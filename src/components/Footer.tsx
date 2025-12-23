@@ -1,0 +1,169 @@
+import { Car, Mail, Phone, MapPin, Facebook, Instagram, Twitter, Youtube } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
+const footerLinks = {
+  services: [
+    { label: "New Cars", href: "#" },
+    { label: "Compare Offers", href: "#" },
+    { label: "Car Loans", href: "#" },
+    { label: "Car Insurance", href: "#" },
+    { label: "Corporate Buying", href: "#" },
+  ],
+  brands: [
+    { label: "Maruti Suzuki", href: "#" },
+    { label: "Hyundai", href: "#" },
+    { label: "Tata Motors", href: "#" },
+    { label: "Mahindra", href: "#" },
+    { label: "Kia", href: "#" },
+    { label: "Toyota", href: "#" },
+  ],
+  company: [
+    { label: "About Us", href: "#" },
+    { label: "Contact", href: "#" },
+    { label: "Careers", href: "#" },
+    { label: "Partner With Us", href: "#" },
+    { label: "Blog", href: "#" },
+  ],
+  legal: [
+    { label: "Privacy Policy", href: "#" },
+    { label: "Terms of Service", href: "#" },
+    { label: "Refund Policy", href: "#" },
+  ],
+};
+
+export const Footer = () => {
+  return (
+    <footer className="bg-foreground text-background">
+      {/* Main Footer */}
+      <div className="container mx-auto px-4 py-12 md:py-16">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-8">
+          {/* Brand */}
+          <div className="col-span-2">
+            <a href="/" className="flex items-center gap-2 mb-6">
+              <div className="w-10 h-10 bg-accent rounded-xl flex items-center justify-center">
+                <Car className="h-6 w-6 text-accent-foreground" />
+              </div>
+              <span className="font-heading font-bold text-xl text-background">
+                Grab<span className="text-accent">your</span>car
+              </span>
+            </a>
+            <p className="text-background/70 mb-6 text-sm leading-relaxed">
+              India's trusted platform for buying new cars at the best price. Compare offers from 500+ authorized dealers across India.
+            </p>
+            
+            {/* Newsletter */}
+            <div className="flex gap-2">
+              <Input
+                placeholder="Enter your email"
+                className="bg-background/10 border-background/20 text-background placeholder:text-background/50"
+              />
+              <Button variant="accent">Subscribe</Button>
+            </div>
+          </div>
+
+          {/* Services */}
+          <div>
+            <h4 className="font-heading font-semibold mb-4 text-background">Services</h4>
+            <ul className="space-y-3">
+              {footerLinks.services.map((link) => (
+                <li key={link.label}>
+                  <a href={link.href} className="text-sm text-background/70 hover:text-accent transition-colors">
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Brands */}
+          <div>
+            <h4 className="font-heading font-semibold mb-4 text-background">Popular Brands</h4>
+            <ul className="space-y-3">
+              {footerLinks.brands.map((link) => (
+                <li key={link.label}>
+                  <a href={link.href} className="text-sm text-background/70 hover:text-accent transition-colors">
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Company */}
+          <div>
+            <h4 className="font-heading font-semibold mb-4 text-background">Company</h4>
+            <ul className="space-y-3">
+              {footerLinks.company.map((link) => (
+                <li key={link.label}>
+                  <a href={link.href} className="text-sm text-background/70 hover:text-accent transition-colors">
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Contact */}
+          <div>
+            <h4 className="font-heading font-semibold mb-4 text-background">Contact Us</h4>
+            <ul className="space-y-4">
+              <li className="flex items-start gap-3">
+                <Phone className="h-4 w-4 text-accent mt-1" />
+                <div>
+                  <p className="text-sm text-background/70">+91 98765 43210</p>
+                  <p className="text-xs text-background/50">Mon-Sat, 9am-7pm</p>
+                </div>
+              </li>
+              <li className="flex items-start gap-3">
+                <Mail className="h-4 w-4 text-accent mt-1" />
+                <p className="text-sm text-background/70">hello@grabyourcar.com</p>
+              </li>
+              <li className="flex items-start gap-3">
+                <MapPin className="h-4 w-4 text-accent mt-1" />
+                <p className="text-sm text-background/70">Mumbai, Maharashtra, India</p>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Bar */}
+      <div className="border-t border-background/10">
+        <div className="container mx-auto px-4 py-6">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <p className="text-sm text-background/50">
+              © 2024 Grabyourcar. All rights reserved.
+            </p>
+            
+            {/* Social Links */}
+            <div className="flex items-center gap-4">
+              {[Facebook, Instagram, Twitter, Youtube].map((Icon, index) => (
+                <a
+                  key={index}
+                  href="#"
+                  className="w-10 h-10 rounded-full bg-background/10 flex items-center justify-center hover:bg-accent transition-colors group"
+                >
+                  <Icon className="h-5 w-5 text-background/70 group-hover:text-accent-foreground" />
+                </a>
+              ))}
+            </div>
+
+            {/* Legal Links */}
+            <div className="flex items-center gap-6">
+              {footerLinks.legal.map((link) => (
+                <a
+                  key={link.label}
+                  href={link.href}
+                  className="text-sm text-background/50 hover:text-accent transition-colors"
+                >
+                  {link.label}
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+};

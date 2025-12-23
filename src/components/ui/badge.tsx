@@ -12,6 +12,13 @@ const badgeVariants = cva(
         secondary: "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
         destructive: "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
         outline: "text-foreground",
+        // Custom variants for Grabyourcar
+        deal: "border-transparent bg-accent text-accent-foreground font-bold",
+        success: "border-transparent bg-success text-success-foreground",
+        limited: "border-transparent bg-destructive text-destructive-foreground animate-pulse",
+        new: "border-transparent bg-primary text-primary-foreground",
+        hot: "border-transparent bg-accent text-accent-foreground",
+        trust: "border-2 border-success text-success bg-success/10",
       },
     },
     defaultVariants: {
