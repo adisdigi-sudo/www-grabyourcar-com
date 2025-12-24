@@ -114,7 +114,9 @@ const EMICalculator = ({ onGetQuote }: EMICalculatorProps) => {
                         <Percent className="w-3 h-3 text-muted-foreground" />
                         Interest Rate
                       </Label>
-                      <span className="text-sm font-semibold text-accent">{interestRate}%</span>
+                      <span className="text-sm font-semibold bg-primary/10 text-primary px-2 py-0.5 rounded">
+                        {interestRate.toFixed(1)}%
+                      </span>
                     </div>
                     <Slider
                       value={[interestRate]}
