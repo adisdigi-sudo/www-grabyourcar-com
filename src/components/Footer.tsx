@@ -4,10 +4,10 @@ import { Input } from "@/components/ui/input";
 
 const footerLinks = {
   services: [
-    { label: "New Cars", href: "#" },
-    { label: "Compare Offers", href: "#" },
-    { label: "Car Loans", href: "#" },
-    { label: "Car Insurance", href: "#" },
+    { label: "New Cars", href: "/#cars" },
+    { label: "Compare Cars", href: "/compare" },
+    { label: "Car Loans", href: "/car-loans" },
+    { label: "Car Insurance", href: "/car-insurance" },
     { label: "Corporate Buying", href: "#" },
   ],
   brands: [
@@ -23,7 +23,7 @@ const footerLinks = {
     { label: "Contact", href: "#" },
     { label: "Careers", href: "#" },
     { label: "Partner With Us", href: "#" },
-    { label: "Blog", href: "#" },
+    { label: "Blog", href: "/blog" },
   ],
   legal: [
     { label: "Privacy Policy", href: "#" },

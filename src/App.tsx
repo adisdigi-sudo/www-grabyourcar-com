@@ -8,6 +8,8 @@ import CarLoans from "./pages/CarLoans";
 import CarDetail from "./pages/CarDetail";
 import CompareCars from "./pages/CompareCards";
 import CarInsurance from "./pages/CarInsurance";
+import Blog from "./pages/Blog";
+import BlogPost from "./pages/BlogPost";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +26,8 @@ const App = () => (
           <Route path="/car/:slug" element={<CarDetail />} />
           <Route path="/compare" element={<CompareCars />} />
           <Route path="/car-insurance" element={<CarInsurance />} />
+          <Route path="/blog" element={<Blog />} />
+          <Route path="/blog/:slug" element={<BlogPost />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
