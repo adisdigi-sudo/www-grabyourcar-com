@@ -1,6 +1,5 @@
-import { Phone, MessageCircle, Menu, X, Heart, User, LogOut } from "lucide-react";
+import { Phone, MessageCircle, Heart, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -21,7 +20,6 @@ const navLinks = [
 ];
 
 export const Header = () => {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, signOut } = useAuth();
 
   const handleSignOut = async () => {
@@ -114,73 +112,6 @@ export const Header = () => {
           </div>
         </div>
 
-        {/* Mobile Bottom Hamburger */}
-        <button
-          className="lg:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-50 p-4 bg-primary text-primary-foreground rounded-full shadow-lg hover:bg-primary/90 transition-all"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-        >
-          {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-        </button>
-
-        {/* Mobile Menu */}
-        {mobileMenuOpen && (
-          <div className="lg:hidden py-4 border-t border-border/50 animate-fade-in">
-            <nav className="flex flex-col gap-2">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.label}
-                  to={link.href}
-                  className="px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  {link.label}
-                </Link>
-              ))}
-              {user ? (
-                <>
-                  <Link
-                    to="/favorites"
-                    className="px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    My Favorites
-                  </Link>
-                  <button
-                    className="px-4 py-3 text-sm font-medium text-destructive hover:bg-muted rounded-lg transition-colors text-left"
-                    onClick={() => {
-                      handleSignOut();
-                      setMobileMenuOpen(false);
-                    }}
-                  >
-                    Sign Out
-                  </button>
-                </>
-              ) : (
-                <Link
-                  to="/auth"
-                  className="px-4 py-3 text-sm font-medium text-primary hover:bg-muted rounded-lg transition-colors"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Login / Sign Up
-                </Link>
-              )}
-              <div className="flex gap-2 mt-4 px-4">
-                <a href="https://wa.me/919876543210" target="_blank" rel="noopener noreferrer" className="flex-1">
-                  <Button variant="whatsapp" className="w-full">
-                    <MessageCircle className="h-4 w-4" />
-                    WhatsApp
-                  </Button>
-                </a>
-                <a href="tel:+919876543210" className="flex-1">
-                  <Button variant="call" className="w-full">
-                    <Phone className="h-4 w-4" />
-                    Call
-                  </Button>
-                </a>
-              </div>
-            </nav>
-          </div>
-        )}
       </div>
     </header>
   );
