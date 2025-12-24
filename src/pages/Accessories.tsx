@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,8 @@ import {
 } from "lucide-react";
 import { accessoriesData, categories, Accessory } from "@/data/accessoriesData";
 import { useCart } from "@/hooks/useCart";
+import { useAccessoryWishlist } from "@/hooks/useAccessoryWishlist";
+import { useAuth } from "@/hooks/useAuth";
 import { CartSheet } from "@/components/CartSheet";
 import { toast } from "sonner";
 import {
@@ -32,6 +35,8 @@ const Accessories = () => {
   const [sortBy, setSortBy] = useState("featured");
   const [addedItems, setAddedItems] = useState<number[]>([]);
   const { addToCart } = useCart();
+  const { isInWishlist, toggleWishlist, wishlist } = useAccessoryWishlist();
+  const { user } = useAuth();
 
   const filteredProducts = accessoriesData
     .filter(product => {
@@ -162,6 +167,19 @@ const Accessories = () => {
                   </SelectContent>
                 </Select>
 
+                <Link to="/accessory-wishlist">
+                  <Button variant="outline" size="icon" className="relative">
+                    <Heart className="h-5 w-5" />
+                    {wishlist.length > 0 && (
+                      <Badge 
+                        className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-500"
+                      >
+                        {wishlist.length}
+                      </Badge>
+                    )}
+                  </Button>
+                </Link>
+
                 <CartSheet />
               </div>
             </div>
@@ -212,9 +230,12 @@ const Accessories = () => {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="absolute top-2 right-2 bg-background/80 hover:bg-background opacity-0 group-hover:opacity-100 transition-opacity"
+                        className={`absolute top-2 right-2 bg-background/80 hover:bg-background transition-opacity ${
+                          isInWishlist(product.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                        }`}
+                        onClick={() => toggleWishlist(product.id, product.name)}
                       >
-                        <Heart className="h-4 w-4" />
+                        <Heart className={`h-4 w-4 ${isInWishlist(product.id) ? 'fill-red-500 text-red-500' : ''}`} />
                       </Button>
                     </div>
                     

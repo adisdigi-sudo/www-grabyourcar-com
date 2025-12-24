@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      accessory_wishlist: {
+        Row: {
+          accessory_id: number
+          accessory_name: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          accessory_id: number
+          accessory_name: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          accessory_id?: number
+          accessory_name?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       chat_conversations: {
         Row: {
           created_at: string
