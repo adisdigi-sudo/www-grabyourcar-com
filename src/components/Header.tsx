@@ -1,7 +1,7 @@
 import { Phone, MessageCircle, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import logoImage from "@/assets/logo-grabyourcar.png";
+import logoImage from "@/assets/logo-option-4.png";
 const navLinks = [
   { label: "New Cars", href: "#cars" },
   { label: "Compare", href: "/compare" },
