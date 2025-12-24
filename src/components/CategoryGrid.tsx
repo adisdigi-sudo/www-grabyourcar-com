@@ -68,8 +68,8 @@ const categories = [
     description: "Bulk Deals for Businesses",
     color: "text-success",
     bgColor: "bg-success/10",
-    href: "#lead-form",
-    type: "scroll" as const,
+    href: "/corporate",
+    type: "navigate" as const,
   },
   {
     icon: CarFront,

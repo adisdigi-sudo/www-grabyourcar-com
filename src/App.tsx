@@ -9,6 +9,7 @@ import CarLoans from "./pages/CarLoans";
 import CarDetail from "./pages/CarDetail";
 import CompareCars from "./pages/CompareCards";
 import CarInsurance from "./pages/CarInsurance";
+import CorporateBuying from "./pages/CorporateBuying";
 import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
 import Auth from "./pages/Auth";
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/car/:slug" element={<CarDetail />} />
             <Route path="/compare" element={<CompareCars />} />
             <Route path="/car-insurance" element={<CarInsurance />} />
+            <Route path="/corporate" element={<CorporateBuying />} />
             <Route path="/blog" element={<Blog />} />
             <Route path="/blog/:slug" element={<BlogPost />} />
             <Route path="/auth" element={<Auth />} />
