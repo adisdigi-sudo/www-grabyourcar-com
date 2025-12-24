@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -7,13 +7,24 @@ import { CheckCircle, Shield, Clock, Gift } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
-export const LeadForm = () => {
+interface LeadFormProps {
+  prefillCarInterest?: string;
+}
+
+export const LeadForm = ({ prefillCarInterest }: LeadFormProps) => {
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
     city: "",
-    carInterest: "",
+    carInterest: prefillCarInterest || "",
   });
+
+  // Update carInterest when prefill changes
+  useEffect(() => {
+    if (prefillCarInterest) {
+      setFormData(prev => ({ ...prev, carInterest: prefillCarInterest }));
+    }
+  }, [prefillCarInterest]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {

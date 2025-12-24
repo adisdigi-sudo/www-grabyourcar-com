@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Header } from "@/components/Header";
 import { PromoBanner } from "@/components/PromoBanner";
 import { HeroSection } from "@/components/HeroSection";
@@ -12,6 +13,14 @@ import { FloatingCTA } from "@/components/FloatingCTA";
 import { CarAdvisorChat } from "@/components/CarAdvisorChat";
 
 const Index = () => {
+  const [loanPrefill, setLoanPrefill] = useState<string>("");
+
+  const handleGetLoanQuote = (loanDetails: string) => {
+    setLoanPrefill(loanDetails);
+    // Scroll to lead form
+    document.getElementById("lead-form")?.scrollIntoView({ behavior: "smooth" });
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* SEO Meta Tags handled in index.html */}
@@ -34,10 +43,10 @@ const Index = () => {
         <CarListings />
         
         {/* EMI Calculator */}
-        <EMICalculator />
+        <EMICalculator onGetQuote={handleGetLoanQuote} />
         
         {/* Lead Capture Form */}
-        <LeadForm />
+        <LeadForm prefillCarInterest={loanPrefill} />
         
         {/* Customer Testimonials */}
         <Testimonials />
