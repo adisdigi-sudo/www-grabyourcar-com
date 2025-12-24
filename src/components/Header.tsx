@@ -6,7 +6,7 @@ const navLinks = [
   { label: "New Cars", href: "#cars" },
   { label: "Compare", href: "#compare" },
   { label: "Offers", href: "#offers" },
-  { label: "Car Loans", href: "#loans" },
+  { label: "Car Loans", href: "/car-loans" },
   { label: "Insurance", href: "#insurance" },
 ];
 
