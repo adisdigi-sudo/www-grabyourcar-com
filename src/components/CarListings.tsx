@@ -1,95 +1,9 @@
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Fuel, Cog, Clock, TrendingDown, MessageCircle, Phone } from "lucide-react";
-
-import carCreta from "@/assets/car-creta.jpg";
-import carNexon from "@/assets/car-nexon.jpg";
-import carSwift from "@/assets/car-swift.jpg";
-import carXuv700 from "@/assets/car-xuv700.jpg";
-import carSeltos from "@/assets/car-seltos.jpg";
-import carInnova from "@/assets/car-innova.jpg";
-
-const cars = [
-  {
-    id: 1,
-    name: "Hyundai Creta",
-    image: carCreta,
-    price: "₹11.00 - 20.15 Lakh",
-    originalPrice: "₹11.50 Lakh",
-    discount: "₹50,000 OFF",
-    fuelTypes: ["Petrol", "Diesel"],
-    transmission: ["Manual", "Automatic"],
-    availability: "Ready Stock",
-    isHot: true,
-    isLimited: false,
-  },
-  {
-    id: 2,
-    name: "Tata Nexon",
-    image: carNexon,
-    price: "₹8.10 - 15.50 Lakh",
-    originalPrice: "₹8.50 Lakh",
-    discount: "₹40,000 OFF",
-    fuelTypes: ["Petrol", "Diesel", "EV"],
-    transmission: ["Manual", "AMT"],
-    availability: "Ready Stock",
-    isHot: true,
-    isLimited: false,
-  },
-  {
-    id: 3,
-    name: "Maruti Swift",
-    image: carSwift,
-    price: "₹6.49 - 9.64 Lakh",
-    originalPrice: "₹6.99 Lakh",
-    discount: "₹50,000 OFF",
-    fuelTypes: ["Petrol", "CNG"],
-    transmission: ["Manual", "AMT"],
-    availability: "2 Units Left",
-    isHot: false,
-    isLimited: true,
-  },
-  {
-    id: 4,
-    name: "Mahindra XUV700",
-    image: carXuv700,
-    price: "₹14.49 - 26.99 Lakh",
-    originalPrice: "₹15.00 Lakh",
-    discount: "₹75,000 OFF",
-    fuelTypes: ["Petrol", "Diesel"],
-    transmission: ["Manual", "Automatic"],
-    availability: "Ready Stock",
-    isHot: true,
-    isLimited: false,
-  },
-  {
-    id: 5,
-    name: "Kia Seltos",
-    image: carSeltos,
-    price: "₹10.90 - 20.35 Lakh",
-    originalPrice: "₹11.40 Lakh",
-    discount: "₹50,000 OFF",
-    fuelTypes: ["Petrol", "Diesel"],
-    transmission: ["Manual", "Automatic", "iMT"],
-    availability: "Ready Stock",
-    isHot: false,
-    isLimited: false,
-  },
-  {
-    id: 6,
-    name: "Toyota Innova Crysta",
-    image: carInnova,
-    price: "₹19.99 - 26.30 Lakh",
-    originalPrice: "₹20.50 Lakh",
-    discount: "₹60,000 OFF",
-    fuelTypes: ["Petrol", "Diesel"],
-    transmission: ["Manual", "Automatic"],
-    availability: "1 Unit Left",
-    isHot: false,
-    isLimited: true,
-  },
-];
+import { cars } from "@/data/carsData";
 
 export const CarListings = () => {
   return (
@@ -177,9 +91,11 @@ export const CarListings = () => {
               </CardContent>
 
               <CardFooter className="p-5 pt-0 gap-2">
-                <Button variant="cta" className="flex-1">
-                  Get Best Price
-                </Button>
+                <Link to={`/car/${car.slug}`} className="flex-1">
+                  <Button variant="cta" className="w-full">
+                    View Details
+                  </Button>
+                </Link>
                 <a href="https://wa.me/919876543210" target="_blank" rel="noopener noreferrer">
                   <Button variant="whatsapp" size="icon">
                     <MessageCircle className="h-4 w-4" />
