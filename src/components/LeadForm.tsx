@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Shield, Clock, Gift } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 export const LeadForm = () => {
   const [formData, setFormData] = useState({
@@ -18,6 +19,7 @@ export const LeadForm = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Client-side validation (complementary to server-side)
     if (!formData.name.trim() || !formData.phone.trim()) {
       toast({
         title: "Please fill required fields",
@@ -38,16 +40,44 @@ export const LeadForm = () => {
 
     setIsSubmitting(true);
     
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    
-    toast({
-      title: "🎉 Request Submitted!",
-      description: "Our car expert will call you within 30 minutes.",
-    });
-    
-    setFormData({ name: "", phone: "", city: "", carInterest: "" });
-    setIsSubmitting(false);
+    try {
+      const { data, error } = await supabase.functions.invoke('submit-lead', {
+        body: {
+          name: formData.name.trim(),
+          phone: formData.phone.trim(),
+          city: formData.city.trim() || undefined,
+          carInterest: formData.carInterest.trim() || undefined,
+        },
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Failed to submit');
+      }
+
+      if (data?.error) {
+        toast({
+          title: "Submission Failed",
+          description: data.error,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "🎉 Request Submitted!",
+        description: data?.message || "Our car expert will call you within 30 minutes.",
+      });
+      
+      setFormData({ name: "", phone: "", city: "", carInterest: "" });
+    } catch (error) {
+      toast({
+        title: "Something went wrong",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
