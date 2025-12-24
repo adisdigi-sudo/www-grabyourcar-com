@@ -3,6 +3,7 @@ import { PromoBanner } from "@/components/PromoBanner";
 import { HeroSection } from "@/components/HeroSection";
 import { CategoryGrid } from "@/components/CategoryGrid";
 import { CarListings } from "@/components/CarListings";
+import EMICalculator from "@/components/EMICalculator";
 import { LeadForm } from "@/components/LeadForm";
 import { Testimonials } from "@/components/Testimonials";
 import { TrustBadges } from "@/components/TrustBadges";
@@ -30,6 +31,9 @@ const Index = () => {
         
         {/* Featured Car Listings */}
         <CarListings />
+        
+        {/* EMI Calculator */}
+        <EMICalculator />
         
         {/* Lead Capture Form */}
         <LeadForm />
