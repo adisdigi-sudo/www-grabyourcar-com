@@ -29,8 +29,10 @@ import {
   Star,
   Shield,
   TrendingDown,
-  IndianRupee
+  IndianRupee,
+  Calculator
 } from "lucide-react";
+import EMICalculator from "@/components/EMICalculator";
 import { getCarBySlug } from "@/data/carsData";
 import { calculatePriceBreakup } from "@/data/cars/types";
 import { toast } from "sonner";
@@ -288,6 +290,10 @@ const CarDetail = () => {
                 <TabsTrigger value="overview" className="rounded-lg">Overview</TabsTrigger>
                 <TabsTrigger value="specifications" className="rounded-lg">Specifications</TabsTrigger>
                 <TabsTrigger value="variants" className="rounded-lg">Variants & Price</TabsTrigger>
+                <TabsTrigger value="emi" className="rounded-lg">
+                  <Calculator className="h-4 w-4 mr-1.5" />
+                  EMI Calculator
+                </TabsTrigger>
                 <TabsTrigger value="offers" className="rounded-lg">Dealer Offers</TabsTrigger>
               </TabsList>
 
@@ -503,6 +509,88 @@ const CarDetail = () => {
                     </Card>
                   </div>
                 </div>
+              </TabsContent>
+
+              <TabsContent value="emi" className="space-y-6">
+                {(() => {
+                  const selectedVar = car.variants[selectedVariant];
+                  const priceMatch = selectedVar.price.match(/[\d.]+/);
+                  const priceInLakh = priceMatch ? parseFloat(priceMatch[0]) : 0;
+                  const exShowroomPrice = selectedVar.priceNumeric || priceInLakh * 100000;
+                  const breakup = selectedVar.priceBreakup || calculatePriceBreakup(exShowroomPrice);
+                  
+                  return (
+                    <div className="space-y-6">
+                      {/* Selected Variant Info */}
+                      <Card className="border-primary/20 bg-primary/5">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between flex-wrap gap-4">
+                            <div>
+                              <p className="text-sm text-muted-foreground">Calculating EMI for</p>
+                              <h3 className="font-semibold text-lg">{car.name} {selectedVar.name}</h3>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm text-muted-foreground">On-Road Price</p>
+                              <p className="text-xl font-bold text-primary">
+                                ₹{(breakup.onRoadPrice / 100000).toFixed(2)} Lakh
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      
+                      {/* EMI Calculator - pre-filled with 80% loan amount */}
+                      <EMICalculator 
+                        onGetQuote={(loanDetails) => {
+                          toast.success("Loan quote request submitted!", {
+                            description: `${loanDetails} for ${car.name} ${selectedVar.name}`
+                          });
+                        }}
+                      />
+                      
+                      {/* Quick Tenure Options */}
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-lg flex items-center gap-2">
+                            <Calculator className="h-5 w-5 text-primary" />
+                            Quick EMI Reference
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {[
+                              { months: 36, rate: 8.5 },
+                              { months: 48, rate: 8.75 },
+                              { months: 60, rate: 9.0 },
+                              { months: 72, rate: 9.25 },
+                            ].map(({ months, rate }) => {
+                              const loanAmount = breakup.onRoadPrice * 0.8;
+                              const monthlyRate = rate / 12 / 100;
+                              const emi = Math.round(
+                                (loanAmount * monthlyRate * Math.pow(1 + monthlyRate, months)) /
+                                (Math.pow(1 + monthlyRate, months) - 1)
+                              );
+                              
+                              return (
+                                <div 
+                                  key={months}
+                                  className="bg-secondary/50 rounded-xl p-4 text-center hover:bg-secondary transition-colors"
+                                >
+                                  <p className="text-sm text-muted-foreground mb-1">{months / 12} Years</p>
+                                  <p className="text-xl font-bold text-primary">₹{emi.toLocaleString("en-IN")}</p>
+                                  <p className="text-xs text-muted-foreground mt-1">@ {rate}% p.a.</p>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <p className="text-xs text-muted-foreground text-center mt-4">
+                            *EMI calculated on 80% loan amount. Actual EMI may vary based on bank and credit score.
+                          </p>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  );
+                })()}
               </TabsContent>
 
               <TabsContent value="offers" className="space-y-6">
