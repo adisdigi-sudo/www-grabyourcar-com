@@ -3,9 +3,21 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Fuel, Cog, Clock, TrendingDown, MessageCircle, Phone, Heart } from "lucide-react";
-import { cars } from "@/data/carsData";
+import { allCars } from "@/data/cars";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useAuth } from "@/hooks/useAuth";
+
+// Get featured cars for homepage - show first 12 cars with deals
+const featuredCars = allCars.slice(0, 12).map(car => ({
+  ...car,
+  image: car.image || "/placeholder.svg",
+  tagline: car.tagline || `The All New ${car.name}`,
+  originalPrice: car.price.split(" - ")[0].replace("₹", "₹") + " (Base)",
+  discount: car.offers?.[0]?.discount || "Special Offer",
+  isHot: car.isNew || false,
+  isLimited: car.isUpcoming || false,
+  availability: car.isUpcoming ? "Coming Soon" : "Ready Stock",
+}));
 
 export const CarListings = () => {
   const { user } = useAuth();
@@ -29,7 +41,7 @@ export const CarListings = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {cars.map((car, index) => (
+          {featuredCars.map((car, index) => (
             <Card
               key={car.id}
               variant="deal"
