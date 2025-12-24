@@ -1,1 +1,7 @@
 project_id = "ynoiwioypxpurwdbjvyt"
+
+[functions.car-advisor]
+verify_jwt = false
+
+[functions.submit-lead]
+verify_jwt = false
