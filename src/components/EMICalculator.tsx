@@ -97,13 +97,13 @@ const EMICalculator = ({ onGetQuote }: EMICalculatorProps) => {
                       value={[loanAmount]}
                       onValueChange={(value) => setLoanAmount(value[0])}
                       min={100000}
-                      max={5000000}
-                      step={50000}
+                      max={100000000}
+                      step={100000}
                       className="w-full"
                     />
                     <div className="flex justify-between text-xs text-muted-foreground">
                       <span>₹1L</span>
-                      <span>₹50L</span>
+                      <span>₹10Cr</span>
                     </div>
                   </div>
 
