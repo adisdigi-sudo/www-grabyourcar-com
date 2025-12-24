@@ -12,7 +12,7 @@ import {
 import logoImage from "@/assets/logo-option-4.png";
 
 const navLinks = [
-  { label: "New Cars", href: "#cars" },
+  { label: "New Cars", href: "/cars" },
   { label: "Compare", href: "/compare" },
   { label: "Car Loans", href: "/car-loans" },
   { label: "Insurance", href: "/car-insurance" },
