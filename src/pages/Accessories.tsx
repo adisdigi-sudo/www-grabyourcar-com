@@ -13,13 +13,15 @@ import {
   Filter,
   Check,
   Heart,
-  Package
+  Package,
+  Eye
 } from "lucide-react";
 import { accessoriesData, categories, Accessory } from "@/data/accessoriesData";
 import { useCart } from "@/hooks/useCart";
 import { useAccessoryWishlist } from "@/hooks/useAccessoryWishlist";
 import { useAuth } from "@/hooks/useAuth";
 import { CartSheet } from "@/components/CartSheet";
+import { AccessoryDetailModal } from "@/components/AccessoryDetailModal";
 import { toast } from "sonner";
 import {
   Select,
@@ -34,6 +36,8 @@ const Accessories = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("featured");
   const [addedItems, setAddedItems] = useState<number[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<Accessory | null>(null);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
   const { addToCart } = useCart();
   const { isInWishlist, toggleWishlist, wishlist } = useAccessoryWishlist();
   const { user } = useAuth();
@@ -88,6 +92,11 @@ const Accessories = () => {
       default:
         return "default";
     }
+  };
+
+  const handleViewDetails = (product: Accessory) => {
+    setSelectedProduct(product);
+    setDetailModalOpen(true);
   };
 
   return (
@@ -206,7 +215,8 @@ const Accessories = () => {
                 {filteredProducts.map((product) => (
                   <Card 
                     key={product.id} 
-                    className="group overflow-hidden hover:shadow-lg transition-all duration-300"
+                    className="group overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer"
+                    onClick={() => handleViewDetails(product)}
                   >
                     <div className="relative aspect-square overflow-hidden">
                       <img
@@ -227,16 +237,32 @@ const Accessories = () => {
                           <Badge variant="secondary">Out of Stock</Badge>
                         </div>
                       )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className={`absolute top-2 right-2 bg-background/80 hover:bg-background transition-opacity ${
-                          isInWishlist(product.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                        }`}
-                        onClick={() => toggleWishlist(product.id, product.name)}
-                      >
-                        <Heart className={`h-4 w-4 ${isInWishlist(product.id) ? 'fill-red-500 text-red-500' : ''}`} />
-                      </Button>
+                      <div className="absolute top-2 right-2 flex flex-col gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className={`bg-background/80 hover:bg-background transition-opacity ${
+                            isInWishlist(product.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleWishlist(product.id, product.name);
+                          }}
+                        >
+                          <Heart className={`h-4 w-4 ${isInWishlist(product.id) ? 'fill-red-500 text-red-500' : ''}`} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="bg-background/80 hover:bg-background opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewDetails(product);
+                          }}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                     
                     <CardContent className="p-4">
@@ -266,7 +292,10 @@ const Accessories = () => {
                         className="w-full"
                         size="sm"
                         disabled={!product.inStock || addedItems.includes(product.id)}
-                        onClick={() => handleAddToCart(product)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAddToCart(product);
+                        }}
                       >
                         {addedItems.includes(product.id) ? (
                           <>
@@ -326,6 +355,12 @@ const Accessories = () => {
       </main>
 
       <Footer />
+
+      <AccessoryDetailModal
+        accessory={selectedProduct}
+        open={detailModalOpen}
+        onOpenChange={setDetailModalOpen}
+      />
     </>
   );
 };
