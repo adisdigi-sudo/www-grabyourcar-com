@@ -1,14 +1,16 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { PriceBreakup as PriceBreakupType, calculatePriceBreakup } from "@/data/cars/types";
-import { IndianRupee, FileText, Shield, Car, CreditCard, Tag, Truck } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { stateRates, calculateStatePriceBreakup, StatePriceBreakup } from "@/data/statePricing";
+import { IndianRupee, FileText, Shield, Car, CreditCard, Tag, Truck, MapPin, Leaf } from "lucide-react";
+import { useState, useMemo } from "react";
 
 interface PriceBreakupProps {
   variantName: string;
   carName: string;
-  priceBreakup?: PriceBreakupType;
-  exShowroomPrice?: number;
+  exShowroomPrice: number;
+  onStateChange?: (stateCode: string, breakup: StatePriceBreakup) => void;
 }
 
 const formatPrice = (price: number): string => {
@@ -24,38 +26,60 @@ const formatPriceExact = (price: number): string => {
   return `₹${price.toLocaleString('en-IN')}`;
 };
 
-export const PriceBreakup = ({ variantName, carName, priceBreakup, exShowroomPrice }: PriceBreakupProps) => {
-  // Calculate breakup if not provided but exShowroomPrice is available
-  const breakup = priceBreakup || (exShowroomPrice ? calculatePriceBreakup(exShowroomPrice) : null);
+export const PriceBreakup = ({ variantName, carName, exShowroomPrice, onStateChange }: PriceBreakupProps) => {
+  const [selectedState, setSelectedState] = useState("DL");
   
-  if (!breakup) {
-    return null;
-  }
+  const breakup = useMemo(() => {
+    const calculated = calculateStatePriceBreakup(exShowroomPrice, selectedState);
+    return calculated;
+  }, [exShowroomPrice, selectedState]);
+
+  const handleStateChange = (stateCode: string) => {
+    setSelectedState(stateCode);
+    const newBreakup = calculateStatePriceBreakup(exShowroomPrice, stateCode);
+    onStateChange?.(stateCode, newBreakup);
+  };
+
+  const selectedStateName = stateRates.find(s => s.code === selectedState)?.name || "Delhi";
 
   const priceItems = [
     { label: "Ex-Showroom Price", value: breakup.exShowroom, icon: Car, description: "Base price of the vehicle" },
-    { label: "RTO & Road Tax", value: breakup.rto, icon: FileText, description: "Registration charges" },
+    { label: "RTO Charges", value: breakup.rto, icon: FileText, description: "Registration transfer charges" },
+    { label: "Road Tax", value: breakup.roadTax, icon: FileText, description: `State road tax (${selectedStateName})` },
     { label: "Insurance (1 Year)", value: breakup.insurance, icon: Shield, description: "Comprehensive insurance" },
     ...(breakup.tcs > 0 ? [{ label: "TCS (1%)", value: breakup.tcs, icon: CreditCard, description: "Tax Collected at Source" }] : []),
     { label: "FASTag", value: breakup.fastag, icon: Tag, description: "Mandatory FASTag" },
-    { label: "Registration", value: breakup.registration, icon: FileText, description: "Number plate charges" },
+    { label: "Registration Fee", value: breakup.registration, icon: FileText, description: "Number plate charges" },
+    { label: "Temp Registration", value: breakup.tempRegistration, icon: FileText, description: "Temporary registration" },
+    ...(breakup.greenTax > 0 ? [{ label: "Green Tax", value: breakup.greenTax, icon: Leaf, description: "Environment cess" }] : []),
     { label: "Handling & Logistics", value: breakup.handling, icon: Truck, description: "Dealer handling charges" },
   ];
 
   return (
     <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
       <CardHeader className="pb-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <CardTitle className="text-lg font-semibold">
               {carName} {variantName}
             </CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">On-Road Price Breakup (Delhi)</p>
+            <p className="text-sm text-muted-foreground mt-1">On-Road Price Breakup</p>
           </div>
-          <Badge variant="outline" className="text-primary border-primary">
-            <IndianRupee className="h-3 w-3 mr-1" />
-            Price Details
-          </Badge>
+          <div className="flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-primary" />
+            <Select value={selectedState} onValueChange={handleStateChange}>
+              <SelectTrigger className="w-[160px] h-9">
+                <SelectValue placeholder="Select State" />
+              </SelectTrigger>
+              <SelectContent>
+                {stateRates.map((state) => (
+                  <SelectItem key={state.code} value={state.code}>
+                    {state.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -83,7 +107,7 @@ export const PriceBreakup = ({ variantName, carName, priceBreakup, exShowroomPri
             </div>
             <div>
               <p className="font-bold text-lg">On-Road Price</p>
-              <p className="text-xs text-muted-foreground">Estimated price in Delhi</p>
+              <p className="text-xs text-muted-foreground">Estimated price in {selectedStateName}</p>
             </div>
           </div>
           <div className="text-right">
@@ -92,8 +116,15 @@ export const PriceBreakup = ({ variantName, carName, priceBreakup, exShowroomPri
           </div>
         </div>
 
-        <p className="text-xs text-muted-foreground text-center mt-4">
-          * Prices are indicative and may vary based on location, accessories, and current offers
+        {/* State comparison hint */}
+        <div className="bg-muted/50 rounded-lg p-3 mt-4">
+          <p className="text-xs text-muted-foreground text-center">
+            💡 Road tax varies by state. Try selecting different states to compare on-road prices.
+          </p>
+        </div>
+
+        <p className="text-xs text-muted-foreground text-center mt-2">
+          * Prices are indicative and may vary based on accessories and current offers
         </p>
       </CardContent>
     </Card>

@@ -34,7 +34,7 @@ import {
 } from "lucide-react";
 import EMICalculator from "@/components/EMICalculator";
 import { getCarBySlug } from "@/data/carsData";
-import { calculatePriceBreakup } from "@/data/cars/types";
+import { calculateStatePriceBreakup } from "@/data/statePricing";
 import { toast } from "sonner";
 
 const CarDetail = () => {
@@ -410,7 +410,7 @@ const CarDetail = () => {
                           const priceMatch = variant.price.match(/[\d.]+/);
                           const priceInLakh = priceMatch ? parseFloat(priceMatch[0]) : 0;
                           const exShowroomPrice = variant.priceNumeric || priceInLakh * 100000;
-                          const breakup = variant.priceBreakup || calculatePriceBreakup(exShowroomPrice);
+                          const breakup = calculateStatePriceBreakup(exShowroomPrice);
                           
                           return (
                             <div
@@ -483,7 +483,6 @@ const CarDetail = () => {
                         <PriceBreakup
                           variantName={selectedVar.name}
                           carName={car.name}
-                          priceBreakup={selectedVar.priceBreakup}
                           exShowroomPrice={exShowroomPrice}
                         />
                       );
@@ -517,7 +516,7 @@ const CarDetail = () => {
                   const priceMatch = selectedVar.price.match(/[\d.]+/);
                   const priceInLakh = priceMatch ? parseFloat(priceMatch[0]) : 0;
                   const exShowroomPrice = selectedVar.priceNumeric || priceInLakh * 100000;
-                  const breakup = selectedVar.priceBreakup || calculatePriceBreakup(exShowroomPrice);
+                  const breakup = calculateStatePriceBreakup(exShowroomPrice);
                   
                   return (
                     <div className="space-y-6">
