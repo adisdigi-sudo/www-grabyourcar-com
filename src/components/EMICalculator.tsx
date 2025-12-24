@@ -3,9 +3,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
-import { Calculator, IndianRupee, Percent, Calendar } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Calculator, IndianRupee, Percent, Calendar, FileText } from "lucide-react";
 
-const EMICalculator = () => {
+interface EMICalculatorProps {
+  onGetQuote?: (loanDetails: string) => void;
+}
+
+const EMICalculator = ({ onGetQuote }: EMICalculatorProps) => {
   const [loanAmount, setLoanAmount] = useState(800000);
   const [interestRate, setInterestRate] = useState(8.5);
   const [tenure, setTenure] = useState(60);
@@ -50,6 +55,11 @@ const EMICalculator = () => {
       return `₹${(amount / 100000).toFixed(2)} L`;
     }
     return `₹${amount.toLocaleString("en-IN")}`;
+  };
+
+  const handleGetQuote = () => {
+    const loanDetails = `Car Loan: ${formatCurrency(loanAmount)} @ ${interestRate}% for ${tenure} months (EMI: ₹${emiDetails.emi.toLocaleString("en-IN")}/month)`;
+    onGetQuote?.(loanDetails);
   };
 
   return (
@@ -195,9 +205,19 @@ const EMICalculator = () => {
                     </div>
                   </div>
 
+                  {/* Get Quote Button */}
+                  <Button 
+                    onClick={handleGetQuote}
+                    className="w-full"
+                    size="sm"
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    Get Loan Quote
+                  </Button>
+
                   {/* Bank Partners */}
-                  <div className="text-center pt-2">
-                    <p className="text-xs text-muted-foreground mb-2">Partners: SBI • HDFC • ICICI • Axis</p>
+                  <div className="text-center">
+                    <p className="text-xs text-muted-foreground">Partners: SBI • HDFC • ICICI • Axis</p>
                   </div>
                 </div>
               </div>
