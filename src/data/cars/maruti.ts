@@ -1,4 +1,17 @@
 import { Car, generateOffers } from "./types";
+import marutiAltoK10 from "@/assets/cars/maruti-alto-k10.jpg";
+import marutiSwift from "@/assets/cars/maruti-swift.jpg";
+import marutiBaleno from "@/assets/cars/maruti-baleno.jpg";
+import marutiDzire from "@/assets/cars/maruti-dzire.jpg";
+import marutiBrezza from "@/assets/cars/maruti-brezza.jpg";
+import marutiWagonR from "@/assets/cars/maruti-wagon-r.jpg";
+import marutiErtiga from "@/assets/cars/maruti-ertiga.jpg";
+import marutiGrandVitara from "@/assets/cars/maruti-grand-vitara.jpg";
+import marutiCiaz from "@/assets/cars/maruti-ciaz.jpg";
+import marutiJimny from "@/assets/cars/maruti-jimny.jpg";
+import marutiInvicto from "@/assets/cars/maruti-invicto.jpg";
+import marutiXL6 from "@/assets/cars/maruti-xl6.jpg";
+import marutiFronx from "@/assets/cars/maruti-fronx.jpg";
 
 const marutiCars: Car[] = [
   {
@@ -8,8 +21,8 @@ const marutiCars: Car[] = [
     brand: "Maruti Suzuki",
     bodyType: "Hatchback",
     tagline: "Let's Go",
-    image: "https://stimg.cardekho.com/images/carexteriorimages/630x420/Maruti/Alto-K10/11053/1717419512575/front-left-side-47.jpg",
-    gallery: ["https://stimg.cardekho.com/images/carexteriorimages/630x420/Maruti/Alto-K10/11053/1717419512575/front-left-side-47.jpg"],
+    image: marutiAltoK10,
+    gallery: [marutiAltoK10],
     price: "₹3.99 - 5.96 Lakh",
     priceNumeric: 399000,
     originalPrice: "₹4.20 Lakh",
@@ -82,8 +95,8 @@ const marutiCars: Car[] = [
     brand: "Maruti Suzuki",
     bodyType: "Hatchback",
     tagline: "Play Hard. Play Swift.",
-    image: "https://stimg.cardekho.com/images/carexteriorimages/630x420/Maruti/Swift/11683/1719979104498/front-left-side-47.jpg",
-    gallery: ["https://stimg.cardekho.com/images/carexteriorimages/630x420/Maruti/Swift/11683/1719979104498/front-left-side-47.jpg"],
+    image: marutiSwift,
+    gallery: [marutiSwift],
     price: "₹6.49 - 9.64 Lakh",
     priceNumeric: 649000,
     originalPrice: "₹6.99 Lakh",
@@ -162,8 +175,8 @@ const marutiCars: Car[] = [
     brand: "Maruti Suzuki",
     bodyType: "Hatchback",
     tagline: "Crafted with Perfection",
-    image: "https://stimg.cardekho.com/images/carexteriorimages/630x420/Maruti/Baleno/9590/1719978990298/front-left-side-47.jpg",
-    gallery: ["https://stimg.cardekho.com/images/carexteriorimages/630x420/Maruti/Baleno/9590/1719978990298/front-left-side-47.jpg"],
+    image: marutiBaleno,
+    gallery: [marutiBaleno],
     price: "₹6.61 - 9.88 Lakh",
     priceNumeric: 661000,
     originalPrice: "₹7.00 Lakh",
@@ -238,8 +251,8 @@ const marutiCars: Car[] = [
     brand: "Maruti Suzuki",
     bodyType: "Sedan",
     tagline: "Heart Wants What It Wants",
-    image: "https://stimg.cardekho.com/images/carexteriorimages/630x420/Maruti/Dzire-2024/11875/1730883627498/front-left-side-47.jpg",
-    gallery: ["https://stimg.cardekho.com/images/carexteriorimages/630x420/Maruti/Dzire-2024/11875/1730883627498/front-left-side-47.jpg"],
+    image: marutiDzire,
+    gallery: [marutiDzire],
     price: "₹6.79 - 10.14 Lakh",
     priceNumeric: 679000,
     originalPrice: "₹7.20 Lakh",
@@ -314,8 +327,8 @@ const marutiCars: Car[] = [
     brand: "Maruti Suzuki",
     bodyType: "Compact SUV",
     tagline: "It's Life. Rule It.",
-    image: "https://stimg.cardekho.com/images/carexteriorimages/630x420/Maruti/Brezza/10753/1713175292249/front-left-side-47.jpg",
-    gallery: ["https://stimg.cardekho.com/images/carexteriorimages/630x420/Maruti/Brezza/10753/1713175292249/front-left-side-47.jpg"],
+    image: marutiBrezza,
+    gallery: [marutiBrezza],
     price: "₹8.34 - 14.14 Lakh",
     priceNumeric: 834000,
     originalPrice: "₹8.80 Lakh",
@@ -392,8 +405,8 @@ const marutiCars: Car[] = [
     brand: "Maruti Suzuki",
     bodyType: "Mid-Size SUV",
     tagline: "Create. Inspire.",
-    image: "https://stimg.cardekho.com/images/carexteriorimages/630x420/Maruti/Grand-Vitara/10577/1713175274139/front-left-side-47.jpg",
-    gallery: ["https://stimg.cardekho.com/images/carexteriorimages/630x420/Maruti/Grand-Vitara/10577/1713175274139/front-left-side-47.jpg"],
+    image: marutiGrandVitara,
+    gallery: [marutiGrandVitara],
     price: "₹10.99 - 19.99 Lakh",
     priceNumeric: 1099000,
     originalPrice: "₹11.50 Lakh",
@@ -470,8 +483,8 @@ const marutiCars: Car[] = [
     brand: "Maruti Suzuki",
     bodyType: "Compact SUV",
     tagline: "Rule Every Road",
-    image: "https://stimg.cardekho.com/images/carexteriorimages/630x420/Maruti/Fronx/10864/1713175288003/front-left-side-47.jpg",
-    gallery: ["https://stimg.cardekho.com/images/carexteriorimages/630x420/Maruti/Fronx/10864/1713175288003/front-left-side-47.jpg"],
+    image: marutiFronx,
+    gallery: [marutiFronx],
     price: "₹7.51 - 13.04 Lakh",
     priceNumeric: 751000,
     originalPrice: "₹8.00 Lakh",
@@ -546,8 +559,8 @@ const marutiCars: Car[] = [
     brand: "Maruti Suzuki",
     bodyType: "MPV",
     tagline: "The Complete Family Car",
-    image: "https://stimg.cardekho.com/images/carexteriorimages/630x420/Maruti/Ertiga/11722/1719979073660/front-left-side-47.jpg",
-    gallery: ["https://stimg.cardekho.com/images/carexteriorimages/630x420/Maruti/Ertiga/11722/1719979073660/front-left-side-47.jpg"],
+    image: marutiErtiga,
+    gallery: [marutiErtiga],
     price: "₹8.69 - 13.03 Lakh",
     priceNumeric: 869000,
     originalPrice: "₹9.20 Lakh",
@@ -623,8 +636,8 @@ const marutiCars: Car[] = [
     brand: "Maruti Suzuki",
     bodyType: "MPV",
     tagline: "Invincible Comfort",
-    image: "https://stimg.cardekho.com/images/carexteriorimages/630x420/Maruti/Invicto/10852/1700196548181/front-left-side-47.jpg",
-    gallery: ["https://stimg.cardekho.com/images/carexteriorimages/630x420/Maruti/Invicto/10852/1700196548181/front-left-side-47.jpg"],
+    image: marutiInvicto,
+    gallery: [marutiInvicto],
     price: "₹25.21 - 28.92 Lakh",
     priceNumeric: 2521000,
     originalPrice: "₹26.00 Lakh",
@@ -693,8 +706,8 @@ const marutiCars: Car[] = [
     brand: "Maruti Suzuki",
     bodyType: "Compact SUV",
     tagline: "Born to be Wild",
-    image: "https://stimg.cardekho.com/images/carexteriorimages/630x420/Maruti/Jimny/10827/1684478995300/front-left-side-47.jpg",
-    gallery: ["https://stimg.cardekho.com/images/carexteriorimages/630x420/Maruti/Jimny/10827/1684478995300/front-left-side-47.jpg"],
+    image: marutiJimny,
+    gallery: [marutiJimny],
     price: "₹12.74 - 14.95 Lakh",
     priceNumeric: 1274000,
     originalPrice: "₹13.50 Lakh",

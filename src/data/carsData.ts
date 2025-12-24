@@ -460,10 +460,67 @@ export const cars: Car[] = [
   },
 ];
 
+// Import all cars from the comprehensive car database
+import { allCars } from "./cars";
+
 export const getCarBySlug = (slug: string): Car | undefined => {
+  // First check the comprehensive car database
+  const carFromAllCars = allCars.find((car) => car.slug === slug);
+  if (carFromAllCars) {
+    // Convert to the legacy format for compatibility
+    return {
+      id: carFromAllCars.id,
+      slug: carFromAllCars.slug,
+      name: carFromAllCars.name,
+      brand: carFromAllCars.brand,
+      tagline: carFromAllCars.tagline,
+      image: carFromAllCars.image,
+      gallery: carFromAllCars.gallery,
+      price: carFromAllCars.price,
+      originalPrice: carFromAllCars.originalPrice,
+      discount: carFromAllCars.discount,
+      fuelTypes: carFromAllCars.fuelTypes,
+      transmission: carFromAllCars.transmission,
+      availability: carFromAllCars.availability,
+      isHot: carFromAllCars.isHot,
+      isLimited: carFromAllCars.isLimited,
+      overview: carFromAllCars.overview,
+      specifications: carFromAllCars.specifications,
+      colors: carFromAllCars.colors,
+      variants: carFromAllCars.variants,
+      offers: carFromAllCars.offers,
+    };
+  }
+  // Fall back to local cars array
   return cars.find((car) => car.slug === slug);
 };
 
 export const getCarById = (id: number): Car | undefined => {
+  // First check the comprehensive car database
+  const carFromAllCars = allCars.find((car) => car.id === id);
+  if (carFromAllCars) {
+    return {
+      id: carFromAllCars.id,
+      slug: carFromAllCars.slug,
+      name: carFromAllCars.name,
+      brand: carFromAllCars.brand,
+      tagline: carFromAllCars.tagline,
+      image: carFromAllCars.image,
+      gallery: carFromAllCars.gallery,
+      price: carFromAllCars.price,
+      originalPrice: carFromAllCars.originalPrice,
+      discount: carFromAllCars.discount,
+      fuelTypes: carFromAllCars.fuelTypes,
+      transmission: carFromAllCars.transmission,
+      availability: carFromAllCars.availability,
+      isHot: carFromAllCars.isHot,
+      isLimited: carFromAllCars.isLimited,
+      overview: carFromAllCars.overview,
+      specifications: carFromAllCars.specifications,
+      colors: carFromAllCars.colors,
+      variants: carFromAllCars.variants,
+      offers: carFromAllCars.offers,
+    };
+  }
   return cars.find((car) => car.id === id);
 };
