@@ -7,7 +7,7 @@ const navLinks = [
   { label: "Compare", href: "/compare" },
   { label: "Offers", href: "#offers" },
   { label: "Car Loans", href: "/car-loans" },
-  { label: "Insurance", href: "#insurance" },
+  { label: "Insurance", href: "/car-insurance" },
 ];
 
 export const Header = () => {
