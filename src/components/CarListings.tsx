@@ -2,10 +2,15 @@ import { Link } from "react-router-dom";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Fuel, Cog, Clock, TrendingDown, MessageCircle, Phone } from "lucide-react";
+import { Fuel, Cog, Clock, TrendingDown, MessageCircle, Phone, Heart } from "lucide-react";
 import { cars } from "@/data/carsData";
+import { useFavorites } from "@/hooks/useFavorites";
+import { useAuth } from "@/hooks/useAuth";
 
 export const CarListings = () => {
+  const { user } = useAuth();
+  const { isFavorite, toggleFavorite } = useFavorites();
+
   return (
     <section id="cars" className="py-16 md:py-24">
       <div className="container mx-auto px-4">
@@ -49,8 +54,16 @@ export const CarListings = () => {
                   )}
                 </div>
                 
-                {/* Discount Badge */}
-                <div className="absolute top-3 right-3">
+                {/* Favorite & Discount */}
+                <div className="absolute top-3 right-3 flex flex-col gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={`bg-background/80 hover:bg-background ${isFavorite(car.id) ? "text-red-500" : "text-muted-foreground"}`}
+                    onClick={() => toggleFavorite(car.id, car.slug)}
+                  >
+                    <Heart className={`h-5 w-5 ${isFavorite(car.id) ? "fill-current" : ""}`} />
+                  </Button>
                   <Badge variant="deal" className="text-sm py-1 px-3">
                     <TrendingDown className="h-3 w-3 mr-1" />
                     {car.discount}
