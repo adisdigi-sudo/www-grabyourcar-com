@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { FloatingCTA } from "@/components/FloatingCTA";
+import { PriceBreakup } from "@/components/PriceBreakup";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,9 +28,11 @@ import {
   User,
   Star,
   Shield,
-  TrendingDown
+  TrendingDown,
+  IndianRupee
 } from "lucide-react";
 import { getCarBySlug } from "@/data/carsData";
+import { calculatePriceBreakup } from "@/data/cars/types";
 import { toast } from "sonner";
 
 const CarDetail = () => {
@@ -384,45 +387,122 @@ const CarDetail = () => {
               </TabsContent>
 
               <TabsContent value="variants" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Available Variants</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {car.variants.map((variant, index) => (
-                        <div
-                          key={index}
-                          onClick={() => setSelectedVariant(index)}
-                          className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                            selectedVariant === index 
-                              ? "border-primary bg-primary/5" 
-                              : "border-border hover:border-primary/50"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-3">
-                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                                selectedVariant === index ? "border-primary bg-primary" : "border-muted-foreground"
-                              }`}>
-                                {selectedVariant === index && <Check className="h-3 w-3 text-primary-foreground" />}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Variants List */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <IndianRupee className="h-5 w-5 text-primary" />
+                        Select Variant
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground">Choose a variant to see on-road price</p>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {car.variants.map((variant, index) => {
+                          // Parse price from string like "₹6.49 Lakh" to number
+                          const priceMatch = variant.price.match(/[\d.]+/);
+                          const priceInLakh = priceMatch ? parseFloat(priceMatch[0]) : 0;
+                          const exShowroomPrice = variant.priceNumeric || priceInLakh * 100000;
+                          const breakup = variant.priceBreakup || calculatePriceBreakup(exShowroomPrice);
+                          
+                          return (
+                            <div
+                              key={index}
+                              onClick={() => setSelectedVariant(index)}
+                              className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                                selectedVariant === index 
+                                  ? "border-primary bg-primary/5 shadow-lg" 
+                                  : "border-border hover:border-primary/50 hover:bg-muted/30"
+                              }`}
+                            >
+                              <div className="flex items-start justify-between mb-3">
+                                <div className="flex items-start gap-3">
+                                  <div className={`w-5 h-5 mt-1 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                                    selectedVariant === index ? "border-primary bg-primary" : "border-muted-foreground"
+                                  }`}>
+                                    {selectedVariant === index && <Check className="h-3 w-3 text-primary-foreground" />}
+                                  </div>
+                                  <div>
+                                    <h4 className="font-semibold text-base">{car.name} {variant.name}</h4>
+                                    {variant.fuelType && (
+                                      <p className="text-xs text-muted-foreground mt-0.5">
+                                        {variant.fuelType} {variant.transmission && `• ${variant.transmission}`}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <span className="text-lg font-bold text-primary">{variant.price}</span>
+                                  <p className="text-xs text-muted-foreground">Ex-showroom</p>
+                                </div>
                               </div>
-                              <h4 className="font-semibold text-lg">{car.name} {variant.name}</h4>
+                              
+                              {/* On-road price preview */}
+                              <div className="flex items-center justify-between bg-muted/50 rounded-lg px-3 py-2 ml-8 mb-2">
+                                <span className="text-sm text-muted-foreground">On-Road Price (Delhi)</span>
+                                <span className="text-sm font-semibold text-success">
+                                  ₹{(breakup.onRoadPrice / 100000).toFixed(2)} Lakh
+                                </span>
+                              </div>
+                              
+                              <div className="flex flex-wrap gap-1.5 pl-8">
+                                {variant.features.slice(0, 3).map((feature, fIndex) => (
+                                  <Badge key={fIndex} variant="secondary" className="text-xs">
+                                    {feature}
+                                  </Badge>
+                                ))}
+                                {variant.features.length > 3 && (
+                                  <Badge variant="outline" className="text-xs">
+                                    +{variant.features.length - 3} more
+                                  </Badge>
+                                )}
+                              </div>
                             </div>
-                            <span className="text-xl font-bold text-primary">{variant.price}</span>
-                          </div>
-                          <div className="flex flex-wrap gap-2 pl-8">
-                            {variant.features.map((feature, fIndex) => (
-                              <Badge key={fIndex} variant="secondary" className="text-xs">
-                                {feature}
-                              </Badge>
-                            ))}
-                          </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  {/* Price Breakup */}
+                  <div className="space-y-4">
+                    {(() => {
+                      const selectedVar = car.variants[selectedVariant];
+                      const priceMatch = selectedVar.price.match(/[\d.]+/);
+                      const priceInLakh = priceMatch ? parseFloat(priceMatch[0]) : 0;
+                      const exShowroomPrice = selectedVar.priceNumeric || priceInLakh * 100000;
+                      
+                      return (
+                        <PriceBreakup
+                          variantName={selectedVar.name}
+                          carName={car.name}
+                          priceBreakup={selectedVar.priceBreakup}
+                          exShowroomPrice={exShowroomPrice}
+                        />
+                      );
+                    })()}
+                    
+                    {/* Features for selected variant */}
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base">
+                          Features - {car.name} {car.variants[selectedVariant].name}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-1 gap-2">
+                          {car.variants[selectedVariant].features.map((feature, fIndex) => (
+                            <div key={fIndex} className="flex items-center gap-2 py-1">
+                              <Check className="h-4 w-4 text-success flex-shrink-0" />
+                              <span className="text-sm">{feature}</span>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </div>
               </TabsContent>
 
               <TabsContent value="offers" className="space-y-6">
