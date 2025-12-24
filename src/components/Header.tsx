@@ -111,15 +111,16 @@ export const Header = () => {
               Get Best Deal
             </Button>
             
-            {/* Mobile Menu Toggle */}
-            <button
-              className="lg:hidden p-2 hover:bg-muted rounded-lg transition-colors"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-            </button>
           </div>
         </div>
+
+        {/* Mobile Bottom Hamburger */}
+        <button
+          className="lg:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-50 p-4 bg-primary text-primary-foreground rounded-full shadow-lg hover:bg-primary/90 transition-all"
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+        >
+          {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+        </button>
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
