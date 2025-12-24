@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { MessageCircle, X, Send, Bot, User } from "lucide-react";
-import { Link } from "react-router-dom";
+import { MessageCircle, X, Send, Bot, User, GitCompare } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -224,6 +224,18 @@ export const CarAdvisorChat = () => {
                         {mentionedCars.map((car) => (
                           <CarCard key={car.id} car={car} />
                         ))}
+                        
+                        {/* Compare Button */}
+                        {mentionedCars.length >= 2 && (
+                          <Link
+                            to="/compare"
+                            state={{ preselectedCars: mentionedCars.slice(0, 3).map(c => c.id) }}
+                            className="flex items-center justify-center gap-2 p-2 rounded-lg bg-primary/10 hover:bg-primary/20 border border-primary/20 transition-colors text-primary font-medium text-sm"
+                          >
+                            <GitCompare className="h-4 w-4" />
+                            Compare these {mentionedCars.length > 3 ? 3 : mentionedCars.length} cars
+                          </Link>
+                        )}
                       </div>
                     )}
                   </div>

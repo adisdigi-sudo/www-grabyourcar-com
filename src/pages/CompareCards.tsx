@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { cars, Car } from "@/data/carsData";
@@ -23,7 +24,22 @@ import {
 import { X, Plus, Car as CarIcon, Fuel, Gauge, Shield, Maximize, Zap } from "lucide-react";
 
 const CompareCars = () => {
-  const [selectedCars, setSelectedCars] = useState<(Car | null)[]>([null, null, null]);
+  const location = useLocation();
+  const preselectedCarIds = (location.state as { preselectedCars?: number[] })?.preselectedCars;
+  
+  const [selectedCars, setSelectedCars] = useState<(Car | null)[]>(() => {
+    if (preselectedCarIds && preselectedCarIds.length > 0) {
+      const preselected = preselectedCarIds.slice(0, 3).map(id => 
+        cars.find(c => c.id === id) || null
+      );
+      // Fill remaining slots with null
+      while (preselected.length < 3) {
+        preselected.push(null);
+      }
+      return preselected;
+    }
+    return [null, null, null];
+  });
 
   const handleSelectCar = (index: number, carId: string) => {
     const car = cars.find((c) => c.id.toString() === carId) || null;
