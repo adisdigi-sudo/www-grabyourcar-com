@@ -1,6 +1,8 @@
 import { useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import { 
   Car, 
   Clock, 
@@ -21,6 +23,8 @@ const categories = [
     description: "Pan-India Deals from Authorized Dealers",
     color: "text-primary",
     bgColor: "bg-primary/10",
+    href: "#cars",
+    type: "scroll" as const,
   },
   {
     icon: Clock,
@@ -28,6 +32,8 @@ const categories = [
     description: "Ready Stock Cars Available Now",
     color: "text-accent-foreground",
     bgColor: "bg-accent/50",
+    href: "#cars",
+    type: "scroll" as const,
   },
   {
     icon: GitCompare,
@@ -35,6 +41,8 @@ const categories = [
     description: "Best Deals from Multiple Dealers",
     color: "text-success",
     bgColor: "bg-success/10",
+    href: "/compare",
+    type: "navigate" as const,
   },
   {
     icon: Shield,
@@ -42,6 +50,8 @@ const categories = [
     description: "Best Rates from Top Insurers",
     color: "text-primary",
     bgColor: "bg-primary/10",
+    href: "/car-insurance",
+    type: "navigate" as const,
   },
   {
     icon: Banknote,
@@ -49,6 +59,8 @@ const categories = [
     description: "Easy Finance from Banks & NBFCs",
     color: "text-accent-foreground",
     bgColor: "bg-accent/50",
+    href: "/car-loans",
+    type: "navigate" as const,
   },
   {
     icon: Building2,
@@ -56,6 +68,8 @@ const categories = [
     description: "Bulk Deals for Businesses",
     color: "text-success",
     bgColor: "bg-success/10",
+    href: "#lead-form",
+    type: "scroll" as const,
   },
   {
     icon: CarFront,
@@ -63,6 +77,8 @@ const categories = [
     description: "Coming Soon",
     color: "text-muted-foreground",
     bgColor: "bg-muted",
+    href: "",
+    type: "coming-soon" as const,
   },
   {
     icon: Package,
@@ -70,11 +86,14 @@ const categories = [
     description: "HSRP Frames & More",
     color: "text-muted-foreground",
     bgColor: "bg-muted",
+    href: "",
+    type: "coming-soon" as const,
   },
 ];
 
 export const CategoryGrid = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   const scroll = (direction: "left" | "right") => {
     if (scrollRef.current) {
@@ -83,6 +102,27 @@ export const CategoryGrid = () => {
         left: direction === "left" ? -scrollAmount : scrollAmount,
         behavior: "smooth",
       });
+    }
+  };
+
+  const handleCategoryClick = (category: typeof categories[0]) => {
+    if (category.type === "coming-soon") {
+      toast.info(`${category.title} - Coming Soon!`, {
+        description: "We're working on this feature. Stay tuned!",
+      });
+      return;
+    }
+
+    if (category.type === "scroll") {
+      const element = document.querySelector(category.href);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+      }
+      return;
+    }
+
+    if (category.type === "navigate") {
+      navigate(category.href);
     }
   };
 
@@ -133,6 +173,7 @@ export const CategoryGrid = () => {
               key={category.title}
               variant="deal"
               className="flex-shrink-0 w-40 md:w-48 p-4 cursor-pointer group"
+              onClick={() => handleCategoryClick(category)}
             >
               <div className={`w-10 h-10 md:w-12 md:h-12 rounded-lg ${category.bgColor} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300`}>
                 <category.icon className={`h-5 w-5 md:h-6 md:w-6 ${category.color}`} />
