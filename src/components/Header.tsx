@@ -5,9 +5,9 @@ import logoImage from "@/assets/logo-option-4.png";
 const navLinks = [
   { label: "New Cars", href: "#cars" },
   { label: "Compare", href: "/compare" },
-  { label: "Offers", href: "#offers" },
   { label: "Car Loans", href: "/car-loans" },
   { label: "Insurance", href: "/car-insurance" },
+  { label: "Blog", href: "/blog" },
 ];
 
 export const Header = () => {
