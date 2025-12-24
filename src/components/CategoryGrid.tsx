@@ -1,4 +1,6 @@
+import { useRef } from "react";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { 
   Car, 
   Clock, 
@@ -7,7 +9,9 @@ import {
   Banknote, 
   Building2, 
   CarFront, 
-  Package 
+  Package,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 
 const categories = [
@@ -22,8 +26,8 @@ const categories = [
     icon: Clock,
     title: "Zero Waiting",
     description: "Ready Stock Cars Available Now",
-    color: "text-accent",
-    bgColor: "bg-accent/10",
+    color: "text-accent-foreground",
+    bgColor: "bg-accent/50",
   },
   {
     icon: GitCompare,
@@ -43,8 +47,8 @@ const categories = [
     icon: Banknote,
     title: "Car Loans",
     description: "Easy Finance from Banks & NBFCs",
-    color: "text-accent",
-    bgColor: "bg-accent/10",
+    color: "text-accent-foreground",
+    bgColor: "bg-accent/50",
   },
   {
     icon: Building2,
@@ -70,8 +74,17 @@ const categories = [
 ];
 
 export const CategoryGrid = () => {
-  // Duplicate categories for seamless infinite scroll
-  const duplicatedCategories = [...categories, ...categories];
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const scroll = (direction: "left" | "right") => {
+    if (scrollRef.current) {
+      const scrollAmount = 200;
+      scrollRef.current.scrollBy({
+        left: direction === "left" ? -scrollAmount : scrollAmount,
+        behavior: "smooth",
+      });
+    }
+  };
 
   return (
     <section className="py-12 md:py-16 bg-secondary/50 overflow-hidden">
@@ -87,10 +100,37 @@ export const CategoryGrid = () => {
       </div>
 
       <div className="relative">
-        <div className="flex gap-4 animate-scroll hover:pause-animation">
-          {duplicatedCategories.map((category, index) => (
+        {/* Left scroll button */}
+        <Button
+          variant="outline"
+          size="icon"
+          className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-card/90 backdrop-blur-sm shadow-md hover:bg-card"
+          onClick={() => scroll("left")}
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </Button>
+
+        {/* Right scroll button */}
+        <Button
+          variant="outline"
+          size="icon"
+          className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-card/90 backdrop-blur-sm shadow-md hover:bg-card"
+          onClick={() => scroll("right")}
+        >
+          <ChevronRight className="h-5 w-5" />
+        </Button>
+
+        {/* Gradient fade edges */}
+        <div className="absolute left-0 top-0 bottom-0 w-12 md:w-20 bg-gradient-to-r from-secondary/50 to-transparent z-[5] pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-12 md:w-20 bg-gradient-to-l from-secondary/50 to-transparent z-[5] pointer-events-none" />
+
+        <div
+          ref={scrollRef}
+          className="flex gap-4 px-12 md:px-20 overflow-x-auto scrollbar-hide scroll-smooth"
+        >
+          {categories.map((category) => (
             <Card
-              key={`${category.title}-${index}`}
+              key={category.title}
               variant="deal"
               className="flex-shrink-0 w-40 md:w-48 p-4 cursor-pointer group"
             >
