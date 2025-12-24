@@ -1,7 +1,7 @@
-import { Phone, MessageCircle, Menu, X, Car } from "lucide-react";
+import { Phone, MessageCircle, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-
+import logoImage from "@/assets/logo-grabyourcar.png";
 const navLinks = [
   { label: "New Cars", href: "#cars" },
   { label: "Compare", href: "/compare" },
@@ -20,12 +20,7 @@ export const Header = () => {
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
           <a href="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
-              <Car className="h-6 w-6 text-primary-foreground" />
-            </div>
-            <span className="font-heading font-bold text-xl md:text-2xl text-foreground">
-              Grab<span className="text-accent">your</span>car
-            </span>
+            <img src={logoImage} alt="Grabyourcar" className="h-10 md:h-12 w-auto" />
           </a>
 
           {/* Desktop Navigation */}
