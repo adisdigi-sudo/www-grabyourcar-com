@@ -4,6 +4,7 @@ import carSwift from "@/assets/car-swift.jpg";
 import carXuv700 from "@/assets/car-xuv700.jpg";
 import carSeltos from "@/assets/car-seltos.jpg";
 import carInnova from "@/assets/car-innova.jpg";
+import { CarVariant, PriceBreakup } from "./cars/types";
 
 export interface CarSpec {
   label: string;
@@ -43,7 +44,7 @@ export interface Car {
     features: CarSpec[];
   };
   colors: { name: string; hex: string }[];
-  variants: { name: string; price: string; features: string[] }[];
+  variants: CarVariant[];
   offers: DealerOffer[];
 }
 

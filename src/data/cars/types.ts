@@ -15,11 +15,75 @@ export interface DealerOffer {
   type: "cashback" | "accessory" | "exchange" | "finance";
 }
 
+export interface PriceBreakup {
+  exShowroom: number;
+  rto: number;
+  insurance: number;
+  tcs: number;
+  fastag: number;
+  registration: number;
+  handling: number;
+  onRoadPrice: number;
+}
+
 export interface CarVariant {
   name: string;
   price: string;
+  priceNumeric?: number;
   features: string[];
+  fuelType?: string;
+  transmission?: string;
+  priceBreakup?: PriceBreakup;
 }
+
+// Helper to calculate price breakup from ex-showroom price
+export const calculatePriceBreakup = (exShowroomPrice: number, state: string = "Delhi"): PriceBreakup => {
+  // RTO charges vary by state (typically 8-15% of ex-showroom)
+  const rtoPercent = state === "Delhi" ? 0.08 : state === "Maharashtra" ? 0.11 : state === "Karnataka" ? 0.13 : 0.10;
+  const rto = Math.round(exShowroomPrice * rtoPercent);
+  
+  // Insurance (typically 3-4% of ex-showroom for comprehensive)
+  const insurance = Math.round(exShowroomPrice * 0.035);
+  
+  // TCS (1% if price > 10 lakhs)
+  const tcs = exShowroomPrice > 1000000 ? Math.round(exShowroomPrice * 0.01) : 0;
+  
+  // Fixed charges
+  const fastag = 500;
+  const registration = 1000;
+  const handling = 15000;
+  
+  const onRoadPrice = exShowroomPrice + rto + insurance + tcs + fastag + registration + handling;
+  
+  return {
+    exShowroom: exShowroomPrice,
+    rto,
+    insurance,
+    tcs,
+    fastag,
+    registration,
+    handling,
+    onRoadPrice
+  };
+};
+
+// Helper to generate variant with price breakup
+export const createVariant = (
+  name: string, 
+  priceLabel: string, 
+  priceNumeric: number, 
+  features: string[],
+  fuelType?: string,
+  transmission?: string
+): CarVariant => ({
+  name,
+  price: priceLabel,
+  priceNumeric,
+  features,
+  fuelType,
+  transmission,
+  priceBreakup: calculatePriceBreakup(priceNumeric)
+});
 
 export interface CarColor {
   name: string;
