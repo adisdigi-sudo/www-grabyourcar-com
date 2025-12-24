@@ -70,33 +70,37 @@ const categories = [
 ];
 
 export const CategoryGrid = () => {
+  // Duplicate categories for seamless infinite scroll
+  const duplicatedCategories = [...categories, ...categories];
+
   return (
-    <section className="py-16 md:py-24 bg-secondary/50">
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-12">
-          <h2 className="font-heading text-3xl md:text-4xl font-bold text-foreground mb-4">
+    <section className="py-12 md:py-16 bg-secondary/50 overflow-hidden">
+      <div className="container mx-auto px-4 mb-8">
+        <div className="text-center">
+          <h2 className="font-heading text-2xl md:text-3xl font-bold text-foreground mb-3">
             Everything You Need to Buy Your Car
           </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-muted-foreground text-sm md:text-base max-w-xl mx-auto">
             From finding the best deals to financing and insurance — we've got you covered
           </p>
         </div>
+      </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-          {categories.map((category, index) => (
+      <div className="relative">
+        <div className="flex gap-4 animate-scroll hover:pause-animation">
+          {duplicatedCategories.map((category, index) => (
             <Card
-              key={category.title}
+              key={`${category.title}-${index}`}
               variant="deal"
-              className="p-6 cursor-pointer group"
-              style={{ animationDelay: `${index * 0.1}s` }}
+              className="flex-shrink-0 w-40 md:w-48 p-4 cursor-pointer group"
             >
-              <div className={`w-14 h-14 rounded-xl ${category.bgColor} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
-                <category.icon className={`h-7 w-7 ${category.color}`} />
+              <div className={`w-10 h-10 md:w-12 md:h-12 rounded-lg ${category.bgColor} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300`}>
+                <category.icon className={`h-5 w-5 md:h-6 md:w-6 ${category.color}`} />
               </div>
-              <h3 className="font-heading font-semibold text-foreground mb-1">
+              <h3 className="font-heading font-semibold text-foreground text-sm md:text-base mb-1">
                 {category.title}
               </h3>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs text-muted-foreground line-clamp-2">
                 {category.description}
               </p>
             </Card>

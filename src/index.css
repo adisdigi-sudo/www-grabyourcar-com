@@ -239,3 +239,8 @@
   background-size: 200% 100%;
   animation: shimmer 2s infinite;
 }
+
+/* Pause animation on hover */
+.hover\:pause-animation:hover {
+  animation-play-state: paused;
+}
