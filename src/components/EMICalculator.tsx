@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
@@ -62,6 +63,33 @@ const EMICalculator = ({ onGetQuote }: EMICalculatorProps) => {
     onGetQuote?.(loanDetails);
   };
 
+  const handleLoanAmountChange = (value: string) => {
+    const num = parseInt(value.replace(/,/g, ''), 10);
+    if (!isNaN(num)) {
+      setLoanAmount(Math.min(Math.max(num, 100000), 100000000));
+    } else if (value === '') {
+      setLoanAmount(100000);
+    }
+  };
+
+  const handleInterestRateChange = (value: string) => {
+    const num = parseFloat(value);
+    if (!isNaN(num)) {
+      setInterestRate(Math.min(Math.max(num, 6), 18));
+    } else if (value === '') {
+      setInterestRate(6);
+    }
+  };
+
+  const handleTenureChange = (value: string) => {
+    const num = parseInt(value, 10);
+    if (!isNaN(num)) {
+      setTenure(Math.min(Math.max(num, 12), 84));
+    } else if (value === '') {
+      setTenure(12);
+    }
+  };
+
   return (
     <section className="py-10 bg-muted/30">
       <div className="container mx-auto px-4">
@@ -91,7 +119,15 @@ const EMICalculator = ({ onGetQuote }: EMICalculatorProps) => {
                         <IndianRupee className="w-3 h-3 text-muted-foreground" />
                         Loan Amount
                       </Label>
-                      <span className="text-sm font-semibold text-primary">{formatCurrency(loanAmount)}</span>
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-muted-foreground">₹</span>
+                        <Input
+                          type="text"
+                          value={loanAmount.toLocaleString("en-IN")}
+                          onChange={(e) => handleLoanAmountChange(e.target.value)}
+                          className="w-28 h-7 text-xs text-right font-semibold text-primary px-2"
+                        />
+                      </div>
                     </div>
                     <Slider
                       value={[loanAmount]}
@@ -114,9 +150,18 @@ const EMICalculator = ({ onGetQuote }: EMICalculatorProps) => {
                         <Percent className="w-3 h-3 text-muted-foreground" />
                         Interest Rate
                       </Label>
-                      <span className="text-sm font-semibold bg-primary/10 text-primary px-2 py-0.5 rounded">
-                        {interestRate.toFixed(1)}%
-                      </span>
+                      <div className="flex items-center gap-1">
+                        <Input
+                          type="number"
+                          value={interestRate}
+                          onChange={(e) => handleInterestRateChange(e.target.value)}
+                          step="0.1"
+                          min="6"
+                          max="18"
+                          className="w-16 h-7 text-xs text-right font-semibold text-primary px-2"
+                        />
+                        <span className="text-xs text-muted-foreground">%</span>
+                      </div>
                     </div>
                     <Slider
                       value={[interestRate]}
@@ -139,14 +184,24 @@ const EMICalculator = ({ onGetQuote }: EMICalculatorProps) => {
                         <Calendar className="w-3 h-3 text-muted-foreground" />
                         Tenure
                       </Label>
-                      <span className="text-sm font-semibold text-foreground">{tenure}M ({(tenure / 12).toFixed(1)}Y)</span>
+                      <div className="flex items-center gap-1">
+                        <Input
+                          type="number"
+                          value={tenure}
+                          onChange={(e) => handleTenureChange(e.target.value)}
+                          min="12"
+                          max="84"
+                          className="w-16 h-7 text-xs text-right font-semibold text-foreground px-2"
+                        />
+                        <span className="text-xs text-muted-foreground">months</span>
+                      </div>
                     </div>
                     <Slider
                       value={[tenure]}
                       onValueChange={(value) => setTenure(value[0])}
                       min={12}
                       max={84}
-                      step={6}
+                      step={1}
                       className="w-full"
                     />
                     <div className="flex justify-between text-xs text-muted-foreground">
