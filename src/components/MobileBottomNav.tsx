@@ -11,6 +11,7 @@ const navLinks = [
   { label: "Car Loans", href: "/car-loans" },
   { label: "Insurance", href: "/car-insurance" },
   { label: "Corporate", href: "/corporate" },
+  { label: "Accessories", href: "/accessories" },
   { label: "Blog", href: "/blog" },
 ];
 
