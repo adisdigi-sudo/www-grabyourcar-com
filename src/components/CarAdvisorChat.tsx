@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import { MessageCircle, X, Send, Bot, User } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { cars } from "@/data/carsData";
 
 type Message = {
   role: "user" | "assistant";
@@ -11,6 +13,41 @@ type Message = {
 };
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/car-advisor`;
+
+// Detect which cars are mentioned in a message
+const detectMentionedCars = (content: string) => {
+  const lowerContent = content.toLowerCase();
+  return cars.filter((car) => {
+    const carName = car.name.toLowerCase();
+    const brandName = car.brand.toLowerCase();
+    // Check for full name, or brand + model keyword
+    return (
+      lowerContent.includes(carName) ||
+      (lowerContent.includes(brandName) && lowerContent.includes(carName.split(" ")[1]?.toLowerCase() || ""))
+    );
+  });
+};
+
+// Car card component
+const CarCard = ({ car }: { car: typeof cars[0] }) => (
+  <Link
+    to={`/car/${car.slug}`}
+    className="flex items-center gap-3 p-2 rounded-lg bg-background/50 hover:bg-background/80 border border-border/50 transition-colors group"
+  >
+    <img
+      src={car.image}
+      alt={car.name}
+      className="w-16 h-12 object-cover rounded-md"
+    />
+    <div className="flex-1 min-w-0">
+      <p className="font-medium text-sm text-foreground group-hover:text-primary truncate">
+        {car.name}
+      </p>
+      <p className="text-xs text-muted-foreground">{car.price}</p>
+    </div>
+    <span className="text-xs text-primary font-medium">View →</span>
+  </Link>
+);
 
 export const CarAdvisorChat = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -148,36 +185,50 @@ export const CarAdvisorChat = () => {
           {/* Messages */}
           <ScrollArea className="h-[400px] p-4" ref={scrollRef}>
             <div className="space-y-4">
-              {messages.map((message, index) => (
-                <div
-                  key={index}
-                  className={cn(
-                    "flex gap-2",
-                    message.role === "user" ? "justify-end" : "justify-start"
-                  )}
-                >
-                  {message.role === "assistant" && (
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                      <Bot className="h-4 w-4 text-primary" />
+              {messages.map((message, index) => {
+                const mentionedCars = message.role === "assistant" ? detectMentionedCars(message.content) : [];
+                
+                return (
+                  <div key={index} className="space-y-2">
+                    <div
+                      className={cn(
+                        "flex gap-2",
+                        message.role === "user" ? "justify-end" : "justify-start"
+                      )}
+                    >
+                      {message.role === "assistant" && (
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                          <Bot className="h-4 w-4 text-primary" />
+                        </div>
+                      )}
+                      <div
+                        className={cn(
+                          "max-w-[80%] rounded-2xl px-4 py-2 text-sm",
+                          message.role === "user"
+                            ? "bg-primary text-primary-foreground rounded-br-md"
+                            : "bg-muted text-foreground rounded-bl-md"
+                        )}
+                      >
+                        {message.content}
+                      </div>
+                      {message.role === "user" && (
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary">
+                          <User className="h-4 w-4 text-secondary-foreground" />
+                        </div>
+                      )}
                     </div>
-                  )}
-                  <div
-                    className={cn(
-                      "max-w-[80%] rounded-2xl px-4 py-2 text-sm",
-                      message.role === "user"
-                        ? "bg-primary text-primary-foreground rounded-br-md"
-                        : "bg-muted text-foreground rounded-bl-md"
+                    
+                    {/* Car Cards */}
+                    {mentionedCars.length > 0 && (
+                      <div className="ml-10 space-y-2">
+                        {mentionedCars.map((car) => (
+                          <CarCard key={car.id} car={car} />
+                        ))}
+                      </div>
                     )}
-                  >
-                    {message.content}
                   </div>
-                  {message.role === "user" && (
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary">
-                      <User className="h-4 w-4 text-secondary-foreground" />
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
               {isLoading && messages[messages.length - 1]?.role === "user" && (
                 <div className="flex gap-2">
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
