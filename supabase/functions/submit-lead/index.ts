@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -26,6 +25,11 @@ function checkRateLimit(ip: string): boolean {
   
   record.count++;
   return true;
+}
+
+// Generate a simple request ID for logging
+function generateRequestId(): string {
+  return `req_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
 // Validation functions
@@ -87,6 +91,45 @@ function validateCarInterest(carInterest: string | undefined): { valid: boolean;
   return { valid: true };
 }
 
+function validateEmail(email: string | undefined): { valid: boolean; error?: string } {
+  if (!email || typeof email !== 'string') {
+    return { valid: true }; // Optional field for regular leads
+  }
+  const trimmed = email.trim();
+  if (trimmed.length === 0) {
+    return { valid: true }; // Empty is valid for optional
+  }
+  if (trimmed.length > 255) {
+    return { valid: false, error: "Email must be less than 255 characters" };
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+    return { valid: false, error: "Please enter a valid email address" };
+  }
+  return { valid: true };
+}
+
+function validateMessage(message: string | undefined): { valid: boolean; error?: string } {
+  if (!message || typeof message !== 'string') {
+    return { valid: true }; // Optional field
+  }
+  const trimmed = message.trim();
+  if (trimmed.length > 500) {
+    return { valid: false, error: "Message must be less than 500 characters" };
+  }
+  return { valid: true };
+}
+
+function validateType(type: string | undefined): { valid: boolean; error?: string } {
+  if (!type || typeof type !== 'string') {
+    return { valid: true }; // Optional field, defaults to regular
+  }
+  const validTypes = ['regular', 'corporate'];
+  if (!validTypes.includes(type)) {
+    return { valid: false, error: "Invalid lead type" };
+  }
+  return { valid: true };
+}
+
 // Sanitize input by trimming and escaping special characters
 function sanitize(input: string | undefined): string {
   if (!input || typeof input !== 'string') return '';
@@ -99,6 +142,8 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const requestId = generateRequestId();
+
   try {
     // Get client IP for rate limiting
     const clientIP = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
@@ -107,7 +152,7 @@ serve(async (req) => {
     
     // Check rate limit
     if (!checkRateLimit(clientIP)) {
-      console.log(`Rate limit exceeded for IP: ${clientIP}`);
+      console.log(`Rate limit exceeded`, { requestId });
       return new Response(
         JSON.stringify({ error: "Too many requests. Please try again later." }),
         { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -115,11 +160,12 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    console.log("Received lead submission request");
+    console.log("Lead submission request received", { requestId });
 
     // Validate all fields
     const nameValidation = validateName(body.name);
     if (!nameValidation.valid) {
+      console.log("Validation failed: name", { requestId });
       return new Response(
         JSON.stringify({ error: nameValidation.error }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -128,6 +174,7 @@ serve(async (req) => {
 
     const phoneValidation = validatePhone(body.phone);
     if (!phoneValidation.valid) {
+      console.log("Validation failed: phone", { requestId });
       return new Response(
         JSON.stringify({ error: phoneValidation.error }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -136,6 +183,7 @@ serve(async (req) => {
 
     const cityValidation = validateCity(body.city);
     if (!cityValidation.valid) {
+      console.log("Validation failed: city", { requestId });
       return new Response(
         JSON.stringify({ error: cityValidation.error }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -144,8 +192,36 @@ serve(async (req) => {
 
     const carInterestValidation = validateCarInterest(body.carInterest);
     if (!carInterestValidation.valid) {
+      console.log("Validation failed: carInterest", { requestId });
       return new Response(
         JSON.stringify({ error: carInterestValidation.error }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const emailValidation = validateEmail(body.email);
+    if (!emailValidation.valid) {
+      console.log("Validation failed: email", { requestId });
+      return new Response(
+        JSON.stringify({ error: emailValidation.error }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const messageValidation = validateMessage(body.message);
+    if (!messageValidation.valid) {
+      console.log("Validation failed: message", { requestId });
+      return new Response(
+        JSON.stringify({ error: messageValidation.error }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const typeValidation = validateType(body.type);
+    if (!typeValidation.valid) {
+      console.log("Validation failed: type", { requestId });
+      return new Response(
+        JSON.stringify({ error: typeValidation.error }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -156,13 +232,16 @@ serve(async (req) => {
       phone: sanitize(body.phone).replace(/\D/g, ''),
       city: sanitize(body.city) || null,
       carInterest: sanitize(body.carInterest) || null,
+      email: sanitize(body.email) || null,
+      message: sanitize(body.message) || null,
+      type: body.type || 'regular',
     };
 
-    console.log("Lead submission validated successfully:", { 
-      name: sanitizedData.name, 
-      phone: sanitizedData.phone.slice(0, 4) + '******',
-      city: sanitizedData.city,
-      carInterest: sanitizedData.carInterest
+    // Log only non-PII data for debugging
+    console.log("Lead submission validated successfully", { 
+      requestId,
+      timestamp: new Date().toISOString(),
+      type: sanitizedData.type,
     });
 
     // Return success - actual database insertion would require user authentication
@@ -177,7 +256,7 @@ serve(async (req) => {
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error("Error processing lead submission:", errorMessage);
+    console.error("Error processing lead submission", { requestId, error: errorMessage });
     return new Response(
       JSON.stringify({ error: "An unexpected error occurred. Please try again." }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
