@@ -48,16 +48,28 @@ import {
   Flame,
   Clock,
   Tag,
+  GitCompare,
+  Check,
 } from "lucide-react";
 import { allCars, brands, bodyTypes, fuelTypes, transmissionTypes, priceRanges } from "@/data/cars";
 import { useAuth } from "@/hooks/useAuth";
 import { useFavorites } from "@/hooks/useFavorites";
+import { useCompare } from "@/hooks/useCompare";
 import { cn } from "@/lib/utils";
 
 const Cars = () => {
   const { user } = useAuth();
   const { favorites, toggleFavorite } = useFavorites();
+  const { isInCompare, addToCompare, removeFromCompare, canAddMore } = useCompare();
   
+  const handleCompareToggle = (carId: number) => {
+    if (isInCompare(carId)) {
+      removeFromCompare(carId);
+    } else {
+      addToCompare(carId);
+    }
+  };
+
   // Filter states
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
@@ -669,26 +681,49 @@ const Cars = () => {
                             <Badge className="bg-purple-500 text-white">Limited</Badge>
                           )}
                         </div>
-                        {user && (
+                        {/* Favorite & Compare Buttons */}
+                        <div className="absolute top-3 right-3 flex flex-col gap-1.5">
+                          {user && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 bg-white/80 hover:bg-white rounded-full"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                toggleFavorite(car.id, car.slug);
+                              }}
+                            >
+                              <Heart
+                                className={cn(
+                                  "h-4 w-4",
+                                  favorites?.some((f) => f.car_id === car.id)
+                                    ? "fill-red-500 text-red-500"
+                                    : "text-muted-foreground"
+                                )}
+                              />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="absolute top-3 right-3 h-8 w-8 bg-white/80 hover:bg-white rounded-full"
+                            className={cn(
+                              "h-8 w-8 bg-white/80 hover:bg-white rounded-full",
+                              isInCompare(car.id) && "bg-primary/20 hover:bg-primary/30"
+                            )}
                             onClick={(e) => {
                               e.preventDefault();
-                              toggleFavorite(car.id, car.slug);
+                              handleCompareToggle(car.id);
                             }}
+                            disabled={!canAddMore && !isInCompare(car.id)}
+                            title={isInCompare(car.id) ? "Remove from compare" : canAddMore ? "Add to compare" : "Max 3 cars"}
                           >
-                            <Heart
-                              className={cn(
-                                "h-4 w-4",
-                                favorites?.some((f) => f.car_id === car.id)
-                                  ? "fill-red-500 text-red-500"
-                                  : "text-muted-foreground"
-                              )}
-                            />
+                            {isInCompare(car.id) ? (
+                              <Check className="h-4 w-4 text-primary" />
+                            ) : (
+                              <GitCompare className="h-4 w-4 text-muted-foreground" />
+                            )}
                           </Button>
-                        )}
+                        </div>
                       </div>
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between gap-2 mb-2">
@@ -797,6 +832,22 @@ const Cars = () => {
                                 />
                               </Button>
                             )}
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className={cn(
+                                isInCompare(car.id) && "border-primary text-primary"
+                              )}
+                              onClick={() => handleCompareToggle(car.id)}
+                              disabled={!canAddMore && !isInCompare(car.id)}
+                              title={isInCompare(car.id) ? "Remove from compare" : canAddMore ? "Add to compare" : "Max 3 cars"}
+                            >
+                              {isInCompare(car.id) ? (
+                                <Check className="h-4 w-4" />
+                              ) : (
+                                <GitCompare className="h-4 w-4" />
+                              )}
+                            </Button>
                           </div>
                         </CardContent>
                       </div>
