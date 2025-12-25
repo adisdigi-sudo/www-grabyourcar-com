@@ -2,10 +2,12 @@ import { Link } from "react-router-dom";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Fuel, Cog, Clock, TrendingDown, MessageCircle, Phone, Heart } from "lucide-react";
+import { Fuel, Cog, Clock, TrendingDown, MessageCircle, Phone, Heart, GitCompare, Check } from "lucide-react";
 import { allCars } from "@/data/cars";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useAuth } from "@/hooks/useAuth";
+import { useCompare } from "@/hooks/useCompare";
+import { cn } from "@/lib/utils";
 
 // Get featured cars for homepage - show first 12 cars with deals
 const featuredCars = allCars.slice(0, 12).map(car => ({
@@ -22,6 +24,15 @@ const featuredCars = allCars.slice(0, 12).map(car => ({
 export const CarListings = () => {
   const { user } = useAuth();
   const { isFavorite, toggleFavorite } = useFavorites();
+  const { isInCompare, addToCompare, removeFromCompare, canAddMore } = useCompare();
+
+  const handleCompareToggle = (carId: number) => {
+    if (isInCompare(carId)) {
+      removeFromCompare(carId);
+    } else {
+      addToCompare(carId);
+    }
+  };
 
   return (
     <section id="cars" className="py-16 md:py-24">
@@ -66,7 +77,7 @@ export const CarListings = () => {
                   )}
                 </div>
                 
-                {/* Favorite & Discount */}
+                {/* Favorite & Compare & Discount */}
                 <div className="absolute top-3 right-3 flex flex-col gap-2">
                   <Button
                     variant="ghost"
@@ -75,6 +86,24 @@ export const CarListings = () => {
                     onClick={() => toggleFavorite(car.id, car.slug)}
                   >
                     <Heart className={`h-5 w-5 ${isFavorite(car.id) ? "fill-current" : ""}`} />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                      "bg-background/80 hover:bg-background",
+                      isInCompare(car.id) ? "text-primary" : "text-muted-foreground",
+                      !canAddMore && !isInCompare(car.id) && "opacity-50"
+                    )}
+                    onClick={() => handleCompareToggle(car.id)}
+                    disabled={!canAddMore && !isInCompare(car.id)}
+                    title={isInCompare(car.id) ? "Remove from compare" : canAddMore ? "Add to compare" : "Max 3 cars"}
+                  >
+                    {isInCompare(car.id) ? (
+                      <Check className="h-5 w-5" />
+                    ) : (
+                      <GitCompare className="h-5 w-5" />
+                    )}
                   </Button>
                   <Badge variant="deal" className="text-sm py-1 px-3">
                     <TrendingDown className="h-3 w-3 mr-1" />

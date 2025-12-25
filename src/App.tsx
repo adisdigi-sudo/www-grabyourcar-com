@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { CartProvider } from "@/hooks/useCart";
+import { CompareProvider } from "@/hooks/useCompare";
+import { FloatingCompareBar } from "@/components/FloatingCompareBar";
 import Index from "./pages/Index";
 import Cars from "./pages/Cars";
 import CarLoans from "./pages/CarLoans";
@@ -26,29 +28,32 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <CartProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/cars" element={<Cars />} />
-              <Route path="/car-loans" element={<CarLoans />} />
-              <Route path="/car/:slug" element={<CarDetail />} />
-              <Route path="/compare" element={<CompareCars />} />
-              <Route path="/car-insurance" element={<CarInsurance />} />
-              <Route path="/corporate" element={<CorporateBuying />} />
-              <Route path="/accessories" element={<Accessories />} />
-              <Route path="/accessory-wishlist" element={<AccessoryWishlist />} />
-              <Route path="/blog" element={<Blog />} />
-              <Route path="/blog/:slug" element={<BlogPost />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/favorites" element={<MyFavorites />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
+        <CompareProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/cars" element={<Cars />} />
+                <Route path="/car-loans" element={<CarLoans />} />
+                <Route path="/car/:slug" element={<CarDetail />} />
+                <Route path="/compare" element={<CompareCars />} />
+                <Route path="/car-insurance" element={<CarInsurance />} />
+                <Route path="/corporate" element={<CorporateBuying />} />
+                <Route path="/accessories" element={<Accessories />} />
+                <Route path="/accessory-wishlist" element={<AccessoryWishlist />} />
+                <Route path="/blog" element={<Blog />} />
+                <Route path="/blog/:slug" element={<BlogPost />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/favorites" element={<MyFavorites />} />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+              <FloatingCompareBar />
+            </BrowserRouter>
+          </TooltipProvider>
+        </CompareProvider>
       </CartProvider>
     </AuthProvider>
   </QueryClientProvider>
