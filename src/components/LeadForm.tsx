@@ -1,17 +1,20 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, Shield, Clock, Gift } from "lucide-react";
+import { CheckCircle, Shield, Clock, Gift, LogIn } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 interface LeadFormProps {
   prefillCarInterest?: string;
 }
 
 export const LeadForm = ({ prefillCarInterest }: LeadFormProps) => {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -29,6 +32,16 @@ export const LeadForm = ({ prefillCarInterest }: LeadFormProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Require authentication
+    if (!user) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to submit a lead request.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     // Client-side validation (complementary to server-side)
     if (!formData.name.trim() || !formData.phone.trim()) {
@@ -136,79 +149,94 @@ export const LeadForm = ({ prefillCarInterest }: LeadFormProps) => {
 
             {/* Form Card */}
             <Card className="p-8">
-              <form onSubmit={handleSubmit} className="space-y-5">
-                <div>
-                  <label className="text-sm font-medium text-foreground mb-2 block">
-                    Your Name *
-                  </label>
-                  <Input
-                    placeholder="Enter your full name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="h-12"
-                    maxLength={100}
-                  />
+              {!user ? (
+                <div className="text-center py-8">
+                  <LogIn className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="font-semibold text-lg mb-2">Sign in to Get Started</h3>
+                  <p className="text-muted-foreground mb-6">
+                    Please sign in to submit your request and get the best deals from our car experts.
+                  </p>
+                  <Link to="/auth">
+                    <Button variant="hero" size="xl" className="w-full">
+                      Sign In to Continue
+                    </Button>
+                  </Link>
                 </div>
-
-                <div>
-                  <label className="text-sm font-medium text-foreground mb-2 block">
-                    Mobile Number *
-                  </label>
-                  <div className="flex">
-                    <span className="inline-flex items-center px-4 rounded-l-lg border border-r-0 border-input bg-muted text-muted-foreground">
-                      +91
-                    </span>
+              ) : (
+                <form onSubmit={handleSubmit} className="space-y-5">
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">
+                      Your Name *
+                    </label>
                     <Input
-                      placeholder="Enter 10-digit mobile"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, "").slice(0, 10) })}
-                      className="rounded-l-none h-12"
-                      type="tel"
-                      maxLength={10}
+                      placeholder="Enter your full name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      className="h-12"
+                      maxLength={100}
                     />
                   </div>
-                </div>
 
-                <div>
-                  <label className="text-sm font-medium text-foreground mb-2 block">
-                    City
-                  </label>
-                  <Input
-                    placeholder="Your city (e.g., Mumbai, Delhi)"
-                    value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    className="h-12"
-                    maxLength={50}
-                  />
-                </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">
+                      Mobile Number *
+                    </label>
+                    <div className="flex">
+                      <span className="inline-flex items-center px-4 rounded-l-lg border border-r-0 border-input bg-muted text-muted-foreground">
+                        +91
+                      </span>
+                      <Input
+                        placeholder="Enter 10-digit mobile"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, "").slice(0, 10) })}
+                        className="rounded-l-none h-12"
+                        type="tel"
+                        maxLength={10}
+                      />
+                    </div>
+                  </div>
 
-                <div>
-                  <label className="text-sm font-medium text-foreground mb-2 block">
-                    Car Interest
-                  </label>
-                  <Input
-                    placeholder="Which car are you looking for?"
-                    value={formData.carInterest}
-                    onChange={(e) => setFormData({ ...formData, carInterest: e.target.value })}
-                    className="h-12"
-                    maxLength={100}
-                  />
-                </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">
+                      City
+                    </label>
+                    <Input
+                      placeholder="Your city (e.g., Mumbai, Delhi)"
+                      value={formData.city}
+                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      className="h-12"
+                      maxLength={50}
+                    />
+                  </div>
 
-                <Button
-                  type="submit"
-                  variant="hero"
-                  size="xl"
-                  className="w-full"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? "Submitting..." : "Get Best Deal Now"}
-                </Button>
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">
+                      Car Interest
+                    </label>
+                    <Input
+                      placeholder="Which car are you looking for?"
+                      value={formData.carInterest}
+                      onChange={(e) => setFormData({ ...formData, carInterest: e.target.value })}
+                      className="h-12"
+                      maxLength={100}
+                    />
+                  </div>
 
-                <p className="text-xs text-muted-foreground text-center">
-                  By submitting, you agree to our Terms & Privacy Policy
-                </p>
-              </form>
+                  <Button
+                    type="submit"
+                    variant="hero"
+                    size="xl"
+                    className="w-full"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? "Submitting..." : "Get Best Deal Now"}
+                  </Button>
+
+                  <p className="text-xs text-muted-foreground text-center">
+                    By submitting, you agree to our Terms & Privacy Policy
+                  </p>
+                </form>
+              )}
             </Card>
           </div>
         </div>

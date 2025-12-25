@@ -155,6 +155,16 @@ export const CarAdvisorChat = () => {
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
 
+    // Require authentication
+    if (!user) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to use the car advisor chat.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const userMessage: Message = { role: "user", content: input.trim() };
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
@@ -165,11 +175,17 @@ export const CarAdvisorChat = () => {
     let finalMessages = newMessages;
 
     try {
+      // Get current session for JWT token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error("Authentication required");
+      }
+
       const response = await fetch(CHAT_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({ messages: newMessages }),
       });
@@ -416,24 +432,33 @@ export const CarAdvisorChat = () => {
 
           {/* Input */}
           <div className="border-t p-4">
-            <div className="flex gap-2">
-              <Input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Type your message..."
-                disabled={isLoading}
-                className="flex-1"
-              />
-              <Button
-                onClick={sendMessage}
-                disabled={!input.trim() || isLoading}
-                size="icon"
-                className="shrink-0"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
+            {!user ? (
+              <div className="text-center py-2">
+                <p className="text-sm text-muted-foreground mb-2">Sign in to chat with our car advisor</p>
+                <Link to="/auth">
+                  <Button size="sm">Sign In</Button>
+                </Link>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <Input
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Type your message..."
+                  disabled={isLoading}
+                  className="flex-1"
+                />
+                <Button
+                  onClick={sendMessage}
+                  disabled={!input.trim() || isLoading}
+                  size="icon"
+                  className="shrink-0"
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       )}
