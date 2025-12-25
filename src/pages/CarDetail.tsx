@@ -4,6 +4,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { FloatingCTA } from "@/components/FloatingCTA";
 import { PriceBreakup } from "@/components/PriceBreakup";
+import { DealerLocator } from "@/components/DealerLocator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +31,8 @@ import {
   Shield,
   TrendingDown,
   IndianRupee,
-  Calculator
+  Calculator,
+  Building2
 } from "lucide-react";
 import EMICalculator from "@/components/EMICalculator";
 import { getCarBySlug } from "@/data/carsData";
@@ -293,6 +295,10 @@ const CarDetail = () => {
                 <TabsTrigger value="emi" className="rounded-lg">
                   <Calculator className="h-4 w-4 mr-1.5" />
                   EMI Calculator
+                </TabsTrigger>
+                <TabsTrigger value="dealers" className="rounded-lg">
+                  <Building2 className="h-4 w-4 mr-1.5" />
+                  Find Dealers
                 </TabsTrigger>
                 <TabsTrigger value="offers" className="rounded-lg">Dealer Offers</TabsTrigger>
               </TabsList>
@@ -590,6 +596,10 @@ const CarDetail = () => {
                     </div>
                   );
                 })()}
+              </TabsContent>
+
+              <TabsContent value="dealers" className="space-y-6">
+                <DealerLocator carName={car.name} />
               </TabsContent>
 
               <TabsContent value="offers" className="space-y-6">
