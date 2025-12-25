@@ -1,21 +1,37 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+// CORS configuration - restrict to allowed origins
+const ALLOWED_ORIGINS = [
+  "https://ynoiwioypxpurwdbjvyt.lovable.app",
+  "http://localhost:5173",
+  "http://localhost:8080",
+  "http://localhost:3000",
+];
 
-// Simple in-memory rate limiting (per IP, resets on function cold start)
+function getCorsHeaders(origin: string | null) {
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin || "") 
+    ? origin 
+    : ALLOWED_ORIGINS[0];
+  
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin || ALLOWED_ORIGINS[0],
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Credentials": "true",
+  };
+}
+
+// Simple in-memory rate limiting (per user, resets on function cold start)
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 const RATE_LIMIT_MAX = 5;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 
-function checkRateLimit(ip: string): boolean {
+function checkRateLimit(userId: string): boolean {
   const now = Date.now();
-  const record = rateLimitMap.get(ip);
+  const record = rateLimitMap.get(userId);
   
   if (!record || now > record.resetTime) {
-    rateLimitMap.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW_MS });
+    rateLimitMap.set(userId, { count: 1, resetTime: now + RATE_LIMIT_WINDOW_MS });
     return true;
   }
   
@@ -137,6 +153,9 @@ function sanitize(input: string | undefined): string {
 }
 
 serve(async (req) => {
+  const origin = req.headers.get('origin');
+  const corsHeaders = getCorsHeaders(origin);
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -145,14 +164,39 @@ serve(async (req) => {
   const requestId = generateRequestId();
 
   try {
-    // Get client IP for rate limiting
-    const clientIP = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
-                     req.headers.get('cf-connecting-ip') || 
-                     'unknown';
+    // Verify authentication - get user from JWT token
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.log("Missing authorization header", { requestId });
+      return new Response(
+        JSON.stringify({ error: "Authentication required" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Create Supabase client with the user's JWT
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    // Verify the user
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     
-    // Check rate limit
-    if (!checkRateLimit(clientIP)) {
-      console.log(`Rate limit exceeded`, { requestId });
+    if (authError || !user) {
+      console.log("Authentication failed", { requestId, error: authError?.message });
+      return new Response(
+        JSON.stringify({ error: "Invalid or expired authentication" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("Authenticated user for lead submission", { requestId, userId: user.id });
+
+    // Check rate limit per user
+    if (!checkRateLimit(user.id)) {
+      console.log(`Rate limit exceeded for user`, { requestId, userId: user.id });
       return new Response(
         JSON.stringify({ error: "Too many requests. Please try again later." }),
         { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -235,6 +279,7 @@ serve(async (req) => {
       email: sanitize(body.email) || null,
       message: sanitize(body.message) || null,
       type: body.type || 'regular',
+      userId: user.id,
     };
 
     // Log only non-PII data for debugging
@@ -242,10 +287,10 @@ serve(async (req) => {
       requestId,
       timestamp: new Date().toISOString(),
       type: sanitizedData.type,
+      userId: user.id,
     });
 
-    // Return success - actual database insertion would require user authentication
-    // or could be done with service role key for anonymous lead capture
+    // Return success
     return new Response(
       JSON.stringify({ 
         success: true, 
@@ -259,7 +304,7 @@ serve(async (req) => {
     console.error("Error processing lead submission", { requestId, error: errorMessage });
     return new Response(
       JSON.stringify({ error: "An unexpected error occurred. Please try again." }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...getCorsHeaders(req.headers.get('origin')), 'Content-Type': 'application/json' } }
     );
   }
 });
