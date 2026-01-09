@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { useCompare } from "@/hooks/useCompare";
 import EMICalculator from "@/components/EMICalculator";
+import { AICarRecommendations } from "@/components/AICarRecommendations";
 import { getCarBySlug } from "@/data/carsData";
 import { calculateStatePriceBreakup } from "@/data/statePricing";
 import { toast } from "sonner";
@@ -794,6 +795,19 @@ const CarDetail = () => {
                   </form>
                 </CardContent>
               </Card>
+            </div>
+
+            {/* AI Recommendations Sidebar */}
+            <div className="lg:col-span-1">
+              <div className="sticky top-24">
+                <AICarRecommendations
+                  carName={car.name}
+                  brand={car.brand}
+                  price={car.price}
+                  fuelTypes={car.fuelTypes}
+                  transmission={car.transmission}
+                />
+              </div>
             </div>
           </div>
         </section>
