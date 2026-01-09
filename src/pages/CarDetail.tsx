@@ -32,12 +32,39 @@ import {
   TrendingDown,
   IndianRupee,
   Calculator,
-  Building2
+  Building2,
+  GitCompareArrows
 } from "lucide-react";
+import { useCompare } from "@/hooks/useCompare";
 import EMICalculator from "@/components/EMICalculator";
 import { getCarBySlug } from "@/data/carsData";
 import { calculateStatePriceBreakup } from "@/data/statePricing";
 import { toast } from "sonner";
+
+const CompareButton = ({ carId }: { carId: number }) => {
+  const { addToCompare, removeFromCompare, isInCompare, canAddMore } = useCompare();
+  const inCompare = isInCompare(carId);
+
+  const handleClick = () => {
+    if (inCompare) {
+      removeFromCompare(carId);
+    } else if (canAddMore) {
+      addToCompare(carId);
+    }
+  };
+
+  return (
+    <Button
+      variant={inCompare ? "default" : "outline"}
+      size="lg"
+      onClick={handleClick}
+      disabled={!inCompare && !canAddMore}
+    >
+      <GitCompareArrows className="h-5 w-5 mr-2" />
+      {inCompare ? "Remove" : "Compare"}
+    </Button>
+  );
+};
 
 const CarDetail = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -250,6 +277,7 @@ const CarDetail = () => {
                   <Button variant="cta" size="lg" className="flex-1">
                     Get Best Price
                   </Button>
+                  <CompareButton carId={car.id} />
                   <a href="https://wa.me/919876543210" target="_blank" rel="noopener noreferrer">
                     <Button variant="whatsapp" size="lg">
                       <MessageCircle className="h-5 w-5 mr-2" />
