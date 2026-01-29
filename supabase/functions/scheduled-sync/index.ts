@@ -22,8 +22,8 @@ interface CarRecord {
   updated_at: string;
 }
 
-// Lovable AI API endpoint
-const LOVABLE_AI_URL = 'https://lovable.dev/ai/chat';
+// Lovable AI Gateway endpoint
+const LOVABLE_AI_URL = 'https://ai.gateway.lovable.dev/v1/chat/completions';
 
 async function enhanceCarWithAI(
   car: CarRecord,
