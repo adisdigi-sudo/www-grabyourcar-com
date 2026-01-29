@@ -119,7 +119,8 @@ Deno.serve(async (req) => {
       errors: [] as string[]
     };
 
-    for (const car of cars) {
+    // Process a single car - extracted for parallel processing
+    const processCar = async (car: CarData): Promise<{ success: boolean; name: string; error?: string }> => {
       try {
         // Check if car already exists
         const { data: existingCar } = await supabase
@@ -164,11 +165,13 @@ Deno.serve(async (req) => {
           carId = existingCar.id;
 
           // Delete existing related data to replace with new
-          await supabase.from('car_specifications').delete().eq('car_id', carId);
-          await supabase.from('car_variants').delete().eq('car_id', carId);
-          await supabase.from('car_colors').delete().eq('car_id', carId);
-          await supabase.from('car_images').delete().eq('car_id', carId);
-          await supabase.from('car_offers').delete().eq('car_id', carId);
+          await Promise.all([
+            supabase.from('car_specifications').delete().eq('car_id', carId),
+            supabase.from('car_variants').delete().eq('car_id', carId),
+            supabase.from('car_colors').delete().eq('car_id', carId),
+            supabase.from('car_images').delete().eq('car_id', carId),
+            supabase.from('car_offers').delete().eq('car_id', carId)
+          ]);
         } else {
           // Insert new car
           const { data: newCar, error: insertError } = await supabase
@@ -204,6 +207,9 @@ Deno.serve(async (req) => {
           carId = newCar.id;
         }
 
+        // Insert all related data in parallel
+        const insertPromises: PromiseLike<unknown>[] = [];
+
         // Insert specifications
         const specCategories = ['engine', 'dimensions', 'performance', 'features', 'safety'] as const;
         for (const category of specCategories) {
@@ -216,7 +222,7 @@ Deno.serve(async (req) => {
               value: spec.value,
               sort_order: index
             }));
-            await supabase.from('car_specifications').insert(specData);
+            insertPromises.push(supabase.from('car_specifications').insert(specData).then(() => {}));
           }
         }
 
@@ -232,7 +238,7 @@ Deno.serve(async (req) => {
             features: variant.features,
             sort_order: index
           }));
-          await supabase.from('car_variants').insert(variantData);
+          insertPromises.push(supabase.from('car_variants').insert(variantData).then(() => {}));
         }
 
         // Insert colors
@@ -243,7 +249,7 @@ Deno.serve(async (req) => {
             hex_code: color.hex,
             sort_order: index
           }));
-          await supabase.from('car_colors').insert(colorData);
+          insertPromises.push(supabase.from('car_colors').insert(colorData).then(() => {}));
         }
 
         // Insert images
@@ -256,7 +262,7 @@ Deno.serve(async (req) => {
             alt_text: `${car.name} - Image ${index + 1}`,
             sort_order: index
           }));
-          await supabase.from('car_images').insert(imageData);
+          insertPromises.push(supabase.from('car_images').insert(imageData).then(() => {}));
         }
 
         // Insert offers
@@ -270,17 +276,36 @@ Deno.serve(async (req) => {
             offer_type: offer.type,
             sort_order: index
           }));
-          await supabase.from('car_offers').insert(offerData);
+          insertPromises.push(supabase.from('car_offers').insert(offerData).then(() => {}));
         }
 
-        results.success++;
-        console.log(`Successfully migrated: ${car.name}`);
+        await Promise.all(insertPromises);
+        
+        return { success: true, name: car.name };
       } catch (error) {
-        results.failed++;
         const errorMessage = error instanceof Error ? error.message : String(error);
-        results.errors.push(`${car.name}: ${errorMessage}`);
-        console.error(`Failed to migrate ${car.name}:`, error);
+        return { success: false, name: car.name, error: errorMessage };
       }
+    };
+
+    // Process cars in parallel batches of 10
+    const BATCH_SIZE = 10;
+    for (let i = 0; i < cars.length; i += BATCH_SIZE) {
+      const batch = cars.slice(i, i + BATCH_SIZE);
+      const batchResults = await Promise.all(batch.map(processCar));
+      
+      for (const result of batchResults) {
+        if (result.success) {
+          results.success++;
+          console.log(`Successfully migrated: ${result.name}`);
+        } else {
+          results.failed++;
+          results.errors.push(`${result.name}: ${result.error}`);
+          console.error(`Failed to migrate ${result.name}:`, result.error);
+        }
+      }
+      
+      console.log(`Batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(cars.length / BATCH_SIZE)} complete`);
     }
 
     console.log(`Migration complete: ${results.success} success, ${results.failed} failed`);
