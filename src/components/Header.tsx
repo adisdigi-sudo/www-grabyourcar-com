@@ -44,21 +44,21 @@ export const Header = () => {
     <>
       <header className="sticky top-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-b border-border/50">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-16 md:h-20">
-            {/* Mobile Menu Button - Outside on left */}
+          <div className="flex items-center justify-between h-14 md:h-20 gap-2">
+            {/* Mobile Menu Button - Left side */}
             <button
               onClick={() => setMenuOpen(!menuOpen)}
               className={cn(
-                "lg:hidden flex items-center justify-center h-10 w-10 rounded-lg transition-colors",
+                "lg:hidden flex items-center justify-center h-9 w-9 rounded-lg transition-colors flex-shrink-0",
                 menuOpen ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted"
               )}
             >
-              {menuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
 
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-2">
-              <img src={logoImage} alt="Grabyourcar" className="h-10 md:h-12 w-auto" />
+            <Link to="/" className="flex items-center flex-shrink-0">
+              <img src={logoImage} alt="Grabyourcar" className="h-8 md:h-12 w-auto" />
             </Link>
 
             {/* Desktop Navigation */}
@@ -79,7 +79,7 @@ export const Header = () => {
             </nav>
 
             {/* CTA Buttons */}
-            <div className="flex items-center gap-2 md:gap-3">
+            <div className="flex items-center gap-1 md:gap-3 flex-shrink-0">
               {user ? (
                 <>
                   <Link to="/favorites">
@@ -141,7 +141,7 @@ export const Header = () => {
                   Call Now
                 </Button>
               </a>
-              <Button variant="cta" size="sm" className="hidden sm:flex">
+              <Button variant="cta" size="sm" className="hidden md:flex text-xs px-3">
                 Get Best Deal
               </Button>
             </div>
@@ -149,8 +149,8 @@ export const Header = () => {
         </div>
 
         {/* Mobile Top Navigation Bar - Home, Search, Favorites only */}
-        <div className="lg:hidden border-t border-border/50 bg-card/95">
-          <div className="flex items-center justify-around h-12">
+        <div className="md:hidden border-t border-border/50 bg-card/95">
+          <div className="flex items-center justify-around h-11">
             <Link
               to="/"
               className={cn(
@@ -189,7 +189,7 @@ export const Header = () => {
 
       {/* Mobile Menu Overlay */}
       {menuOpen && (
-        <div className="lg:hidden fixed inset-0 z-40 bg-background/95 backdrop-blur-sm animate-fade-in pt-[7rem]">
+        <div className="lg:hidden fixed inset-0 z-40 bg-background/95 backdrop-blur-sm animate-fade-in pt-[6.5rem]">
           <div className="flex flex-col h-full pb-8 px-6 overflow-y-auto">
             <nav className="flex flex-col gap-2">
               {navLinks.map((link) => (
