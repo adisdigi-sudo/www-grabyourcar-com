@@ -1,11 +1,16 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { X, GitCompare, ChevronRight } from "lucide-react";
-import { useCompare } from "@/hooks/useCompare";
+import { useCompareSafe } from "@/hooks/useCompare";
 import { cn } from "@/lib/utils";
 
 export const FloatingCompareBar = () => {
-  const { selectedCars, removeFromCompare, clearCompare } = useCompare();
+  const compareContext = useCompareSafe();
+
+  // If context is not available, don't render
+  if (!compareContext) return null;
+
+  const { selectedCars, removeFromCompare, clearCompare } = compareContext;
 
   if (selectedCars.length === 0) return null;
 

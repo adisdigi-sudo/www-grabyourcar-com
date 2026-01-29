@@ -59,3 +59,8 @@ export const useCompare = () => {
   }
   return context;
 };
+
+// Safe version that returns null if context is not available
+export const useCompareSafe = () => {
+  return useContext(CompareContext);
+};
