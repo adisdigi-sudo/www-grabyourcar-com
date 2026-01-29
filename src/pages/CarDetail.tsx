@@ -5,6 +5,7 @@ import { Footer } from "@/components/Footer";
 import { FloatingCTA } from "@/components/FloatingCTA";
 import { PriceBreakup } from "@/components/PriceBreakup";
 import { DealerLocator } from "@/components/DealerLocator";
+import { ShareButtons } from "@/components/ShareButtons";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -279,6 +280,7 @@ const CarDetail = () => {
                     Get Best Price
                   </Button>
                   <CompareButton carId={car.id} />
+                  <ShareButtons title={`Check out ${car.name} on Grabyourcar`} />
                   <a href="https://wa.me/919876543210" target="_blank" rel="noopener noreferrer">
                     <Button variant="whatsapp" size="lg">
                       <MessageCircle className="h-5 w-5 mr-2" />
