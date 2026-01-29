@@ -38,6 +38,50 @@ export type Database = {
         }
         Relationships: []
       }
+      car_brochures: {
+        Row: {
+          car_id: string
+          created_at: string | null
+          file_size: string | null
+          id: string
+          language: string | null
+          sort_order: number | null
+          title: string
+          url: string
+          variant_name: string | null
+        }
+        Insert: {
+          car_id: string
+          created_at?: string | null
+          file_size?: string | null
+          id?: string
+          language?: string | null
+          sort_order?: number | null
+          title: string
+          url: string
+          variant_name?: string | null
+        }
+        Update: {
+          car_id?: string
+          created_at?: string | null
+          file_size?: string | null
+          id?: string
+          language?: string | null
+          sort_order?: number | null
+          title?: string
+          url?: string
+          variant_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "car_brochures_car_id_fkey"
+            columns: ["car_id"]
+            isOneToOne: false
+            referencedRelation: "cars"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       car_colors: {
         Row: {
           car_id: string
@@ -66,6 +110,47 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "car_colors_car_id_fkey"
+            columns: ["car_id"]
+            isOneToOne: false
+            referencedRelation: "cars"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      car_features: {
+        Row: {
+          car_id: string
+          category: string
+          created_at: string | null
+          feature_name: string
+          id: string
+          is_standard: boolean | null
+          sort_order: number | null
+          variant_specific: string[] | null
+        }
+        Insert: {
+          car_id: string
+          category: string
+          created_at?: string | null
+          feature_name: string
+          id?: string
+          is_standard?: boolean | null
+          sort_order?: number | null
+          variant_specific?: string[] | null
+        }
+        Update: {
+          car_id?: string
+          category?: string
+          created_at?: string | null
+          feature_name?: string
+          id?: string
+          is_standard?: boolean | null
+          sort_order?: number | null
+          variant_specific?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "car_features_car_id_fkey"
             columns: ["car_id"]
             isOneToOne: false
             referencedRelation: "cars"
@@ -154,6 +239,57 @@ export type Database = {
             columns: ["car_id"]
             isOneToOne: false
             referencedRelation: "cars"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      car_price_history: {
+        Row: {
+          car_id: string
+          change_percentage: number | null
+          change_type: string
+          id: string
+          new_price: number | null
+          old_price: number | null
+          recorded_at: string | null
+          source: string | null
+          variant_id: string | null
+        }
+        Insert: {
+          car_id: string
+          change_percentage?: number | null
+          change_type: string
+          id?: string
+          new_price?: number | null
+          old_price?: number | null
+          recorded_at?: string | null
+          source?: string | null
+          variant_id?: string | null
+        }
+        Update: {
+          car_id?: string
+          change_percentage?: number | null
+          change_type?: string
+          id?: string
+          new_price?: number | null
+          old_price?: number | null
+          recorded_at?: string | null
+          source?: string | null
+          variant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "car_price_history_car_id_fkey"
+            columns: ["car_id"]
+            isOneToOne: false
+            referencedRelation: "cars"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "car_price_history_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "car_variants"
             referencedColumns: ["id"]
           },
         ]
@@ -272,19 +408,27 @@ export type Database = {
           availability: string | null
           body_type: string | null
           brand: string
+          brochure_url: string | null
           competitors: string[] | null
           cons: string[] | null
           created_at: string
+          data_freshness_score: number | null
           discount: string | null
+          expected_price_max: number | null
+          expected_price_min: number | null
           fuel_types: string[] | null
           id: string
+          is_bestseller: boolean | null
+          is_discontinued: boolean | null
           is_hot: boolean | null
           is_limited: boolean | null
           is_new: boolean | null
           is_upcoming: boolean | null
           key_highlights: string[] | null
+          last_verified_at: string | null
           launch_date: string | null
           name: string
+          official_url: string | null
           original_price: string | null
           overview: string | null
           price_numeric: number | null
@@ -299,19 +443,27 @@ export type Database = {
           availability?: string | null
           body_type?: string | null
           brand: string
+          brochure_url?: string | null
           competitors?: string[] | null
           cons?: string[] | null
           created_at?: string
+          data_freshness_score?: number | null
           discount?: string | null
+          expected_price_max?: number | null
+          expected_price_min?: number | null
           fuel_types?: string[] | null
           id?: string
+          is_bestseller?: boolean | null
+          is_discontinued?: boolean | null
           is_hot?: boolean | null
           is_limited?: boolean | null
           is_new?: boolean | null
           is_upcoming?: boolean | null
           key_highlights?: string[] | null
+          last_verified_at?: string | null
           launch_date?: string | null
           name: string
+          official_url?: string | null
           original_price?: string | null
           overview?: string | null
           price_numeric?: number | null
@@ -326,19 +478,27 @@ export type Database = {
           availability?: string | null
           body_type?: string | null
           brand?: string
+          brochure_url?: string | null
           competitors?: string[] | null
           cons?: string[] | null
           created_at?: string
+          data_freshness_score?: number | null
           discount?: string | null
+          expected_price_max?: number | null
+          expected_price_min?: number | null
           fuel_types?: string[] | null
           id?: string
+          is_bestseller?: boolean | null
+          is_discontinued?: boolean | null
           is_hot?: boolean | null
           is_limited?: boolean | null
           is_new?: boolean | null
           is_upcoming?: boolean | null
           key_highlights?: string[] | null
+          last_verified_at?: string | null
           launch_date?: string | null
           name?: string
+          official_url?: string | null
           original_price?: string | null
           overview?: string | null
           price_numeric?: number | null
