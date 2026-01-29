@@ -38,6 +38,319 @@ export type Database = {
         }
         Relationships: []
       }
+      car_colors: {
+        Row: {
+          car_id: string
+          created_at: string
+          hex_code: string
+          id: string
+          name: string
+          sort_order: number | null
+        }
+        Insert: {
+          car_id: string
+          created_at?: string
+          hex_code: string
+          id?: string
+          name: string
+          sort_order?: number | null
+        }
+        Update: {
+          car_id?: string
+          created_at?: string
+          hex_code?: string
+          id?: string
+          name?: string
+          sort_order?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "car_colors_car_id_fkey"
+            columns: ["car_id"]
+            isOneToOne: false
+            referencedRelation: "cars"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      car_images: {
+        Row: {
+          alt_text: string | null
+          car_id: string
+          created_at: string
+          id: string
+          is_primary: boolean | null
+          sort_order: number | null
+          url: string
+        }
+        Insert: {
+          alt_text?: string | null
+          car_id: string
+          created_at?: string
+          id?: string
+          is_primary?: boolean | null
+          sort_order?: number | null
+          url: string
+        }
+        Update: {
+          alt_text?: string | null
+          car_id?: string
+          created_at?: string
+          id?: string
+          is_primary?: boolean | null
+          sort_order?: number | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "car_images_car_id_fkey"
+            columns: ["car_id"]
+            isOneToOne: false
+            referencedRelation: "cars"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      car_offers: {
+        Row: {
+          car_id: string
+          created_at: string
+          description: string | null
+          discount: string
+          id: string
+          is_active: boolean | null
+          offer_type: string
+          sort_order: number | null
+          title: string
+          valid_till: string | null
+        }
+        Insert: {
+          car_id: string
+          created_at?: string
+          description?: string | null
+          discount: string
+          id?: string
+          is_active?: boolean | null
+          offer_type: string
+          sort_order?: number | null
+          title: string
+          valid_till?: string | null
+        }
+        Update: {
+          car_id?: string
+          created_at?: string
+          description?: string | null
+          discount?: string
+          id?: string
+          is_active?: boolean | null
+          offer_type?: string
+          sort_order?: number | null
+          title?: string
+          valid_till?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "car_offers_car_id_fkey"
+            columns: ["car_id"]
+            isOneToOne: false
+            referencedRelation: "cars"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      car_specifications: {
+        Row: {
+          car_id: string
+          category: string
+          created_at: string
+          id: string
+          label: string
+          sort_order: number | null
+          value: string
+        }
+        Insert: {
+          car_id: string
+          category: string
+          created_at?: string
+          id?: string
+          label: string
+          sort_order?: number | null
+          value: string
+        }
+        Update: {
+          car_id?: string
+          category?: string
+          created_at?: string
+          id?: string
+          label?: string
+          sort_order?: number | null
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "car_specifications_car_id_fkey"
+            columns: ["car_id"]
+            isOneToOne: false
+            referencedRelation: "cars"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      car_variants: {
+        Row: {
+          car_id: string
+          created_at: string
+          ex_showroom: number | null
+          fastag: number | null
+          features: string[] | null
+          fuel_type: string | null
+          handling: number | null
+          id: string
+          insurance: number | null
+          name: string
+          on_road_price: number | null
+          price: string
+          price_numeric: number | null
+          registration: number | null
+          rto: number | null
+          sort_order: number | null
+          tcs: number | null
+          transmission: string | null
+        }
+        Insert: {
+          car_id: string
+          created_at?: string
+          ex_showroom?: number | null
+          fastag?: number | null
+          features?: string[] | null
+          fuel_type?: string | null
+          handling?: number | null
+          id?: string
+          insurance?: number | null
+          name: string
+          on_road_price?: number | null
+          price: string
+          price_numeric?: number | null
+          registration?: number | null
+          rto?: number | null
+          sort_order?: number | null
+          tcs?: number | null
+          transmission?: string | null
+        }
+        Update: {
+          car_id?: string
+          created_at?: string
+          ex_showroom?: number | null
+          fastag?: number | null
+          features?: string[] | null
+          fuel_type?: string | null
+          handling?: number | null
+          id?: string
+          insurance?: number | null
+          name?: string
+          on_road_price?: number | null
+          price?: string
+          price_numeric?: number | null
+          registration?: number | null
+          rto?: number | null
+          sort_order?: number | null
+          tcs?: number | null
+          transmission?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "car_variants_car_id_fkey"
+            columns: ["car_id"]
+            isOneToOne: false
+            referencedRelation: "cars"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cars: {
+        Row: {
+          availability: string | null
+          body_type: string | null
+          brand: string
+          competitors: string[] | null
+          cons: string[] | null
+          created_at: string
+          discount: string | null
+          fuel_types: string[] | null
+          id: string
+          is_hot: boolean | null
+          is_limited: boolean | null
+          is_new: boolean | null
+          is_upcoming: boolean | null
+          key_highlights: string[] | null
+          launch_date: string | null
+          name: string
+          original_price: string | null
+          overview: string | null
+          price_numeric: number | null
+          price_range: string | null
+          pros: string[] | null
+          slug: string
+          tagline: string | null
+          transmission_types: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          availability?: string | null
+          body_type?: string | null
+          brand: string
+          competitors?: string[] | null
+          cons?: string[] | null
+          created_at?: string
+          discount?: string | null
+          fuel_types?: string[] | null
+          id?: string
+          is_hot?: boolean | null
+          is_limited?: boolean | null
+          is_new?: boolean | null
+          is_upcoming?: boolean | null
+          key_highlights?: string[] | null
+          launch_date?: string | null
+          name: string
+          original_price?: string | null
+          overview?: string | null
+          price_numeric?: number | null
+          price_range?: string | null
+          pros?: string[] | null
+          slug: string
+          tagline?: string | null
+          transmission_types?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          availability?: string | null
+          body_type?: string | null
+          brand?: string
+          competitors?: string[] | null
+          cons?: string[] | null
+          created_at?: string
+          discount?: string | null
+          fuel_types?: string[] | null
+          id?: string
+          is_hot?: boolean | null
+          is_limited?: boolean | null
+          is_new?: boolean | null
+          is_upcoming?: boolean | null
+          key_highlights?: string[] | null
+          launch_date?: string | null
+          name?: string
+          original_price?: string | null
+          overview?: string | null
+          price_numeric?: number | null
+          price_range?: string | null
+          pros?: string[] | null
+          slug?: string
+          tagline?: string | null
+          transmission_types?: string[] | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       chat_conversations: {
         Row: {
           created_at: string
