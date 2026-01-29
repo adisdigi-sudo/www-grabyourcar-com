@@ -9,6 +9,9 @@ import { CompareProvider } from "@/hooks/useCompare";
 import { FloatingCompareBar } from "@/components/FloatingCompareBar";
 import Index from "./pages/Index";
 import Cars from "./pages/Cars";
+import CarImages from "./pages/CarImages";
+import FeaturesSpecs from "./pages/FeaturesSpecs";
+import Brochures from "./pages/Brochures";
 import CarLoans from "./pages/CarLoans";
 import CarDetail from "./pages/CarDetail";
 import CompareCars from "./pages/CompareCards";
@@ -38,6 +41,9 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/cars" element={<Cars />} />
+                <Route path="/car-images" element={<CarImages />} />
+                <Route path="/features-specs" element={<FeaturesSpecs />} />
+                <Route path="/brochures" element={<Brochures />} />
                 <Route path="/car-loans" element={<CarLoans />} />
                 <Route path="/car/:slug" element={<CarDetail />} />
                 <Route path="/compare" element={<CompareCars />} />
