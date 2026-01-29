@@ -444,6 +444,45 @@ export type Database = {
         }
         Relationships: []
       }
+      sync_logs: {
+        Row: {
+          cars_enhanced: number | null
+          cars_processed: number | null
+          completed_at: string | null
+          created_at: string
+          errors: string[] | null
+          id: string
+          metadata: Json | null
+          started_at: string
+          status: string
+          sync_type: string
+        }
+        Insert: {
+          cars_enhanced?: number | null
+          cars_processed?: number | null
+          completed_at?: string | null
+          created_at?: string
+          errors?: string[] | null
+          id?: string
+          metadata?: Json | null
+          started_at?: string
+          status?: string
+          sync_type: string
+        }
+        Update: {
+          cars_enhanced?: number | null
+          cars_processed?: number | null
+          completed_at?: string | null
+          created_at?: string
+          errors?: string[] | null
+          id?: string
+          metadata?: Json | null
+          started_at?: string
+          status?: string
+          sync_type?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
