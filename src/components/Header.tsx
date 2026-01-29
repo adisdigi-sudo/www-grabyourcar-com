@@ -1,4 +1,4 @@
-import { Phone, MessageCircle, Heart, User, LogOut } from "lucide-react";
+import { Phone, MessageCircle, Heart, User, LogOut, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -81,6 +81,12 @@ export const Header = () => {
                       <Link to="/favorites" className="cursor-pointer">
                         <Heart className="h-4 w-4 mr-2" />
                         My Favorites
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin" className="cursor-pointer">
+                        <Settings className="h-4 w-4 mr-2" />
+                        Admin
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />

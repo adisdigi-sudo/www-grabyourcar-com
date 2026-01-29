@@ -56,6 +56,42 @@ interface CarData {
   gallery: string[];
 }
 
+// Helper function to parse launch date - handles formats like "Q1 2025", "February 2025", or ISO dates
+function parseLaunchDate(launchDate: string | undefined): string | null {
+  if (!launchDate) return null;
+  
+  // If it's already a valid ISO date, return it
+  const isoDate = new Date(launchDate);
+  if (!isNaN(isoDate.getTime()) && launchDate.includes('-')) {
+    return launchDate;
+  }
+  
+  // Handle quarter format like "Q1 2025", "Q2 2025", etc.
+  const quarterMatch = launchDate.match(/Q(\d)\s*(\d{4})/i);
+  if (quarterMatch) {
+    const quarter = parseInt(quarterMatch[1]);
+    const year = parseInt(quarterMatch[2]);
+    // Map quarter to first month of that quarter
+    const month = (quarter - 1) * 3 + 1;
+    return `${year}-${month.toString().padStart(2, '0')}-01`;
+  }
+  
+  // Handle month year format like "February 2025", "Feb 2025"
+  const monthYearMatch = launchDate.match(/([A-Za-z]+)\s*(\d{4})/);
+  if (monthYearMatch) {
+    const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 
+                       'july', 'august', 'september', 'october', 'november', 'december'];
+    const monthIndex = monthNames.findIndex(m => m.startsWith(monthYearMatch[1].toLowerCase()));
+    if (monthIndex !== -1) {
+      const year = parseInt(monthYearMatch[2]);
+      return `${year}-${(monthIndex + 1).toString().padStart(2, '0')}-01`;
+    }
+  }
+  
+  // Can't parse, return null instead of invalid date
+  return null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -113,7 +149,7 @@ Deno.serve(async (req) => {
               is_limited: car.isLimited,
               is_new: car.isNew,
               is_upcoming: car.isUpcoming,
-              launch_date: car.launchDate || null,
+              launch_date: parseLaunchDate(car.launchDate),
               fuel_types: car.fuelTypes,
               transmission_types: car.transmission,
               key_highlights: car.keyHighlights,
@@ -153,7 +189,7 @@ Deno.serve(async (req) => {
               is_limited: car.isLimited,
               is_new: car.isNew,
               is_upcoming: car.isUpcoming,
-              launch_date: car.launchDate || null,
+              launch_date: parseLaunchDate(car.launchDate),
               fuel_types: car.fuelTypes,
               transmission_types: car.transmission,
               key_highlights: car.keyHighlights,
