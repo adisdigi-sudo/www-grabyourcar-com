@@ -5,31 +5,59 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, FileText, Download, ExternalLink } from "lucide-react";
+import { Search, FileText, Download, ExternalLink, AlertCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useCars } from "@/hooks/useCars";
+import { useAllCarsForBrochures, CarWithBrochure } from "@/hooks/useBrochures";
 import { CarPagination } from "@/components/CarPagination";
 
 const ITEMS_PER_PAGE = 12;
 
 const Brochures = () => {
-  const { data: cars = [], isLoading } = useCars();
+  const { data: staticCars = [] } = useCars();
+  const { data: dbCars = [], isLoading: isLoadingDb } = useAllCarsForBrochures();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const brands = [...new Set(cars.map((car) => car.brand))].sort();
+  // Merge database cars with static cars for display
+  const carsWithBrochureInfo = useMemo(() => {
+    // Create a map of database cars by slug for quick lookup
+    const dbCarMap = new Map<string, CarWithBrochure>();
+    dbCars.forEach((car) => {
+      dbCarMap.set(car.slug, car);
+    });
 
+    // Merge static cars with database brochure info
+    return staticCars.map((staticCar) => {
+      const dbCar = dbCarMap.get(staticCar.slug);
+      return {
+        ...staticCar,
+        brochureUrl: dbCar?.brochure_url || null,
+        brochures: dbCar?.car_brochures || [],
+        dbImage: dbCar?.car_images?.find((img) => img.is_primary)?.url || 
+                 dbCar?.car_images?.[0]?.url || null,
+      };
+    });
+  }, [staticCars, dbCars]);
+
+  // Get unique brands
+  const brands = useMemo(() => {
+    return [...new Set(carsWithBrochureInfo.map((car) => car.brand))].sort();
+  }, [carsWithBrochureInfo]);
+
+  // Filter cars
   const filteredCars = useMemo(() => {
-    return cars.filter((car) => {
+    return carsWithBrochureInfo.filter((car) => {
       const matchesSearch =
         car.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         car.brand.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesBrand = !selectedBrand || car.brand === selectedBrand;
       return matchesSearch && matchesBrand;
     });
-  }, [cars, searchQuery, selectedBrand]);
+  }, [carsWithBrochureInfo, searchQuery, selectedBrand]);
 
+  // Pagination
   const totalPages = Math.ceil(filteredCars.length / ITEMS_PER_PAGE);
   const paginatedCars = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -45,6 +73,25 @@ const Brochures = () => {
     setSelectedBrand(brand);
     setCurrentPage(1);
   };
+
+  const handleDownload = (car: typeof paginatedCars[0]) => {
+    // Priority: car_brochures table > brochure_url field > car detail page
+    if (car.brochures && car.brochures.length > 0) {
+      // Open the first brochure URL
+      window.open(car.brochures[0].url, "_blank");
+    } else if (car.brochureUrl) {
+      window.open(car.brochureUrl, "_blank");
+    } else {
+      // Fallback to car detail page
+      window.open(`/cars/${car.slug}`, "_blank");
+    }
+  };
+
+  const hasBrochure = (car: typeof paginatedCars[0]) => {
+    return (car.brochures && car.brochures.length > 0) || car.brochureUrl;
+  };
+
+  const isLoading = isLoadingDb;
 
   return (
     <div className="min-h-screen bg-background">
@@ -71,37 +118,37 @@ const Brochures = () => {
               <Input
                 placeholder="Search cars by name or brand..."
                 value={searchQuery}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            className="pl-12 h-12 text-base rounded-full border-border/50 bg-card"
-          />
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="pl-12 h-12 text-base rounded-full border-border/50 bg-card"
+              />
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-  </section>
+      </section>
 
-  {/* Brand Filter */}
-  <section className="py-6 border-b border-border/50 bg-card/50">
-    <div className="container mx-auto px-4">
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
-        <Button
-          variant={selectedBrand === null ? "default" : "outline"}
-          size="sm"
-          onClick={() => handleBrandChange(null)}
-          className="rounded-full whitespace-nowrap"
-        >
-          All Brands
-        </Button>
-        {brands.map((brand) => (
-          <Button
-            key={brand}
-            variant={selectedBrand === brand ? "default" : "outline"}
-            size="sm"
-            onClick={() => handleBrandChange(brand)}
-            className="rounded-full whitespace-nowrap"
-          >
-            {brand}
-          </Button>
-        ))}
+      {/* Brand Filter */}
+      <section className="py-6 border-b border-border/50 bg-card/50">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            <Button
+              variant={selectedBrand === null ? "default" : "outline"}
+              size="sm"
+              onClick={() => handleBrandChange(null)}
+              className="rounded-full whitespace-nowrap"
+            >
+              All Brands
+            </Button>
+            {brands.map((brand) => (
+              <Button
+                key={brand}
+                variant={selectedBrand === brand ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleBrandChange(brand)}
+                className="rounded-full whitespace-nowrap"
+              >
+                {brand}
+              </Button>
+            ))}
           </div>
         </div>
       </section>
@@ -111,7 +158,7 @@ const Brochures = () => {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-xl font-semibold text-foreground">
-              {filteredCars.length} Brochures Available
+              {filteredCars.length} Cars Available
             </h2>
           </div>
 
@@ -132,84 +179,119 @@ const Brochures = () => {
                 </Card>
               ))}
             </div>
-        ) : (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {paginatedCars.map((car) => (
-                <Card key={car.id} className="overflow-hidden hover:shadow-lg transition-all duration-300 border-border/50 group">
-                  <CardContent className="p-5">
-                    <div className="flex gap-4">
-                      {/* Car Thumbnail */}
-                      <Link to={`/cars/${car.slug}`} className="flex-shrink-0">
-                        <div className="w-24 h-20 rounded-lg overflow-hidden bg-muted">
-                          <img
-                            src={car.image || "/placeholder.svg"}
-                            alt={car.name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                          />
-                        </div>
-                      </Link>
-
-                      {/* Brochure Info */}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted-foreground mb-1">{car.brand}</p>
-                        <Link to={`/cars/${car.slug}`}>
-                          <h3 className="font-semibold text-foreground hover:text-primary transition-colors line-clamp-1">
-                            {car.name}
-                          </h3>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {paginatedCars.map((car) => (
+                  <Card
+                    key={car.id}
+                    className="overflow-hidden hover:shadow-lg transition-all duration-300 border-border/50 group"
+                  >
+                    <CardContent className="p-5">
+                      <div className="flex gap-4">
+                        {/* Car Thumbnail */}
+                        <Link to={`/cars/${car.slug}`} className="flex-shrink-0">
+                          <div className="w-24 h-20 rounded-lg overflow-hidden bg-muted">
+                            <img
+                              src={car.dbImage || car.image || "/placeholder.svg"}
+                              alt={car.name}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            />
+                          </div>
                         </Link>
-                        <p className="text-sm text-primary font-medium mb-3">{car.price}</p>
 
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="default"
-                            size="sm"
-                            className="flex-1 gap-1.5"
-                            onClick={() => {
-                              // In a real app, this would download the brochure
-                              window.open(`/cars/${car.slug}`, "_blank");
-                            }}
-                          >
-                            <Download className="h-3.5 w-3.5" />
-                            Download
-                          </Button>
+                        {/* Brochure Info */}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-muted-foreground mb-1">{car.brand}</p>
                           <Link to={`/cars/${car.slug}`}>
-                            <Button variant="outline" size="sm" className="gap-1">
-                              <ExternalLink className="h-3.5 w-3.5" />
-                            </Button>
+                            <h3 className="font-semibold text-foreground hover:text-primary transition-colors line-clamp-1">
+                              {car.name}
+                            </h3>
                           </Link>
+                          <p className="text-sm text-primary font-medium mb-3">{car.price}</p>
+
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant={hasBrochure(car) ? "default" : "secondary"}
+                              size="sm"
+                              className="flex-1 gap-1.5"
+                              onClick={() => handleDownload(car)}
+                              disabled={!hasBrochure(car)}
+                            >
+                              <Download className="h-3.5 w-3.5" />
+                              {hasBrochure(car) ? "Download" : "Unavailable"}
+                            </Button>
+                            <Link to={`/cars/${car.slug}`}>
+                              <Button variant="outline" size="sm" className="gap-1">
+                                <ExternalLink className="h-3.5 w-3.5" />
+                              </Button>
+                            </Link>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Brochure Details */}
-                    <div className="mt-4 pt-4 border-t border-border/50">
-                      <div className="flex items-center justify-between text-sm">
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-muted-foreground">Official Brochure</span>
+                      {/* Brochure Details */}
+                      <div className="mt-4 pt-4 border-t border-border/50">
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2">
+                            {hasBrochure(car) ? (
+                              <>
+                                <FileText className="h-4 w-4 text-primary" />
+                                <span className="text-foreground">Official Brochure</span>
+                              </>
+                            ) : (
+                              <>
+                                <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-muted-foreground">Brochure not available</span>
+                              </>
+                            )}
+                          </div>
+                          {hasBrochure(car) && (
+                            <Badge variant="secondary" className="text-xs">
+                              PDF
+                            </Badge>
+                          )}
                         </div>
-                        <Badge variant="secondary" className="text-xs">
-                          PDF
-                        </Badge>
+                        {hasBrochure(car) && (
+                          <p className="text-xs text-muted-foreground mt-2">
+                            {car.brochures && car.brochures.length > 0
+                              ? `${car.brochures.length} brochure${car.brochures.length > 1 ? "s" : ""} available`
+                              : "Includes specifications, variants, colors & pricing"}
+                          </p>
+                        )}
+                        {car.brochures && car.brochures.length > 1 && (
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            {car.brochures.slice(0, 3).map((brochure) => (
+                              <Badge
+                                key={brochure.id}
+                                variant="outline"
+                                className="text-xs cursor-pointer hover:bg-primary/10"
+                                onClick={() => window.open(brochure.url, "_blank")}
+                              >
+                                {brochure.variant_name || brochure.title}
+                              </Badge>
+                            ))}
+                            {car.brochures.length > 3 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{car.brochures.length - 3} more
+                              </Badge>
+                            )}
+                          </div>
+                        )}
                       </div>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Includes specifications, variants, colors & pricing
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-            ))}
-          </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
 
-          <CarPagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-            className="mt-10"
-          />
-        </>
-      )}
+              <CarPagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                className="mt-10"
+              />
+            </>
+          )}
 
           {!isLoading && filteredCars.length === 0 && (
             <div className="text-center py-16">
