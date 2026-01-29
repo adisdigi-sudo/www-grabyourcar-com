@@ -51,16 +51,21 @@ import {
   GitCompare,
   Check,
 } from "lucide-react";
-import { allCars, brands, bodyTypes, fuelTypes, transmissionTypes, priceRanges } from "@/data/cars";
+import { brands, bodyTypes, fuelTypes, transmissionTypes, priceRanges } from "@/data/cars";
+import { useCars } from "@/hooks/useCars";
 import { useAuth } from "@/hooks/useAuth";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useCompare } from "@/hooks/useCompare";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 const Cars = () => {
   const { user } = useAuth();
   const { favorites, toggleFavorite } = useFavorites();
   const { isInCompare, addToCompare, removeFromCompare, canAddMore } = useCompare();
+  
+  // Fetch cars from database
+  const { data: allCars = [], isLoading: carsLoading } = useCars({ useDatabase: true });
   
   const handleCompareToggle = (carId: number) => {
     if (isInCompare(carId)) {
@@ -172,6 +177,7 @@ const Cars = () => {
 
     return result;
   }, [
+    allCars,
     searchQuery,
     selectedBrands,
     selectedBodyTypes,
@@ -237,13 +243,13 @@ const Cars = () => {
   const availableBrands = useMemo(() => {
     const brandSet = new Set(allCars.map((car) => car.brand));
     return Array.from(brandSet).sort();
-  }, []);
+  }, [allCars]);
 
   // Get unique body types from car data
   const availableBodyTypes = useMemo(() => {
     const typeSet = new Set(allCars.map((car) => car.bodyType));
     return Array.from(typeSet).sort();
-  }, []);
+  }, [allCars]);
 
   const FilterSidebar = () => (
     <div className="space-y-6">
@@ -642,7 +648,24 @@ const Cars = () => {
               )}
 
               {/* Cars Grid/List */}
-              {filteredCars.length === 0 ? (
+              {carsLoading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {Array.from({ length: 9 }).map((_, i) => (
+                    <Card key={i} className="overflow-hidden">
+                      <Skeleton className="aspect-[16/10] w-full" />
+                      <CardContent className="p-4 space-y-3">
+                        <Skeleton className="h-5 w-3/4" />
+                        <Skeleton className="h-4 w-1/2" />
+                        <div className="flex gap-2">
+                          <Skeleton className="h-6 w-16" />
+                          <Skeleton className="h-6 w-16" />
+                        </div>
+                        <Skeleton className="h-8 w-full" />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : filteredCars.length === 0 ? (
                 <div className="text-center py-16">
                   <Car className="h-16 w-16 mx-auto text-muted-foreground/50 mb-4" />
                   <h3 className="text-xl font-semibold mb-2">No cars found</h3>
