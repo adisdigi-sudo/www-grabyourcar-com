@@ -22,6 +22,7 @@ const navLinks = [
   { label: "Corporate", href: "/corporate" },
   { label: "Accessories", href: "/accessories" },
   { label: "Blog", href: "/blog" },
+  { label: "Admin", href: "/admin" },
 ];
 
 export const Header = () => {
