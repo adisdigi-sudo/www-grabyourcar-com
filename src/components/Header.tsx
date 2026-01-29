@@ -15,14 +15,11 @@ import logoImage from "@/assets/logo-option-4.png";
 
 const navLinks = [
   { label: "New Cars", href: "/cars" },
-  { label: "Find Your Car", href: "/car-finder", highlight: true },
-  { label: "Compare", href: "/compare" },
-  { label: "Car Loans", href: "/car-loans" },
-  { label: "Insurance", href: "/car-insurance" },
-  { label: "Corporate", href: "/corporate" },
-  { label: "Accessories", href: "/accessories" },
-  { label: "Blog", href: "/blog" },
-  { label: "Admin", href: "/admin" },
+  { label: "Car Images", href: "/cars?view=images" },
+  { label: "Features & Specs", href: "/cars?view=specs" },
+  { label: "Brochures", href: "/cars?view=brochures" },
+  { label: "Upcoming Cars", href: "/cars?filter=upcoming" },
+  { label: "Compare Cars", href: "/compare" },
 ];
 
 export const Header = () => {
@@ -62,16 +59,12 @@ export const Header = () => {
             </Link>
 
             {/* Desktop Navigation */}
-            <nav className="hidden lg:flex items-center gap-6">
+            <nav className="hidden lg:flex items-center gap-5">
               {navLinks.map((link) => (
                 <Link
                   key={link.label}
                   to={link.href}
-                  className={`text-sm font-medium transition-colors ${
-                    link.highlight 
-                      ? "text-accent hover:text-accent/80 font-semibold" 
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
+                  className="text-sm font-medium transition-colors text-muted-foreground hover:text-foreground whitespace-nowrap"
                 >
                   {link.label}
                 </Link>
