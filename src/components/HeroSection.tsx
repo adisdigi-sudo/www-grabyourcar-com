@@ -1,7 +1,8 @@
 import { SearchBar } from "@/components/SearchBar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Shield, Award, Users, CheckCircle } from "lucide-react";
+import { Shield, Award, Users, CheckCircle, Sparkles } from "lucide-react";
+import { Link } from "react-router-dom";
 import heroBg from "@/assets/hero-bg.jpg";
 
 export const HeroSection = () => {
@@ -39,6 +40,17 @@ export const HeroSection = () => {
 
           {/* Search Bar */}
           <SearchBar />
+
+          {/* Find Your Car CTA */}
+          <div className="mt-6">
+            <Link to="/car-finder">
+              <Button variant="accent" size="lg" className="gap-2">
+                <Sparkles className="h-5 w-5" />
+                Find Your Perfect Car
+              </Button>
+            </Link>
+            <p className="text-sm text-card/60 mt-2">Answer a few questions & get AI-powered recommendations</p>
+          </div>
 
           {/* Trust Indicators */}
           <div className="mt-12 flex flex-wrap items-center justify-center gap-6 md:gap-12">
