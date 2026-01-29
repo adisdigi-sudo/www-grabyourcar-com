@@ -11,3 +11,12 @@ verify_jwt = false
 
 [functions.submit-lead]
 verify_jwt = true
+
+[functions.migrate-car-data]
+verify_jwt = false
+
+[functions.enhance-car-data]
+verify_jwt = false
+
+[functions.sync-car-database]
+verify_jwt = false
