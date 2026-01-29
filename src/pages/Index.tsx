@@ -11,7 +11,7 @@ import { TrustBadges } from "@/components/TrustBadges";
 import { Footer } from "@/components/Footer";
 import { FloatingCTA } from "@/components/FloatingCTA";
 import { CarAdvisorChat } from "@/components/CarAdvisorChat";
-import { MobileBottomNav } from "@/components/MobileBottomNav";
+
 
 const Index = () => {
   const [loanPrefill, setLoanPrefill] = useState<string>("");
@@ -64,9 +64,6 @@ const Index = () => {
       
       {/* AI Car Advisor Chat */}
       <CarAdvisorChat />
-      
-      {/* Mobile Bottom Navigation */}
-      <MobileBottomNav />
     </div>
   );
 };
