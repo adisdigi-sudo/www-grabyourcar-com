@@ -27,24 +27,39 @@ export const PromoBanner = () => {
   }, []);
 
   return (
-    <div className="bg-accent text-accent-foreground py-3 overflow-hidden">
-      <div className="container mx-auto px-4">
-        <div className="flex flex-col md:flex-row items-center justify-center gap-3 md:gap-6 text-center md:text-left">
+    <div className="bg-accent text-accent-foreground py-1.5 md:py-3 overflow-hidden">
+      <div className="container mx-auto px-3 md:px-4">
+        {/* Mobile: Single line compact layout */}
+        <div className="flex md:hidden items-center justify-center gap-2 text-xs">
+          <Flame className="h-3.5 w-3.5 animate-pulse flex-shrink-0" />
+          <span className="font-heading font-bold truncate">
+            🎉 Up to ₹2.5L OFF
+          </span>
+          <span className="text-accent-foreground/60">•</span>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <Badge variant="secondary" className="bg-accent-foreground/20 text-accent-foreground border-0 font-mono text-xs px-1.5 py-0">
+              {String(timeLeft.hours).padStart(2, "0")}:{String(timeLeft.minutes).padStart(2, "0")}:{String(timeLeft.seconds).padStart(2, "0")}
+            </Badge>
+          </div>
+        </div>
+
+        {/* Desktop: Full layout */}
+        <div className="hidden md:flex items-center justify-center gap-6 text-center">
           <div className="flex items-center gap-2">
             <Flame className="h-5 w-5 animate-pulse" />
-            <span className="font-heading font-bold text-sm md:text-base">
+            <span className="font-heading font-bold text-base">
               🎉 Year-End Mega Sale!
             </span>
           </div>
           
-          <div className="hidden md:block w-px h-6 bg-accent-foreground/30" />
+          <div className="w-px h-6 bg-accent-foreground/30" />
           
           <div className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
             <span className="text-sm">Up to ₹2,50,000 OFF on Select Models</span>
           </div>
           
-          <div className="hidden md:block w-px h-6 bg-accent-foreground/30" />
+          <div className="w-px h-6 bg-accent-foreground/30" />
           
           <div className="flex items-center gap-3">
             <Timer className="h-4 w-4" />
