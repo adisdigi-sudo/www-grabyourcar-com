@@ -32,16 +32,15 @@ export const CarFinanceHero = () => {
       <div className="absolute inset-0 z-[2] overflow-hidden">
         {/* Primary streak - center */}
         <div 
-          className="absolute left-0 right-0 h-[2px] top-1/2 -translate-y-1/2"
+          className="absolute left-0 right-0 h-[2px] top-1/2 -translate-y-1/2 animate-streak-pulse"
           style={{
             background: "linear-gradient(90deg, transparent 0%, #00E5FF 20%, #00E5FF 50%, #00E5FF 80%, transparent 100%)",
-            boxShadow: "0 0 60px 20px rgba(0, 229, 255, 0.4), 0 0 120px 40px rgba(0, 229, 255, 0.2)",
             filter: "blur(1px)"
           }}
         />
         {/* Secondary streak - above */}
         <div 
-          className="absolute left-[10%] right-[20%] h-[1px] top-[40%]"
+          className="absolute left-[10%] right-[20%] h-[1px] top-[40%] animate-streak-flow"
           style={{
             background: "linear-gradient(90deg, transparent 0%, #00E5FF 30%, #00E5FF 70%, transparent 100%)",
             boxShadow: "0 0 40px 10px rgba(0, 229, 255, 0.3)",
@@ -51,12 +50,13 @@ export const CarFinanceHero = () => {
         />
         {/* Tertiary streak - below */}
         <div 
-          className="absolute left-[20%] right-[10%] h-[1px] top-[60%]"
+          className="absolute left-[20%] right-[10%] h-[1px] top-[60%] animate-streak-flow"
           style={{
             background: "linear-gradient(90deg, transparent 0%, #00E5FF 30%, #00E5FF 70%, transparent 100%)",
             boxShadow: "0 0 40px 10px rgba(0, 229, 255, 0.3)",
             filter: "blur(1px)",
-            opacity: 0.5
+            opacity: 0.5,
+            animationDelay: "4s"
           }}
         />
       </div>
