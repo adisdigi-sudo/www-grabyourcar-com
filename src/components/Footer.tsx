@@ -1,7 +1,7 @@
 import { Mail, Phone, MapPin, Facebook, Instagram, Twitter, Youtube } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import logoImage from "@/assets/logo-grabyourcar-transparent.png";
+import logoImage from "@/assets/logo-grabyourcar-main.png";
 
 const footerLinks = {
   services: [
