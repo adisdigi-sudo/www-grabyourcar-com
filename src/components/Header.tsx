@@ -55,7 +55,7 @@ export const Header = () => {
 
             {/* Logo */}
             <Link to="/" className="flex items-center flex-shrink-0">
-              <img src={logoImage} alt="Grabyourcar" className="h-7 md:h-10 w-auto object-contain" />
+              <img src={logoImage} alt="Grabyourcar" className="h-9 md:h-14 w-auto object-contain" />
             </Link>
 
             {/* Desktop Navigation */}
