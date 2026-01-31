@@ -55,9 +55,9 @@ export const FinanceHeroEMIWidget = () => {
     <div 
       className="rounded-xl p-5 md:p-6 backdrop-blur-md border max-w-xl mx-auto"
       style={{
-        background: "rgba(0, 51, 102, 0.6)",
-        borderColor: "rgba(0, 229, 255, 0.3)",
-        boxShadow: "0 0 40px rgba(0, 229, 255, 0.15), inset 0 1px 0 rgba(255,255,255,0.1)"
+        background: "linear-gradient(135deg, rgba(0, 51, 102, 0.8) 0%, rgba(0, 51, 102, 0.6) 100%)",
+        borderColor: "rgba(0, 51, 102, 0.6)",
+        boxShadow: "0 0 40px rgba(0, 51, 102, 0.4), inset 0 1px 0 rgba(255,255,255,0.1)"
       }}
     >
       {/* Header */}
@@ -148,8 +148,8 @@ export const FinanceHeroEMIWidget = () => {
           <div 
             className="rounded-lg p-4 text-center mb-4"
             style={{
-              background: "linear-gradient(135deg, rgba(0, 229, 255, 0.2) 0%, rgba(0, 229, 255, 0.05) 100%)",
-              border: "1px solid rgba(0, 229, 255, 0.3)"
+              background: "linear-gradient(135deg, rgba(0, 51, 102, 0.6) 0%, rgba(0, 51, 102, 0.3) 100%)",
+              border: "1px solid rgba(0, 51, 102, 0.5)"
             }}
           >
             <p className="text-white/60 text-xs mb-1">Your Monthly EMI</p>
@@ -166,11 +166,11 @@ export const FinanceHeroEMIWidget = () => {
 
           {/* Quick Stats */}
           <div className="grid grid-cols-2 gap-2 mb-4 text-center">
-            <div className="rounded-md p-2" style={{ background: "rgba(255,255,255,0.05)" }}>
+            <div className="rounded-md p-2" style={{ background: "rgba(0, 51, 102, 0.5)" }}>
               <p className="text-[10px] text-white/50">Principal</p>
               <p className="text-xs font-semibold text-white">{formatCurrency(loanAmount)}</p>
             </div>
-            <div className="rounded-md p-2" style={{ background: "rgba(255,255,255,0.05)" }}>
+            <div className="rounded-md p-2" style={{ background: "rgba(0, 51, 102, 0.5)" }}>
               <p className="text-[10px] text-white/50">Interest</p>
               <p className="text-xs font-semibold" style={{ color: "#F58220" }}>
                 {formatCurrency(emiDetails.totalInterest)}

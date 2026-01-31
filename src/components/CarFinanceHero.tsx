@@ -61,18 +61,18 @@ export const CarFinanceHero = () => {
         />
       </div>
 
-      {/* Glow orbs for depth */}
+      {/* Glow orbs for depth - using #003366 */}
       <div 
         className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full z-[1]"
         style={{
-          background: "radial-gradient(circle, rgba(0, 229, 255, 0.1) 0%, transparent 70%)",
+          background: "radial-gradient(circle, rgba(0, 51, 102, 0.4) 0%, transparent 70%)",
           filter: "blur(60px)"
         }}
       />
       <div 
         className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full z-[1]"
         style={{
-          background: "radial-gradient(circle, rgba(0, 229, 255, 0.08) 0%, transparent 70%)",
+          background: "radial-gradient(circle, rgba(0, 51, 102, 0.3) 0%, transparent 70%)",
           filter: "blur(40px)"
         }}
       />
@@ -85,8 +85,8 @@ export const CarFinanceHero = () => {
             <div 
               className="w-12 h-12 rounded-full flex items-center justify-center"
               style={{
-                background: "linear-gradient(135deg, #00E5FF 0%, #0088CC 100%)",
-                boxShadow: "0 0 30px rgba(0, 229, 255, 0.5)"
+                background: "linear-gradient(135deg, #003366 0%, #001529 100%)",
+                boxShadow: "0 0 30px rgba(0, 51, 102, 0.6), 0 0 60px rgba(0, 229, 255, 0.3)"
               }}
             >
               <svg viewBox="0 0 24 24" className="w-7 h-7 text-white" fill="currentColor">
@@ -155,7 +155,7 @@ export const CarFinanceHero = () => {
               <div 
                 className="absolute inset-0 rounded-full border-2 border-white/80 animate-pulse"
                 style={{
-                  boxShadow: "0 0 20px rgba(0, 229, 255, 0.3), inset 0 0 20px rgba(0, 229, 255, 0.1)"
+                  boxShadow: "0 0 20px rgba(0, 51, 102, 0.5), inset 0 0 20px rgba(0, 51, 102, 0.3)"
                 }}
               />
               <div className="text-center">
