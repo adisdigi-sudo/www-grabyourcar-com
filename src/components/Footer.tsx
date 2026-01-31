@@ -1,6 +1,7 @@
-import { Car, Mail, Phone, MapPin, Facebook, Instagram, Twitter, Youtube } from "lucide-react";
+import { Mail, Phone, MapPin, Facebook, Instagram, Twitter, Youtube } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import logoImage from "@/assets/logo-grabyourcar-new.png";
 
 const footerLinks = {
   services: [
@@ -40,13 +41,8 @@ export const Footer = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-8">
           {/* Brand */}
           <div className="col-span-2">
-            <a href="/" className="flex items-center gap-2 mb-6">
-              <div className="w-10 h-10 bg-accent rounded-xl flex items-center justify-center">
-                <Car className="h-6 w-6 text-accent-foreground" />
-              </div>
-              <span className="font-heading font-bold text-xl text-background">
-                Grab<span className="text-accent">your</span>car
-              </span>
+            <a href="/" className="flex items-center mb-6">
+              <img src={logoImage} alt="Grabyourcar" className="h-10 w-auto" />
             </a>
             <p className="text-background/70 mb-6 text-sm leading-relaxed">
               India's trusted platform for buying new cars at the best price. Compare offers from 500+ authorized dealers across India.
