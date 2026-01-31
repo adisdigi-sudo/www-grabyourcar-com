@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle, Zap, Clock, Shield } from "lucide-react";
 import { Link } from "react-router-dom";
 import { FinanceHeroEMIWidget } from "./FinanceHeroEMIWidget";
-import logoImage from "@/assets/logo-grabyourcar-transparent.png";
+import logoImage from "@/assets/logo-grabyourcar-main.png";
 
 export const CarFinanceHero = () => {
   return (

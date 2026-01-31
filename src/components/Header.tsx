@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import logoImage from "@/assets/logo-grabyourcar-transparent.png";
+import logoImage from "@/assets/logo-grabyourcar-main.png";
 
 const navLinks = [
   { label: "New Cars", href: "/cars" },
