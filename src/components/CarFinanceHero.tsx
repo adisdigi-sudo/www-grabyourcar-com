@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle, Zap, Clock, Shield } from "lucide-react";
 import { Link } from "react-router-dom";
 import { FinanceHeroEMIWidget } from "./FinanceHeroEMIWidget";
-import logoImage from "@/assets/logo-grabyourcar-new.png";
+import logoImage from "@/assets/logo-grabyourcar-transparent.png";
 
 export const CarFinanceHero = () => {
   return (
@@ -83,7 +83,7 @@ export const CarFinanceHero = () => {
         <div className="max-w-4xl mx-auto text-center">
           {/* Logo/Brand Badge */}
           <div className="flex items-center justify-center mb-8">
-            <img src={logoImage} alt="Grabyourcar" className="h-12 md:h-16 w-auto" />
+            <img src={logoImage} alt="Grabyourcar" className="h-10 md:h-14 w-auto object-contain brightness-0 invert" />
           </div>
 
           {/* Main Headline */}
