@@ -6,11 +6,11 @@ import { FinanceHeroEMIWidget } from "./FinanceHeroEMIWidget";
 export const CarFinanceHero = () => {
   return (
     <section className="relative min-h-[80vh] flex items-center justify-center overflow-hidden">
-      {/* Deep Navy Radial Gradient Background */}
+      {/* Deep Navy Radial Gradient Background with #003366 Center Glow */}
       <div 
         className="absolute inset-0 z-0"
         style={{
-          background: "radial-gradient(ellipse at center, #003366 0%, #001B3D 70%, #000d1f 100%)"
+          background: "radial-gradient(ellipse at center, #003366 0%, #002244 50%, #001529 100%)"
         }}
       />
 
