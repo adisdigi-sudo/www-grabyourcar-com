@@ -4,6 +4,7 @@ import { PromoBanner } from "@/components/PromoBanner";
 import { HeroSection } from "@/components/HeroSection";
 import { CategoryGrid } from "@/components/CategoryGrid";
 import { CarListings } from "@/components/CarListings";
+import { CarFinanceHero } from "@/components/CarFinanceHero";
 import EMICalculator from "@/components/EMICalculator";
 import { LeadForm } from "@/components/LeadForm";
 import { Testimonials } from "@/components/Testimonials";
@@ -42,6 +43,9 @@ const Index = () => {
         
         {/* Featured Car Listings */}
         <CarListings />
+        
+        {/* Car Finance Hero - Midnight Tech */}
+        <CarFinanceHero />
         
         {/* EMI Calculator */}
         <EMICalculator onGetQuote={handleGetLoanQuote} />
