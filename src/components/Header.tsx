@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import logoImage from "@/assets/logo-grabyourcar-new.png";
+import logoImage from "@/assets/logo-grabyourcar-transparent.png";
 
 const navLinks = [
   { label: "New Cars", href: "/cars" },
@@ -55,7 +55,7 @@ export const Header = () => {
 
             {/* Logo */}
             <Link to="/" className="flex items-center flex-shrink-0">
-              <img src={logoImage} alt="Grabyourcar" className="h-8 md:h-12 w-auto" />
+              <img src={logoImage} alt="Grabyourcar" className="h-7 md:h-10 w-auto object-contain" />
             </Link>
 
             {/* Desktop Navigation */}
