@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Zap, Clock, Shield } from "lucide-react";
 import { Link } from "react-router-dom";
+import { FinanceHeroEMIWidget } from "./FinanceHeroEMIWidget";
 
 export const CarFinanceHero = () => {
   return (
@@ -167,64 +167,8 @@ export const CarFinanceHero = () => {
             </div>
           </div>
 
-          {/* Car Image with Motion Effect */}
-          <div className="relative mx-auto max-w-3xl">
-            {/* Motion blur effect behind car */}
-            <div 
-              className="absolute inset-x-0 bottom-0 h-20"
-              style={{
-                background: "linear-gradient(90deg, transparent 0%, rgba(0, 229, 255, 0.2) 20%, rgba(0, 229, 255, 0.3) 50%, rgba(0, 229, 255, 0.2) 80%, transparent 100%)",
-                filter: "blur(20px)",
-                transform: "scaleX(1.2)"
-              }}
-            />
-            {/* Placeholder for car image - using SVG representation */}
-            <div className="relative z-10">
-              <svg 
-                viewBox="0 0 400 150" 
-                className="w-full max-w-2xl mx-auto drop-shadow-2xl"
-                style={{
-                  filter: "drop-shadow(0 20px 40px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 60px rgba(0, 229, 255, 0.2))"
-                }}
-              >
-                {/* Simplified luxury car silhouette */}
-                <defs>
-                  <linearGradient id="carGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" style={{ stopColor: "#4a5568", stopOpacity: 1 }} />
-                    <stop offset="100%" style={{ stopColor: "#1a202c", stopOpacity: 1 }} />
-                  </linearGradient>
-                  <linearGradient id="windowGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" style={{ stopColor: "#00E5FF", stopOpacity: 0.3 }} />
-                    <stop offset="100%" style={{ stopColor: "#003366", stopOpacity: 0.8 }} />
-                  </linearGradient>
-                </defs>
-                {/* Car body */}
-                <path 
-                  d="M40 100 L60 70 L120 55 L280 55 L340 70 L360 100 L360 110 L40 110 Z" 
-                  fill="url(#carGradient)"
-                />
-                {/* Windows */}
-                <path 
-                  d="M70 70 L120 58 L200 58 L200 70 L130 70 Z" 
-                  fill="url(#windowGradient)"
-                />
-                <path 
-                  d="M210 58 L280 58 L330 70 L200 70 L200 58 Z" 
-                  fill="url(#windowGradient)"
-                />
-                {/* Wheels */}
-                <circle cx="100" cy="110" r="25" fill="#1a202c" />
-                <circle cx="100" cy="110" r="20" fill="#2d3748" />
-                <circle cx="100" cy="110" r="10" fill="#4a5568" />
-                <circle cx="300" cy="110" r="25" fill="#1a202c" />
-                <circle cx="300" cy="110" r="20" fill="#2d3748" />
-                <circle cx="300" cy="110" r="10" fill="#4a5568" />
-                {/* Headlights */}
-                <ellipse cx="355" cy="85" rx="8" ry="5" fill="#00E5FF" opacity="0.8" />
-                <ellipse cx="45" cy="85" rx="8" ry="5" fill="#F58220" opacity="0.6" />
-              </svg>
-            </div>
-          </div>
+          {/* EMI Calculator Widget */}
+          <FinanceHeroEMIWidget />
 
           {/* Trust Indicators */}
           <div className="mt-12 flex flex-wrap items-center justify-center gap-6 md:gap-10 text-white/60 text-xs md:text-sm">
