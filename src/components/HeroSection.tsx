@@ -1,7 +1,7 @@
 import { SearchBar } from "@/components/SearchBar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Shield, Award, Users, CheckCircle, Sparkles } from "lucide-react";
+import { Shield, Award, Users, CheckCircle, Sparkles, Zap, Gift, Percent } from "lucide-react";
 import { Link } from "react-router-dom";
 import heroBg from "@/assets/hero-bg.jpg";
 
@@ -34,9 +34,45 @@ export const HeroSection = () => {
           </h1>
 
           {/* Subheading */}
-          <p className="text-lg md:text-xl text-card/80 mb-8 max-w-2xl mx-auto">
+          <p className="text-lg md:text-xl text-card/80 mb-6 max-w-2xl mx-auto">
             No Waiting Period • Pan-India Dealer Network • Exclusive Discounts
           </p>
+
+          {/* Promotional Banner Section */}
+          <div className="mb-8 flex flex-col md:flex-row gap-3 md:gap-4 justify-center items-center">
+            {/* Banner Slot 1 */}
+            <div className="w-full md:w-auto bg-gradient-to-r from-accent/90 to-accent rounded-xl p-4 md:px-6 shadow-lg border border-accent/20 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-card/20 flex items-center justify-center flex-shrink-0">
+                <Zap className="h-5 w-5 text-card" />
+              </div>
+              <div className="text-left">
+                <p className="font-heading font-bold text-card text-sm md:text-base">Zero Waiting Period</p>
+                <p className="text-card/80 text-xs">Get your dream car today!</p>
+              </div>
+            </div>
+
+            {/* Banner Slot 2 */}
+            <div className="w-full md:w-auto bg-gradient-to-r from-success/90 to-success rounded-xl p-4 md:px-6 shadow-lg border border-success/20 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-card/20 flex items-center justify-center flex-shrink-0">
+                <Gift className="h-5 w-5 text-card" />
+              </div>
+              <div className="text-left">
+                <p className="font-heading font-bold text-card text-sm md:text-base">₹50,000 Off</p>
+                <p className="text-card/80 text-xs">Festive Season Offer</p>
+              </div>
+            </div>
+
+            {/* Banner Slot 3 */}
+            <div className="w-full md:w-auto bg-gradient-to-r from-primary/90 to-primary rounded-xl p-4 md:px-6 shadow-lg border border-primary/20 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-card/20 flex items-center justify-center flex-shrink-0">
+                <Percent className="h-5 w-5 text-card" />
+              </div>
+              <div className="text-left">
+                <p className="font-heading font-bold text-card text-sm md:text-base">7.99% EMI</p>
+                <p className="text-card/80 text-xs">Low Interest Financing</p>
+              </div>
+            </div>
+          </div>
 
           {/* Search Bar */}
           <SearchBar />
