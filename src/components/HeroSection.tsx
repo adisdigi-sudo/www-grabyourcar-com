@@ -1,14 +1,27 @@
+import { useEffect, useState } from "react";
 import { SearchBar } from "@/components/SearchBar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Shield, Award, Users, CheckCircle, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+} from "@/components/ui/carousel";
+import Autoplay from "embla-carousel-autoplay";
 import heroBg from "@/assets/hero-bg.jpg";
 
 // Import banner images - replace these with your custom uploads
 import banner1 from "@/assets/banners/banner-1.png";
 import banner2 from "@/assets/banners/banner-2.png";
 import banner3 from "@/assets/banners/banner-3.png";
+
+const banners = [
+  { id: 1, src: banner1, alt: "Zero Waiting Period Offer", link: "/cars" },
+  { id: 2, src: banner2, alt: "Festive Season Discount", link: "/car-loans" },
+  { id: 3, src: banner3, alt: "Low EMI Financing", link: "/car-loans" },
+];
 
 export const HeroSection = () => {
   return (
@@ -43,40 +56,49 @@ export const HeroSection = () => {
             No Waiting Period • Pan-India Dealer Network • Exclusive Discounts
           </p>
 
-          {/* Promotional Banner Section - Upload your custom images */}
-          <div className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 max-w-5xl mx-auto">
-            {/* Banner 1 */}
-            <Link to="/cars" className="group">
-              <div className="relative overflow-hidden rounded-xl shadow-lg border border-card/20 transition-transform duration-300 group-hover:scale-[1.02]">
-                <img 
-                  src={banner1} 
-                  alt="Zero Waiting Period Offer" 
-                  className="w-full h-24 md:h-28 object-cover"
-                />
+          {/* Promotional Banner Carousel */}
+          <div className="mb-8 max-w-5xl mx-auto">
+            <Carousel
+              opts={{
+                align: "start",
+                loop: true,
+              }}
+              plugins={[
+                Autoplay({
+                  delay: 3000,
+                  stopOnInteraction: false,
+                  stopOnMouseEnter: true,
+                }),
+              ]}
+              className="w-full"
+            >
+              <CarouselContent className="-ml-2 md:-ml-4">
+                {banners.map((banner) => (
+                  <CarouselItem key={banner.id} className="pl-2 md:pl-4 basis-full md:basis-1/3">
+                    <Link to={banner.link} className="group block">
+                      <div className="relative overflow-hidden rounded-xl shadow-lg border border-card/20 transition-all duration-300 group-hover:scale-[1.02] group-hover:shadow-xl">
+                        <img 
+                          src={banner.src} 
+                          alt={banner.alt} 
+                          className="w-full h-32 md:h-36 object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      </div>
+                    </Link>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              
+              {/* Carousel Indicators */}
+              <div className="flex justify-center gap-2 mt-4">
+                {banners.map((_, index) => (
+                  <div
+                    key={index}
+                    className="w-2 h-2 rounded-full bg-card/40 transition-all duration-300"
+                  />
+                ))}
               </div>
-            </Link>
-
-            {/* Banner 2 */}
-            <Link to="/car-loans" className="group">
-              <div className="relative overflow-hidden rounded-xl shadow-lg border border-card/20 transition-transform duration-300 group-hover:scale-[1.02]">
-                <img 
-                  src={banner2} 
-                  alt="Festive Season Discount" 
-                  className="w-full h-24 md:h-28 object-cover"
-                />
-              </div>
-            </Link>
-
-            {/* Banner 3 */}
-            <Link to="/car-loans" className="group">
-              <div className="relative overflow-hidden rounded-xl shadow-lg border border-card/20 transition-transform duration-300 group-hover:scale-[1.02]">
-                <img 
-                  src={banner3} 
-                  alt="Low EMI Financing" 
-                  className="w-full h-24 md:h-28 object-cover"
-                />
-              </div>
-            </Link>
+            </Carousel>
           </div>
 
           {/* Search Bar */}
