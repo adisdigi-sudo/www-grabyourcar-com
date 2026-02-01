@@ -1,9 +1,14 @@
 import { SearchBar } from "@/components/SearchBar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Shield, Award, Users, CheckCircle, Sparkles, Zap, Gift, Percent } from "lucide-react";
+import { Shield, Award, Users, CheckCircle, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import heroBg from "@/assets/hero-bg.jpg";
+
+// Import banner images - replace these with your custom uploads
+import banner1 from "@/assets/banners/banner-1.png";
+import banner2 from "@/assets/banners/banner-2.png";
+import banner3 from "@/assets/banners/banner-3.png";
 
 export const HeroSection = () => {
   return (
@@ -38,40 +43,40 @@ export const HeroSection = () => {
             No Waiting Period • Pan-India Dealer Network • Exclusive Discounts
           </p>
 
-          {/* Promotional Banner Section */}
-          <div className="mb-8 flex flex-col md:flex-row gap-3 md:gap-4 justify-center items-center">
-            {/* Banner Slot 1 */}
-            <div className="w-full md:w-auto bg-gradient-to-r from-accent/90 to-accent rounded-xl p-4 md:px-6 shadow-lg border border-accent/20 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-card/20 flex items-center justify-center flex-shrink-0">
-                <Zap className="h-5 w-5 text-card" />
+          {/* Promotional Banner Section - Upload your custom images */}
+          <div className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 max-w-5xl mx-auto">
+            {/* Banner 1 */}
+            <Link to="/cars" className="group">
+              <div className="relative overflow-hidden rounded-xl shadow-lg border border-card/20 transition-transform duration-300 group-hover:scale-[1.02]">
+                <img 
+                  src={banner1} 
+                  alt="Zero Waiting Period Offer" 
+                  className="w-full h-24 md:h-28 object-cover"
+                />
               </div>
-              <div className="text-left">
-                <p className="font-heading font-bold text-card text-sm md:text-base">Zero Waiting Period</p>
-                <p className="text-card/80 text-xs">Get your dream car today!</p>
-              </div>
-            </div>
+            </Link>
 
-            {/* Banner Slot 2 */}
-            <div className="w-full md:w-auto bg-gradient-to-r from-success/90 to-success rounded-xl p-4 md:px-6 shadow-lg border border-success/20 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-card/20 flex items-center justify-center flex-shrink-0">
-                <Gift className="h-5 w-5 text-card" />
+            {/* Banner 2 */}
+            <Link to="/car-loans" className="group">
+              <div className="relative overflow-hidden rounded-xl shadow-lg border border-card/20 transition-transform duration-300 group-hover:scale-[1.02]">
+                <img 
+                  src={banner2} 
+                  alt="Festive Season Discount" 
+                  className="w-full h-24 md:h-28 object-cover"
+                />
               </div>
-              <div className="text-left">
-                <p className="font-heading font-bold text-card text-sm md:text-base">₹50,000 Off</p>
-                <p className="text-card/80 text-xs">Festive Season Offer</p>
-              </div>
-            </div>
+            </Link>
 
-            {/* Banner Slot 3 */}
-            <div className="w-full md:w-auto bg-gradient-to-r from-primary/90 to-primary rounded-xl p-4 md:px-6 shadow-lg border border-primary/20 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-card/20 flex items-center justify-center flex-shrink-0">
-                <Percent className="h-5 w-5 text-card" />
+            {/* Banner 3 */}
+            <Link to="/car-loans" className="group">
+              <div className="relative overflow-hidden rounded-xl shadow-lg border border-card/20 transition-transform duration-300 group-hover:scale-[1.02]">
+                <img 
+                  src={banner3} 
+                  alt="Low EMI Financing" 
+                  className="w-full h-24 md:h-28 object-cover"
+                />
               </div>
-              <div className="text-left">
-                <p className="font-heading font-bold text-card text-sm md:text-base">7.99% EMI</p>
-                <p className="text-card/80 text-xs">Low Interest Financing</p>
-              </div>
-            </div>
+            </Link>
           </div>
 
           {/* Search Bar */}
