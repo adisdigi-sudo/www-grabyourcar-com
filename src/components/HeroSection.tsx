@@ -16,11 +16,17 @@ import heroBg from "@/assets/hero-bg.jpg";
 import banner1 from "@/assets/banners/banner-1.png";
 import banner2 from "@/assets/banners/banner-2.png";
 import banner3 from "@/assets/banners/banner-3.png";
+import banner4 from "@/assets/banners/banner-4.png";
+import banner5 from "@/assets/banners/banner-5.png";
+import banner6 from "@/assets/banners/banner-6.png";
 
 const banners = [
   { id: 1, src: banner1, alt: "Zero Waiting Period Offer", link: "/cars" },
   { id: 2, src: banner2, alt: "Festive Season Discount", link: "/car-loans" },
   { id: 3, src: banner3, alt: "Low EMI Financing", link: "/car-loans" },
+  { id: 4, src: banner4, alt: "Free Insurance Offer", link: "/car-insurance" },
+  { id: 5, src: banner5, alt: "Exchange Bonus Offer", link: "/cars" },
+  { id: 6, src: banner6, alt: "Free Accessories Offer", link: "/accessories" },
 ];
 
 export const HeroSection = () => {
