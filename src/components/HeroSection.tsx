@@ -12,21 +12,25 @@ import {
 import Autoplay from "embla-carousel-autoplay";
 import heroBg from "@/assets/hero-bg.jpg";
 
-// Import banner images - replace these with your custom uploads
+// Import banner images - Grabyourcar Service Banners
 import banner1 from "@/assets/banners/banner-1.png";
 import banner2 from "@/assets/banners/banner-2.png";
 import banner3 from "@/assets/banners/banner-3.png";
 import banner4 from "@/assets/banners/banner-4.png";
 import banner5 from "@/assets/banners/banner-5.png";
 import banner6 from "@/assets/banners/banner-6.png";
+import banner7 from "@/assets/banners/banner-7.png";
+import banner8 from "@/assets/banners/banner-8.png";
 
 const banners = [
-  { id: 1, src: banner1, alt: "Zero Waiting Period Offer", link: "/cars" },
-  { id: 2, src: banner2, alt: "Festive Season Discount", link: "/car-loans" },
-  { id: 3, src: banner3, alt: "Low EMI Financing", link: "/car-loans" },
-  { id: 4, src: banner4, alt: "Free Insurance Offer", link: "/car-insurance" },
-  { id: 5, src: banner5, alt: "Exchange Bonus Offer", link: "/cars" },
-  { id: 6, src: banner6, alt: "Free Accessories Offer", link: "/accessories" },
+  { id: 1, src: banner1, alt: "New Cars - Pan-India Deals", link: "/cars" },
+  { id: 2, src: banner2, alt: "No Waiting Period Cars", link: "/cars?filter=no-waiting" },
+  { id: 3, src: banner3, alt: "Compare Car Offers", link: "/compare" },
+  { id: 4, src: banner4, alt: "Car Insurance", link: "/car-insurance" },
+  { id: 5, src: banner5, alt: "Car Loans - Banks & NBFCs", link: "/car-loans" },
+  { id: 6, src: banner6, alt: "Corporate & Bulk Buying", link: "/corporate-buying" },
+  { id: 7, src: banner7, alt: "Self-Drive Rentals - Coming Soon", link: "#" },
+  { id: 8, src: banner8, alt: "Accessories & HSRP Frames", link: "/accessories" },
 ];
 
 export const HeroSection = () => {
