@@ -15,9 +15,7 @@ import logoImage from "@/assets/logo-grabyourcar-main.png";
 
 const navLinks = [
   { label: "New Cars", href: "/cars" },
-  { label: "Car Images", href: "/car-images" },
   { label: "Features & Specs", href: "/features-specs" },
-  { label: "Brochures", href: "/brochures" },
   { label: "Upcoming Cars", href: "/cars?filter=upcoming" },
   { label: "Compare Cars", href: "/compare" },
 ];
