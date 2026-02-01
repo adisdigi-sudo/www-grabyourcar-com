@@ -26,6 +26,7 @@ import MyFavorites from "./pages/MyFavorites";
 import CarFinder from "./pages/CarFinder";
 import Admin from "./pages/Admin";
 import SelfDriveRentals from "./pages/SelfDriveRentals";
+import HSRP from "./pages/HSRP";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -59,6 +60,7 @@ const App = () => (
                 <Route path="/car-finder" element={<CarFinder />} />
                 <Route path="/admin" element={<Admin />} />
                 <Route path="/self-drive" element={<SelfDriveRentals />} />
+                <Route path="/hsrp" element={<HSRP />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
                 <Route path="*" element={<NotFound />} />

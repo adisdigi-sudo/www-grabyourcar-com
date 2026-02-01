@@ -48,8 +48,8 @@ const services = [
   },
   {
     title: "HSRP Plates",
-    href: "/accessories?category=hsrp",
-    description: "High Security Registration Plates",
+    href: "/hsrp",
+    description: "Book High Security Registration Plates",
     icon: RectangleHorizontal,
   },
   {
