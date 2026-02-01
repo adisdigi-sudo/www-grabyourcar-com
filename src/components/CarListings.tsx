@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Fuel, Cog, Clock, TrendingDown, MessageCircle, Phone, Heart, GitCompare, Check } from "lucide-react";
+import { Fuel, Cog, Clock, TrendingDown, MessageCircle, Phone, Heart, GitCompare, Check, FileText, Eye } from "lucide-react";
 import { allCars } from "@/data/cars";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useAuth } from "@/hooks/useAuth";
@@ -144,22 +144,37 @@ export const CarListings = () => {
                 </div>
               </CardContent>
 
-              <CardFooter className="p-5 pt-0 gap-2">
-                <Link to={`/car/${car.slug}`} className="flex-1">
-                  <Button variant="cta" className="w-full">
-                    View Details
-                  </Button>
-                </Link>
-                <a href="https://wa.me/919876543210" target="_blank" rel="noopener noreferrer">
-                  <Button variant="whatsapp" size="icon">
-                    <MessageCircle className="h-4 w-4" />
-                  </Button>
-                </a>
-                <a href="tel:+919876543210">
-                  <Button variant="outline" size="icon">
-                    <Phone className="h-4 w-4" />
-                  </Button>
-                </a>
+              <CardFooter className="p-5 pt-0 flex flex-col gap-3">
+                {/* Primary Actions Row */}
+                <div className="flex gap-2 w-full">
+                  <Link to={`/car/${car.slug}`} className="flex-1">
+                    <Button variant="cta" className="w-full gap-2">
+                      <Eye className="h-4 w-4" />
+                      View Details
+                    </Button>
+                  </Link>
+                  <Link to={`/brochures?car=${car.slug}`}>
+                    <Button variant="outline" size="icon" title="Download Brochure">
+                      <FileText className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                </div>
+                
+                {/* Secondary Actions Row */}
+                <div className="flex gap-2 w-full">
+                  <a href="https://wa.me/919876543210" target="_blank" rel="noopener noreferrer" className="flex-1">
+                    <Button variant="whatsapp" className="w-full gap-2">
+                      <MessageCircle className="h-4 w-4" />
+                      WhatsApp
+                    </Button>
+                  </a>
+                  <a href="tel:+919876543210" className="flex-1">
+                    <Button variant="outline" className="w-full gap-2">
+                      <Phone className="h-4 w-4" />
+                      Call
+                    </Button>
+                  </a>
+                </div>
               </CardFooter>
             </Card>
           ))}

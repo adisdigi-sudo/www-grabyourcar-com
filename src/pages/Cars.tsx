@@ -50,6 +50,7 @@ import {
   Tag,
   GitCompare,
   Check,
+  FileText,
 } from "lucide-react";
 import { brands, bodyTypes, fuelTypes, transmissionTypes, priceRanges } from "@/data/cars";
 import { useCars } from "@/hooks/useCars";
@@ -772,12 +773,19 @@ const Cars = () => {
                             {car.transmission.join(" / ")}
                           </Badge>
                         </div>
-                        <Link to={`/car/${car.slug}`}>
-                          <Button className="w-full gap-2">
-                            View Details
-                            <ChevronRight className="h-4 w-4" />
-                          </Button>
-                        </Link>
+                        <div className="flex gap-2">
+                          <Link to={`/car/${car.slug}`} className="flex-1">
+                            <Button className="w-full gap-2">
+                              View Details
+                              <ChevronRight className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                          <Link to={`/brochures?car=${car.slug}`}>
+                            <Button variant="outline" size="icon" title="Download Brochure">
+                              <FileText className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                        </div>
                       </CardContent>
                     </Card>
                   ))}
@@ -837,6 +845,11 @@ const Cars = () => {
                               <Button className="w-full gap-2">
                                 View Details
                                 <ChevronRight className="h-4 w-4" />
+                              </Button>
+                            </Link>
+                            <Link to={`/brochures?car=${car.slug}`}>
+                              <Button variant="outline" size="icon" title="Download Brochure">
+                                <FileText className="h-4 w-4" />
                               </Button>
                             </Link>
                             {user && (
