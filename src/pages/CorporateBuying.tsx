@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-
+import { ServiceBanner } from "@/components/ServiceBanner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -117,6 +117,14 @@ const CorporateBuying = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
+
+      {/* Service Banner */}
+      <ServiceBanner
+        highlightText="Corporate Deals"
+        title="Fleet Discounts up to 15% on Bulk Orders!"
+        subtitle="Dedicated account manager | Priority delivery | Extended warranty options"
+        variant="gradient"
+      />
 
       {/* Hero Section */}
       <section className="relative py-16 md:py-24 bg-gradient-to-br from-primary/10 via-background to-accent/10">
@@ -314,9 +322,9 @@ const CorporateBuying = () => {
                   Contact Our Corporate Team
                 </h4>
                 <div className="space-y-3">
-                  <a href="tel:+919876543210" className="flex items-center gap-3 text-muted-foreground hover:text-foreground transition-colors">
+                  <a href="tel:+919855924442" className="flex items-center gap-3 text-muted-foreground hover:text-foreground transition-colors">
                     <Phone className="h-5 w-5 text-primary" />
-                    +91 98765 43210
+                    +91 98559 24442
                   </a>
                   <a href="mailto:corporate@grabyourcar.com" className="flex items-center gap-3 text-muted-foreground hover:text-foreground transition-colors">
                     <Mail className="h-5 w-5 text-primary" />

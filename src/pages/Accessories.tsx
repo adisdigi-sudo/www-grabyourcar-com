@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { ServiceBanner } from "@/components/ServiceBanner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -102,8 +103,16 @@ const Accessories = () => {
   return (
     <>
       <Header />
+
+      {/* Service Banner */}
+      <ServiceBanner
+        highlightText="Free Shipping"
+        title="Flat 20% Off on All Car Accessories!"
+        subtitle="Use code: GRAB20 | Free installation on orders above ₹2,000"
+        variant="accent"
+      />
       
-      <main className="min-h-screen bg-background pt-20">
+      <main className="min-h-screen bg-background pt-6">
         {/* Hero Section */}
         <section className="bg-gradient-to-r from-primary/10 via-primary/5 to-background py-12 md:py-16">
           <div className="container mx-auto px-4">
