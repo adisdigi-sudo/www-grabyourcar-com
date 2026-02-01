@@ -1,4 +1,4 @@
-import { Mail, Phone, MapPin, Facebook, Instagram, Twitter, Youtube } from "lucide-react";
+import { Mail, Phone, MapPin, Facebook, Instagram, Twitter, Youtube, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import logoImage from "@/assets/logo-grabyourcar-main.png";
@@ -107,13 +107,28 @@ export const Footer = () => {
               <li className="flex items-start gap-3">
                 <Phone className="h-4 w-4 text-accent mt-1" />
                 <div>
-                  <p className="text-sm text-background/70">+91 98559 24442</p>
+                  <a href="tel:+919855924442" className="text-sm text-background/70 hover:text-accent transition-colors">
+                    +91 98559 24442
+                  </a>
                   <p className="text-xs text-background/50">Mon-Sat, 9am-7pm</p>
                 </div>
               </li>
               <li className="flex items-start gap-3">
+                <MessageCircle className="h-4 w-4 text-accent mt-1" />
+                <a 
+                  href="https://wa.me/919855924442" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-sm text-background/70 hover:text-accent transition-colors"
+                >
+                  WhatsApp Us
+                </a>
+              </li>
+              <li className="flex items-start gap-3">
                 <Mail className="h-4 w-4 text-accent mt-1" />
-                <p className="text-sm text-background/70">hello@grabyourcar.com</p>
+                <a href="mailto:hello@grabyourcar.com" className="text-sm text-background/70 hover:text-accent transition-colors">
+                  hello@grabyourcar.com
+                </a>
               </li>
               <li className="flex items-start gap-3">
                 <MapPin className="h-4 w-4 text-accent mt-1" />

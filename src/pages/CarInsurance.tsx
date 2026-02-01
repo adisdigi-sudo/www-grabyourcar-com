@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { ServiceBanner } from "@/components/ServiceBanner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -149,6 +150,14 @@ const CarInsurance = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
+
+      {/* Service Banner */}
+      <ServiceBanner
+        highlightText="Save Up to 80%"
+        title="Renew Your Car Insurance Today!"
+        subtitle="Instant policy | 98% claim settlement ratio | 10,000+ cashless garages"
+        variant="primary"
+      />
 
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-primary/10 via-background to-accent/10 py-12 md:py-20">

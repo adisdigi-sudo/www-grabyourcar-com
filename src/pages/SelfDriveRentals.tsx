@@ -1,5 +1,6 @@
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { ServiceBanner } from "@/components/ServiceBanner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -90,6 +91,14 @@ const SelfDriveRentals = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
+
+      {/* Service Banner */}
+      <ServiceBanner
+        highlightText="Weekend Special"
+        title="Rent Any Car Starting ₹999/day!"
+        subtitle="Unlimited kilometers | Doorstep delivery | Zero security deposit for members"
+        variant="accent"
+      />
 
       {/* Hero Section */}
       <section className="py-12 md:py-16 bg-gradient-to-b from-muted/30 to-background">

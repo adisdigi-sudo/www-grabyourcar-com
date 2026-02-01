@@ -1,5 +1,6 @@
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { ServiceBanner } from "@/components/ServiceBanner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -173,6 +174,14 @@ const HSRP = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
+
+      {/* Service Banner */}
+      <ServiceBanner
+        highlightText="Mandatory"
+        title="Get Your HSRP Before the Deadline!"
+        subtitle="Avoid ₹10,000 fine | Government authorized | Quick installation in 48 hours"
+        variant="dark"
+      />
 
       {/* Hero Section */}
       <section className="relative bg-gradient-to-br from-primary via-primary/90 to-primary/80 text-primary-foreground py-12 md:py-16 overflow-hidden">

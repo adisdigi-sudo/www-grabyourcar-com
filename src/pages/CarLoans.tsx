@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { ServiceBanner } from "@/components/ServiceBanner";
 import EMICalculator from "@/components/EMICalculator";
 import {
   CheckCircle2,
@@ -187,6 +188,14 @@ const CarLoans = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
+
+      {/* Service Banner */}
+      <ServiceBanner
+        highlightText="Limited Offer"
+        title="Get Pre-Approved Car Loan in 30 Minutes!"
+        subtitle="Lowest interest rates starting 8.45% p.a. | Zero processing fee for first 100 customers"
+        variant="accent"
+      />
 
       {/* Hero Section */}
       <section className="relative bg-gradient-to-br from-primary via-primary/90 to-primary-dark pt-24 pb-16">
