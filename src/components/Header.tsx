@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Phone, MessageCircle, Heart, User, LogOut, Settings, Home, Search, Menu, X } from "lucide-react";
+import { Phone, MessageCircle, Heart, User, LogOut, Settings, Home, Search, Menu, X, ChevronDown, Car, CreditCard, Shield, Package, Building2, CarFront, RectangleHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -11,15 +11,65 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+} from "@/components/ui/navigation-menu";
 import logoImage from "@/assets/logo-grabyourcar-main.png";
 
-const navLinks = [
-  { label: "New Cars", href: "/cars" },
-  { label: "Car Loans", href: "/car-loans" },
-  { label: "Car Insurance", href: "/car-insurance" },
-  { label: "Accessories", href: "/accessories" },
-  { label: "Corporate Buying", href: "/corporate" },
+const services = [
+  {
+    title: "New Cars",
+    href: "/cars",
+    description: "Browse new cars with pan-India deals",
+    icon: Car,
+  },
+  {
+    title: "Car Loans",
+    href: "/car-loans",
+    description: "Best rates from banks & NBFCs",
+    icon: CreditCard,
+  },
+  {
+    title: "Car Insurance",
+    href: "/car-insurance",
+    description: "Compare & buy car insurance online",
+    icon: Shield,
+  },
+  {
+    title: "Accessories",
+    href: "/accessories",
+    description: "Car accessories & add-ons",
+    icon: Package,
+  },
+  {
+    title: "HSRP Plates",
+    href: "/accessories?category=hsrp",
+    description: "High Security Registration Plates",
+    icon: RectangleHorizontal,
+  },
+  {
+    title: "Corporate Buying",
+    href: "/corporate",
+    description: "Bulk & fleet car purchases",
+    icon: Building2,
+  },
+  {
+    title: "Self-Drive Rentals",
+    href: "/self-drive",
+    description: "Coming soon - Rent cars on demand",
+    icon: CarFront,
+    comingSoon: true,
+  },
+];
+
+const quickLinks = [
   { label: "Compare Cars", href: "/compare" },
+  { label: "Features & Specs", href: "/features-specs" },
 ];
 
 export const Header = () => {
@@ -58,18 +108,54 @@ export const Header = () => {
               <img src={logoImage} alt="Grabyourcar" className="h-9 md:h-14 w-auto object-contain" />
             </Link>
 
-            {/* Desktop Navigation */}
-            <nav className="hidden lg:flex items-center gap-5">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.label}
-                  to={link.href}
-                  className="text-sm font-medium transition-colors text-muted-foreground hover:text-foreground whitespace-nowrap"
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </nav>
+            {/* Desktop Navigation with Mega Menu */}
+            <NavigationMenu className="hidden lg:flex">
+              <NavigationMenuList>
+                <NavigationMenuItem>
+                  <NavigationMenuTrigger className="bg-transparent text-muted-foreground hover:text-foreground">
+                    Services
+                  </NavigationMenuTrigger>
+                  <NavigationMenuContent>
+                    <div className="w-[600px] p-4 bg-card border border-border rounded-xl shadow-xl">
+                      <div className="grid grid-cols-2 gap-2">
+                        {services.map((service) => (
+                          <Link
+                            key={service.title}
+                            to={service.href}
+                            className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted transition-colors group"
+                          >
+                            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
+                              <service.icon className="h-5 w-5 text-primary" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-foreground text-sm">{service.title}</span>
+                                {service.comingSoon && (
+                                  <span className="text-[10px] bg-amber-500/10 text-amber-600 px-1.5 py-0.5 rounded-full font-medium">
+                                    Soon
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-0.5">{service.description}</p>
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  </NavigationMenuContent>
+                </NavigationMenuItem>
+                {quickLinks.map((link) => (
+                  <NavigationMenuItem key={link.label}>
+                    <Link
+                      to={link.href}
+                      className="text-sm font-medium px-3 py-2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {link.label}
+                    </Link>
+                  </NavigationMenuItem>
+                ))}
+              </NavigationMenuList>
+            </NavigationMenu>
 
             {/* CTA Buttons */}
             <div className="flex items-center gap-1 md:gap-3 flex-shrink-0">
@@ -184,12 +270,32 @@ export const Header = () => {
       {menuOpen && (
         <div className="lg:hidden fixed inset-0 z-40 bg-background/95 backdrop-blur-sm animate-fade-in pt-[6.5rem]">
           <div className="flex flex-col h-full pb-8 px-6 overflow-y-auto">
-            <nav className="flex flex-col gap-2">
-              {navLinks.map((link) => (
+            <nav className="flex flex-col gap-1">
+              <p className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Services</p>
+              {services.map((service) => (
+                <Link
+                  key={service.title}
+                  to={service.href}
+                  className="px-4 py-3 text-base font-medium text-foreground hover:bg-muted rounded-xl transition-colors flex items-center gap-3"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  <service.icon className="h-5 w-5 text-primary" />
+                  <span className="flex-1">{service.title}</span>
+                  {service.comingSoon && (
+                    <span className="text-[10px] bg-amber-500/10 text-amber-600 px-2 py-0.5 rounded-full font-medium">
+                      Soon
+                    </span>
+                  )}
+                </Link>
+              ))}
+              
+              <div className="border-t border-border/50 my-3" />
+              <p className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Quick Links</p>
+              {quickLinks.map((link) => (
                 <Link
                   key={link.label}
                   to={link.href}
-                  className="px-4 py-4 text-lg font-medium text-foreground hover:bg-muted rounded-xl transition-colors"
+                  className="px-4 py-3 text-base font-medium text-foreground hover:bg-muted rounded-xl transition-colors"
                   onClick={() => setMenuOpen(false)}
                 >
                   {link.label}
