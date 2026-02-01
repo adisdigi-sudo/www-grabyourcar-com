@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import EMICalculator from "@/components/EMICalculator";
 import {
   CheckCircle2,
   XCircle,
@@ -33,6 +34,7 @@ import {
   Clock,
   Percent,
   IndianRupee,
+  Download,
 } from "lucide-react";
 
 const bankData = [
@@ -315,6 +317,9 @@ const CarLoans = () => {
           </div>
         </div>
       </section>
+
+      {/* EMI Calculator Section */}
+      <EMICalculator />
 
       {/* Eligibility Checker */}
       <section className="py-16">
