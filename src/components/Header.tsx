@@ -61,16 +61,17 @@ const services = [
   {
     title: "Self-Drive Rentals",
     href: "/self-drive",
-    description: "Coming soon - Rent cars on demand",
+    description: "Rent cars on demand",
     icon: CarFront,
-    comingSoon: true,
   },
 ];
 
 const quickLinks = [
   { label: "Compare Cars", href: "/compare" },
   { label: "Features & Specs", href: "/features-specs" },
+  { label: "Blog", href: "/blog" },
 ];
+
 
 export const Header = () => {
   const { user, signOut } = useAuth();
@@ -130,11 +131,6 @@ export const Header = () => {
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
                                 <span className="font-medium text-foreground text-sm">{service.title}</span>
-                                {service.comingSoon && (
-                                  <span className="text-[10px] bg-amber-500/10 text-amber-600 px-1.5 py-0.5 rounded-full font-medium">
-                                    Soon
-                                  </span>
-                                )}
                               </div>
                               <p className="text-xs text-muted-foreground mt-0.5">{service.description}</p>
                             </div>
@@ -208,13 +204,13 @@ export const Header = () => {
                 </Link>
               )}
               
-              <a href="https://wa.me/919876543210" target="_blank" rel="noopener noreferrer">
+              <a href="https://wa.me/919855924442" target="_blank" rel="noopener noreferrer">
                 <Button variant="whatsapp" size="sm" className="hidden md:flex">
                   <MessageCircle className="h-4 w-4" />
                   WhatsApp
                 </Button>
               </a>
-              <a href="tel:+919876543210">
+              <a href="tel:+919855924442">
                 <Button variant="call" size="sm" className="hidden md:flex">
                   <Phone className="h-4 w-4" />
                   Call Now
@@ -281,11 +277,6 @@ export const Header = () => {
                 >
                   <service.icon className="h-5 w-5 text-primary" />
                   <span className="flex-1">{service.title}</span>
-                  {service.comingSoon && (
-                    <span className="text-[10px] bg-amber-500/10 text-amber-600 px-2 py-0.5 rounded-full font-medium">
-                      Soon
-                    </span>
-                  )}
                 </Link>
               ))}
               
@@ -347,13 +338,13 @@ export const Header = () => {
 
             {/* Contact Buttons */}
             <div className="mt-auto flex gap-3 pb-4">
-              <a href="https://wa.me/919876543210" target="_blank" rel="noopener noreferrer" className="flex-1">
+              <a href="https://wa.me/919855924442" target="_blank" rel="noopener noreferrer" className="flex-1">
                 <Button variant="whatsapp" className="w-full h-12">
                   <MessageCircle className="h-5 w-5 mr-2" />
                   WhatsApp
                 </Button>
               </a>
-              <a href="tel:+919876543210" className="flex-1">
+              <a href="tel:+919855924442" className="flex-1">
                 <Button variant="call" className="w-full h-12">
                   <Phone className="h-5 w-5 mr-2" />
                   Call Now
