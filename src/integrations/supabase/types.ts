@@ -559,6 +559,93 @@ export type Database = {
         }
         Relationships: []
       }
+      hsrp_bookings: {
+        Row: {
+          address: string | null
+          chassis_number: string | null
+          completed_at: string | null
+          created_at: string
+          email: string
+          engine_number: string | null
+          home_installation: boolean | null
+          home_installation_fee: number | null
+          id: string
+          mobile: string
+          order_id: string | null
+          order_status: string
+          owner_name: string
+          payment_amount: number
+          payment_id: string | null
+          payment_status: string
+          pincode: string
+          registration_number: string
+          scheduled_date: string | null
+          service_price: number
+          service_type: string
+          state: string
+          tracking_id: string | null
+          updated_at: string
+          user_id: string
+          vehicle_class: string
+        }
+        Insert: {
+          address?: string | null
+          chassis_number?: string | null
+          completed_at?: string | null
+          created_at?: string
+          email: string
+          engine_number?: string | null
+          home_installation?: boolean | null
+          home_installation_fee?: number | null
+          id?: string
+          mobile: string
+          order_id?: string | null
+          order_status?: string
+          owner_name: string
+          payment_amount: number
+          payment_id?: string | null
+          payment_status?: string
+          pincode: string
+          registration_number: string
+          scheduled_date?: string | null
+          service_price: number
+          service_type: string
+          state: string
+          tracking_id?: string | null
+          updated_at?: string
+          user_id: string
+          vehicle_class: string
+        }
+        Update: {
+          address?: string | null
+          chassis_number?: string | null
+          completed_at?: string | null
+          created_at?: string
+          email?: string
+          engine_number?: string | null
+          home_installation?: boolean | null
+          home_installation_fee?: number | null
+          id?: string
+          mobile?: string
+          order_id?: string | null
+          order_status?: string
+          owner_name?: string
+          payment_amount?: number
+          payment_id?: string | null
+          payment_status?: string
+          pincode?: string
+          registration_number?: string
+          scheduled_date?: string | null
+          service_price?: number
+          service_type?: string
+          state?: string
+          tracking_id?: string | null
+          updated_at?: string
+          user_id?: string
+          vehicle_class?: string
+        }
+        Relationships: []
+      }
       inquiries: {
         Row: {
           car_id: number
