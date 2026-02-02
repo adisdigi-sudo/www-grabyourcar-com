@@ -195,6 +195,8 @@ const CarLoans = () => {
         title="Get Pre-Approved Car Loan in 30 Minutes!"
         subtitle="Lowest interest rates starting 8.45% p.a. | Zero processing fee for first 100 customers"
         variant="accent"
+        showCountdown
+        countdownHours={24}
       />
 
       {/* Hero Section */}

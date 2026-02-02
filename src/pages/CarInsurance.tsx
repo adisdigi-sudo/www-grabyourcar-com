@@ -157,6 +157,8 @@ const CarInsurance = () => {
         title="Renew Your Car Insurance Today!"
         subtitle="Instant policy | 98% claim settlement ratio | 10,000+ cashless garages"
         variant="primary"
+        showCountdown
+        countdownHours={72}
       />
 
       {/* Hero Section */}

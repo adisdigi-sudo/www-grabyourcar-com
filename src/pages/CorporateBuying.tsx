@@ -124,6 +124,8 @@ const CorporateBuying = () => {
         title="Fleet Discounts up to 15% on Bulk Orders!"
         subtitle="Dedicated account manager | Priority delivery | Extended warranty options"
         variant="gradient"
+        showCountdown
+        countdownHours={168}
       />
 
       {/* Hero Section */}
