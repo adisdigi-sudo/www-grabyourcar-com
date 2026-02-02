@@ -58,7 +58,7 @@ export const HeroSection = () => {
           {/* Main Heading */}
           <h1 className="font-heading text-4xl md:text-5xl lg:text-6xl font-bold text-card mb-6 leading-tight">
             Buy Your New Car at the{" "}
-            <span className="text-accent">Best Price</span>
+            <span className="text-success">Best Price</span>
           </h1>
 
           {/* Subheading */}
