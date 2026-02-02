@@ -181,6 +181,8 @@ const HSRP = () => {
         title="Get Your HSRP Before the Deadline!"
         subtitle="Avoid ₹10,000 fine | Government authorized | Quick installation in 48 hours"
         variant="dark"
+        showCountdown
+        countdownHours={96}
       />
 
       {/* Hero Section */}

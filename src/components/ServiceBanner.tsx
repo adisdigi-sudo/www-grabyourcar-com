@@ -1,6 +1,8 @@
 import { Button } from "@/components/ui/button";
-import { Phone, MessageCircle, ArrowRight } from "lucide-react";
+import { Phone, MessageCircle, ArrowRight, Timer } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useState, useEffect } from "react";
 
 interface ServiceBannerProps {
   title: string;
@@ -10,6 +12,8 @@ interface ServiceBannerProps {
   ctaLink?: string;
   variant?: "primary" | "accent" | "gradient" | "dark";
   showContactButtons?: boolean;
+  showCountdown?: boolean;
+  countdownHours?: number;
   className?: string;
 }
 
@@ -21,13 +25,47 @@ export const ServiceBanner = ({
   ctaLink,
   variant = "primary",
   showContactButtons = true,
+  showCountdown = false,
+  countdownHours = 48,
   className,
 }: ServiceBannerProps) => {
+  const [timeLeft, setTimeLeft] = useState({
+    hours: countdownHours,
+    minutes: 59,
+    seconds: 59,
+  });
+
+  useEffect(() => {
+    if (!showCountdown) return;
+    
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev.seconds > 0) {
+          return { ...prev, seconds: prev.seconds - 1 };
+        } else if (prev.minutes > 0) {
+          return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
+        } else if (prev.hours > 0) {
+          return { hours: prev.hours - 1, minutes: 59, seconds: 59 };
+        }
+        return prev;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [showCountdown]);
+
   const variantStyles = {
     primary: "bg-primary text-primary-foreground",
     accent: "bg-amber-500 text-amber-950",
     gradient: "bg-gradient-to-r from-primary via-primary/90 to-primary-dark text-primary-foreground",
     dark: "bg-foreground text-background",
+  };
+
+  const badgeStyles = {
+    primary: "bg-white/20 text-primary-foreground border-0",
+    accent: "bg-amber-700/30 text-amber-900 border-0",
+    gradient: "bg-white/20 text-primary-foreground border-0",
+    dark: "bg-background/20 text-background border-0",
   };
 
   return (
@@ -54,7 +92,26 @@ export const ServiceBanner = ({
             </p>
           </div>
 
-          <div className="flex items-center gap-3 flex-shrink-0">
+          <div className="flex items-center gap-3 flex-shrink-0 flex-wrap justify-center">
+            {showCountdown && (
+              <div className="flex items-center gap-2">
+                <Timer className="h-4 w-4" />
+                <span className="text-xs font-medium hidden sm:inline">Ends in:</span>
+                <div className="flex items-center gap-1">
+                  <Badge variant="secondary" className={cn("font-mono text-xs px-1.5", badgeStyles[variant])}>
+                    {String(timeLeft.hours).padStart(2, "0")}h
+                  </Badge>
+                  <span className="text-xs">:</span>
+                  <Badge variant="secondary" className={cn("font-mono text-xs px-1.5", badgeStyles[variant])}>
+                    {String(timeLeft.minutes).padStart(2, "0")}m
+                  </Badge>
+                  <span className="text-xs">:</span>
+                  <Badge variant="secondary" className={cn("font-mono text-xs px-1.5", badgeStyles[variant])}>
+                    {String(timeLeft.seconds).padStart(2, "0")}s
+                  </Badge>
+                </div>
+              </div>
+            )}
             {showContactButtons && (
               <>
                 <a href="https://wa.me/919855924442" target="_blank" rel="noopener noreferrer">

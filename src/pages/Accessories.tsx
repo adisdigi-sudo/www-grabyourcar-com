@@ -110,6 +110,8 @@ const Accessories = () => {
         title="Flat 20% Off on All Car Accessories!"
         subtitle="Use code: GRAB20 | Free installation on orders above ₹2,000"
         variant="accent"
+        showCountdown
+        countdownHours={36}
       />
       
       <main className="min-h-screen bg-background pt-6">
