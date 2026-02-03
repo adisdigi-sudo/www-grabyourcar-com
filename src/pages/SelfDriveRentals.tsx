@@ -2,11 +2,12 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { ServiceBanner } from "@/components/ServiceBanner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Car, Fuel, Settings2, Phone, MessageCircle } from "lucide-react";
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Phone, MessageCircle, Car } from "lucide-react";
+import { useState, useMemo } from "react";
+import { RentalSearchFilters, RentalFilters } from "@/components/rentals/RentalSearchFilters";
+import { RentalCarCard } from "@/components/rentals/RentalCarCard";
+import { RentalBookingModal } from "@/components/rentals/RentalBookingModal";
 
 // Import car images
 import swiftImage from "@/assets/car-swift.jpg";
@@ -16,7 +17,23 @@ import innovaImage from "@/assets/car-innova.jpg";
 import seltosImage from "@/assets/car-seltos.jpg";
 import xuv700Image from "@/assets/car-xuv700.jpg";
 
-const rentalCars = [
+interface RentalCar {
+  id: number;
+  name: string;
+  image: string;
+  fuelType: string;
+  transmission: string;
+  rent: number;
+  brand: string;
+  vehicleType: string;
+  seats: number;
+  year: number;
+  color: string;
+  available: boolean;
+  location: string;
+}
+
+const rentalCars: RentalCar[] = [
   {
     id: 1,
     name: "Maruti Swift",
@@ -25,7 +42,12 @@ const rentalCars = [
     transmission: "Manual",
     rent: 1300,
     brand: "Maruti",
-    condition: "Used",
+    vehicleType: "Hatchback",
+    seats: 5,
+    year: 2023,
+    color: "White",
+    available: true,
+    location: "Delhi - Connaught Place",
   },
   {
     id: 2,
@@ -35,7 +57,12 @@ const rentalCars = [
     transmission: "Automatic",
     rent: 2500,
     brand: "Hyundai",
-    condition: "Used",
+    vehicleType: "SUV",
+    seats: 5,
+    year: 2024,
+    color: "Black",
+    available: true,
+    location: "Noida - Sector 18",
   },
   {
     id: 3,
@@ -45,17 +72,27 @@ const rentalCars = [
     transmission: "Manual",
     rent: 1800,
     brand: "Tata",
-    condition: "Used",
+    vehicleType: "SUV",
+    seats: 5,
+    year: 2023,
+    color: "Red",
+    available: true,
+    location: "Gurugram - Cyber Hub",
   },
   {
     id: 4,
-    name: "Toyota Innova",
+    name: "Toyota Innova Crysta",
     image: innovaImage,
     fuelType: "Diesel",
     transmission: "Manual",
     rent: 3500,
     brand: "Toyota",
-    condition: "Used",
+    vehicleType: "SUV",
+    seats: 7,
+    year: 2023,
+    color: "Silver",
+    available: false,
+    location: "Delhi - Rajiv Chowk",
   },
   {
     id: 5,
@@ -65,7 +102,12 @@ const rentalCars = [
     transmission: "Automatic",
     rent: 2200,
     brand: "Kia",
-    condition: "Used",
+    vehicleType: "SUV",
+    seats: 5,
+    year: 2024,
+    color: "Blue",
+    available: true,
+    location: "Greater Noida - Pari Chowk",
   },
   {
     id: 6,
@@ -75,18 +117,157 @@ const rentalCars = [
     transmission: "Automatic",
     rent: 3000,
     brand: "Mahindra",
-    condition: "Used",
+    vehicleType: "SUV",
+    seats: 7,
+    year: 2024,
+    color: "White",
+    available: true,
+    location: "Gurugram - MG Road",
+  },
+  {
+    id: 7,
+    name: "Maruti Dzire",
+    image: swiftImage,
+    fuelType: "CNG",
+    transmission: "Manual",
+    rent: 1400,
+    brand: "Maruti",
+    vehicleType: "Sedan",
+    seats: 5,
+    year: 2023,
+    color: "White",
+    available: true,
+    location: "Ghaziabad - Vaishali",
+  },
+  {
+    id: 8,
+    name: "Hyundai Verna",
+    image: cretaImage,
+    fuelType: "Petrol",
+    transmission: "Automatic",
+    rent: 2000,
+    brand: "Hyundai",
+    vehicleType: "Sedan",
+    seats: 5,
+    year: 2024,
+    color: "Grey",
+    available: true,
+    location: "Delhi - Connaught Place",
+  },
+  {
+    id: 9,
+    name: "Toyota Fortuner",
+    image: innovaImage,
+    fuelType: "Diesel",
+    transmission: "Automatic",
+    rent: 5000,
+    brand: "Toyota",
+    vehicleType: "Luxury",
+    seats: 7,
+    year: 2024,
+    color: "Black",
+    available: true,
+    location: "Gurugram - Golf Course Road",
+  },
+  {
+    id: 10,
+    name: "Force Traveller",
+    image: innovaImage,
+    fuelType: "Diesel",
+    transmission: "Manual",
+    rent: 4500,
+    brand: "Force",
+    vehicleType: "Tempo Traveller",
+    seats: 12,
+    year: 2023,
+    color: "White",
+    available: true,
+    location: "Noida - Sector 62",
   },
 ];
 
-const brands = ["All", "Maruti", "Hyundai", "Tata", "Toyota", "Kia", "Mahindra"];
+const brands = ["All", "Maruti", "Hyundai", "Tata", "Toyota", "Kia", "Mahindra", "Force"];
+const locations = [
+  "All",
+  "Delhi - Connaught Place",
+  "Delhi - Rajiv Chowk",
+  "Noida - Sector 18",
+  "Noida - Sector 62",
+  "Greater Noida - Pari Chowk",
+  "Gurugram - Cyber Hub",
+  "Gurugram - MG Road",
+  "Gurugram - Golf Course Road",
+  "Ghaziabad - Vaishali",
+];
 
 const SelfDriveRentals = () => {
-  const [selectedBrand, setSelectedBrand] = useState("All");
+  const [filters, setFilters] = useState<RentalFilters>({
+    search: "",
+    vehicleType: "All",
+    brand: "All",
+    fuelType: "All",
+    transmission: "All",
+    priceRange: [500, 10000],
+    location: "All",
+  });
 
-  const filteredCars = selectedBrand === "All" 
-    ? rentalCars 
-    : rentalCars.filter(car => car.brand === selectedBrand);
+  const [selectedCar, setSelectedCar] = useState<RentalCar | null>(null);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [favorites, setFavorites] = useState<number[]>([]);
+
+  const filteredCars = useMemo(() => {
+    return rentalCars.filter((car) => {
+      // Search filter
+      if (filters.search && !car.name.toLowerCase().includes(filters.search.toLowerCase())) {
+        return false;
+      }
+
+      // Vehicle type filter
+      if (filters.vehicleType !== "All" && car.vehicleType !== filters.vehicleType) {
+        return false;
+      }
+
+      // Brand filter
+      if (filters.brand !== "All" && car.brand !== filters.brand) {
+        return false;
+      }
+
+      // Fuel type filter
+      if (filters.fuelType !== "All" && car.fuelType !== filters.fuelType) {
+        return false;
+      }
+
+      // Transmission filter
+      if (filters.transmission !== "All" && car.transmission !== filters.transmission) {
+        return false;
+      }
+
+      // Location filter
+      if (filters.location !== "All" && car.location !== filters.location) {
+        return false;
+      }
+
+      // Price range filter
+      if (car.rent < filters.priceRange[0] || car.rent > filters.priceRange[1]) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [filters]);
+
+  const handleBookCar = (car: RentalCar) => {
+    setSelectedCar(car);
+    setIsBookingModalOpen(true);
+  };
+
+  const toggleFavorite = (carId: number) => {
+    setFavorites((prev) =>
+      prev.includes(carId) ? prev.filter((id) => id !== carId) : [...prev, carId]
+    );
+  };
+
+  const availableCount = filteredCars.filter((c) => c.available).length;
 
   return (
     <div className="min-h-screen bg-background">
@@ -106,96 +287,85 @@ const SelfDriveRentals = () => {
       <section className="py-12 md:py-16 bg-gradient-to-b from-muted/30 to-background">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto">
+            <Badge className="mb-4">Self-Drive Car Rental</Badge>
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4">
-              SELF DRIVE CAR RENTAL
+              Drive Your Way Across Delhi NCR
             </h1>
-            <p className="text-muted-foreground text-base md:text-lg leading-relaxed">
-              Grab Your Car offers self drive car rentals across Delhi NCR including Noida, Greater Noida, Gurugram and Ghaziabad. Choose from petrol, diesel or hybrid cars with manual or automatic transmission. Easy booking, transparent pricing and complete freedom to drive on your terms.
+            <p className="text-muted-foreground text-base md:text-lg leading-relaxed mb-6">
+              Choose from our fleet of well-maintained vehicles - Hatchbacks, Sedans, SUVs, Luxury Cars, and Tempo Travellers.
+              Easy booking, transparent pricing, and complete freedom to drive on your terms.
             </p>
+            <div className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <Car className="h-4 w-4 text-primary" />
+                <span>{rentalCars.length} Vehicles</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">{availableCount} Available Now</Badge>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Brand Filter */}
+      {/* Search & Filters */}
       <section className="py-6 border-b border-border">
         <div className="container mx-auto px-4">
-          <p className="text-center text-sm text-muted-foreground mb-4">Filter items with Brand</p>
-          <div className="flex flex-wrap justify-center gap-2">
-            {brands.map((brand) => (
-              <Button
-                key={brand}
-                variant={selectedBrand === brand ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedBrand(brand)}
-                className="rounded-full px-5"
-              >
-                {brand}
-              </Button>
-            ))}
-          </div>
+          <RentalSearchFilters
+            filters={filters}
+            onFiltersChange={setFilters}
+            brands={brands}
+            locations={locations}
+          />
         </div>
       </section>
 
       {/* Car Listings */}
       <section className="py-10 md:py-16">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredCars.map((car) => (
-              <Card key={car.id} className="overflow-hidden border-border hover:shadow-lg transition-shadow group">
-                <CardContent className="p-0">
-                  {/* Header */}
-                  <div className="p-4 pb-2 flex items-start justify-between">
-                    <div>
-                      <h3 className="font-bold text-foreground text-lg uppercase">{car.name}</h3>
-                      <p className="text-xs text-primary font-medium">RENT</p>
-                    </div>
-                    <Badge variant="secondary" className="text-xs">
-                      {car.condition}
-                    </Badge>
-                  </div>
-
-                  {/* Image */}
-                  <div className="relative h-48 overflow-hidden">
-                    <img
-                      src={car.image}
-                      alt={car.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  </div>
-
-                  {/* Specs */}
-                  <div className="px-4 py-3 flex items-center gap-4 border-t border-border/50">
-                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                      <Fuel className="h-4 w-4" />
-                      <span>{car.fuelType}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                      <Fuel className="h-4 w-4" />
-                      <span>{car.fuelType}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                      <Settings2 className="h-4 w-4" />
-                      <span>{car.transmission}</span>
-                    </div>
-                  </div>
-
-                  {/* Price & CTA */}
-                  <div className="px-4 py-3 flex items-center justify-between border-t border-border/50">
-                    <div>
-                      <span className="text-sm text-muted-foreground">Rent: </span>
-                      <span className="text-lg font-bold text-foreground">₹{car.rent}</span>
-                      <span className="text-sm text-muted-foreground">/day</span>
-                    </div>
-                    <a href="https://wa.me/919855924442" target="_blank" rel="noopener noreferrer">
-                      <Button variant="cta" size="sm" className="gap-1.5">
-                        Book Now
-                      </Button>
-                    </a>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-foreground">
+              {filteredCars.length} {filteredCars.length === 1 ? "Vehicle" : "Vehicles"} Found
+            </h2>
           </div>
+
+          {filteredCars.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredCars.map((car) => (
+                <RentalCarCard
+                  key={car.id}
+                  car={car}
+                  onBook={handleBookCar}
+                  isFavorite={favorites.includes(car.id)}
+                  onToggleFavorite={toggleFavorite}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-16">
+              <Car className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-foreground mb-2">No Vehicles Found</h3>
+              <p className="text-muted-foreground mb-4">
+                Try adjusting your filters to see more options
+              </p>
+              <Button
+                variant="outline"
+                onClick={() =>
+                  setFilters({
+                    search: "",
+                    vehicleType: "All",
+                    brand: "All",
+                    fuelType: "All",
+                    transmission: "All",
+                    priceRange: [500, 10000],
+                    location: "All",
+                  })
+                }
+              >
+                Clear All Filters
+              </Button>
+            </div>
+          )}
         </div>
       </section>
 
@@ -226,6 +396,16 @@ const SelfDriveRentals = () => {
       </section>
 
       <Footer />
+
+      {/* Booking Modal */}
+      <RentalBookingModal
+        car={selectedCar}
+        isOpen={isBookingModalOpen}
+        onClose={() => {
+          setIsBookingModalOpen(false);
+          setSelectedCar(null);
+        }}
+      />
     </div>
   );
 };

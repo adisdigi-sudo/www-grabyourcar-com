@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
 import { 
   Car, 
   Truck, 
@@ -26,10 +28,16 @@ import {
   AlertCircle,
   IndianRupee,
   Calendar,
-  Home
+  Home,
+  Loader2,
+  Package
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { PincodeChecker } from "@/components/hsrp/PincodeChecker";
+import { useNavigate } from "react-router-dom";
 
 const hsrpServices = [
   {
@@ -38,7 +46,9 @@ const hsrpServices = [
     description: "For new vehicle registrations",
     icon: Car,
     color: "bg-amber-400",
-    price: "₹1,100",
+    price: 1100,
+    priceDisplay: "₹1,100",
+    vehicleClass: "4W",
   },
   {
     id: "replacement",
@@ -46,7 +56,9 @@ const hsrpServices = [
     description: "Replace damaged or lost HSRP",
     icon: Car,
     color: "bg-primary",
-    price: "₹1,100",
+    price: 1100,
+    priceDisplay: "₹1,100",
+    vehicleClass: "4W",
   },
   {
     id: "colour-sticker",
@@ -54,7 +66,9 @@ const hsrpServices = [
     description: "Get colour-coded fuel type sticker",
     icon: Truck,
     color: "bg-primary",
-    price: "₹100",
+    price: 100,
+    priceDisplay: "₹100",
+    vehicleClass: "Any",
   },
   {
     id: "ev-hsrp",
@@ -62,7 +76,9 @@ const hsrpServices = [
     description: "Green plates for EVs",
     icon: Zap,
     color: "bg-primary",
-    price: "₹1,100",
+    price: 1100,
+    priceDisplay: "₹1,100",
+    vehicleClass: "EV",
   },
   {
     id: "tractor",
@@ -70,7 +86,9 @@ const hsrpServices = [
     description: "For agricultural vehicles",
     icon: Truck,
     color: "bg-primary",
-    price: "₹600",
+    price: 600,
+    priceDisplay: "₹600",
+    vehicleClass: "Tractor",
   },
   {
     id: "two-wheeler",
@@ -78,7 +96,9 @@ const hsrpServices = [
     description: "For motorcycles and scooters",
     icon: Bike,
     color: "bg-amber-400",
-    price: "₹450",
+    price: 450,
+    priceDisplay: "₹450",
+    vehicleClass: "2W",
   },
 ];
 
@@ -136,10 +156,21 @@ const faqs = [
 ];
 
 const HSRP = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [selectedService, setSelectedService] = useState<string | null>(null);
   const [trackingNumber, setTrackingNumber] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isTracking, setIsTracking] = useState(false);
+  const [trackingResult, setTrackingResult] = useState<any>(null);
+  const [homeInstallation, setHomeInstallation] = useState(false);
+  const [homeInstallationFee, setHomeInstallationFee] = useState(0);
+  const [pincodeServiceable, setPincodeServiceable] = useState(false);
+  
   const [formData, setFormData] = useState({
     registrationNumber: "",
+    chassisNumber: "",
+    engineNumber: "",
     state: "",
     ownerName: "",
     mobile: "",
@@ -148,34 +179,167 @@ const HSRP = () => {
     pincode: "",
   });
 
-  const handleTrackOrder = () => {
+  const selectedServiceData = hsrpServices.find(s => s.id === selectedService);
+  const servicePrice = selectedServiceData?.price || 0;
+  const totalAmount = servicePrice + (homeInstallation ? homeInstallationFee : 0);
+
+  const handleTrackOrder = async () => {
     if (!trackingNumber.trim()) {
       toast.error("Please enter your order/booking number");
       return;
     }
-    toast.info("Order tracking feature coming soon!");
+
+    setIsTracking(true);
+    setTrackingResult(null);
+
+    try {
+      const { data, error } = await supabase
+        .from("hsrp_bookings")
+        .select("*")
+        .or(`tracking_id.eq.${trackingNumber},registration_number.ilike.${trackingNumber}`)
+        .single();
+
+      if (error || !data) {
+        toast.error("No booking found with this order number");
+        setTrackingResult({ found: false });
+      } else {
+        setTrackingResult({ found: true, booking: data });
+        toast.success("Booking found!");
+      }
+    } catch {
+      toast.error("Failed to track order. Please try again.");
+    } finally {
+      setIsTracking(false);
+    }
   };
 
   const handleBookNow = (serviceId: string) => {
     setSelectedService(serviceId);
-    // Scroll to booking form
     document.getElementById("booking-form")?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const handleSubmitBooking = (e: React.FormEvent) => {
+  const handlePincodeServiceability = (serviceable: boolean, fee: number) => {
+    setPincodeServiceable(serviceable);
+    setHomeInstallationFee(fee);
+    if (!serviceable) {
+      setHomeInstallation(false);
+    }
+  };
+
+  const generateTrackingId = () => {
+    const prefix = "HSRP";
+    const timestamp = Date.now().toString(36).toUpperCase();
+    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+    return `${prefix}${timestamp}${random}`;
+  };
+
+  const handleSubmitBooking = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.registrationNumber || !formData.state || !formData.ownerName || !formData.mobile) {
+    
+    if (!selectedService) {
+      toast.error("Please select a service type");
+      return;
+    }
+
+    if (!formData.registrationNumber || !formData.state || !formData.ownerName || !formData.mobile || !formData.email) {
       toast.error("Please fill all required fields");
       return;
     }
-    toast.success("Booking request submitted! Our team will contact you shortly.");
+
+    if (!user) {
+      toast.error("Please login to book HSRP");
+      navigate("/auth");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const trackingId = generateTrackingId();
+      
+      const bookingData = {
+        user_id: user.id,
+        registration_number: formData.registrationNumber.toUpperCase(),
+        chassis_number: formData.chassisNumber || null,
+        engine_number: formData.engineNumber || null,
+        vehicle_class: selectedServiceData?.vehicleClass || "4W",
+        state: formData.state,
+        owner_name: formData.ownerName,
+        mobile: formData.mobile,
+        email: formData.email,
+        address: formData.address || null,
+        pincode: formData.pincode,
+        service_type: selectedService,
+        service_price: servicePrice,
+        home_installation: homeInstallation,
+        home_installation_fee: homeInstallation ? homeInstallationFee : 0,
+        payment_amount: totalAmount,
+        tracking_id: trackingId,
+        order_status: "pending",
+        payment_status: "pending",
+      };
+
+      const { data, error } = await supabase
+        .from("hsrp_bookings")
+        .insert(bookingData)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Send WhatsApp notification with booking details
+      const message = `🚗 *New HSRP Booking*\n\n` +
+        `📋 Tracking ID: ${trackingId}\n` +
+        `🚘 Vehicle: ${formData.registrationNumber.toUpperCase()}\n` +
+        `📦 Service: ${selectedServiceData?.title}\n` +
+        `💰 Amount: ₹${totalAmount}\n` +
+        `📍 State: ${formData.state}\n` +
+        `👤 Name: ${formData.ownerName}\n` +
+        `📱 Mobile: ${formData.mobile}\n` +
+        `${homeInstallation ? `🏠 Home Installation: Yes (₹${homeInstallationFee} extra)\n` : ""}` +
+        `📍 Pincode: ${formData.pincode}`;
+
+      const whatsappUrl = `https://wa.me/919855924442?text=${encodeURIComponent(message)}`;
+      
+      toast.success(
+        <div className="space-y-2">
+          <p className="font-semibold">Booking Created Successfully!</p>
+          <p className="text-sm">Your Tracking ID: <span className="font-mono font-bold">{trackingId}</span></p>
+          <p className="text-xs text-muted-foreground">Complete payment to confirm your booking.</p>
+        </div>,
+        { duration: 8000 }
+      );
+
+      // Open WhatsApp for payment coordination
+      window.open(whatsappUrl, "_blank");
+
+      // Reset form
+      setFormData({
+        registrationNumber: "",
+        chassisNumber: "",
+        engineNumber: "",
+        state: "",
+        ownerName: "",
+        mobile: "",
+        email: "",
+        address: "",
+        pincode: "",
+      });
+      setSelectedService(null);
+      setHomeInstallation(false);
+
+    } catch (error: any) {
+      console.error("Booking error:", error);
+      toast.error(error.message || "Failed to create booking. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
 
-      {/* Service Banner */}
       <ServiceBanner
         highlightText="Mandatory"
         title="Get Your HSRP Before the Deadline!"
@@ -205,7 +369,7 @@ const HSRP = () => {
                 <Car className="h-5 w-5" />
                 Book HSRP Now
               </Button>
-              <Button variant="outline" size="lg" className="gap-2 bg-transparent border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10">
+              <Button variant="outline" size="lg" className="gap-2 bg-transparent border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10" onClick={() => document.getElementById("track")?.scrollIntoView({ behavior: "smooth" })}>
                 <Search className="h-5 w-5" />
                 Track Order
               </Button>
@@ -223,9 +387,9 @@ const HSRP = () => {
               Track Order
             </a>
             <span className="text-border">|</span>
-            <a href="#" className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors">
+            <a href="#booking-form" className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors">
               <Calendar className="h-4 w-4" />
-              Reschedule
+              Book Now
             </a>
             <span className="text-border">|</span>
             <a href="#" className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors">
@@ -267,7 +431,7 @@ const HSRP = () => {
                       <h3 className="font-semibold text-foreground mb-1">{service.title}</h3>
                       <p className="text-sm text-muted-foreground mb-3">{service.description}</p>
                       <div className="flex items-center justify-between">
-                        <span className="text-lg font-bold text-primary">{service.price}</span>
+                        <span className="text-lg font-bold text-primary">{service.priceDisplay}</span>
                         <Button size="sm" variant="outline" className="gap-1">
                           Book <ArrowRight className="h-4 w-4" />
                         </Button>
@@ -290,7 +454,7 @@ const HSRP = () => {
                 <Car className="h-4 w-4" />
                 Book HSRP
               </TabsTrigger>
-              <TabsTrigger value="track" className="gap-2">
+              <TabsTrigger value="track" className="gap-2" id="track">
                 <Search className="h-4 w-4" />
                 Track Order
               </TabsTrigger>
@@ -305,101 +469,204 @@ const HSRP = () => {
                   </CardTitle>
                   {selectedService && (
                     <Badge variant="secondary" className="w-fit">
-                      Selected: {hsrpServices.find(s => s.id === selectedService)?.title}
+                      Selected: {selectedServiceData?.title}
                     </Badge>
                   )}
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleSubmitBooking} className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="registration">Vehicle Registration Number *</Label>
-                        <Input
-                          id="registration"
-                          placeholder="e.g., DL01AB1234"
-                          value={formData.registrationNumber}
-                          onChange={(e) => setFormData({ ...formData, registrationNumber: e.target.value.toUpperCase() })}
-                          className="uppercase"
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="state">State *</Label>
-                        <Select value={formData.state} onValueChange={(value) => setFormData({ ...formData, state: value })}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select State" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {states.map((state) => (
-                              <SelectItem key={state} value={state}>{state}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="owner">Owner Name *</Label>
-                        <Input
-                          id="owner"
-                          placeholder="As per RC"
-                          value={formData.ownerName}
-                          onChange={(e) => setFormData({ ...formData, ownerName: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="mobile">Mobile Number *</Label>
-                        <Input
-                          id="mobile"
-                          type="tel"
-                          placeholder="10-digit mobile"
-                          value={formData.mobile}
-                          onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
-                          maxLength={10}
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email Address</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          placeholder="your@email.com"
-                          value={formData.email}
-                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="pincode">Pin Code</Label>
-                        <Input
-                          id="pincode"
-                          placeholder="For home installation check"
-                          value={formData.pincode}
-                          onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
-                          maxLength={6}
-                        />
+                    {/* Vehicle Details */}
+                    <div className="space-y-4">
+                      <h4 className="font-semibold text-foreground">Vehicle Information</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="registration">Vehicle Registration Number *</Label>
+                          <Input
+                            id="registration"
+                            placeholder="e.g., DL01AB1234"
+                            value={formData.registrationNumber}
+                            onChange={(e) => setFormData({ ...formData, registrationNumber: e.target.value.toUpperCase() })}
+                            className="uppercase"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="state">State *</Label>
+                          <Select value={formData.state} onValueChange={(value) => setFormData({ ...formData, state: value })}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select State" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {states.map((state) => (
+                                <SelectItem key={state} value={state}>{state}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="chassis">Chassis Number</Label>
+                          <Input
+                            id="chassis"
+                            placeholder="Last 5 digits"
+                            value={formData.chassisNumber}
+                            onChange={(e) => setFormData({ ...formData, chassisNumber: e.target.value.toUpperCase() })}
+                            className="uppercase"
+                            maxLength={5}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="engine">Engine Number</Label>
+                          <Input
+                            id="engine"
+                            placeholder="Last 5 digits"
+                            value={formData.engineNumber}
+                            onChange={(e) => setFormData({ ...formData, engineNumber: e.target.value.toUpperCase() })}
+                            className="uppercase"
+                            maxLength={5}
+                          />
+                        </div>
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="address">Address</Label>
-                      <Input
-                        id="address"
-                        placeholder="Full address for installation"
-                        value={formData.address}
-                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    <Separator />
+
+                    {/* Owner Details */}
+                    <div className="space-y-4">
+                      <h4 className="font-semibold text-foreground">Owner Information</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="owner">Owner Name (As per RC) *</Label>
+                          <Input
+                            id="owner"
+                            placeholder="Full name"
+                            value={formData.ownerName}
+                            onChange={(e) => setFormData({ ...formData, ownerName: e.target.value })}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="mobile">Mobile Number *</Label>
+                          <Input
+                            id="mobile"
+                            type="tel"
+                            placeholder="10-digit mobile"
+                            value={formData.mobile}
+                            onChange={(e) => setFormData({ ...formData, mobile: e.target.value.replace(/\D/g, "").slice(0, 10) })}
+                            maxLength={10}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2 md:col-span-2">
+                          <Label htmlFor="email">Email Address *</Label>
+                          <Input
+                            id="email"
+                            type="email"
+                            placeholder="your@email.com"
+                            value={formData.email}
+                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                            required
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    {/* Installation Preference */}
+                    <div className="space-y-4">
+                      <h4 className="font-semibold text-foreground">Installation Preference</h4>
+                      
+                      <PincodeChecker
+                        pincode={formData.pincode}
+                        onPincodeChange={(pincode) => setFormData({ ...formData, pincode })}
+                        onServiceabilityChange={handlePincodeServiceability}
                       />
+
+                      {pincodeServiceable && (
+                        <div className="flex items-center space-x-3 p-4 bg-muted rounded-lg">
+                          <Checkbox
+                            id="homeInstallation"
+                            checked={homeInstallation}
+                            onCheckedChange={(checked) => setHomeInstallation(checked === true)}
+                          />
+                          <div className="flex-1">
+                            <Label htmlFor="homeInstallation" className="cursor-pointer font-medium">
+                              Opt for Home Installation
+                            </Label>
+                            <p className="text-sm text-muted-foreground">
+                              Our technician will visit your location to install HSRP
+                            </p>
+                          </div>
+                          <Badge variant="outline" className="text-primary">
+                            +₹{homeInstallationFee}
+                          </Badge>
+                        </div>
+                      )}
+
+                      {homeInstallation && (
+                        <div className="space-y-2">
+                          <Label htmlFor="address">Full Address for Installation *</Label>
+                          <Input
+                            id="address"
+                            placeholder="Complete address with landmark"
+                            value={formData.address}
+                            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                            required={homeInstallation}
+                          />
+                        </div>
+                      )}
                     </div>
+
+                    <Separator />
+
+                    {/* Price Summary */}
+                    {selectedService && (
+                      <Card className="bg-primary/5 border-primary/20">
+                        <CardContent className="p-4 space-y-3">
+                          <h4 className="font-semibold flex items-center gap-2">
+                            <IndianRupee className="h-5 w-5 text-primary" />
+                            Price Summary
+                          </h4>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span>{selectedServiceData?.title}</span>
+                              <span>₹{servicePrice.toLocaleString()}</span>
+                            </div>
+                            {homeInstallation && (
+                              <div className="flex justify-between">
+                                <span>Home Installation Fee</span>
+                                <span>₹{homeInstallationFee}</span>
+                              </div>
+                            )}
+                            <Separator />
+                            <div className="flex justify-between font-bold text-lg">
+                              <span>Total Amount</span>
+                              <span className="text-primary">₹{totalAmount.toLocaleString()}</span>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
 
                     <div className="flex flex-col sm:flex-row gap-3">
-                      <Button type="submit" variant="cta" size="lg" className="flex-1 gap-2">
-                        <CheckCircle2 className="h-5 w-5" />
-                        Submit Booking Request
+                      <Button 
+                        type="submit" 
+                        variant="cta" 
+                        size="lg" 
+                        className="flex-1 gap-2"
+                        disabled={isSubmitting || !selectedService}
+                      >
+                        {isSubmitting ? (
+                          <>
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 className="h-5 w-5" />
+                            Book Now - ₹{totalAmount.toLocaleString()}
+                          </>
+                        )}
                       </Button>
                       <a href="https://wa.me/919855924442" target="_blank" rel="noopener noreferrer">
                         <Button type="button" variant="whatsapp" size="lg" className="w-full sm:w-auto gap-2">
@@ -408,12 +675,18 @@ const HSRP = () => {
                         </Button>
                       </a>
                     </div>
+
+                    {!user && (
+                      <p className="text-sm text-center text-muted-foreground">
+                        You'll need to <Button variant="link" className="p-0 h-auto" onClick={() => navigate("/auth")}>login</Button> to complete your booking
+                      </p>
+                    )}
                   </form>
                 </CardContent>
               </Card>
             </TabsContent>
 
-            <TabsContent value="track" id="track">
+            <TabsContent value="track">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -424,18 +697,99 @@ const HSRP = () => {
                 <CardContent>
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="tracking">Order / Booking Number</Label>
+                      <Label htmlFor="tracking">Order ID / Registration Number</Label>
                       <Input
                         id="tracking"
-                        placeholder="Enter your order number"
+                        placeholder="e.g., HSRP1234ABC or DL01AB1234"
                         value={trackingNumber}
-                        onChange={(e) => setTrackingNumber(e.target.value)}
+                        onChange={(e) => setTrackingNumber(e.target.value.toUpperCase())}
+                        className="uppercase"
                       />
                     </div>
-                    <Button onClick={handleTrackOrder} className="w-full gap-2">
-                      <Search className="h-4 w-4" />
-                      Track Order Status
+                    <Button 
+                      onClick={handleTrackOrder} 
+                      className="w-full gap-2"
+                      disabled={isTracking}
+                    >
+                      {isTracking ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Searching...
+                        </>
+                      ) : (
+                        <>
+                          <Search className="h-4 w-4" />
+                          Track Order Status
+                        </>
+                      )}
                     </Button>
+
+                    {trackingResult && (
+                      <div className="mt-6">
+                        {trackingResult.found ? (
+                          <Card className="border-primary/30 bg-primary/5">
+                            <CardContent className="p-4 space-y-4">
+                              <div className="flex items-center gap-2">
+                                <Package className="h-5 w-5 text-primary" />
+                                <span className="font-semibold">Booking Found</span>
+                              </div>
+                              <div className="grid grid-cols-2 gap-3 text-sm">
+                                <div>
+                                  <span className="text-muted-foreground">Tracking ID:</span>
+                                  <p className="font-mono font-semibold">{trackingResult.booking.tracking_id}</p>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">Vehicle:</span>
+                                  <p className="font-semibold">{trackingResult.booking.registration_number}</p>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">Order Status:</span>
+                                  <Badge className="mt-1" variant={
+                                    trackingResult.booking.order_status === "completed" ? "default" :
+                                    trackingResult.booking.order_status === "confirmed" ? "secondary" : "outline"
+                                  }>
+                                    {trackingResult.booking.order_status.charAt(0).toUpperCase() + trackingResult.booking.order_status.slice(1)}
+                                  </Badge>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">Payment:</span>
+                                  <Badge className="mt-1" variant={
+                                    trackingResult.booking.payment_status === "paid" ? "default" : "destructive"
+                                  }>
+                                    {trackingResult.booking.payment_status.charAt(0).toUpperCase() + trackingResult.booking.payment_status.slice(1)}
+                                  </Badge>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">Amount:</span>
+                                  <p className="font-semibold text-primary">₹{trackingResult.booking.payment_amount}</p>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">Booked On:</span>
+                                  <p className="font-semibold">{new Date(trackingResult.booking.created_at).toLocaleDateString()}</p>
+                                </div>
+                              </div>
+                              {trackingResult.booking.home_installation && (
+                                <Badge variant="outline" className="gap-1">
+                                  <Home className="h-3 w-3" />
+                                  Home Installation
+                                </Badge>
+                              )}
+                            </CardContent>
+                          </Card>
+                        ) : (
+                          <Card className="border-red-500/30 bg-red-50 dark:bg-red-950/20">
+                            <CardContent className="p-4 flex items-center gap-3">
+                              <AlertCircle className="h-5 w-5 text-red-500" />
+                              <div>
+                                <p className="font-semibold text-red-700 dark:text-red-400">No Booking Found</p>
+                                <p className="text-sm text-red-600 dark:text-red-500">Please check your order ID or registration number and try again.</p>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
+                      </div>
+                    )}
+
                     <p className="text-sm text-muted-foreground text-center">
                       You can find your order number in the confirmation email or SMS
                     </p>
@@ -477,7 +831,6 @@ const HSRP = () => {
       <section className="py-12 md:py-16 bg-muted/30">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Documents */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -497,7 +850,6 @@ const HSRP = () => {
               </CardContent>
             </Card>
 
-            {/* Pricing */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
