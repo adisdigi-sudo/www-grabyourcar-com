@@ -9,33 +9,33 @@
 
 @layer base {
   :root {
-    /* Primary - Orange #F58220 */
-    --primary: 30 91% 55%;
+    /* Primary - Green */
+    --primary: 142 70% 45%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 30 100% 60%;
+    --primary-glow: 142 80% 50%;
 
     /* Secondary - Light Gray */
-    --secondary: 210 30% 25%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 210 20% 96%;
+    --secondary-foreground: 210 20% 20%;
 
-    /* Accent - Orange (Deals/CTA) #F58220 */
-    --accent: 30 91% 55%;
+    /* Accent - Green (Deals/CTA) */
+    --accent: 142 70% 45%;
     --accent-foreground: 0 0% 100%;
-    --accent-glow: 30 100% 60%;
+    --accent-glow: 142 80% 50%;
 
-    /* Background & Surface - Rich Navy #003366 */
-    --background: 210 100% 10%;
-    --foreground: 0 0% 98%;
+    /* Background & Surface - White */
+    --background: 0 0% 100%;
+    --foreground: 210 20% 15%;
 
-    --card: 210 100% 15%;
-    --card-foreground: 0 0% 98%;
+    --card: 0 0% 100%;
+    --card-foreground: 210 20% 15%;
 
-    --popover: 210 100% 12%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 20% 15%;
 
-    /* Muted - Navy tinted */
-    --muted: 210 50% 20%;
-    --muted-foreground: 210 20% 70%;
+    /* Muted - Light Gray */
+    --muted: 210 20% 96%;
+    --muted-foreground: 210 15% 45%;
 
     /* Success - Green */
     --success: 142 70% 45%;
@@ -43,97 +43,97 @@
 
     /* Destructive */
     --destructive: 0 72% 50%;
-    --destructive-foreground: 0 85% 97%;
+    --destructive-foreground: 0 0% 100%;
 
-    /* Border & Input - Navy tinted */
-    --border: 210 50% 25%;
-    --input: 210 50% 25%;
-    --ring: 30 91% 55%;
+    /* Border & Input */
+    --border: 210 20% 90%;
+    --input: 210 20% 90%;
+    --ring: 142 70% 45%;
 
     --radius: 0.75rem;
 
-    /* Sidebar - Navy theme */
-    --sidebar-background: 210 100% 12%;
-    --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 30 91% 55%;
+    /* Sidebar - Light theme */
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 210 20% 15%;
+    --sidebar-primary: 142 70% 45%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 100% 20%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 210 50% 25%;
-    --sidebar-ring: 30 91% 55%;
+    --sidebar-accent: 210 20% 96%;
+    --sidebar-accent-foreground: 210 20% 15%;
+    --sidebar-border: 210 20% 90%;
+    --sidebar-ring: 142 70% 45%;
 
-    /* Custom Gradients - Navy theme */
-    --gradient-hero: linear-gradient(135deg, hsl(210 100% 20%) 0%, hsl(210 100% 10%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(30 91% 55%) 0%, hsl(30 80% 45%) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(210 100% 18%) 0%, hsl(210 100% 12%) 100%);
-    --gradient-overlay: linear-gradient(180deg, hsla(210 100% 10% / 0) 0%, hsla(210 100% 10% / 0.9) 100%);
+    /* Custom Gradients - Green theme */
+    --gradient-hero: linear-gradient(135deg, hsl(142 70% 45%) 0%, hsl(142 60% 35%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(142 70% 45%) 0%, hsl(142 60% 40%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(210 20% 98%) 100%);
+    --gradient-overlay: linear-gradient(180deg, hsla(0 0% 100% / 0) 0%, hsla(0 0% 100% / 0.9) 100%);
 
-    /* Shadows - Navy glow */
-    --shadow-sm: 0 1px 3px 0px hsl(210 100% 5% / 0.3), 0 1px 2px -1px hsl(210 100% 5% / 0.2);
-    --shadow-md: 0 1px 3px 0px hsl(210 100% 5% / 0.3), 0 2px 4px -1px hsl(210 100% 5% / 0.2);
-    --shadow-lg: 0 1px 3px 0px hsl(210 100% 5% / 0.3), 0 4px 6px -1px hsl(210 100% 5% / 0.2);
-    --shadow-glow: 0 0 40px hsla(30 91% 55% / 0.3);
-    --shadow-accent-glow: 0 8px 32px hsla(30 91% 55% / 0.4);
-    --chart-1: 30 91% 55%;
-    --chart-2: 35 85% 60%;
-    --chart-3: 25 80% 50%;
-    --chart-4: 40 90% 55%;
-    --chart-5: 210 50% 40%;
-    --sidebar: 210 100% 12%;
+    /* Shadows - Light */
+    --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
+    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.1), 0 2px 4px -2px hsl(0 0% 0% / 0.1);
+    --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.1), 0 4px 6px -4px hsl(0 0% 0% / 0.1);
+    --shadow-glow: 0 0 40px hsla(142 70% 45% / 0.2);
+    --shadow-accent-glow: 0 8px 32px hsla(142 70% 45% / 0.3);
+    --chart-1: 142 70% 45%;
+    --chart-2: 142 60% 55%;
+    --chart-3: 142 50% 40%;
+    --chart-4: 160 60% 45%;
+    --chart-5: 180 50% 40%;
+    --sidebar: 0 0% 98%;
     --font-sans: 'Work Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
     --font-serif: 'Lora', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
     --font-mono: 'Inconsolata', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
-    --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+    --shadow-2xs: 0 1px 2px 0px hsl(0 0% 0% / 0.05);
     --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
     --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
-    --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
-    --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
+    --shadow-xl: 0 20px 25px -5px hsl(0 0% 0% / 0.1), 0 8px 10px -6px hsl(0 0% 0% / 0.1);
+    --shadow-2xl: 0 25px 50px -12px hsl(0 0% 0% / 0.25);
     --tracking-normal: 0em;
     --spacing: 0.25rem;
   }
 
   .dark {
-    --background: 210 100% 8%;
+    --background: 210 20% 10%;
     --foreground: 0 0% 98%;
-    --card: 210 100% 12%;
+    --card: 210 20% 15%;
     --card-foreground: 0 0% 98%;
-    --popover: 210 100% 10%;
+    --popover: 210 20% 12%;
     --popover-foreground: 0 0% 98%;
-    --primary: 30 91% 55%;
+    --primary: 142 70% 45%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 30% 25%;
+    --secondary: 210 20% 20%;
     --secondary-foreground: 0 0% 98%;
-    --muted: 210 50% 20%;
-    --muted-foreground: 210 20% 70%;
-    --accent: 30 91% 55%;
+    --muted: 210 20% 20%;
+    --muted-foreground: 210 15% 65%;
+    --accent: 142 70% 45%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84% 60%;
-    --destructive-foreground: 0 85% 97%;
-    --border: 210 50% 25%;
-    --input: 210 50% 25%;
-    --ring: 30 91% 55%;
-    --sidebar-background: 210 100% 10%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 210 20% 25%;
+    --input: 210 20% 25%;
+    --ring: 142 70% 45%;
+    --sidebar-background: 210 20% 12%;
     --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 30 91% 55%;
+    --sidebar-primary: 142 70% 45%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 100% 20%;
+    --sidebar-accent: 210 20% 18%;
     --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 210 50% 25%;
-    --sidebar-ring: 30 91% 55%;
-    --chart-1: 30 91% 55%;
-    --chart-2: 35 85% 60%;
-    --chart-3: 25 80% 50%;
-    --chart-4: 40 90% 55%;
-    --chart-5: 210 50% 40%;
-    --sidebar: 210 100% 12%;
-    --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
-    --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
-    --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
-    --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
-    --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 2px 4px -1px hsl(0 0% 0% / 0.1);
-    --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 4px 6px -1px hsl(0 0% 0% / 0.1);
-    --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
-    --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
+    --sidebar-border: 210 20% 25%;
+    --sidebar-ring: 142 70% 45%;
+    --chart-1: 142 70% 45%;
+    --chart-2: 142 60% 55%;
+    --chart-3: 142 50% 40%;
+    --chart-4: 160 60% 45%;
+    --chart-5: 180 50% 40%;
+    --sidebar: 210 20% 12%;
+    --shadow-2xs: 0 1px 2px 0px hsl(0 0% 0% / 0.1);
+    --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.1);
+    --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.2), 0 1px 2px -1px hsl(0 0% 0% / 0.2);
+    --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.2), 0 1px 2px -1px hsl(0 0% 0% / 0.2);
+    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.2), 0 2px 4px -2px hsl(0 0% 0% / 0.2);
+    --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.2), 0 4px 6px -4px hsl(0 0% 0% / 0.2);
+    --shadow-xl: 0 20px 25px -5px hsl(0 0% 0% / 0.2), 0 8px 10px -6px hsl(0 0% 0% / 0.2);
+    --shadow-2xl: 0 25px 50px -12px hsl(0 0% 0% / 0.4);
   }
 }
 
