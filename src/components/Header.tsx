@@ -105,12 +105,12 @@ export const Header = () => {
               {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
 
-            {/* Logo */}
+            {/* Logo - Premium Visibility */}
             <Link to="/" className="flex items-center flex-shrink-0">
               <img 
                 src={logoImage} 
-                alt="Grabyourcar" 
-                className="h-8 sm:h-10 md:h-12 lg:h-14 w-auto max-w-[140px] sm:max-w-[160px] md:max-w-[200px] lg:max-w-[240px] object-contain dark:brightness-0 dark:invert" 
+                alt="Grabyourcar - India's Smarter Way to Buy New Cars" 
+                className="h-10 sm:h-12 md:h-14 lg:h-16 w-auto max-w-[160px] sm:max-w-[180px] md:max-w-[220px] lg:max-w-[280px] object-contain drop-shadow-sm dark:brightness-0 dark:invert" 
               />
             </Link>
 
@@ -222,21 +222,18 @@ export const Header = () => {
                 </Link>
               )}
               
-              <a href="https://wa.me/919855924442" target="_blank" rel="noopener noreferrer">
-                <Button variant="whatsapp" size="sm" className="hidden md:flex">
+              <a href="https://wa.me/919855924442?text=Hi%20Grabyourcar!%20I%27m%20looking%20for%20the%20best%20price%20on%20a%20new%20car.%20Please%20help!" target="_blank" rel="noopener noreferrer">
+                <Button variant="whatsapp" size="sm" className="hidden md:flex gap-1.5 font-semibold hover:scale-105 transition-transform">
                   <MessageCircle className="h-4 w-4" />
-                  WhatsApp
+                  Unlock Best Price
                 </Button>
               </a>
               <a href="tel:+919855924442">
-                <Button variant="call" size="sm" className="hidden md:flex">
+                <Button variant="call" size="sm" className="hidden md:flex gap-1.5 font-semibold hover:scale-105 transition-transform">
                   <Phone className="h-4 w-4" />
-                  Call Now
+                  Call Expert
                 </Button>
               </a>
-              <Button variant="cta" size="sm" className="hidden md:flex text-xs px-3">
-                Get Best Deal
-              </Button>
             </div>
           </div>
         </div>
