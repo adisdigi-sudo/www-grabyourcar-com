@@ -8,6 +8,7 @@ import {
   CorporateIndustries,
   CorporateCaseStudies,
   CorporateComparison,
+  CorporateTestimonials,
   CorporateBrochureDownload,
   CorporateFAQ,
   CorporateSocialProof,
@@ -39,6 +40,9 @@ const CorporateBuying = () => {
 
       {/* Case Studies */}
       <CorporateCaseStudies />
+
+      {/* Client Testimonials */}
+      <CorporateTestimonials />
 
       {/* Brochure Download */}
       <CorporateBrochureDownload />

@@ -5,6 +5,7 @@ export { CorporateWhyChoose } from "./CorporateWhyChoose";
 export { CorporateIndustries } from "./CorporateIndustries";
 export { CorporateCaseStudies } from "./CorporateCaseStudies";
 export { CorporateComparison } from "./CorporateComparison";
+export { CorporateTestimonials } from "./CorporateTestimonials";
 export { CorporateBrochureDownload } from "./CorporateBrochureDownload";
 export { CorporateFAQ } from "./CorporateFAQ";
 export { CorporateSocialProof } from "./CorporateSocialProof";
