@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
-import { Phone, MessageCircle, X, FileText } from "lucide-react";
+import { Phone, MessageCircle, X, FileText, Zap, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import {
@@ -8,31 +10,41 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { LeadForm } from "@/components/LeadForm";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { z } from "zod";
+
+const quickFormSchema = z.object({
+  name: z.string().trim().min(2, "Name must be at least 2 characters").max(100, "Name is too long"),
+  phone: z.string().trim().regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit mobile number"),
+});
 
 export const FloatingCTA = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [isHiddenByScroll, setIsHiddenByScroll] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [showQuoteForm, setShowQuoteForm] = useState(false);
+  const [showQuickDealForm, setShowQuickDealForm] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [quickFormData, setQuickFormData] = useState({ name: "", phone: "" });
+  const [quickFormErrors, setQuickFormErrors] = useState<{ name?: string; phone?: string }>({});
 
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
       const heroHeight = window.innerHeight * 0.9;
       
-      // Show after scrolling past hero section
       const pastHero = currentScrollY > heroHeight;
       setIsVisible(pastHero);
       
-      // Hide on scroll up, show on scroll down (only when past hero)
       if (pastHero) {
         const scrollingDown = currentScrollY > lastScrollY;
         const scrollDelta = Math.abs(currentScrollY - lastScrollY);
         
-        // Only trigger hide/show if scroll delta is significant (> 10px)
         if (scrollDelta > 10) {
           setIsHiddenByScroll(!scrollingDown);
         }
@@ -50,6 +62,50 @@ export const FloatingCTA = () => {
   const handleRequestQuote = () => {
     setShowQuoteForm(true);
     setIsExpanded(false);
+  };
+
+  const handleGetBestDeal = () => {
+    setShowQuickDealForm(true);
+    setIsExpanded(false);
+  };
+
+  const handleQuickFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setQuickFormErrors({});
+
+    const result = quickFormSchema.safeParse(quickFormData);
+    if (!result.success) {
+      const errors: { name?: string; phone?: string } = {};
+      result.error.errors.forEach((err) => {
+        if (err.path[0] === "name") errors.name = err.message;
+        if (err.path[0] === "phone") errors.phone = err.message;
+      });
+      setQuickFormErrors(errors);
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase.from("leads").insert({
+        customer_name: quickFormData.name.trim(),
+        phone: quickFormData.phone.trim(),
+        source: "floating_cta",
+        lead_type: "quick_deal",
+        status: "new",
+        priority: "high",
+      });
+
+      if (error) throw error;
+
+      toast.success("Thanks! We'll call you with the best deal shortly.");
+      setShowQuickDealForm(false);
+      setQuickFormData({ name: "", phone: "" });
+    } catch (error) {
+      console.error("Error submitting quick form:", error);
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -73,6 +129,28 @@ export const FloatingCTA = () => {
                   transition={{ duration: 0.2 }}
                   className="flex flex-col gap-3 mb-2"
                 >
+                  {/* Get Best Deal - Quick Form */}
+                  <button
+                    onClick={handleGetBestDeal}
+                    className="group flex items-center gap-3"
+                  >
+                    <motion.span
+                      initial={{ opacity: 0, x: 10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0 }}
+                      className="px-3 py-1.5 bg-primary text-primary-foreground rounded-lg shadow-md text-sm font-medium whitespace-nowrap"
+                    >
+                      Get Best Deal
+                    </motion.span>
+                    <Button
+                      variant="default"
+                      size="icon"
+                      className="h-12 w-12 rounded-full shadow-lg group-hover:scale-110 transition-transform bg-primary hover:bg-primary/90"
+                    >
+                      <Zap className="h-5 w-5" />
+                    </Button>
+                  </button>
+
                   {/* Request Quote Button with Label */}
                   <button
                     onClick={handleRequestQuote}
@@ -200,12 +278,72 @@ export const FloatingCTA = () => {
         )}
       </AnimatePresence>
 
+      {/* Request Quote Dialog */}
       <Dialog open={showQuoteForm} onOpenChange={setShowQuoteForm}>
         <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-heading text-xl">Request a Quote</DialogTitle>
           </DialogHeader>
           <LeadForm prefillCarInterest="General Quote Request" />
+        </DialogContent>
+      </Dialog>
+
+      {/* Get Best Deal Quick Form Dialog */}
+      <Dialog open={showQuickDealForm} onOpenChange={setShowQuickDealForm}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-xl flex items-center gap-2">
+              <Zap className="h-5 w-5 text-primary" />
+              Get Best Deal
+            </DialogTitle>
+            <DialogDescription>
+              Share your details and we'll call you with exclusive offers within 30 minutes!
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleQuickFormSubmit} className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <Label htmlFor="quick-name">Your Name *</Label>
+              <Input
+                id="quick-name"
+                placeholder="Enter your name"
+                value={quickFormData.name}
+                onChange={(e) => setQuickFormData({ ...quickFormData, name: e.target.value })}
+                className={quickFormErrors.name ? "border-destructive" : ""}
+              />
+              {quickFormErrors.name && (
+                <p className="text-xs text-destructive">{quickFormErrors.name}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="quick-phone">Mobile Number *</Label>
+              <Input
+                id="quick-phone"
+                placeholder="10-digit mobile number"
+                value={quickFormData.phone}
+                onChange={(e) => setQuickFormData({ ...quickFormData, phone: e.target.value.replace(/\D/g, "").slice(0, 10) })}
+                className={quickFormErrors.phone ? "border-destructive" : ""}
+              />
+              {quickFormErrors.phone && (
+                <p className="text-xs text-destructive">{quickFormErrors.phone}</p>
+              )}
+            </div>
+            <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  <Zap className="h-4 w-4 mr-2" />
+                  Get Best Deal Now
+                </>
+              )}
+            </Button>
+            <p className="text-xs text-center text-muted-foreground">
+              By submitting, you agree to receive calls from our team.
+            </p>
+          </form>
         </DialogContent>
       </Dialog>
     </>
