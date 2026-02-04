@@ -1,5 +1,6 @@
 export { CorporateHero } from "./CorporateHero";
 export { CorporateLogoGrid } from "./CorporateLogoGrid";
+export { CorporateStats } from "./CorporateStats";
 export { CorporateWhyChoose } from "./CorporateWhyChoose";
 export { CorporateIndustries } from "./CorporateIndustries";
 export { CorporateCaseStudies } from "./CorporateCaseStudies";
