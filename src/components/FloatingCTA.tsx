@@ -20,6 +20,7 @@ import { LeadForm } from "@/components/LeadForm";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { z } from "zod";
+import { triggerFeedback } from "@/lib/feedback";
 
 const quickFormSchema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters").max(100, "Name is too long"),
@@ -211,7 +212,7 @@ export const FloatingCTA = () => {
                 >
                   {/* Get Best Deal - Quick Form */}
                   <button
-                    onClick={handleGetBestDeal}
+                    onClick={() => { triggerFeedback(); handleGetBestDeal(); }}
                     className="group flex items-center gap-3"
                   >
                     <motion.span
@@ -233,7 +234,7 @@ export const FloatingCTA = () => {
 
                   {/* Request Quote Button with Label */}
                   <button
-                    onClick={handleRequestQuote}
+                    onClick={() => { triggerFeedback(); handleRequestQuote(); }}
                     className="group flex items-center gap-3"
                   >
                     <motion.span
@@ -255,7 +256,7 @@ export const FloatingCTA = () => {
 
                   {/* Schedule a Call Button */}
                   <button
-                    onClick={handleScheduleCall}
+                    onClick={() => { triggerFeedback(); handleScheduleCall(); }}
                     className="group flex items-center gap-3"
                   >
                     <motion.span
@@ -323,7 +324,10 @@ export const FloatingCTA = () => {
 
             {/* Main Toggle Button */}
             <motion.button
-              onClick={() => setIsExpanded(!isExpanded)}
+              onClick={() => {
+                triggerFeedback();
+                setIsExpanded(!isExpanded);
+              }}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               className={cn(
