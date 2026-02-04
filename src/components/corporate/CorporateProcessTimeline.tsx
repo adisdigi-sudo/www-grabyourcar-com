@@ -102,38 +102,103 @@ export const CorporateProcessTimeline = () => {
         <div ref={ref} className="max-w-6xl mx-auto">
           {/* Desktop Timeline */}
           <div className="hidden lg:block relative">
-            {/* Connecting Line */}
-            <div className="absolute top-24 left-0 right-0 h-1 bg-border/50">
-              <motion.div
-                initial={{ scaleX: 0 }}
-                animate={isInView ? { scaleX: 1 } : { scaleX: 0 }}
-                transition={{ duration: 1.5, ease: "easeOut" }}
-                className="h-full bg-gradient-to-r from-primary via-accent to-primary origin-left"
-              />
+            {/* Connecting Line Background */}
+            <div className="absolute top-10 left-[12.5%] right-[12.5%] h-0.5 bg-border/30" />
+            
+            {/* Animated Progress Line */}
+            <motion.div
+              initial={{ scaleX: 0 }}
+              animate={isInView ? { scaleX: 1 } : { scaleX: 0 }}
+              transition={{ duration: 2, ease: "easeOut" }}
+              className="absolute top-10 left-[12.5%] right-[12.5%] h-0.5 bg-gradient-to-r from-primary via-accent to-primary origin-left"
+            />
+
+            {/* Step Numbers Row */}
+            <div className="relative grid grid-cols-4 gap-6 mb-8">
+              {processSteps.map((step, index) => (
+                <motion.div
+                  key={step.step}
+                  initial={{ opacity: 0, scale: 0 }}
+                  animate={isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0 }}
+                  transition={{ duration: 0.4, delay: 0.3 + index * 0.3 }}
+                  className="flex justify-center"
+                >
+                  {/* Step Number Circle */}
+                  <div className="relative">
+                    {/* Pulse ring animation */}
+                    <motion.div
+                      initial={{ opacity: 0, scale: 1 }}
+                      animate={isInView ? { 
+                        opacity: [0, 0.5, 0], 
+                        scale: [1, 1.5, 1.8] 
+                      } : {}}
+                      transition={{ 
+                        duration: 1.5, 
+                        delay: 0.5 + index * 0.3,
+                        repeat: Infinity,
+                        repeatDelay: 3
+                      }}
+                      className="absolute inset-0 rounded-full bg-primary"
+                    />
+                    
+                    {/* Main number circle */}
+                    <div className={cn(
+                      "relative z-10 w-20 h-20 rounded-full flex items-center justify-center",
+                      "bg-gradient-to-br from-primary to-primary/80",
+                      "border-4 border-background shadow-xl shadow-primary/30"
+                    )}>
+                      <span className="text-2xl font-bold text-primary-foreground">
+                        {step.step}
+                      </span>
+                    </div>
+
+                    {/* Connecting dots to next step */}
+                    {index < processSteps.length - 1 && (
+                      <div className="absolute top-1/2 left-full -translate-y-1/2 flex items-center gap-2 px-4">
+                        {[...Array(3)].map((_, dotIndex) => (
+                          <motion.div
+                            key={dotIndex}
+                            initial={{ opacity: 0, scale: 0 }}
+                            animate={isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0 }}
+                            transition={{ 
+                              duration: 0.3, 
+                              delay: 0.8 + index * 0.3 + dotIndex * 0.1 
+                            }}
+                            className="w-2 h-2 rounded-full bg-primary/60"
+                          />
+                        ))}
+                        <motion.div
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: -10 }}
+                          transition={{ duration: 0.3, delay: 1.1 + index * 0.3 }}
+                        >
+                          <ArrowRight className="w-4 h-4 text-primary" />
+                        </motion.div>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              ))}
             </div>
 
+            {/* Content Cards Row */}
             <div className="grid grid-cols-4 gap-6">
               {processSteps.map((step, index) => (
                 <motion.div
                   key={step.step}
                   initial={{ opacity: 0, y: 30 }}
                   animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
-                  transition={{ duration: 0.5, delay: index * 0.2 }}
-                  className="relative"
+                  transition={{ duration: 0.5, delay: 0.5 + index * 0.2 }}
+                  className="relative group"
                 >
-                  {/* Step Icon */}
-                  <div className="relative z-10 flex justify-center mb-6">
+                  {/* Icon */}
+                  <div className="flex justify-center mb-4">
                     <div className={cn(
-                      "w-20 h-20 rounded-2xl flex items-center justify-center",
-                      "bg-gradient-to-br from-card to-secondary border-2 border-primary/20",
-                      "shadow-xl shadow-primary/10",
-                      "group-hover:border-primary/50 transition-all duration-300"
+                      "w-14 h-14 rounded-xl flex items-center justify-center",
+                      "bg-gradient-to-br from-card to-secondary border border-primary/20",
+                      "shadow-lg group-hover:border-primary/50 transition-all duration-300"
                     )}>
-                      <step.icon className="h-8 w-8 text-primary" />
-                    </div>
-                    {/* Step Number Badge */}
-                    <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm shadow-lg">
-                      {step.step}
+                      <step.icon className="h-6 w-6 text-primary" />
                     </div>
                   </div>
 
@@ -141,7 +206,7 @@ export const CorporateProcessTimeline = () => {
                   <div className={cn(
                     "bg-card border border-border/50 rounded-2xl p-6",
                     "hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5",
-                    "transition-all duration-300 group"
+                    "transition-all duration-300"
                   )}>
                     {/* Duration Badge */}
                     <div className="inline-block px-3 py-1 mb-3 text-xs font-semibold rounded-full bg-accent/10 text-accent border border-accent/20">
