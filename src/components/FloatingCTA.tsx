@@ -481,6 +481,7 @@ export const FloatingCTA = () => {
                 value={quickFormData.name}
                 onChange={(e) => setQuickFormData({ ...quickFormData, name: e.target.value })}
                 className={quickFormErrors.name ? "border-destructive" : ""}
+                autoFocus
               />
               {quickFormErrors.name && (
                 <p className="text-xs text-destructive">{quickFormErrors.name}</p>
