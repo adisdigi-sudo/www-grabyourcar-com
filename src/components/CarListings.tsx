@@ -2,12 +2,13 @@ import { Link } from "react-router-dom";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Fuel, Cog, Clock, TrendingDown, MessageCircle, Phone, Heart, GitCompare, Check, FileText, Eye } from "lucide-react";
+import { Fuel, Cog, Clock, TrendingDown, Phone, Heart, GitCompare, Check, FileText, Eye } from "lucide-react";
 import { allCars } from "@/data/cars";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompare } from "@/hooks/useCompare";
 import { cn } from "@/lib/utils";
+import { WhatsAppCardButton } from "@/components/WhatsAppCTA";
 
 // Get featured cars for homepage - show first 12 cars with deals
 const featuredCars = allCars.slice(0, 12).map(car => ({
@@ -162,17 +163,7 @@ export const CarListings = () => {
                 
                 {/* Secondary Actions Row - Sales-Driven WhatsApp */}
                 <div className="flex gap-2 w-full">
-                  <a 
-                    href={`https://wa.me/919855924442?text=Hi%20Grabyourcar!%20I%27m%20interested%20in%20${encodeURIComponent(car.name)}.%20Please%20share%20the%20best%20price%20and%20offers.`}
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="flex-1"
-                  >
-                    <Button variant="whatsapp" className="w-full gap-2 font-semibold hover:scale-[1.02] transition-transform">
-                      <MessageCircle className="h-4 w-4" />
-                      Unlock Best Price
-                    </Button>
-                  </a>
+                  <WhatsAppCardButton carName={car.name} />
                   <a href="tel:+919855924442" className="flex-1">
                     <Button variant="call" className="w-full gap-2 font-semibold hover:scale-[1.02] transition-transform">
                       <Phone className="h-4 w-4" />
