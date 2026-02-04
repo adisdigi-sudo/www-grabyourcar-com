@@ -1,5 +1,15 @@
 import { cn } from "@/lib/utils";
 
+// Import logo images
+import gaurGroupLogo from "@/assets/logos/gaur-group.png";
+import empathyRelocationsLogo from "@/assets/logos/empathy-relocations.png";
+import sewaHospitalityLogo from "@/assets/logos/sewa-hospitality.png";
+import orangeGroupLogo from "@/assets/logos/orange-group.png";
+import dewanPublicSchoolLogo from "@/assets/logos/dewan-public-school.png";
+import virmaniHospitalLogo from "@/assets/logos/virmani-hospital.png";
+import flightNFaresLogo from "@/assets/logos/flight-n-fares.png";
+import banshidharGroupLogo from "@/assets/logos/banshidhar-group.png";
+
 interface CorporateClient {
   name: string;
   description: string;
@@ -10,42 +20,42 @@ const corporateClients: CorporateClient[] = [
   {
     name: "Gaur Group",
     description: "Leading Real Estate Developer",
-    logo: "/logos/gaur-group.png",
+    logo: gaurGroupLogo,
   },
   {
     name: "Empathy Relocations LLP",
     description: "Fleet Management Company",
-    logo: "/logos/empathy-relocations.png",
+    logo: empathyRelocationsLogo,
   },
   {
     name: "Sewa Hospitality Services",
     description: "Hospitality Services Provider",
-    logo: "/logos/sewa-hospitality.png",
+    logo: sewaHospitalityLogo,
   },
   {
     name: "Orange Group",
     description: "75+ Year Legacy in Education",
-    logo: "/logos/orange-group.png",
+    logo: orangeGroupLogo,
   },
   {
     name: "Dewan Public School",
     description: "Established School Chain",
-    logo: "/logos/dewan-public-school.png",
+    logo: dewanPublicSchoolLogo,
   },
   {
     name: "Virmani Hospital",
     description: "Healthcare Institution",
-    logo: "/logos/virmani-hospital.png",
+    logo: virmaniHospitalLogo,
   },
   {
     name: "Flight n Fares",
     description: "Travel Services Company",
-    logo: "/logos/flight-n-fares.png",
+    logo: flightNFaresLogo,
   },
   {
     name: "Banshidhar Group",
-    description: "75+ Year Legacy Tobacco Company",
-    logo: "/logos/banshidhar-group.png",
+    description: "75+ Year Legacy Business House",
+    logo: banshidharGroupLogo,
   },
 ];
 
@@ -67,33 +77,24 @@ export const CorporateLogoGrid = () => {
             <div
               key={client.name}
               className={cn(
-                "group relative bg-card border border-border/50 rounded-xl p-6 md:p-8",
+                "group relative bg-card border border-border/50 rounded-xl p-4 md:p-6",
                 "transition-all duration-300 ease-out",
                 "hover:shadow-lg hover:shadow-primary/5 hover:border-primary/20",
                 "hover:-translate-y-1"
               )}
             >
-              {/* Logo placeholder - styled as professional monogram */}
-              <div className="aspect-[3/2] flex items-center justify-center mb-4">
-                <div 
+              {/* Logo Image */}
+              <div className="aspect-square flex items-center justify-center mb-4 p-2">
+                <img
+                  src={client.logo}
+                  alt={`${client.name} logo`}
                   className={cn(
-                    "w-full h-full rounded-lg flex items-center justify-center",
-                    "bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700",
+                    "w-full h-full object-contain",
+                    "filter grayscale opacity-70",
                     "transition-all duration-300",
-                    "group-hover:from-primary/10 group-hover:to-primary/5"
+                    "group-hover:grayscale-0 group-hover:opacity-100"
                   )}
-                >
-                  <span 
-                    className={cn(
-                      "font-heading font-bold text-2xl md:text-3xl",
-                      "text-slate-400 dark:text-slate-500",
-                      "transition-colors duration-300",
-                      "group-hover:text-primary"
-                    )}
-                  >
-                    {client.name.split(' ').map(word => word[0]).slice(0, 2).join('')}
-                  </span>
-                </div>
+                />
               </div>
 
               <div className="text-center">
