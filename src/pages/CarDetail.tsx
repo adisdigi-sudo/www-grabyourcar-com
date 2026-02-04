@@ -9,6 +9,7 @@ import { DealerLocator } from "@/components/DealerLocator";
 import { ShareButtons } from "@/components/ShareButtons";
 import { CarStructuredData } from "@/components/seo/CarStructuredData";
 import { VariantComparisonTable } from "@/components/VariantComparisonTable";
+import { WhatsAppSalesCTA } from "@/components/WhatsAppCTA";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -306,22 +307,39 @@ const CarDetail = () => {
                   </Button>
                   <CompareButton carId={car.id} />
                   <ShareButtons title={`Check out ${car.name} on Grabyourcar`} />
-                  <a 
-                    href={`https://wa.me/919855924442?text=Hi%20Grabyourcar!%20I%20want%20the%20best%20price%20for%20${encodeURIComponent(car.brand + " " + car.name)}.%20Please%20share%20the%20on-road%20price%20and%20available%20offers.`}
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                  >
-                    <Button variant="whatsapp" size="lg" className="font-semibold hover:scale-105 transition-transform">
-                      <MessageCircle className="h-5 w-5 mr-2" />
-                      Get On-Road Price
-                    </Button>
-                  </a>
+                  <WhatsAppSalesCTA 
+                    carName={`${car.brand} ${car.name}`} 
+                    type="price" 
+                    size="lg"
+                  />
                   <a href="tel:+919855924442">
                     <Button variant="call" size="lg" className="font-semibold hover:scale-105 transition-transform">
                       <Phone className="h-5 w-5 mr-2" />
                       Talk to Expert
                     </Button>
                   </a>
+                </div>
+
+                {/* Additional WhatsApp CTAs */}
+                <div className="flex flex-wrap gap-2">
+                  <WhatsAppSalesCTA 
+                    carName={`${car.brand} ${car.name}`} 
+                    type="waiting" 
+                    size="sm"
+                    className="text-sm"
+                  />
+                  <WhatsAppSalesCTA 
+                    carName={`${car.brand} ${car.name}`} 
+                    type="testDrive" 
+                    size="sm"
+                    className="text-sm"
+                  />
+                  <WhatsAppSalesCTA 
+                    carName={`${car.brand} ${car.name}`} 
+                    type="offers" 
+                    size="sm"
+                    className="text-sm"
+                  />
                 </div>
 
                 {/* Trust Badges */}

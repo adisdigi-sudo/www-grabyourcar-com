@@ -12,6 +12,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
+import { WhatsAppCTA, whatsappMessages } from "@/components/WhatsAppCTA";
 import { 
   Car, 
   Truck, 
@@ -1015,12 +1016,12 @@ const HSRP = () => {
             Our team is here to assist you with the entire HSRP booking and installation process.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a href="https://wa.me/919855924442" target="_blank" rel="noopener noreferrer">
-              <Button variant="secondary" size="lg" className="gap-2">
-                <MessageCircle className="h-5 w-5" />
-                WhatsApp Us
-              </Button>
-            </a>
+            <WhatsAppCTA
+              message={whatsappMessages.hsrp}
+              label="Get HSRP Assistance"
+              size="lg"
+              variant="whatsapp"
+            />
             <a href="tel:+919855924442">
               <Button variant="outline" size="lg" className="gap-2 bg-transparent border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10">
                 <Phone className="h-5 w-5" />

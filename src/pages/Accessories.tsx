@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { WhatsAppCTA, whatsappMessages } from "@/components/WhatsAppCTA";
 import { 
   ShoppingCart, 
   Star, 
@@ -382,6 +383,16 @@ const Accessories = () => {
                 <h4 className="font-semibold mb-1">Easy Returns</h4>
                 <p className="text-sm text-muted-foreground">7-day return policy</p>
               </div>
+            </div>
+
+            {/* WhatsApp CTA */}
+            <div className="mt-8 text-center">
+              <p className="text-muted-foreground mb-4">Need help finding the right accessories?</p>
+              <WhatsAppCTA
+                message={whatsappMessages.accessories}
+                label="Chat with Expert"
+                size="lg"
+              />
             </div>
           </div>
         </section>
