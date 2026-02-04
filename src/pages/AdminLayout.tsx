@@ -6,6 +6,7 @@ import { LeadManagement } from "@/components/admin/LeadManagement";
 import { HomepageManagement } from "@/components/admin/HomepageManagement";
 import { HSRPManagement } from "@/components/admin/HSRPManagement";
 import { CarDataManagement } from "@/components/admin/CarDataManagement";
+import { RoleManagement } from "@/components/admin/RoleManagement";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ import {
   Image, 
   Shield, 
   Database,
+  UserCog,
 } from "lucide-react";
 
 const AdminLayout = () => {
@@ -102,6 +104,13 @@ const AdminLayout = () => {
               <Database className="h-4 w-4" />
               Data & Migration
             </TabsTrigger>
+            <TabsTrigger 
+              value="roles" 
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2"
+            >
+              <UserCog className="h-4 w-4" />
+              Roles
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard">
@@ -122,6 +131,10 @@ const AdminLayout = () => {
 
           <TabsContent value="data">
             <CarDataManagement />
+          </TabsContent>
+
+          <TabsContent value="roles">
+            <RoleManagement />
           </TabsContent>
         </Tabs>
       </div>

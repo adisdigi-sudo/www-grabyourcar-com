@@ -9,10 +9,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { CalendarIcon, Clock, MapPin, Phone, MessageCircle, CheckCircle2, Fuel, Settings2 } from "lucide-react";
+import { CalendarIcon, Clock, MapPin, Phone, MessageCircle, CheckCircle2, Fuel, Settings2, CreditCard, Loader2 } from "lucide-react";
 import { format, differenceInDays, addDays } from "date-fns";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
+import { useRazorpay } from "@/hooks/useRazorpay";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 interface RentalCar {
   id: number;
@@ -54,6 +58,10 @@ const pickupLocations = [
 ];
 
 export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalProps) => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { initiatePayment, isLoading: isPaymentLoading } = useRazorpay();
+  
   const [pickupDate, setPickupDate] = useState<Date>();
   const [dropoffDate, setDropoffDate] = useState<Date>();
   const [pickupTime, setPickupTime] = useState("");
@@ -64,6 +72,7 @@ export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalP
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
+  const [isCreatingBooking, setIsCreatingBooking] = useState(false);
 
   if (!car) return null;
 
@@ -73,22 +82,107 @@ export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalP
   const securityDeposit = 2000;
   const totalAmount = baseRent + gst;
 
-  const handleBooking = () => {
+  const validateForm = () => {
     if (!pickupDate || !dropoffDate || !pickupTime || !dropoffTime || !pickupLocation) {
       toast.error("Please fill all required booking details");
-      return;
+      return false;
     }
 
     if (!customerName || !customerPhone) {
       toast.error("Please provide your contact details");
+      return false;
+    }
+
+    if (customerPhone.length !== 10) {
+      toast.error("Please enter a valid 10-digit mobile number");
+      return false;
+    }
+
+    return true;
+  };
+
+  const handlePayNow = async () => {
+    if (!validateForm()) return;
+
+    if (!user) {
+      toast.error("Please login to make a booking");
+      navigate("/auth");
       return;
     }
+
+    setIsCreatingBooking(true);
+
+    try {
+      // Create booking in database first
+      const bookingData = {
+        user_id: user.id,
+        vehicle_name: car.name,
+        vehicle_type: car.vehicleType,
+        vehicle_image: car.image,
+        pickup_date: format(pickupDate!, "yyyy-MM-dd"),
+        pickup_time: pickupTime,
+        dropoff_date: format(dropoffDate!, "yyyy-MM-dd"),
+        dropoff_time: dropoffTime,
+        pickup_location: pickupLocation,
+        dropoff_location: sameDropoff ? pickupLocation : dropoffLocation,
+        daily_rate: car.rent,
+        total_days: rentalDays,
+        subtotal: baseRent,
+        security_deposit: securityDeposit,
+        total_amount: totalAmount,
+        status: "pending",
+        payment_status: "pending",
+      };
+
+      const { data: booking, error } = await supabase
+        .from("rental_bookings")
+        .insert(bookingData)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Initiate Razorpay payment
+      initiatePayment({
+        amount: totalAmount,
+        receipt: `RENTAL-${booking.id.substring(0, 8)}`,
+        bookingType: "rental",
+        bookingId: booking.id,
+        customerName,
+        customerEmail: customerEmail || `${customerPhone}@grabyourcar.in`,
+        customerPhone,
+        description: `Self-Drive Rental: ${car.name} for ${rentalDays} days`,
+        notes: {
+          vehicleName: car.name,
+          rentalDays: rentalDays.toString(),
+          pickupLocation,
+        },
+        onSuccess: (paymentData) => {
+          toast.success("Booking confirmed! Check My Bookings for details.");
+          onClose();
+          navigate("/my-bookings");
+        },
+        onError: (error) => {
+          console.error("Payment failed:", error);
+          // Booking is created but payment failed - user can retry from My Bookings
+        },
+      });
+    } catch (error: any) {
+      console.error("Booking error:", error);
+      toast.error(error.message || "Failed to create booking");
+    } finally {
+      setIsCreatingBooking(false);
+    }
+  };
+
+  const handleBookViaWhatsApp = () => {
+    if (!validateForm()) return;
 
     // Generate booking message for WhatsApp
     const message = `Hi! I want to book a self-drive car:\n\n` +
       `🚗 Car: ${car.name}\n` +
-      `📅 Pickup: ${format(pickupDate, "dd MMM yyyy")} at ${pickupTime}\n` +
-      `📅 Dropoff: ${format(dropoffDate, "dd MMM yyyy")} at ${dropoffTime}\n` +
+      `📅 Pickup: ${format(pickupDate!, "dd MMM yyyy")} at ${pickupTime}\n` +
+      `📅 Dropoff: ${format(dropoffDate!, "dd MMM yyyy")} at ${dropoffTime}\n` +
       `📍 Pickup Location: ${pickupLocation}\n` +
       `📍 Dropoff Location: ${sameDropoff ? pickupLocation : dropoffLocation}\n` +
       `💰 Total: ₹${totalAmount.toLocaleString()}\n\n` +
@@ -101,6 +195,8 @@ export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalP
     toast.success("Redirecting to WhatsApp for booking confirmation!");
     onClose();
   };
+
+  const isProcessing = isCreatingBooking || isPaymentLoading;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -302,7 +398,7 @@ export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalP
                   type="tel"
                   placeholder="10-digit mobile"
                   value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, ""))}
                   maxLength={10}
                 />
               </div>
@@ -351,16 +447,44 @@ export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalP
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-3">
-            <Button onClick={handleBooking} variant="cta" size="lg" className="flex-1 gap-2">
+            <Button 
+              onClick={handlePayNow} 
+              variant="cta" 
+              size="lg" 
+              className="flex-1 gap-2"
+              disabled={isProcessing}
+            >
+              {isProcessing ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <CreditCard className="h-5 w-5" />
+                  Pay ₹{totalAmount.toLocaleString()}
+                </>
+              )}
+            </Button>
+            <Button 
+              onClick={handleBookViaWhatsApp} 
+              variant="outline" 
+              size="lg" 
+              className="flex-1 gap-2"
+              disabled={isProcessing}
+            >
               <MessageCircle className="h-5 w-5" />
               Book via WhatsApp
             </Button>
-            <a href="tel:+919855924442" className="flex-1">
-              <Button variant="outline" size="lg" className="w-full gap-2">
-                <Phone className="h-5 w-5" />
-                Call to Book
-              </Button>
-            </a>
+          </div>
+
+          <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+            <img 
+              src="https://razorpay.com/favicon.png" 
+              alt="Razorpay" 
+              className="h-4 w-4"
+            />
+            <span>Secured by Razorpay</span>
           </div>
 
           <p className="text-xs text-center text-muted-foreground">
