@@ -11,3 +11,4 @@ export { CorporateFAQ } from "./CorporateFAQ";
 export { CorporateSocialProof } from "./CorporateSocialProof";
 export { CorporateCTA } from "./CorporateCTA";
 export { CorporateProcessTimeline } from "./CorporateProcessTimeline";
+export { CorporateScrollProgress } from "./CorporateScrollProgress";
