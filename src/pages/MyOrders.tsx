@@ -26,6 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { generateInvoice } from "@/lib/generateInvoice";
 import { toast } from "sonner";
+import { OrderTrackingTimeline } from "@/components/OrderTrackingTimeline";
 
 interface OrderItem {
   id: number;
@@ -269,6 +270,12 @@ const MyOrders = () => {
                 </CardHeader>
 
                 <CardContent className="p-0">
+                  {/* Order Tracking Timeline */}
+                  <OrderTrackingTimeline
+                    orderStatus={order.order_status}
+                    paymentStatus={order.payment_status}
+                    createdAt={order.created_at}
+                  />
                   {/* Order Items */}
                   <div className="p-4 border-b border-border/50">
                     <div className="space-y-3">
