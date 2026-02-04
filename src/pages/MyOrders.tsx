@@ -17,11 +17,15 @@ import {
   Calendar,
   MapPin,
   CreditCard,
-  ArrowLeft
+  ArrowLeft,
+  Download,
+  FileText
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { generateInvoice } from "@/lib/generateInvoice";
+import { toast } from "sonner";
 
 interface OrderItem {
   id: number;
@@ -232,7 +236,7 @@ const MyOrders = () => {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-3">
                       <Badge variant="outline" className={getStatusColor(order.order_status)}>
                         {getStatusIcon(order.order_status)}
                         <span className="ml-1.5 capitalize">{order.order_status}</span>
@@ -241,6 +245,25 @@ const MyOrders = () => {
                         <CreditCard className="h-3.5 w-3.5 mr-1.5" />
                         <span className="capitalize">{order.payment_status}</span>
                       </Badge>
+                      {(order.payment_status === "paid" || order.order_status === "delivered" || order.order_status === "completed") && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5 text-primary border-primary/30 hover:bg-primary/10"
+                          onClick={() => {
+                            try {
+                              generateInvoice(order);
+                              toast.success("Invoice downloaded successfully!");
+                            } catch (error) {
+                              console.error("Error generating invoice:", error);
+                              toast.error("Failed to generate invoice");
+                            }
+                          }}
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          Invoice
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </CardHeader>
