@@ -152,16 +152,21 @@ const CarDetail = () => {
         <meta name="description" content={`${car.brand} ${car.name} price starts at ${car.price}. Check out specifications, features, colors, mileage and more. ${car.variants.length} variants available.`} />
         <meta property="og:title" content={`${car.brand} ${car.name} - Price, Specs & Features`} />
         <meta property="og:description" content={car.overview || car.tagline} />
-        <meta property="og:image" content={`https://ynoiwioypxpurwdbjvyt.supabase.co/functions/v1/og-image?slug=${car.slug}`} />
+        {/* Use car's actual primary image for rich social previews */}
+        <meta property="og:image" content={car.gallery[0] || car.image} />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
+        <meta property="og:image:alt" content={`${car.brand} ${car.name}`} />
         <meta property="og:type" content="product" />
-        <meta property="og:url" content={`https://grabyourcar.lovable.app/car/${car.slug}`} />
+        <meta property="og:url" content={`https://grabyourcar.lovable.app/cars/${car.slug}`} />
+        <meta property="og:site_name" content="Grabyourcar" />
+        <meta property="product:price:currency" content="INR" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={`${car.brand} ${car.name} - Price, Specs & Features`} />
         <meta name="twitter:description" content={car.overview || car.tagline} />
-        <meta name="twitter:image" content={`https://ynoiwioypxpurwdbjvyt.supabase.co/functions/v1/og-image?slug=${car.slug}`} />
-        <link rel="canonical" href={`https://grabyourcar.lovable.app/car/${car.slug}`} />
+        <meta name="twitter:image" content={car.gallery[0] || car.image} />
+        <meta name="twitter:image:alt" content={`${car.brand} ${car.name}`} />
+        <link rel="canonical" href={`https://grabyourcar.lovable.app/cars/${car.slug}`} />
       </Helmet>
       <Header />
       
