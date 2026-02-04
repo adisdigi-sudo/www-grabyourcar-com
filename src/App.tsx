@@ -24,6 +24,7 @@ import BlogPost from "./pages/BlogPost";
 import Auth from "./pages/Auth";
 import MyFavorites from "./pages/MyFavorites";
 import MyBookings from "./pages/MyBookings";
+import MyOrders from "./pages/MyOrders";
 import CarFinder from "./pages/CarFinder";
 import AdminLayout from "./pages/AdminLayout";
 import SelfDriveRentals from "./pages/SelfDriveRentals";
@@ -59,6 +60,7 @@ const App = () => (
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/favorites" element={<MyFavorites />} />
                 <Route path="/my-bookings" element={<MyBookings />} />
+                <Route path="/my-orders" element={<MyOrders />} />
                 <Route path="/car-finder" element={<CarFinder />} />
                 <Route path="/admin" element={<AdminLayout />} />
                 <Route path="/self-drive" element={<SelfDriveRentals />} />
