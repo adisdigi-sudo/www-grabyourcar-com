@@ -53,7 +53,7 @@ const insurers = [
 
 export function InsuranceComparison() {
   return (
-    <section className="py-12 md:py-20">
+    <section id="insurance-comparison" className="py-12 md:py-20 scroll-mt-20">
       <div className="container mx-auto px-4">
         <div className="text-center max-w-2xl mx-auto mb-12">
           <Badge className="mb-4" variant="secondary">Compare & Save</Badge>
