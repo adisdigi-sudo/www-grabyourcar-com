@@ -148,12 +148,17 @@ const CarDetail = () => {
       {/* SEO Structured Data */}
       <CarStructuredData car={car} selectedVariant={selectedVariant} />
       <Helmet>
-        <title>{car.brand} {car.name} Price, Specs, Features | Grabyourcar</title>
+        <title>{car.name} Price, Specs, Features | Grabyourcar</title>
         <meta name="description" content={`${car.brand} ${car.name} price starts at ${car.price}. Check out specifications, features, colors, mileage and more. ${car.variants.length} variants available.`} />
         <meta property="og:title" content={`${car.brand} ${car.name} - Price, Specs & Features`} />
         <meta property="og:description" content={car.overview || car.tagline} />
-        <meta property="og:image" content={car.gallery[0] || car.image} />
+        <meta property="og:image" content="https://grabyourcar.lovable.app/og-image.png" />
         <meta property="og:type" content="product" />
+        <meta property="og:url" content={`https://grabyourcar.lovable.app/car/${car.slug}`} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={`${car.brand} ${car.name} - Price, Specs & Features`} />
+        <meta name="twitter:description" content={car.overview || car.tagline} />
+        <meta name="twitter:image" content="https://grabyourcar.lovable.app/og-image.png" />
         <link rel="canonical" href={`https://grabyourcar.lovable.app/car/${car.slug}`} />
       </Helmet>
       <Header />
