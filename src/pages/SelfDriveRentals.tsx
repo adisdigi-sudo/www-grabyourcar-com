@@ -278,6 +278,19 @@ const SelfDriveRentals = () => {
           name="description"
           content="Rent self-drive cars in Delhi NCR starting ₹999/day. Choose from hatchbacks, sedans, SUVs & luxury cars. Doorstep delivery, unlimited kilometers."
         />
+        {/* Open Graph */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://grabyourcar.lovable.app/self-drive-rentals" />
+        <meta property="og:title" content="Self-Drive Car Rentals in Delhi NCR | GrabYourCar" />
+        <meta property="og:description" content="Rent self-drive cars in Delhi NCR starting ₹999/day. Doorstep delivery." />
+        <meta property="og:image" content="https://grabyourcar.lovable.app/og-image.png" />
+        <meta property="og:site_name" content="GrabYourCar" />
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content="https://grabyourcar.lovable.app/self-drive-rentals" />
+        <meta name="twitter:title" content="Self-Drive Car Rentals in Delhi NCR" />
+        <meta name="twitter:description" content="Rent cars starting ₹999/day. Unlimited kilometers!" />
+        <meta name="twitter:image" content="https://grabyourcar.lovable.app/og-image.png" />
       </Helmet>
 
       <div className="min-h-screen bg-background">

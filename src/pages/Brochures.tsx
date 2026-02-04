@@ -102,6 +102,19 @@ const Brochures = () => {
           name="description"
           content="Download official car brochures with complete specifications, features, colors, and pricing. Get all details before buying your new car."
         />
+        {/* Open Graph */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://grabyourcar.lovable.app/brochures" />
+        <meta property="og:title" content="Download Car Brochures | Specs, Features & Prices | GrabYourCar" />
+        <meta property="og:description" content="Download official car brochures with complete specifications and pricing." />
+        <meta property="og:image" content="https://grabyourcar.lovable.app/og-image.png" />
+        <meta property="og:site_name" content="GrabYourCar" />
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content="https://grabyourcar.lovable.app/brochures" />
+        <meta name="twitter:title" content="Download Car Brochures | Specs, Features & Prices" />
+        <meta name="twitter:description" content="Get all details before buying your new car." />
+        <meta name="twitter:image" content="https://grabyourcar.lovable.app/og-image.png" />
       </Helmet>
 
       <div className="min-h-screen bg-background">

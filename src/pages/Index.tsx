@@ -32,6 +32,19 @@ const Index = () => {
           name="description"
           content="India's trusted platform for buying new cars. Compare prices, get loans, and find the best deals on Maruti, Hyundai, Tata, Mahindra & more. Expert advice & doorstep delivery."
         />
+        {/* Open Graph */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://grabyourcar.lovable.app/" />
+        <meta property="og:title" content="GrabYourCar | Buy New Cars in India | Best Prices & Offers" />
+        <meta property="og:description" content="India's trusted platform for buying new cars. Compare prices, get loans, and find the best deals on Maruti, Hyundai, Tata, Mahindra & more." />
+        <meta property="og:image" content="https://grabyourcar.lovable.app/og-image.png" />
+        <meta property="og:site_name" content="GrabYourCar" />
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content="https://grabyourcar.lovable.app/" />
+        <meta name="twitter:title" content="GrabYourCar | Buy New Cars in India | Best Prices & Offers" />
+        <meta name="twitter:description" content="India's trusted platform for buying new cars. Compare prices, get loans, and find the best deals." />
+        <meta name="twitter:image" content="https://grabyourcar.lovable.app/og-image.png" />
       </Helmet>
       
       <div className="min-h-screen bg-background">
