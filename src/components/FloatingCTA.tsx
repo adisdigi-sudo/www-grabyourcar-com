@@ -194,10 +194,18 @@ export const FloatingCTA = () => {
       <AnimatePresence>
         {isVisible && !isHiddenByScroll && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.8, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
+            initial={{ opacity: 0, scale: 0.3, y: 50 }}
+            animate={{ 
+              opacity: 1, 
+              scale: [0.3, 1.15, 0.95, 1.05, 1], 
+              y: [50, -10, 5, -3, 0] 
+            }}
             exit={{ opacity: 0, scale: 0.8, y: 20 }}
-            transition={{ duration: 0.3, ease: "easeOut" }}
+            transition={{ 
+              duration: 0.6, 
+              ease: "easeOut",
+              times: [0, 0.4, 0.6, 0.8, 1]
+            }}
             className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3"
           >
             {/* Expanded Menu */}
