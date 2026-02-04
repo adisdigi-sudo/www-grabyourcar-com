@@ -152,7 +152,7 @@ const CarDetail = () => {
         <meta name="description" content={`${car.brand} ${car.name} price starts at ${car.price}. Check out specifications, features, colors, mileage and more. ${car.variants.length} variants available.`} />
         <meta property="og:title" content={`${car.brand} ${car.name} - Price, Specs & Features`} />
         <meta property="og:description" content={car.overview || car.tagline} />
-        <meta property="og:image" content={`https://ynoiwioypxpurwdbjvyt.supabase.co/functions/v1/generate-og-image?slug=${car.slug}`} />
+        <meta property="og:image" content={`https://ynoiwioypxpurwdbjvyt.supabase.co/functions/v1/og-image?slug=${car.slug}`} />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta property="og:type" content="product" />
@@ -160,7 +160,7 @@ const CarDetail = () => {
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={`${car.brand} ${car.name} - Price, Specs & Features`} />
         <meta name="twitter:description" content={car.overview || car.tagline} />
-        <meta name="twitter:image" content={`https://ynoiwioypxpurwdbjvyt.supabase.co/functions/v1/generate-og-image?slug=${car.slug}`} />
+        <meta name="twitter:image" content={`https://ynoiwioypxpurwdbjvyt.supabase.co/functions/v1/og-image?slug=${car.slug}`} />
         <link rel="canonical" href={`https://grabyourcar.lovable.app/car/${car.slug}`} />
       </Helmet>
       <Header />
