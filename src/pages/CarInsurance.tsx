@@ -24,6 +24,19 @@ const CarInsurance = () => {
           name="description"
           content="Compare car insurance quotes from 20+ top insurers. Get instant policy, 98% claim settlement, and 10,000+ cashless garages. Save up to 80% on your premium."
         />
+        {/* Open Graph */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://grabyourcar.lovable.app/car-insurance" />
+        <meta property="og:title" content="Car Insurance | Compare & Save Up to 80% | GrabYourCar" />
+        <meta property="og:description" content="Compare car insurance quotes from 20+ top insurers. Get instant policy and 98% claim settlement." />
+        <meta property="og:image" content="https://grabyourcar.lovable.app/og-image.png" />
+        <meta property="og:site_name" content="GrabYourCar" />
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content="https://grabyourcar.lovable.app/car-insurance" />
+        <meta name="twitter:title" content="Car Insurance | Compare & Save Up to 80%" />
+        <meta name="twitter:description" content="Compare car insurance quotes from 20+ top insurers. Save up to 80% on your premium." />
+        <meta name="twitter:image" content="https://grabyourcar.lovable.app/og-image.png" />
       </Helmet>
 
       <Header />

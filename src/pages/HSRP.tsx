@@ -381,6 +381,19 @@ const HSRP = () => {
           name="description"
           content="Book HSRP online for your vehicle. Government authorized high security registration plates with quick installation. Avoid fines - book now!"
         />
+        {/* Open Graph */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://grabyourcar.lovable.app/hsrp" />
+        <meta property="og:title" content="HSRP Online Booking | High Security Number Plate | GrabYourCar" />
+        <meta property="og:description" content="Book HSRP online for your vehicle. Government authorized high security plates." />
+        <meta property="og:image" content="https://grabyourcar.lovable.app/og-image.png" />
+        <meta property="og:site_name" content="GrabYourCar" />
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content="https://grabyourcar.lovable.app/hsrp" />
+        <meta name="twitter:title" content="HSRP Online Booking | High Security Number Plate" />
+        <meta name="twitter:description" content="Book HSRP online. Avoid fines - book now!" />
+        <meta name="twitter:image" content="https://grabyourcar.lovable.app/og-image.png" />
       </Helmet>
 
       <div className="min-h-screen bg-background">

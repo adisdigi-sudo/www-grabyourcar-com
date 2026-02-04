@@ -194,6 +194,19 @@ const CarLoans = () => {
           name="description"
           content="Compare car loan rates from 15+ banks. Get instant approval starting 8.45% p.a., flexible EMI options, and up to ₹1 Crore financing. Apply online now!"
         />
+        {/* Open Graph */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://grabyourcar.lovable.app/car-loans" />
+        <meta property="og:title" content="Car Loan at Best Rates | Compare EMI & Apply Online | GrabYourCar" />
+        <meta property="og:description" content="Compare car loan rates from 15+ banks. Get instant approval starting 8.45% p.a." />
+        <meta property="og:image" content="https://grabyourcar.lovable.app/og-image.png" />
+        <meta property="og:site_name" content="GrabYourCar" />
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content="https://grabyourcar.lovable.app/car-loans" />
+        <meta name="twitter:title" content="Car Loan at Best Rates | Compare EMI & Apply Online" />
+        <meta name="twitter:description" content="Compare car loan rates from 15+ banks. Apply online now!" />
+        <meta name="twitter:image" content="https://grabyourcar.lovable.app/og-image.png" />
       </Helmet>
       
       <div className="min-h-screen bg-background">

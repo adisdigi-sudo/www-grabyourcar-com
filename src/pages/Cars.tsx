@@ -444,6 +444,19 @@ const Cars = () => {
           name="description"
           content="Explore 76+ new cars from 10+ brands in India. Filter by brand, body type, fuel type, transmission & price. Find your perfect car today!"
         />
+        {/* Open Graph */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://grabyourcar.lovable.app/cars" />
+        <meta property="og:title" content="New Cars in India 2024 - All Brands & Models | GrabYourCar" />
+        <meta property="og:description" content="Explore 76+ new cars from 10+ brands in India. Filter by brand, body type, fuel type, transmission & price." />
+        <meta property="og:image" content="https://grabyourcar.lovable.app/og-image.png" />
+        <meta property="og:site_name" content="GrabYourCar" />
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content="https://grabyourcar.lovable.app/cars" />
+        <meta name="twitter:title" content="New Cars in India 2024 - All Brands & Models" />
+        <meta name="twitter:description" content="Explore 76+ new cars from 10+ brands in India. Find your perfect car today!" />
+        <meta name="twitter:image" content="https://grabyourcar.lovable.app/og-image.png" />
       </Helmet>
 
       <div className="min-h-screen bg-background">
