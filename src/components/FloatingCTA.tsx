@@ -1,10 +1,14 @@
 import { useState, useEffect } from "react";
-import { Phone, MessageCircle, X, FileText, Zap, Loader2 } from "lucide-react";
+import { Phone, MessageCircle, X, FileText, Zap, Loader2, CalendarClock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { format, addDays, isBefore, startOfToday } from "date-fns";
 import {
   Dialog,
   DialogContent,
@@ -22,16 +26,44 @@ const quickFormSchema = z.object({
   phone: z.string().trim().regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit mobile number"),
 });
 
+const scheduleFormSchema = z.object({
+  name: z.string().trim().min(2, "Name must be at least 2 characters").max(100, "Name is too long"),
+  phone: z.string().trim().regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit mobile number"),
+  date: z.date({ required_error: "Please select a date" }),
+  time: z.string().min(1, "Please select a time slot"),
+});
+
+const timeSlots = [
+  "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
+  "12:00 PM", "12:30 PM", "02:00 PM", "02:30 PM",
+  "03:00 PM", "03:30 PM", "04:00 PM", "04:30 PM",
+  "05:00 PM", "05:30 PM", "06:00 PM", "06:30 PM",
+];
+
 export const FloatingCTA = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [isHiddenByScroll, setIsHiddenByScroll] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [showQuoteForm, setShowQuoteForm] = useState(false);
   const [showQuickDealForm, setShowQuickDealForm] = useState(false);
+  const [showScheduleForm, setShowScheduleForm] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isScheduleSubmitting, setIsScheduleSubmitting] = useState(false);
   const [quickFormData, setQuickFormData] = useState({ name: "", phone: "" });
   const [quickFormErrors, setQuickFormErrors] = useState<{ name?: string; phone?: string }>({});
+  const [scheduleFormData, setScheduleFormData] = useState<{
+    name: string;
+    phone: string;
+    date: Date | undefined;
+    time: string;
+  }>({ name: "", phone: "", date: undefined, time: "" });
+  const [scheduleFormErrors, setScheduleFormErrors] = useState<{
+    name?: string;
+    phone?: string;
+    date?: string;
+    time?: string;
+  }>({});
 
   useEffect(() => {
     const handleScroll = () => {
@@ -66,6 +98,11 @@ export const FloatingCTA = () => {
 
   const handleGetBestDeal = () => {
     setShowQuickDealForm(true);
+    setIsExpanded(false);
+  };
+
+  const handleScheduleCall = () => {
+    setShowScheduleForm(true);
     setIsExpanded(false);
   };
 
@@ -105,6 +142,45 @@ export const FloatingCTA = () => {
       toast.error("Something went wrong. Please try again.");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleScheduleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setScheduleFormErrors({});
+
+    const result = scheduleFormSchema.safeParse(scheduleFormData);
+    if (!result.success) {
+      const errors: { name?: string; phone?: string; date?: string; time?: string } = {};
+      result.error.errors.forEach((err) => {
+        const field = err.path[0] as keyof typeof errors;
+        errors[field] = err.message;
+      });
+      setScheduleFormErrors(errors);
+      return;
+    }
+
+    setIsScheduleSubmitting(true);
+    try {
+      const { error } = await supabase.from("call_bookings").insert({
+        customer_name: scheduleFormData.name.trim(),
+        phone: scheduleFormData.phone.trim(),
+        preferred_date: format(scheduleFormData.date!, "yyyy-MM-dd"),
+        preferred_time: scheduleFormData.time,
+        source: "floating_cta",
+        status: "pending",
+      });
+
+      if (error) throw error;
+
+      toast.success(`Call scheduled for ${format(scheduleFormData.date!, "PPP")} at ${scheduleFormData.time}!`);
+      setShowScheduleForm(false);
+      setScheduleFormData({ name: "", phone: "", date: undefined, time: "" });
+    } catch (error) {
+      console.error("Error scheduling call:", error);
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setIsScheduleSubmitting(false);
     }
   };
 
@@ -170,6 +246,28 @@ export const FloatingCTA = () => {
                       className="h-12 w-12 rounded-full shadow-lg group-hover:scale-110 transition-transform"
                     >
                       <FileText className="h-5 w-5" />
+                    </Button>
+                  </button>
+
+                  {/* Schedule a Call Button */}
+                  <button
+                    onClick={handleScheduleCall}
+                    className="group flex items-center gap-3"
+                  >
+                    <motion.span
+                      initial={{ opacity: 0, x: 10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.1 }}
+                      className="px-3 py-1.5 bg-card rounded-lg shadow-md text-sm font-medium text-foreground whitespace-nowrap"
+                    >
+                      Schedule a Call
+                    </motion.span>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-12 w-12 rounded-full shadow-lg group-hover:scale-110 transition-transform border-2 border-primary"
+                    >
+                      <CalendarClock className="h-5 w-5 text-primary" />
                     </Button>
                   </button>
 
@@ -342,6 +440,123 @@ export const FloatingCTA = () => {
             </Button>
             <p className="text-xs text-center text-muted-foreground">
               By submitting, you agree to receive calls from our team.
+            </p>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Schedule a Call Dialog */}
+      <Dialog open={showScheduleForm} onOpenChange={setShowScheduleForm}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-xl flex items-center gap-2">
+              <CalendarClock className="h-5 w-5 text-primary" />
+              Schedule a Call
+            </DialogTitle>
+            <DialogDescription>
+              Pick a convenient date and time, and our expert will call you.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleScheduleFormSubmit} className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <Label htmlFor="schedule-name">Your Name *</Label>
+              <Input
+                id="schedule-name"
+                placeholder="Enter your name"
+                value={scheduleFormData.name}
+                onChange={(e) => setScheduleFormData({ ...scheduleFormData, name: e.target.value })}
+                className={scheduleFormErrors.name ? "border-destructive" : ""}
+              />
+              {scheduleFormErrors.name && (
+                <p className="text-xs text-destructive">{scheduleFormErrors.name}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="schedule-phone">Mobile Number *</Label>
+              <Input
+                id="schedule-phone"
+                placeholder="10-digit mobile number"
+                value={scheduleFormData.phone}
+                onChange={(e) => setScheduleFormData({ ...scheduleFormData, phone: e.target.value.replace(/\D/g, "").slice(0, 10) })}
+                className={scheduleFormErrors.phone ? "border-destructive" : ""}
+              />
+              {scheduleFormErrors.phone && (
+                <p className="text-xs text-destructive">{scheduleFormErrors.phone}</p>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Preferred Date *</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !scheduleFormData.date && "text-muted-foreground",
+                        scheduleFormErrors.date && "border-destructive"
+                      )}
+                    >
+                      <CalendarClock className="mr-2 h-4 w-4" />
+                      {scheduleFormData.date ? format(scheduleFormData.date, "PP") : "Pick date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={scheduleFormData.date}
+                      onSelect={(date) => setScheduleFormData({ ...scheduleFormData, date })}
+                      disabled={(date) => isBefore(date, startOfToday()) || isBefore(addDays(new Date(), 30), date)}
+                      initialFocus
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
+                {scheduleFormErrors.date && (
+                  <p className="text-xs text-destructive">{scheduleFormErrors.date}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>Preferred Time *</Label>
+                <Select
+                  value={scheduleFormData.time}
+                  onValueChange={(value) => setScheduleFormData({ ...scheduleFormData, time: value })}
+                >
+                  <SelectTrigger className={scheduleFormErrors.time ? "border-destructive" : ""}>
+                    <SelectValue placeholder="Select time" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {timeSlots.map((slot) => (
+                      <SelectItem key={slot} value={slot}>
+                        {slot}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {scheduleFormErrors.time && (
+                  <p className="text-xs text-destructive">{scheduleFormErrors.time}</p>
+                )}
+              </div>
+            </div>
+
+            <Button type="submit" className="w-full" size="lg" disabled={isScheduleSubmitting}>
+              {isScheduleSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Scheduling...
+                </>
+              ) : (
+                <>
+                  <CalendarClock className="h-4 w-4 mr-2" />
+                  Schedule Call
+                </>
+              )}
+            </Button>
+            <p className="text-xs text-center text-muted-foreground">
+              We'll call you at your preferred time. Calls available Mon-Sat, 10 AM - 7 PM.
             </p>
           </form>
         </DialogContent>

@@ -173,6 +173,48 @@ export type Database = {
         }
         Relationships: []
       }
+      call_bookings: {
+        Row: {
+          created_at: string
+          customer_name: string
+          email: string | null
+          id: string
+          notes: string | null
+          phone: string
+          preferred_date: string
+          preferred_time: string
+          source: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_name: string
+          email?: string | null
+          id?: string
+          notes?: string | null
+          phone: string
+          preferred_date: string
+          preferred_time: string
+          source?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_name?: string
+          email?: string | null
+          id?: string
+          notes?: string | null
+          phone?: string
+          preferred_date?: string
+          preferred_time?: string
+          source?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       car_brochures: {
         Row: {
           car_id: string
