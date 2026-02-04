@@ -1,5 +1,7 @@
+import { useEffect, useRef, useState } from "react";
 import { Car, Clock, TrendingDown, CheckCircle, Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { motion, useInView, useSpring, useTransform } from "framer-motion";
 
 interface CaseStudy {
   industry: string;
@@ -76,7 +78,67 @@ const caseStudies: CaseStudy[] = [
   },
 ];
 
+interface AnimatedCounterProps {
+  value: number;
+  suffix?: string;
+  prefix?: string;
+}
+
+const AnimatedCounter = ({ value, suffix = "", prefix = "" }: AnimatedCounterProps) => {
+  const ref = useRef<HTMLSpanElement>(null);
+  const isInView = useInView(ref, { once: true, margin: "-50px" });
+  const [hasAnimated, setHasAnimated] = useState(false);
+
+  const spring = useSpring(0, { 
+    mass: 0.8, 
+    stiffness: 75, 
+    damping: 15,
+    restDelta: 0.001 
+  });
+  
+  const display = useTransform(spring, (current) => Math.round(current));
+  const [displayValue, setDisplayValue] = useState(0);
+
+  useEffect(() => {
+    if (isInView && !hasAnimated) {
+      spring.set(value);
+      setHasAnimated(true);
+    }
+  }, [isInView, value, spring, hasAnimated]);
+
+  useEffect(() => {
+    const unsubscribe = display.on("change", (latest) => {
+      setDisplayValue(latest);
+    });
+    return unsubscribe;
+  }, [display]);
+
+  return (
+    <span ref={ref} className="tabular-nums">
+      {prefix}{displayValue}{suffix}
+    </span>
+  );
+};
+
+interface SummaryStat {
+  value: number;
+  suffix: string;
+  prefix?: string;
+  label: string;
+  icon: React.ElementType;
+}
+
+const summaryStats: SummaryStat[] = [
+  { value: 70, suffix: "+", label: "Vehicles Delivered", icon: Car },
+  { value: 135, suffix: "+", label: "Days Saved", icon: Clock },
+  { value: 11, suffix: "%", label: "Avg. Cost Savings", icon: TrendingDown },
+  { value: 4, suffix: "+", label: "Industries Served", icon: Building2 },
+];
+
 export const CorporateCaseStudies = () => {
+  const statsRef = useRef<HTMLDivElement>(null);
+  const isInView = useInView(statsRef, { once: true, margin: "-50px" });
+
   return (
     <section className="py-16 md:py-24 bg-background">
       <div className="container mx-auto px-4">
@@ -177,26 +239,31 @@ export const CorporateCaseStudies = () => {
           ))}
         </div>
 
-        {/* Summary Stats */}
-        <div className="mt-12 md:mt-16 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
-          {[
-            { value: "70+", label: "Vehicles Delivered", icon: Car },
-            { value: "135+", label: "Days Saved", icon: Clock },
-            { value: "11%", label: "Avg. Cost Savings", icon: TrendingDown },
-            { value: "4+", label: "Industries Served", icon: Building2 },
-          ].map((stat) => (
-            <div 
+        {/* Summary Stats with Animated Counters */}
+        <div 
+          ref={statsRef}
+          className="mt-12 md:mt-16 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto"
+        >
+          {summaryStats.map((stat, index) => (
+            <motion.div 
               key={stat.label}
+              initial={{ opacity: 0, y: 20 }}
+              animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+              transition={{ duration: 0.5, delay: index * 0.1 }}
               className="text-center p-4 rounded-xl bg-primary/5 border border-primary/10"
             >
               <stat.icon className="h-5 w-5 text-primary mx-auto mb-2" />
               <span className="block text-2xl md:text-3xl font-bold text-foreground">
-                {stat.value}
+                <AnimatedCounter 
+                  value={stat.value} 
+                  suffix={stat.suffix}
+                  prefix={stat.prefix}
+                />
               </span>
               <span className="text-xs md:text-sm text-muted-foreground">
                 {stat.label}
               </span>
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>
