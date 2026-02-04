@@ -13,21 +13,39 @@ import { LeadForm } from "@/components/LeadForm";
 
 export const FloatingCTA = () => {
   const [isVisible, setIsVisible] = useState(false);
+  const [isHiddenByScroll, setIsHiddenByScroll] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [showQuoteForm, setShowQuoteForm] = useState(false);
+  const [lastScrollY, setLastScrollY] = useState(0);
 
   useEffect(() => {
     const handleScroll = () => {
-      // Show after scrolling past hero section (approximately 90vh)
+      const currentScrollY = window.scrollY;
       const heroHeight = window.innerHeight * 0.9;
-      setIsVisible(window.scrollY > heroHeight);
+      
+      // Show after scrolling past hero section
+      const pastHero = currentScrollY > heroHeight;
+      setIsVisible(pastHero);
+      
+      // Hide on scroll up, show on scroll down (only when past hero)
+      if (pastHero) {
+        const scrollingDown = currentScrollY > lastScrollY;
+        const scrollDelta = Math.abs(currentScrollY - lastScrollY);
+        
+        // Only trigger hide/show if scroll delta is significant (> 10px)
+        if (scrollDelta > 10) {
+          setIsHiddenByScroll(!scrollingDown);
+        }
+      }
+      
+      setLastScrollY(currentScrollY);
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
-    handleScroll(); // Check initial position
+    handleScroll();
 
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [lastScrollY]);
 
   const handleRequestQuote = () => {
     setShowQuoteForm(true);
@@ -37,7 +55,7 @@ export const FloatingCTA = () => {
   return (
     <>
       <AnimatePresence>
-        {isVisible && (
+        {isVisible && !isHiddenByScroll && (
           <motion.div
             initial={{ opacity: 0, scale: 0.8, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
