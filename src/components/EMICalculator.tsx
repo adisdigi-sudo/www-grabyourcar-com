@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calculator, IndianRupee, Percent, Calendar, FileText } from "lucide-react";
+import { Calculator, IndianRupee, Percent, Calendar, FileText, MessageCircle, TrendingDown, Building2 } from "lucide-react";
 
 interface EMICalculatorProps {
   onGetQuote?: (loanDetails: string) => void;
@@ -15,19 +15,21 @@ const EMICalculator = ({ onGetQuote }: EMICalculatorProps) => {
   const [loanAmount, setLoanAmount] = useState(800000);
   const [interestRate, setInterestRate] = useState(8.5);
   const [tenure, setTenure] = useState(60);
+  const [downPayment, setDownPayment] = useState(100000);
 
   const emiDetails = useMemo(() => {
-    const principal = loanAmount;
+    const principal = loanAmount - downPayment;
     const monthlyRate = interestRate / 12 / 100;
     const months = tenure;
 
-    if (monthlyRate === 0) {
+    if (monthlyRate === 0 || principal <= 0) {
       return {
-        emi: Math.round(principal / months),
+        emi: principal > 0 ? Math.round(principal / months) : 0,
         totalPayment: principal,
         totalInterest: 0,
         interestPercent: 0,
         principalPercent: 100,
+        loanPrincipal: principal,
       };
     }
 
@@ -46,8 +48,9 @@ const EMICalculator = ({ onGetQuote }: EMICalculatorProps) => {
       totalInterest,
       interestPercent,
       principalPercent,
+      loanPrincipal: principal,
     };
-  }, [loanAmount, interestRate, tenure]);
+  }, [loanAmount, interestRate, tenure, downPayment]);
 
   const formatCurrency = (amount: number) => {
     if (amount >= 10000000) {
@@ -72,6 +75,15 @@ const EMICalculator = ({ onGetQuote }: EMICalculatorProps) => {
     }
   };
 
+  const handleDownPaymentChange = (value: string) => {
+    const num = parseInt(value.replace(/,/g, ''), 10);
+    if (!isNaN(num)) {
+      setDownPayment(Math.min(Math.max(num, 0), loanAmount * 0.5));
+    } else if (value === '') {
+      setDownPayment(0);
+    }
+  };
+
   const handleInterestRateChange = (value: string) => {
     const num = parseFloat(value);
     if (!isNaN(num)) {
@@ -90,42 +102,66 @@ const EMICalculator = ({ onGetQuote }: EMICalculatorProps) => {
     }
   };
 
-  return (
-    <section className="py-10 bg-muted/30">
-      <div className="container mx-auto px-4">
-        <div className="max-w-4xl mx-auto">
-          <Card className="border border-border/50 shadow-md">
-            <CardContent className="p-6">
-              {/* Header */}
-              <div className="flex items-center gap-2 mb-6">
-                <Badge variant="secondary" className="text-xs">
-                  <Calculator className="w-3 h-3 mr-1" />
-                  EMI Calculator
-                </Badge>
-              </div>
+  // Quick EMI reference table
+  const quickEmiTable = useMemo(() => {
+    const tenures = [36, 48, 60, 72, 84];
+    const principal = loanAmount - downPayment;
+    const monthlyRate = interestRate / 12 / 100;
+    
+    return tenures.map(months => {
+      if (monthlyRate === 0 || principal <= 0) {
+        return { months, emi: principal > 0 ? Math.round(principal / months) : 0 };
+      }
+      const emi = Math.round(
+        (principal * monthlyRate * Math.pow(1 + monthlyRate, months)) /
+          (Math.pow(1 + monthlyRate, months) - 1)
+      );
+      return { months, emi };
+    });
+  }, [loanAmount, downPayment, interestRate]);
 
-              <div className="grid md:grid-cols-2 gap-6">
+  return (
+    <section className="py-12 bg-gradient-to-br from-muted/50 via-background to-muted/30">
+      <div className="container mx-auto px-4">
+        <div className="max-w-5xl mx-auto">
+          {/* Section Header */}
+          <div className="text-center mb-8">
+            <Badge variant="secondary" className="mb-4 py-1.5 px-4">
+              <Calculator className="w-4 h-4 mr-2" />
+              Grabyourcar Finance
+            </Badge>
+            <h2 className="font-heading text-3xl md:text-4xl font-bold text-foreground mb-3">
+              EMI Calculator
+            </h2>
+            <p className="text-muted-foreground max-w-xl mx-auto">
+              Plan your car purchase with our easy EMI calculator. Get instant loan quotes from top banks.
+            </p>
+          </div>
+
+          <Card className="border-2 border-border/50 shadow-xl overflow-hidden">
+            <CardContent className="p-0">
+              <div className="grid lg:grid-cols-2">
                 {/* Left: Calculator Inputs */}
-                <div className="space-y-5">
+                <div className="p-6 lg:p-8 space-y-6 bg-card">
                   <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                    <Calculator className="w-4 h-4 text-primary" />
-                    Calculate EMI
+                    <Calculator className="w-5 h-5 text-primary" />
+                    Loan Parameters
                   </h3>
 
-                  {/* Loan Amount */}
-                  <div className="space-y-2">
+                  {/* Car Price / Loan Amount */}
+                  <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <Label className="flex items-center gap-1.5 text-sm">
-                        <IndianRupee className="w-3 h-3 text-muted-foreground" />
-                        Loan Amount
+                      <Label className="flex items-center gap-1.5 text-sm font-medium">
+                        <IndianRupee className="w-4 h-4 text-primary" />
+                        Car Price
                       </Label>
                       <div className="flex items-center gap-1">
-                        <span className="text-xs text-muted-foreground">₹</span>
+                        <span className="text-sm text-muted-foreground">₹</span>
                         <Input
                           type="text"
                           value={loanAmount.toLocaleString("en-IN")}
                           onChange={(e) => handleLoanAmountChange(e.target.value)}
-                          className="w-28 h-7 text-xs text-right font-semibold text-primary px-2"
+                          className="w-32 h-9 text-sm text-right font-bold text-primary px-2 border-primary/30 focus:border-primary"
                         />
                       </div>
                     </div>
@@ -138,17 +174,48 @@ const EMICalculator = ({ onGetQuote }: EMICalculatorProps) => {
                       className="w-full"
                     />
                     <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>₹1L</span>
-                      <span>₹10Cr</span>
+                      <span>₹1 Lakh</span>
+                      <span>₹10 Crore</span>
+                    </div>
+                  </div>
+
+                  {/* Down Payment */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="flex items-center gap-1.5 text-sm font-medium">
+                        <TrendingDown className="w-4 h-4 text-success" />
+                        Down Payment
+                      </Label>
+                      <div className="flex items-center gap-1">
+                        <span className="text-sm text-muted-foreground">₹</span>
+                        <Input
+                          type="text"
+                          value={downPayment.toLocaleString("en-IN")}
+                          onChange={(e) => handleDownPaymentChange(e.target.value)}
+                          className="w-32 h-9 text-sm text-right font-bold text-success px-2 border-success/30 focus:border-success"
+                        />
+                      </div>
+                    </div>
+                    <Slider
+                      value={[downPayment]}
+                      onValueChange={(value) => setDownPayment(value[0])}
+                      min={0}
+                      max={loanAmount * 0.5}
+                      step={10000}
+                      className="w-full"
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>₹0</span>
+                      <span>{formatCurrency(loanAmount * 0.5)} (50%)</span>
                     </div>
                   </div>
 
                   {/* Interest Rate */}
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <Label className="flex items-center gap-1.5 text-sm">
-                        <Percent className="w-3 h-3 text-muted-foreground" />
-                        Interest Rate
+                      <Label className="flex items-center gap-1.5 text-sm font-medium">
+                        <Percent className="w-4 h-4 text-accent" />
+                        Interest Rate (p.a.)
                       </Label>
                       <div className="flex items-center gap-1">
                         <Input
@@ -158,9 +225,9 @@ const EMICalculator = ({ onGetQuote }: EMICalculatorProps) => {
                           step="0.1"
                           min="6"
                           max="18"
-                          className="w-16 h-7 text-xs text-right font-semibold text-primary px-2"
+                          className="w-20 h-9 text-sm text-right font-bold text-accent px-2 border-accent/30 focus:border-accent"
                         />
-                        <span className="text-xs text-muted-foreground">%</span>
+                        <span className="text-sm text-muted-foreground">%</span>
                       </div>
                     </div>
                     <Slider
@@ -178,11 +245,11 @@ const EMICalculator = ({ onGetQuote }: EMICalculatorProps) => {
                   </div>
 
                   {/* Tenure */}
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <Label className="flex items-center gap-1.5 text-sm">
-                        <Calendar className="w-3 h-3 text-muted-foreground" />
-                        Tenure
+                      <Label className="flex items-center gap-1.5 text-sm font-medium">
+                        <Calendar className="w-4 h-4 text-muted-foreground" />
+                        Loan Tenure
                       </Label>
                       <div className="flex items-center gap-1">
                         <Input
@@ -191,9 +258,9 @@ const EMICalculator = ({ onGetQuote }: EMICalculatorProps) => {
                           onChange={(e) => handleTenureChange(e.target.value)}
                           min="12"
                           max="84"
-                          className="w-16 h-7 text-xs text-right font-semibold text-foreground px-2"
+                          className="w-20 h-9 text-sm text-right font-bold text-foreground px-2"
                         />
-                        <span className="text-xs text-muted-foreground">months</span>
+                        <span className="text-sm text-muted-foreground">months</span>
                       </div>
                     </div>
                     <Slider
@@ -205,76 +272,116 @@ const EMICalculator = ({ onGetQuote }: EMICalculatorProps) => {
                       className="w-full"
                     />
                     <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>1Y</span>
-                      <span>7Y</span>
+                      <span>1 Year</span>
+                      <span>7 Years</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Right: Results */}
-                <div className="space-y-4">
-                  {/* EMI Result */}
-                  <div className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground rounded-xl p-5 text-center">
-                    <p className="text-primary-foreground/80 text-sm mb-1">Monthly EMI</p>
+                <div className="p-6 lg:p-8 bg-gradient-to-br from-primary/5 via-primary/10 to-success/5 flex flex-col">
+                  {/* EMI Result - Hero Display */}
+                  <div className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground rounded-2xl p-6 text-center shadow-lg mb-6">
+                    <p className="text-primary-foreground/80 text-sm mb-1 font-medium">Your Monthly EMI</p>
                     <div className="flex items-center justify-center gap-1">
-                      <IndianRupee className="w-5 h-5" />
-                      <span className="text-3xl font-bold">
+                      <IndianRupee className="w-8 h-8" />
+                      <span className="text-4xl md:text-5xl font-bold tracking-tight">
                         {emiDetails.emi.toLocaleString("en-IN")}
                       </span>
                     </div>
-                    <p className="text-primary-foreground/70 text-xs mt-1">for {tenure} months</p>
+                    <p className="text-primary-foreground/70 text-sm mt-2">for {tenure} months ({Math.floor(tenure/12)} years {tenure%12} months)</p>
                   </div>
 
                   {/* Breakdown */}
-                  <div className="bg-muted/50 rounded-xl p-4 space-y-3">
+                  <div className="bg-card rounded-xl p-5 space-y-4 mb-6 border border-border/50">
                     {/* Visual Bar */}
-                    <div className="h-2 rounded-full overflow-hidden flex bg-muted">
+                    <div className="h-3 rounded-full overflow-hidden flex bg-muted">
                       <div
-                        className="bg-primary transition-all duration-500"
+                        className="bg-primary transition-all duration-500 rounded-l-full"
                         style={{ width: `${emiDetails.principalPercent}%` }}
                       />
                       <div
-                        className="bg-accent transition-all duration-500"
+                        className="bg-accent transition-all duration-500 rounded-r-full"
                         style={{ width: `${emiDetails.interestPercent}%` }}
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-primary" />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-3 h-3 rounded-full bg-primary" />
                         <div>
-                          <p className="text-muted-foreground text-xs">Principal</p>
-                          <p className="font-semibold">{formatCurrency(loanAmount)}</p>
+                          <p className="text-muted-foreground text-xs">Principal Amount</p>
+                          <p className="font-bold text-lg">{formatCurrency(emiDetails.loanPrincipal)}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-accent" />
+                      <div className="flex items-center gap-3">
+                        <div className="w-3 h-3 rounded-full bg-accent" />
                         <div>
-                          <p className="text-muted-foreground text-xs">Interest</p>
-                          <p className="font-semibold">{formatCurrency(emiDetails.totalInterest)}</p>
+                          <p className="text-muted-foreground text-xs">Total Interest</p>
+                          <p className="font-bold text-lg">{formatCurrency(emiDetails.totalInterest)}</p>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between pt-2 border-t border-border/50">
-                      <span className="text-sm text-muted-foreground">Total</span>
-                      <span className="text-lg font-bold">{formatCurrency(emiDetails.totalPayment)}</span>
+                    <div className="flex items-center justify-between pt-3 border-t border-border">
+                      <span className="text-sm text-muted-foreground font-medium">Total Amount Payable</span>
+                      <span className="text-xl font-bold text-foreground">{formatCurrency(emiDetails.totalPayment + downPayment)}</span>
                     </div>
                   </div>
 
-                  {/* Get Quote Button */}
-                  <Button 
-                    onClick={handleGetQuote}
-                    className="w-full"
-                    size="sm"
-                  >
-                    <FileText className="w-4 h-4 mr-2" />
-                    Get Loan Quote
-                  </Button>
+                  {/* Quick EMI Reference */}
+                  <div className="bg-card rounded-xl p-4 mb-6 border border-border/50">
+                    <p className="text-sm font-medium text-muted-foreground mb-3">Quick EMI Reference</p>
+                    <div className="grid grid-cols-5 gap-2 text-center">
+                      {quickEmiTable.map(({ months, emi }) => (
+                        <div 
+                          key={months} 
+                          className={`p-2 rounded-lg transition-all cursor-pointer ${tenure === months ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/80'}`}
+                          onClick={() => setTenure(months)}
+                        >
+                          <p className="text-xs opacity-75">{months}M</p>
+                          <p className="text-sm font-bold">₹{(emi / 1000).toFixed(1)}K</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* CTA Buttons */}
+                  <div className="mt-auto space-y-3">
+                    <Button 
+                      onClick={handleGetQuote}
+                      className="w-full h-12 text-base font-semibold hover:scale-[1.02] transition-transform"
+                      size="lg"
+                    >
+                      <FileText className="w-5 h-5 mr-2" />
+                      Get Loan Quote
+                    </Button>
+                    
+                    <a 
+                      href={`https://wa.me/919855924442?text=Hi%20Grabyourcar!%20I%20need%20a%20car%20loan%20of%20${formatCurrency(emiDetails.loanPrincipal)}%20at%20${interestRate}%25%20for%20${tenure}%20months.%20EMI%3A%20₹${emiDetails.emi.toLocaleString("en-IN")}.%20Please%20connect%20me%20with%20banks.`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block"
+                    >
+                      <Button 
+                        variant="whatsapp"
+                        className="w-full h-11 font-semibold hover:scale-[1.02] transition-transform"
+                      >
+                        <MessageCircle className="w-4 h-4 mr-2" />
+                        Check Loan Eligibility
+                      </Button>
+                    </a>
+                  </div>
 
                   {/* Bank Partners */}
-                  <div className="text-center">
-                    <p className="text-xs text-muted-foreground">Partners: SBI • HDFC • ICICI • Axis</p>
+                  <div className="text-center mt-4 pt-4 border-t border-border/50">
+                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground mb-2">
+                      <Building2 className="h-4 w-4" />
+                      <span>Partnered with leading banks</span>
+                    </div>
+                    <p className="text-xs font-medium text-muted-foreground">
+                      SBI • HDFC Bank • ICICI Bank • Axis Bank • Kotak • IDFC First
+                    </p>
                   </div>
                 </div>
               </div>

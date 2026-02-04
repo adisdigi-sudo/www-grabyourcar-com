@@ -342,9 +342,9 @@ export const FloatingCTA = () => {
                     </Button>
                   </button>
 
-                  {/* WhatsApp Button with Label */}
+                  {/* WhatsApp Button with Label - Sales-Driven */}
                   <a
-                    href="https://wa.me/919855924442"
+                    href="https://wa.me/919855924442?text=Hi%20Grabyourcar!%20I%27m%20looking%20for%20a%20new%20car.%20Please%20help%20me%20find%20the%20best%20deal."
                     target="_blank"
                     rel="noopener noreferrer"
                     className="group flex items-center gap-3"
@@ -355,7 +355,7 @@ export const FloatingCTA = () => {
                       transition={{ delay: 0.1 }}
                       className="px-3 py-1.5 bg-card rounded-lg shadow-md text-sm font-medium text-foreground whitespace-nowrap"
                     >
-                      Chat on WhatsApp
+                      Get Best Price
                     </motion.span>
                     <Button
                       variant="whatsapp"

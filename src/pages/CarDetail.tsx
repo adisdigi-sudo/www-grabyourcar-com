@@ -8,6 +8,7 @@ import { PriceBreakup } from "@/components/PriceBreakup";
 import { DealerLocator } from "@/components/DealerLocator";
 import { ShareButtons } from "@/components/ShareButtons";
 import { CarStructuredData } from "@/components/seo/CarStructuredData";
+import { VariantComparisonTable } from "@/components/VariantComparisonTable";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -298,23 +299,27 @@ const CarDetail = () => {
                   <p className="text-sm text-muted-foreground mt-2">{car.colors[selectedColor].name}</p>
                 </div>
 
-                {/* CTA Buttons */}
+                {/* CTA Buttons - Sales-Driven */}
                 <div className="flex flex-wrap gap-3">
-                  <Button variant="cta" size="lg" className="flex-1">
+                  <Button variant="cta" size="lg" className="flex-1 font-semibold hover:scale-105 transition-transform">
                     Get Best Price
                   </Button>
                   <CompareButton carId={car.id} />
                   <ShareButtons title={`Check out ${car.name} on Grabyourcar`} />
-                  <a href="https://wa.me/919876543210" target="_blank" rel="noopener noreferrer">
-                    <Button variant="whatsapp" size="lg">
+                  <a 
+                    href={`https://wa.me/919855924442?text=Hi%20Grabyourcar!%20I%20want%20the%20best%20price%20for%20${encodeURIComponent(car.brand + " " + car.name)}.%20Please%20share%20the%20on-road%20price%20and%20available%20offers.`}
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                  >
+                    <Button variant="whatsapp" size="lg" className="font-semibold hover:scale-105 transition-transform">
                       <MessageCircle className="h-5 w-5 mr-2" />
-                      WhatsApp
+                      Get On-Road Price
                     </Button>
                   </a>
-                  <a href="tel:+919876543210">
-                    <Button variant="outline" size="lg">
+                  <a href="tel:+919855924442">
+                    <Button variant="call" size="lg" className="font-semibold hover:scale-105 transition-transform">
                       <Phone className="h-5 w-5 mr-2" />
-                      Call
+                      Talk to Expert
                     </Button>
                   </a>
                 </div>
@@ -453,85 +458,18 @@ const CarDetail = () => {
                 </div>
               </TabsContent>
 
-              <TabsContent value="variants" className="space-y-6">
+              <TabsContent value="variants" className="space-y-8">
+                {/* Variant Comparison Table - Full Width */}
+                <VariantComparisonTable
+                  carName={car.name}
+                  carBrand={car.brand}
+                  variants={car.variants}
+                  onVariantSelect={setSelectedVariant}
+                  selectedVariantIndex={selectedVariant}
+                />
+                
+                {/* Selected Variant Details */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Variants List */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <IndianRupee className="h-5 w-5 text-primary" />
-                        Select Variant
-                      </CardTitle>
-                      <p className="text-sm text-muted-foreground">Choose a variant to see on-road price</p>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        {car.variants.map((variant, index) => {
-                          // Parse price from string like "₹6.49 Lakh" to number
-                          const priceMatch = variant.price.match(/[\d.]+/);
-                          const priceInLakh = priceMatch ? parseFloat(priceMatch[0]) : 0;
-                          const exShowroomPrice = variant.priceNumeric || priceInLakh * 100000;
-                          const breakup = calculateStatePriceBreakup(exShowroomPrice);
-                          
-                          return (
-                            <div
-                              key={index}
-                              onClick={() => setSelectedVariant(index)}
-                              className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                                selectedVariant === index 
-                                  ? "border-primary bg-primary/5 shadow-lg" 
-                                  : "border-border hover:border-primary/50 hover:bg-muted/30"
-                              }`}
-                            >
-                              <div className="flex items-start justify-between mb-3">
-                                <div className="flex items-start gap-3">
-                                  <div className={`w-5 h-5 mt-1 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                                    selectedVariant === index ? "border-primary bg-primary" : "border-muted-foreground"
-                                  }`}>
-                                    {selectedVariant === index && <Check className="h-3 w-3 text-primary-foreground" />}
-                                  </div>
-                                  <div>
-                                    <h4 className="font-semibold text-base">{car.name} {variant.name}</h4>
-                                    {variant.fuelType && (
-                                      <p className="text-xs text-muted-foreground mt-0.5">
-                                        {variant.fuelType} {variant.transmission && `• ${variant.transmission}`}
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-                                <div className="text-right">
-                                  <span className="text-lg font-bold text-primary">{variant.price}</span>
-                                  <p className="text-xs text-muted-foreground">Ex-showroom</p>
-                                </div>
-                              </div>
-                              
-                              {/* On-road price preview */}
-                              <div className="flex items-center justify-between bg-muted/50 rounded-lg px-3 py-2 ml-8 mb-2">
-                                <span className="text-sm text-muted-foreground">On-Road Price (Delhi)</span>
-                                <span className="text-sm font-semibold text-success">
-                                  ₹{(breakup.onRoadPrice / 100000).toFixed(2)} Lakh
-                                </span>
-                              </div>
-                              
-                              <div className="flex flex-wrap gap-1.5 pl-8">
-                                {variant.features.slice(0, 3).map((feature, fIndex) => (
-                                  <Badge key={fIndex} variant="secondary" className="text-xs">
-                                    {feature}
-                                  </Badge>
-                                ))}
-                                {variant.features.length > 3 && (
-                                  <Badge variant="outline" className="text-xs">
-                                    +{variant.features.length - 3} more
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </CardContent>
-                  </Card>
-                  
                   {/* Price Breakup */}
                   <div className="space-y-4">
                     {(() => {
@@ -548,26 +486,27 @@ const CarDetail = () => {
                         />
                       );
                     })()}
-                    
-                    {/* Features for selected variant */}
-                    <Card>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-base">
-                          Features - {car.name} {car.variants[selectedVariant].name}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-1 gap-2">
-                          {car.variants[selectedVariant].features.map((feature, fIndex) => (
-                            <div key={fIndex} className="flex items-center gap-2 py-1">
-                              <Check className="h-4 w-4 text-success flex-shrink-0" />
-                              <span className="text-sm">{feature}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
                   </div>
+                  
+                  {/* Features for selected variant */}
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Check className="h-5 w-5 text-success" />
+                        Features - {car.name} {car.variants[selectedVariant].name}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {car.variants[selectedVariant].features.map((feature, fIndex) => (
+                          <div key={fIndex} className="flex items-center gap-2 py-1.5 px-2 bg-muted/30 rounded-lg">
+                            <Check className="h-4 w-4 text-success flex-shrink-0" />
+                            <span className="text-sm">{feature}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
               </TabsContent>
 

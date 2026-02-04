@@ -160,18 +160,23 @@ export const CarListings = () => {
                   </Link>
                 </div>
                 
-                {/* Secondary Actions Row */}
+                {/* Secondary Actions Row - Sales-Driven WhatsApp */}
                 <div className="flex gap-2 w-full">
-                  <a href="https://wa.me/919876543210" target="_blank" rel="noopener noreferrer" className="flex-1">
-                    <Button variant="whatsapp" className="w-full gap-2">
+                  <a 
+                    href={`https://wa.me/919855924442?text=Hi%20Grabyourcar!%20I%27m%20interested%20in%20${encodeURIComponent(car.name)}.%20Please%20share%20the%20best%20price%20and%20offers.`}
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="flex-1"
+                  >
+                    <Button variant="whatsapp" className="w-full gap-2 font-semibold hover:scale-[1.02] transition-transform">
                       <MessageCircle className="h-4 w-4" />
-                      WhatsApp
+                      Unlock Best Price
                     </Button>
                   </a>
-                  <a href="tel:+919876543210" className="flex-1">
-                    <Button variant="outline" className="w-full gap-2">
+                  <a href="tel:+919855924442" className="flex-1">
+                    <Button variant="call" className="w-full gap-2 font-semibold hover:scale-[1.02] transition-transform">
                       <Phone className="h-4 w-4" />
-                      Call
+                      Call Expert
                     </Button>
                   </a>
                 </div>

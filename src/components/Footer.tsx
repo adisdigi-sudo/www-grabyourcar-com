@@ -41,15 +41,18 @@ export const Footer = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-8">
           {/* Brand */}
           <div className="col-span-2">
-            <a href="/" className="flex items-center mb-6">
+            <a href="/" className="flex items-center mb-4">
               <img 
                 src={logoImage} 
-                alt="Grabyourcar" 
-                className="h-10 md:h-12 w-auto max-w-[180px] md:max-w-[220px] object-contain brightness-0 invert" 
+                alt="Grabyourcar - India's Smarter Way to Buy New Cars" 
+                className="h-12 md:h-14 w-auto max-w-[200px] md:max-w-[260px] object-contain brightness-0 invert drop-shadow-lg" 
               />
             </a>
+            <p className="text-xl md:text-2xl font-heading font-bold text-background mb-2">
+              India's Smarter Way to Buy New Cars
+            </p>
             <p className="text-background/70 mb-6 text-sm leading-relaxed">
-              India's trusted platform for buying new cars at the best price. Compare offers from 500+ authorized dealers across India.
+              Best Price. Faster Delivery. Zero Hassle. Compare offers from 500+ authorized dealers across India.
             </p>
             
             {/* Newsletter */}
