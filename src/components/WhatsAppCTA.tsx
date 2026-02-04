@@ -1,6 +1,7 @@
 import { MessageCircle } from "lucide-react";
 import { Button, ButtonProps } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 const WHATSAPP_NUMBER = "919855924442";
 
@@ -16,6 +17,27 @@ interface WhatsAppCTAProps extends Omit<ButtonProps, "variant"> {
   /** Context for analytics (car name, page, etc.) */
   context?: string;
 }
+
+/**
+ * Track WhatsApp CTA click in analytics
+ */
+const trackWhatsAppClick = async (context?: string, label?: string, page?: string) => {
+  try {
+    await supabase.from('analytics_events').insert({
+      event_type: 'whatsapp_cta_click',
+      page_url: window.location.pathname,
+      device_type: window.innerWidth < 768 ? 'mobile' : 'desktop',
+      event_data: {
+        context: context || 'general',
+        label: label || 'Chat on WhatsApp',
+        page: page || window.location.pathname,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    console.error('Failed to track WhatsApp click:', error);
+  }
+};
 
 /**
  * Pre-configured WhatsApp messages for different contexts
@@ -68,11 +90,16 @@ export const WhatsAppCTA = ({
   label = "Chat on WhatsApp",
   showIcon = true,
   variant = "whatsapp",
+  context,
   className,
   size = "default",
   ...props
 }: WhatsAppCTAProps) => {
   const whatsappUrl = getWhatsAppUrl(message);
+
+  const handleClick = () => {
+    trackWhatsAppClick(context, label);
+  };
 
   return (
     <a
@@ -80,6 +107,7 @@ export const WhatsAppCTA = ({
       target="_blank"
       rel="noopener noreferrer"
       className="inline-flex"
+      onClick={handleClick}
     >
       <Button
         variant={variant}
@@ -109,16 +137,21 @@ export const WhatsAppFloatingButton = ({
 }) => {
   const whatsappUrl = getWhatsAppUrl(message);
 
+  const handleClick = () => {
+    trackWhatsAppClick('floating_button', 'Floating WhatsApp');
+  };
+
   return (
     <a
       href={whatsappUrl}
       target="_blank"
       rel="noopener noreferrer"
       className={cn(
-        "fixed bottom-24 right-6 z-40 w-14 h-14 rounded-full bg-[#25D366] hover:bg-[#20BD5A] shadow-lg flex items-center justify-center transition-all hover:scale-110",
+        "fixed bottom-24 right-6 z-40 w-14 h-14 rounded-full bg-[#25D366] hover:bg-[#20BD5A] shadow-lg flex items-center justify-center transition-all hover:scale-110 animate-bounce-slow",
         className
       )}
       aria-label="Chat on WhatsApp"
+      onClick={handleClick}
     >
       <MessageCircle className="h-7 w-7 text-white" />
     </a>
@@ -159,7 +192,46 @@ export const WhatsAppSalesCTA = ({
       message={messages[type]}
       size={size}
       className={className}
+      context={carName ? `car_${type}_${carName}` : type}
     />
+  );
+};
+
+/**
+ * Compact WhatsApp button for card layouts
+ */
+export const WhatsAppCardButton = ({
+  carName,
+  className,
+}: {
+  carName: string;
+  className?: string;
+}) => {
+  const whatsappUrl = getWhatsAppUrl(whatsappMessages.carPrice(carName));
+
+  const handleClick = () => {
+    trackWhatsAppClick(`car_listing_${carName}`, 'Unlock Best Price', '/cars');
+  };
+
+  return (
+    <a
+      href={whatsappUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex-1"
+      onClick={handleClick}
+    >
+      <Button
+        variant="whatsapp"
+        className={cn(
+          "w-full gap-2 font-semibold hover:scale-[1.02] transition-transform",
+          className
+        )}
+      >
+        <MessageCircle className="h-4 w-4" />
+        Unlock Best Price
+      </Button>
+    </a>
   );
 };
 

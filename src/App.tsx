@@ -7,6 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { CartProvider } from "@/hooks/useCart";
 import { CompareProvider } from "@/hooks/useCompare";
 import { FloatingCompareBar } from "@/components/FloatingCompareBar";
+import { WhatsAppFloatingButton } from "@/components/WhatsAppCTA";
 import Index from "./pages/Index";
 import Cars from "./pages/Cars";
 import CarImages from "./pages/CarImages";
@@ -75,6 +76,7 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
               <FloatingCompareBar />
+              <WhatsAppFloatingButton />
             </BrowserRouter>
           </TooltipProvider>
         </CompareProvider>

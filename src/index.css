@@ -286,3 +286,17 @@
 .hover\:pause-animation:hover {
   animation-play-state: paused;
 }
+
+/* Slow bounce animation for WhatsApp floating button */
+@keyframes bounce-slow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+.animate-bounce-slow {
+  animation: bounce-slow 2s ease-in-out infinite;
+}
+
+.animate-bounce-slow:hover {
+  animation-play-state: paused;
+}
