@@ -14,12 +14,14 @@ import {
   CorporateSocialProof,
   CorporateCTA,
   CorporateProcessTimeline,
+  CorporateScrollProgress,
 } from "@/components/corporate";
 
 const CorporateBuying = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
+      <CorporateScrollProgress />
 
       {/* Hero Section */}
       <CorporateHero />
