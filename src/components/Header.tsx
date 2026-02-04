@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Phone, MessageCircle, Heart, User, LogOut, Settings, Home, Search, Menu, X, ChevronDown, Car, CreditCard, Shield, Package, Building2, CarFront, RectangleHorizontal, Calendar, ShoppingBag } from "lucide-react";
+import { Phone, MessageCircle, Heart, User, LogOut, Settings, Home, Search, Menu, X, ChevronDown, Car, CreditCard, Shield, Package, Building2, CarFront, RectangleHorizontal, Calendar, ShoppingBag, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -52,6 +52,12 @@ const services = [
     href: "/hsrp",
     description: "Book High Security Registration Plates",
     icon: RectangleHorizontal,
+  },
+  {
+    title: "Dealer Locator",
+    href: "/dealers",
+    description: "Find nearest authorized showrooms",
+    icon: MapPin,
   },
   {
     title: "Corporate Buying",
@@ -122,8 +128,8 @@ export const Header = () => {
                     Services
                   </NavigationMenuTrigger>
                   <NavigationMenuContent>
-                    <div className="w-[600px] p-4 bg-card border border-border rounded-xl shadow-xl">
-                      <div className="grid grid-cols-2 gap-2">
+                    <div className="w-[640px] p-4 bg-card border border-border rounded-xl shadow-xl">
+                      <div className="grid grid-cols-2 gap-1.5">
                         {services.map((service) => (
                           <Link
                             key={service.title}
