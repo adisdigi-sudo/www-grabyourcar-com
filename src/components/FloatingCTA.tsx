@@ -495,6 +495,12 @@ export const FloatingCTA = () => {
                 value={quickFormData.phone}
                 onChange={(e) => setQuickFormData({ ...quickFormData, phone: e.target.value.replace(/\D/g, "").slice(0, 10) })}
                 className={quickFormErrors.phone ? "border-destructive" : ""}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !isSubmitting) {
+                    e.preventDefault();
+                    handleQuickFormSubmit(e as unknown as React.FormEvent);
+                  }
+                }}
               />
               {quickFormErrors.phone && (
                 <p className="text-xs text-destructive">{quickFormErrors.phone}</p>
@@ -541,6 +547,7 @@ export const FloatingCTA = () => {
                 value={scheduleFormData.name}
                 onChange={(e) => setScheduleFormData({ ...scheduleFormData, name: e.target.value })}
                 className={scheduleFormErrors.name ? "border-destructive" : ""}
+                autoFocus
               />
               {scheduleFormErrors.name && (
                 <p className="text-xs text-destructive">{scheduleFormErrors.name}</p>
