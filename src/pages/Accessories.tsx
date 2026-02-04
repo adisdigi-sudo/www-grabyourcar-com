@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { ServiceBanner } from "@/components/ServiceBanner";
@@ -102,6 +103,14 @@ const Accessories = () => {
 
   return (
     <>
+      <Helmet>
+        <title>Car Accessories | HSRP Frames, Covers & More | GrabYourCar</title>
+        <meta
+          name="description"
+          content="Shop premium car accessories - HSRP frames, car covers, floor mats, and more. Free delivery, genuine products, and top quality. Order online now!"
+        />
+      </Helmet>
+
       <Header />
 
       {/* Service Banner */}

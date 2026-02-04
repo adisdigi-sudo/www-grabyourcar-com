@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { Helmet } from "react-helmet-async";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Input } from "@/components/ui/input";
@@ -94,8 +95,17 @@ const Brochures = () => {
   const isLoading = isLoadingDb;
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
+    <>
+      <Helmet>
+        <title>Download Car Brochures | Specs, Features & Prices | GrabYourCar</title>
+        <meta
+          name="description"
+          content="Download official car brochures with complete specifications, features, colors, and pricing. Get all details before buying your new car."
+        />
+      </Helmet>
+
+      <div className="min-h-screen bg-background">
+        <Header />
 
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-primary/10 via-background to-accent/10 py-12 md:py-16">
@@ -347,7 +357,8 @@ const Brochures = () => {
       </section>
 
       <Footer />
-    </div>
+      </div>
+    </>
   );
 };
 

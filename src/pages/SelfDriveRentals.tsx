@@ -1,3 +1,4 @@
+import { Helmet } from "react-helmet-async";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { ServiceBanner } from "@/components/ServiceBanner";
@@ -270,8 +271,17 @@ const SelfDriveRentals = () => {
   const availableCount = filteredCars.filter((c) => c.available).length;
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
+    <>
+      <Helmet>
+        <title>Self-Drive Car Rentals in Delhi NCR | GrabYourCar</title>
+        <meta
+          name="description"
+          content="Rent self-drive cars in Delhi NCR starting ₹999/day. Choose from hatchbacks, sedans, SUVs & luxury cars. Doorstep delivery, unlimited kilometers."
+        />
+      </Helmet>
+
+      <div className="min-h-screen bg-background">
+        <Header />
 
       {/* Service Banner */}
       <ServiceBanner
@@ -406,7 +416,8 @@ const SelfDriveRentals = () => {
           setSelectedCar(null);
         }}
       />
-    </div>
+      </div>
+    </>
   );
 };
 

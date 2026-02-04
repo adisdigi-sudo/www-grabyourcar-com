@@ -1,3 +1,4 @@
+import { Helmet } from "react-helmet-async";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import {
@@ -19,7 +20,16 @@ import {
 
 const CorporateBuying = () => {
   return (
-    <div className="min-h-screen bg-background">
+    <>
+      <Helmet>
+        <title>Corporate Car Buying | Fleet Solutions & Bulk Orders | GrabYourCar</title>
+        <meta
+          name="description"
+          content="Corporate fleet solutions for businesses. Get special pricing on bulk car orders, dedicated account management, and hassle-free procurement for your organization."
+        />
+      </Helmet>
+      
+      <div className="min-h-screen bg-background">
       <Header />
       <CorporateScrollProgress />
 
@@ -63,7 +73,8 @@ const CorporateBuying = () => {
       <CorporateCTA />
 
       <Footer />
-    </div>
+      </div>
+    </>
   );
 };
 

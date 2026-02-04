@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Helmet } from "react-helmet-async";
 import { Header } from "@/components/Header";
 import { PromoBanner } from "@/components/PromoBanner";
 import { HeroSection } from "@/components/HeroSection";
@@ -24,8 +25,16 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* SEO Meta Tags handled in index.html */}
+    <>
+      <Helmet>
+        <title>GrabYourCar | Buy New Cars in India | Best Prices & Offers</title>
+        <meta
+          name="description"
+          content="India's trusted platform for buying new cars. Compare prices, get loans, and find the best deals on Maruti, Hyundai, Tata, Mahindra & more. Expert advice & doorstep delivery."
+        />
+      </Helmet>
+      
+      <div className="min-h-screen bg-background">
       
       {/* Promo Banner */}
       <PromoBanner />
@@ -68,7 +77,8 @@ const Index = () => {
       
       {/* AI Car Advisor Chat */}
       <CarAdvisorChat />
-    </div>
+      </div>
+    </>
   );
 };
 

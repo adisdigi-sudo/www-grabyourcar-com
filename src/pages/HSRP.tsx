@@ -1,3 +1,4 @@
+import { Helmet } from "react-helmet-async";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { ServiceBanner } from "@/components/ServiceBanner";
@@ -373,8 +374,17 @@ const HSRP = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
+    <>
+      <Helmet>
+        <title>HSRP Online Booking | High Security Number Plate | GrabYourCar</title>
+        <meta
+          name="description"
+          content="Book HSRP online for your vehicle. Government authorized high security registration plates with quick installation. Avoid fines - book now!"
+        />
+      </Helmet>
+
+      <div className="min-h-screen bg-background">
+        <Header />
 
       <ServiceBanner
         highlightText="Mandatory"
@@ -1009,7 +1019,8 @@ const HSRP = () => {
       </section>
 
       <Footer />
-    </div>
+      </div>
+    </>
   );
 };
 
