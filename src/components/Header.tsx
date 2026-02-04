@@ -106,7 +106,11 @@ export const Header = () => {
 
             {/* Logo */}
             <Link to="/" className="flex items-center flex-shrink-0">
-              <img src={logoImage} alt="Grabyourcar" className="h-9 md:h-14 w-auto object-contain" />
+              <img 
+                src={logoImage} 
+                alt="Grabyourcar" 
+                className="h-8 sm:h-10 md:h-12 lg:h-14 w-auto max-w-[140px] sm:max-w-[160px] md:max-w-[200px] lg:max-w-[240px] object-contain" 
+              />
             </Link>
 
             {/* Desktop Navigation with Mega Menu */}

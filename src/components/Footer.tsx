@@ -42,7 +42,11 @@ export const Footer = () => {
           {/* Brand */}
           <div className="col-span-2">
             <a href="/" className="flex items-center mb-6">
-              <img src={logoImage} alt="Grabyourcar" className="h-8 w-auto object-contain brightness-0 invert" />
+              <img 
+                src={logoImage} 
+                alt="Grabyourcar" 
+                className="h-10 md:h-12 w-auto max-w-[180px] md:max-w-[220px] object-contain brightness-0 invert" 
+              />
             </a>
             <p className="text-background/70 mb-6 text-sm leading-relaxed">
               India's trusted platform for buying new cars at the best price. Compare offers from 500+ authorized dealers across India.
