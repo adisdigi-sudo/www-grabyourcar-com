@@ -13,4 +13,8 @@ Allow: /
 User-agent: *
 Allow: /
 
+# Dynamic sitemap generated from database
+Sitemap: https://ynoiwioypxpurwdbjvyt.supabase.co/functions/v1/sitemap
+
+# Static sitemap fallback
 Sitemap: https://grabyourcar.lovable.app/sitemap.xml
