@@ -21,6 +21,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { z } from "zod";
 import { triggerFeedback } from "@/lib/feedback";
+import confetti from "canvas-confetti";
 
 const quickFormSchema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters").max(100, "Name is too long"),
@@ -139,7 +140,36 @@ export const FloatingCTA = () => {
 
       if (error) throw error;
 
-      toast.success("Thanks! We'll call you with the best deal shortly.");
+      // Trigger confetti celebration
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#22c55e', '#16a34a', '#15803d', '#ffffff', '#fbbf24'],
+      });
+
+      // Fire additional bursts for extra celebration
+      setTimeout(() => {
+        confetti({
+          particleCount: 50,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0 },
+          colors: ['#22c55e', '#16a34a', '#fbbf24'],
+        });
+      }, 150);
+
+      setTimeout(() => {
+        confetti({
+          particleCount: 50,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1 },
+          colors: ['#22c55e', '#16a34a', '#fbbf24'],
+        });
+      }, 300);
+
+      toast.success("🎉 Thanks! We'll call you with the best deal shortly.");
       setShowQuickDealForm(false);
       setQuickFormData({ name: "", phone: "" });
     } catch (error) {
@@ -178,7 +208,35 @@ export const FloatingCTA = () => {
 
       if (error) throw error;
 
-      toast.success(`Call scheduled for ${format(scheduleFormData.date!, "PPP")} at ${scheduleFormData.time}!`);
+      // Trigger confetti celebration
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#22c55e', '#16a34a', '#15803d', '#ffffff', '#3b82f6'],
+      });
+
+      setTimeout(() => {
+        confetti({
+          particleCount: 50,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0 },
+          colors: ['#22c55e', '#3b82f6'],
+        });
+      }, 150);
+
+      setTimeout(() => {
+        confetti({
+          particleCount: 50,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1 },
+          colors: ['#22c55e', '#3b82f6'],
+        });
+      }, 300);
+
+      toast.success(`🎉 Call scheduled for ${format(scheduleFormData.date!, "PPP")} at ${scheduleFormData.time}!`);
       setShowScheduleForm(false);
       setScheduleFormData({ name: "", phone: "", date: undefined, time: "" });
     } catch (error) {
