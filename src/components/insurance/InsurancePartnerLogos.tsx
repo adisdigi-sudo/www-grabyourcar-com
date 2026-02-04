@@ -1,14 +1,23 @@
 import { motion } from "framer-motion";
 
+import hdfcErgoLogo from "@/assets/insurers/hdfc-ergo.png";
+import iciciLombardLogo from "@/assets/insurers/icici-lombard.png";
+import bajajAllianzLogo from "@/assets/insurers/bajaj-allianz.png";
+import tataAigLogo from "@/assets/insurers/tata-aig.png";
+import newIndiaLogo from "@/assets/insurers/new-india.png";
+import relianceGeneralLogo from "@/assets/insurers/reliance-general.png";
+import unitedIndiaLogo from "@/assets/insurers/united-india.png";
+import kotakGeneralLogo from "@/assets/insurers/kotak-general.png";
+
 const insurancePartners = [
-  { name: "HDFC ERGO", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/HDFC_Bank_Logo.svg/200px-HDFC_Bank_Logo.svg.png" },
-  { name: "ICICI Lombard", logo: "https://www.icicilombard.com/content/dam/icicilombard/logos/ICICI-Lombard-logo.svg" },
-  { name: "Bajaj Allianz", logo: "https://www.bajajallianz.com/content/dam/bagic/logos/bagic-logo.svg" },
-  { name: "Tata AIG", logo: "https://www.tataaig.com/static/images/logo/TATA-AIG-Logo.svg" },
-  { name: "New India", logo: "https://www.newindia.co.in/logo_1.png" },
-  { name: "Reliance General", logo: "https://www.reliancegeneral.co.in/SiteAssets/RGI-Logo.svg" },
-  { name: "United India", logo: "https://uiic.co.in/sites/default/files/UIICLogo2.jpg" },
-  { name: "Kotak General", logo: "https://www.kotakgeneral.com/content/dam/kotakgeneral/footer/kotak-general-logo.svg" },
+  { name: "HDFC ERGO", logo: hdfcErgoLogo },
+  { name: "ICICI Lombard", logo: iciciLombardLogo },
+  { name: "Bajaj Allianz", logo: bajajAllianzLogo },
+  { name: "Tata AIG", logo: tataAigLogo },
+  { name: "New India", logo: newIndiaLogo },
+  { name: "Reliance General", logo: relianceGeneralLogo },
+  { name: "United India", logo: unitedIndiaLogo },
+  { name: "Kotak General", logo: kotakGeneralLogo },
 ];
 
 export function InsurancePartnerLogos() {
@@ -24,11 +33,13 @@ export function InsurancePartnerLogos() {
               <motion.div
                 key={`${partner.name}-${index}`}
                 whileHover={{ scale: 1.05 }}
-                className="flex-shrink-0 h-10 w-32 flex items-center justify-center grayscale hover:grayscale-0 opacity-60 hover:opacity-100 transition-all duration-300"
+                className="flex-shrink-0 h-16 w-40 flex items-center justify-center grayscale hover:grayscale-0 opacity-70 hover:opacity-100 transition-all duration-300"
               >
-                <div className="text-lg font-semibold text-muted-foreground">
-                  {partner.name}
-                </div>
+                <img
+                  src={partner.logo}
+                  alt={`${partner.name} logo`}
+                  className="max-h-full max-w-full object-contain"
+                />
               </motion.div>
             ))}
           </div>
