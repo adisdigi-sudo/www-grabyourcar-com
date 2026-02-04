@@ -3,6 +3,7 @@ import { Footer } from "@/components/Footer";
 import {
   CorporateHero,
   CorporateLogoGrid,
+  CorporateStats,
   CorporateWhyChoose,
   CorporateIndustries,
   CorporateCaseStudies,
@@ -23,6 +24,9 @@ const CorporateBuying = () => {
 
       {/* Logo Trust Section */}
       <CorporateLogoGrid />
+
+      {/* Animated Stats */}
+      <CorporateStats />
 
       {/* Industries We Serve */}
       <CorporateIndustries />
