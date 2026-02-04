@@ -36,6 +36,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useRazorpay } from "@/hooks/useRazorpay";
 import { PincodeChecker } from "@/components/hsrp/PincodeChecker";
 import { useNavigate } from "react-router-dom";
 
@@ -158,6 +159,7 @@ const faqs = [
 const HSRP = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { initiatePayment, isLoading: isPaymentLoading } = useRazorpay();
   const [selectedService, setSelectedService] = useState<string | null>(null);
   const [trackingNumber, setTrackingNumber] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -246,6 +248,11 @@ const HSRP = () => {
       return;
     }
 
+    if (formData.mobile.length !== 10) {
+      toast.error("Please enter a valid 10-digit mobile number");
+      return;
+    }
+
     if (!user) {
       toast.error("Please login to book HSRP");
       navigate("/auth");
@@ -279,7 +286,7 @@ const HSRP = () => {
         payment_status: "pending",
       };
 
-      const { data, error } = await supabase
+      const { data: booking, error } = await supabase
         .from("hsrp_bookings")
         .insert(bookingData)
         .select()
@@ -287,46 +294,50 @@ const HSRP = () => {
 
       if (error) throw error;
 
-      // Send WhatsApp notification with booking details
-      const message = `🚗 *New HSRP Booking*\n\n` +
-        `📋 Tracking ID: ${trackingId}\n` +
-        `🚘 Vehicle: ${formData.registrationNumber.toUpperCase()}\n` +
-        `📦 Service: ${selectedServiceData?.title}\n` +
-        `💰 Amount: ₹${totalAmount}\n` +
-        `📍 State: ${formData.state}\n` +
-        `👤 Name: ${formData.ownerName}\n` +
-        `📱 Mobile: ${formData.mobile}\n` +
-        `${homeInstallation ? `🏠 Home Installation: Yes (₹${homeInstallationFee} extra)\n` : ""}` +
-        `📍 Pincode: ${formData.pincode}`;
-
-      const whatsappUrl = `https://wa.me/919855924442?text=${encodeURIComponent(message)}`;
-      
-      toast.success(
-        <div className="space-y-2">
-          <p className="font-semibold">Booking Created Successfully!</p>
-          <p className="text-sm">Your Tracking ID: <span className="font-mono font-bold">{trackingId}</span></p>
-          <p className="text-xs text-muted-foreground">Complete payment to confirm your booking.</p>
-        </div>,
-        { duration: 8000 }
-      );
-
-      // Open WhatsApp for payment coordination
-      window.open(whatsappUrl, "_blank");
-
-      // Reset form
-      setFormData({
-        registrationNumber: "",
-        chassisNumber: "",
-        engineNumber: "",
-        state: "",
-        ownerName: "",
-        mobile: "",
-        email: "",
-        address: "",
-        pincode: "",
+      // Initiate Razorpay payment
+      initiatePayment({
+        amount: totalAmount,
+        receipt: `HSRP-${booking.id.substring(0, 8)}`,
+        bookingType: "hsrp",
+        bookingId: booking.id,
+        customerName: formData.ownerName,
+        customerEmail: formData.email,
+        customerPhone: formData.mobile,
+        description: `HSRP: ${selectedServiceData?.title} - ${formData.registrationNumber.toUpperCase()}`,
+        notes: {
+          trackingId,
+          registrationNumber: formData.registrationNumber.toUpperCase(),
+          vehicleClass: selectedServiceData?.vehicleClass || "4W",
+        },
+        onSuccess: (paymentData) => {
+          toast.success(
+            <div className="space-y-2">
+              <p className="font-semibold">Payment Successful!</p>
+              <p className="text-sm">Tracking ID: <span className="font-mono font-bold">{trackingId}</span></p>
+            </div>,
+            { duration: 8000 }
+          );
+          
+          // Reset form
+          setFormData({
+            registrationNumber: "",
+            chassisNumber: "",
+            engineNumber: "",
+            state: "",
+            ownerName: "",
+            mobile: "",
+            email: "",
+            address: "",
+            pincode: "",
+          });
+          setSelectedService(null);
+          setHomeInstallation(false);
+        },
+        onError: (error) => {
+          console.error("Payment failed:", error);
+          toast.info(`Booking created with Tracking ID: ${trackingId}. Complete payment to confirm.`);
+        },
       });
-      setSelectedService(null);
-      setHomeInstallation(false);
 
     } catch (error: any) {
       console.error("Booking error:", error);
@@ -334,6 +345,31 @@ const HSRP = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleBookViaWhatsApp = () => {
+    if (!selectedService) {
+      toast.error("Please select a service type");
+      return;
+    }
+
+    if (!formData.registrationNumber || !formData.state || !formData.ownerName || !formData.mobile) {
+      toast.error("Please fill all required fields");
+      return;
+    }
+
+    const message = `🚗 *HSRP Booking Inquiry*\n\n` +
+      `🚘 Vehicle: ${formData.registrationNumber.toUpperCase()}\n` +
+      `📦 Service: ${selectedServiceData?.title}\n` +
+      `💰 Amount: ₹${totalAmount}\n` +
+      `📍 State: ${formData.state}\n` +
+      `👤 Name: ${formData.ownerName}\n` +
+      `📱 Mobile: ${formData.mobile}\n` +
+      `${homeInstallation ? `🏠 Home Installation: Yes (₹${homeInstallationFee} extra)\n` : ""}` +
+      `📍 Pincode: ${formData.pincode}`;
+
+    const whatsappUrl = `https://wa.me/919855924442?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, "_blank");
   };
 
   return (
@@ -654,9 +690,9 @@ const HSRP = () => {
                         variant="cta" 
                         size="lg" 
                         className="flex-1 gap-2"
-                        disabled={isSubmitting || !selectedService}
+                        disabled={isSubmitting || isPaymentLoading || !selectedService}
                       >
-                        {isSubmitting ? (
+                        {isSubmitting || isPaymentLoading ? (
                           <>
                             <Loader2 className="h-5 w-5 animate-spin" />
                             Processing...
@@ -664,16 +700,30 @@ const HSRP = () => {
                         ) : (
                           <>
                             <CheckCircle2 className="h-5 w-5" />
-                            Book Now - ₹{totalAmount.toLocaleString()}
+                            Pay ₹{totalAmount.toLocaleString()}
                           </>
                         )}
                       </Button>
-                      <a href="https://wa.me/919855924442" target="_blank" rel="noopener noreferrer">
-                        <Button type="button" variant="whatsapp" size="lg" className="w-full sm:w-auto gap-2">
-                          <MessageCircle className="h-5 w-5" />
-                          WhatsApp
-                        </Button>
-                      </a>
+                      <Button 
+                        type="button" 
+                        variant="whatsapp" 
+                        size="lg" 
+                        className="gap-2"
+                        onClick={handleBookViaWhatsApp}
+                        disabled={isSubmitting || isPaymentLoading}
+                      >
+                        <MessageCircle className="h-5 w-5" />
+                        WhatsApp
+                      </Button>
+                    </div>
+
+                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                      <img 
+                        src="https://razorpay.com/favicon.png" 
+                        alt="Razorpay" 
+                        className="h-4 w-4"
+                      />
+                      <span>Secured by Razorpay</span>
                     </div>
 
                     {!user && (
