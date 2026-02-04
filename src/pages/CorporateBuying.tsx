@@ -6,6 +6,7 @@ import {
   CorporateWhyChoose,
   CorporateIndustries,
   CorporateCaseStudies,
+  CorporateBrochureDownload,
   CorporateSocialProof,
   CorporateCTA,
 } from "@/components/corporate";
@@ -29,6 +30,9 @@ const CorporateBuying = () => {
 
       {/* Case Studies */}
       <CorporateCaseStudies />
+
+      {/* Brochure Download */}
+      <CorporateBrochureDownload />
 
       {/* Social Proof */}
       <CorporateSocialProof />
