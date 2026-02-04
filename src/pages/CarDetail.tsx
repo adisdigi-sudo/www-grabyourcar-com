@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { FloatingCTA } from "@/components/FloatingCTA";
 import { PriceBreakup } from "@/components/PriceBreakup";
 import { DealerLocator } from "@/components/DealerLocator";
 import { ShareButtons } from "@/components/ShareButtons";
+import { CarStructuredData } from "@/components/seo/CarStructuredData";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -143,6 +145,17 @@ const CarDetail = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* SEO Structured Data */}
+      <CarStructuredData car={car} selectedVariant={selectedVariant} />
+      <Helmet>
+        <title>{car.brand} {car.name} Price, Specs, Features | Grabyourcar</title>
+        <meta name="description" content={`${car.brand} ${car.name} price starts at ${car.price}. Check out specifications, features, colors, mileage and more. ${car.variants.length} variants available.`} />
+        <meta property="og:title" content={`${car.brand} ${car.name} - Price, Specs & Features`} />
+        <meta property="og:description" content={car.overview || car.tagline} />
+        <meta property="og:image" content={car.gallery[0] || car.image} />
+        <meta property="og:type" content="product" />
+        <link rel="canonical" href={`https://grabyourcar.lovable.app/car/${car.slug}`} />
+      </Helmet>
       <Header />
       
       <main className="pt-20">
