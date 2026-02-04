@@ -72,24 +72,24 @@ export const CorporateLogoGrid = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 max-w-5xl mx-auto">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 max-w-6xl mx-auto">
           {corporateClients.map((client) => (
             <div
               key={client.name}
               className={cn(
-                "group relative bg-card border border-border/50 rounded-xl p-4 md:p-6",
+                "group relative bg-card border border-border/50 rounded-xl p-5 md:p-8",
                 "transition-all duration-300 ease-out",
                 "hover:shadow-lg hover:shadow-primary/5 hover:border-primary/20",
                 "hover:-translate-y-1"
               )}
             >
               {/* Logo Image */}
-              <div className="aspect-square flex items-center justify-center mb-4 p-2">
+              <div className="aspect-[4/3] flex items-center justify-center mb-5 p-3">
                 <img
                   src={client.logo}
                   alt={`${client.name} logo`}
                   className={cn(
-                    "w-full h-full object-contain",
+                    "w-full h-full object-contain max-h-28 md:max-h-36",
                     "filter grayscale opacity-70",
                     "transition-all duration-300",
                     "group-hover:grayscale-0 group-hover:opacity-100"
@@ -98,10 +98,10 @@ export const CorporateLogoGrid = () => {
               </div>
 
               <div className="text-center">
-                <h3 className="font-heading font-semibold text-foreground text-sm md:text-base mb-1 line-clamp-1">
+                <h3 className="font-heading font-semibold text-foreground text-base md:text-lg mb-1 line-clamp-1">
                   {client.name}
                 </h3>
-                <p className="text-muted-foreground text-xs md:text-sm line-clamp-2">
+                <p className="text-muted-foreground text-sm line-clamp-2">
                   {client.description}
                 </p>
               </div>
