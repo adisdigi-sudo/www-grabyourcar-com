@@ -11,7 +11,7 @@ declare global {
 interface RazorpayOptions {
   amount: number;
   receipt: string;
-  bookingType: "hsrp" | "rental";
+  bookingType: "hsrp" | "rental" | "accessories";
   bookingId: string;
   customerName: string;
   customerEmail: string;

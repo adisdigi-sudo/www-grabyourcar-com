@@ -10,7 +10,7 @@ interface CreateOrderRequest {
   amount: number;
   currency?: string;
   receipt: string;
-  bookingType: "hsrp" | "rental";
+  bookingType: "hsrp" | "rental" | "accessories";
   bookingId: string;
   notes?: Record<string, string>;
 }
@@ -90,8 +90,21 @@ serve(async (req) => {
       throw new Error(`Razorpay API error: ${orderData.error?.description || "Unknown error"}`);
     }
 
-    // Update the booking with order_id
-    const tableName = bookingType === "hsrp" ? "hsrp_bookings" : "rental_bookings";
+    // Update the booking with order_id based on booking type
+    let tableName: string;
+    switch (bookingType) {
+      case "hsrp":
+        tableName = "hsrp_bookings";
+        break;
+      case "rental":
+        tableName = "rental_bookings";
+        break;
+      case "accessories":
+        tableName = "accessory_orders";
+        break;
+      default:
+        throw new Error("Invalid booking type");
+    }
     
     const { error: updateError } = await supabase
       .from(tableName)

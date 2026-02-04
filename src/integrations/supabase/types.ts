@@ -14,6 +14,75 @@ export type Database = {
   }
   public: {
     Tables: {
+      accessory_orders: {
+        Row: {
+          created_at: string
+          delivery_fee: number
+          id: string
+          items: Json
+          notes: string | null
+          order_id: string | null
+          order_status: string
+          payment_id: string | null
+          payment_status: string
+          shipping_address: string
+          shipping_city: string
+          shipping_email: string | null
+          shipping_name: string
+          shipping_phone: string
+          shipping_pincode: string
+          shipping_state: string
+          subtotal: number
+          total_amount: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          delivery_fee?: number
+          id?: string
+          items: Json
+          notes?: string | null
+          order_id?: string | null
+          order_status?: string
+          payment_id?: string | null
+          payment_status?: string
+          shipping_address: string
+          shipping_city: string
+          shipping_email?: string | null
+          shipping_name: string
+          shipping_phone: string
+          shipping_pincode: string
+          shipping_state: string
+          subtotal: number
+          total_amount: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          delivery_fee?: number
+          id?: string
+          items?: Json
+          notes?: string | null
+          order_id?: string | null
+          order_status?: string
+          payment_id?: string | null
+          payment_status?: string
+          shipping_address?: string
+          shipping_city?: string
+          shipping_email?: string | null
+          shipping_name?: string
+          shipping_phone?: string
+          shipping_pincode?: string
+          shipping_state?: string
+          subtotal?: number
+          total_amount?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       accessory_wishlist: {
         Row: {
           accessory_id: number
