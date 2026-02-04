@@ -6,6 +6,7 @@ import {
   CorporateWhyChoose,
   CorporateIndustries,
   CorporateCaseStudies,
+  CorporateComparison,
   CorporateBrochureDownload,
   CorporateFAQ,
   CorporateSocialProof,
@@ -28,6 +29,9 @@ const CorporateBuying = () => {
 
       {/* Why Choose Us */}
       <CorporateWhyChoose />
+
+      {/* Comparison Table */}
+      <CorporateComparison />
 
       {/* Case Studies */}
       <CorporateCaseStudies />
