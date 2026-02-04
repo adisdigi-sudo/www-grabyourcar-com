@@ -12,8 +12,6 @@ import { Testimonials } from "@/components/Testimonials";
 import { TrustBadges } from "@/components/TrustBadges";
 import { Footer } from "@/components/Footer";
 import { FloatingCTA } from "@/components/FloatingCTA";
-import { CarAdvisorChat } from "@/components/CarAdvisorChat";
-
 
 const Index = () => {
   const [loanPrefill, setLoanPrefill] = useState<string>("");
@@ -87,9 +85,6 @@ const Index = () => {
       
       {/* Floating WhatsApp & Call Buttons */}
       <FloatingCTA />
-      
-      {/* AI Car Advisor Chat */}
-      <CarAdvisorChat />
       </div>
     </>
   );
