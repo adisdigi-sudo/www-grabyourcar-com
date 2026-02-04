@@ -23,8 +23,9 @@ import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
 import Auth from "./pages/Auth";
 import MyFavorites from "./pages/MyFavorites";
+import MyBookings from "./pages/MyBookings";
 import CarFinder from "./pages/CarFinder";
-import Admin from "./pages/Admin";
+import AdminLayout from "./pages/AdminLayout";
 import SelfDriveRentals from "./pages/SelfDriveRentals";
 import HSRP from "./pages/HSRP";
 import NotFound from "./pages/NotFound";
@@ -57,12 +58,12 @@ const App = () => (
                 <Route path="/blog/:slug" element={<BlogPost />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/favorites" element={<MyFavorites />} />
+                <Route path="/my-bookings" element={<MyBookings />} />
                 <Route path="/car-finder" element={<CarFinder />} />
-                <Route path="/admin" element={<Admin />} />
+                <Route path="/admin" element={<AdminLayout />} />
                 <Route path="/self-drive" element={<SelfDriveRentals />} />
                 <Route path="/hsrp" element={<HSRP />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
               <FloatingCompareBar />
