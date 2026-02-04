@@ -6,155 +6,135 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const WHATSAPP_API_URL = "https://graph.facebook.com/v18.0";
+// Finbite API endpoint for sending messages
+const FINBITE_API_URL = "https://app.finbite.in/api/v1/send_msg/";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const WHATSAPP_ACCESS_TOKEN = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
-  const WHATSAPP_PHONE_NUMBER_ID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
-  const WHATSAPP_VERIFY_TOKEN = Deno.env.get("WHATSAPP_VERIFY_TOKEN");
+  const FINBITE_CLIENT_ID = Deno.env.get("FINBITE_CLIENT_ID");
+  const FINBITE_API_KEY = Deno.env.get("FINBITE_API_KEY");
+  const FINBITE_WHATSAPP_CLIENT = Deno.env.get("FINBITE_WHATSAPP_CLIENT");
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-  if (!WHATSAPP_ACCESS_TOKEN || !WHATSAPP_PHONE_NUMBER_ID || !WHATSAPP_VERIFY_TOKEN) {
-    console.error("Missing WhatsApp configuration");
+  if (!FINBITE_CLIENT_ID || !FINBITE_API_KEY || !FINBITE_WHATSAPP_CLIENT) {
+    console.error("Missing Finbite configuration");
     return new Response(JSON.stringify({ error: "Server configuration error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
-  const url = new URL(req.url);
-
-  // Webhook verification (GET request from Meta)
-  if (req.method === "GET") {
-    const mode = url.searchParams.get("hub.mode");
-    const token = url.searchParams.get("hub.verify_token");
-    const challenge = url.searchParams.get("hub.challenge");
-
-    console.log("Webhook verification request:", { mode, token, challenge });
-
-    if (mode === "subscribe" && token === WHATSAPP_VERIFY_TOKEN) {
-      console.log("Webhook verified successfully");
-      return new Response(challenge, { status: 200 });
-    } else {
-      console.error("Webhook verification failed");
-      return new Response("Forbidden", { status: 403 });
-    }
-  }
-
-  // Handle incoming messages (POST request from Meta)
+  // Handle incoming webhook from Finbite (POST request)
   if (req.method === "POST") {
     try {
       const body = await req.json();
-      console.log("Incoming webhook:", JSON.stringify(body, null, 2));
+      console.log("Incoming Finbite webhook:", JSON.stringify(body, null, 2));
 
-      const entry = body.entry?.[0];
-      const changes = entry?.changes?.[0];
-      const value = changes?.value;
+      // Finbite webhook format - extract message details
+      // Common fields: phone, message, sender_name, timestamp
+      const from = body.phone || body.from || body.sender;
+      const messageText = body.message || body.msg || body.text || "";
+      const senderName = body.sender_name || body.name || "Customer";
 
-      // Handle incoming messages
-      if (value?.messages?.[0]) {
-        const message = value.messages[0];
-        const contact = value.contacts?.[0];
-        const from = message.from;
-        const messageType = message.type;
-        const messageText = message.text?.body || "";
-        const senderName = contact?.profile?.name || "Customer";
+      if (!from || !messageText) {
+        console.log("No message content in webhook, might be status update");
+        return new Response(JSON.stringify({ success: true, status: "acknowledged" }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
 
-        console.log(`Message from ${senderName} (${from}): ${messageText}`);
+      console.log(`Message from ${senderName} (${from}): ${messageText}`);
 
-        // Create Supabase client
-        const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
+      // Create Supabase client
+      const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
 
-        // Get or create conversation history for this phone number
-        const { data: existingConvo } = await supabase
+      // Format phone number for consistency
+      const formattedPhone = from.replace(/\D/g, "");
+
+      // Get or create conversation history for this phone number
+      const { data: existingConvo } = await supabase
+        .from("whatsapp_conversations")
+        .select("*")
+        .eq("phone_number", formattedPhone)
+        .single();
+
+      let conversationHistory: Array<{ role: string; content: string }> = [];
+      let conversationId: string;
+
+      if (existingConvo) {
+        conversationId = existingConvo.id;
+        conversationHistory = existingConvo.messages || [];
+      } else {
+        // Create new conversation
+        const { data: newConvo, error } = await supabase
           .from("whatsapp_conversations")
-          .select("*")
-          .eq("phone_number", from)
+          .insert({
+            phone_number: formattedPhone,
+            customer_name: senderName,
+            messages: [],
+            status: "active",
+          })
+          .select()
           .single();
 
-        let conversationHistory: Array<{ role: string; content: string }> = [];
-        let conversationId: string;
-
-        if (existingConvo) {
-          conversationId = existingConvo.id;
-          conversationHistory = existingConvo.messages || [];
-        } else {
-          // Create new conversation
-          const { data: newConvo, error } = await supabase
-            .from("whatsapp_conversations")
-            .insert({
-              phone_number: from,
-              customer_name: senderName,
-              messages: [],
-              status: "active",
-            })
-            .select()
-            .single();
-
-          if (error) {
-            console.error("Failed to create conversation:", error);
-          }
-          conversationId = newConvo?.id;
+        if (error) {
+          console.error("Failed to create conversation:", error);
         }
-
-        // Add user message to history
-        conversationHistory.push({ role: "user", content: messageText });
-
-        // Generate AI response
-        let aiResponse: string;
-        
-        if (LOVABLE_API_KEY) {
-          aiResponse = await generateAIResponse(LOVABLE_API_KEY, senderName, messageText, conversationHistory);
-        } else {
-          aiResponse = getStaticResponse(messageText.toLowerCase());
-        }
-
-        // Add AI response to history
-        conversationHistory.push({ role: "assistant", content: aiResponse });
-
-        // Update conversation in database (keep last 20 messages)
-        const trimmedHistory = conversationHistory.slice(-20);
-        await supabase
-          .from("whatsapp_conversations")
-          .update({
-            messages: trimmedHistory,
-            last_message_at: new Date().toISOString(),
-          })
-          .eq("id", conversationId);
-
-        // Save as lead (only for new conversations or important intents)
-        if (!existingConvo || detectHighIntent(messageText)) {
-          await supabase.from("leads").upsert({
-            phone: formatPhoneNumber(from),
-            customer_name: senderName,
-            source: "whatsapp_chatbot",
-            lead_type: detectLeadType(messageText),
-            notes: `Latest: ${messageText}`,
-            status: existingConvo ? "contacted" : "new",
-            priority: detectHighIntent(messageText) ? "high" : "medium",
-          }, { onConflict: "phone" });
-        }
-
-        // Send response via WhatsApp
-        await sendWhatsAppMessage(
-          WHATSAPP_PHONE_NUMBER_ID,
-          WHATSAPP_ACCESS_TOKEN,
-          from,
-          aiResponse
-        );
+        conversationId = newConvo?.id;
       }
 
-      // Handle message status updates
-      if (value?.statuses?.[0]) {
-        const status = value.statuses[0];
-        console.log(`Message status: ${status.status} for ${status.id}`);
+      // Add user message to history
+      conversationHistory.push({ role: "user", content: messageText });
+
+      // Generate AI response
+      let aiResponse: string;
+      
+      if (LOVABLE_API_KEY) {
+        aiResponse = await generateAIResponse(LOVABLE_API_KEY, senderName, messageText, conversationHistory);
+      } else {
+        aiResponse = getStaticResponse(messageText.toLowerCase());
       }
+
+      // Add AI response to history
+      conversationHistory.push({ role: "assistant", content: aiResponse });
+
+      // Update conversation in database (keep last 20 messages)
+      const trimmedHistory = conversationHistory.slice(-20);
+      await supabase
+        .from("whatsapp_conversations")
+        .update({
+          messages: trimmedHistory,
+          last_message_at: new Date().toISOString(),
+        })
+        .eq("id", conversationId);
+
+      // Save as lead (only for new conversations or important intents)
+      if (!existingConvo || detectHighIntent(messageText)) {
+        await supabase.from("leads").upsert({
+          phone: formatPhoneNumber(formattedPhone),
+          customer_name: senderName,
+          source: "whatsapp_chatbot",
+          lead_type: detectLeadType(messageText),
+          notes: `Latest: ${messageText}`,
+          status: existingConvo ? "contacted" : "new",
+          priority: detectHighIntent(messageText) ? "high" : "medium",
+        }, { onConflict: "phone" });
+      }
+
+      // Send response via Finbite API
+      await sendFinbiteMessage(
+        FINBITE_CLIENT_ID,
+        FINBITE_API_KEY,
+        FINBITE_WHATSAPP_CLIENT,
+        formattedPhone,
+        aiResponse
+      );
 
       return new Response(JSON.stringify({ success: true }), {
         status: 200,
@@ -167,6 +147,22 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+  }
+
+  // Handle GET request for webhook verification (if Finbite requires it)
+  if (req.method === "GET") {
+    const url = new URL(req.url);
+    const challenge = url.searchParams.get("challenge") || url.searchParams.get("hub.challenge");
+    
+    if (challenge) {
+      console.log("Webhook verification challenge:", challenge);
+      return new Response(challenge, { status: 200 });
+    }
+    
+    return new Response(JSON.stringify({ status: "Webhook endpoint active" }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   return new Response("Method not allowed", { status: 405 });
@@ -330,39 +326,45 @@ function formatPhoneNumber(phone: string): string {
   return phone;
 }
 
-// Send WhatsApp message
-async function sendWhatsAppMessage(
-  phoneNumberId: string,
-  accessToken: string,
+// Send WhatsApp message via Finbite API
+async function sendFinbiteMessage(
+  clientId: string,
+  apiKey: string,
+  whatsappClient: string,
   to: string,
   text: string
 ): Promise<void> {
   try {
-    const response = await fetch(
-      `${WHATSAPP_API_URL}/${phoneNumberId}/messages`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          messaging_product: "whatsapp",
-          recipient_type: "individual",
-          to: to,
-          type: "text",
-          text: { body: text },
-        }),
-      }
-    );
+    // Ensure phone has country code
+    const phoneWithCountry = to.startsWith("91") ? to : `91${to}`;
+
+    const payload = {
+      client_id: parseInt(clientId),
+      api_key: apiKey,
+      whatsapp_client: parseInt(whatsappClient),
+      phone: phoneWithCountry,
+      msg: text,
+      msg_type: 0, // Text message
+    };
+
+    console.log("Sending via Finbite:", JSON.stringify({ ...payload, api_key: "[REDACTED]" }));
+
+    const response = await fetch(FINBITE_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
 
     if (!response.ok) {
       const errorData = await response.text();
-      console.error("WhatsApp API error:", response.status, errorData);
+      console.error("Finbite API error:", response.status, errorData);
     } else {
-      console.log("Message sent successfully");
+      const result = await response.json();
+      console.log("Message sent successfully via Finbite:", result);
     }
   } catch (error) {
-    console.error("Failed to send WhatsApp message:", error);
+    console.error("Failed to send Finbite message:", error);
   }
 }
