@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
 import { SearchBar } from "@/components/SearchBar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AnimatedCounter } from "@/components/ui/animated-counter";
 import { Shield, Award, Users, CheckCircle, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
@@ -52,7 +52,7 @@ export const HeroSection = () => {
           {/* Trust Badge */}
           <Badge variant="trust" className="mb-6 py-2 px-4 text-sm">
             <CheckCircle className="h-4 w-4 mr-2" />
-            Trusted by 50,000+ Car Buyers Pan-India
+            Trusted by <AnimatedCounter value={50000} suffix="+" /> Car Buyers Pan-India
           </Badge>
 
           {/* Main Heading */}
@@ -132,7 +132,9 @@ export const HeroSection = () => {
                 <Shield className="h-6 w-6 text-success" />
               </div>
               <div className="text-left">
-                <p className="font-heading font-semibold">100% Verified</p>
+                <p className="font-heading font-semibold">
+                  <AnimatedCounter value={100} suffix="%" /> Verified
+                </p>
                 <p className="text-sm text-card/70">Authorized Dealers</p>
               </div>
             </div>
@@ -152,7 +154,9 @@ export const HeroSection = () => {
                 <Users className="h-6 w-6 text-primary-foreground" />
               </div>
               <div className="text-left">
-                <p className="font-heading font-semibold">500+ Dealers</p>
+                <p className="font-heading font-semibold">
+                  <AnimatedCounter value={500} suffix="+" /> Dealers
+                </p>
                 <p className="text-sm text-card/70">Across India</p>
               </div>
             </div>

@@ -1,35 +1,45 @@
 import { Shield, Award, Users, Clock, CheckCircle, Headphones } from "lucide-react";
+import { AnimatedCounter } from "@/components/ui/animated-counter";
 
 const trustItems = [
   {
     icon: Shield,
     title: "100% Verified Dealers",
     description: "All our partner dealers are authorized and verified",
+    hasCounter: false,
   },
   {
     icon: Award,
     title: "Best Price Guarantee",
     description: "We match or beat any genuine dealer quote",
+    hasCounter: false,
   },
   {
     icon: Users,
-    title: "50,000+ Happy Customers",
+    title: null, // Will render custom title
+    counterValue: 50000,
+    counterSuffix: "+",
+    titleSuffix: " Happy Customers",
     description: "Trusted by car buyers across India",
+    hasCounter: true,
   },
   {
     icon: Clock,
     title: "Zero Waiting Period",
     description: "Ready stock available for popular models",
+    hasCounter: false,
   },
   {
     icon: CheckCircle,
     title: "No Hidden Charges",
     description: "Transparent pricing, what you see is what you pay",
+    hasCounter: false,
   },
   {
     icon: Headphones,
     title: "Expert Support",
     description: "Dedicated car experts to guide your purchase",
+    hasCounter: false,
   },
 ];
 
@@ -46,7 +56,7 @@ export const TrustBadges = () => {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 md:gap-8">
           {trustItems.map((item, index) => (
             <div
-              key={item.title}
+              key={index}
               className="text-center animate-fade-in"
               style={{ animationDelay: `${index * 0.1}s` }}
             >
@@ -54,7 +64,17 @@ export const TrustBadges = () => {
                 <item.icon className="h-8 w-8 text-primary" />
               </div>
               <h3 className="font-heading font-semibold text-foreground text-sm mb-1">
-                {item.title}
+                {item.hasCounter ? (
+                  <>
+                    <AnimatedCounter 
+                      value={item.counterValue!} 
+                      suffix={item.counterSuffix} 
+                    />
+                    {item.titleSuffix}
+                  </>
+                ) : (
+                  item.title
+                )}
               </h3>
               <p className="text-xs text-muted-foreground">
                 {item.description}
