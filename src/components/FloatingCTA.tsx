@@ -73,13 +73,17 @@ export const FloatingCTA = () => {
       const pastHero = currentScrollY > heroHeight;
       setIsVisible(pastHero);
       
-      if (pastHero) {
+      // Only hide by scroll when menu is NOT expanded
+      if (pastHero && !isExpanded) {
         const scrollingDown = currentScrollY > lastScrollY;
         const scrollDelta = Math.abs(currentScrollY - lastScrollY);
         
         if (scrollDelta > 10) {
           setIsHiddenByScroll(!scrollingDown);
         }
+      } else if (isExpanded) {
+        // Keep visible when expanded
+        setIsHiddenByScroll(false);
       }
       
       setLastScrollY(currentScrollY);
@@ -89,7 +93,7 @@ export const FloatingCTA = () => {
     handleScroll();
 
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [lastScrollY]);
+  }, [lastScrollY, isExpanded]);
 
   const handleRequestQuote = () => {
     setShowQuoteForm(true);
