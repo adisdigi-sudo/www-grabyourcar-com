@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { HelmetProvider, Helmet } from "react-helmet-async";
+import { CarsListStructuredData } from "@/components/seo/CarsListStructuredData";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 
@@ -458,6 +459,8 @@ const Cars = () => {
         <meta name="twitter:description" content="Explore 76+ new cars from 10+ brands in India. Find your perfect car today!" />
         <meta name="twitter:image" content="https://grabyourcar.lovable.app/og-image.png" />
       </Helmet>
+      
+      <CarsListStructuredData cars={filteredCars} totalCount={allCars.length} />
 
       <div className="min-h-screen bg-background">
         <Header />
