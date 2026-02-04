@@ -13,6 +13,7 @@ import {
   CorporateFAQ,
   CorporateSocialProof,
   CorporateCTA,
+  CorporateProcessTimeline,
 } from "@/components/corporate";
 
 const CorporateBuying = () => {
@@ -31,6 +32,9 @@ const CorporateBuying = () => {
 
       {/* Industries We Serve */}
       <CorporateIndustries />
+
+      {/* Process Timeline */}
+      <CorporateProcessTimeline />
 
       {/* Why Choose Us */}
       <CorporateWhyChoose />
