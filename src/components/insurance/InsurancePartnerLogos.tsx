@@ -8,6 +8,12 @@ import newIndiaLogo from "@/assets/insurers/new-india.png";
 import relianceGeneralLogo from "@/assets/insurers/reliance-general.png";
 import unitedIndiaLogo from "@/assets/insurers/united-india.png";
 import kotakGeneralLogo from "@/assets/insurers/kotak-general.png";
+import nationalInsuranceLogo from "@/assets/insurers/national-insurance.png";
+import orientalInsuranceLogo from "@/assets/insurers/oriental-insurance.png";
+import sbiGeneralLogo from "@/assets/insurers/sbi-general.png";
+import cholaMsLogo from "@/assets/insurers/chola-ms.png";
+import futureGeneraliLogo from "@/assets/insurers/future-generali.png";
+import iffcoTokioLogo from "@/assets/insurers/iffco-tokio.png";
 
 const insurancePartners = [
   { name: "HDFC ERGO", logo: hdfcErgoLogo },
@@ -18,6 +24,12 @@ const insurancePartners = [
   { name: "Reliance General", logo: relianceGeneralLogo },
   { name: "United India", logo: unitedIndiaLogo },
   { name: "Kotak General", logo: kotakGeneralLogo },
+  { name: "National Insurance", logo: nationalInsuranceLogo },
+  { name: "Oriental Insurance", logo: orientalInsuranceLogo },
+  { name: "SBI General", logo: sbiGeneralLogo },
+  { name: "Cholamandalam MS", logo: cholaMsLogo },
+  { name: "Future Generali", logo: futureGeneraliLogo },
+  { name: "Iffco Tokio", logo: iffcoTokioLogo },
 ];
 
 export function InsurancePartnerLogos() {
