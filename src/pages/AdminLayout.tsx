@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
@@ -11,6 +11,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { logAdminActivity } from "@/lib/adminActivityLogger";
 import { 
   LayoutDashboard, 
   Users, 
@@ -25,6 +26,13 @@ const AdminLayout = () => {
   const location = useLocation();
   const { user, isLoading, isAdmin, roles } = useAdminAuth();
   const [activeTab, setActiveTab] = useState("dashboard");
+
+  // Log admin dashboard access
+  useEffect(() => {
+    if (user && !isLoading) {
+      logAdminActivity({ action: 'view_dashboard' });
+    }
+  }, [user, isLoading]);
 
   // Redirect if not authenticated
   if (!isLoading && !user) {
