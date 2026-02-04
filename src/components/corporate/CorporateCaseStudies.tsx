@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import { Car, Clock, TrendingDown, CheckCircle, Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { motion, useInView, useSpring, useTransform } from "framer-motion";
+import { motion, useInView } from "framer-motion";
+import { AnimatedCounter } from "@/components/ui/animated-counter";
 
 interface CaseStudy {
   industry: string;
@@ -77,48 +78,6 @@ const caseStudies: CaseStudy[] = [
     ],
   },
 ];
-
-interface AnimatedCounterProps {
-  value: number;
-  suffix?: string;
-  prefix?: string;
-}
-
-const AnimatedCounter = ({ value, suffix = "", prefix = "" }: AnimatedCounterProps) => {
-  const ref = useRef<HTMLSpanElement>(null);
-  const isInView = useInView(ref, { once: true, margin: "-50px" });
-  const [hasAnimated, setHasAnimated] = useState(false);
-
-  const spring = useSpring(0, { 
-    mass: 0.8, 
-    stiffness: 75, 
-    damping: 15,
-    restDelta: 0.001 
-  });
-  
-  const display = useTransform(spring, (current) => Math.round(current));
-  const [displayValue, setDisplayValue] = useState(0);
-
-  useEffect(() => {
-    if (isInView && !hasAnimated) {
-      spring.set(value);
-      setHasAnimated(true);
-    }
-  }, [isInView, value, spring, hasAnimated]);
-
-  useEffect(() => {
-    const unsubscribe = display.on("change", (latest) => {
-      setDisplayValue(latest);
-    });
-    return unsubscribe;
-  }, [display]);
-
-  return (
-    <span ref={ref} className="tabular-nums">
-      {prefix}{displayValue}{suffix}
-    </span>
-  );
-};
 
 interface SummaryStat {
   value: number;
