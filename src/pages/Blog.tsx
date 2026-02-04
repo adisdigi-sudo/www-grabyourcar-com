@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { blogPosts, BlogPost } from "@/data/blogData";
@@ -43,8 +44,16 @@ const Blog = () => {
   const recentPosts = blogPosts.slice(1, 4);
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
+    <>
+      <Helmet>
+        <title>Car Blog | Reviews, Guides & Expert Tips | GrabYourCar</title>
+        <meta
+          name="description"
+          content="Read expert car reviews, buying guides, and tips from GrabYourCar. Get insights on new car launches, comparisons, and automotive industry news."
+        />
+      </Helmet>
+
+      <div className="min-h-screen bg-background">
 
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-primary/10 via-background to-accent/10 py-12 md:py-16">
@@ -199,7 +208,8 @@ const Blog = () => {
       </section>
 
       <Footer />
-    </div>
+      </div>
+    </>
   );
 };
 

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Helmet } from "react-helmet-async";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -186,7 +187,16 @@ const CarLoans = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <>
+      <Helmet>
+        <title>Car Loan at Best Rates | Compare EMI & Apply Online | GrabYourCar</title>
+        <meta
+          name="description"
+          content="Compare car loan rates from 15+ banks. Get instant approval starting 8.45% p.a., flexible EMI options, and up to ₹1 Crore financing. Apply online now!"
+        />
+      </Helmet>
+      
+      <div className="min-h-screen bg-background">
       <Header />
 
       {/* Service Banner */}
@@ -552,7 +562,8 @@ const CarLoans = () => {
       </section>
 
       <Footer />
-    </div>
+      </div>
+    </>
   );
 };
 
