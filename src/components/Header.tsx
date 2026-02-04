@@ -199,12 +199,7 @@ export const Header = () => {
                           My Orders
                         </Link>
                       </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link to="/admin" className="cursor-pointer">
-                          <Settings className="h-4 w-4 mr-2" />
-                          Admin
-                        </Link>
-                      </DropdownMenuItem>
+                      {/* Admin link removed from public menu for security - access via /admin directly */}
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-destructive">
                         <LogOut className="h-4 w-4 mr-2" />
@@ -320,14 +315,7 @@ export const Header = () => {
                     <Heart className="h-5 w-5" />
                     My Favorites
                   </Link>
-                  <Link
-                    to="/admin"
-                    className="px-4 py-4 text-lg font-medium text-foreground hover:bg-muted rounded-xl transition-colors flex items-center gap-3"
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    <Settings className="h-5 w-5" />
-                    Admin
-                  </Link>
+                  {/* Admin link removed from mobile menu for security - access via /admin directly */}
                   <div className="px-4 py-2 text-sm text-muted-foreground">
                     {user.email}
                   </div>
