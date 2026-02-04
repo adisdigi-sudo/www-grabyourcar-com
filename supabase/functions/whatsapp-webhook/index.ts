@@ -9,7 +9,6 @@ const corsHeaders = {
 const WHATSAPP_API_URL = "https://graph.facebook.com/v18.0";
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -17,6 +16,7 @@ serve(async (req) => {
   const WHATSAPP_ACCESS_TOKEN = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
   const WHATSAPP_PHONE_NUMBER_ID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
   const WHATSAPP_VERIFY_TOKEN = Deno.env.get("WHATSAPP_VERIFY_TOKEN");
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
@@ -53,7 +53,6 @@ serve(async (req) => {
       const body = await req.json();
       console.log("Incoming webhook:", JSON.stringify(body, null, 2));
 
-      // Process the webhook payload
       const entry = body.entry?.[0];
       const changes = entry?.changes?.[0];
       const value = changes?.value;
@@ -62,47 +61,99 @@ serve(async (req) => {
       if (value?.messages?.[0]) {
         const message = value.messages[0];
         const contact = value.contacts?.[0];
-        const from = message.from; // Sender's phone number
+        const from = message.from;
         const messageType = message.type;
         const messageText = message.text?.body || "";
-        const senderName = contact?.profile?.name || "Unknown";
+        const senderName = contact?.profile?.name || "Customer";
 
         console.log(`Message from ${senderName} (${from}): ${messageText}`);
 
-        // Create Supabase client for lead capture
+        // Create Supabase client
         const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
 
-        // Save as lead in database
-        const { error: leadError } = await supabase.from("leads").insert({
-          customer_name: senderName,
-          phone: from.replace(/^91/, "+91 ").replace(/(\d{5})(\d{5})$/, "$1 $2"),
-          source: "whatsapp",
-          lead_type: "whatsapp_inquiry",
-          notes: `WhatsApp message: ${messageText}`,
-          status: "new",
-          priority: "high", // WhatsApp leads are high intent
-        });
+        // Get or create conversation history for this phone number
+        const { data: existingConvo } = await supabase
+          .from("whatsapp_conversations")
+          .select("*")
+          .eq("phone_number", from)
+          .single();
 
-        if (leadError) {
-          console.error("Failed to save lead:", leadError);
+        let conversationHistory: Array<{ role: string; content: string }> = [];
+        let conversationId: string;
+
+        if (existingConvo) {
+          conversationId = existingConvo.id;
+          conversationHistory = existingConvo.messages || [];
         } else {
-          console.log("Lead saved successfully");
+          // Create new conversation
+          const { data: newConvo, error } = await supabase
+            .from("whatsapp_conversations")
+            .insert({
+              phone_number: from,
+              customer_name: senderName,
+              messages: [],
+              status: "active",
+            })
+            .select()
+            .single();
+
+          if (error) {
+            console.error("Failed to create conversation:", error);
+          }
+          conversationId = newConvo?.id;
         }
 
-        // Send auto-reply
-        const autoReplyText = getAutoReply(messageText.toLowerCase());
+        // Add user message to history
+        conversationHistory.push({ role: "user", content: messageText });
+
+        // Generate AI response
+        let aiResponse: string;
+        
+        if (LOVABLE_API_KEY) {
+          aiResponse = await generateAIResponse(LOVABLE_API_KEY, senderName, messageText, conversationHistory);
+        } else {
+          aiResponse = getStaticResponse(messageText.toLowerCase());
+        }
+
+        // Add AI response to history
+        conversationHistory.push({ role: "assistant", content: aiResponse });
+
+        // Update conversation in database (keep last 20 messages)
+        const trimmedHistory = conversationHistory.slice(-20);
+        await supabase
+          .from("whatsapp_conversations")
+          .update({
+            messages: trimmedHistory,
+            last_message_at: new Date().toISOString(),
+          })
+          .eq("id", conversationId);
+
+        // Save as lead (only for new conversations or important intents)
+        if (!existingConvo || detectHighIntent(messageText)) {
+          await supabase.from("leads").upsert({
+            phone: formatPhoneNumber(from),
+            customer_name: senderName,
+            source: "whatsapp_chatbot",
+            lead_type: detectLeadType(messageText),
+            notes: `Latest: ${messageText}`,
+            status: existingConvo ? "contacted" : "new",
+            priority: detectHighIntent(messageText) ? "high" : "medium",
+          }, { onConflict: "phone" });
+        }
+
+        // Send response via WhatsApp
         await sendWhatsAppMessage(
           WHATSAPP_PHONE_NUMBER_ID,
           WHATSAPP_ACCESS_TOKEN,
           from,
-          autoReplyText
+          aiResponse
         );
       }
 
       // Handle message status updates
       if (value?.statuses?.[0]) {
         const status = value.statuses[0];
-        console.log(`Message status update: ${status.status} for ${status.id}`);
+        console.log(`Message status: ${status.status} for ${status.id}`);
       }
 
       return new Response(JSON.stringify({ success: true }), {
@@ -121,80 +172,165 @@ serve(async (req) => {
   return new Response("Method not allowed", { status: 405 });
 });
 
-// Generate smart auto-reply based on message content
-function getAutoReply(message: string): string {
-  if (message.includes("price") || message.includes("on-road") || message.includes("cost")) {
-    return `🚗 *GrabYourCar - Best Price Guarantee*
+// Generate AI response using Lovable AI
+async function generateAIResponse(
+  apiKey: string,
+  customerName: string,
+  currentMessage: string,
+  conversationHistory: Array<{ role: string; content: string }>
+): Promise<string> {
+  const systemPrompt = `You are GrabYourCar's WhatsApp car buying assistant. You help customers find their perfect car in India.
 
-Thank you for reaching out! 
+PERSONALITY:
+- Friendly, professional, and helpful
+- Use emojis sparingly (1-2 per message max)
+- Keep responses concise (under 200 words) - this is WhatsApp
+- Use bullet points for lists
+- Always be proactive in offering help
 
-For the best on-road price and exclusive offers, our car expert will call you within 5 minutes.
+KNOWLEDGE:
+- Brands available: Maruti Suzuki, Hyundai, Tata, Mahindra, Kia, Toyota, Honda, MG, Skoda, Volkswagen
+- Services: New car sales, car loans (8.5% onwards), insurance (up to 70% discount), HSRP, accessories
+- We have 20+ verified dealers across major Indian cities
+- Website: grabyourcar.lovable.app
 
-Meanwhile, you can:
-📱 Browse cars: grabyourcar.lovable.app/cars
-💰 Check EMI: grabyourcar.lovable.app/car-loans
-🏪 Find dealers: grabyourcar.lovable.app/dealers
+CAPABILITIES:
+- Recommend cars based on budget, preferences, family size
+- Explain differences between variants
+- Provide approximate price ranges
+- Answer questions about features, mileage, safety
+- Help with loan/EMI calculations
+- Connect with nearest dealer
 
-_Your dream car is just a call away!_`;
+RESPONSE FORMAT:
+- Start with a brief acknowledgment
+- Provide clear, actionable information
+- End with a follow-up question OR offer to connect with expert
+
+IMPORTANT:
+- If customer wants to speak to a human, say our expert will call within 5 minutes
+- For exact prices, say "Our team will share the best on-road price for your city"
+- Never make up specific prices - give ranges like "₹8-12 Lakh"`;
+
+  try {
+    const messages = [
+      { role: "system", content: systemPrompt },
+      ...conversationHistory.slice(-10), // Last 10 messages for context
+    ];
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages,
+        max_tokens: 500,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("AI API error:", response.status);
+      return getStaticResponse(currentMessage.toLowerCase());
+    }
+
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content || getStaticResponse(currentMessage.toLowerCase());
+  } catch (error) {
+    console.error("AI generation error:", error);
+    return getStaticResponse(currentMessage.toLowerCase());
+  }
+}
+
+// Fallback static responses
+function getStaticResponse(message: string): string {
+  if (message.includes("price") || message.includes("cost") || message.includes("kitna")) {
+    return `🚗 *Best Price Guarantee*
+
+Thank you for your interest! For the best on-road price in your city, our car expert will call you within 5 minutes.
+
+Quick links:
+• Browse cars: grabyourcar.lovable.app/cars
+• EMI Calculator: grabyourcar.lovable.app/car-loans
+
+Which car model are you interested in?`;
   }
 
   if (message.includes("loan") || message.includes("emi") || message.includes("finance")) {
-    return `💰 *GrabYourCar Car Finance*
+    return `💰 *Car Finance Made Easy*
 
-Great! We offer:
-✅ Lowest interest rates from 8.5%
-✅ Up to 100% on-road funding
-✅ 7-year flexible tenure
-✅ Instant approval
+We offer:
+• Interest from 8.5%
+• Up to 100% funding
+• 7-year tenure
+• Instant approval
 
-Our finance expert will call you shortly with personalized options.
+Our finance expert will call you shortly!
 
-📱 Calculate EMI now: grabyourcar.lovable.app/car-loans`;
+Calculate EMI: grabyourcar.lovable.app/car-loans`;
   }
 
-  if (message.includes("insurance")) {
-    return `🛡️ *GrabYourCar Insurance*
-
-We partner with top insurers for:
-✅ Up to 70% discount on premium
-✅ Zero paperwork
-✅ Instant policy issuance
-✅ 24/7 claim support
-
-Our insurance advisor will reach out shortly!
-
-📱 Get quotes: grabyourcar.lovable.app/car-insurance`;
-  }
-
-  if (message.includes("dealer") || message.includes("showroom") || message.includes("visit")) {
-    return `🏪 *GrabYourCar Dealer Network*
-
-We have 20+ verified dealers across India!
-
-Our team will connect you with the nearest authorized dealer with exclusive GrabYourCar offers.
-
-📱 Find dealers: grabyourcar.lovable.app/dealers`;
-  }
-
-  // Default reply
-  return `👋 *Welcome to GrabYourCar!*
+  if (message.includes("hi") || message.includes("hello") || message.includes("hey")) {
+    return `👋 *Welcome to GrabYourCar!*
 
 India's Smarter Way to Buy New Cars.
 
-Thank you for reaching out! Our car buying expert will call you within 5 minutes.
+How can I help you today?
+1️⃣ Find the perfect car
+2️⃣ Check prices & offers
+3️⃣ Calculate EMI
+4️⃣ Locate nearest dealer
 
-*What we offer:*
-🚗 Best Price Guarantee
-🏪 20+ Verified Dealers
-💰 Easy Car Finance
-🛡️ Comprehensive Insurance
+Just type your preference or ask any question!`;
+  }
 
-📱 Explore: grabyourcar.lovable.app
+  return `Thank you for your message! 🚗
 
-_How can we help you today?_`;
+Our car expert will connect with you shortly to assist you better.
+
+Meanwhile, explore: grabyourcar.lovable.app
+
+What specific car or query can I help you with?`;
 }
 
-// Send WhatsApp message via Cloud API
+// Detect high-intent messages
+function detectHighIntent(message: string): boolean {
+  const highIntentKeywords = [
+    "buy", "purchase", "book", "price", "offer", "discount",
+    "loan", "emi", "finance", "dealer", "showroom", "test drive",
+    "delivery", "available", "stock", "waiting"
+  ];
+  const lowerMessage = message.toLowerCase();
+  return highIntentKeywords.some(keyword => lowerMessage.includes(keyword));
+}
+
+// Detect lead type from message
+function detectLeadType(message: string): string {
+  const lowerMessage = message.toLowerCase();
+  if (lowerMessage.includes("loan") || lowerMessage.includes("emi") || lowerMessage.includes("finance")) {
+    return "finance_inquiry";
+  }
+  if (lowerMessage.includes("insurance")) {
+    return "insurance_inquiry";
+  }
+  if (lowerMessage.includes("dealer") || lowerMessage.includes("showroom")) {
+    return "dealer_visit";
+  }
+  return "car_inquiry";
+}
+
+// Format phone number for display
+function formatPhoneNumber(phone: string): string {
+  const cleaned = phone.replace(/\D/g, "");
+  if (cleaned.startsWith("91") && cleaned.length === 12) {
+    return `+91 ${cleaned.slice(2, 7)} ${cleaned.slice(7)}`;
+  }
+  return phone;
+}
+
+// Send WhatsApp message
 async function sendWhatsAppMessage(
   phoneNumberId: string,
   accessToken: string,
@@ -223,13 +359,10 @@ async function sendWhatsAppMessage(
     if (!response.ok) {
       const errorData = await response.text();
       console.error("WhatsApp API error:", response.status, errorData);
-      throw new Error(`WhatsApp API error: ${response.status}`);
+    } else {
+      console.log("Message sent successfully");
     }
-
-    const result = await response.json();
-    console.log("Message sent successfully:", result);
   } catch (error) {
     console.error("Failed to send WhatsApp message:", error);
-    throw error;
   }
 }
