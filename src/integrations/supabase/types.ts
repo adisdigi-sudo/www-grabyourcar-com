@@ -38,6 +38,72 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_settings: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          setting_key: string
+          setting_value: Json
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      analytics_events: {
+        Row: {
+          created_at: string | null
+          device_type: string | null
+          event_data: Json | null
+          event_type: string
+          id: string
+          page_url: string | null
+          referrer: string | null
+          session_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          device_type?: string | null
+          event_data?: Json | null
+          event_type: string
+          id?: string
+          page_url?: string | null
+          referrer?: string | null
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          device_type?: string | null
+          event_data?: Json | null
+          event_type?: string
+          id?: string
+          page_url?: string | null
+          referrer?: string | null
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       car_brochures: {
         Row: {
           car_id: string
@@ -559,6 +625,54 @@ export type Database = {
         }
         Relationships: []
       }
+      homepage_content: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          link_text: string | null
+          link_url: string | null
+          metadata: Json | null
+          section_type: string
+          sort_order: number | null
+          subtitle: string | null
+          title: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          link_text?: string | null
+          link_url?: string | null
+          metadata?: Json | null
+          section_type: string
+          sort_order?: number | null
+          subtitle?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          link_text?: string | null
+          link_url?: string | null
+          metadata?: Json | null
+          section_type?: string
+          sort_order?: number | null
+          subtitle?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       hsrp_bookings: {
         Row: {
           address: string | null
@@ -691,6 +805,218 @@ export type Database = {
         }
         Relationships: []
       }
+      lead_activities: {
+        Row: {
+          activity_type: string
+          created_at: string | null
+          description: string | null
+          id: string
+          lead_id: string
+          metadata: Json | null
+          outcome: string | null
+          performed_by: string | null
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          lead_id: string
+          metadata?: Json | null
+          outcome?: string | null
+          performed_by?: string | null
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          lead_id?: string
+          metadata?: Json | null
+          outcome?: string | null
+          performed_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_activities_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leads: {
+        Row: {
+          assigned_at: string | null
+          assigned_to: string | null
+          budget_max: number | null
+          budget_min: number | null
+          buying_timeline: string | null
+          car_brand: string | null
+          car_model: string | null
+          car_variant: string | null
+          city: string | null
+          created_at: string | null
+          customer_name: string
+          email: string | null
+          follow_up_count: number | null
+          id: string
+          landing_page: string | null
+          last_contacted_at: string | null
+          lead_type: string
+          next_follow_up_at: string | null
+          notes: string | null
+          phone: string
+          priority: string | null
+          source: string
+          status: string
+          tags: string[] | null
+          updated_at: string | null
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_to?: string | null
+          budget_max?: number | null
+          budget_min?: number | null
+          buying_timeline?: string | null
+          car_brand?: string | null
+          car_model?: string | null
+          car_variant?: string | null
+          city?: string | null
+          created_at?: string | null
+          customer_name: string
+          email?: string | null
+          follow_up_count?: number | null
+          id?: string
+          landing_page?: string | null
+          last_contacted_at?: string | null
+          lead_type: string
+          next_follow_up_at?: string | null
+          notes?: string | null
+          phone: string
+          priority?: string | null
+          source: string
+          status?: string
+          tags?: string[] | null
+          updated_at?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_to?: string | null
+          budget_max?: number | null
+          budget_min?: number | null
+          buying_timeline?: string | null
+          car_brand?: string | null
+          car_model?: string | null
+          car_variant?: string | null
+          city?: string | null
+          created_at?: string | null
+          customer_name?: string
+          email?: string | null
+          follow_up_count?: number | null
+          id?: string
+          landing_page?: string | null
+          last_contacted_at?: string | null
+          lead_type?: string
+          next_follow_up_at?: string | null
+          notes?: string | null
+          phone?: string
+          priority?: string | null
+          source?: string
+          status?: string
+          tags?: string[] | null
+          updated_at?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Relationships: []
+      }
+      rental_bookings: {
+        Row: {
+          created_at: string | null
+          daily_rate: number
+          driver_license_number: string | null
+          dropoff_date: string
+          dropoff_location: string
+          dropoff_time: string
+          id: string
+          notes: string | null
+          payment_id: string | null
+          payment_status: string
+          pickup_date: string
+          pickup_location: string
+          pickup_time: string
+          security_deposit: number | null
+          status: string
+          subtotal: number
+          total_amount: number
+          total_days: number
+          updated_at: string | null
+          user_id: string
+          vehicle_image: string | null
+          vehicle_name: string
+          vehicle_type: string
+        }
+        Insert: {
+          created_at?: string | null
+          daily_rate: number
+          driver_license_number?: string | null
+          dropoff_date: string
+          dropoff_location: string
+          dropoff_time: string
+          id?: string
+          notes?: string | null
+          payment_id?: string | null
+          payment_status?: string
+          pickup_date: string
+          pickup_location: string
+          pickup_time: string
+          security_deposit?: number | null
+          status?: string
+          subtotal: number
+          total_amount: number
+          total_days: number
+          updated_at?: string | null
+          user_id: string
+          vehicle_image?: string | null
+          vehicle_name: string
+          vehicle_type: string
+        }
+        Update: {
+          created_at?: string | null
+          daily_rate?: number
+          driver_license_number?: string | null
+          dropoff_date?: string
+          dropoff_location?: string
+          dropoff_time?: string
+          id?: string
+          notes?: string | null
+          payment_id?: string | null
+          payment_status?: string
+          pickup_date?: string
+          pickup_location?: string
+          pickup_time?: string
+          security_deposit?: number | null
+          status?: string
+          subtotal?: number
+          total_amount?: number
+          total_days?: number
+          updated_at?: string | null
+          user_id?: string
+          vehicle_image?: string | null
+          vehicle_name?: string
+          vehicle_type?: string
+        }
+        Relationships: []
+      }
       sync_logs: {
         Row: {
           cars_enhanced: number | null
@@ -730,15 +1056,46 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "super_admin" | "admin" | "sales" | "dealer" | "finance"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -865,6 +1222,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["super_admin", "admin", "sales", "dealer", "finance"],
+    },
   },
 } as const

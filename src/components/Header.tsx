@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Phone, MessageCircle, Heart, User, LogOut, Settings, Home, Search, Menu, X, ChevronDown, Car, CreditCard, Shield, Package, Building2, CarFront, RectangleHorizontal } from "lucide-react";
+import { Phone, MessageCircle, Heart, User, LogOut, Settings, Home, Search, Menu, X, ChevronDown, Car, CreditCard, Shield, Package, Building2, CarFront, RectangleHorizontal, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -179,6 +179,12 @@ export const Header = () => {
                         <Link to="/favorites" className="cursor-pointer">
                           <Heart className="h-4 w-4 mr-2" />
                           My Favorites
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/my-bookings" className="cursor-pointer">
+                          <Calendar className="h-4 w-4 mr-2" />
+                          My Bookings
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
