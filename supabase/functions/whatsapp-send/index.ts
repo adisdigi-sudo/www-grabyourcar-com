@@ -5,14 +5,14 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const WHATSAPP_API_URL = "https://graph.facebook.com/v18.0";
+// Finbite API endpoint
+const FINBITE_API_URL = "https://app.finbite.in/api/v1/send_msg/";
 
 interface SendMessageRequest {
   to: string;
   message?: string;
-  templateName?: string;
-  templateLanguage?: string;
-  templateParams?: string[];
+  messageType?: number; // 0 = text, 1 = image, 2 = PDF
+  mediaUrl?: string;
 }
 
 serve(async (req) => {
@@ -21,18 +21,19 @@ serve(async (req) => {
   }
 
   try {
-    const WHATSAPP_ACCESS_TOKEN = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
-    const WHATSAPP_PHONE_NUMBER_ID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
+    const FINBITE_CLIENT_ID = Deno.env.get("FINBITE_CLIENT_ID");
+    const FINBITE_API_KEY = Deno.env.get("FINBITE_API_KEY");
+    const FINBITE_WHATSAPP_CLIENT = Deno.env.get("FINBITE_WHATSAPP_CLIENT");
 
-    if (!WHATSAPP_ACCESS_TOKEN || !WHATSAPP_PHONE_NUMBER_ID) {
-      console.error("Missing WhatsApp configuration");
+    if (!FINBITE_CLIENT_ID || !FINBITE_API_KEY || !FINBITE_WHATSAPP_CLIENT) {
+      console.error("Missing Finbite configuration");
       return new Response(
         JSON.stringify({ error: "WhatsApp not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const { to, message, templateName, templateLanguage, templateParams }: SendMessageRequest = await req.json();
+    const { to, message, messageType = 0, mediaUrl }: SendMessageRequest = await req.json();
 
     if (!to) {
       return new Response(
@@ -41,70 +42,48 @@ serve(async (req) => {
       );
     }
 
-    // Format phone number (ensure it starts with country code)
+    // Format phone number (ensure it starts with country code, no + sign)
     const formattedPhone = to.replace(/\D/g, "").replace(/^0+/, "");
     const phoneWithCountry = formattedPhone.startsWith("91") ? formattedPhone : `91${formattedPhone}`;
 
-    let payload: Record<string, unknown>;
+    // Build Finbite API payload
+    const payload: Record<string, unknown> = {
+      client_id: parseInt(FINBITE_CLIENT_ID),
+      api_key: FINBITE_API_KEY,
+      whatsapp_client: parseInt(FINBITE_WHATSAPP_CLIENT),
+      phone: phoneWithCountry,
+      msg: message || "Hello from GrabYourCar!",
+      msg_type: messageType,
+    };
 
-    if (templateName) {
-      // Send template message
-      payload = {
-        messaging_product: "whatsapp",
-        recipient_type: "individual",
-        to: phoneWithCountry,
-        type: "template",
-        template: {
-          name: templateName,
-          language: { code: templateLanguage || "en" },
-          components: templateParams?.length
-            ? [
-                {
-                  type: "body",
-                  parameters: templateParams.map((p) => ({ type: "text", text: p })),
-                },
-              ]
-            : undefined,
-        },
-      };
-    } else {
-      // Send text message
-      payload = {
-        messaging_product: "whatsapp",
-        recipient_type: "individual",
-        to: phoneWithCountry,
-        type: "text",
-        text: { body: message || "Hello from GrabYourCar!" },
-      };
+    // Add media URL if sending image/file
+    if (mediaUrl && messageType > 0) {
+      payload.media_url = mediaUrl;
     }
 
-    console.log("Sending WhatsApp message:", JSON.stringify(payload));
+    console.log("Sending WhatsApp message via Finbite:", JSON.stringify({ ...payload, api_key: "[REDACTED]" }));
 
-    const response = await fetch(
-      `${WHATSAPP_API_URL}/${WHATSAPP_PHONE_NUMBER_ID}/messages`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      }
-    );
+    const response = await fetch(FINBITE_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
 
     const result = await response.json();
 
     if (!response.ok) {
-      console.error("WhatsApp API error:", result);
+      console.error("Finbite API error:", result);
       return new Response(
         JSON.stringify({ error: "Failed to send message", details: result }),
         { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log("Message sent successfully:", result);
+    console.log("Message sent successfully via Finbite:", result);
     return new Response(
-      JSON.stringify({ success: true, messageId: result.messages?.[0]?.id }),
+      JSON.stringify({ success: true, result }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
