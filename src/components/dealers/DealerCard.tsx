@@ -11,6 +11,7 @@ import {
   Mail,
   CheckCircle2
 } from "lucide-react";
+import { getWhatsAppUrl, whatsappMessages } from "@/components/WhatsAppCTA";
 import type { Dealer } from "@/data/dealerLocatorData";
 
 interface DealerCardProps {
@@ -21,8 +22,8 @@ interface DealerCardProps {
 
 export const DealerCard = ({ dealer, distance, onGetDirections }: DealerCardProps) => {
   const handleWhatsApp = () => {
-    const message = `Hi, I found ${dealer.name} on GrabYourCar. I'm interested in getting the best deal. Please share more details.`;
-    window.open(`https://wa.me/${dealer.whatsapp}?text=${encodeURIComponent(message)}`, "_blank");
+    const message = whatsappMessages.dealerSpecific(dealer.name, dealer.city);
+    window.open(getWhatsAppUrl(message), "_blank");
   };
 
   const handleCall = () => {

@@ -23,6 +23,7 @@ import {
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { ServiceBanner } from "@/components/ServiceBanner";
+import { WhatsAppCTA, whatsappMessages } from "@/components/WhatsAppCTA";
 import EMICalculator from "@/components/EMICalculator";
 import {
   CheckCircle2,
@@ -560,13 +561,17 @@ const CarLoans = () => {
                   Our experts will guide you through the entire loan process and help you get the best rates.
                 </p>
                 <div className="flex flex-wrap justify-center gap-4">
-                  <Button variant="secondary" size="lg" className="gap-2">
-                    <Phone className="w-5 h-5" />
-                    Call: 1800-XXX-XXXX
-                  </Button>
-                  <Button variant="outline" size="lg" className="bg-white/10 border-white/30 text-white hover:bg-white/20">
-                    Apply Online
-                  </Button>
+                  <WhatsAppCTA
+                    message={whatsappMessages.loan}
+                    label="Get Loan Assistance"
+                    size="lg"
+                  />
+                  <a href="tel:+919855924442">
+                    <Button variant="secondary" size="lg" className="gap-2">
+                      <Phone className="w-5 h-5" />
+                      Talk to Expert
+                    </Button>
+                  </a>
                 </div>
               </CardContent>
             </Card>

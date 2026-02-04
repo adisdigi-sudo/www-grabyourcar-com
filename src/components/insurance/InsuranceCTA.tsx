@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Car, Phone, MessageCircle, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { WhatsAppCTA, whatsappMessages } from "@/components/WhatsAppCTA";
 
 export function InsuranceCTA() {
   return (
@@ -37,14 +38,22 @@ export function InsuranceCTA() {
                 <Car className="h-5 w-5" />
                 Get Free Quote
               </Button>
-              <Button
+              <WhatsAppCTA
+                message={whatsappMessages.insurance}
+                label="Get Insurance Quote"
                 size="lg"
-                variant="outline"
-                className="gap-2 text-base h-12 px-8 bg-transparent border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground hover:text-primary"
-              >
-                <Phone className="h-5 w-5" />
-                Talk to Expert
-              </Button>
+                className="h-12 px-8 text-base"
+              />
+              <a href="tel:+919855924442">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="gap-2 text-base h-12 px-8 bg-transparent border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground hover:text-primary"
+                >
+                  <Phone className="h-5 w-5" />
+                  Talk to Expert
+                </Button>
+              </a>
             </div>
 
             <div className="mt-8 flex flex-wrap justify-center gap-6 text-sm">

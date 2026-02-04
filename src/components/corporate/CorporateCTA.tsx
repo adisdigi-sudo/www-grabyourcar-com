@@ -3,9 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { Phone, Mail, ArrowRight, CheckCircle } from "lucide-react";
+import { Phone, Mail, ArrowRight, CheckCircle, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { WhatsAppCTA, whatsappMessages } from "@/components/WhatsAppCTA";
 
 export const CorporateCTA = () => {
   const [formData, setFormData] = useState({
@@ -131,6 +132,16 @@ export const CorporateCTA = () => {
                   <p className="font-semibold">corporate@grabyourcar.com</p>
                 </div>
               </a>
+            </div>
+
+            {/* WhatsApp CTA */}
+            <div className="mt-8">
+              <WhatsAppCTA
+                message={whatsappMessages.corporate}
+                label="Chat for Corporate Deals"
+                size="lg"
+                className="w-full sm:w-auto"
+              />
             </div>
           </div>
 
