@@ -4,5 +4,6 @@ export { CorporateWhyChoose } from "./CorporateWhyChoose";
 export { CorporateIndustries } from "./CorporateIndustries";
 export { CorporateCaseStudies } from "./CorporateCaseStudies";
 export { CorporateBrochureDownload } from "./CorporateBrochureDownload";
+export { CorporateFAQ } from "./CorporateFAQ";
 export { CorporateSocialProof } from "./CorporateSocialProof";
 export { CorporateCTA } from "./CorporateCTA";

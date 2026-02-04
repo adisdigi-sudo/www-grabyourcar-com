@@ -7,6 +7,7 @@ import {
   CorporateIndustries,
   CorporateCaseStudies,
   CorporateBrochureDownload,
+  CorporateFAQ,
   CorporateSocialProof,
   CorporateCTA,
 } from "@/components/corporate";
@@ -33,6 +34,9 @@ const CorporateBuying = () => {
 
       {/* Brochure Download */}
       <CorporateBrochureDownload />
+
+      {/* FAQ Section */}
+      <CorporateFAQ />
 
       {/* Social Proof */}
       <CorporateSocialProof />
