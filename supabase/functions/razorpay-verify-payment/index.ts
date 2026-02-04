@@ -10,7 +10,7 @@ interface VerifyPaymentRequest {
   razorpay_order_id: string;
   razorpay_payment_id: string;
   razorpay_signature: string;
-  bookingType: "hsrp" | "rental";
+  bookingType: "hsrp" | "rental" | "accessories";
   bookingId: string;
 }
 
@@ -79,7 +79,21 @@ serve(async (req) => {
     // Use service role to update booking (bypass RLS for admin operations)
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
     
-    const tableName = bookingType === "hsrp" ? "hsrp_bookings" : "rental_bookings";
+    // Get table name based on booking type
+    let tableName: string;
+    switch (bookingType) {
+      case "hsrp":
+        tableName = "hsrp_bookings";
+        break;
+      case "rental":
+        tableName = "rental_bookings";
+        break;
+      case "accessories":
+        tableName = "accessory_orders";
+        break;
+      default:
+        throw new Error("Invalid booking type");
+    }
     
     const { data: booking, error: updateError } = await supabaseAdmin
       .from(tableName)
