@@ -1,0 +1,161 @@
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Search, MapPin, LocateFixed, X } from "lucide-react";
+import { brands, cities, states } from "@/data/dealerLocatorData";
+
+interface DealerFiltersProps {
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
+  selectedBrand: string;
+  setSelectedBrand: (brand: string) => void;
+  selectedCity: string;
+  setSelectedCity: (city: string) => void;
+  selectedState: string;
+  setSelectedState: (state: string) => void;
+  onDetectLocation: () => void;
+  isDetecting: boolean;
+  detectedLocation: string | null;
+}
+
+export const DealerFilters = ({
+  searchQuery,
+  setSearchQuery,
+  selectedBrand,
+  setSelectedBrand,
+  selectedCity,
+  setSelectedCity,
+  selectedState,
+  setSelectedState,
+  onDetectLocation,
+  isDetecting,
+  detectedLocation,
+}: DealerFiltersProps) => {
+  const clearFilters = () => {
+    setSearchQuery("");
+    setSelectedBrand("All Brands");
+    setSelectedCity("");
+    setSelectedState("");
+  };
+
+  const hasActiveFilters = searchQuery || selectedBrand !== "All Brands" || selectedCity || selectedState;
+
+  return (
+    <div className="bg-card border rounded-xl p-4 md:p-6 space-y-4">
+      {/* Location Detection */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <Button
+          onClick={onDetectLocation}
+          disabled={isDetecting}
+          variant="outline"
+          className="gap-2 flex-1 sm:flex-none border-primary/30 hover:bg-primary/5"
+        >
+          <LocateFixed className={`h-4 w-4 ${isDetecting ? "animate-pulse" : ""}`} />
+          {isDetecting ? "Detecting..." : "Use My Location"}
+        </Button>
+        {detectedLocation && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 px-3 py-2 rounded-lg">
+            <MapPin className="h-4 w-4 text-primary" />
+            <span>{detectedLocation}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Search & Filters */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* Search Input */}
+        <div className="relative sm:col-span-2 lg:col-span-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by dealer, city, pincode..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+
+        {/* Brand Filter */}
+        <Select value={selectedBrand} onValueChange={setSelectedBrand}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select Brand" />
+          </SelectTrigger>
+          <SelectContent>
+            {brands.map((brand) => (
+              <SelectItem key={brand} value={brand}>
+                {brand}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* State Filter */}
+        <Select value={selectedState} onValueChange={setSelectedState}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select State" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">All States</SelectItem>
+            {states.map((state) => (
+              <SelectItem key={state} value={state}>
+                {state}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* City Filter */}
+        <Select value={selectedCity} onValueChange={setSelectedCity}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select City" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">All Cities</SelectItem>
+            {cities.map((city) => (
+              <SelectItem key={city} value={city}>
+                {city}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Active Filters & Clear */}
+      {hasActiveFilters && (
+        <div className="flex items-center justify-between pt-2 border-t">
+          <div className="flex flex-wrap gap-2">
+            {searchQuery && (
+              <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
+                "{searchQuery}"
+              </span>
+            )}
+            {selectedBrand !== "All Brands" && (
+              <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
+                {selectedBrand}
+              </span>
+            )}
+            {selectedState && (
+              <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
+                {selectedState}
+              </span>
+            )}
+            {selectedCity && (
+              <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
+                {selectedCity}
+              </span>
+            )}
+          </div>
+          <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1 text-muted-foreground">
+            <X className="h-3 w-3" />
+            Clear All
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+};
