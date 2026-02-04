@@ -19,6 +19,7 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import logoImage from "@/assets/logo-grabyourcar-main.png";
 
 const services = [
@@ -109,7 +110,7 @@ export const Header = () => {
               <img 
                 src={logoImage} 
                 alt="Grabyourcar" 
-                className="h-8 sm:h-10 md:h-12 lg:h-14 w-auto max-w-[140px] sm:max-w-[160px] md:max-w-[200px] lg:max-w-[240px] object-contain" 
+                className="h-8 sm:h-10 md:h-12 lg:h-14 w-auto max-w-[140px] sm:max-w-[160px] md:max-w-[200px] lg:max-w-[240px] object-contain dark:brightness-0 dark:invert" 
               />
             </Link>
 
@@ -157,8 +158,9 @@ export const Header = () => {
               </NavigationMenuList>
             </NavigationMenu>
 
-            {/* CTA Buttons */}
+            {/* Theme Toggle & CTA Buttons */}
             <div className="flex items-center gap-1 md:gap-3 flex-shrink-0">
+              <ThemeToggle />
               {user ? (
                 <>
                   <Link to="/favorites">
