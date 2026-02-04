@@ -5,6 +5,7 @@ import {
   CorporateLogoGrid,
   CorporateWhyChoose,
   CorporateIndustries,
+  CorporateCaseStudies,
   CorporateSocialProof,
   CorporateCTA,
 } from "@/components/corporate";
@@ -25,6 +26,9 @@ const CorporateBuying = () => {
 
       {/* Why Choose Us */}
       <CorporateWhyChoose />
+
+      {/* Case Studies */}
+      <CorporateCaseStudies />
 
       {/* Social Proof */}
       <CorporateSocialProof />
