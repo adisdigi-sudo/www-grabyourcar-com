@@ -1,6 +1,11 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { cn } from "@/lib/utils";
+import { logAdminActivity } from "@/lib/adminActivityLogger";
+
+// Admin Components
+import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
 import { LeadManagement } from "@/components/admin/LeadManagement";
 import { HomepageManagement } from "@/components/admin/HomepageManagement";
@@ -8,24 +13,18 @@ import { HSRPManagement } from "@/components/admin/HSRPManagement";
 import { CarDataManagement } from "@/components/admin/CarDataManagement";
 import { RoleManagement } from "@/components/admin/RoleManagement";
 import { AIContentManagement } from "@/components/admin/AIContentManagement";
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
+import { CarCatalogManagement } from "@/components/admin/CarCatalogManagement";
+import { RentalManagement } from "@/components/admin/RentalManagement";
+import { AccessoriesManagement } from "@/components/admin/AccessoriesManagement";
+import { WebsiteSettings } from "@/components/admin/WebsiteSettings";
+import { WhatsAppManagement } from "@/components/admin/WhatsAppManagement";
+import { BlogManagement } from "@/components/admin/BlogManagement";
+
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { logAdminActivity } from "@/lib/adminActivityLogger";
-import { 
-  LayoutDashboard, 
-  Users, 
-  Image, 
-  Shield, 
-  Database,
-  UserCog,
-  Brain,
-} from "lucide-react";
+import { Shield } from "lucide-react";
 
 const AdminLayout = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { user, isLoading, isAdmin, roles } = useAdminAuth();
   const [activeTab, setActiveTab] = useState("dashboard");
 
@@ -45,7 +44,7 @@ const AdminLayout = () => {
   // Show loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
@@ -56,7 +55,7 @@ const AdminLayout = () => {
 
   if (!hasAdminAccess) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
         <Shield className="h-16 w-16 text-muted-foreground mb-4" />
         <h1 className="text-2xl font-bold mb-2">Access Denied</h1>
         <p className="text-muted-foreground mb-4">You don't have permission to access the admin panel.</p>
@@ -65,102 +64,99 @@ const AdminLayout = () => {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-background">
-      <Header />
+  // Render content based on active tab
+  const renderContent = () => {
+    switch (activeTab) {
+      case "dashboard":
+        return <AdminDashboard />;
       
-      <div className="container mx-auto px-4 py-6">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-          <p className="text-muted-foreground">
-            Manage your platform, leads, and content
-          </p>
+      // Lead Management
+      case "leads-all":
+      case "leads-hot":
+      case "leads-whatsapp":
+        return <LeadManagement />;
+      
+      // Car Catalog
+      case "cars-list":
+        return <CarCatalogManagement />;
+      case "cars-images":
+        return <CarCatalogManagement />;
+      case "cars-variants":
+        return <CarCatalogManagement />;
+      case "cars-compare":
+        return <CarCatalogManagement />;
+      case "cars-migration":
+        return <CarDataManagement />;
+      case "cars-ai":
+        return <AIContentManagement />;
+      
+      // Website Manager
+      case "website-homepage":
+        return <HomepageManagement />;
+      case "website-banners":
+        return <HomepageManagement />;
+      case "website-menu":
+        return <WebsiteSettings />;
+      case "website-branding":
+        return <WebsiteSettings />;
+      case "website-seo":
+        return <WebsiteSettings />;
+      
+      // Services
+      case "services-hsrp":
+        return <HSRPManagement />;
+      case "services-rentals":
+        return <RentalManagement />;
+      case "services-insurance":
+        return <WebsiteSettings />;
+      case "services-loans":
+        return <WebsiteSettings />;
+      
+      // E-Commerce
+      case "ecommerce-accessories":
+        return <AccessoriesManagement />;
+      case "ecommerce-orders":
+        return <AccessoriesManagement />;
+      
+      // Content
+      case "content-blog":
+        return <BlogManagement />;
+      case "content-news":
+        return <AIContentManagement />;
+      case "content-ai":
+        return <AIContentManagement />;
+      
+      // Integrations
+      case "integrations-whatsapp":
+        return <WhatsAppManagement />;
+      case "integrations-payments":
+        return <WebsiteSettings />;
+      
+      // User Management
+      case "roles":
+        return <RoleManagement />;
+      case "settings":
+        return <WebsiteSettings />;
+      
+      default:
+        return <AdminDashboard />;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-muted/30">
+      {/* Sidebar */}
+      <AdminSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+
+      {/* Main Content */}
+      <main className={cn(
+        "transition-all duration-300 min-h-screen",
+        "md:ml-64 p-6 pt-16 md:pt-6"
+      )}>
+        <div className="max-w-7xl mx-auto">
+          {renderContent()}
         </div>
-
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="flex-wrap h-auto gap-2 bg-transparent p-0">
-            <TabsTrigger 
-              value="dashboard" 
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2"
-            >
-              <LayoutDashboard className="h-4 w-4" />
-              Dashboard
-            </TabsTrigger>
-            <TabsTrigger 
-              value="leads" 
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2"
-            >
-              <Users className="h-4 w-4" />
-              Leads
-            </TabsTrigger>
-            <TabsTrigger 
-              value="hsrp" 
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2"
-            >
-              <Shield className="h-4 w-4" />
-              HSRP Bookings
-            </TabsTrigger>
-            <TabsTrigger 
-              value="homepage" 
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2"
-            >
-              <Image className="h-4 w-4" />
-              Homepage
-            </TabsTrigger>
-            <TabsTrigger 
-              value="data" 
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2"
-            >
-              <Database className="h-4 w-4" />
-              Data & Migration
-            </TabsTrigger>
-            <TabsTrigger 
-              value="roles" 
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2"
-            >
-              <UserCog className="h-4 w-4" />
-              Roles
-            </TabsTrigger>
-            <TabsTrigger 
-              value="ai-content" 
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2"
-            >
-              <Brain className="h-4 w-4" />
-              AI Content
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="dashboard">
-            <AdminDashboard />
-          </TabsContent>
-
-          <TabsContent value="leads">
-            <LeadManagement />
-          </TabsContent>
-
-          <TabsContent value="hsrp">
-            <HSRPManagement />
-          </TabsContent>
-
-          <TabsContent value="homepage">
-            <HomepageManagement />
-          </TabsContent>
-
-          <TabsContent value="data">
-            <CarDataManagement />
-          </TabsContent>
-
-          <TabsContent value="roles">
-            <RoleManagement />
-          </TabsContent>
-
-          <TabsContent value="ai-content">
-            <AIContentManagement />
-          </TabsContent>
-        </Tabs>
-      </div>
-
-      <Footer />
+      </main>
     </div>
   );
 };
