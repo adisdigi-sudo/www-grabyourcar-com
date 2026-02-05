@@ -14,6 +14,13 @@ import { FloatingCTA } from "@/components/FloatingCTA";
 import { CustomerStories } from "@/components/CustomerStories";
 import { DealerLocatorWidget } from "@/components/DealerLocatorWidget";
 import { CrossSellWidget } from "@/components/CrossSellWidget";
+import {
+  DynamicHeroBanners,
+  DynamicPromoBanners,
+  DynamicFeaturedCars,
+  DynamicTestimonials,
+  DynamicCTABanners,
+} from "@/components/DynamicHomepageContent";
 
 const Index = () => {
   const [loanPrefill, setLoanPrefill] = useState<string>("");
@@ -60,8 +67,17 @@ const Index = () => {
         {/* Hero Section with Search */}
         <HeroSection />
         
+        {/* Dynamic Hero Banners from Admin */}
+        <DynamicHeroBanners />
+        
+        {/* Dynamic Promo Banners from Admin */}
+        <DynamicPromoBanners />
+        
         {/* Service Categories */}
         <CategoryGrid />
+        
+        {/* Dynamic Featured Cars from Admin */}
+        <DynamicFeaturedCars />
         
         {/* Featured Car Listings */}
         <CarListings />
@@ -77,11 +93,17 @@ const Index = () => {
         {/* EMI Calculator */}
         <EMICalculator onGetQuote={handleGetLoanQuote} />
         
+        {/* Dynamic CTA Banners from Admin */}
+        <DynamicCTABanners />
+        
         {/* Lead Capture Form */}
         <LeadForm prefillCarInterest={loanPrefill} />
         
         {/* Customer Testimonials */}
         <Testimonials />
+        
+        {/* Dynamic Testimonials from Admin */}
+        <DynamicTestimonials />
         
          {/* Customer Stories with Delivery Photos */}
          <CustomerStories />
