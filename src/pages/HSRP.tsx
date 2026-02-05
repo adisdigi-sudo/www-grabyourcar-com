@@ -35,8 +35,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { CrossSellWidget } from "@/components/CrossSellWidget";
-import { HSRPServiceCarousel } from "@/components/hsrp/HSRPServiceCarousel";
-import { HSRPBookingForm } from "@/components/hsrp/HSRPBookingForm";
+import { HSRPUnifiedBookingForm } from "@/components/hsrp/HSRPUnifiedBookingForm";
 import { useHSRPPricing, formatPrice } from "@/hooks/useHSRPPricing";
 
 const benefits = [
@@ -88,17 +87,8 @@ const HSRP = () => {
   const [trackingNumber, setTrackingNumber] = useState("");
   const [isTracking, setIsTracking] = useState(false);
   const [trackingResult, setTrackingResult] = useState<any>(null);
-  
-  // Selected service state for booking form
-  const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
-  const [selectedPrice, setSelectedPrice] = useState(0);
-  const [selectedVehicleClass, setSelectedVehicleClass] = useState("");
-  const [activeServiceTab, setActiveServiceTab] = useState<'hsrp' | 'fastag'>('hsrp');
 
-  const handleServiceSelect = (serviceId: string, price: number, vehicleClass: string) => {
-    setSelectedServiceId(serviceId);
-    setSelectedPrice(price);
-    setSelectedVehicleClass(vehicleClass);
+  const handleServiceSelect = () => {
     document.getElementById("booking-section")?.scrollIntoView({ behavior: "smooth" });
   };
 
@@ -180,7 +170,7 @@ const HSRP = () => {
                   variant="secondary" 
                   size="lg" 
                   className="gap-2" 
-                  onClick={() => document.getElementById("services")?.scrollIntoView({ behavior: "smooth" })}
+                  onClick={() => document.getElementById("booking-section")?.scrollIntoView({ behavior: "smooth" })}
                 >
                   <Shield className="h-5 w-5" />
                   Book HSRP
@@ -189,10 +179,7 @@ const HSRP = () => {
                   variant="secondary" 
                   size="lg" 
                   className="gap-2" 
-                  onClick={() => {
-                    setActiveServiceTab('fastag');
-                    document.getElementById("services")?.scrollIntoView({ behavior: "smooth" });
-                  }}
+                  onClick={() => document.getElementById("booking-section")?.scrollIntoView({ behavior: "smooth" })}
                 >
                   <CreditCard className="h-5 w-5" />
                   Get FASTag
@@ -238,198 +225,123 @@ const HSRP = () => {
           </div>
         </section>
 
-        {/* HSRP & FASTag Services Section */}
-        <section id="services" className="py-12 md:py-16">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-10">
-              <Badge className="mb-3 bg-primary/10 text-primary border-primary/20">
-                <Sparkles className="w-3 h-3 mr-1" />
-                Choose Your Service
-              </Badge>
-              <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-3">
-                HSRP & FASTag Services
-              </h2>
-              <p className="text-muted-foreground">Select the service you need for your vehicle</p>
-            </div>
-
-            {/* Service Type Tabs */}
-            <Tabs value={activeServiceTab} onValueChange={(v) => setActiveServiceTab(v as 'hsrp' | 'fastag')} className="w-full">
-              <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-8">
-                <TabsTrigger value="hsrp" className="gap-2">
-                  <Shield className="h-4 w-4" />
-                  HSRP (Number Plate)
-                </TabsTrigger>
-                <TabsTrigger value="fastag" className="gap-2">
-                  <CreditCard className="h-4 w-4" />
-                  FASTag (Toll)
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="hsrp">
-                <HSRPServiceCarousel 
-                  onSelectService={handleServiceSelect}
-                  selectedServiceId={selectedServiceId}
-                  serviceType="hsrp"
-                />
-              </TabsContent>
-
-              <TabsContent value="fastag">
-                <HSRPServiceCarousel 
-                  onSelectService={handleServiceSelect}
-                  selectedServiceId={selectedServiceId}
-                  serviceType="fastag"
-                />
-              </TabsContent>
-            </Tabs>
-          </div>
-        </section>
-
-        {/* Booking Form Section */}
+        {/* Main Booking Section - Always Visible */}
         <section id="booking-section" className="py-12 md:py-16 bg-muted/30">
           <div className="container mx-auto px-4">
-            <div className="max-w-4xl mx-auto">
-              <Tabs defaultValue="book" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-8">
-                  <TabsTrigger value="book" className="gap-2">
-                    <Car className="h-4 w-4" />
-                    Book HSRP
-                  </TabsTrigger>
-                  <TabsTrigger value="track" className="gap-2" id="track">
-                    <Search className="h-4 w-4" />
-                    Track Order
-                  </TabsTrigger>
-                </TabsList>
+            <div className="grid lg:grid-cols-3 gap-8">
+              {/* Main Booking Form */}
+              <div className="lg:col-span-2">
+                <div className="text-center mb-8 lg:text-left">
+                  <Badge className="mb-3 bg-primary/10 text-primary border-primary/20">
+                    <Sparkles className="w-3 h-3 mr-1" />
+                    Quick & Easy Booking
+                  </Badge>
+                  <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-3">
+                    Book Your HSRP & FASTag
+                  </h2>
+                  <p className="text-muted-foreground">
+                    Complete the form below - price calculates automatically based on your vehicle
+                  </p>
+                </div>
+                
+                <HSRPUnifiedBookingForm />
+              </div>
 
-                <TabsContent value="book">
-                  {selectedServiceId ? (
-                    <HSRPBookingForm
-                      selectedServiceId={selectedServiceId}
-                      selectedPrice={selectedPrice}
-                      selectedVehicleClass={selectedVehicleClass}
-                    />
-                  ) : (
-                    <Card className="border-dashed border-2">
-                      <CardContent className="py-12 text-center">
-                        <Package className="w-16 h-16 text-muted-foreground/50 mx-auto mb-4" />
-                        <h3 className="text-xl font-semibold mb-2">Select a Service First</h3>
-                        <p className="text-muted-foreground mb-4">
-                          Please choose an HSRP service from the carousel above to continue with booking
-                        </p>
-                        <Button onClick={() => document.getElementById("services")?.scrollIntoView({ behavior: "smooth" })}>
-                          Browse Services
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  )}
-                </TabsContent>
+              {/* Sidebar - Track Order & Info */}
+              <div className="space-y-6">
+                {/* Track Order Card */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <Search className="h-5 w-5 text-primary" />
+                      Track Your Order
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="trackingNumber">Order ID / Reg. Number</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            id="trackingNumber"
+                            placeholder="e.g., HSRP12345 or DL01AB1234"
+                            value={trackingNumber}
+                            onChange={(e) => setTrackingNumber(e.target.value)}
+                          />
+                          <Button onClick={handleTrackOrder} disabled={isTracking}>
+                            {isTracking ? <Loader2 className="h-4 w-4 animate-spin" /> : "Track"}
+                          </Button>
+                        </div>
+                      </div>
 
-                <TabsContent value="track">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Search className="h-5 w-5 text-primary" />
-                        Track Your HSRP Order
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="trackingNumber">Order ID / Registration Number</Label>
-                          <div className="flex gap-2">
-                            <Input
-                              id="trackingNumber"
-                              placeholder="e.g., HSRP123ABC or DL01AB1234"
-                              value={trackingNumber}
-                              onChange={(e) => setTrackingNumber(e.target.value.toUpperCase())}
-                              className="flex-1"
-                            />
-                            <Button onClick={handleTrackOrder} disabled={isTracking}>
-                              {isTracking ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                "Track"
-                              )}
-                            </Button>
+                      {trackingResult?.found && (
+                        <div className="p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+                          <div className="flex items-center gap-2 text-green-600 mb-2">
+                            <CheckCircle2 className="h-5 w-5" />
+                            <span className="font-semibold">Order Found</span>
+                          </div>
+                          <div className="space-y-1 text-sm">
+                            <p><strong>Status:</strong> {trackingResult.booking.order_status}</p>
+                            <p><strong>Vehicle:</strong> {trackingResult.booking.registration_number}</p>
+                            <p><strong>Service:</strong> {trackingResult.booking.service_type}</p>
                           </div>
                         </div>
+                      )}
 
-                        {trackingResult && (
-                          <div className="mt-4">
-                            {trackingResult.found ? (
-                              <Card className="border-primary/30 bg-primary/5">
-                                <CardContent className="p-4 space-y-3">
-                                  <div className="flex items-center gap-2 text-primary">
-                                    <CheckCircle2 className="h-5 w-5" />
-                                    <span className="font-semibold">Booking Found</span>
-                                  </div>
-                                  <div className="grid grid-cols-2 gap-3 text-sm">
-                                    <div>
-                                      <span className="text-muted-foreground">Tracking ID:</span>
-                                      <p className="font-mono font-semibold">{trackingResult.booking.tracking_id}</p>
-                                    </div>
-                                    <div>
-                                      <span className="text-muted-foreground">Vehicle:</span>
-                                      <p className="font-semibold">{trackingResult.booking.registration_number}</p>
-                                    </div>
-                                    <div>
-                                      <span className="text-muted-foreground">Order Status:</span>
-                                      <Badge className="mt-1" variant={
-                                        trackingResult.booking.order_status === "completed" ? "default" :
-                                        trackingResult.booking.order_status === "confirmed" ? "secondary" : "outline"
-                                      }>
-                                        {trackingResult.booking.order_status.charAt(0).toUpperCase() + trackingResult.booking.order_status.slice(1)}
-                                      </Badge>
-                                    </div>
-                                    <div>
-                                      <span className="text-muted-foreground">Payment:</span>
-                                      <Badge className="mt-1" variant={
-                                        trackingResult.booking.payment_status === "paid" ? "default" : "destructive"
-                                      }>
-                                        {trackingResult.booking.payment_status.charAt(0).toUpperCase() + trackingResult.booking.payment_status.slice(1)}
-                                      </Badge>
-                                    </div>
-                                    <div>
-                                      <span className="text-muted-foreground">Amount:</span>
-                                      <p className="font-semibold text-primary">₹{trackingResult.booking.payment_amount}</p>
-                                    </div>
-                                    <div>
-                                      <span className="text-muted-foreground">Booked On:</span>
-                                      <p className="font-semibold">{new Date(trackingResult.booking.created_at).toLocaleDateString()}</p>
-                                    </div>
-                                  </div>
-                                  {trackingResult.booking.home_installation && (
-                                    <Badge variant="outline" className="gap-1">
-                                      <Home className="h-3 w-3" />
-                                      Home Installation
-                                    </Badge>
-                                  )}
-                                </CardContent>
-                              </Card>
-                            ) : (
-                              <Card className="border-destructive/30 bg-destructive/5">
-                                <CardContent className="p-4 flex items-center gap-3">
-                                  <AlertCircle className="h-5 w-5 text-destructive" />
-                                  <div>
-                                    <p className="font-semibold text-destructive">No Booking Found</p>
-                                    <p className="text-sm text-muted-foreground">Please check your order ID or registration number and try again.</p>
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            )}
+                      {trackingResult && !trackingResult.found && (
+                        <div className="p-4 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
+                          <div className="flex items-center gap-2 text-red-600">
+                            <AlertCircle className="h-5 w-5" />
+                            <span>No order found with this ID</span>
                           </div>
-                        )}
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
 
-                        <p className="text-sm text-muted-foreground text-center">
-                          You can find your order number in the confirmation email or SMS
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              </Tabs>
+                {/* Benefits Card */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Why Choose Us?</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {benefits.slice(0, 4).map((benefit, idx) => {
+                      const Icon = benefit.icon;
+                      return (
+                        <div key={idx} className="flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                            <Icon className="w-4 h-4 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">{benefit.title}</p>
+                            <p className="text-xs text-muted-foreground">{benefit.description}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </CardContent>
+                </Card>
+
+                {/* Help Card */}
+                <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+                  <CardContent className="pt-6 text-center">
+                    <Phone className="w-10 h-10 mx-auto text-primary mb-3" />
+                    <p className="font-semibold">Need Help?</p>
+                    <p className="text-sm text-muted-foreground mb-4">Our team is available 24/7</p>
+                    <Button variant="outline" className="w-full gap-2" asChild>
+                      <a href="tel:+919577200023">
+                        <Phone className="w-4 h-4" />
+                        Call Now
+                      </a>
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </div>
         </section>
+
 
         {/* Benefits */}
         <section className="py-12 md:py-16">
