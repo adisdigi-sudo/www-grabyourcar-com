@@ -8,7 +8,8 @@ import { CartProvider } from "@/hooks/useCart";
 import { CompareProvider } from "@/hooks/useCompare";
 import { FloatingCompareBar } from "@/components/FloatingCompareBar";
 import { WhatsAppFloatingButton } from "@/components/WhatsAppCTA";
-import { AdminSubdomainRedirect } from "@/components/AdminSubdomainRedirect";
+import { AdminSubdomainRouter } from "@/components/AdminSubdomainRouter";
+import { isAdminSubdomain } from "@/hooks/useAdminSubdomain";
 import Index from "./pages/Index";
 import Cars from "./pages/Cars";
 import CarImages from "./pages/CarImages";
@@ -51,42 +52,48 @@ const App = () => (
             <Toaster />
             <Sonner />
             <BrowserRouter>
-              <AdminSubdomainRedirect />
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/cars" element={<Cars />} />
-                <Route path="/car-images" element={<CarImages />} />
-                <Route path="/features-specs" element={<FeaturesSpecs />} />
-                <Route path="/brochures" element={<Brochures />} />
-                <Route path="/car-loans" element={<CarLoans />} />
-                <Route path="/car/:slug" element={<CarDetail />} />
-                <Route path="/compare" element={<CompareCars />} />
-                <Route path="/car-insurance" element={<CarInsurance />} />
-                <Route path="/corporate" element={<CorporateBuying />} />
-                <Route path="/accessories" element={<Accessories />} />
-                <Route path="/accessory-wishlist" element={<AccessoryWishlist />} />
-                <Route path="/blog" element={<Blog />} />
-                <Route path="/blog/:slug" element={<BlogPost />} />
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/favorites" element={<MyFavorites />} />
-                <Route path="/my-bookings" element={<MyBookings />} />
-                <Route path="/my-orders" element={<MyOrders />} />
-                <Route path="/car-finder" element={<CarFinder />} />
-                <Route path="/admin" element={<AdminLayout />} />
-                <Route path="/admin-auth" element={<AdminAuth />} />
-                <Route path="/admin-reset-password" element={<AdminResetPassword />} />
-                <Route path="/self-drive" element={<SelfDriveRentals />} />
-                <Route path="/hsrp" element={<HSRP />} />
-                <Route path="/upcoming-cars" element={<UpcomingCars />} />
-                <Route path="/auto-news" element={<AutoNews />} />
-                <Route path="/dealers" element={<DealerLocator />} />
-                 <Route path="/about" element={<About />} />
-                 <Route path="/auto-intelligence" element={<AutoIntelligence />} />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-              <FloatingCompareBar />
-              <WhatsAppFloatingButton />
+              <AdminSubdomainRouter>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/cars" element={<Cars />} />
+                  <Route path="/car-images" element={<CarImages />} />
+                  <Route path="/features-specs" element={<FeaturesSpecs />} />
+                  <Route path="/brochures" element={<Brochures />} />
+                  <Route path="/car-loans" element={<CarLoans />} />
+                  <Route path="/car/:slug" element={<CarDetail />} />
+                  <Route path="/compare" element={<CompareCars />} />
+                  <Route path="/car-insurance" element={<CarInsurance />} />
+                  <Route path="/corporate" element={<CorporateBuying />} />
+                  <Route path="/accessories" element={<Accessories />} />
+                  <Route path="/accessory-wishlist" element={<AccessoryWishlist />} />
+                  <Route path="/blog" element={<Blog />} />
+                  <Route path="/blog/:slug" element={<BlogPost />} />
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/favorites" element={<MyFavorites />} />
+                  <Route path="/my-bookings" element={<MyBookings />} />
+                  <Route path="/my-orders" element={<MyOrders />} />
+                  <Route path="/car-finder" element={<CarFinder />} />
+                  <Route path="/admin" element={<AdminLayout />} />
+                  <Route path="/admin-auth" element={<AdminAuth />} />
+                  <Route path="/admin-reset-password" element={<AdminResetPassword />} />
+                  <Route path="/self-drive" element={<SelfDriveRentals />} />
+                  <Route path="/hsrp" element={<HSRP />} />
+                  <Route path="/upcoming-cars" element={<UpcomingCars />} />
+                  <Route path="/auto-news" element={<AutoNews />} />
+                  <Route path="/dealers" element={<DealerLocator />} />
+                  <Route path="/about" element={<About />} />
+                  <Route path="/auto-intelligence" element={<AutoIntelligence />} />
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+                {/* Only show floating elements on main site, not admin subdomain */}
+                {!isAdminSubdomain() && (
+                  <>
+                    <FloatingCompareBar />
+                    <WhatsAppFloatingButton />
+                  </>
+                )}
+              </AdminSubdomainRouter>
             </BrowserRouter>
           </TooltipProvider>
         </CompareProvider>
