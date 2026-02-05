@@ -10,7 +10,6 @@ import { Mail, Lock, Loader2, Shield, KeyRound, Building2, Eye, EyeOff } from "l
 import { z } from "zod";
 import { motion, AnimatePresence } from "framer-motion";
 import logoImage from "@/assets/logo-grabyourcar-main.png";
-import AdminOTPVerification from "@/components/admin/AdminOTPVerification";
 import AdminForgotPassword from "@/components/admin/AdminForgotPassword";
 
 const emailSchema = z.string().email("Please enter a valid email address");
@@ -18,22 +17,19 @@ const passwordSchema = z.string().min(6, "Password must be at least 6 characters
 
 const AdminAuth = () => {
   const navigate = useNavigate();
-  const { user, signIn, signOut, loading } = useAuth();
+  const { user, signIn, loading } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [showOTPVerification, setShowOTPVerification] = useState(false);
-  const [pendingUserId, setPendingUserId] = useState<string | null>(null);
-  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
 
-  // Redirect if already logged in and verified
+  // Redirect if already logged in
   useEffect(() => {
-    if (user && !loading && !showOTPVerification) {
+    if (user && !loading) {
       navigate("/admin");
     }
-  }, [user, loading, navigate, showOTPVerification]);
+  }, [user, loading, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,7 +46,7 @@ const AdminAuth = () => {
       }
     }
 
-    const { error, data } = await signIn(email, password);
+    const { error } = await signIn(email, password);
     
     if (error) {
       if (error.message.includes("Invalid login credentials")) {
@@ -62,38 +58,9 @@ const AdminAuth = () => {
       return;
     }
 
-    // Password verified - now require 2FA
-    if (data?.user) {
-      setPendingUserId(data.user.id);
-      setPendingEmail(data.user.email || email);
-      setShowOTPVerification(true);
-      // Sign out temporarily until OTP is verified
-      await signOut();
-    }
-    
+    toast.success("Welcome to Admin Dashboard!");
+    navigate("/admin");
     setIsSubmitting(false);
-  };
-
-  const handleOTPVerified = () => {
-    // Re-authenticate after OTP verification
-    signIn(pendingEmail!, password).then(({ error }) => {
-      if (error) {
-        toast.error("Session expired. Please login again.");
-        setShowOTPVerification(false);
-        setPendingUserId(null);
-        setPendingEmail(null);
-      } else {
-        toast.success("Welcome to Admin Dashboard!");
-        navigate("/admin");
-      }
-    });
-  };
-
-  const handleOTPCancel = async () => {
-    setShowOTPVerification(false);
-    setPendingUserId(null);
-    setPendingEmail(null);
-    setPassword("");
   };
 
   if (loading) {
@@ -152,22 +119,14 @@ const AdminAuth = () => {
                 Welcome Back, Admin
               </h1>
               <p className="text-muted-foreground mt-2">
-                {showOTPVerification ? "Verify your identity" : showForgotPassword ? "Reset your password" : "Sign in to access the control center"}
+                {showForgotPassword ? "Reset your password" : "Sign in to access the control center"}
               </p>
             </motion.div>
           </div>
 
-          {/* OTP Verification, Forgot Password, or Login Card */}
+          {/* Forgot Password or Login Card */}
           <AnimatePresence mode="wait">
-            {showOTPVerification && pendingUserId && pendingEmail ? (
-              <AdminOTPVerification
-                key="otp"
-                email={pendingEmail}
-                userId={pendingUserId}
-                onVerified={handleOTPVerified}
-                onCancel={handleOTPCancel}
-              />
-            ) : showForgotPassword ? (
+            {showForgotPassword ? (
               <AdminForgotPassword
                 key="forgot"
                 onBack={() => setShowForgotPassword(false)}
