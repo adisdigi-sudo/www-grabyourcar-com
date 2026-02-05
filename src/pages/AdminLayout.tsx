@@ -23,6 +23,10 @@ import { NotificationCenter } from "@/components/admin/NotificationCenter";
 import { SEOBuilder } from "@/components/admin/SEOBuilder";
 import { BrandingSettings } from "@/components/admin/BrandingSettings";
 import { VariantPricingManagement } from "@/components/admin/VariantPricingManagement";
+import { APIIntegrationPortal } from "@/components/admin/APIIntegrationPortal";
+import { EmailMarketingManagement } from "@/components/admin/EmailMarketingManagement";
+import { AIContentHub } from "@/components/admin/AIContentHub";
+import { BulkDataManager } from "@/components/admin/BulkDataManager";
 
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
@@ -126,8 +130,15 @@ const AdminLayout = () => {
       case "content-blog":
         return <BlogManagement />;
       case "content-news":
-      case "content-ai":
         return <AIContentManagement />;
+      case "content-ai":
+        return <AIContentHub />;
+      case "marketing-email":
+        return <EmailMarketingManagement />;
+      case "marketing-bulk":
+        return <BulkDataManager />;
+      case "integrations-api":
+        return <APIIntegrationPortal />;
       case "integrations-whatsapp":
         return <WhatsAppManagement />;
       case "integrations-payments":

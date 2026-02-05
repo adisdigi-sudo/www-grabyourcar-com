@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Search, Filter, Eye, Phone, RefreshCw, Car, Calendar, MapPin, CreditCard, CheckCircle, XCircle, Clock, Plus, Edit, Trash2, Upload } from "lucide-react";
+import { Search, Filter, Eye, Phone, RefreshCw, Car, Calendar, MapPin, CreditCard, CheckCircle, XCircle, Clock, Plus, Edit, Trash2, Upload, Download, Image, FileSpreadsheet } from "lucide-react";
 
 interface RentalBooking {
   id: string;
@@ -236,6 +236,86 @@ export const RentalManagement = () => {
     }
     
     setIsVehicleModalOpen(false);
+  };
+
+  // Bulk operations
+  const handleBulkExport = () => {
+    const headers = ['name', 'brand', 'vehicle_type', 'fuel_type', 'transmission', 'seats', 'year', 'color', 'rent', 'location', 'available', 'image_url'];
+    const rows = vehicles.map(v => [
+      v.name, v.brand, v.vehicleType, v.fuelType, v.transmission, 
+      v.seats, v.year, v.color, v.rent, v.location, v.available, v.image || ''
+    ]);
+    
+    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `rental_vehicles_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Vehicles exported successfully');
+  };
+
+  const handleBulkUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const lines = text.split('\n').filter(l => l.trim());
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/\s+/g, '_'));
+      
+      const newVehicles: RentalVehicle[] = lines.slice(1).map((line, index) => {
+        const values = line.split(',').map(v => v.trim());
+        const obj: Record<string, string> = {};
+        headers.forEach((header, i) => {
+          obj[header] = values[i] || '';
+        });
+        
+        return {
+          id: Date.now() + index,
+          name: obj.name || 'Unknown',
+          brand: obj.brand || 'Other',
+          vehicleType: obj.vehicle_type || 'Hatchback',
+          fuelType: obj.fuel_type || 'Petrol',
+          transmission: obj.transmission || 'Manual',
+          seats: parseInt(obj.seats) || 5,
+          year: parseInt(obj.year) || 2024,
+          color: obj.color || 'White',
+          rent: parseInt(obj.rent) || 1500,
+          location: obj.location || 'Delhi - Connaught Place',
+          available: obj.available === 'true' || obj.available === '1',
+          image: obj.image_url || undefined,
+        };
+      }).filter(v => v.name !== 'Unknown');
+
+      const updated = [...vehicles, ...newVehicles];
+      setVehicles(updated);
+      saveVehicles(updated);
+      toast.success(`Imported ${newVehicles.length} vehicles`);
+    } catch (error) {
+      toast.error('Failed to process file');
+    }
+    
+    // Reset file input
+    event.target.value = '';
+  };
+
+  const handleDownloadSample = () => {
+    const sample = `name,brand,vehicle_type,fuel_type,transmission,seats,year,color,rent,location,available,image_url
+Swift Dzire,Maruti,Sedan,Petrol,Manual,5,2024,White,1500,Delhi - Connaught Place,true,https://example.com/dzire.jpg
+Hyundai Venue,Hyundai,SUV,Petrol,Automatic,5,2023,Grey,2500,Noida - Sector 18,true,
+Toyota Innova,Toyota,Tempo Traveller,Diesel,Automatic,7,2024,White,4000,Gurugram - Cyber Hub,true,`;
+    
+    const blob = new Blob([sample], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'rental_vehicles_sample.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Sample CSV downloaded');
   };
 
   // Calculate stats
@@ -460,59 +540,106 @@ export const RentalManagement = () => {
 
         {/* Vehicles Tab */}
         <TabsContent value="vehicles" className="space-y-6">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
               <h3 className="text-lg font-semibold">Vehicle Fleet</h3>
               <p className="text-sm text-muted-foreground">
                 {vehicles.length} vehicles • {vehicles.filter(v => v.available).length} available
               </p>
             </div>
-            <Button onClick={handleAddVehicle}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Vehicle
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={handleBulkExport}>
+                <Download className="h-4 w-4 mr-2" />
+                Export CSV
+              </Button>
+              <Button variant="outline" onClick={() => document.getElementById('bulk-vehicle-upload')?.click()}>
+                <Upload className="h-4 w-4 mr-2" />
+                Bulk Import
+              </Button>
+              <input
+                id="bulk-vehicle-upload"
+                type="file"
+                accept=".csv"
+                onChange={handleBulkUpload}
+                className="hidden"
+              />
+              <Button onClick={handleAddVehicle}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Vehicle
+              </Button>
+            </div>
           </div>
+
+          {/* Bulk Upload Info */}
+          <Card className="bg-muted/50">
+            <CardContent className="py-4">
+              <div className="flex items-start gap-3">
+                <FileSpreadsheet className="h-5 w-5 text-muted-foreground mt-0.5" />
+                <div>
+                  <p className="font-medium text-sm">Bulk Import Format</p>
+                  <p className="text-xs text-muted-foreground">
+                    CSV columns: name, brand, vehicle_type, fuel_type, transmission, seats, year, color, rent, location, available, image_url
+                  </p>
+                  <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={handleDownloadSample}>
+                    Download sample CSV template
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Vehicles Grid */}
           {vehicles.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {vehicles.map((vehicle) => (
-                <Card key={vehicle.id} className="relative">
-                  <CardContent className="pt-6">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <h4 className="font-semibold">{vehicle.name}</h4>
-                        <p className="text-sm text-muted-foreground">{vehicle.brand} • {vehicle.vehicleType}</p>
+                <Card key={vehicle.id} className="relative overflow-hidden">
+                  {/* Vehicle Image */}
+                  <div className="aspect-video bg-muted relative">
+                    {vehicle.image ? (
+                      <img 
+                        src={vehicle.image} 
+                        alt={vehicle.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Car className="h-12 w-12 text-muted-foreground" />
                       </div>
-                      <Badge variant={vehicle.available ? "default" : "secondary"}>
-                        {vehicle.available ? "Available" : "Unavailable"}
-                      </Badge>
+                    )}
+                    <Badge 
+                      variant={vehicle.available ? "default" : "secondary"}
+                      className="absolute top-2 right-2"
+                    >
+                      {vehicle.available ? "Available" : "Unavailable"}
+                    </Badge>
+                  </div>
+                  
+                  <CardContent className="pt-4">
+                    <div className="mb-3">
+                      <h4 className="font-semibold">{vehicle.name}</h4>
+                      <p className="text-sm text-muted-foreground">{vehicle.brand} • {vehicle.vehicleType}</p>
                     </div>
                     
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Fuel/Transmission</span>
+                        <span className="text-muted-foreground">Fuel/Trans</span>
                         <span>{vehicle.fuelType} / {vehicle.transmission}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Seats</span>
-                        <span>{vehicle.seats}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Year/Color</span>
-                        <span>{vehicle.year} / {vehicle.color}</span>
+                        <span className="text-muted-foreground">Seats / Year</span>
+                        <span>{vehicle.seats} seats • {vehicle.year}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Location</span>
-                        <span className="text-right text-xs">{vehicle.location}</span>
+                        <span className="text-right text-xs max-w-[120px] truncate">{vehicle.location}</span>
                       </div>
-                      <div className="flex justify-between font-semibold">
+                      <div className="flex justify-between font-semibold pt-2 border-t">
                         <span>Daily Rent</span>
-                        <span className="text-primary">₹{vehicle.rent}/day</span>
+                        <span className="text-primary">₹{vehicle.rent.toLocaleString()}/day</span>
                       </div>
                     </div>
 
-                    <div className="flex gap-2 mt-4 pt-4 border-t">
+                    <div className="flex gap-2 mt-4">
                       <Button 
                         variant="outline" 
                         size="sm" 
@@ -542,10 +669,16 @@ export const RentalManagement = () => {
                 <p className="text-sm text-muted-foreground mb-4">
                   Add your first rental vehicle to get started
                 </p>
-                <Button onClick={handleAddVehicle}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Vehicle
-                </Button>
+                <div className="flex gap-2 justify-center">
+                  <Button variant="outline" onClick={() => document.getElementById('bulk-vehicle-upload')?.click()}>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Bulk Import
+                  </Button>
+                  <Button onClick={handleAddVehicle}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Vehicle
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           )}
@@ -740,6 +873,16 @@ export const RentalManagement = () => {
                   value={vehicleForm.rent || 1500}
                   onChange={(e) => setVehicleForm({...vehicleForm, rent: parseInt(e.target.value)})}
                 />
+              </div>
+
+              <div className="col-span-2">
+                <Label>Vehicle Image URL</Label>
+                <Input
+                  value={vehicleForm.image || ''}
+                  onChange={(e) => setVehicleForm({...vehicleForm, image: e.target.value})}
+                  placeholder="https://example.com/vehicle-image.jpg"
+                />
+                <p className="text-xs text-muted-foreground mt-1">Enter a URL for the vehicle image</p>
               </div>
 
               <div className="col-span-2">

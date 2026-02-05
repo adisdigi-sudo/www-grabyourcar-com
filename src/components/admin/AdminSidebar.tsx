@@ -110,7 +110,17 @@ const navItems: NavItem[] = [
     children: [
       { id: "content-blog", label: "Blog Posts", icon: FileText },
       { id: "content-news", label: "Auto News", icon: Newspaper },
-      { id: "content-ai", label: "AI Content", icon: Brain },
+      { id: "content-ai", label: "AI Content Hub", icon: Brain },
+    ]
+  },
+  { 
+    id: "marketing", 
+    label: "Marketing", 
+    icon: Users,
+    badge: "New",
+    children: [
+      { id: "marketing-email", label: "Email Campaigns", icon: MessageSquare },
+      { id: "marketing-bulk", label: "Bulk Data Manager", icon: Database },
     ]
   },
   { 
@@ -118,6 +128,7 @@ const navItems: NavItem[] = [
     label: "Integrations", 
     icon: Settings,
     children: [
+      { id: "integrations-api", label: "API Portal", icon: Database, badge: "New" },
       { id: "integrations-whatsapp", label: "WhatsApp API", icon: MessageSquare },
       { id: "integrations-payments", label: "Payment Gateway", icon: CreditCard },
     ]
