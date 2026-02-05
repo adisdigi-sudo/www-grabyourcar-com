@@ -33,6 +33,7 @@ import { SocialProofManagement } from "@/components/admin/SocialProofManagement"
 import { IntegrationsManagement } from "@/components/admin/IntegrationsManagement";
 import { OffersManagement } from "@/components/admin/OffersManagement";
 import { AutoIntelligenceSettings } from "@/components/admin/AutoIntelligenceSettings";
+import CrossSellManagement from "@/components/admin/CrossSellManagement";
 
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
@@ -139,6 +140,8 @@ const AdminLayout = () => {
       case "ecommerce-accessories":
       case "ecommerce-orders":
         return <AccessoriesManagement />;
+      case "ecommerce-crosssell":
+        return <CrossSellManagement />;
       case "content-blog":
         return <BlogManagement />;
       case "content-news":

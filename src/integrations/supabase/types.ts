@@ -970,6 +970,275 @@ export type Database = {
         }
         Relationships: []
       }
+      cross_sell_analytics: {
+        Row: {
+          bundle_id: string | null
+          created_at: string
+          event_type: string
+          id: string
+          item_id: string | null
+          metadata: Json | null
+          page_url: string | null
+          rule_id: string | null
+          session_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          bundle_id?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          item_id?: string | null
+          metadata?: Json | null
+          page_url?: string | null
+          rule_id?: string | null
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          bundle_id?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          item_id?: string | null
+          metadata?: Json | null
+          page_url?: string | null
+          rule_id?: string | null
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cross_sell_analytics_bundle_id_fkey"
+            columns: ["bundle_id"]
+            isOneToOne: false
+            referencedRelation: "cross_sell_bundles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cross_sell_analytics_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "cross_sell_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cross_sell_analytics_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "cross_sell_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cross_sell_bundle_items: {
+        Row: {
+          bundle_id: string
+          id: string
+          individual_price: number | null
+          is_optional: boolean | null
+          item_description: string | null
+          item_name: string
+          item_type: string
+          sort_order: number | null
+        }
+        Insert: {
+          bundle_id: string
+          id?: string
+          individual_price?: number | null
+          is_optional?: boolean | null
+          item_description?: string | null
+          item_name: string
+          item_type: string
+          sort_order?: number | null
+        }
+        Update: {
+          bundle_id?: string
+          id?: string
+          individual_price?: number | null
+          is_optional?: boolean | null
+          item_description?: string | null
+          item_name?: string
+          item_type?: string
+          sort_order?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cross_sell_bundle_items_bundle_id_fkey"
+            columns: ["bundle_id"]
+            isOneToOne: false
+            referencedRelation: "cross_sell_bundles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cross_sell_bundles: {
+        Row: {
+          applicable_brands: string[] | null
+          applicable_segments: string[] | null
+          bundle_price: number | null
+          bundle_type: string
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          is_featured: boolean | null
+          name: string
+          savings_text: string | null
+          total_value: number | null
+          updated_at: string
+          valid_from: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          applicable_brands?: string[] | null
+          applicable_segments?: string[] | null
+          bundle_price?: number | null
+          bundle_type: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          name: string
+          savings_text?: string | null
+          total_value?: number | null
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          applicable_brands?: string[] | null
+          applicable_segments?: string[] | null
+          bundle_price?: number | null
+          bundle_type?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          name?: string
+          savings_text?: string | null
+          total_value?: number | null
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Relationships: []
+      }
+      cross_sell_items: {
+        Row: {
+          created_at: string
+          cta_link: string | null
+          cta_text: string | null
+          description: string | null
+          discount_text: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          item_id: string | null
+          item_type: string
+          offer_price: number | null
+          original_price: number | null
+          rule_id: string
+          sort_order: number | null
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          cta_link?: string | null
+          cta_text?: string | null
+          description?: string | null
+          discount_text?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          item_id?: string | null
+          item_type: string
+          offer_price?: number | null
+          original_price?: number | null
+          rule_id: string
+          sort_order?: number | null
+          title: string
+        }
+        Update: {
+          created_at?: string
+          cta_link?: string | null
+          cta_text?: string | null
+          description?: string | null
+          discount_text?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          item_id?: string | null
+          item_type?: string
+          offer_price?: number | null
+          original_price?: number | null
+          rule_id?: string
+          sort_order?: number | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cross_sell_items_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "cross_sell_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cross_sell_rules: {
+        Row: {
+          conditions: Json | null
+          created_at: string
+          description: string | null
+          display_location: string
+          end_date: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          priority: number | null
+          start_date: string | null
+          trigger_type: string
+          trigger_value: string | null
+          updated_at: string
+        }
+        Insert: {
+          conditions?: Json | null
+          created_at?: string
+          description?: string | null
+          display_location: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          priority?: number | null
+          start_date?: string | null
+          trigger_type: string
+          trigger_value?: string | null
+          updated_at?: string
+        }
+        Update: {
+          conditions?: Json | null
+          created_at?: string
+          description?: string | null
+          display_location?: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          priority?: number | null
+          start_date?: string | null
+          trigger_type?: string
+          trigger_value?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       favorites: {
         Row: {
           car_id: number

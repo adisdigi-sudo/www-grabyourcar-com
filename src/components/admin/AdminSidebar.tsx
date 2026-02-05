@@ -113,6 +113,7 @@ const navItems: NavItem[] = [
     children: [
       { id: "ecommerce-accessories", label: "Accessories", icon: Package },
       { id: "ecommerce-orders", label: "Orders", icon: FileText },
+      { id: "ecommerce-crosssell", label: "Cross-Sell", icon: Tags, badge: "New" },
     ]
   },
   { 
