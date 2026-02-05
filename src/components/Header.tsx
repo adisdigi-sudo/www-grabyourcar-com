@@ -77,6 +77,7 @@ const quickLinks = [
   { label: "Compare Cars", href: "/compare" },
   { label: "Features & Specs", href: "/features-specs" },
   { label: "Blog", href: "/blog" },
+   { label: "About Us", href: "/about" },
 ];
 
 

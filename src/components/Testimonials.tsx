@@ -79,9 +79,9 @@ const textTestimonials = [
 ];
 
 const stats = [
-  { icon: Users, value: "15,000+", label: "Happy Customers" },
+   { icon: Users, value: "500+", label: "Happy Customers" },
   { icon: ThumbsUp, value: "4.6/5", label: "Average Rating" },
-  { icon: Award, value: "₹85L+", label: "Total Savings" },
+   { icon: Award, value: "₹25L+", label: "Customer Savings" },
 ];
 
 export const Testimonials = () => {

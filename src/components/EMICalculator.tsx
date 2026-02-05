@@ -5,13 +5,17 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calculator, IndianRupee, Percent, Calendar, FileText, MessageCircle, TrendingDown, Building2 } from "lucide-react";
+ import { Calculator, IndianRupee, Percent, Calendar, FileText, MessageCircle, TrendingDown, Building2, Download, Share2 } from "lucide-react";
+ import { generateEMIPdf, generateEMIWhatsAppMessage, EMIData } from "@/lib/generateEMIPdf";
+ import { toast } from "sonner";
 
 interface EMICalculatorProps {
   onGetQuote?: (loanDetails: string) => void;
+   carName?: string;
+   variantName?: string;
 }
 
-const EMICalculator = ({ onGetQuote }: EMICalculatorProps) => {
+ const EMICalculator = ({ onGetQuote, carName, variantName }: EMICalculatorProps) => {
   const [loanAmount, setLoanAmount] = useState(800000);
   const [interestRate, setInterestRate] = useState(8.5);
   const [tenure, setTenure] = useState(60);
@@ -66,6 +70,33 @@ const EMICalculator = ({ onGetQuote }: EMICalculatorProps) => {
     onGetQuote?.(loanDetails);
   };
 
+   const getEMIData = (): EMIData => ({
+     loanAmount,
+     downPayment,
+     loanPrincipal: emiDetails.loanPrincipal,
+     interestRate,
+     tenure,
+     emi: emiDetails.emi,
+     totalPayment: emiDetails.totalPayment,
+     totalInterest: emiDetails.totalInterest,
+     carName,
+     variantName,
+   });
+ 
+   const handleDownloadPdf = () => {
+     try {
+       generateEMIPdf(getEMIData());
+       toast.success("EMI estimate PDF downloaded!");
+     } catch (error) {
+       toast.error("Failed to generate PDF");
+     }
+   };
+ 
+   const handleShareWhatsApp = () => {
+     const message = generateEMIWhatsAppMessage(getEMIData());
+     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank");
+   };
+ 
   const handleLoanAmountChange = (value: string) => {
     const num = parseInt(value.replace(/,/g, ''), 10);
     if (!isNaN(num)) {
@@ -349,28 +380,49 @@ const EMICalculator = ({ onGetQuote }: EMICalculatorProps) => {
                   {/* CTA Buttons */}
                   <div className="mt-auto space-y-3">
                     <Button 
-                      onClick={handleGetQuote}
-                      className="w-full h-12 text-base font-semibold hover:scale-[1.02] transition-transform"
+                       onClick={handleDownloadPdf}
+                       className="w-full h-12 text-base font-semibold hover:scale-[1.02] transition-transform bg-gradient-to-r from-primary to-primary/90"
                       size="lg"
                     >
-                      <FileText className="w-5 h-5 mr-2" />
-                      Get Loan Quote
+                       <Download className="w-5 h-5 mr-2" />
+                       Download EMI PDF
                     </Button>
                     
-                    <a 
-                      href={`https://wa.me/919855924442?text=Hi%20Grabyourcar!%20I%20need%20a%20car%20loan%20of%20${formatCurrency(emiDetails.loanPrincipal)}%20at%20${interestRate}%25%20for%20${tenure}%20months.%20EMI%3A%20₹${emiDetails.emi.toLocaleString("en-IN")}.%20Please%20connect%20me%20with%20banks.`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block"
-                    >
+                     <div className="grid grid-cols-2 gap-2">
+                       <Button 
+                         variant="outline"
+                         onClick={handleShareWhatsApp}
+                         className="h-11 font-semibold hover:scale-[1.02] transition-transform"
+                       >
+                         <Share2 className="w-4 h-4 mr-2" />
+                         Share
+                       </Button>
+                       <a 
+                         href={`https://wa.me/919855924442?text=Hi%20Grabyourcar!%20I%20need%20a%20car%20loan%20of%20${formatCurrency(emiDetails.loanPrincipal)}%20at%20${interestRate}%25%20for%20${tenure}%20months.%20EMI%3A%20₹${emiDetails.emi.toLocaleString("en-IN")}.%20Please%20connect%20me%20with%20banks.`}
+                         target="_blank"
+                         rel="noopener noreferrer"
+                         className="block"
+                       >
+                         <Button 
+                           variant="whatsapp"
+                           className="w-full h-11 font-semibold hover:scale-[1.02] transition-transform"
+                         >
+                           <MessageCircle className="w-4 h-4 mr-2" />
+                           Get Quote
+                         </Button>
+                       </a>
+                     </div>
+                     
+                     {onGetQuote && (
                       <Button 
-                        variant="whatsapp"
-                        className="w-full h-11 font-semibold hover:scale-[1.02] transition-transform"
+                         variant="outline"
+                         onClick={handleGetQuote}
+                         className="w-full h-10"
                       >
-                        <MessageCircle className="w-4 h-4 mr-2" />
-                        Check Loan Eligibility
+                         <FileText className="w-4 h-4 mr-2" />
+                         Request Callback
                       </Button>
-                    </a>
+                     )}
                   </div>
 
                   {/* Bank Partners */}
