@@ -77,10 +77,20 @@ const navItems: NavItem[] = [
     icon: Globe,
     children: [
       { id: "website-homepage", label: "Homepage", icon: Home },
+      { id: "website-content", label: "Header & Footer", icon: Menu, badge: "New" },
       { id: "website-banners", label: "Banners & Sliders", icon: Image },
-      { id: "website-menu", label: "Menu & Navigation", icon: Menu },
       { id: "website-branding", label: "Logo & Branding", icon: Palette },
       { id: "website-seo", label: "SEO Settings", icon: Settings },
+    ]
+  },
+  { 
+    id: "socialproof", 
+    label: "Social Proof", 
+    icon: Users,
+    badge: "New",
+    children: [
+      { id: "socialproof-reviews", label: "Google Reviews", icon: MessageSquare },
+      { id: "socialproof-stories", label: "Delivery Stories", icon: Image },
     ]
   },
   { 
@@ -128,8 +138,10 @@ const navItems: NavItem[] = [
     label: "Integrations", 
     icon: Settings,
     children: [
-      { id: "integrations-api", label: "API Portal", icon: Database, badge: "New" },
+      { id: "integrations-api", label: "API Portal", icon: Database },
       { id: "integrations-whatsapp", label: "WhatsApp API", icon: MessageSquare },
+      { id: "integrations-chatbot", label: "AI Chatbot", icon: Brain, badge: "New" },
+      { id: "integrations-shipping", label: "Shipping Partners", icon: Package },
       { id: "integrations-payments", label: "Payment Gateway", icon: CreditCard },
     ]
   },
