@@ -28,6 +28,9 @@ import { EmailMarketingManagement } from "@/components/admin/EmailMarketingManag
 import { AIContentHub } from "@/components/admin/AIContentHub";
 import { BulkDataManager } from "@/components/admin/BulkDataManager";
 import { ServiceCategoriesManager } from "@/components/admin/ServiceCategoriesManager";
+import { WebsiteContentManagement } from "@/components/admin/WebsiteContentManagement";
+import { SocialProofManagement } from "@/components/admin/SocialProofManagement";
+import { IntegrationsManagement } from "@/components/admin/IntegrationsManagement";
 
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
@@ -111,14 +114,17 @@ const AdminLayout = () => {
         return <AIContentManagement />;
       case "website-homepage":
         return <HomepageManagement />;
+      case "website-content":
+        return <WebsiteContentManagement />;
       case "website-banners":
         return <ServiceCategoriesManager />;
-      case "website-menu":
-        return <WebsiteSettings />;
       case "website-branding":
         return <BrandingSettings />;
       case "website-seo":
         return <SEOBuilder />;
+      case "socialproof-reviews":
+      case "socialproof-stories":
+        return <SocialProofManagement />;
       case "services-hsrp":
         return <HSRPManagement />;
       case "services-rentals":
@@ -143,6 +149,9 @@ const AdminLayout = () => {
         return <APIIntegrationPortal />;
       case "integrations-whatsapp":
         return <WhatsAppManagement />;
+      case "integrations-chatbot":
+      case "integrations-shipping":
+        return <IntegrationsManagement />;
       case "integrations-payments":
         return <WebsiteSettings />;
       case "roles":
