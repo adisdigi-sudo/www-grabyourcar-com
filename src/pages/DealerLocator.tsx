@@ -9,9 +9,18 @@ import { DealerMap } from "@/components/dealers/DealerMap";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-  import { MapPin, List, Map, Building2, Star, Shield, Sparkles, Phone, MessageCircle, Navigation, Loader2 } from "lucide-react";
+  import { MapPin, List, Map, Building2, Star, Shield, Sparkles, Phone, MessageCircle, Navigation, Loader2, Bookmark, BookmarkCheck, X } from "lucide-react";
 import { toast } from "sonner";
 import { dealerLocatorData, type Dealer } from "@/data/dealerLocatorData";
+
+ interface SavedLocation {
+   lat: number;
+   lng: number;
+   name: string;
+   savedAt: string;
+ }
+
+ const SAVED_LOCATION_KEY = "grabyourcar_saved_location";
 
 // Haversine formula to calculate distance between two coordinates
 const calculateDistance = (
@@ -45,6 +54,57 @@ const DealerLocatorPage = () => {
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
    const [nearMeActive, setNearMeActive] = useState(false);
    const [nearMeRadius, setNearMeRadius] = useState(50); // km
+   const [savedLocation, setSavedLocation] = useState<SavedLocation | null>(null);
+   const [showSavedLocationBanner, setShowSavedLocationBanner] = useState(false);
+
+   // Load saved location on mount
+   useEffect(() => {
+     const saved = localStorage.getItem(SAVED_LOCATION_KEY);
+     if (saved) {
+       try {
+         const parsedSaved = JSON.parse(saved) as SavedLocation;
+         setSavedLocation(parsedSaved);
+         setShowSavedLocationBanner(true);
+       } catch (e) {
+         console.error("Failed to parse saved location:", e);
+         localStorage.removeItem(SAVED_LOCATION_KEY);
+       }
+     }
+   }, []);
+
+   const handleSaveLocation = () => {
+     if (userLocation && detectedLocation) {
+       const locationToSave: SavedLocation = {
+         lat: userLocation.lat,
+         lng: userLocation.lng,
+         name: detectedLocation,
+         savedAt: new Date().toISOString(),
+       };
+       localStorage.setItem(SAVED_LOCATION_KEY, JSON.stringify(locationToSave));
+       setSavedLocation(locationToSave);
+       toast.success("Location saved! We'll remember this for your next visit.", {
+         icon: <BookmarkCheck className="h-5 w-5 text-green-500" />,
+       });
+     } else {
+       toast.error("Please detect your location first before saving.");
+     }
+   };
+
+   const handleUseSavedLocation = () => {
+     if (savedLocation) {
+       setUserLocation({ lat: savedLocation.lat, lng: savedLocation.lng });
+       setDetectedLocation(savedLocation.name);
+       setShowSavedLocationBanner(false);
+       toast.success(`Using saved location: ${savedLocation.name}`);
+     }
+   };
+
+   const handleClearSavedLocation = () => {
+     localStorage.removeItem(SAVED_LOCATION_KEY);
+     setSavedLocation(null);
+     setShowSavedLocationBanner(false);
+     toast.info("Saved location cleared");
+   };
 
   const detectLocation = () => {
     setIsDetecting(true);
@@ -238,6 +298,50 @@ const DealerLocatorPage = () => {
       <Header />
 
       <main className="min-h-screen bg-background">
+         {/* Saved Location Banner */}
+         {showSavedLocationBanner && savedLocation && !userLocation && (
+           <motion.div
+             initial={{ opacity: 0, y: -20 }}
+             animate={{ opacity: 1, y: 0 }}
+             exit={{ opacity: 0, y: -20 }}
+             className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-primary/20"
+           >
+             <div className="container mx-auto px-4 py-3">
+               <div className="flex flex-wrap items-center justify-between gap-3">
+                 <div className="flex items-center gap-3">
+                   <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                     <BookmarkCheck className="h-5 w-5 text-primary" />
+                   </div>
+                   <div>
+                     <p className="font-medium text-sm">Welcome back!</p>
+                     <p className="text-xs text-muted-foreground">
+                       Use your saved location: <span className="font-medium text-foreground">{savedLocation.name}</span>
+                     </p>
+                   </div>
+                 </div>
+                 <div className="flex items-center gap-2">
+                   <Button
+                     size="sm"
+                     onClick={handleUseSavedLocation}
+                     className="gap-1.5"
+                   >
+                     <MapPin className="h-4 w-4" />
+                     Use This Location
+                   </Button>
+                   <Button
+                     size="sm"
+                     variant="ghost"
+                     onClick={() => setShowSavedLocationBanner(false)}
+                     className="text-muted-foreground"
+                   >
+                     <X className="h-4 w-4" />
+                   </Button>
+                 </div>
+               </div>
+             </div>
+           </motion.div>
+         )}
+
         {/* Premium Hero Section */}
         <section className="relative bg-gradient-to-br from-primary/10 via-primary/5 to-background py-16 md:py-24 overflow-hidden">
           {/* Background Elements */}
@@ -346,6 +450,32 @@ const DealerLocatorPage = () => {
                      </Badge>
                    )}
                  </Button>
+
+                 {/* Save Location Button */}
+                 {userLocation && detectedLocation && (
+                   <Button
+                     onClick={handleSaveLocation}
+                     variant="outline"
+                     size="lg"
+                     className={`gap-2 shadow-lg hover:shadow-xl transition-all border-2 ${
+                       savedLocation && savedLocation.lat === userLocation.lat && savedLocation.lng === userLocation.lng
+                         ? "border-green-500/50 bg-green-500/10 text-green-600 hover:bg-green-500/20"
+                         : "border-primary/30 hover:border-primary/50"
+                     }`}
+                   >
+                     {savedLocation && savedLocation.lat === userLocation.lat && savedLocation.lng === userLocation.lng ? (
+                       <>
+                         <BookmarkCheck className="h-5 w-5" />
+                         Location Saved
+                       </>
+                     ) : (
+                       <>
+                         <Bookmark className="h-5 w-5" />
+                         Save My Location
+                       </>
+                     )}
+                   </Button>
+                 )}
                  
                 <a href="https://wa.me/919577200023?text=Hi!%20I%27m%20looking%20for%20the%20best%20car%20deal%20from%20a%20nearby%20dealer.">
                   <Button variant="whatsapp" size="lg" className="gap-2 shadow-lg hover:shadow-xl">
@@ -411,6 +541,64 @@ const DealerLocatorPage = () => {
                  >
                    Clear
                  </Button>
+                  
+                  {/* Clear Saved Location */}
+                  {savedLocation && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleClearSavedLocation}
+                      className="text-muted-foreground hover:text-destructive gap-1"
+                    >
+                      <X className="h-3 w-3" />
+                      Clear Saved
+                    </Button>
+                  )}
+               </div>
+             </div>
+           </motion.section>
+         )}
+
+         {/* Saved Location Info Card (when using saved location) */}
+         {savedLocation && userLocation && savedLocation.lat === userLocation.lat && savedLocation.lng === userLocation.lng && !nearMeActive && (
+           <motion.section
+             initial={{ opacity: 0 }}
+             animate={{ opacity: 1 }}
+             className="bg-green-500/5 border-b border-green-500/20"
+           >
+             <div className="container mx-auto px-4 py-3">
+               <div className="flex flex-wrap items-center justify-between gap-3">
+                 <div className="flex items-center gap-3">
+                   <BookmarkCheck className="h-5 w-5 text-green-500" />
+                   <p className="text-sm">
+                     <span className="font-medium">Using saved location:</span>{" "}
+                     <span className="text-muted-foreground">{savedLocation.name}</span>
+                   </p>
+                 </div>
+                 <div className="flex items-center gap-2">
+                   <Button
+                     size="sm"
+                     variant="outline"
+                     onClick={detectLocation}
+                     disabled={isDetecting}
+                     className="gap-1.5 text-xs"
+                   >
+                     {isDetecting ? (
+                       <Loader2 className="h-3 w-3 animate-spin" />
+                     ) : (
+                       <Navigation className="h-3 w-3" />
+                     )}
+                     Update Location
+                   </Button>
+                   <Button
+                     size="sm"
+                     variant="ghost"
+                     onClick={handleClearSavedLocation}
+                     className="text-xs text-muted-foreground hover:text-destructive"
+                   >
+                     Clear
+                   </Button>
+                 </div>
                </div>
              </div>
            </motion.section>
