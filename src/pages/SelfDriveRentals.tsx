@@ -301,7 +301,7 @@ const SelfDriveRentals = () => {
         highlightText="Weekend Special"
         title="Rent Any Car Starting ₹999/day!"
         subtitle="Unlimited kilometers | Doorstep delivery | Zero security deposit for members"
-        variant="accent"
+        variant="primary"
         showCountdown
         countdownHours={48}
       />
