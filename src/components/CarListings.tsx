@@ -57,11 +57,11 @@ export const CarListings = () => {
             <Card
               key={car.id}
               variant="deal"
-              className="overflow-hidden animate-fade-in"
+              className="overflow-hidden animate-fade-in car-card-glow"
               style={{ animationDelay: `${index * 0.1}s` }}
             >
               {/* Image Container */}
-              <div className="relative aspect-[4/3] overflow-hidden bg-secondary">
+              <div className="relative aspect-[4/3] overflow-hidden bg-secondary glow-image">
                 <img
                   src={car.image}
                   alt={car.name}

@@ -1,4 +1,4 @@
-import { Car, Bot } from "lucide-react";
+import { Car, Bot, Sparkles } from "lucide-react";
 import { Button, ButtonProps } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -144,15 +144,17 @@ export const WhatsAppFloatingButton = ({
   return (
     <div className={cn("fixed bottom-24 right-6 z-40 flex flex-col items-center gap-1", className)}>
       {/* Label */}
-      <span className="px-2 py-0.5 bg-card/95 backdrop-blur-sm rounded-full text-[10px] font-semibold text-foreground shadow-md border border-border/50 whitespace-nowrap">
-        AutoBot 🚗
-      </span>
+      <div className="flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-card via-card to-success/10 backdrop-blur-sm rounded-full text-[11px] font-bold text-foreground shadow-lg border border-success/30 whitespace-nowrap glow-border-pulse">
+        <Car className="h-3 w-3 text-success" />
+        <span>AutoBot</span>
+        <Sparkles className="h-2.5 w-2.5 text-success animate-pulse" />
+      </div>
       {/* Button */}
       <a
         href={whatsappUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="relative w-14 h-14 rounded-full bg-gradient-to-br from-[#25D366] to-[#128C7E] hover:from-[#20BD5A] hover:to-[#0f7a6d] shadow-xl flex items-center justify-center transition-all hover:scale-110 animate-bounce-slow group"
+        className="relative w-14 h-14 rounded-full bg-gradient-to-br from-[#25D366] to-[#128C7E] hover:from-[#20BD5A] hover:to-[#0f7a6d] shadow-xl flex items-center justify-center transition-all hover:scale-110 animate-bounce-slow group autobot-glow"
         aria-label="Chat with AutoBot on WhatsApp"
         onClick={handleClick}
       >

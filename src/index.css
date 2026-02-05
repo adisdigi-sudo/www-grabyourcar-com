@@ -300,3 +300,88 @@
 .animate-bounce-slow:hover {
   animation-play-state: paused;
 }
+
+/* Glowing border pulse animation for branding */
+@keyframes glow-border-pulse {
+  0%, 100% {
+    box-shadow: 
+      0 0 5px hsla(142, 70%, 45%, 0.2),
+      0 0 10px hsla(142, 70%, 45%, 0.1),
+      inset 0 0 3px hsla(142, 70%, 45%, 0.05);
+  }
+  50% {
+    box-shadow: 
+      0 0 15px hsla(142, 70%, 45%, 0.4),
+      0 0 30px hsla(142, 70%, 45%, 0.2),
+      inset 0 0 8px hsla(142, 70%, 45%, 0.1);
+  }
+}
+
+.glow-border-pulse {
+  animation: glow-border-pulse 3s ease-in-out infinite;
+}
+
+/* Subtle glow for images and banners */
+.glow-image {
+  position: relative;
+}
+
+.glow-image::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  animation: glow-border-pulse 3s ease-in-out infinite;
+}
+
+/* AutoBot branding glow */
+@keyframes autobot-glow {
+  0%, 100% {
+    box-shadow: 
+      0 0 10px hsla(142, 70%, 45%, 0.4),
+      0 0 20px hsla(142, 70%, 45%, 0.2);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 
+      0 0 20px hsla(142, 70%, 45%, 0.6),
+      0 0 40px hsla(142, 70%, 45%, 0.3);
+    transform: scale(1.02);
+  }
+}
+
+.autobot-glow {
+  animation: autobot-glow 2s ease-in-out infinite;
+}
+
+/* Car card hover glow effect */
+.car-card-glow {
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.car-card-glow:hover {
+  box-shadow: 
+    0 0 20px hsla(142, 70%, 45%, 0.3),
+    0 0 40px hsla(142, 70%, 45%, 0.15),
+    0 10px 40px -10px rgba(0,0,0,0.2);
+  transform: translateY(-4px);
+}
+
+/* Banner glow animation */
+@keyframes banner-glow {
+  0%, 100% {
+    box-shadow: 
+      inset 0 0 30px hsla(142, 70%, 45%, 0.1),
+      0 0 20px hsla(142, 70%, 45%, 0.15);
+  }
+  50% {
+    box-shadow: 
+      inset 0 0 50px hsla(142, 70%, 45%, 0.2),
+      0 0 40px hsla(142, 70%, 45%, 0.25);
+  }
+}
+
+.banner-glow {
+  animation: banner-glow 4s ease-in-out infinite;
+}

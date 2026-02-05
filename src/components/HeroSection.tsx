@@ -105,7 +105,7 @@ export const HeroSection = () => {
                 {banners.map((banner) => (
                   <CarouselItem key={banner.id} className="pl-2 md:pl-4 basis-full md:basis-1/3">
                     <Link to={banner.link} className="group block">
-                      <div className="relative overflow-hidden rounded-xl shadow-lg border border-card/20 transition-all duration-300 group-hover:scale-[1.02] group-hover:shadow-xl">
+                      <div className="relative overflow-hidden rounded-xl shadow-lg border border-card/20 transition-all duration-300 group-hover:scale-[1.02] group-hover:shadow-xl banner-glow">
                         <img 
                           src={banner.src} 
                           alt={banner.alt} 
