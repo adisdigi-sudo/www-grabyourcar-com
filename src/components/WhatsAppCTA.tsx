@@ -1,4 +1,4 @@
-import { MessageCircle } from "lucide-react";
+import { Car, Bot } from "lucide-react";
 import { Button, ButtonProps } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -118,7 +118,7 @@ export const WhatsAppCTA = ({
         )}
         {...props}
       >
-        {showIcon && <MessageCircle className="h-5 w-5 mr-2" />}
+        {showIcon && <Car className="h-5 w-5 mr-2" />}
         {label}
       </Button>
     </a>
@@ -142,19 +142,31 @@ export const WhatsAppFloatingButton = ({
   };
 
   return (
-    <a
-      href={whatsappUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={cn(
-        "fixed bottom-24 right-6 z-40 w-14 h-14 rounded-full bg-[#25D366] hover:bg-[#20BD5A] shadow-lg flex items-center justify-center transition-all hover:scale-110 animate-bounce-slow",
-        className
-      )}
-      aria-label="Chat on WhatsApp"
-      onClick={handleClick}
-    >
-      <MessageCircle className="h-7 w-7 text-white" />
-    </a>
+    <div className={cn("fixed bottom-24 right-6 z-40 flex flex-col items-center gap-1", className)}>
+      {/* Label */}
+      <span className="px-2 py-0.5 bg-card/95 backdrop-blur-sm rounded-full text-[10px] font-semibold text-foreground shadow-md border border-border/50 whitespace-nowrap">
+        AutoBot 🚗
+      </span>
+      {/* Button */}
+      <a
+        href={whatsappUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="relative w-14 h-14 rounded-full bg-gradient-to-br from-[#25D366] to-[#128C7E] hover:from-[#20BD5A] hover:to-[#0f7a6d] shadow-xl flex items-center justify-center transition-all hover:scale-110 animate-bounce-slow group"
+        aria-label="Chat with AutoBot on WhatsApp"
+        onClick={handleClick}
+      >
+        {/* Pulse ring */}
+        <span className="absolute inset-0 rounded-full bg-[#25D366]/40 animate-ping" />
+        {/* Icon container with car + bot hybrid */}
+        <div className="relative flex items-center justify-center">
+          <Car className="h-6 w-6 text-white" />
+          <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-white rounded-full flex items-center justify-center shadow-sm">
+            <Bot className="h-2.5 w-2.5 text-[#25D366]" />
+          </div>
+        </div>
+      </a>
+    </div>
   );
 };
 
@@ -228,7 +240,7 @@ export const WhatsAppCardButton = ({
           className
         )}
       >
-        <MessageCircle className="h-4 w-4" />
+        <Car className="h-4 w-4" />
         Unlock Best Price
       </Button>
     </a>

@@ -640,6 +640,19 @@ const CarDetail = () => {
           </div>
         </section>
 
+        {/* AI Car Recommendations Section */}
+        <section className="py-8 md:py-12 bg-secondary/30">
+          <div className="container mx-auto px-4">
+            <AICarRecommendations
+              carName={car.name}
+              brand={car.brand}
+              price={car.price}
+              fuelTypes={car.fuelTypes}
+              transmission={car.transmission}
+            />
+          </div>
+        </section>
+
       </main>
 
       <Footer />
