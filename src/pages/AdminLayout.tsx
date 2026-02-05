@@ -27,6 +27,7 @@ import { APIIntegrationPortal } from "@/components/admin/APIIntegrationPortal";
 import { EmailMarketingManagement } from "@/components/admin/EmailMarketingManagement";
 import { AIContentHub } from "@/components/admin/AIContentHub";
 import { BulkDataManager } from "@/components/admin/BulkDataManager";
+import { ServiceCategoriesManager } from "@/components/admin/ServiceCategoriesManager";
 
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
@@ -109,8 +110,9 @@ const AdminLayout = () => {
       case "cars-ai":
         return <AIContentManagement />;
       case "website-homepage":
-      case "website-banners":
         return <HomepageManagement />;
+      case "website-banners":
+        return <ServiceCategoriesManager />;
       case "website-menu":
         return <WebsiteSettings />;
       case "website-branding":
