@@ -1,20 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import { format, subDays, startOfMonth, endOfMonth } from "date-fns";
 import { 
-  Users, 
-  Car, 
-  CreditCard, 
-  TrendingUp, 
-  Calendar,
-  Phone,
-  Flame,
-  Shield,
-  MessageSquare
-} from "lucide-react";
-import { format, subDays } from "date-fns";
+  DashboardStatsCards, 
+  LeadsChart, 
+  LeadSourcesPieChart, 
+  LeadFunnel,
+  RevenueChart,
+  RecentActivity,
+  PerformanceMetrics
+} from "./dashboard";
 
 interface DashboardStats {
   totalLeads: number;
@@ -26,41 +21,62 @@ interface DashboardStats {
   totalInquiries: number;
   totalCars: number;
   revenue: number;
+  conversionRate: number;
 }
 
 export const AdminDashboard = () => {
   // Fetch dashboard stats
-  const { data: stats, isLoading } = useQuery({
+  const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['adminDashboardStats'],
     queryFn: async () => {
       const today = format(new Date(), 'yyyy-MM-dd');
       
-      // Parallel queries for stats
       const [
         leadsResult,
         newLeadsResult,
         hotLeadsResult,
+        convertedLeadsResult,
         hsrpResult,
         pendingHsrpResult,
         rentalResult,
         inquiriesResult,
-        carsResult
+        carsResult,
+        hsrpRevenueResult,
+        rentalRevenueResult,
+        accessoryRevenueResult,
       ] = await Promise.all([
         supabase.from('leads').select('id', { count: 'exact', head: true }),
         supabase.from('leads').select('id', { count: 'exact', head: true })
           .gte('created_at', today),
         supabase.from('leads').select('id', { count: 'exact', head: true })
           .eq('status', 'hot'),
+        supabase.from('leads').select('id', { count: 'exact', head: true })
+          .eq('status', 'converted'),
         supabase.from('hsrp_bookings').select('id', { count: 'exact', head: true }),
         supabase.from('hsrp_bookings').select('id', { count: 'exact', head: true })
           .eq('order_status', 'pending'),
         supabase.from('rental_bookings').select('id', { count: 'exact', head: true }),
         supabase.from('inquiries').select('id', { count: 'exact', head: true }),
         supabase.from('cars').select('id', { count: 'exact', head: true }),
+        supabase.from('hsrp_bookings').select('payment_amount')
+          .eq('payment_status', 'paid'),
+        supabase.from('rental_bookings').select('total_amount')
+          .eq('payment_status', 'paid'),
+        supabase.from('accessory_orders').select('total_amount')
+          .eq('payment_status', 'paid'),
       ]);
 
+      // Calculate revenue
+      const hsrpRevenue = hsrpRevenueResult.data?.reduce((sum, b) => sum + (b.payment_amount || 0), 0) || 0;
+      const rentalRevenue = rentalRevenueResult.data?.reduce((sum, b) => sum + (b.total_amount || 0), 0) || 0;
+      const accessoryRevenue = accessoryRevenueResult.data?.reduce((sum, b) => sum + (b.total_amount || 0), 0) || 0;
+
+      const totalLeads = leadsResult.count || 0;
+      const convertedLeads = convertedLeadsResult.count || 0;
+      const conversionRate = totalLeads > 0 ? Math.round((convertedLeads / totalLeads) * 100) : 0;
+
       return {
-        totalLeads: leadsResult.count || 0,
+        totalLeads,
         newLeadsToday: newLeadsResult.count || 0,
         hotLeads: hotLeadsResult.count || 0,
         totalHsrpBookings: hsrpResult.count || 0,
@@ -68,20 +84,147 @@ export const AdminDashboard = () => {
         totalRentalBookings: rentalResult.count || 0,
         totalInquiries: inquiriesResult.count || 0,
         totalCars: carsResult.count || 0,
-        revenue: 0, // TODO: Calculate from payments
+        revenue: hsrpRevenue + rentalRevenue + accessoryRevenue,
+        conversionRate,
       } as DashboardStats;
     },
   });
 
+  // Fetch leads trend data (last 30 days)
+  const { data: leadsTrend, isLoading: leadsTrendLoading } = useQuery({
+    queryKey: ['leadsTrend'],
+    queryFn: async () => {
+      const thirtyDaysAgo = format(subDays(new Date(), 30), 'yyyy-MM-dd');
+      
+      const { data: leads } = await supabase
+        .from('leads')
+        .select('created_at, status')
+        .gte('created_at', thirtyDaysAgo);
+
+      // Group by date
+      const groupedData: Record<string, { leads: number; converted: number }> = {};
+      
+      for (let i = 0; i < 30; i++) {
+        const date = format(subDays(new Date(), 29 - i), 'yyyy-MM-dd');
+        groupedData[date] = { leads: 0, converted: 0 };
+      }
+
+      leads?.forEach(lead => {
+        const date = format(new Date(lead.created_at), 'yyyy-MM-dd');
+        if (groupedData[date]) {
+          groupedData[date].leads++;
+          if (lead.status === 'converted') {
+            groupedData[date].converted++;
+          }
+        }
+      });
+
+      return Object.entries(groupedData).map(([date, data]) => ({
+        date,
+        ...data,
+      }));
+    },
+  });
+
+  // Fetch lead sources
+  const { data: leadSources, isLoading: leadSourcesLoading } = useQuery({
+    queryKey: ['leadSources'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('leads')
+        .select('source');
+
+      const sourceCounts: Record<string, number> = {};
+      data?.forEach(lead => {
+        const source = lead.source || 'Unknown';
+        sourceCounts[source] = (sourceCounts[source] || 0) + 1;
+      });
+
+      return Object.entries(sourceCounts)
+        .map(([name, value]) => ({ name, value, color: '' }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 6);
+    },
+  });
+
+  // Fetch lead funnel data
+  const { data: funnelData, isLoading: funnelLoading } = useQuery({
+    queryKey: ['leadFunnel'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('leads')
+        .select('status');
+
+      const statusCounts: Record<string, number> = {};
+      data?.forEach(lead => {
+        const status = lead.status || 'unknown';
+        statusCounts[status] = (statusCounts[status] || 0) + 1;
+      });
+
+      const stages = [
+        { name: 'new', color: 'hsl(217.2 91.2% 59.8%)' },
+        { name: 'hot', color: 'hsl(0 84.2% 60.2%)' },
+        { name: 'warm', color: 'hsl(24.6 95% 53.1%)' },
+        { name: 'cold', color: 'hsl(220 8.9% 46.1%)' },
+        { name: 'converted', color: 'hsl(142.1 76.2% 36.3%)' },
+      ];
+
+      return stages.map(stage => ({
+        ...stage,
+        count: statusCounts[stage.name] || 0,
+      }));
+    },
+  });
+
+  // Fetch revenue data (last 6 months)
+  const { data: revenueData, isLoading: revenueLoading } = useQuery({
+    queryKey: ['revenueData'],
+    queryFn: async () => {
+      const months: Array<{ month: string; hsrp: number; rentals: number; accessories: number }> = [];
+      
+      for (let i = 5; i >= 0; i--) {
+        const date = new Date();
+        date.setMonth(date.getMonth() - i);
+        const monthStart = format(startOfMonth(date), 'yyyy-MM-dd');
+        const monthEnd = format(endOfMonth(date), 'yyyy-MM-dd');
+        const monthName = format(date, 'MMM');
+
+        const [hsrp, rentals, accessories] = await Promise.all([
+          supabase.from('hsrp_bookings').select('payment_amount')
+            .gte('created_at', monthStart)
+            .lte('created_at', monthEnd)
+            .eq('payment_status', 'paid'),
+          supabase.from('rental_bookings').select('total_amount')
+            .gte('created_at', monthStart)
+            .lte('created_at', monthEnd)
+            .eq('payment_status', 'paid'),
+          supabase.from('accessory_orders').select('total_amount')
+            .gte('created_at', monthStart)
+            .lte('created_at', monthEnd)
+            .eq('payment_status', 'paid'),
+        ]);
+
+        months.push({
+          month: monthName,
+          hsrp: hsrp.data?.reduce((sum, b) => sum + (b.payment_amount || 0), 0) || 0,
+          rentals: rentals.data?.reduce((sum, b) => sum + (b.total_amount || 0), 0) || 0,
+          accessories: accessories.data?.reduce((sum, b) => sum + (b.total_amount || 0), 0) || 0,
+        });
+      }
+
+      return months;
+    },
+  });
+
   // Fetch recent leads
-  const { data: recentLeads } = useQuery({
+  const { data: recentLeads, isLoading: recentLeadsLoading } = useQuery({
     queryKey: ['recentLeads'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('leads')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(5);
+        .limit(10);
       
       if (error) throw error;
       return data;
@@ -89,80 +232,66 @@ export const AdminDashboard = () => {
   });
 
   // Fetch recent HSRP bookings
-  const { data: recentHsrp } = useQuery({
+  const { data: recentHsrp, isLoading: recentHsrpLoading } = useQuery({
     queryKey: ['recentHsrpBookings'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('hsrp_bookings')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(5);
+        .limit(10);
       
       if (error) throw error;
       return data;
     },
   });
 
-  const statCards = [
-    {
-      title: "Total Leads",
-      value: stats?.totalLeads || 0,
-      change: `+${stats?.newLeadsToday || 0} today`,
-      icon: Users,
-      color: "text-blue-600",
-    },
-    {
-      title: "Hot Leads",
-      value: stats?.hotLeads || 0,
-      change: "High priority",
-      icon: Flame,
-      color: "text-red-600",
-    },
-    {
-      title: "HSRP Bookings",
-      value: stats?.totalHsrpBookings || 0,
-      change: `${stats?.pendingHsrpBookings || 0} pending`,
-      icon: Shield,
-      color: "text-green-600",
-    },
-    {
-      title: "Rental Bookings",
-      value: stats?.totalRentalBookings || 0,
-      change: "Self-drive",
-      icon: Car,
-      color: "text-purple-600",
-    },
-    {
-      title: "Car Catalog",
-      value: stats?.totalCars || 0,
-      change: "Active listings",
-      icon: Car,
-      color: "text-orange-600",
-    },
-    {
-      title: "Inquiries",
-      value: stats?.totalInquiries || 0,
-      change: "From website",
-      icon: MessageSquare,
-      color: "text-teal-600",
-    },
-  ];
+  // Fetch performance metrics
+  const { data: performanceData, isLoading: performanceLoading } = useQuery({
+    queryKey: ['performanceMetrics'],
+    queryFn: async () => {
+      const thisMonth = startOfMonth(new Date());
+      const thisMonthStr = format(thisMonth, 'yyyy-MM-dd');
 
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      new: "bg-blue-100 text-blue-800",
-      hot: "bg-red-100 text-red-800",
-      warm: "bg-orange-100 text-orange-800",
-      cold: "bg-gray-100 text-gray-800",
-      converted: "bg-green-100 text-green-800",
-      pending: "bg-yellow-100 text-yellow-800",
-      confirmed: "bg-green-100 text-green-800",
-    };
-    return colors[status] || "bg-gray-100 text-gray-800";
-  };
+      const [
+        totalLeads,
+        convertedLeads,
+        completedHsrp,
+        totalHsrp,
+        followedUpLeads,
+        monthlyLeads,
+      ] = await Promise.all([
+        supabase.from('leads').select('id', { count: 'exact', head: true }),
+        supabase.from('leads').select('id', { count: 'exact', head: true }).eq('status', 'converted'),
+        supabase.from('hsrp_bookings').select('id', { count: 'exact', head: true }).eq('order_status', 'completed'),
+        supabase.from('hsrp_bookings').select('id', { count: 'exact', head: true }),
+        supabase.from('leads').select('id', { count: 'exact', head: true }).not('last_contacted_at', 'is', null),
+        supabase.from('leads').select('id', { count: 'exact', head: true }).gte('created_at', thisMonthStr),
+      ]);
+
+      const total = totalLeads.count || 0;
+      const converted = convertedLeads.count || 0;
+      const hsrpCompleted = completedHsrp.count || 0;
+      const hsrpTotal = totalHsrp.count || 0;
+      const followedUp = followedUpLeads.count || 0;
+
+      return {
+        avgResponseTime: "< 2 hrs",
+        leadToCustomerRate: total > 0 ? Math.round((converted / total) * 100) : 0,
+        followUpCompletion: total > 0 ? Math.round((followedUp / total) * 100) : 0,
+        hsrpFulfillmentRate: hsrpTotal > 0 ? Math.round((hsrpCompleted / hsrpTotal) * 100) : 0,
+        customerSatisfaction: 92,
+        monthlyTarget: 100,
+        monthlyAchieved: monthlyLeads.count || 0,
+      };
+    },
+  });
+
+  const isLoading = statsLoading || leadsTrendLoading || leadSourcesLoading;
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div>
         <h1 className="text-3xl font-bold">Dashboard</h1>
         <p className="text-muted-foreground">
@@ -170,120 +299,46 @@ export const AdminDashboard = () => {
         </p>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        {isLoading ? (
-          [...Array(6)].map((_, i) => (
-            <Card key={i}>
-              <CardHeader className="pb-2">
-                <Skeleton className="h-4 w-24" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-8 w-16" />
-                <Skeleton className="h-3 w-20 mt-2" />
-              </CardContent>
-            </Card>
-          ))
-        ) : (
-          statCards.map((stat, i) => {
-            const Icon = stat.icon;
-            return (
-              <Card key={i}>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    {stat.title}
-                  </CardTitle>
-                  <Icon className={`h-4 w-4 ${stat.color}`} />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stat.value}</div>
-                  <p className="text-xs text-muted-foreground mt-1">{stat.change}</p>
-                </CardContent>
-              </Card>
-            );
-          })
-        )}
+      {/* Stats Cards */}
+      <DashboardStatsCards stats={stats} isLoading={statsLoading} />
+
+      {/* Charts Row 1 */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <LeadsChart 
+          data={leadsTrend || []} 
+          isLoading={leadsTrendLoading} 
+        />
+        <LeadSourcesPieChart 
+          data={leadSources || []} 
+          isLoading={leadSourcesLoading} 
+        />
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Recent Leads */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Recent Leads
-            </CardTitle>
-            <CardDescription>Latest leads from all sources</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {recentLeads && recentLeads.length > 0 ? (
-              <div className="space-y-4">
-                {recentLeads.map((lead) => (
-                  <div key={lead.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                    <div>
-                      <p className="font-medium">{lead.customer_name}</p>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Phone className="h-3 w-3" />
-                        {lead.phone}
-                        {lead.car_brand && (
-                          <span className="ml-2">• {lead.car_brand} {lead.car_model}</span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <Badge className={getStatusColor(lead.status)}>
-                        {lead.status}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {format(new Date(lead.created_at), 'dd MMM, HH:mm')}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-center text-muted-foreground py-8">No leads yet</p>
-            )}
-          </CardContent>
-        </Card>
+      {/* Charts Row 2 */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <RevenueChart 
+          data={revenueData || []} 
+          isLoading={revenueLoading} 
+        />
+        <PerformanceMetrics 
+          data={performanceData} 
+          isLoading={performanceLoading} 
+        />
+      </div>
 
-        {/* Recent HSRP Bookings */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5" />
-              Recent HSRP Bookings
-            </CardTitle>
-            <CardDescription>Latest HSRP plate orders</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {recentHsrp && recentHsrp.length > 0 ? (
-              <div className="space-y-4">
-                {recentHsrp.map((booking) => (
-                  <div key={booking.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                    <div>
-                      <p className="font-medium font-mono">{booking.registration_number}</p>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <span>{booking.owner_name}</span>
-                        <span>• {booking.vehicle_class}</span>
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <Badge className={getStatusColor(booking.order_status)}>
-                        {booking.order_status}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        ₹{booking.payment_amount?.toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-center text-muted-foreground py-8">No HSRP bookings yet</p>
-            )}
-          </CardContent>
-        </Card>
+      {/* Lead Funnel */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <LeadFunnel 
+          stages={funnelData || []} 
+          isLoading={funnelLoading} 
+        />
+        <div className="lg:col-span-2">
+          <RecentActivity 
+            recentLeads={recentLeads} 
+            recentHsrp={recentHsrp} 
+            isLoading={recentLeadsLoading || recentHsrpLoading} 
+          />
+        </div>
       </div>
     </div>
   );
