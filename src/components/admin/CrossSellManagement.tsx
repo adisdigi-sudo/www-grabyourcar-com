@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import {
   Plus, Edit2, Trash2, Package, Target, BarChart3,
   Gift, Layers, TrendingUp, Eye, MousePointer, ShoppingCart,
-  Calendar, Tag, Zap, Settings
+  Calendar, Tag, Zap, Settings, Upload, Download, FileSpreadsheet, Loader2
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -111,6 +111,27 @@ const bundleTypes = [
   { value: "custom", label: "Custom Bundle" },
 ];
 
+// CSV parsing helper
+function parseCSV(csvText: string): Record<string, string>[] {
+  const lines = csvText.trim().split('\n');
+  if (lines.length < 2) return [];
+  
+  const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/['"]/g, ''));
+  const rows: Record<string, string>[] = [];
+  
+  for (let i = 1; i < lines.length; i++) {
+    const values = lines[i].split(',').map(v => v.trim().replace(/^["']|["']$/g, ''));
+    if (values.length === headers.length) {
+      const row: Record<string, string> = {};
+      headers.forEach((header, idx) => {
+        row[header] = values[idx];
+      });
+      rows.push(row);
+    }
+  }
+  return rows;
+}
+
 export default function CrossSellManagement() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("rules");
@@ -120,6 +141,9 @@ export default function CrossSellManagement() {
   const [editingRule, setEditingRule] = useState<CrossSellRule | null>(null);
   const [editingBundle, setEditingBundle] = useState<CrossSellBundle | null>(null);
   const [selectedRuleId, setSelectedRuleId] = useState<string | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const [csvDialogOpen, setCsvDialogOpen] = useState(false);
+  const [csvType, setCsvType] = useState<"items" | "bundles">("items");
 
   // Form states
   const [ruleForm, setRuleForm] = useState({
@@ -403,6 +427,106 @@ export default function CrossSellManagement() {
       applicable_brands: "",
       applicable_segments: "",
     });
+  };
+
+  // CSV Import handlers
+  const handleCSVImport = async (e: React.ChangeEvent<HTMLInputElement>, type: "items" | "bundles") => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setIsImporting(true);
+    
+    try {
+      const text = await file.text();
+      const rows = parseCSV(text);
+      
+      if (rows.length === 0) {
+        toast.error("No valid data found in CSV");
+        return;
+      }
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      if (type === "items" && selectedRuleId) {
+        for (const row of rows) {
+          try {
+            const { error } = await supabase.from("cross_sell_items").insert({
+              rule_id: selectedRuleId,
+              item_type: row.item_type || "custom",
+              title: row.title,
+              description: row.description || null,
+              image_url: row.image_url || null,
+              cta_text: row.cta_text || "Learn More",
+              cta_link: row.cta_link || null,
+              discount_text: row.discount_text || null,
+              original_price: row.original_price ? parseFloat(row.original_price) : null,
+              offer_price: row.offer_price ? parseFloat(row.offer_price) : null,
+              sort_order: row.sort_order ? parseInt(row.sort_order) : 0,
+              is_active: row.is_active !== "false",
+            });
+            if (error) throw error;
+            successCount++;
+          } catch {
+            errorCount++;
+          }
+        }
+        queryClient.invalidateQueries({ queryKey: ["cross-sell-items"] });
+      } else if (type === "bundles") {
+        for (const row of rows) {
+          try {
+            const { error } = await supabase.from("cross_sell_bundles").insert({
+              name: row.name,
+              description: row.description || null,
+              bundle_type: row.bundle_type || "starter",
+              total_value: row.total_value ? parseFloat(row.total_value) : null,
+              bundle_price: row.bundle_price ? parseFloat(row.bundle_price) : null,
+              savings_text: row.savings_text || null,
+              image_url: row.image_url || null,
+              is_featured: row.is_featured === "true",
+              applicable_brands: row.applicable_brands ? row.applicable_brands.split(";").map(s => s.trim()) : null,
+              applicable_segments: row.applicable_segments ? row.applicable_segments.split(";").map(s => s.trim()) : null,
+            });
+            if (error) throw error;
+            successCount++;
+          } catch {
+            errorCount++;
+          }
+        }
+        queryClient.invalidateQueries({ queryKey: ["cross-sell-bundles"] });
+      }
+
+      toast.success(`Imported ${successCount} records${errorCount > 0 ? `, ${errorCount} failed` : ""}`);
+    } catch (error) {
+      console.error("CSV import error:", error);
+      toast.error("Failed to import CSV");
+    } finally {
+      setIsImporting(false);
+      setCsvDialogOpen(false);
+      e.target.value = "";
+    }
+  };
+
+  const downloadCSVTemplate = (type: "items" | "bundles") => {
+    let headers: string;
+    let sampleRow: string;
+
+    if (type === "items") {
+      headers = "title,description,item_type,image_url,cta_text,cta_link,discount_text,original_price,offer_price,sort_order,is_active";
+      sampleRow = "Premium HSRP Frame,Add style to your plate,accessory,,Add Now,/hsrp,50% OFF,199,99,1,true";
+    } else {
+      headers = "name,description,bundle_type,total_value,bundle_price,savings_text,image_url,is_featured,applicable_brands,applicable_segments";
+      sampleRow = "Starter Protection Bundle,Basic protection pack,starter,5000,3999,Save ₹1001,,false,Maruti;Hyundai,Hatchback;Sedan";
+    }
+
+    const csv = `${headers}\n${sampleRow}`;
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `crosssell-${type}-template.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const openEditRule = (rule: CrossSellRule) => {
@@ -754,10 +878,39 @@ export default function CrossSellManagement() {
                 <DialogTitle>Manage Cross-Sell Items</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
+                {/* CSV Import for Items */}
+                <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <FileSpreadsheet className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">Bulk import items via CSV</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="sm" onClick={() => downloadCSVTemplate("items")}>
+                      <Download className="h-4 w-4 mr-1" />
+                      Template
+                    </Button>
+                    <label className="cursor-pointer">
+                      <input
+                        type="file"
+                        accept=".csv"
+                        className="hidden"
+                        onChange={(e) => handleCSVImport(e, "items")}
+                        disabled={isImporting || !selectedRuleId}
+                      />
+                      <Button variant="outline" size="sm" asChild disabled={isImporting || !selectedRuleId}>
+                        <span>
+                          {isImporting ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Upload className="h-4 w-4 mr-1" />}
+                          Import
+                        </span>
+                      </Button>
+                    </label>
+                  </div>
+                </div>
+                
                 {/* Existing items */}
                 {items.length > 0 && (
                   <div className="space-y-2">
-                    <Label>Current Items</Label>
+                    <Label>Current Items ({items.length})</Label>
                     {items.map((item) => (
                       <div key={item.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                         <div>
@@ -888,21 +1041,43 @@ export default function CrossSellManagement() {
 
         {/* Bundles Tab */}
         <TabsContent value="bundles" className="space-y-4">
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center flex-wrap gap-3">
             <h3 className="text-lg font-semibold">Product Bundles</h3>
-            <Dialog open={bundleDialogOpen} onOpenChange={(open) => {
-              setBundleDialogOpen(open);
-              if (!open) {
-                setEditingBundle(null);
-                resetBundleForm();
-              }
-            }}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Bundle
+            <div className="flex items-center gap-2">
+              {/* CSV Import/Export */}
+              <Button variant="outline" size="sm" onClick={() => downloadCSVTemplate("bundles")}>
+                <Download className="h-4 w-4 mr-1" />
+                Template
+              </Button>
+              <label className="cursor-pointer">
+                <input
+                  type="file"
+                  accept=".csv"
+                  className="hidden"
+                  onChange={(e) => handleCSVImport(e, "bundles")}
+                  disabled={isImporting}
+                />
+                <Button variant="outline" size="sm" asChild disabled={isImporting}>
+                  <span>
+                    {isImporting ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Upload className="h-4 w-4 mr-1" />}
+                    Import CSV
+                  </span>
                 </Button>
-              </DialogTrigger>
+              </label>
+              
+              <Dialog open={bundleDialogOpen} onOpenChange={(open) => {
+                setBundleDialogOpen(open);
+                if (!open) {
+                  setEditingBundle(null);
+                  resetBundleForm();
+                }
+              }}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Bundle
+                  </Button>
+                </DialogTrigger>
               <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>{editingBundle ? "Edit Bundle" : "Create Product Bundle"}</DialogTitle>
@@ -1004,6 +1179,7 @@ export default function CrossSellManagement() {
                 </div>
               </DialogContent>
             </Dialog>
+            </div>
           </div>
 
           {bundlesLoading ? (
