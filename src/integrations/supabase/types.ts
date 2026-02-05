@@ -523,6 +523,7 @@ export type Database = {
           created_at: string
           hex_code: string
           id: string
+          image_url: string | null
           name: string
           sort_order: number | null
         }
@@ -531,6 +532,7 @@ export type Database = {
           created_at?: string
           hex_code: string
           id?: string
+          image_url?: string | null
           name: string
           sort_order?: number | null
         }
@@ -539,6 +541,7 @@ export type Database = {
           created_at?: string
           hex_code?: string
           id?: string
+          image_url?: string | null
           name?: string
           sort_order?: number | null
         }
@@ -1394,6 +1397,69 @@ export type Database = {
           tracking_id?: string | null
           updated_at?: string
           user_id?: string
+          vehicle_class?: string
+        }
+        Relationships: []
+      }
+      hsrp_service_banners: {
+        Row: {
+          animation_type: string | null
+          badge_color: string | null
+          badge_text: string | null
+          created_at: string
+          cta_text: string | null
+          description: string | null
+          features: string[] | null
+          gradient_from: string | null
+          gradient_to: string | null
+          icon_type: string | null
+          id: string
+          is_active: boolean | null
+          price_key: string
+          sort_order: number | null
+          subtitle: string | null
+          title: string
+          updated_at: string
+          vehicle_class: string
+        }
+        Insert: {
+          animation_type?: string | null
+          badge_color?: string | null
+          badge_text?: string | null
+          created_at?: string
+          cta_text?: string | null
+          description?: string | null
+          features?: string[] | null
+          gradient_from?: string | null
+          gradient_to?: string | null
+          icon_type?: string | null
+          id?: string
+          is_active?: boolean | null
+          price_key: string
+          sort_order?: number | null
+          subtitle?: string | null
+          title: string
+          updated_at?: string
+          vehicle_class: string
+        }
+        Update: {
+          animation_type?: string | null
+          badge_color?: string | null
+          badge_text?: string | null
+          created_at?: string
+          cta_text?: string | null
+          description?: string | null
+          features?: string[] | null
+          gradient_from?: string | null
+          gradient_to?: string | null
+          icon_type?: string | null
+          id?: string
+          is_active?: boolean | null
+          price_key?: string
+          sort_order?: number | null
+          subtitle?: string | null
+          title?: string
+          updated_at?: string
           vehicle_class?: string
         }
         Relationships: []

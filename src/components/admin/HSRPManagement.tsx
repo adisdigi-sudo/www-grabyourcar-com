@@ -23,7 +23,9 @@ import {
   Settings,
   Save,
   Loader2,
+  Image as ImageIcon,
 } from "lucide-react";
+import { HSRPBannersManagement } from "./HSRPBannersManagement";
 
 interface HSRPBooking {
   id: string;
@@ -254,8 +256,9 @@ export const HSRPManagement = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full max-w-md grid-cols-2">
+        <TabsList className="grid w-full max-w-lg grid-cols-3">
           <TabsTrigger value="bookings">Bookings ({stats.total})</TabsTrigger>
+          <TabsTrigger value="banners"><ImageIcon className="h-4 w-4 mr-2" />Banners</TabsTrigger>
           <TabsTrigger value="settings"><Settings className="h-4 w-4 mr-2" />Pricing</TabsTrigger>
         </TabsList>
 
@@ -663,6 +666,11 @@ export const HSRPManagement = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+        </TabsContent>
+
+        {/* Banners Tab */}
+        <TabsContent value="banners" className="space-y-6">
+          <HSRPBannersManagement />
         </TabsContent>
 
         {/* Pricing Settings Tab */}
