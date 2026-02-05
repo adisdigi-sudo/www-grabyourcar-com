@@ -3,7 +3,7 @@ import { Button, ButtonProps } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 
-const WHATSAPP_NUMBER = "919855924442";
+const WHATSAPP_NUMBER = "919577200023";
 
 interface WhatsAppCTAProps extends Omit<ButtonProps, "variant"> {
   /** Pre-filled message for WhatsApp chat */

@@ -370,7 +370,7 @@ const HSRP = () => {
       `${homeInstallation ? `🏠 Home Installation: Yes (₹${homeInstallationFee} extra)\n` : ""}` +
       `📍 Pincode: ${formData.pincode}`;
 
-    const whatsappUrl = `https://wa.me/919855924442?text=${encodeURIComponent(message)}`;
+    const whatsappUrl = `https://wa.me/919577200023?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, "_blank");
   };
 
@@ -457,7 +457,7 @@ const HSRP = () => {
               Home Installation
             </a>
             <span className="text-border">|</span>
-            <a href="tel:+919855924442" className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors">
+            <a href="tel:+919577200023" className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors">
               <Phone className="h-4 w-4" />
               Contact Us
             </a>
@@ -1022,10 +1022,10 @@ const HSRP = () => {
               size="lg"
               variant="whatsapp"
             />
-            <a href="tel:+919855924442">
+            <a href="tel:+919577200023">
               <Button variant="outline" size="lg" className="gap-2 bg-transparent border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10">
                 <Phone className="h-5 w-5" />
-                Call: +91 98559 24442
+                Call: +91 95772 00023
               </Button>
             </a>
           </div>

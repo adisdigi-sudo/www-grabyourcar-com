@@ -329,13 +329,13 @@
                Get in touch with our team for the best deals on new cars across India.
              </p>
              <div className="flex flex-wrap justify-center gap-4">
-               <a href="https://wa.me/919855924442?text=Hi%20Grabyourcar!%20I%27m%20interested%20in%20buying%20a%20new%20car." target="_blank" rel="noopener noreferrer">
+               <a href="https://wa.me/919577200023?text=Hi%20Grabyourcar!%20I%27m%20interested%20in%20buying%20a%20new%20car." target="_blank" rel="noopener noreferrer">
                  <Button size="lg" variant="whatsapp" className="font-semibold">
                    <MessageCircle className="h-5 w-5 mr-2" />
                    WhatsApp Us
                  </Button>
                </a>
-               <a href="tel:+919855924442">
+               <a href="tel:+919577200023">
                  <Button size="lg" variant="outline" className="font-semibold bg-primary-foreground text-primary hover:bg-primary-foreground/90">
                    <Phone className="h-5 w-5 mr-2" />
                    Call Now

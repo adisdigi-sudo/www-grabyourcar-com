@@ -164,7 +164,7 @@ export const CarListings = () => {
                 {/* Secondary Actions Row - Sales-Driven WhatsApp */}
                 <div className="flex gap-2 w-full">
                   <WhatsAppCardButton carName={car.name} />
-                  <a href="tel:+919855924442" className="flex-1">
+                  <a href="tel:+919577200023" className="flex-1">
                     <Button variant="call" className="w-full gap-2 font-semibold hover:scale-[1.02] transition-transform">
                       <Phone className="h-4 w-4" />
                       Call Expert

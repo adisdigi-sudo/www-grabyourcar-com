@@ -5,11 +5,12 @@ import logoImage from "@/assets/logo-grabyourcar-main.png";
 
 const footerLinks = {
   services: [
-    { label: "New Cars", href: "/#cars" },
+    { label: "Explore New Cars", href: "/cars" },
     { label: "Compare Cars", href: "/compare" },
-    { label: "Car Loans", href: "/car-loans" },
-    { label: "Car Insurance", href: "/car-insurance" },
-    { label: "Corporate Buying", href: "#" },
+    { label: "Car Finance", href: "/car-loans" },
+    { label: "Insurance Solutions", href: "/car-insurance" },
+    { label: "Corporate & Fleet Sales", href: "/corporate" },
+    { label: "Find Nearby Dealers", href: "/dealers" },
   ],
   brands: [
     { label: "Maruti Suzuki", href: "#" },
@@ -21,9 +22,8 @@ const footerLinks = {
   ],
   company: [
     { label: "About Us", href: "#" },
-    { label: "Contact", href: "#" },
-    { label: "Careers", href: "#" },
-    { label: "Partner With Us", href: "#" },
+    { label: "About Us", href: "/about" },
+    { label: "Partner With Us", href: "/corporate" },
     { label: "Blog", href: "/blog" },
   ],
   legal: [
@@ -49,10 +49,10 @@ export const Footer = () => {
               />
             </a>
             <p className="text-xl md:text-2xl font-heading font-bold text-background mb-2">
-              India's Smarter Way to Buy New Cars
+              Grab Your New Car — Hassle-Free & Memorable
             </p>
             <p className="text-background/70 mb-6 text-sm leading-relaxed">
-              Best Price. Faster Delivery. Zero Hassle. Compare offers from 500+ authorized dealers across India.
+              India's smarter way to buy new cars. Best Price. Faster Delivery. Zero Hassle. 500+ Happy Customers Trust Us Every Day.
             </p>
             
             {/* Newsletter */}
@@ -114,8 +114,8 @@ export const Footer = () => {
               <li className="flex items-start gap-3">
                 <Phone className="h-4 w-4 text-accent mt-1" />
                 <div>
-                  <a href="tel:+919855924442" className="text-sm text-background/70 hover:text-accent transition-colors">
-                    +91 98559 24442
+                  <a href="tel:+919577200023" className="text-sm text-background/70 hover:text-accent transition-colors">
+                    +91 95772 00023
                   </a>
                   <p className="text-xs text-background/50">Mon-Sat, 9am-7pm</p>
                 </div>
@@ -123,7 +123,7 @@ export const Footer = () => {
               <li className="flex items-start gap-3">
                 <MessageCircle className="h-4 w-4 text-accent mt-1" />
                 <a 
-                  href="https://wa.me/919855924442" 
+                  href="https://wa.me/919577200023" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-sm text-background/70 hover:text-accent transition-colors"

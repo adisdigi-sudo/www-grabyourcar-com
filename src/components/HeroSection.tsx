@@ -54,19 +54,19 @@ export const HeroSection = () => {
           {/* Trust Badge - More Premium */}
           <Badge variant="trust" className="mb-6 py-2.5 px-5 text-sm border-2 border-success/30 backdrop-blur-sm">
             <CheckCircle className="h-4 w-4 mr-2" />
-            Trusted by <AnimatedCounter value={50000} suffix="+" /> Car Buyers Across India
+            500+ Happy Customers Trust Us Every Day
           </Badge>
 
           {/* Main Heading - Stronger Tagline */}
           <h1 className="font-heading text-4xl md:text-5xl lg:text-7xl font-bold text-card mb-4 leading-tight tracking-tight">
-            India's <span className="text-success">Smarter</span> Way to{" "}
+            Grab Your <span className="text-success">New Car</span>{" "}
             <br className="hidden md:block" />
-            Buy New Cars
+            Hassle-Free & Memorable
           </h1>
 
           {/* Subheading - Value Props */}
           <p className="text-lg md:text-2xl text-card/90 mb-4 max-w-3xl mx-auto font-medium">
-            Best Price. Faster Delivery. Zero Hassle.
+            India's Smarter Way to Buy New Cars
           </p>
           
           {/* USP Pills */}
@@ -143,7 +143,7 @@ export const HeroSection = () => {
               </Button>
             </Link>
             <a 
-              href="https://wa.me/919855924442?text=Hi%20Grabyourcar!%20I%20want%20to%20know%20the%20best%20price%20for%20a%20new%20car." 
+              href="https://wa.me/919577200023?text=Hi%20Grabyourcar!%20I%20want%20to%20know%20the%20best%20price%20for%20a%20new%20car." 
               target="_blank" 
               rel="noopener noreferrer"
             >
