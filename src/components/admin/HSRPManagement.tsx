@@ -18,6 +18,7 @@ import {
   MapPin,
   Calendar,
   Eye,
+  Edit,
   CheckCircle,
   Clock,
   AlertCircle,
@@ -71,6 +72,13 @@ export const HSRPManagement = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedBooking, setSelectedBooking] = useState<HSRPBooking | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editForm, setEditForm] = useState({
+    tracking_id: "",
+    scheduled_date: "",
+    order_status: "",
+    payment_status: "",
+  });
 
   // Fetch HSRP bookings
   const { data: bookings, isLoading } = useQuery({
@@ -467,9 +475,102 @@ export const HSRPManagement = () => {
             <Button variant="outline" onClick={() => setIsDetailOpen(false)}>
               Close
             </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setEditForm({
+                  tracking_id: selectedBooking?.tracking_id || "",
+                  scheduled_date: selectedBooking?.scheduled_date || "",
+                  order_status: selectedBooking?.order_status || "",
+                  payment_status: selectedBooking?.payment_status || "",
+                });
+                setIsEditMode(true);
+              }}
+            >
+              <Edit className="h-4 w-4 mr-2" />
+              Edit Details
+            </Button>
             <Button onClick={() => window.open(`tel:${selectedBooking?.mobile}`)}>
               <Phone className="h-4 w-4 mr-2" />
               Call Customer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit HSRP Booking Dialog */}
+      <Dialog open={isEditMode} onOpenChange={setIsEditMode}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit HSRP Booking</DialogTitle>
+            <DialogDescription>
+              Update tracking and status for {selectedBooking?.registration_number}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Tracking ID</label>
+              <Input
+                value={editForm.tracking_id}
+                onChange={(e) => setEditForm({ ...editForm, tracking_id: e.target.value })}
+                placeholder="Enter tracking ID"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Scheduled Date</label>
+              <Input
+                type="date"
+                value={editForm.scheduled_date}
+                onChange={(e) => setEditForm({ ...editForm, scheduled_date: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Order Status</label>
+              <Select value={editForm.order_status} onValueChange={(v) => setEditForm({ ...editForm, order_status: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {orderStatusOptions.map((status) => (
+                    <SelectItem key={status.value} value={status.value}>
+                      {status.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Payment Status</label>
+              <Select value={editForm.payment_status} onValueChange={(v) => setEditForm({ ...editForm, payment_status: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="paid">Paid</SelectItem>
+                  <SelectItem value="refunded">Refunded</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditMode(false)}>Cancel</Button>
+            <Button 
+              onClick={() => {
+                if (selectedBooking) {
+                  updateBookingMutation.mutate({
+                    id: selectedBooking.id,
+                    updates: {
+                      tracking_id: editForm.tracking_id || null,
+                      scheduled_date: editForm.scheduled_date || null,
+                      order_status: editForm.order_status,
+                      payment_status: editForm.payment_status,
+                    },
+                  });
+                  setIsEditMode(false);
+                }
+              }}
+              disabled={updateBookingMutation.isPending}
+            >
+              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>

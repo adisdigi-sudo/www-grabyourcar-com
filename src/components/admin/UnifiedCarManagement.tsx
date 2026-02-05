@@ -85,12 +85,25 @@ export const UnifiedCarManagement = () => {
   const [brandFilter, setBrandFilter] = useState<string>("all");
   const [selectedCar, setSelectedCar] = useState<FullCarData | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isAddCarOpen, setIsAddCarOpen] = useState(false);
   const [activeEditTab, setActiveEditTab] = useState("basic");
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form state
   const [formData, setFormData] = useState<Partial<CarData>>({});
+  const [newCarForm, setNewCarForm] = useState({
+    name: "",
+    brand: "Maruti",
+    body_type: "Hatchback",
+    price_range: "",
+    tagline: "",
+    overview: "",
+    is_hot: false,
+    is_new: true,
+    is_upcoming: false,
+    is_bestseller: false,
+  });
   const [newImageUrl, setNewImageUrl] = useState("");
   const [newBrochure, setNewBrochure] = useState({ title: "", url: "", variant_name: "" });
   const [newVariant, setNewVariant] = useState({ 
@@ -294,6 +307,78 @@ export const UnifiedCarManagement = () => {
     setIsEditOpen(true);
   };
 
+  // Add new car mutation
+  const addCarMutation = useMutation({
+    mutationFn: async (carData: typeof newCarForm) => {
+      const slug = `${carData.brand}-${carData.name}`.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+      const { error } = await supabase
+        .from('cars')
+        .insert([{
+          slug,
+          name: carData.name,
+          brand: carData.brand,
+          body_type: carData.body_type,
+          price_range: carData.price_range,
+          tagline: carData.tagline,
+          overview: carData.overview,
+          is_hot: carData.is_hot,
+          is_new: carData.is_new,
+          is_upcoming: carData.is_upcoming,
+          is_bestseller: carData.is_bestseller,
+        }]);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['unifiedCarManagement'] });
+      toast.success('Car added successfully');
+      setIsAddCarOpen(false);
+      setNewCarForm({
+        name: "",
+        brand: "Maruti",
+        body_type: "Hatchback",
+        price_range: "",
+        tagline: "",
+        overview: "",
+        is_hot: false,
+        is_new: true,
+        is_upcoming: false,
+        is_bestseller: false,
+      });
+    },
+    onError: (error) => {
+      toast.error('Failed to add car');
+      console.error(error);
+    },
+  });
+
+  // Delete car mutation
+  const deleteCarMutation = useMutation({
+    mutationFn: async (carId: string) => {
+      // Delete related data first
+      await supabase.from('car_images').delete().eq('car_id', carId);
+      await supabase.from('car_variants').delete().eq('car_id', carId);
+      await supabase.from('car_brochures').delete().eq('car_id', carId);
+      const { error } = await supabase.from('cars').delete().eq('id', carId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['unifiedCarManagement'] });
+      toast.success('Car deleted');
+    },
+    onError: (error) => {
+      toast.error('Failed to delete car');
+      console.error(error);
+    },
+  });
+
+  const handleAddCar = () => {
+    if (!newCarForm.name || !newCarForm.brand) {
+      toast.error('Please fill in car name and brand');
+      return;
+    }
+    addCarMutation.mutate(newCarForm);
+  };
+
   const handleSaveBasic = () => {
     if (!selectedCar) return;
     updateCarMutation.mutate({ id: selectedCar.id, updates: formData });
@@ -401,7 +486,7 @@ export const UnifiedCarManagement = () => {
             <Upload className="h-4 w-4 mr-2" />
             Bulk Import
           </Button>
-          <Button>
+          <Button onClick={() => setIsAddCarOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Add Car
           </Button>
@@ -569,6 +654,17 @@ export const UnifiedCarManagement = () => {
                           </Button>
                           <Button variant="ghost" size="icon" onClick={() => handleEdit(car)}>
                             <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => {
+                              if (confirm(`Delete ${car.brand} ${car.name}? This will also delete all images, variants, and brochures.`)) {
+                                deleteCarMutation.mutate(car.id);
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </div>
                       </TableCell>
@@ -947,6 +1043,129 @@ export const UnifiedCarManagement = () => {
               </code>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add New Car Dialog */}
+      <Dialog open={isAddCarOpen} onOpenChange={setIsAddCarOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add New Car</DialogTitle>
+            <DialogDescription>
+              Add a new car to your inventory
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Car Name *</Label>
+                <Input
+                  value={newCarForm.name}
+                  onChange={(e) => setNewCarForm({ ...newCarForm, name: e.target.value })}
+                  placeholder="e.g., Swift, Creta, Nexon"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Brand *</Label>
+                <Select 
+                  value={newCarForm.brand} 
+                  onValueChange={(v) => setNewCarForm({ ...newCarForm, brand: v })}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {['Maruti', 'Hyundai', 'Tata', 'Mahindra', 'Kia', 'Toyota', 'Honda', 'MG', 'Skoda', 'Volkswagen', 'Audi', 'BMW', 'Mercedes'].map(b => (
+                      <SelectItem key={b} value={b}>{b}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Body Type</Label>
+                <Select 
+                  value={newCarForm.body_type} 
+                  onValueChange={(v) => setNewCarForm({ ...newCarForm, body_type: v })}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Hatchback">Hatchback</SelectItem>
+                    <SelectItem value="Sedan">Sedan</SelectItem>
+                    <SelectItem value="SUV">SUV</SelectItem>
+                    <SelectItem value="MUV">MUV</SelectItem>
+                    <SelectItem value="Crossover">Crossover</SelectItem>
+                    <SelectItem value="Coupe">Coupe</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Price Range</Label>
+                <Input
+                  value={newCarForm.price_range}
+                  onChange={(e) => setNewCarForm({ ...newCarForm, price_range: e.target.value })}
+                  placeholder="e.g., ₹6.5L - ₹9.8L"
+                />
+              </div>
+              <div className="space-y-2 col-span-2">
+                <Label>Tagline</Label>
+                <Input
+                  value={newCarForm.tagline}
+                  onChange={(e) => setNewCarForm({ ...newCarForm, tagline: e.target.value })}
+                  placeholder="e.g., The All-New Bold Design"
+                />
+              </div>
+              <div className="space-y-2 col-span-2">
+                <Label>Overview</Label>
+                <Textarea
+                  value={newCarForm.overview}
+                  onChange={(e) => setNewCarForm({ ...newCarForm, overview: e.target.value })}
+                  placeholder="Brief description of the car..."
+                  rows={3}
+                />
+              </div>
+            </div>
+
+            <div className="border-t pt-4">
+              <Label className="text-base font-semibold">Display Flags</Label>
+              <div className="grid grid-cols-2 gap-4 mt-4">
+                <div className="flex items-center justify-between">
+                  <Label className="cursor-pointer">🔥 Hot Deal</Label>
+                  <Switch
+                    checked={newCarForm.is_hot}
+                    onCheckedChange={(v) => setNewCarForm({ ...newCarForm, is_hot: v })}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label className="cursor-pointer">✨ New Arrival</Label>
+                  <Switch
+                    checked={newCarForm.is_new}
+                    onCheckedChange={(v) => setNewCarForm({ ...newCarForm, is_new: v })}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label className="cursor-pointer">🚀 Upcoming</Label>
+                  <Switch
+                    checked={newCarForm.is_upcoming}
+                    onCheckedChange={(v) => setNewCarForm({ ...newCarForm, is_upcoming: v })}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label className="cursor-pointer">⭐ Bestseller</Label>
+                  <Switch
+                    checked={newCarForm.is_bestseller}
+                    onCheckedChange={(v) => setNewCarForm({ ...newCarForm, is_bestseller: v })}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddCarOpen(false)}>Cancel</Button>
+            <Button onClick={handleAddCar} disabled={addCarMutation.isPending}>
+              <Plus className="h-4 w-4 mr-2" />
+              {addCarMutation.isPending ? 'Adding...' : 'Add Car'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
