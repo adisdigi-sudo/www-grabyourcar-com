@@ -24,49 +24,49 @@ import logoImage from "@/assets/logo-grabyourcar-main.png";
 
 const services = [
   {
-    title: "New Cars",
+    title: "Explore New Cars",
     href: "/cars",
     description: "Browse new cars with pan-India deals",
     icon: Car,
   },
   {
-    title: "Car Loans",
+    title: "Car Finance",
     href: "/car-loans",
     description: "Best rates from banks & NBFCs",
     icon: CreditCard,
   },
   {
-    title: "Car Insurance",
+    title: "Insurance Solutions",
     href: "/car-insurance",
     description: "Compare & buy car insurance online",
     icon: Shield,
   },
   {
-    title: "Accessories",
+    title: "Premium Accessories",
     href: "/accessories",
     description: "Car accessories & add-ons",
     icon: Package,
   },
   {
-    title: "HSRP Plates",
+    title: "HSRP Registration",
     href: "/hsrp",
     description: "Book High Security Registration Plates",
     icon: RectangleHorizontal,
   },
   {
-    title: "Dealer Locator",
+    title: "Find Nearby Dealers",
     href: "/dealers",
     description: "Find nearest authorized showrooms",
     icon: MapPin,
   },
   {
-    title: "Corporate Buying",
+    title: "Corporate & Fleet Sales",
     href: "/corporate",
     description: "Bulk & fleet car purchases",
     icon: Building2,
   },
   {
-    title: "Self-Drive Rentals",
+    title: "Self-Drive Car Rentals",
     href: "/self-drive",
     description: "Rent cars on demand",
     icon: CarFront,
@@ -224,13 +224,13 @@ export const Header = () => {
                 </Link>
               )}
               
-              <a href="https://wa.me/919855924442?text=Hi%20Grabyourcar!%20I%27m%20looking%20for%20the%20best%20price%20on%20a%20new%20car.%20Please%20help!" target="_blank" rel="noopener noreferrer">
+              <a href="https://wa.me/919577200023?text=Hi%20Grabyourcar!%20I%27m%20looking%20for%20the%20best%20price%20on%20a%20new%20car.%20Please%20help!" target="_blank" rel="noopener noreferrer">
                 <Button variant="whatsapp" size="sm" className="hidden md:flex gap-1.5 font-semibold hover:scale-105 transition-transform">
                   <MessageCircle className="h-4 w-4" />
                   Unlock Best Price
                 </Button>
               </a>
-              <a href="tel:+919855924442">
+              <a href="tel:+919577200023">
                 <Button variant="call" size="sm" className="hidden md:flex gap-1.5 font-semibold hover:scale-105 transition-transform">
                   <Phone className="h-4 w-4" />
                   Call Expert
@@ -348,13 +348,13 @@ export const Header = () => {
 
             {/* Contact Buttons */}
             <div className="mt-auto flex gap-3 pb-4">
-              <a href="https://wa.me/919855924442" target="_blank" rel="noopener noreferrer" className="flex-1">
+              <a href="https://wa.me/919577200023" target="_blank" rel="noopener noreferrer" className="flex-1">
                 <Button variant="whatsapp" className="w-full h-12">
                   <MessageCircle className="h-5 w-5 mr-2" />
                   WhatsApp
                 </Button>
               </a>
-              <a href="tel:+919855924442" className="flex-1">
+              <a href="tel:+919577200023" className="flex-1">
                 <Button variant="call" className="w-full h-12">
                   <Phone className="h-5 w-5 mr-2" />
                   Call Now

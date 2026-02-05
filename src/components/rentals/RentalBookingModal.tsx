@@ -189,7 +189,7 @@ export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalP
       `Name: ${customerName}\n` +
       `Phone: ${customerPhone}`;
 
-    const whatsappUrl = `https://wa.me/919855924442?text=${encodeURIComponent(message)}`;
+    const whatsappUrl = `https://wa.me/919577200023?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, "_blank");
     
     toast.success("Redirecting to WhatsApp for booking confirmation!");
