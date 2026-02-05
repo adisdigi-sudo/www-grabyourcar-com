@@ -18,9 +18,14 @@ interface BrandingSettings {
   secondary_color: string;
   brand_name: string;
   tagline: string;
-  logo_height_header: number; // in pixels
+  logo_height_header: number;
   logo_height_footer: number;
   logo_height_mobile: number;
+  logo_width_header: number;
+  logo_width_footer: number;
+  logo_width_mobile: number;
+  banner_height_desktop: number;
+  banner_height_mobile: number;
 }
 
 export const BrandingSettings = () => {
@@ -42,9 +47,14 @@ export const BrandingSettings = () => {
     secondary_color: "#1e3a5f",
     brand_name: "Grabyourcar",
     tagline: "Your Trusted Car Partner",
-    logo_height_header: 64, // 4rem
-    logo_height_footer: 56, // 3.5rem
-    logo_height_mobile: 40, // 2.5rem
+    logo_height_header: 64,
+    logo_height_footer: 56,
+    logo_height_mobile: 40,
+    logo_width_header: 0, // 0 = auto
+    logo_width_footer: 0,
+    logo_width_mobile: 0,
+    banner_height_desktop: 400,
+    banner_height_mobile: 280,
   });
 
   // Fetch branding settings
@@ -79,6 +89,11 @@ export const BrandingSettings = () => {
         logo_height_header: Number(value.logo_height_header) || 64,
         logo_height_footer: Number(value.logo_height_footer) || 56,
         logo_height_mobile: Number(value.logo_height_mobile) || 40,
+        logo_width_header: Number(value.logo_width_header) || 0,
+        logo_width_footer: Number(value.logo_width_footer) || 0,
+        logo_width_mobile: Number(value.logo_width_mobile) || 0,
+        banner_height_desktop: Number(value.banner_height_desktop) || 400,
+        banner_height_mobile: Number(value.banner_height_mobile) || 280,
       });
     }
   });
@@ -537,40 +552,111 @@ export const BrandingSettings = () => {
 
               {/* Logo Size Settings */}
               <div className="border-t pt-6">
-                <Label className="text-base font-semibold mb-4 block">Logo Size Settings</Label>
+                <Label className="text-base font-semibold mb-4 block">Logo Dimensions</Label>
                 <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-3 p-4 border rounded-lg">
+                    <Label className="font-medium">Header (Desktop)</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Height (px)</Label>
+                        <Input
+                          type="number"
+                          min={32}
+                          max={120}
+                          value={formData.logo_height_header}
+                          onChange={(e) => setFormData({ ...formData, logo_height_header: Number(e.target.value) })}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Width (px, 0=auto)</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={400}
+                          value={formData.logo_width_header}
+                          onChange={(e) => setFormData({ ...formData, logo_width_header: Number(e.target.value) })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-3 p-4 border rounded-lg">
+                    <Label className="font-medium">Footer</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Height (px)</Label>
+                        <Input
+                          type="number"
+                          min={24}
+                          max={80}
+                          value={formData.logo_height_footer}
+                          onChange={(e) => setFormData({ ...formData, logo_height_footer: Number(e.target.value) })}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Width (px, 0=auto)</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={300}
+                          value={formData.logo_width_footer}
+                          onChange={(e) => setFormData({ ...formData, logo_width_footer: Number(e.target.value) })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-3 p-4 border rounded-lg">
+                    <Label className="font-medium">Mobile</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Height (px)</Label>
+                        <Input
+                          type="number"
+                          min={24}
+                          max={60}
+                          value={formData.logo_height_mobile}
+                          onChange={(e) => setFormData({ ...formData, logo_height_mobile: Number(e.target.value) })}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Width (px, 0=auto)</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={200}
+                          value={formData.logo_width_mobile}
+                          onChange={(e) => setFormData({ ...formData, logo_width_mobile: Number(e.target.value) })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Banner Dimensions */}
+              <div className="border-t pt-6">
+                <Label className="text-base font-semibold mb-4 block">Banner Dimensions</Label>
+                <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label className="text-sm">Header Logo Height (px)</Label>
+                    <Label className="text-sm">Desktop Banner Height (px)</Label>
                     <Input
                       type="number"
-                      min={32}
-                      max={120}
-                      value={formData.logo_height_header}
-                      onChange={(e) => setFormData({ ...formData, logo_height_header: Number(e.target.value) })}
+                      min={200}
+                      max={800}
+                      value={formData.banner_height_desktop}
+                      onChange={(e) => setFormData({ ...formData, banner_height_desktop: Number(e.target.value) })}
                     />
-                    <p className="text-xs text-muted-foreground">Desktop header: 48-80px recommended</p>
+                    <p className="text-xs text-muted-foreground">Recommended: 350-500px</p>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-sm">Footer Logo Height (px)</Label>
+                    <Label className="text-sm">Mobile Banner Height (px)</Label>
                     <Input
                       type="number"
-                      min={24}
-                      max={80}
-                      value={formData.logo_height_footer}
-                      onChange={(e) => setFormData({ ...formData, logo_height_footer: Number(e.target.value) })}
+                      min={150}
+                      max={500}
+                      value={formData.banner_height_mobile}
+                      onChange={(e) => setFormData({ ...formData, banner_height_mobile: Number(e.target.value) })}
                     />
-                    <p className="text-xs text-muted-foreground">Footer: 40-60px recommended</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm">Mobile Logo Height (px)</Label>
-                    <Input
-                      type="number"
-                      min={24}
-                      max={60}
-                      value={formData.logo_height_mobile}
-                      onChange={(e) => setFormData({ ...formData, logo_height_mobile: Number(e.target.value) })}
-                    />
-                    <p className="text-xs text-muted-foreground">Mobile: 32-48px recommended</p>
+                    <p className="text-xs text-muted-foreground">Recommended: 250-350px</p>
                   </div>
                 </div>
               </div>
