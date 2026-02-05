@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Phone, MessageCircle, Heart, User, LogOut, Settings, Home, Search, Menu, X, ChevronDown, Car, CreditCard, Shield, Package, Building2, CarFront, RectangleHorizontal, Calendar, ShoppingBag, MapPin } from "lucide-react";
+import { Phone, MessageCircle, Heart, User, LogOut, Settings, Home, Search, Menu, X, ChevronDown, Car, CreditCard, Shield, Package, Building2, CarFront, RectangleHorizontal, Calendar, ShoppingBag, MapPin, Brain, Newspaper, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -28,6 +28,13 @@ const services = [
     href: "/cars",
     description: "Browse new cars with pan-India deals",
     icon: Car,
+  },
+  {
+    title: "Auto Intelligence",
+    href: "/auto-intelligence",
+    description: "AI-powered news, launches & insights",
+    icon: Brain,
+    badge: "New",
   },
   {
     title: "Car Finance",
@@ -76,6 +83,7 @@ const services = [
 const quickLinks = [
   { label: "Compare Cars", href: "/compare" },
   { label: "Features & Specs", href: "/features-specs" },
+  { label: "Auto News", href: "/auto-news" },
   { label: "Blog", href: "/blog" },
    { label: "About Us", href: "/about" },
 ];
@@ -143,6 +151,11 @@ export const Header = () => {
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
                                 <span className="font-medium text-foreground text-sm">{service.title}</span>
+                            {(service as any).badge && (
+                              <span className="text-[10px] bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full font-semibold">
+                                {(service as any).badge}
+                              </span>
+                            )}
                               </div>
                               <p className="text-xs text-muted-foreground mt-0.5">{service.description}</p>
                             </div>

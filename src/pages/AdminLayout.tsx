@@ -7,6 +7,7 @@ import { HomepageManagement } from "@/components/admin/HomepageManagement";
 import { HSRPManagement } from "@/components/admin/HSRPManagement";
 import { CarDataManagement } from "@/components/admin/CarDataManagement";
 import { RoleManagement } from "@/components/admin/RoleManagement";
+import { AIContentManagement } from "@/components/admin/AIContentManagement";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ import {
   Shield, 
   Database,
   UserCog,
+  Brain,
 } from "lucide-react";
 
 const AdminLayout = () => {
@@ -119,6 +121,13 @@ const AdminLayout = () => {
               <UserCog className="h-4 w-4" />
               Roles
             </TabsTrigger>
+            <TabsTrigger 
+              value="ai-content" 
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2"
+            >
+              <Brain className="h-4 w-4" />
+              AI Content
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard">
@@ -143,6 +152,10 @@ const AdminLayout = () => {
 
           <TabsContent value="roles">
             <RoleManagement />
+          </TabsContent>
+
+          <TabsContent value="ai-content">
+            <AIContentManagement />
           </TabsContent>
         </Tabs>
       </div>
