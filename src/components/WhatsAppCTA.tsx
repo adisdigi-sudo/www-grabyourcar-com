@@ -254,12 +254,12 @@ export const WhatsAppCardButton = ({
         variant="whatsapp"
         size="sm"
         className={cn(
-          "w-full gap-1 font-semibold hover:scale-[1.02] transition-transform px-2",
+          "w-full gap-1 font-semibold hover:scale-[1.02] transition-transform px-1.5 sm:px-2",
           className
         )}
       >
-        <Car className="h-3.5 w-3.5 flex-shrink-0" />
-        <span className="truncate text-[10px] sm:text-xs">Best Price</span>
+        <Car className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
+        <span className="text-[9px] sm:text-xs whitespace-nowrap">Best Deal</span>
       </Button>
     </a>
   );
