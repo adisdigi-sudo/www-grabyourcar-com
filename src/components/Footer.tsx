@@ -1,7 +1,7 @@
 import { Mail, Phone, MapPin, Facebook, Instagram, Twitter, Youtube, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import logoImage from "@/assets/logo-grabyourcar-main.png";
+import { ResponsiveLogo } from "@/components/ResponsiveLogo";
 
 const footerLinks = {
   services: [
@@ -42,11 +42,7 @@ export const Footer = () => {
           {/* Brand */}
           <div className="col-span-2">
             <a href="/" className="flex items-center mb-4">
-              <img 
-                src={logoImage} 
-                alt="Grabyourcar - India's Smarter Way to Buy New Cars" 
-                className="h-14 md:h-16 lg:h-[4.5rem] w-auto max-w-[220px] md:max-w-[300px] lg:max-w-[340px] object-contain brightness-0 invert drop-shadow-lg transition-transform hover:scale-[1.02]" 
-              />
+              <ResponsiveLogo variant="footer" className="brightness-0 invert" />
             </a>
             <p className="text-xl md:text-2xl font-heading font-bold text-background mb-2">
               Grab Your New Car — Hassle-Free & Memorable

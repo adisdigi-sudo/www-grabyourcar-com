@@ -18,6 +18,9 @@ interface BrandingSettings {
   secondary_color: string;
   brand_name: string;
   tagline: string;
+  logo_height_header: number; // in pixels
+  logo_height_footer: number;
+  logo_height_mobile: number;
 }
 
 export const BrandingSettings = () => {
@@ -39,6 +42,9 @@ export const BrandingSettings = () => {
     secondary_color: "#1e3a5f",
     brand_name: "Grabyourcar",
     tagline: "Your Trusted Car Partner",
+    logo_height_header: 64, // 4rem
+    logo_height_footer: 56, // 3.5rem
+    logo_height_mobile: 40, // 2.5rem
   });
 
   // Fetch branding settings
@@ -60,16 +66,19 @@ export const BrandingSettings = () => {
   // Load settings when data changes
   useState(() => {
     if (settings?.setting_value) {
-      const value = settings.setting_value as Record<string, string>;
+      const value = settings.setting_value as Record<string, string | number>;
       setFormData({
-        logo_url: value.logo_url || "/logo-grabyourcar.png",
-        logo_dark_url: value.logo_dark_url || "",
-        favicon_url: value.favicon_url || "/favicon.png",
-        og_image_url: value.og_image_url || "/og-image.png",
-        primary_color: value.primary_color || "#2563eb",
-        secondary_color: value.secondary_color || "#7c3aed",
-        brand_name: value.brand_name || "Grabyourcar",
-        tagline: value.tagline || "Your Trusted Car Partner",
+        logo_url: String(value.logo_url || "/logo-grabyourcar.png"),
+        logo_dark_url: String(value.logo_dark_url || ""),
+        favicon_url: String(value.favicon_url || "/favicon.png"),
+        og_image_url: String(value.og_image_url || "/og-image.png"),
+        primary_color: String(value.primary_color || "#2563eb"),
+        secondary_color: String(value.secondary_color || "#7c3aed"),
+        brand_name: String(value.brand_name || "Grabyourcar"),
+        tagline: String(value.tagline || "Your Trusted Car Partner"),
+        logo_height_header: Number(value.logo_height_header) || 64,
+        logo_height_footer: Number(value.logo_height_footer) || 56,
+        logo_height_mobile: Number(value.logo_height_mobile) || 40,
       });
     }
   });
@@ -504,7 +513,7 @@ export const BrandingSettings = () => {
           <Card>
             <CardHeader>
               <CardTitle>Brand Identity</CardTitle>
-              <CardDescription>Your brand name and tagline</CardDescription>
+              <CardDescription>Your brand name, tagline, and logo sizing</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid gap-4 md:grid-cols-2">
@@ -526,11 +535,56 @@ export const BrandingSettings = () => {
                 </div>
               </div>
 
+              {/* Logo Size Settings */}
               <div className="border-t pt-6">
-                <Label className="text-base font-semibold">Header Preview</Label>
-                <div className="mt-4 p-4 border rounded-lg bg-white flex items-center gap-3">
+                <Label className="text-base font-semibold mb-4 block">Logo Size Settings</Label>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label className="text-sm">Header Logo Height (px)</Label>
+                    <Input
+                      type="number"
+                      min={32}
+                      max={120}
+                      value={formData.logo_height_header}
+                      onChange={(e) => setFormData({ ...formData, logo_height_header: Number(e.target.value) })}
+                    />
+                    <p className="text-xs text-muted-foreground">Desktop header: 48-80px recommended</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm">Footer Logo Height (px)</Label>
+                    <Input
+                      type="number"
+                      min={24}
+                      max={80}
+                      value={formData.logo_height_footer}
+                      onChange={(e) => setFormData({ ...formData, logo_height_footer: Number(e.target.value) })}
+                    />
+                    <p className="text-xs text-muted-foreground">Footer: 40-60px recommended</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm">Mobile Logo Height (px)</Label>
+                    <Input
+                      type="number"
+                      min={24}
+                      max={60}
+                      value={formData.logo_height_mobile}
+                      onChange={(e) => setFormData({ ...formData, logo_height_mobile: Number(e.target.value) })}
+                    />
+                    <p className="text-xs text-muted-foreground">Mobile: 32-48px recommended</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t pt-6">
+                <Label className="text-base font-semibold">Preview</Label>
+                <div className="mt-4 p-4 border rounded-lg bg-background flex items-center gap-3">
                   {formData.logo_url && (
-                    <img src={formData.logo_url} alt="Logo" className="h-10 object-contain" />
+                    <img 
+                      src={formData.logo_url} 
+                      alt="Logo" 
+                      style={{ height: formData.logo_height_header }}
+                      className="object-contain" 
+                    />
                   )}
                   <div>
                     <div className="font-bold text-lg">{formData.brand_name}</div>
