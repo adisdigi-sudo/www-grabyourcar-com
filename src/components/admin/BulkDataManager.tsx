@@ -55,41 +55,53 @@ const DATA_MODULES = [
 ];
 
 const SAMPLE_DATA: Record<string, string> = {
-  cars: `brand,name,slug,price_range,body_type,fuel_types,transmission_types,is_bestseller,is_new
-Maruti,Swift,maruti-swift,6.49 - 9.59 Lakh,Hatchback,Petrol;CNG,Manual;AMT,true,false
-Maruti,Brezza,maruti-brezza,8.29 - 14.14 Lakh,SUV,Petrol;CNG,Manual;Automatic,true,true
-Hyundai,Creta,hyundai-creta,11.00 - 20.15 Lakh,SUV,Petrol;Diesel,Manual;Automatic,true,false
-Tata,Nexon,tata-nexon,8.10 - 15.50 Lakh,SUV,Petrol;Diesel;Electric,Manual;AMT,true,false`,
+  cars: `brand,name,slug,price_range,body_type,fuel_types,transmission_types,is_bestseller,is_new,is_hot,tagline,overview,key_highlights,pros,cons
+Maruti,Swift,maruti-swift,6.49 - 9.59 Lakh,Hatchback,Petrol;CNG,Manual;AMT,true,false,false,India's Favorite Hatchback,The Maruti Swift is one of the most popular hatchbacks in India known for its sporty design and fuel efficiency.,Sporty Design;Great Mileage;Peppy Engine;Low Maintenance,Good fuel efficiency;Sporty looks;Easy to drive,Limited rear space;Basic features in base variant
+Maruti,Brezza,maruti-brezza,8.29 - 14.14 Lakh,SUV,Petrol;CNG,Manual;Automatic,true,true,true,Smart Choice for Smart Buyers,The Brezza is a compact SUV that offers a perfect blend of style comfort and performance.,Sunroof;360 Camera;HUD Display;Wireless Charging,Stylish design;Feature-loaded;Good ground clearance,No diesel option;Average rear AC
+Hyundai,Creta,hyundai-creta,11.00 - 20.15 Lakh,SUV,Petrol;Diesel,Manual;Automatic,true,false,false,The Ultimate SUV,Hyundai Creta is a premium compact SUV with segment-leading features and powerful performance.,ADAS;Panoramic Sunroof;Bose Audio;Ventilated Seats,Premium interiors;Powerful engines;Safety features,Expensive top variants;Firm ride quality
+Tata,Nexon,tata-nexon,8.10 - 15.50 Lakh,SUV,Petrol;Diesel;Electric,Manual;AMT,true,false,true,Play Safe Play Smart,The Nexon is India's safest car with 5-star Global NCAP rating and modern design.,5-Star Safety;Electric Option;Connected Tech;Terrain Modes,Excellent safety;Multiple powertrain options;Good build quality,AMT could be smoother;Boot space average`,
   
-  leads: `customer_name,phone,email,city,car_brand,car_model,source,lead_type,notes
-Rahul Sharma,9876543210,rahul@email.com,Delhi,Maruti,Swift,website,car_inquiry,Interested in petrol variant
-Priya Patel,9876543211,priya@email.com,Mumbai,Hyundai,Creta,whatsapp,test_drive,Wants test drive this weekend
-Amit Kumar,9876543212,amit@email.com,Bangalore,Tata,Nexon,referral,finance,Looking for loan options`,
+  leads: `customer_name,phone,email,city,car_brand,car_model,car_variant,source,lead_type,status,priority,notes,budget_min,budget_max,buying_timeline,tags
+Rahul Sharma,9876543210,rahul@email.com,Delhi,Maruti,Swift,VXi,website,car_inquiry,new,high,Interested in petrol variant with accessories,600000,800000,within_week,hot;ready_to_buy
+Priya Patel,9876543211,priya@email.com,Mumbai,Hyundai,Creta,SX(O),whatsapp,test_drive,contacted,medium,Wants test drive this weekend,1500000,2000000,within_month,family;suv
+Amit Kumar,9876543212,amit@email.com,Bangalore,Tata,Nexon,XZ+,referral,finance,qualified,high,Looking for loan options - salaried professional,900000,1200000,within_week,finance;exchange
+Sneha Gupta,9876543213,sneha@email.com,Pune,Maruti,Brezza,ZXi+,showroom,exchange,new,low,Has old Swift for exchange,1000000,1400000,within_3_months,exchange;first_time_buyer`,
   
-  accessories: `id,name,category,price,mrp,brand,compatibility,stock,image_url
-1,Premium Floor Mats,Interior,1499,1999,Generic,All Cars,50,https://example.com/mat.jpg
-2,Car Dash Camera,Electronics,3499,4999,Viofo,All Cars,30,https://example.com/cam.jpg
-3,Seat Covers Premium,Interior,4999,6999,Autoform,Sedan;Hatchback,25,https://example.com/seat.jpg`,
+  accessories: `name,category,price,mrp,brand,compatibility,stock,description,image_url,is_featured
+Premium 3D Floor Mats,Interior,1499,1999,AutoForm,All Cars,50,High quality 3D floor mats with anti-slip backing and waterproof material,https://example.com/floor-mat.jpg,true
+Dash Camera 4K,Electronics,4999,6999,Viofo,All Cars,30,4K recording with night vision GPS tracking and parking mode,https://example.com/dash-cam.jpg,true
+Leather Seat Covers Premium,Interior,7999,9999,Autoform,Sedan;Hatchback,25,Premium grade leather seat covers with cushioning and waterproof lining,https://example.com/seat-covers.jpg,true
+Car Air Purifier,Electronics,2499,3499,Xiaomi,All Cars,40,HEPA filter air purifier with PM2.5 display and USB charging,https://example.com/air-purifier.jpg,false
+Door Visor Set,Exterior,999,1499,Generic,All Cars,100,Injection molded door visors with chrome lining for rain protection,https://example.com/door-visor.jpg,false
+Alloy Wheels 16 inch,Exterior,24999,29999,TSW,SUV;Sedan,15,Premium alloy wheels 16 inch with 5 year warranty,https://example.com/alloy-wheels.jpg,true`,
   
-  rentals: `name,brand,vehicle_type,fuel_type,transmission,seats,year,color,rent,location,available
-Swift Dzire,Maruti,Sedan,Petrol,Manual,5,2024,White,1500,Delhi - Connaught Place,true
-Hyundai Venue,Hyundai,SUV,Petrol,Automatic,5,2023,Grey,2500,Noida - Sector 18,true
-Toyota Innova,Toyota,MPV,Diesel,Automatic,7,2024,White,4000,Gurugram - Cyber Hub,true`,
+  rentals: `name,brand,vehicle_type,fuel_type,transmission,seats,year,color,daily_rate,weekly_rate,monthly_rate,location,available,features,security_deposit,km_limit_daily
+Swift Dzire,Maruti,Sedan,Petrol,Manual,5,2024,Pearl White,1500,9000,35000,Delhi - Connaught Place,true,AC;Bluetooth;USB Charging,5000,150
+Hyundai Venue,Hyundai,SUV,Petrol,Automatic,5,2023,Titan Grey,2500,15000,55000,Noida - Sector 18,true,Sunroof;Reverse Camera;TouchScreen,8000,150
+Toyota Innova Crysta,Toyota,MPV,Diesel,Automatic,7,2024,Super White,4000,24000,90000,Gurugram - Cyber Hub,true,Captain Seats;Rear AC;Entertainment,15000,200
+Maruti Ertiga,Maruti,MPV,Petrol,Automatic,7,2024,Arctic White,2200,13000,48000,Delhi - Rajouri Garden,true,AC;Bluetooth;Third Row,7000,150
+Mahindra XUV700,Mahindra,SUV,Diesel,Automatic,7,2024,Midnight Black,5500,33000,120000,Noida - Sector 62,true,ADAS;Panoramic Sunroof;Alexa,20000,200`,
   
-  insurance: `provider,plan_name,plan_type,premium_min,premium_max,idv_percentage,ncb_discount,features
-HDFC Ergo,Basic Cover,third_party,2999,4999,0,0,Third party liability;Personal accident cover
-ICICI Lombard,Comprehensive,comprehensive,5999,15999,90,50,Full damage cover;Zero depreciation;Roadside assistance
-Tata AIG,Premium Plus,comprehensive,7999,19999,100,60,Engine protection;Return to invoice;Key replacement`,
+  insurance: `provider,plan_name,plan_type,premium_range_min,premium_range_max,idv_percentage,ncb_max_discount,key_features,claim_settlement_ratio,cashless_garages
+HDFC Ergo,Basic Third Party,third_party,2999,4999,0,0,Third party liability;Personal accident cover;Legal liability,96.5,7500
+ICICI Lombard,Comprehensive Plus,comprehensive,5999,15999,90,50,Full damage cover;Zero depreciation;Roadside assistance;Towing,95.8,8200
+Tata AIG,Premium Shield,comprehensive,7999,19999,100,60,Engine protection;Return to invoice;Key replacement;NCB protection,97.2,7800
+Bajaj Allianz,Total Secure,comprehensive,6499,17999,95,55,Consumable cover;Tyre protection;Personal belongings;EMI protection,96.1,9000
+SBI General,Smart Cover,comprehensive,5499,14999,85,50,Zero depreciation;Roadside assistance;Personal accident;Passenger cover,94.5,6500`,
   
-  loans: `bank,loan_name,interest_rate_min,interest_rate_max,tenure_min,tenure_max,processing_fee,max_funding
-HDFC Bank,New Car Loan,8.50,10.50,12,84,0.50,90
-ICICI Bank,Auto Loan,8.75,11.00,12,84,0.40,85
-SBI,SBI Car Loan,8.40,10.25,12,84,0.35,90
-Axis Bank,Axis Drive Easy,8.60,10.75,12,72,0.50,85`,
+  loans: `bank_name,loan_name,interest_rate_min,interest_rate_max,tenure_min_months,tenure_max_months,processing_fee_percent,max_funding_percent,min_loan_amount,max_loan_amount,features
+HDFC Bank,New Car Loan,8.50,10.50,12,84,0.50,90,100000,10000000,Quick approval;Doorstep service;Flexible EMI;Top-up loan facility
+ICICI Bank,Auto Finance,8.75,11.00,12,84,0.40,85,150000,15000000,Pre-approved offers;Part-payment;Balance transfer;Online tracking
+SBI,SBI Car Loan,8.40,10.25,12,84,0.35,90,100000,12000000,Lowest interest;No hidden charges;Doorstep documentation;Quick disbursal
+Axis Bank,Axis Drive Easy,8.60,10.75,12,72,0.50,85,100000,8000000,Instant approval;Minimum documentation;Flexible tenure;Step-up EMI
+Kotak Mahindra,Kotak Car Loan,8.65,10.80,12,84,0.45,85,150000,10000000,Zero foreclosure;Dedicated RM;Online application;Fast processing`,
   
-  contacts: `name,email,company,gstin,phone,tags
-ABC Motors,contact@abcmotors.com,ABC Motors Pvt Ltd,27AABCU9603R1ZM,9876543210,corporate;dealer
-XYZ Industries,info@xyzind.com,XYZ Industries Ltd,07AAACZ2345F1ZN,9876543211,corporate;fleet`,
+  contacts: `name,email,company,designation,phone,city,gstin,tags,subscription_status,last_contacted
+ABC Motors,contact@abcmotors.com,ABC Motors Pvt Ltd,Fleet Manager,9876543210,Delhi,27AABCU9603R1ZM,corporate;dealer;bulk_buyer,subscribed,2024-01-15
+XYZ Industries,info@xyzind.com,XYZ Industries Ltd,Admin Head,9876543211,Mumbai,07AAACZ2345F1ZN,corporate;fleet;logistics,subscribed,2024-01-20
+Tech Solutions Inc,fleet@techsol.com,Tech Solutions Inc,Operations Manager,9876543212,Bangalore,29AABCT1234G1ZP,corporate;tech;startup,subscribed,2024-01-18
+Metro Logistics,admin@metrologistics.in,Metro Logistics Pvt Ltd,CEO,9876543213,Chennai,33AABCM5678H1ZQ,corporate;logistics;fleet,unsubscribed,2024-01-10
+Sunrise Healthcare,transport@sunrisehc.com,Sunrise Healthcare Ltd,Transport Head,9876543214,Hyderabad,36AABCS9012I1ZR,corporate;healthcare;ambulance,subscribed,2024-01-22`,
 };
 
 const STORAGE_KEY = 'gyc_import_jobs';
