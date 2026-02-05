@@ -82,6 +82,20 @@ export const LeadManagement = () => {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [noteText, setNoteText] = useState("");
+  const [isAddLeadOpen, setIsAddLeadOpen] = useState(false);
+  const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
+  const [newLeadForm, setNewLeadForm] = useState({
+    customer_name: "",
+    phone: "",
+    email: "",
+    city: "",
+    car_brand: "",
+    car_model: "",
+    source: "website",
+    lead_type: "car_inquiry",
+    status: "new",
+    notes: "",
+  });
 
   // Fetch leads
   const { data: leads, isLoading } = useQuery({
@@ -161,6 +175,112 @@ export const LeadManagement = () => {
     },
   });
 
+  // Add lead mutation
+  const addLeadMutation = useMutation({
+    mutationFn: async (leadData: typeof newLeadForm) => {
+      const { error } = await supabase
+        .from('leads')
+        .insert([{
+          customer_name: leadData.customer_name,
+          phone: leadData.phone,
+          email: leadData.email || null,
+          city: leadData.city || null,
+          car_brand: leadData.car_brand || null,
+          car_model: leadData.car_model || null,
+          source: leadData.source,
+          lead_type: leadData.lead_type,
+          status: leadData.status,
+          notes: leadData.notes || null,
+        }]);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminLeads'] });
+      toast.success('Lead added successfully');
+      setIsAddLeadOpen(false);
+      setNewLeadForm({
+        customer_name: "",
+        phone: "",
+        email: "",
+        city: "",
+        car_brand: "",
+        car_model: "",
+        source: "website",
+        lead_type: "car_inquiry",
+        status: "new",
+        notes: "",
+      });
+    },
+    onError: (error) => {
+      toast.error('Failed to add lead');
+      console.error(error);
+    },
+  });
+
+  // Bulk upload handler
+  const handleBulkUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const lines = text.split('\n').filter(l => l.trim());
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/\s+/g, '_'));
+      
+      const leads = lines.slice(1).map(line => {
+        const values = line.split(',').map(v => v.trim());
+        const leadObj: Record<string, string> = {};
+        headers.forEach((header, index) => {
+          leadObj[header] = values[index] || '';
+        });
+        return leadObj;
+      });
+
+      toast.loading(`Processing ${leads.length} leads...`);
+      
+      let success = 0;
+      let failed = 0;
+
+      for (const lead of leads) {
+        try {
+          const { error } = await supabase.from('leads').insert({
+            customer_name: lead.customer_name || lead.name || 'Unknown',
+            phone: lead.phone || lead.mobile || '',
+            email: lead.email || null,
+            city: lead.city || null,
+            car_brand: lead.car_brand || lead.brand || null,
+            car_model: lead.car_model || lead.model || null,
+            source: lead.source || 'csv_import',
+            lead_type: lead.lead_type || 'car_inquiry',
+            status: 'new',
+            notes: lead.notes || null,
+          });
+          
+          if (error) throw error;
+          success++;
+        } catch {
+          failed++;
+        }
+      }
+
+      toast.dismiss();
+      toast.success(`Imported ${success} leads, ${failed} failed`);
+      queryClient.invalidateQueries({ queryKey: ['adminLeads'] });
+      setIsBulkUploadOpen(false);
+    } catch (error) {
+      toast.error('Failed to process file');
+      console.error(error);
+    }
+  };
+
+  const handleAddLead = () => {
+    if (!newLeadForm.customer_name || !newLeadForm.phone) {
+      toast.error('Please fill in customer name and phone');
+      return;
+    }
+    addLeadMutation.mutate(newLeadForm);
+  };
+
   const handleStatusChange = (leadId: string, newStatus: string) => {
     updateLeadMutation.mutate({ id: leadId, updates: { status: newStatus } });
   };
@@ -206,10 +326,16 @@ export const LeadManagement = () => {
             Manage and track all customer leads
           </p>
         </div>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Lead
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setIsBulkUploadOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Bulk Import
+          </Button>
+          <Button onClick={() => setIsAddLeadOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Lead
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -477,6 +603,142 @@ export const LeadManagement = () => {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Lead Dialog */}
+      <Dialog open={isAddLeadOpen} onOpenChange={setIsAddLeadOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add New Lead</DialogTitle>
+            <DialogDescription>Add a new customer lead to the CRM</DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Customer Name *</label>
+                <Input
+                  value={newLeadForm.customer_name}
+                  onChange={(e) => setNewLeadForm({ ...newLeadForm, customer_name: e.target.value })}
+                  placeholder="Full name"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Phone *</label>
+                <Input
+                  value={newLeadForm.phone}
+                  onChange={(e) => setNewLeadForm({ ...newLeadForm, phone: e.target.value })}
+                  placeholder="10-digit mobile"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Email</label>
+                <Input
+                  value={newLeadForm.email}
+                  onChange={(e) => setNewLeadForm({ ...newLeadForm, email: e.target.value })}
+                  placeholder="Email address"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">City</label>
+                <Input
+                  value={newLeadForm.city}
+                  onChange={(e) => setNewLeadForm({ ...newLeadForm, city: e.target.value })}
+                  placeholder="City"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Car Brand</label>
+                <Input
+                  value={newLeadForm.car_brand}
+                  onChange={(e) => setNewLeadForm({ ...newLeadForm, car_brand: e.target.value })}
+                  placeholder="e.g., Maruti, Hyundai"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Car Model</label>
+                <Input
+                  value={newLeadForm.car_model}
+                  onChange={(e) => setNewLeadForm({ ...newLeadForm, car_model: e.target.value })}
+                  placeholder="e.g., Swift, Creta"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Source</label>
+                <Select value={newLeadForm.source} onValueChange={(v) => setNewLeadForm({ ...newLeadForm, source: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {sourceOptions.map(s => (
+                      <SelectItem key={s} value={s}>{s.replace('_', ' ')}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Lead Type</label>
+                <Select value={newLeadForm.lead_type} onValueChange={(v) => setNewLeadForm({ ...newLeadForm, lead_type: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {leadTypeOptions.map(t => (
+                      <SelectItem key={t} value={t}>{t.replace('_', ' ')}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2 col-span-2">
+                <label className="text-sm font-medium">Notes</label>
+                <Textarea
+                  value={newLeadForm.notes}
+                  onChange={(e) => setNewLeadForm({ ...newLeadForm, notes: e.target.value })}
+                  placeholder="Additional notes..."
+                  rows={3}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setIsAddLeadOpen(false)}>Cancel</Button>
+            <Button onClick={handleAddLead} disabled={addLeadMutation.isPending}>
+              <Plus className="h-4 w-4 mr-2" />
+              {addLeadMutation.isPending ? 'Adding...' : 'Add Lead'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Upload Dialog */}
+      <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bulk Import Leads</DialogTitle>
+            <DialogDescription>
+              Upload a CSV file with lead data
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="border-2 border-dashed rounded-lg p-8 text-center">
+              <Plus className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground mb-4">
+                Drag & drop a CSV file or click to browse
+              </p>
+              <Input
+                type="file"
+                accept=".csv"
+                onChange={handleBulkUpload}
+                className="max-w-xs mx-auto"
+              />
+            </div>
+            
+            <div className="text-sm text-muted-foreground">
+              <p className="font-medium mb-2">CSV Format:</p>
+              <code className="text-xs bg-muted p-2 rounded block">
+                customer_name,phone,email,city,car_brand,car_model,source
+              </code>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
