@@ -20,7 +20,7 @@ import {
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import logoImage from "@/assets/logo-grabyourcar-main.png";
+import logoImage from "@/assets/logo-grabyourcar-new.png";
 
 const services = [
   {
