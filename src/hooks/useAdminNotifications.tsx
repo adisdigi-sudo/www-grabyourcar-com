@@ -25,7 +25,6 @@ const playNotificationSound = (type: 'urgent' | 'normal' = 'normal') => {
     gainNode.connect(audioContext.destination);
     
     if (type === 'urgent') {
-      // Urgent: Higher pitched, double beep
       oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
       oscillator.frequency.setValueAtTime(0, audioContext.currentTime + 0.1);
       oscillator.frequency.setValueAtTime(880, audioContext.currentTime + 0.15);
@@ -34,7 +33,6 @@ const playNotificationSound = (type: 'urgent' | 'normal' = 'normal') => {
       oscillator.start(audioContext.currentTime);
       oscillator.stop(audioContext.currentTime + 0.3);
     } else {
-      // Normal: Single soft tone
       oscillator.frequency.setValueAtTime(520, audioContext.currentTime);
       gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
       gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
@@ -46,12 +44,36 @@ const playNotificationSound = (type: 'urgent' | 'normal' = 'normal') => {
   }
 };
 
+// Send email alert for critical notifications
+const sendEmailAlert = async (
+  type: 'hot_lead' | 'large_payment' | 'overdue_followup' | 'urgent_followup',
+  title: string,
+  message: string,
+  data?: any
+) => {
+  try {
+    await supabase.functions.invoke('send-alert-email', {
+      body: { type, title, message, data }
+    });
+    console.log('Email alert sent for:', type);
+  } catch (error) {
+    console.error('Failed to send email alert:', error);
+  }
+};
+
+// Large payment threshold (₹50,000)
+const LARGE_PAYMENT_THRESHOLD = 50000;
+
 export const useAdminNotifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [soundEnabled, setSoundEnabled] = useState(() => {
     const stored = localStorage.getItem('admin-notification-sound');
     return stored !== 'false';
+  });
+  const [emailAlertsEnabled, setEmailAlertsEnabled] = useState(() => {
+    const stored = localStorage.getItem('admin-email-alerts');
+    return stored === 'true';
   });
   const { toast } = useToast();
   const { isAdmin } = useAdminAuth();
@@ -65,7 +87,18 @@ export const useAdminNotifications = () => {
     });
   }, []);
 
-  const addNotification = useCallback((notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
+  const toggleEmailAlerts = useCallback(() => {
+    setEmailAlertsEnabled(prev => {
+      const newValue = !prev;
+      localStorage.setItem('admin-email-alerts', String(newValue));
+      return newValue;
+    });
+  }, []);
+
+  const addNotification = useCallback((
+    notification: Omit<Notification, 'id' | 'timestamp' | 'read'>,
+    sendEmail = false
+  ) => {
     const newNotification: Notification = {
       ...notification,
       id: crypto.randomUUID(),
@@ -73,7 +106,7 @@ export const useAdminNotifications = () => {
       read: false,
     };
 
-    setNotifications(prev => [newNotification, ...prev].slice(0, 50)); // Keep last 50
+    setNotifications(prev => [newNotification, ...prev].slice(0, 50));
     setUnreadCount(prev => prev + 1);
 
     // Play sound for urgent notifications
@@ -85,13 +118,20 @@ export const useAdminNotifications = () => {
       }
     }
 
-    // Show toast for important notifications
+    // Send email alert for critical notifications if enabled
+    if (sendEmail && emailAlertsEnabled) {
+      if (notification.type === 'hot_lead') {
+        sendEmailAlert('hot_lead', notification.title, notification.message, notification.data);
+      }
+    }
+
+    // Show toast
     toast({
       title: notification.title,
       description: notification.message,
       variant: notification.type === 'hot_lead' || notification.type === 'urgent_followup' || notification.type === 'overdue_followup' ? 'destructive' : 'default',
     });
-  }, [toast, soundEnabled]);
+  }, [toast, soundEnabled, emailAlertsEnabled]);
 
   const markAsRead = useCallback((id: string) => {
     setNotifications(prev => 
@@ -116,7 +156,6 @@ export const useAdminNotifications = () => {
       const now = new Date();
       const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
       
-      // Check for overdue follow-ups (past due)
       const { data: overdueLeads, error: overdueError } = await supabase
         .from('leads')
         .select('id, customer_name, car_brand, car_model, next_follow_up_at, phone')
@@ -126,7 +165,6 @@ export const useAdminNotifications = () => {
         .limit(5);
 
       if (!overdueError && overdueLeads && overdueLeads.length > 0) {
-        // Only notify for the most urgent one to avoid spam
         const mostUrgent = overdueLeads[0];
         const followupTime = new Date(mostUrgent.next_follow_up_at!);
         const hoursOverdue = Math.round((now.getTime() - followupTime.getTime()) / (1000 * 60 * 60));
@@ -140,7 +178,6 @@ export const useAdminNotifications = () => {
         });
       }
 
-      // Check for upcoming follow-ups (within next hour)
       const { data: upcomingLeads, error: upcomingError } = await supabase
         .from('leads')
         .select('id, customer_name, car_brand, car_model, next_follow_up_at, phone')
@@ -172,10 +209,7 @@ export const useAdminNotifications = () => {
   useEffect(() => {
     if (!isAdmin()) return;
 
-    // Initial check for urgent follow-ups
     checkUrgentFollowups();
-
-    // Check every 15 minutes for follow-ups
     followupCheckRef.current = setInterval(checkUrgentFollowups, 15 * 60 * 1000);
 
     // Subscribe to leads changes
@@ -190,13 +224,14 @@ export const useAdminNotifications = () => {
         },
         (payload) => {
           const lead = payload.new as any;
+          const isHot = lead.status === 'hot';
           addNotification({
-            type: lead.status === 'hot' ? 'hot_lead' : 'new_lead',
-            title: lead.status === 'hot' ? '🔥 Hot Lead!' : 'New Lead',
+            type: isHot ? 'hot_lead' : 'new_lead',
+            title: isHot ? '🔥 Hot Lead!' : 'New Lead',
             message: `${lead.customer_name} - ${lead.car_brand || 'General'} ${lead.car_model || 'Inquiry'}`,
             data: lead,
-            priority: lead.status === 'hot' ? 'high' : 'medium',
-          });
+            priority: isHot ? 'high' : 'medium',
+          }, isHot); // Send email for hot leads
         }
       )
       .on(
@@ -210,7 +245,6 @@ export const useAdminNotifications = () => {
           const lead = payload.new as any;
           const oldLead = payload.old as any;
           
-          // Notify if status changed to hot
           if (lead.status === 'hot' && oldLead.status !== 'hot') {
             addNotification({
               type: 'hot_lead',
@@ -218,10 +252,9 @@ export const useAdminNotifications = () => {
               message: `${lead.customer_name} is now a hot lead`,
               data: lead,
               priority: 'high',
-            });
+            }, true); // Send email
           }
           
-          // Notify if follow-up was scheduled within the next hour
           if (lead.next_follow_up_at && lead.next_follow_up_at !== oldLead.next_follow_up_at) {
             const followupTime = new Date(lead.next_follow_up_at);
             const now = new Date();
@@ -241,7 +274,7 @@ export const useAdminNotifications = () => {
       )
       .subscribe();
 
-    // Subscribe to HSRP bookings
+    // Subscribe to HSRP bookings for large payments
     const hsrpChannel = supabase
       .channel('admin-hsrp-notifications')
       .on(
@@ -273,13 +306,21 @@ export const useAdminNotifications = () => {
           const oldBooking = payload.old as any;
           
           if (booking.payment_status === 'paid' && oldBooking.payment_status !== 'paid') {
+            const isLargePayment = booking.payment_amount >= LARGE_PAYMENT_THRESHOLD;
+            
             addNotification({
               type: 'payment_received',
-              title: '💰 Payment Received!',
+              title: isLargePayment ? '💰 Large Payment Received!' : '💰 Payment Received!',
               message: `₹${booking.payment_amount?.toLocaleString()} - ${booking.owner_name}`,
               data: booking,
-              priority: 'high',
+              priority: isLargePayment ? 'high' : 'medium',
             });
+
+            // Send email for large payments
+            if (isLargePayment && emailAlertsEnabled) {
+              sendEmailAlert('large_payment', 'Large Payment Received!', 
+                `₹${booking.payment_amount?.toLocaleString()} received from ${booking.owner_name}`, booking);
+            }
           }
         }
       )
@@ -315,7 +356,7 @@ export const useAdminNotifications = () => {
         clearInterval(followupCheckRef.current);
       }
     };
-  }, [isAdmin, addNotification, checkUrgentFollowups]);
+  }, [isAdmin, addNotification, checkUrgentFollowups, emailAlertsEnabled]);
 
   return {
     notifications,
@@ -325,5 +366,7 @@ export const useAdminNotifications = () => {
     clearNotifications,
     soundEnabled,
     toggleSound,
+    emailAlertsEnabled,
+    toggleEmailAlerts,
   };
 };

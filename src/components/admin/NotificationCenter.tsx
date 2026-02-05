@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { 
   Bell, 
   CheckCheck, 
@@ -19,7 +20,9 @@ import {
   Phone,
   AlertTriangle,
   Volume2,
-  VolumeX
+  VolumeX,
+  Mail,
+  MailX
 } from "lucide-react";
 import { useAdminNotifications, Notification } from "@/hooks/useAdminNotifications";
 import { formatDistanceToNow } from "date-fns";
@@ -57,9 +60,9 @@ const getNotificationBg = (type: Notification['type'], read: boolean) => {
     case 'payment_received':
       return 'bg-green-50 dark:bg-green-950/20';
     case 'urgent_followup':
-      return 'bg-blue-50 dark:bg-blue-950/30 border-l-2 border-blue-500';
+      return 'bg-blue-50 dark:bg-blue-950/30 border-l-2 border-l-blue-500';
     case 'overdue_followup':
-      return 'bg-red-50 dark:bg-red-950/30 border-l-2 border-red-500';
+      return 'bg-red-50 dark:bg-red-950/30 border-l-2 border-l-red-500';
     default:
       return 'bg-muted/50';
   }
@@ -90,6 +93,8 @@ export const NotificationCenter = () => {
     clearNotifications,
     soundEnabled,
     toggleSound,
+    emailAlertsEnabled,
+    toggleEmailAlerts,
   } = useAdminNotifications();
 
   const urgentCount = notifications.filter(
@@ -130,6 +135,19 @@ export const NotificationCenter = () => {
               variant="ghost" 
               size="icon" 
               className="h-8 w-8"
+              onClick={toggleEmailAlerts}
+              title={emailAlertsEnabled ? "Disable email alerts" : "Enable email alerts for critical notifications"}
+            >
+              {emailAlertsEnabled ? (
+                <Mail className="h-4 w-4 text-primary" />
+              ) : (
+                <MailX className="h-4 w-4 text-muted-foreground" />
+              )}
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8"
               onClick={toggleSound}
               title={soundEnabled ? "Mute notifications" : "Enable sound"}
             >
@@ -164,6 +182,18 @@ export const NotificationCenter = () => {
           </div>
         </div>
 
+        {/* Settings indicator */}
+        <div className="px-4 py-2 bg-muted/30 border-b flex items-center gap-4 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1">
+            {soundEnabled ? <Volume2 className="h-3 w-3" /> : <VolumeX className="h-3 w-3" />}
+            Sound {soundEnabled ? 'on' : 'off'}
+          </span>
+          <span className="flex items-center gap-1">
+            {emailAlertsEnabled ? <Mail className="h-3 w-3" /> : <MailX className="h-3 w-3" />}
+            Email {emailAlertsEnabled ? 'on' : 'off'}
+          </span>
+        </div>
+
         {urgentCount > 0 && (
           <div className="bg-destructive/10 px-4 py-2 text-sm text-destructive flex items-center gap-2 border-b">
             <AlertTriangle className="h-4 w-4" />
@@ -171,7 +201,7 @@ export const NotificationCenter = () => {
           </div>
         )}
 
-        <ScrollArea className="h-[400px]">
+        <ScrollArea className="h-[350px]">
           {notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
               <Bell className="h-10 w-10 mb-3 opacity-50" />
