@@ -126,6 +126,7 @@ export interface Car {
   pros: string[];
   cons: string[];
   competitors: string[];
+  brochureUrl?: string;
 }
 
 export const bodyTypes = [
