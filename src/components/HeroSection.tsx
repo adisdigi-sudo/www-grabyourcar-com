@@ -77,31 +77,25 @@ export const HeroSection = () => {
           {/* Search Bar */}
           <SearchBar />
 
-          {/* CTA Buttons Row */}
-          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link to="/car-finder">
-              <Button variant="accent" size="lg" className="gap-2 text-base px-6 py-6 font-semibold hover:scale-105 transition-transform shadow-lg">
-                <Sparkles className="h-5 w-5" />
-                Find Your Perfect Car
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
-            <a 
-              href="https://wa.me/919577200023?text=Hi%20Grabyourcar!%20I%20want%20to%20know%20the%20best%20price%20for%20a%20new%20car." 
-              target="_blank" 
-              rel="noopener noreferrer"
-            >
-              <Button 
-                variant="whatsapp" 
-                size="lg" 
-                className="gap-2 text-base px-6 py-6 font-semibold hover:scale-105 transition-transform shadow-lg"
-              >
-                <MessageCircle className="h-5 w-5" />
-                Unlock Best Price
-              </Button>
-            </a>
-          </div>
-          <p className="text-sm text-card/60 mt-3">Get AI-powered recommendations in seconds</p>
+           {/* CTA Button */}
+           <div className="mt-8 flex justify-center">
+             <a 
+               href="https://wa.me/919577200023?text=Hi%20Grabyourcar!%20I%27m%20interested%20in%20buying%20a%20new%20car%20and%20would%20like%20to%20speak%20with%20an%20expert." 
+               target="_blank" 
+               rel="noopener noreferrer"
+             >
+               <Button 
+                 variant="accent" 
+                 size="lg" 
+                 className="gap-2 text-base px-8 py-6 font-semibold hover:scale-105 transition-transform shadow-xl"
+               >
+                 <MessageCircle className="h-5 w-5" />
+                 Talk to Our Expert
+                 <ArrowRight className="h-4 w-4" />
+               </Button>
+             </a>
+           </div>
+           <p className="text-sm text-card/60 mt-3">Get personalized car recommendations instantly</p>
 
           {/* Trust Indicators - Premium Design */}
           <div className="mt-14 flex flex-wrap items-center justify-center gap-8 md:gap-16">
