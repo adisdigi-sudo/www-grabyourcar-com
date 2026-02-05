@@ -227,12 +227,20 @@ const CarDetail = () => {
                    carName={car.name}
                    carBrand={car.brand}
                    exShowroomPrice={car.variants[selectedVariant]?.priceNumeric || (parseFloat(car.price.match(/[\d.]+/)?.[0] || "0") * 100000)}
-                   variants={car.variants}
+                   variants={car.variants.map(v => ({
+                     ...v,
+                     fuelType: v.fuelType || car.fuelTypes[0],
+                     transmission: v.transmission || car.transmission[0]
+                   }))}
+                   colors={car.colors}
                    selectedVariant={selectedVariant}
+                   selectedColor={selectedColor}
                    onVariantChange={setSelectedVariant}
+                   onColorChange={setSelectedColor}
+                   brochureUrl={car.brochureUrl}
                  />
 
-                {/* Quick Specs */}
+                {/* Quick Specs - Moved after Price Card */}
                 <div className="grid grid-cols-3 gap-4">
                   <div className="bg-card border border-border rounded-xl p-4 text-center">
                     <Fuel className="h-6 w-6 mx-auto mb-2 text-primary" />
@@ -249,29 +257,6 @@ const CarDetail = () => {
                     <p className="text-sm text-muted-foreground">Availability</p>
                     <p className="font-semibold text-sm text-success">{car.availability}</p>
                   </div>
-                </div>
-
-                {/* Color Selection */}
-                <div>
-                  <h3 className="font-semibold mb-3">Available Colors</h3>
-                  <div className="flex gap-3">
-                    {car.colors.map((color, index) => (
-                      <button
-                        key={index}
-                        onClick={() => setSelectedColor(index)}
-                        className={`group relative w-10 h-10 rounded-full border-2 transition-all ${
-                          selectedColor === index ? "border-primary scale-110" : "border-border"
-                        }`}
-                        style={{ backgroundColor: color.hex }}
-                        title={color.name}
-                      >
-                        {selectedColor === index && (
-                          <Check className="absolute inset-0 m-auto h-5 w-5 text-primary-foreground drop-shadow-md" />
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-2">{car.colors[selectedColor].name}</p>
                 </div>
 
                 {/* CTA Buttons - Sales-Driven */}

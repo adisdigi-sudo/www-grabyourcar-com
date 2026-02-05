@@ -46,6 +46,7 @@ export interface Car {
   colors: { name: string; hex: string }[];
   variants: CarVariant[];
   offers: DealerOffer[];
+  brochureUrl?: string;
 }
 
 export const cars: Car[] = [
