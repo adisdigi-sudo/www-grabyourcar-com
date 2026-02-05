@@ -16,8 +16,10 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { toast } from "sonner";
 import { 
   Search, Plus, Edit, Trash2, Eye, RefreshCw, Car, Image as ImageIcon, 
-  Filter, Download, Upload, FileText, Tags, Sparkles, Save, X, Link2
+  Filter, Download, Upload, FileText, Tags, Sparkles, Save, X, Link2,
+  Settings, IndianRupee, Gauge, Shield, Ruler
 } from "lucide-react";
+import { stateRates, calculateStatePriceBreakup } from "@/data/statePricing";
 
 interface CarData {
   id: string;
@@ -73,11 +75,31 @@ interface CarBrochure {
   file_size: string | null;
 }
 
+interface CarSpecification {
+  id: string;
+  car_id: string;
+  category: string;
+  label: string;
+  value: string;
+  sort_order: number | null;
+}
+
 interface FullCarData extends CarData {
   images: CarImage[];
   variants: CarVariant[];
   brochures: CarBrochure[];
+  specifications: CarSpecification[];
 }
+
+const specCategories = ['engine', 'dimensions', 'performance', 'features', 'safety'] as const;
+
+const specCategoryLabels: Record<string, { label: string; icon: React.ReactNode }> = {
+  engine: { label: 'Engine', icon: <Gauge className="h-4 w-4" /> },
+  dimensions: { label: 'Dimensions', icon: <Ruler className="h-4 w-4" /> },
+  performance: { label: 'Performance', icon: <Sparkles className="h-4 w-4" /> },
+  features: { label: 'Features', icon: <Settings className="h-4 w-4" /> },
+  safety: { label: 'Safety', icon: <Shield className="h-4 w-4" /> },
+};
 
 export const UnifiedCarManagement = () => {
   const queryClient = useQueryClient();
@@ -109,6 +131,9 @@ export const UnifiedCarManagement = () => {
   const [newVariant, setNewVariant] = useState({ 
     name: "", price: "", fuel_type: "", transmission: "", ex_showroom: "", on_road_price: "" 
   });
+  const [newSpec, setNewSpec] = useState({ category: "engine", label: "", value: "" });
+  const [editingVariantId, setEditingVariantId] = useState<string | null>(null);
+  const [priceBreakupState, setPriceBreakupState] = useState("DL");
 
   // Fetch cars with all related data
   const { data: cars, isLoading, refetch } = useQuery({
@@ -134,10 +159,11 @@ export const UnifiedCarManagement = () => {
       // Fetch related data for all cars
       const carsWithRelations = await Promise.all(
         (carsData || []).map(async (car) => {
-          const [imagesRes, variantsRes, brochuresRes] = await Promise.all([
+          const [imagesRes, variantsRes, brochuresRes, specsRes] = await Promise.all([
             supabase.from('car_images').select('*').eq('car_id', car.id).order('sort_order'),
             supabase.from('car_variants').select('*').eq('car_id', car.id).order('price_numeric'),
             supabase.from('car_brochures').select('*').eq('car_id', car.id).order('sort_order'),
+            supabase.from('car_specifications').select('*').eq('car_id', car.id).order('sort_order'),
           ]);
 
           return {
@@ -145,6 +171,7 @@ export const UnifiedCarManagement = () => {
             images: imagesRes.data || [],
             variants: variantsRes.data || [],
             brochures: brochuresRes.data || [],
+            specifications: specsRes.data || [],
           } as FullCarData;
         })
       );
@@ -284,6 +311,52 @@ export const UnifiedCarManagement = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['unifiedCarManagement'] });
       toast.success('Variant deleted');
+    },
+  });
+
+  // Specification mutations
+  const addSpecMutation = useMutation({
+    mutationFn: async ({ carId, category, label, value }: { carId: string; category: string; label: string; value: string }) => {
+      const { error } = await supabase
+        .from('car_specifications')
+        .insert([{ car_id: carId, category, label, value }]);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['unifiedCarManagement'] });
+      toast.success('Specification added');
+    },
+    onError: () => {
+      toast.error('Failed to add specification');
+    },
+  });
+
+  const deleteSpecMutation = useMutation({
+    mutationFn: async (specId: string) => {
+      const { error } = await supabase.from('car_specifications').delete().eq('id', specId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['unifiedCarManagement'] });
+      toast.success('Specification deleted');
+    },
+  });
+
+  // Update variant price breakup
+  const updateVariantPriceMutation = useMutation({
+    mutationFn: async ({ variantId, updates }: { variantId: string; updates: Partial<CarVariant> }) => {
+      const { error } = await supabase
+        .from('car_variants')
+        .update(updates)
+        .eq('id', variantId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['unifiedCarManagement'] });
+      toast.success('Pricing updated');
+    },
+    onError: () => {
+      toast.error('Failed to update pricing');
     },
   });
 
@@ -693,22 +766,30 @@ export const UnifiedCarManagement = () => {
           
           {selectedCar && (
             <Tabs value={activeEditTab} onValueChange={setActiveEditTab}>
-              <TabsList className="w-full grid grid-cols-4">
-                <TabsTrigger value="basic">
-                  <Car className="h-4 w-4 mr-2" />
-                  Basic Info
+              <TabsList className="w-full grid grid-cols-6">
+                <TabsTrigger value="basic" className="text-xs px-2">
+                  <Car className="h-3 w-3 mr-1" />
+                  Basic
                 </TabsTrigger>
-                <TabsTrigger value="images">
-                  <ImageIcon className="h-4 w-4 mr-2" />
-                  Images ({selectedCar.images.length})
+                <TabsTrigger value="images" className="text-xs px-2">
+                  <ImageIcon className="h-3 w-3 mr-1" />
+                  Images
                 </TabsTrigger>
-                <TabsTrigger value="variants">
-                  <Tags className="h-4 w-4 mr-2" />
-                  Variants ({selectedCar.variants.length})
+                <TabsTrigger value="variants" className="text-xs px-2">
+                  <Tags className="h-3 w-3 mr-1" />
+                  Variants
                 </TabsTrigger>
-                <TabsTrigger value="brochures">
-                  <FileText className="h-4 w-4 mr-2" />
-                  Brochures ({selectedCar.brochures.length})
+                <TabsTrigger value="specs" className="text-xs px-2">
+                  <Settings className="h-3 w-3 mr-1" />
+                  Specs
+                </TabsTrigger>
+                <TabsTrigger value="pricing" className="text-xs px-2">
+                  <IndianRupee className="h-3 w-3 mr-1" />
+                  Pricing
+                </TabsTrigger>
+                <TabsTrigger value="brochures" className="text-xs px-2">
+                  <FileText className="h-3 w-3 mr-1" />
+                  Docs
                 </TabsTrigger>
               </TabsList>
 
@@ -931,6 +1012,182 @@ export const UnifiedCarManagement = () => {
                     Add Variant
                   </Button>
                 </div>
+              </TabsContent>
+
+              {/* Specifications Tab */}
+              <TabsContent value="specs" className="space-y-4">
+                <Accordion type="multiple" defaultValue={["engine"]} className="w-full">
+                  {specCategories.map((category) => {
+                    const categorySpecs = selectedCar.specifications.filter(s => s.category === category);
+                    const catInfo = specCategoryLabels[category];
+                    return (
+                      <AccordionItem key={category} value={category}>
+                        <AccordionTrigger className="hover:no-underline">
+                          <div className="flex items-center gap-2">
+                            {catInfo.icon}
+                            <span>{catInfo.label}</span>
+                            <Badge variant="secondary" className="ml-2">{categorySpecs.length}</Badge>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="space-y-2 pt-2">
+                            {categorySpecs.map((spec) => (
+                              <div key={spec.id} className="flex items-center justify-between p-2 bg-muted/50 rounded-lg">
+                                <div className="flex-1">
+                                  <span className="font-medium text-sm">{spec.label}</span>
+                                  <span className="text-muted-foreground mx-2">:</span>
+                                  <span className="text-sm">{spec.value}</span>
+                                </div>
+                                <Button variant="ghost" size="icon" onClick={() => deleteSpecMutation.mutate(spec.id)}>
+                                  <Trash2 className="h-3 w-3 text-destructive" />
+                                </Button>
+                              </div>
+                            ))}
+                            {categorySpecs.length === 0 && (
+                              <p className="text-sm text-muted-foreground text-center py-2">No specifications added</p>
+                            )}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    );
+                  })}
+                </Accordion>
+
+                <div className="border-t pt-4">
+                  <Label className="text-base font-semibold mb-4 block">Add Specification</Label>
+                  <div className="grid grid-cols-4 gap-4">
+                    <Select value={newSpec.category} onValueChange={(v) => setNewSpec({ ...newSpec, category: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {specCategories.map(cat => (
+                          <SelectItem key={cat} value={cat}>{specCategoryLabels[cat].label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      placeholder="Label (e.g., Engine Type)"
+                      value={newSpec.label}
+                      onChange={(e) => setNewSpec({ ...newSpec, label: e.target.value })}
+                    />
+                    <Input
+                      placeholder="Value (e.g., 1.5L Turbo Petrol)"
+                      value={newSpec.value}
+                      onChange={(e) => setNewSpec({ ...newSpec, value: e.target.value })}
+                    />
+                    <Button 
+                      onClick={() => {
+                        if (!newSpec.label || !newSpec.value) return;
+                        addSpecMutation.mutate({ 
+                          carId: selectedCar.id, 
+                          category: newSpec.category, 
+                          label: newSpec.label, 
+                          value: newSpec.value 
+                        });
+                        setNewSpec({ ...newSpec, label: "", value: "" });
+                      }}
+                      disabled={!newSpec.label || !newSpec.value}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />Add
+                    </Button>
+                  </div>
+                </div>
+              </TabsContent>
+
+              {/* Price Breakup Tab */}
+              <TabsContent value="pricing" className="space-y-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h4 className="font-semibold">Variant-wise Pricing</h4>
+                    <p className="text-sm text-muted-foreground">Manage ex-showroom and on-road prices for each variant</p>
+                  </div>
+                  <Select value={priceBreakupState} onValueChange={setPriceBreakupState}>
+                    <SelectTrigger className="w-[160px]">
+                      <SelectValue placeholder="Select State" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {stateRates.map((state) => (
+                        <SelectItem key={state.code} value={state.code}>{state.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {selectedCar.variants.length > 0 ? (
+                  <div className="space-y-4">
+                    {selectedCar.variants.map((variant) => {
+                      const breakup = calculateStatePriceBreakup(variant.ex_showroom || variant.price_numeric || 0, priceBreakupState);
+                      return (
+                        <Card key={variant.id} className="p-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <div>
+                              <h5 className="font-semibold">{variant.name}</h5>
+                              <div className="flex gap-2 mt-1">
+                                {variant.fuel_type && <Badge variant="outline">{variant.fuel_type}</Badge>}
+                                {variant.transmission && <Badge variant="secondary">{variant.transmission}</Badge>}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-lg font-bold text-primary">₹{breakup.onRoadPrice.toLocaleString('en-IN')}</p>
+                              <p className="text-xs text-muted-foreground">On-road in {stateRates.find(s => s.code === priceBreakupState)?.name}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                            <div className="bg-muted/50 p-2 rounded">
+                              <p className="text-muted-foreground text-xs">Ex-Showroom</p>
+                              <p className="font-medium">₹{(variant.ex_showroom || variant.price_numeric || 0).toLocaleString('en-IN')}</p>
+                            </div>
+                            <div className="bg-muted/50 p-2 rounded">
+                              <p className="text-muted-foreground text-xs">RTO + Road Tax</p>
+                              <p className="font-medium">₹{(breakup.rto + breakup.roadTax).toLocaleString('en-IN')}</p>
+                            </div>
+                            <div className="bg-muted/50 p-2 rounded">
+                              <p className="text-muted-foreground text-xs">Insurance</p>
+                              <p className="font-medium">₹{breakup.insurance.toLocaleString('en-IN')}</p>
+                            </div>
+                            <div className="bg-muted/50 p-2 rounded">
+                              <p className="text-muted-foreground text-xs">Others</p>
+                              <p className="font-medium">₹{(breakup.fastag + breakup.registration + breakup.handling + breakup.tcs).toLocaleString('en-IN')}</p>
+                            </div>
+                          </div>
+
+                          <div className="flex gap-2 mt-3">
+                            <Input
+                              type="number"
+                              placeholder="Update Ex-Showroom"
+                              className="max-w-[200px]"
+                              defaultValue={variant.ex_showroom || variant.price_numeric || ""}
+                              onBlur={(e) => {
+                                const val = parseInt(e.target.value);
+                                if (val && val !== (variant.ex_showroom || variant.price_numeric)) {
+                                  updateVariantPriceMutation.mutate({
+                                    variantId: variant.id,
+                                    updates: { ex_showroom: val, price_numeric: val }
+                                  });
+                                }
+                              }}
+                            />
+                            <Button variant="outline" size="sm" onClick={() => {
+                              const newOnRoad = calculateStatePriceBreakup(variant.ex_showroom || variant.price_numeric || 0, priceBreakupState).onRoadPrice;
+                              updateVariantPriceMutation.mutate({
+                                variantId: variant.id,
+                                updates: { on_road_price: newOnRoad }
+                              });
+                            }}>
+                              <Save className="h-4 w-4 mr-1" />
+                              Save On-Road
+                            </Button>
+                          </div>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <IndianRupee className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No variants to price. Add variants first in the Variants tab.</p>
+                  </div>
+                )}
               </TabsContent>
 
               {/* Brochures Tab */}
