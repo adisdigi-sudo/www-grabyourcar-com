@@ -5,8 +5,8 @@
    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
  };
  
-// Finbite/Wbiztool API endpoint (without trailing slash)
-const FINBITE_API_URL = "https://app.finbite.in/api/v1/send_msg";
+// Finbite WhatsApp API endpoint
+const FINBITE_API_URL = "https://api.finbite.in/v1/whatsapp/send";
  
  // In-memory OTP store (for demo; in production use database)
  const otpStore = new Map<string, { otp: string; expires: number; attempts: number }>();
