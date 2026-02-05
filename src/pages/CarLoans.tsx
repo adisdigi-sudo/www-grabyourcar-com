@@ -39,6 +39,7 @@ import {
   IndianRupee,
   Download,
 } from "lucide-react";
+import { CrossSellWidget } from "@/components/CrossSellWidget";
 
 const bankData = [
   {
@@ -548,6 +549,15 @@ const CarLoans = () => {
                 </CardContent>
               </Card>
             ))}
+          </div>
+
+          {/* Cross-Sell Services */}
+          <div className="mt-12">
+            <CrossSellWidget 
+              context="loans" 
+              title="Related Services" 
+              maxItems={3} 
+            />
           </div>
 
           {/* CTA */}

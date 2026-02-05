@@ -41,6 +41,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useRazorpay } from "@/hooks/useRazorpay";
 import { PincodeChecker } from "@/components/hsrp/PincodeChecker";
 import { useNavigate } from "react-router-dom";
+import { CrossSellWidget } from "@/components/CrossSellWidget";
 
 const hsrpServices = [
   {
@@ -1003,6 +1004,17 @@ const HSRP = () => {
               ))}
             </Accordion>
           </div>
+        </div>
+      </section>
+
+      {/* Cross-Sell Services */}
+      <section className="py-12 bg-muted/30">
+        <div className="container mx-auto px-4">
+          <CrossSellWidget 
+            context="hsrp" 
+            title="Related Services You May Need" 
+            maxItems={3} 
+          />
         </div>
       </section>
 

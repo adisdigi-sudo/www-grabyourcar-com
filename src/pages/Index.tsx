@@ -11,8 +11,9 @@ import { Testimonials } from "@/components/Testimonials";
 import { TrustBadges } from "@/components/TrustBadges";
 import { Footer } from "@/components/Footer";
 import { FloatingCTA } from "@/components/FloatingCTA";
- import { CustomerStories } from "@/components/CustomerStories";
- import { DealerLocatorWidget } from "@/components/DealerLocatorWidget";
+import { CustomerStories } from "@/components/CustomerStories";
+import { DealerLocatorWidget } from "@/components/DealerLocatorWidget";
+import { CrossSellWidget } from "@/components/CrossSellWidget";
 
 const Index = () => {
   const [loanPrefill, setLoanPrefill] = useState<string>("");
@@ -64,9 +65,14 @@ const Index = () => {
         
         {/* Featured Car Listings */}
         <CarListings />
+
+        {/* Cross-Sell Services */}
+        <div className="container mx-auto px-4">
+          <CrossSellWidget context="home" title="Complete Your Car Buying Journey" maxItems={4} />
+        </div>
         
-         {/* Nearby Dealer Locator */}
-         <DealerLocatorWidget />
+        {/* Nearby Dealer Locator */}
+        <DealerLocatorWidget />
          
         {/* EMI Calculator */}
         <EMICalculator onGetQuote={handleGetLoanQuote} />

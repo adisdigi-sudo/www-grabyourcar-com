@@ -45,6 +45,7 @@ import {
 import { useCompare } from "@/hooks/useCompare";
 import EMICalculator from "@/components/EMICalculator";
 import { AICarRecommendations } from "@/components/AICarRecommendations";
+import { CrossSellWidget } from "@/components/CrossSellWidget";
 import { getCarBySlug } from "@/data/carsData";
 import { calculateStatePriceBreakup } from "@/data/statePricing";
 import { toast } from "sonner";
@@ -661,6 +662,17 @@ const CarDetail = () => {
               price={car.price}
               fuelTypes={car.fuelTypes}
               transmission={car.transmission}
+            />
+          </div>
+        </section>
+
+        {/* Cross-Sell Services */}
+        <section className="py-8 md:py-12 bg-muted/30">
+          <div className="container mx-auto px-4">
+            <CrossSellWidget 
+              context="carDetail" 
+              title="Complete Your Purchase" 
+              maxItems={4} 
             />
           </div>
         </section>
