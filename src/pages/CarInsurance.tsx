@@ -4,6 +4,7 @@ import { Shield, CheckCircle2, Car, Sparkles } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Badge } from "@/components/ui/badge";
+import { CrossSellWidget } from "@/components/CrossSellWidget";
 import {
   InsuranceHeroForm,
   InsurancePartnerLogos,
@@ -139,6 +140,17 @@ const CarInsurance = () => {
 
         {/* FAQ Section */}
         <InsuranceFAQ />
+
+        {/* Cross-Sell Services */}
+        <section className="py-12 bg-muted/30">
+          <div className="container mx-auto px-4">
+            <CrossSellWidget 
+              context="insurance" 
+              title="You May Also Need" 
+              maxItems={3} 
+            />
+          </div>
+        </section>
 
         {/* CTA Section */}
         <InsuranceCTA />
