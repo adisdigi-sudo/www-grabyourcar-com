@@ -8,6 +8,7 @@ import { CartProvider } from "@/hooks/useCart";
 import { CompareProvider } from "@/hooks/useCompare";
 import { FloatingCompareBar } from "@/components/FloatingCompareBar";
 import { WhatsAppFloatingButton } from "@/components/WhatsAppCTA";
+import { AdminSubdomainRedirect } from "@/components/AdminSubdomainRedirect";
 import Index from "./pages/Index";
 import Cars from "./pages/Cars";
 import CarImages from "./pages/CarImages";
@@ -48,6 +49,7 @@ const App = () => (
             <Toaster />
             <Sonner />
             <BrowserRouter>
+              <AdminSubdomainRedirect />
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/cars" element={<Cars />} />
