@@ -54,6 +54,7 @@ interface CarData {
   competitors: string[];
   image: string;
   gallery: string[];
+  brochureUrl?: string;
 }
 
 // Helper function to parse launch date - handles formats like "Q1 2025", "February 2025", or ISO dates
@@ -170,7 +171,9 @@ Deno.serve(async (req) => {
             supabase.from('car_variants').delete().eq('car_id', carId),
             supabase.from('car_colors').delete().eq('car_id', carId),
             supabase.from('car_images').delete().eq('car_id', carId),
-            supabase.from('car_offers').delete().eq('car_id', carId)
+            supabase.from('car_offers').delete().eq('car_id', carId),
+            supabase.from('car_features').delete().eq('car_id', carId),
+            supabase.from('car_brochures').delete().eq('car_id', carId)
           ]);
         } else {
           // Insert new car
@@ -212,6 +215,8 @@ Deno.serve(async (req) => {
 
         // Insert specifications
         const specCategories = ['engine', 'dimensions', 'performance', 'features', 'safety'] as const;
+        const featuresToInsert: { car_id: string; category: string; feature_name: string; is_standard: boolean; sort_order: number }[] = [];
+        
         for (const category of specCategories) {
           const specs = car.specifications[category];
           if (specs && specs.length > 0) {
@@ -223,7 +228,25 @@ Deno.serve(async (req) => {
               sort_order: index
             }));
             insertPromises.push(supabase.from('car_specifications').insert(specData).then(() => {}));
+            
+            // Extract features from 'features' and 'safety' spec categories
+            if (category === 'features' || category === 'safety') {
+              specs.forEach((spec, index) => {
+                featuresToInsert.push({
+                  car_id: carId,
+                  category: category === 'safety' ? 'Safety' : 'Comfort',
+                  feature_name: `${spec.label}: ${spec.value}`,
+                  is_standard: true,
+                  sort_order: featuresToInsert.length + index
+                });
+              });
+            }
           }
+        }
+        
+        // Insert extracted features
+        if (featuresToInsert.length > 0) {
+          insertPromises.push(supabase.from('car_features').insert(featuresToInsert).then(() => {}));
         }
 
         // Insert variants
@@ -277,6 +300,18 @@ Deno.serve(async (req) => {
             sort_order: index
           }));
           insertPromises.push(supabase.from('car_offers').insert(offerData).then(() => {}));
+        }
+
+        // Insert brochure URL as brochure record
+        if (car.brochureUrl) {
+          const brochureData = {
+            car_id: carId,
+            title: `${car.name} Brochure`,
+            url: car.brochureUrl,
+            language: 'English',
+            sort_order: 0
+          };
+          insertPromises.push(supabase.from('car_brochures').insert(brochureData).then(() => {}));
         }
 
         await Promise.all(insertPromises);

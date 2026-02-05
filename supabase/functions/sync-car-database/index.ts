@@ -91,6 +91,27 @@ interface OfferFromDB {
   sort_order: number;
 }
 
+interface FeatureFromDB {
+  id: string;
+  car_id: string;
+  category: string;
+  feature_name: string;
+  is_standard: boolean;
+  variant_specific: string[] | null;
+  sort_order: number;
+}
+
+interface BrochureFromDB {
+  id: string;
+  car_id: string;
+  title: string;
+  url: string;
+  variant_name: string | null;
+  file_size: string | null;
+  language: string;
+  sort_order: number;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -143,12 +164,14 @@ Deno.serve(async (req) => {
     const carIds = cars.map((c: CarFromDB) => c.id);
 
     // Fetch all related data in parallel
-    const [specsResult, variantsResult, colorsResult, imagesResult, offersResult] = await Promise.all([
+    const [specsResult, variantsResult, colorsResult, imagesResult, offersResult, featuresResult, brochuresResult] = await Promise.all([
       supabase.from('car_specifications').select('*').in('car_id', carIds).order('sort_order'),
       supabase.from('car_variants').select('*').in('car_id', carIds).order('sort_order'),
       supabase.from('car_colors').select('*').in('car_id', carIds).order('sort_order'),
       supabase.from('car_images').select('*').in('car_id', carIds).order('sort_order'),
-      supabase.from('car_offers').select('*').in('car_id', carIds).eq('is_active', true).order('sort_order')
+      supabase.from('car_offers').select('*').in('car_id', carIds).eq('is_active', true).order('sort_order'),
+      supabase.from('car_features').select('*').in('car_id', carIds).order('sort_order'),
+      supabase.from('car_brochures').select('*').in('car_id', carIds).order('sort_order')
     ]);
 
     const specs = specsResult.data || [];
@@ -156,6 +179,8 @@ Deno.serve(async (req) => {
     const colors = colorsResult.data || [];
     const images = imagesResult.data || [];
     const offers = offersResult.data || [];
+    const features = featuresResult.data || [];
+    const brochures = brochuresResult.data || [];
 
     // Group data by car_id
     const groupByCarId = <T extends { car_id: string }>(items: T[]): Record<string, T[]> => {
@@ -171,6 +196,8 @@ Deno.serve(async (req) => {
     const colorsByCarId = groupByCarId(colors as ColorFromDB[]);
     const imagesByCarId = groupByCarId(images as ImageFromDB[]);
     const offersByCarId = groupByCarId(offers as OfferFromDB[]);
+    const featuresByCarId = groupByCarId(features as FeatureFromDB[]);
+    const brochuresByCarId = groupByCarId(brochures as BrochureFromDB[]);
 
     // Transform to frontend format
     const transformedCars = cars.map((car: CarFromDB) => {
@@ -179,6 +206,17 @@ Deno.serve(async (req) => {
       const carColors = colorsByCarId[car.id] || [];
       const carImages = imagesByCarId[car.id] || [];
       const carOffers = offersByCarId[car.id] || [];
+      const carFeatures = featuresByCarId[car.id] || [];
+      const carBrochures = brochuresByCarId[car.id] || [];
+
+      // Group features by category
+      const featuresGrouped: Record<string, string[]> = {};
+      carFeatures.forEach((feature: FeatureFromDB) => {
+        if (!featuresGrouped[feature.category]) {
+          featuresGrouped[feature.category] = [];
+        }
+        featuresGrouped[feature.category].push(feature.feature_name);
+      });
 
       // Group specifications by category
       const specifications: Record<string, { label: string; value: string }[]> = {
@@ -257,7 +295,16 @@ Deno.serve(async (req) => {
         })),
         pros: car.pros || [],
         cons: car.cons || [],
-        competitors: car.competitors || []
+        competitors: car.competitors || [],
+        featuresGrouped,
+        brochures: carBrochures.map((brochure: BrochureFromDB) => ({
+          id: brochure.id,
+          title: brochure.title,
+          url: brochure.url,
+          variantName: brochure.variant_name,
+          fileSize: brochure.file_size,
+          language: brochure.language
+        }))
       };
     });
 
