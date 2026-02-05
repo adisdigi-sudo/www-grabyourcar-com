@@ -4,34 +4,9 @@ import { Button } from "@/components/ui/button";
 import { AnimatedCounter } from "@/components/ui/animated-counter";
 import { Shield, Award, Users, CheckCircle, Sparkles, MessageCircle, ArrowRight, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-} from "@/components/ui/carousel";
-import Autoplay from "embla-carousel-autoplay";
+import { PremiumBannerCarousel } from "@/components/PremiumBannerCarousel";
 import heroBg from "@/assets/hero-bg.jpg";
-
-// Import banner images - Grabyourcar Service Banners
-import banner1 from "@/assets/banners/banner-1.png";
-import banner2 from "@/assets/banners/banner-2.png";
-import banner3 from "@/assets/banners/banner-3.png";
-import banner4 from "@/assets/banners/banner-4.png";
-import banner5 from "@/assets/banners/banner-5.png";
-import banner6 from "@/assets/banners/banner-6.png";
-import banner7 from "@/assets/banners/banner-7.png";
-import banner8 from "@/assets/banners/banner-8.png";
-
-const banners = [
-  { id: 1, src: banner1, alt: "New Cars - Pan-India Deals", link: "/cars" },
-  { id: 2, src: banner2, alt: "No Waiting Period Cars", link: "/cars?filter=no-waiting" },
-  { id: 3, src: banner3, alt: "Compare Car Offers", link: "/compare" },
-  { id: 4, src: banner4, alt: "Car Insurance", link: "/car-insurance" },
-  { id: 5, src: banner5, alt: "Car Loans - Banks & NBFCs", link: "/car-loans" },
-  { id: 6, src: banner6, alt: "Corporate & Bulk Buying", link: "/corporate" },
-  { id: 7, src: banner7, alt: "Self-Drive Rentals - Coming Soon", link: "/self-drive" },
-  { id: 8, src: banner8, alt: "Accessories & HSRP Frames", link: "/accessories" },
-];
+import logoImage from "@/assets/logo-grabyourcar-main.png";
 
 export const HeroSection = () => {
   return (
@@ -51,6 +26,15 @@ export const HeroSection = () => {
       {/* Content */}
       <div className="container mx-auto px-4 relative z-10 pt-20 pb-16">
         <div className="max-w-5xl mx-auto text-center">
+          {/* Logo Watermark for Brand Authority */}
+          <div className="flex justify-center mb-6">
+            <img 
+              src={logoImage} 
+              alt="GrabYourCar" 
+              className="h-14 md:h-16 lg:h-20 w-auto brightness-0 invert opacity-90 drop-shadow-2xl"
+            />
+          </div>
+
           {/* Trust Badge - More Premium */}
           <Badge variant="trust" className="mb-6 py-2.5 px-5 text-sm border-2 border-success/30 backdrop-blur-sm">
             <CheckCircle className="h-4 w-4 mr-2" />
@@ -85,49 +69,9 @@ export const HeroSection = () => {
             </Badge>
           </div>
 
-          {/* Promotional Banner Carousel */}
-          <div className="mb-8 max-w-5xl mx-auto">
-            <Carousel
-              opts={{
-                align: "start",
-                loop: true,
-              }}
-              plugins={[
-                Autoplay({
-                  delay: 3000,
-                  stopOnInteraction: false,
-                  stopOnMouseEnter: true,
-                }),
-              ]}
-              className="w-full"
-            >
-              <CarouselContent className="-ml-2 md:-ml-4">
-                {banners.map((banner) => (
-                  <CarouselItem key={banner.id} className="pl-2 md:pl-4 basis-full md:basis-1/3">
-                    <Link to={banner.link} className="group block">
-                      <div className="relative overflow-hidden rounded-xl shadow-lg border border-card/20 transition-all duration-300 group-hover:scale-[1.02] group-hover:shadow-xl banner-glow">
-                        <img 
-                          src={banner.src} 
-                          alt={banner.alt} 
-                          className="w-full h-32 md:h-36 object-cover transition-transform duration-500 group-hover:scale-105"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                      </div>
-                    </Link>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-              
-              {/* Carousel Indicators */}
-              <div className="flex justify-center gap-2 mt-4">
-                {banners.map((_, index) => (
-                  <div
-                    key={index}
-                    className="w-2 h-2 rounded-full bg-card/40 transition-all duration-300"
-                  />
-                ))}
-              </div>
-            </Carousel>
+          {/* Premium Service Banner Carousel */}
+          <div className="mb-8">
+            <PremiumBannerCarousel />
           </div>
 
           {/* Search Bar */}

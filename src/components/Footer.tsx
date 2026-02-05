@@ -45,7 +45,7 @@ export const Footer = () => {
               <img 
                 src={logoImage} 
                 alt="Grabyourcar - India's Smarter Way to Buy New Cars" 
-                className="h-12 md:h-14 w-auto max-w-[200px] md:max-w-[260px] object-contain brightness-0 invert drop-shadow-lg" 
+                className="h-14 md:h-16 lg:h-[4.5rem] w-auto max-w-[220px] md:max-w-[300px] lg:max-w-[340px] object-contain brightness-0 invert drop-shadow-lg transition-transform hover:scale-[1.02]" 
               />
             </a>
             <p className="text-xl md:text-2xl font-heading font-bold text-background mb-2">
