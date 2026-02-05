@@ -153,6 +153,46 @@ export const useHSRPServices = () => {
   });
 };
 
+export interface HSRPBannerData {
+  id: string;
+  title: string;
+  subtitle: string | null;
+  description: string | null;
+  vehicle_class: string;
+  icon_type: string;
+  gradient_from: string;
+  gradient_to: string;
+  badge_text: string | null;
+  badge_color: string;
+  features: string[] | null;
+  price_key: string;
+  cta_text: string;
+  sort_order: number;
+  is_active: boolean;
+  animation_type: string;
+}
+
+export const useHSRPBanners = () => {
+  return useQuery({
+    queryKey: ["hsrp-banners-public"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("hsrp_service_banners")
+        .select("*")
+        .eq("is_active", true)
+        .order("sort_order");
+
+      if (error) {
+        console.error("Error fetching HSRP banners:", error);
+        return [];
+      }
+      
+      return (data || []) as HSRPBannerData[];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
 export const formatPrice = (price: number): string => {
   return new Intl.NumberFormat("en-IN", {
     style: "currency",

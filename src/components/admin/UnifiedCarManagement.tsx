@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import { 
   Search, Plus, Edit, Trash2, Eye, RefreshCw, Car, Image as ImageIcon, 
   Filter, Download, Upload, FileText, Tags, Sparkles, Save, X, Link2,
-  Settings, IndianRupee, Gauge, Shield, Ruler
+  Settings, IndianRupee, Gauge, Shield, Ruler, Palette
 } from "lucide-react";
 import { stateRates, calculateStatePriceBreakup } from "@/data/statePricing";
 
@@ -84,11 +84,21 @@ interface CarSpecification {
   sort_order: number | null;
 }
 
+interface CarColor {
+  id: string;
+  car_id: string;
+  name: string;
+  hex_code: string;
+  image_url: string | null;
+  sort_order: number | null;
+}
+
 interface FullCarData extends CarData {
   images: CarImage[];
   variants: CarVariant[];
   brochures: CarBrochure[];
   specifications: CarSpecification[];
+  colors: CarColor[];
 }
 
 const specCategories = ['engine', 'dimensions', 'performance', 'features', 'safety'] as const;
@@ -132,6 +142,7 @@ export const UnifiedCarManagement = () => {
     name: "", price: "", fuel_type: "", transmission: "", ex_showroom: "", on_road_price: "" 
   });
   const [newSpec, setNewSpec] = useState({ category: "engine", label: "", value: "" });
+  const [newColor, setNewColor] = useState({ name: "", hex_code: "#000000", image_url: "" });
   const [editingVariantId, setEditingVariantId] = useState<string | null>(null);
   const [priceBreakupState, setPriceBreakupState] = useState("DL");
 
@@ -159,11 +170,12 @@ export const UnifiedCarManagement = () => {
       // Fetch related data for all cars
       const carsWithRelations = await Promise.all(
         (carsData || []).map(async (car) => {
-          const [imagesRes, variantsRes, brochuresRes, specsRes] = await Promise.all([
+          const [imagesRes, variantsRes, brochuresRes, specsRes, colorsRes] = await Promise.all([
             supabase.from('car_images').select('*').eq('car_id', car.id).order('sort_order'),
             supabase.from('car_variants').select('*').eq('car_id', car.id).order('price_numeric'),
             supabase.from('car_brochures').select('*').eq('car_id', car.id).order('sort_order'),
             supabase.from('car_specifications').select('*').eq('car_id', car.id).order('sort_order'),
+            supabase.from('car_colors').select('*').eq('car_id', car.id).order('sort_order'),
           ]);
 
           return {
@@ -172,6 +184,7 @@ export const UnifiedCarManagement = () => {
             variants: variantsRes.data || [],
             brochures: brochuresRes.data || [],
             specifications: specsRes.data || [],
+            colors: colorsRes.data || [],
           } as FullCarData;
         })
       );
@@ -357,6 +370,46 @@ export const UnifiedCarManagement = () => {
     },
     onError: () => {
       toast.error('Failed to update pricing');
+    },
+  });
+
+  // Add color mutation
+  const addColorMutation = useMutation({
+    mutationFn: async ({ carId, color }: { carId: string; color: typeof newColor }) => {
+      const maxOrder = selectedCar?.colors.reduce((max, c) => Math.max(max, c.sort_order || 0), 0) || 0;
+      const { error } = await supabase
+        .from('car_colors')
+        .insert([{
+          car_id: carId,
+          name: color.name,
+          hex_code: color.hex_code,
+          image_url: color.image_url || null,
+          sort_order: maxOrder + 1,
+        }]);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['unifiedCarManagement'] });
+      toast.success('Color added');
+      setNewColor({ name: "", hex_code: "#000000", image_url: "" });
+    },
+    onError: () => {
+      toast.error('Failed to add color');
+    },
+  });
+
+  // Delete color mutation
+  const deleteColorMutation = useMutation({
+    mutationFn: async (colorId: string) => {
+      const { error } = await supabase
+        .from('car_colors')
+        .delete()
+        .eq('id', colorId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['unifiedCarManagement'] });
+      toast.success('Color deleted');
     },
   });
 
@@ -766,28 +819,32 @@ export const UnifiedCarManagement = () => {
           
           {selectedCar && (
             <Tabs value={activeEditTab} onValueChange={setActiveEditTab}>
-              <TabsList className="w-full grid grid-cols-6">
-                <TabsTrigger value="basic" className="text-xs px-2">
+              <TabsList className="w-full grid grid-cols-7">
+                <TabsTrigger value="basic" className="text-xs px-1">
                   <Car className="h-3 w-3 mr-1" />
                   Basic
                 </TabsTrigger>
-                <TabsTrigger value="images" className="text-xs px-2">
+                <TabsTrigger value="images" className="text-xs px-1">
                   <ImageIcon className="h-3 w-3 mr-1" />
                   Images
                 </TabsTrigger>
-                <TabsTrigger value="variants" className="text-xs px-2">
+                <TabsTrigger value="colors" className="text-xs px-1">
+                  <Palette className="h-3 w-3 mr-1" />
+                  Colors
+                </TabsTrigger>
+                <TabsTrigger value="variants" className="text-xs px-1">
                   <Tags className="h-3 w-3 mr-1" />
                   Variants
                 </TabsTrigger>
-                <TabsTrigger value="specs" className="text-xs px-2">
+                <TabsTrigger value="specs" className="text-xs px-1">
                   <Settings className="h-3 w-3 mr-1" />
                   Specs
                 </TabsTrigger>
-                <TabsTrigger value="pricing" className="text-xs px-2">
+                <TabsTrigger value="pricing" className="text-xs px-1">
                   <IndianRupee className="h-3 w-3 mr-1" />
                   Pricing
                 </TabsTrigger>
-                <TabsTrigger value="brochures" className="text-xs px-2">
+                <TabsTrigger value="brochures" className="text-xs px-1">
                   <FileText className="h-3 w-3 mr-1" />
                   Docs
                 </TabsTrigger>
@@ -921,6 +978,100 @@ export const UnifiedCarManagement = () => {
                       <Plus className="h-4 w-4 mr-2" />
                       Add
                     </Button>
+                  </div>
+                </div>
+              </TabsContent>
+
+              {/* Colors Tab */}
+              <TabsContent value="colors" className="space-y-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                  {selectedCar.colors.map((color) => (
+                    <div key={color.id} className="relative group border rounded-lg p-3 hover:shadow-md transition-shadow">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div
+                          className="w-10 h-10 rounded-full border-2 border-border shadow-inner"
+                          style={{ backgroundColor: color.hex_code }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{color.name}</p>
+                          <p className="text-xs text-muted-foreground">{color.hex_code}</p>
+                        </div>
+                      </div>
+                      {color.image_url && (
+                        <div className="h-24 rounded-md overflow-hidden bg-muted mt-2">
+                          <img src={color.image_url} alt={color.name} className="w-full h-full object-cover" />
+                        </div>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => deleteColorMutation.mutate(color.id)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+
+                {selectedCar.colors.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Palette className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No colors added yet</p>
+                    <p className="text-sm">Add color options available for this car</p>
+                  </div>
+                )}
+
+                <div className="border-t pt-4">
+                  <Label className="text-base font-semibold mb-4 block">Add New Color</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="space-y-2">
+                      <Label>Color Name</Label>
+                      <Input
+                        value={newColor.name}
+                        onChange={(e) => setNewColor({ ...newColor, name: e.target.value })}
+                        placeholder="e.g., Pearl White"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Hex Code</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          type="color"
+                          value={newColor.hex_code}
+                          onChange={(e) => setNewColor({ ...newColor, hex_code: e.target.value })}
+                          className="w-14 h-10 p-1 cursor-pointer"
+                        />
+                        <Input
+                          value={newColor.hex_code}
+                          onChange={(e) => setNewColor({ ...newColor, hex_code: e.target.value })}
+                          placeholder="#FFFFFF"
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Color-Specific Image URL (optional)</Label>
+                      <Input
+                        value={newColor.image_url}
+                        onChange={(e) => setNewColor({ ...newColor, image_url: e.target.value })}
+                        placeholder="https://example.com/car-white.jpg"
+                      />
+                    </div>
+                    <div className="flex items-end">
+                      <Button
+                        onClick={() => {
+                          if (selectedCar && newColor.name && newColor.hex_code) {
+                            addColorMutation.mutate({ carId: selectedCar.id, color: newColor });
+                          }
+                        }}
+                        disabled={!newColor.name || !newColor.hex_code || addColorMutation.isPending}
+                        className="w-full"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Color
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </TabsContent>
