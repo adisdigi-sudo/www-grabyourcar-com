@@ -176,6 +176,192 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_blog_posts: {
+        Row: {
+          ai_model: string | null
+          author: string
+          category: string
+          content: string
+          cover_image_description: string | null
+          cover_image_url: string | null
+          created_at: string
+          created_by: string | null
+          excerpt: string
+          id: string
+          is_ai_generated: boolean | null
+          published_at: string | null
+          read_time: string | null
+          seo_description: string | null
+          seo_title: string | null
+          slug: string
+          status: string
+          tags: string[] | null
+          title: string
+          updated_at: string
+          updated_by: string | null
+          views: number | null
+        }
+        Insert: {
+          ai_model?: string | null
+          author?: string
+          category?: string
+          content: string
+          cover_image_description?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          excerpt: string
+          id?: string
+          is_ai_generated?: boolean | null
+          published_at?: string | null
+          read_time?: string | null
+          seo_description?: string | null
+          seo_title?: string | null
+          slug: string
+          status?: string
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+          views?: number | null
+        }
+        Update: {
+          ai_model?: string | null
+          author?: string
+          category?: string
+          content?: string
+          cover_image_description?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          excerpt?: string
+          id?: string
+          is_ai_generated?: boolean | null
+          published_at?: string | null
+          read_time?: string | null
+          seo_description?: string | null
+          seo_title?: string | null
+          slug?: string
+          status?: string
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+          views?: number | null
+        }
+        Relationships: []
+      }
+      ai_news_cache: {
+        Row: {
+          author: string | null
+          category: string
+          created_at: string
+          excerpt: string
+          expires_at: string | null
+          fetched_at: string
+          id: string
+          image_description: string | null
+          image_url: string | null
+          is_featured: boolean | null
+          published_at: string | null
+          read_time: string | null
+          source: string | null
+          source_url: string | null
+          status: string
+          tags: string[] | null
+          title: string
+        }
+        Insert: {
+          author?: string | null
+          category: string
+          created_at?: string
+          excerpt: string
+          expires_at?: string | null
+          fetched_at?: string
+          id?: string
+          image_description?: string | null
+          image_url?: string | null
+          is_featured?: boolean | null
+          published_at?: string | null
+          read_time?: string | null
+          source?: string | null
+          source_url?: string | null
+          status?: string
+          tags?: string[] | null
+          title: string
+        }
+        Update: {
+          author?: string | null
+          category?: string
+          created_at?: string
+          excerpt?: string
+          expires_at?: string | null
+          fetched_at?: string
+          id?: string
+          image_description?: string | null
+          image_url?: string | null
+          is_featured?: boolean | null
+          published_at?: string | null
+          read_time?: string | null
+          source?: string | null
+          source_url?: string | null
+          status?: string
+          tags?: string[] | null
+          title?: string
+        }
+        Relationships: []
+      }
+      ai_upcoming_cars_cache: {
+        Row: {
+          brand: string
+          created_at: string
+          expected_price: string | null
+          expires_at: string | null
+          fetched_at: string
+          highlights: string[] | null
+          id: string
+          image_description: string | null
+          image_url: string | null
+          is_featured: boolean | null
+          launch_date: string | null
+          name: string
+          segment: string | null
+          status: string
+        }
+        Insert: {
+          brand: string
+          created_at?: string
+          expected_price?: string | null
+          expires_at?: string | null
+          fetched_at?: string
+          highlights?: string[] | null
+          id?: string
+          image_description?: string | null
+          image_url?: string | null
+          is_featured?: boolean | null
+          launch_date?: string | null
+          name: string
+          segment?: string | null
+          status?: string
+        }
+        Update: {
+          brand?: string
+          created_at?: string
+          expected_price?: string | null
+          expires_at?: string | null
+          fetched_at?: string
+          highlights?: string[] | null
+          id?: string
+          image_description?: string | null
+          image_url?: string | null
+          is_featured?: boolean | null
+          launch_date?: string | null
+          name?: string
+          segment?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       analytics_events: {
         Row: {
           created_at: string | null

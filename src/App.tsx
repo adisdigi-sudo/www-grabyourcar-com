@@ -35,6 +35,7 @@ import AutoNews from "./pages/AutoNews";
 import DealerLocator from "./pages/DealerLocator";
 import NotFound from "./pages/NotFound";
  import About from "./pages/About";
+ import AutoIntelligence from "./pages/AutoIntelligence";
 
 const queryClient = new QueryClient();
 
@@ -74,6 +75,7 @@ const App = () => (
                 <Route path="/auto-news" element={<AutoNews />} />
                 <Route path="/dealers" element={<DealerLocator />} />
                  <Route path="/about" element={<About />} />
+                 <Route path="/auto-intelligence" element={<AutoIntelligence />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
