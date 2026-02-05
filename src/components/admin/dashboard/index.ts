@@ -5,3 +5,4 @@ export { LeadFunnel } from './LeadFunnel';
 export { RevenueChart } from './RevenueChart';
 export { RecentActivity } from './RecentActivity';
 export { PerformanceMetrics } from './PerformanceMetrics';
+export { DashboardDateFilter, type DateRange } from './DashboardDateFilter';
