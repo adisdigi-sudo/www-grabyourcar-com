@@ -1,5 +1,14 @@
 project_id = "ynoiwioypxpurwdbjvyt"
 
+[functions.admin-otp]
+verify_jwt = false
+
+[functions.admin-password-reset]
+verify_jwt = false
+
+[functions.auto-news]
+verify_jwt = false
+
 [functions.car-advisor]
 verify_jwt = true
 
@@ -9,38 +18,53 @@ verify_jwt = false
 [functions.car-recommendations]
 verify_jwt = false
 
-[functions.submit-lead]
+[functions.enhance-car-data]
+verify_jwt = false
+
+[functions.generate-blog]
 verify_jwt = true
 
 [functions.migrate-car-data]
 verify_jwt = false
 
-[functions.enhance-car-data]
+[functions.og-image]
 verify_jwt = false
 
-[functions.sync-car-database]
-verify_jwt = false
+[functions.razorpay-create-order]
+verify_jwt = true
+
+[functions.razorpay-verify-payment]
+verify_jwt = true
 
 [functions.scheduled-sync]
 verify_jwt = false
 
-[functions.validate-car-data]
+[functions.send-alert-email]
+verify_jwt = false
+
+[functions.send-dashboard-report]
 verify_jwt = false
 
 [functions.sitemap]
 verify_jwt = false
 
-[functions.og-image]
+[functions.submit-lead]
+verify_jwt = true
+
+[functions.sync-car-database]
 verify_jwt = false
 
-[functions.whatsapp-webhook]
+[functions.upcoming-cars]
 verify_jwt = false
 
-[functions.whatsapp-send]
+[functions.validate-car-data]
 verify_jwt = false
 
 [functions.whatsapp-otp]
 verify_jwt = false
 
-[functions.generate-blog]
-verify_jwt = true
+[functions.whatsapp-send]
+verify_jwt = false
+
+[functions.whatsapp-webhook]
+verify_jwt = false
