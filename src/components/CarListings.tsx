@@ -73,7 +73,7 @@ export const CarListings = () => {
                 <div className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2">
                   {car.isHot && (
                     <Badge className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 bg-primary text-primary-foreground rounded-full font-semibold">
-                      🔥 Hot
+                      🚀 Express Delivery
                     </Badge>
                   )}
                   {car.isLimited && !car.isHot && (
