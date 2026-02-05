@@ -1,13 +1,12 @@
  import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
- import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
  
  const corsHeaders = {
    "Access-Control-Allow-Origin": "*",
    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
  };
  
- // Finbite API endpoint
- const FINBITE_API_URL = "https://app.finbite.in/api/v1/send_msg/";
+// Finbite/Wbiztool API endpoint (without trailing slash)
+const FINBITE_API_URL = "https://app.finbite.in/api/v1/send_msg";
  
  // In-memory OTP store (for demo; in production use database)
  const otpStore = new Map<string, { otp: string; expires: number; attempts: number }>();
@@ -56,14 +55,20 @@
  
      // Validate phone number (Indian 10-digit)
      const cleanPhone = phone?.replace(/\D/g, "").replace(/^0+/, "");
-     if (!cleanPhone || !/^[6-9]\d{9}$/.test(cleanPhone)) {
+      // Handle both 10-digit numbers and 12-digit with 91 prefix
+      let normalizedPhone = cleanPhone;
+      if (cleanPhone?.startsWith("91") && cleanPhone.length === 12) {
+        normalizedPhone = cleanPhone.slice(2);
+      }
+      
+      if (!normalizedPhone || !/^[6-9]\d{9}$/.test(normalizedPhone)) {
        return new Response(
          JSON.stringify({ error: "Invalid phone number. Enter a valid 10-digit mobile number." }),
          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
        );
      }
  
-     const phoneKey = `91${cleanPhone}`;
+      const phoneKey = `91${normalizedPhone}`;
      cleanExpiredOTPs();
  
      if (action === "send") {
@@ -91,21 +96,22 @@
        // Send OTP via WhatsApp
        const message = `🚗 *GrabYourCar OTP*\n\nYour verification code is: *${newOtp}*\n\nThis code expires in 5 minutes.\n\n_Do not share this code with anyone._`;
  
-       const payload = {
-         client_id: parseInt(FINBITE_CLIENT_ID),
-         api_key: FINBITE_API_KEY,
-         whatsapp_client: parseInt(FINBITE_WHATSAPP_CLIENT),
-         phone: phoneKey,
-         msg: message,
-         msg_type: 0,
-       };
+        // Use URLSearchParams for form-urlencoded format (required by Finbite/Wbiztool API)
+        const formData = new URLSearchParams();
+        formData.append("client_id", FINBITE_CLIENT_ID);
+        formData.append("api_key", FINBITE_API_KEY);
+        formData.append("whatsapp_client", FINBITE_WHATSAPP_CLIENT);
+        formData.append("phone", normalizedPhone);
+        formData.append("country_code", "91");
+        formData.append("msg", message);
+        formData.append("msg_type", "0");
  
        console.log("Sending OTP via WhatsApp:", { phone: phoneKey, otp: newOtp });
  
        const response = await fetch(FINBITE_API_URL, {
          method: "POST",
-         headers: { "Content-Type": "application/json" },
-         body: JSON.stringify(payload),
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: formData.toString(),
        });
  
         // Check if response is JSON before parsing
@@ -114,27 +120,26 @@
         
         if (contentType.includes("application/json")) {
           result = await response.json();
+          console.log("Finbite API response:", result);
+          
+          if (!response.ok || result.status === false || result.error) {
+            console.error("Finbite API error:", result);
+            return new Response(
+              JSON.stringify({ error: "Failed to send OTP. Please try again." }),
+              { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
         } else {
           // API returned non-JSON (likely HTML error page)
           const textBody = await response.text();
           console.error("Finbite API returned non-JSON response:", textBody.substring(0, 200));
           
-          // Still return success since OTP was generated and stored
-          // The WhatsApp message might have been sent despite the response format
-          console.log("OTP stored locally, WhatsApp delivery status unknown:", { phone: phoneKey });
+          // Return error to user so they know the OTP wasn't sent
           return new Response(
-            JSON.stringify({ success: true, message: "OTP sent to your WhatsApp" }),
-            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            JSON.stringify({ error: "WhatsApp service temporarily unavailable. Please try again." }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
- 
-       if (!response.ok) {
-         console.error("Finbite API error:", result);
-         return new Response(
-           JSON.stringify({ error: "Failed to send OTP. Please try again." }),
-           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-         );
-       }
  
        console.log("OTP sent successfully:", { phone: phoneKey });
        return new Response(
