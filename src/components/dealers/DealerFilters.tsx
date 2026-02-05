@@ -40,11 +40,11 @@ export const DealerFilters = ({
   const clearFilters = () => {
     setSearchQuery("");
     setSelectedBrand("All Brands");
-    setSelectedCity("");
-    setSelectedState("");
+     setSelectedCity("all");
+     setSelectedState("all");
   };
 
-  const hasActiveFilters = searchQuery || selectedBrand !== "All Brands" || selectedCity || selectedState;
+   const hasActiveFilters = searchQuery || selectedBrand !== "All Brands" || (selectedCity && selectedCity !== "all") || (selectedState && selectedState !== "all");
 
   return (
     <div className="bg-card border border-border/50 rounded-2xl p-4 md:p-6 space-y-4 shadow-sm">
@@ -100,8 +100,8 @@ export const DealerFilters = ({
           <SelectTrigger className="h-11 bg-background/50">
             <SelectValue placeholder="Select State" />
           </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="">All States</SelectItem>
+           <SelectContent>
+             <SelectItem value="all">All States</SelectItem>
             {states.map((state) => (
               <SelectItem key={state} value={state}>
                 {state}
@@ -115,8 +115,8 @@ export const DealerFilters = ({
           <SelectTrigger className="h-11 bg-background/50">
             <SelectValue placeholder="Select City" />
           </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="">All Cities</SelectItem>
+           <SelectContent>
+             <SelectItem value="all">All Cities</SelectItem>
             {cities.map((city) => (
               <SelectItem key={city} value={city}>
                 {city}
@@ -141,12 +141,12 @@ export const DealerFilters = ({
                 {selectedBrand}
               </span>
             )}
-            {selectedState && (
+             {selectedState && selectedState !== "all" && (
               <span className="text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-full font-medium">
                 {selectedState}
               </span>
             )}
-            {selectedCity && (
+             {selectedCity && selectedCity !== "all" && (
               <span className="text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-full font-medium">
                 {selectedCity}
               </span>
