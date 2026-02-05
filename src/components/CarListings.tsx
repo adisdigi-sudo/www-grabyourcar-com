@@ -36,31 +36,32 @@ export const CarListings = () => {
   };
 
   return (
-    <section id="cars" className="py-16 md:py-24">
-      <div className="container mx-auto px-4">
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
+    <section id="cars" className="py-10 md:py-16 lg:py-24">
+      <div className="container mx-auto px-3 sm:px-4">
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 md:mb-12 gap-4">
           <div>
-            <h2 className="font-heading text-3xl md:text-4xl font-bold text-foreground mb-4">
+            <h2 className="font-heading text-2xl sm:text-3xl md:text-4xl font-bold text-foreground mb-2 md:mb-4">
               Hot Deals This Week
             </h2>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground text-sm md:text-base">
               Exclusive discounts on India's most popular cars
             </p>
           </div>
-          <Button variant="outline" size="lg">
+          <Button variant="outline" size="lg" className="hidden md:flex">
             View All Cars
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* 2 columns on mobile/tablet, 3 on desktop */}
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
           {featuredCars.map((car, index) => (
             <Card
               key={car.id}
               variant="deal"
               className="overflow-hidden animate-fade-in car-card-glow"
-              style={{ animationDelay: `${index * 0.1}s` }}
+              style={{ animationDelay: `${index * 0.05}s` }}
             >
-              {/* Image Container */}
+              {/* Image Container - Compact on mobile */}
               <div className="relative aspect-[4/3] overflow-hidden bg-secondary glow-image">
                 <img
                   src={car.image}
@@ -68,112 +69,124 @@ export const CarListings = () => {
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
                 
-                {/* Badges */}
-                <div className="absolute top-3 left-3 flex flex-wrap gap-2">
+                {/* Badges - Smaller on mobile */}
+                <div className="absolute top-2 left-2 flex flex-wrap gap-1">
                   {car.isHot && (
-                    <Badge variant="hot">🔥 Hot Deal</Badge>
+                    <Badge variant="hot" className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5">
+                      🔥 Hot
+                    </Badge>
                   )}
                   {car.isLimited && (
-                    <Badge variant="limited">⚡ {car.availability}</Badge>
+                    <Badge variant="limited" className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5">
+                      ⚡ Soon
+                    </Badge>
                   )}
                 </div>
                 
-                {/* Favorite & Compare & Discount */}
-                <div className="absolute top-3 right-3 flex flex-col gap-2">
+                {/* Favorite & Compare - Compact on mobile */}
+                <div className="absolute top-2 right-2 flex flex-col gap-1">
                   <Button
                     variant="ghost"
                     size="icon"
-                    className={`bg-background/80 hover:bg-background ${isFavorite(car.id) ? "text-red-500" : "text-muted-foreground"}`}
+                    className={cn(
+                      "h-7 w-7 sm:h-8 sm:w-8 bg-background/80 hover:bg-background",
+                      isFavorite(car.id) ? "text-red-500" : "text-muted-foreground"
+                    )}
                     onClick={() => toggleFavorite(car.id, car.slug)}
                   >
-                    <Heart className={`h-5 w-5 ${isFavorite(car.id) ? "fill-current" : ""}`} />
+                    <Heart className={cn("h-4 w-4", isFavorite(car.id) && "fill-current")} />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
                     className={cn(
-                      "bg-background/80 hover:bg-background",
+                      "h-7 w-7 sm:h-8 sm:w-8 bg-background/80 hover:bg-background",
                       isInCompare(car.id) ? "text-primary" : "text-muted-foreground",
                       !canAddMore && !isInCompare(car.id) && "opacity-50"
                     )}
                     onClick={() => handleCompareToggle(car.id)}
                     disabled={!canAddMore && !isInCompare(car.id)}
-                    title={isInCompare(car.id) ? "Remove from compare" : canAddMore ? "Add to compare" : "Max 3 cars"}
                   >
                     {isInCompare(car.id) ? (
-                      <Check className="h-5 w-5" />
+                      <Check className="h-4 w-4" />
                     ) : (
-                      <GitCompare className="h-5 w-5" />
+                      <GitCompare className="h-4 w-4" />
                     )}
                   </Button>
-                  <Badge variant="deal" className="text-sm py-1 px-3">
+                </div>
+
+                {/* Discount Badge - Bottom overlay */}
+                <div className="absolute bottom-2 right-2">
+                  <Badge variant="deal" className="text-[10px] sm:text-xs py-0.5 px-2">
                     <TrendingDown className="h-3 w-3 mr-1" />
                     {car.discount}
                   </Badge>
                 </div>
               </div>
 
-              <CardContent className="p-5">
-                <h3 className="font-heading text-xl font-semibold text-foreground mb-2">
+              {/* Content - Compact padding on mobile */}
+              <CardContent className="p-3 sm:p-4 lg:p-5">
+                <h3 className="font-heading text-sm sm:text-base lg:text-lg font-semibold text-foreground mb-1 line-clamp-1">
                   {car.name}
                 </h3>
                 
-                {/* Price */}
-                <div className="mb-4">
-                  <span className="text-2xl font-bold text-primary">{car.price}</span>
-                  <span className="text-sm text-muted-foreground line-through ml-2">
-                    {car.originalPrice}
-                  </span>
+                {/* Price - Smaller on mobile */}
+                <div className="mb-2 sm:mb-3">
+                  <span className="text-base sm:text-lg lg:text-xl font-bold text-primary">{car.price.split(" - ")[0]}</span>
+                  <span className="text-[10px] sm:text-xs text-muted-foreground ml-1">onwards</span>
                 </div>
 
-                {/* Specs */}
-                <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-1.5">
-                    <Fuel className="h-4 w-4 text-primary" />
-                    <span>{car.fuelTypes.join(" / ")}</span>
+                {/* Specs - Single line on mobile */}
+                <div className="flex flex-wrap gap-2 text-[10px] sm:text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1">
+                    <Fuel className="h-3 w-3 text-primary" />
+                    <span>{car.fuelTypes[0]}</span>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <Cog className="h-4 w-4 text-primary" />
+                  <div className="flex items-center gap-1">
+                    <Cog className="h-3 w-3 text-primary" />
                     <span>{car.transmission[0]}</span>
                   </div>
                   {!car.isLimited && (
-                    <div className="flex items-center gap-1.5">
-                      <Clock className="h-4 w-4 text-success" />
-                      <span className="text-success font-medium">{car.availability}</span>
+                    <div className="hidden sm:flex items-center gap-1">
+                      <Clock className="h-3 w-3 text-success" />
+                      <span className="text-success font-medium">Ready</span>
                     </div>
                   )}
                 </div>
               </CardContent>
 
-              <CardFooter className="p-5 pt-0 flex flex-col gap-3">
-                {/* Primary Actions Row */}
-                <div className="flex gap-2 w-full">
-                  <Link to={`/car/${car.slug}`} className="flex-1">
-                    <Button variant="cta" className="w-full gap-2">
-                      <Eye className="h-4 w-4" />
-                      View Details
-                    </Button>
-                  </Link>
-                  <Link to={`/brochures?car=${car.slug}`}>
-                    <Button variant="outline" size="icon" title="Download Brochure">
-                      <FileText className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                </div>
+              {/* Footer - Stacked on mobile, compact */}
+              <CardFooter className="p-3 sm:p-4 lg:p-5 pt-0 flex flex-col gap-2">
+                {/* View Details - Primary CTA */}
+                <Link to={`/car/${car.slug}`} className="w-full">
+                  <Button variant="cta" size="sm" className="w-full gap-1.5 text-xs sm:text-sm h-8 sm:h-9">
+                    <Eye className="h-3.5 w-3.5" />
+                    View Details
+                  </Button>
+                </Link>
                 
-                {/* Secondary Actions Row - Sales-Driven WhatsApp */}
+                {/* WhatsApp & Call - Side by side */}
                 <div className="flex gap-2 w-full">
-                  <WhatsAppCardButton carName={car.name} />
+                  <WhatsAppCardButton carName={car.name} className="flex-1 text-xs h-8 sm:h-9" />
                   <a href="tel:+919577200023" className="flex-1">
-                    <Button variant="call" className="w-full gap-2 font-semibold hover:scale-[1.02] transition-transform">
-                      <Phone className="h-4 w-4" />
-                      Call Expert
+                    <Button variant="call" size="sm" className="w-full gap-1 text-xs h-8 sm:h-9">
+                      <Phone className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">Call</span>
                     </Button>
                   </a>
                 </div>
               </CardFooter>
             </Card>
           ))}
+        </div>
+
+        {/* Mobile View All Button */}
+        <div className="mt-6 md:hidden">
+          <Link to="/cars">
+            <Button variant="outline" className="w-full">
+              View All Cars
+            </Button>
+          </Link>
         </div>
       </div>
     </section>
