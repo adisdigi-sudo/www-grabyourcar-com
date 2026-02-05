@@ -237,18 +237,12 @@ export const Header = () => {
                 </Link>
               )}
               
-              <a href="https://wa.me/919577200023?text=Hi%20Grabyourcar!%20I%27m%20looking%20for%20the%20best%20price%20on%20a%20new%20car.%20Please%20help!" target="_blank" rel="noopener noreferrer">
-                <Button variant="whatsapp" size="sm" className="hidden md:flex gap-1.5 font-semibold hover:scale-105 transition-transform">
-                  <MessageCircle className="h-4 w-4" />
-                  Unlock Best Price
-                </Button>
-              </a>
-              <a href="tel:+919577200023">
-                <Button variant="call" size="sm" className="hidden md:flex gap-1.5 font-semibold hover:scale-105 transition-transform">
-                  <Phone className="h-4 w-4" />
-                  Call Expert
-                </Button>
-              </a>
+               <a href="https://wa.me/919577200023?text=Hi%20Grabyourcar!%20I%27m%20interested%20in%20buying%20a%20new%20car%20and%20would%20like%20to%20speak%20with%20an%20expert." target="_blank" rel="noopener noreferrer">
+                 <Button variant="whatsapp" size="sm" className="hidden md:flex gap-1.5 font-semibold hover:scale-105 transition-transform px-5">
+                   <MessageCircle className="h-4 w-4" />
+                   Talk to Expert
+                 </Button>
+               </a>
             </div>
           </div>
         </div>
