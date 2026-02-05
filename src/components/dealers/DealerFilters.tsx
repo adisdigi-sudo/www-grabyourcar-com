@@ -7,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, MapPin, LocateFixed, X } from "lucide-react";
+import { Search, MapPin, LocateFixed, X, Filter } from "lucide-react";
 import { brands, cities, states } from "@/data/dealerLocatorData";
 
 interface DealerFiltersProps {
@@ -47,42 +47,43 @@ export const DealerFilters = ({
   const hasActiveFilters = searchQuery || selectedBrand !== "All Brands" || selectedCity || selectedState;
 
   return (
-    <div className="bg-card border rounded-xl p-4 md:p-6 space-y-4">
+    <div className="bg-card border border-border/50 rounded-2xl p-4 md:p-6 space-y-4 shadow-sm">
       {/* Location Detection */}
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
         <Button
           onClick={onDetectLocation}
           disabled={isDetecting}
           variant="outline"
-          className="gap-2 flex-1 sm:flex-none border-primary/30 hover:bg-primary/5"
+          size="lg"
+          className="gap-2 flex-1 sm:flex-none border-primary/30 hover:bg-primary/5 font-medium"
         >
-          <LocateFixed className={`h-4 w-4 ${isDetecting ? "animate-pulse" : ""}`} />
+          <LocateFixed className={`h-5 w-5 ${isDetecting ? "animate-spin" : ""}`} />
           {isDetecting ? "Detecting..." : "Use My Location"}
         </Button>
         {detectedLocation && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 px-3 py-2 rounded-lg">
-            <MapPin className="h-4 w-4 text-primary" />
+          <div className="flex items-center gap-2 text-sm bg-primary/10 text-primary px-4 py-2.5 rounded-full font-medium">
+            <MapPin className="h-4 w-4" />
             <span>{detectedLocation}</span>
           </div>
         )}
       </div>
 
       {/* Search & Filters */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Search Input */}
-        <div className="relative sm:col-span-2 lg:col-span-1">
+        <div className="relative sm:col-span-2 lg:col-span-1 group">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search by dealer, city, pincode..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
+            className="pl-10 h-11 bg-background/50"
           />
         </div>
 
         {/* Brand Filter */}
         <Select value={selectedBrand} onValueChange={setSelectedBrand}>
-          <SelectTrigger>
+          <SelectTrigger className="h-11 bg-background/50">
             <SelectValue placeholder="Select Brand" />
           </SelectTrigger>
           <SelectContent>
@@ -96,7 +97,7 @@ export const DealerFilters = ({
 
         {/* State Filter */}
         <Select value={selectedState} onValueChange={setSelectedState}>
-          <SelectTrigger>
+          <SelectTrigger className="h-11 bg-background/50">
             <SelectValue placeholder="Select State" />
           </SelectTrigger>
           <SelectContent>
@@ -111,7 +112,7 @@ export const DealerFilters = ({
 
         {/* City Filter */}
         <Select value={selectedCity} onValueChange={setSelectedCity}>
-          <SelectTrigger>
+          <SelectTrigger className="h-11 bg-background/50">
             <SelectValue placeholder="Select City" />
           </SelectTrigger>
           <SelectContent>
@@ -127,30 +128,31 @@ export const DealerFilters = ({
 
       {/* Active Filters & Clear */}
       {hasActiveFilters && (
-        <div className="flex items-center justify-between pt-2 border-t">
-          <div className="flex flex-wrap gap-2">
+        <div className="flex items-center justify-between pt-4 border-t border-border/50">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Filter className="h-4 w-4 text-muted-foreground" />
             {searchQuery && (
-              <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
+              <span className="text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-full font-medium">
                 "{searchQuery}"
               </span>
             )}
             {selectedBrand !== "All Brands" && (
-              <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
+              <span className="text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-full font-medium">
                 {selectedBrand}
               </span>
             )}
             {selectedState && (
-              <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
+              <span className="text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-full font-medium">
                 {selectedState}
               </span>
             )}
             {selectedCity && (
-              <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
+              <span className="text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-full font-medium">
                 {selectedCity}
               </span>
             )}
           </div>
-          <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1 text-muted-foreground">
+          <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1.5 text-muted-foreground hover:text-destructive">
             <X className="h-3 w-3" />
             Clear All
           </Button>
