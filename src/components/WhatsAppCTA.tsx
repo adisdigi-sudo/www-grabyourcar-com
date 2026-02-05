@@ -247,18 +247,19 @@ export const WhatsAppCardButton = ({
       href={whatsappUrl}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex-1"
+      className="flex-1 min-w-0"
       onClick={handleClick}
     >
       <Button
         variant="whatsapp"
+        size="sm"
         className={cn(
-          "w-full gap-2 font-semibold hover:scale-[1.02] transition-transform",
+          "w-full gap-1 font-semibold hover:scale-[1.02] transition-transform px-2",
           className
         )}
       >
-        <Car className="h-4 w-4" />
-        Unlock Best Price
+        <Car className="h-3.5 w-3.5 flex-shrink-0" />
+        <span className="truncate text-[10px] sm:text-xs">Best Price</span>
       </Button>
     </a>
   );
