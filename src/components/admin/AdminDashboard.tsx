@@ -13,6 +13,7 @@ import {
   DashboardDateFilter,
   DashboardExportButton,
   TeamPerformanceComparison,
+  ScheduledReportsManager,
   type DateRange
 } from "./dashboard";
 
@@ -423,6 +424,9 @@ export const AdminDashboard = () => {
 
       {/* Team Performance Comparison */}
       <TeamPerformanceComparison dateRange={dateRange} />
+
+      {/* Scheduled Email Reports */}
+      <ScheduledReportsManager />
     </div>
   );
 };
