@@ -80,7 +80,10 @@ const Auth = () => {
     try {
       emailSchema.parse(signupEmail);
       passwordSchema.parse(signupPassword);
-      phoneSchema.parse(signupPhone);
+      // Only validate phone if provided
+      if (signupPhone) {
+        phoneSchema.parse(signupPhone);
+      }
     } catch (error) {
       if (error instanceof z.ZodError) {
         toast.error(error.errors[0].message);
@@ -95,8 +98,11 @@ const Auth = () => {
       return;
     }
 
-    // Require phone verification
-    if (!isPhoneVerified) {
+    // Skip phone verification for admin emails or if phone not provided
+    const isAdminEmail = signupEmail.includes('admin') || signupEmail.includes('grabyourcar');
+    
+    // Require phone verification only for regular users
+    if (signupPhone && !isPhoneVerified && !isAdminEmail) {
       setShowPhoneOTP(true);
       setIsSubmitting(false);
       return;
@@ -250,6 +256,7 @@ const Auth = () => {
                       <div className="space-y-2">
                         <Label htmlFor="signup-phone" className="flex items-center gap-2">
                           WhatsApp Number
+                          <span className="text-xs text-muted-foreground">(optional)</span>
                           {isPhoneVerified && (
                             <Badge variant="outline" className="text-[10px] border-success/50 text-success py-0">
                               <CheckCircle className="h-2.5 w-2.5 mr-0.5" />
@@ -269,7 +276,6 @@ const Auth = () => {
                               setSignupPhone(e.target.value.replace(/\D/g, '').slice(0, 10));
                               setIsPhoneVerified(false);
                             }}
-                            required
                           />
                         </div>
                       </div>
