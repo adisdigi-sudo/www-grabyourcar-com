@@ -157,7 +157,45 @@ const CarDetail = () => {
           </div>
         </div>
 
-        {/* Hero Section */}
+        {/* Price Breakup - PROMINENT at TOP */}
+        <section id="price-section" className="py-6 bg-gradient-to-b from-primary/5 to-transparent">
+          <div className="container mx-auto px-4">
+            <div className="max-w-4xl mx-auto">
+              <div className="text-center mb-4">
+                <Badge variant="default" className="mb-3">
+                  <TrendingDown className="h-3 w-3 mr-1" />
+                  Price Transparency
+                </Badge>
+                <h2 className="text-xl md:text-2xl font-bold text-foreground">
+                  {car.brand} {car.name} On-Road Price
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Get complete price breakup with taxes, registration & accessories
+                </p>
+              </div>
+              
+              {/* Premium Price Summary Card - ABOVE everything */}
+              <PriceSummaryCard
+                carName={car.name}
+                carBrand={car.brand}
+                exShowroomPrice={car.variants[selectedVariant]?.priceNumeric || (parseFloat(car.price.match(/[\d.]+/)?.[0] || "0") * 100000)}
+                variants={car.variants.map(v => ({
+                  ...v,
+                  fuelType: v.fuelType || car.fuelTypes[0],
+                  transmission: v.transmission || car.transmission[0]
+                }))}
+                colors={car.colors}
+                selectedVariant={selectedVariant}
+                selectedColor={selectedColor}
+                onVariantChange={setSelectedVariant}
+                onColorChange={setSelectedColor}
+                brochureUrl={car.brochureUrl}
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Car Details Section */}
         <section className="py-8 md:py-12">
           <div className="container mx-auto px-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
@@ -222,24 +260,24 @@ const CarDetail = () => {
                   <p className="text-muted-foreground text-lg">{car.tagline}</p>
                 </div>
 
-                {/* Price */}
-                 {/* Price Summary Card - Prominent Pricing */}
-                 <PriceSummaryCard
-                   carName={car.name}
-                   carBrand={car.brand}
-                   exShowroomPrice={car.variants[selectedVariant]?.priceNumeric || (parseFloat(car.price.match(/[\d.]+/)?.[0] || "0") * 100000)}
-                   variants={car.variants.map(v => ({
-                     ...v,
-                     fuelType: v.fuelType || car.fuelTypes[0],
-                     transmission: v.transmission || car.transmission[0]
-                   }))}
-                   colors={car.colors}
-                   selectedVariant={selectedVariant}
-                   selectedColor={selectedColor}
-                   onVariantChange={setSelectedVariant}
-                   onColorChange={setSelectedColor}
-                   brochureUrl={car.brochureUrl}
-                 />
+                {/* Quick Price Display - Links to top section */}
+                <div className="bg-gradient-to-r from-primary/10 via-success/10 to-primary/10 rounded-xl p-4 border border-primary/20">
+                  <div className="flex items-center justify-between flex-wrap gap-4">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Starting Price</p>
+                      <p className="text-2xl md:text-3xl font-bold text-primary">{car.price}</p>
+                      <p className="text-xs text-muted-foreground">Ex-showroom price</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <a href="#price-section">
+                        <Button variant="cta" size="sm">
+                          <IndianRupee className="h-4 w-4 mr-1" />
+                          View Price Breakup
+                        </Button>
+                      </a>
+                    </div>
+                  </div>
+                </div>
 
                 {/* Quick Specs - Moved after Price Card */}
                 <div className="grid grid-cols-3 gap-4">
