@@ -1,31 +1,28 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import {
   Search,
   Filter,
   Phone,
-  Mail,
-  MapPin,
-  Calendar,
   Eye,
   Edit,
-  CheckCircle,
-  Clock,
-  AlertCircle,
-  Truck,
   Home,
-  CreditCard,
   Shield,
+  Settings,
+  Save,
+  Loader2,
 } from "lucide-react";
 
 interface HSRPBooking {
@@ -56,6 +53,15 @@ interface HSRPBooking {
   updated_at: string;
 }
 
+interface HSRPPricing {
+  fourWheeler: number;
+  twoWheeler: number;
+  tractor: number;
+  colourSticker: number;
+  homeInstallationFee: number;
+  evVehicle: number;
+}
+
 const orderStatusOptions = [
   { value: 'pending', label: 'Pending', color: 'bg-yellow-100 text-yellow-800' },
   { value: 'confirmed', label: 'Confirmed', color: 'bg-blue-100 text-blue-800' },
@@ -66,19 +72,60 @@ const orderStatusOptions = [
   { value: 'cancelled', label: 'Cancelled', color: 'bg-red-100 text-red-800' },
 ];
 
+const defaultPricing: HSRPPricing = {
+  fourWheeler: 1100,
+  twoWheeler: 450,
+  tractor: 600,
+  colourSticker: 100,
+  homeInstallationFee: 200,
+  evVehicle: 1100,
+};
+
 export const HSRPManagement = () => {
   const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState("bookings");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedBooking, setSelectedBooking] = useState<HSRPBooking | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isSavingPricing, setIsSavingPricing] = useState(false);
+  const [pricing, setPricing] = useState<HSRPPricing>(defaultPricing);
   const [editForm, setEditForm] = useState({
     tracking_id: "",
     scheduled_date: "",
     order_status: "",
     payment_status: "",
   });
+
+  // Fetch HSRP pricing from settings
+  const { data: pricingData } = useQuery({
+    queryKey: ['hsrp-pricing'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('admin_settings')
+        .select('setting_value')
+        .eq('setting_key', 'hsrp_pricing')
+        .single();
+
+      if (error || !data) return defaultPricing;
+      const val = data.setting_value as Record<string, number>;
+      return {
+        fourWheeler: val?.fourWheeler ?? defaultPricing.fourWheeler,
+        twoWheeler: val?.twoWheeler ?? defaultPricing.twoWheeler,
+        tractor: val?.tractor ?? defaultPricing.tractor,
+        colourSticker: val?.colourSticker ?? defaultPricing.colourSticker,
+        homeInstallationFee: val?.homeInstallationFee ?? defaultPricing.homeInstallationFee,
+        evVehicle: val?.evVehicle ?? defaultPricing.evVehicle,
+      };
+    },
+  });
+
+  useEffect(() => {
+    if (pricingData) {
+      setPricing(pricingData);
+    }
+  }, [pricingData]);
 
   // Fetch HSRP bookings
   const { data: bookings, isLoading } = useQuery({
@@ -162,16 +209,57 @@ export const HSRPManagement = () => {
     revenue: bookings?.filter(b => b.payment_status === 'paid').reduce((sum, b) => sum + b.payment_amount, 0) || 0,
   };
 
+  // Save pricing
+  const handleSavePricing = async () => {
+    setIsSavingPricing(true);
+    try {
+      const { data: existing } = await supabase
+        .from('admin_settings')
+        .select('id')
+        .eq('setting_key', 'hsrp_pricing')
+        .single();
+
+      const settingValue = JSON.parse(JSON.stringify(pricing));
+
+      if (existing) {
+        const { error } = await supabase
+          .from('admin_settings')
+          .update({ setting_value: settingValue, updated_at: new Date().toISOString() })
+          .eq('setting_key', 'hsrp_pricing');
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('admin_settings')
+          .insert([{ setting_key: 'hsrp_pricing', setting_value: settingValue, description: 'HSRP service pricing' }]);
+        if (error) throw error;
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['hsrp-pricing'] });
+      toast.success('Pricing saved successfully');
+    } catch (error) {
+      toast.error('Failed to save pricing');
+      console.error(error);
+    } finally {
+      setIsSavingPricing(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">HSRP Bookings</h1>
-          <p className="text-muted-foreground">
-            Manage HSRP plate orders and installations
-          </p>
+          <h1 className="text-3xl font-bold">HSRP Management</h1>
+          <p className="text-muted-foreground">Manage HSRP orders and pricing</p>
         </div>
       </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="bookings">Bookings ({stats.total})</TabsTrigger>
+          <TabsTrigger value="settings"><Settings className="h-4 w-4 mr-2" />Pricing</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="bookings" className="space-y-6">
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-5">
@@ -575,6 +663,78 @@ export const HSRPManagement = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+        </TabsContent>
+
+        {/* Pricing Settings Tab */}
+        <TabsContent value="settings" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="h-5 w-5" />
+                HSRP Service Pricing
+              </CardTitle>
+              <CardDescription>Configure pricing for different HSRP services</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <div className="space-y-2">
+                  <Label>Four Wheeler (₹)</Label>
+                  <Input
+                    type="number"
+                    value={pricing.fourWheeler}
+                    onChange={(e) => setPricing({ ...pricing, fourWheeler: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Two Wheeler (₹)</Label>
+                  <Input
+                    type="number"
+                    value={pricing.twoWheeler}
+                    onChange={(e) => setPricing({ ...pricing, twoWheeler: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Tractor/Trailer (₹)</Label>
+                  <Input
+                    type="number"
+                    value={pricing.tractor}
+                    onChange={(e) => setPricing({ ...pricing, tractor: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Electric Vehicle (₹)</Label>
+                  <Input
+                    type="number"
+                    value={pricing.evVehicle}
+                    onChange={(e) => setPricing({ ...pricing, evVehicle: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Colour Sticker Only (₹)</Label>
+                  <Input
+                    type="number"
+                    value={pricing.colourSticker}
+                    onChange={(e) => setPricing({ ...pricing, colourSticker: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Home Installation Fee (₹)</Label>
+                  <Input
+                    type="number"
+                    value={pricing.homeInstallationFee}
+                    onChange={(e) => setPricing({ ...pricing, homeInstallationFee: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+              </div>
+
+              <Button onClick={handleSavePricing} disabled={isSavingPricing}>
+                {isSavingPricing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                Save Pricing
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
