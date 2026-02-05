@@ -9,7 +9,7 @@ import { DealerMap } from "@/components/dealers/DealerMap";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
- import { MapPin, List, Map, Building2, Star, Shield, Sparkles, Phone, MessageCircle } from "lucide-react";
+  import { MapPin, List, Map, Building2, Star, Shield, Sparkles, Phone, MessageCircle, Navigation, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { dealerLocatorData, type Dealer } from "@/data/dealerLocatorData";
 
@@ -36,18 +36,15 @@ const calculateDistance = (
 const DealerLocatorPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBrand, setSelectedBrand] = useState("All Brands");
-  const [selectedCity, setSelectedCity] = useState("");
-  const [selectedState, setSelectedState] = useState("");
+   const [selectedCity, setSelectedCity] = useState("all");
+   const [selectedState, setSelectedState] = useState("all");
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isDetecting, setIsDetecting] = useState(false);
   const [detectedLocation, setDetectedLocation] = useState<string | null>(null);
   const [selectedDealer, setSelectedDealer] = useState<Dealer | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
-
-  // Auto-detect location on mount
-  useEffect(() => {
-    detectLocation();
-  }, []);
+   const [nearMeActive, setNearMeActive] = useState(false);
+   const [nearMeRadius, setNearMeRadius] = useState(50); // km
 
   const detectLocation = () => {
     setIsDetecting(true);
@@ -58,10 +55,19 @@ const DealerLocatorPage = () => {
           const { latitude, longitude } = position.coords;
           setUserLocation({ lat: latitude, lng: longitude });
           
-          // Reverse geocode (mock for now - would use Google Geocoding API)
-          // For demo, we'll just show coordinates
-          setDetectedLocation(`Near ${latitude.toFixed(2)}°N, ${longitude.toFixed(2)}°E`);
-          toast.success("Location detected! Showing nearby dealers.");
+           // Reverse geocode to get city name
+           try {
+             const response = await fetch(
+               `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
+             );
+             const data = await response.json();
+             const city = data.address?.city || data.address?.town || data.address?.suburb || data.address?.state_district;
+             setDetectedLocation(city || `${latitude.toFixed(2)}°N, ${longitude.toFixed(2)}°E`);
+           } catch {
+             setDetectedLocation(`${latitude.toFixed(2)}°N, ${longitude.toFixed(2)}°E`);
+           }
+           
+           toast.success("Location detected! Tap 'Near Me' to find closest dealers.");
           setIsDetecting(false);
         },
         (error) => {
@@ -76,6 +82,63 @@ const DealerLocatorPage = () => {
       setIsDetecting(false);
     }
   };
+
+   const handleNearMe = async () => {
+     if (!userLocation) {
+       // First detect location
+       setIsDetecting(true);
+       
+       if ("geolocation" in navigator) {
+         navigator.geolocation.getCurrentPosition(
+           async (position) => {
+             const { latitude, longitude } = position.coords;
+             setUserLocation({ lat: latitude, lng: longitude });
+             
+             try {
+               const response = await fetch(
+                 `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
+               );
+               const data = await response.json();
+               const city = data.address?.city || data.address?.town || data.address?.suburb || data.address?.state_district;
+               setDetectedLocation(city || `${latitude.toFixed(2)}°N, ${longitude.toFixed(2)}°E`);
+             } catch {
+               setDetectedLocation(`${latitude.toFixed(2)}°N, ${longitude.toFixed(2)}°E`);
+             }
+             
+             setNearMeActive(true);
+             setSelectedBrand("All Brands");
+             setSelectedCity("all");
+             setSelectedState("all");
+             setSearchQuery("");
+             toast.success(`Showing dealers within ${nearMeRadius}km of your location!`);
+             setIsDetecting(false);
+           },
+           (error) => {
+             console.error("Geolocation error:", error);
+             toast.error("Could not detect location. Please enable location services.");
+             setIsDetecting(false);
+           },
+           { enableHighAccuracy: true, timeout: 10000 }
+         );
+       } else {
+         toast.error("Geolocation not supported by your browser.");
+         setIsDetecting(false);
+       }
+     } else {
+       // Toggle near me mode
+       if (nearMeActive) {
+         setNearMeActive(false);
+         toast.info("Showing all dealers");
+       } else {
+         setNearMeActive(true);
+         setSelectedBrand("All Brands");
+         setSelectedCity("all");
+         setSelectedState("all");
+         setSearchQuery("");
+         toast.success(`Showing dealers within ${nearMeRadius}km of your location!`);
+       }
+     }
+   };
 
   // Filter and sort dealers
   const filteredDealers = useMemo(() => {
@@ -100,12 +163,12 @@ const DealerLocatorPage = () => {
     }
 
     // Apply state filter
-    if (selectedState) {
+     if (selectedState && selectedState !== "all") {
       dealers = dealers.filter((d) => d.state === selectedState);
     }
 
     // Apply city filter
-    if (selectedCity) {
+     if (selectedCity && selectedCity !== "all") {
       dealers = dealers.filter((d) => d.city === selectedCity);
     }
 
@@ -120,6 +183,12 @@ const DealerLocatorPage = () => {
           dealer.longitude
         ),
       }));
+       
+       // Filter by radius if Near Me is active
+       if (nearMeActive) {
+         dealers = dealers.filter((d) => (d.distance || 0) <= nearMeRadius);
+       }
+       
       dealers.sort((a, b) => (a.distance || 0) - (b.distance || 0));
     } else {
       // Sort by featured first, then rating
@@ -131,7 +200,21 @@ const DealerLocatorPage = () => {
     }
 
     return dealers;
-  }, [searchQuery, selectedBrand, selectedCity, selectedState, userLocation]);
+   }, [searchQuery, selectedBrand, selectedCity, selectedState, userLocation, nearMeActive, nearMeRadius]);
+
+   // Get count of nearby dealers for badge
+   const nearbyDealersCount = useMemo(() => {
+     if (!userLocation) return 0;
+     return dealerLocatorData.filter((dealer) => {
+       const distance = calculateDistance(
+         userLocation.lat,
+         userLocation.lng,
+         dealer.latitude,
+         dealer.longitude
+       );
+       return distance <= nearMeRadius;
+     }).length;
+   }, [userLocation, nearMeRadius]);
 
   const handleGetDirections = (dealer: Dealer) => {
     const url = userLocation
@@ -240,6 +323,30 @@ const DealerLocatorPage = () => {
                 transition={{ delay: 0.5 }}
                 className="flex flex-wrap justify-center gap-4 mt-10"
               >
+                 {/* Near Me Button - Primary CTA */}
+                 <Button
+                   onClick={handleNearMe}
+                   disabled={isDetecting}
+                   size="lg"
+                   className={`gap-2 shadow-lg hover:shadow-xl transition-all ${
+                     nearMeActive 
+                       ? "bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 ring-2 ring-blue-400/50" 
+                       : "bg-gradient-to-r from-primary to-primary/80"
+                   }`}
+                 >
+                   {isDetecting ? (
+                     <Loader2 className="h-5 w-5 animate-spin" />
+                   ) : (
+                     <Navigation className={`h-5 w-5 ${nearMeActive ? "animate-pulse" : ""}`} />
+                   )}
+                   {isDetecting ? "Detecting..." : nearMeActive ? "Near Me Active" : "Find Dealers Near Me"}
+                   {nearbyDealersCount > 0 && !isDetecting && (
+                     <Badge variant="secondary" className="ml-1 bg-white/20 text-white border-0">
+                       {nearbyDealersCount}
+                     </Badge>
+                   )}
+                 </Button>
+                 
                 <a href="https://wa.me/919577200023?text=Hi!%20I%27m%20looking%20for%20the%20best%20car%20deal%20from%20a%20nearby%20dealer.">
                   <Button variant="whatsapp" size="lg" className="gap-2 shadow-lg hover:shadow-xl">
                     <MessageCircle className="h-5 w-5" />
@@ -256,6 +363,58 @@ const DealerLocatorPage = () => {
             </motion.div>
           </div>
         </section>
+
+         {/* Near Me Radius Selector (when active) */}
+         {nearMeActive && userLocation && (
+           <motion.section
+             initial={{ opacity: 0, height: 0 }}
+             animate={{ opacity: 1, height: "auto" }}
+             exit={{ opacity: 0, height: 0 }}
+             className="bg-gradient-to-r from-blue-600/10 to-cyan-500/10 border-y border-blue-500/20"
+           >
+             <div className="container mx-auto px-4 py-4">
+               <div className="flex flex-wrap items-center justify-between gap-4">
+                 <div className="flex items-center gap-3">
+                   <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
+                     <Navigation className="h-5 w-5 text-blue-500" />
+                   </div>
+                   <div>
+                     <p className="font-semibold text-sm">Near Me Mode Active</p>
+                     <p className="text-xs text-muted-foreground">
+                       {detectedLocation ? `📍 ${detectedLocation}` : "Showing dealers near you"}
+                     </p>
+                   </div>
+                 </div>
+                 
+                 <div className="flex items-center gap-3">
+                   <span className="text-sm text-muted-foreground">Radius:</span>
+                   <div className="flex gap-2">
+                     {[25, 50, 100, 200].map((radius) => (
+                       <Button
+                         key={radius}
+                         size="sm"
+                         variant={nearMeRadius === radius ? "default" : "outline"}
+                         onClick={() => setNearMeRadius(radius)}
+                         className={nearMeRadius === radius ? "bg-blue-600 hover:bg-blue-700" : ""}
+                       >
+                         {radius}km
+                       </Button>
+                     ))}
+                   </div>
+                 </div>
+                 
+                 <Button
+                   variant="ghost"
+                   size="sm"
+                   onClick={() => setNearMeActive(false)}
+                   className="text-muted-foreground hover:text-foreground"
+                 >
+                   Clear
+                 </Button>
+               </div>
+             </div>
+           </motion.section>
+         )}
 
         {/* Filters Section */}
         <section className="py-6 border-b sticky top-14 md:top-20 bg-background/95 backdrop-blur-sm z-40 shadow-sm">
@@ -288,11 +447,36 @@ const DealerLocatorPage = () => {
               <div>
                 <h2 className="text-2xl md:text-3xl font-bold">
                   {filteredDealers.length} Dealer{filteredDealers.length !== 1 ? "s" : ""} Found
+                   {nearMeActive && filteredDealers.length > 0 && (
+                     <span className="text-lg font-normal text-muted-foreground ml-2">
+                       within {nearMeRadius}km
+                     </span>
+                   )}
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  {userLocation ? "Sorted by distance from your location" : "Sorted by rating and featured status"}
+                   {nearMeActive && userLocation
+                     ? `Showing closest dealers to ${detectedLocation || "your location"}`
+                     : userLocation 
+                       ? "Sorted by distance from your location" 
+                       : "Sorted by rating and featured status"}
                 </p>
               </div>
+
+                 {/* Near Me Quick Toggle (Mobile) */}
+                 <Button
+                   variant={nearMeActive ? "default" : "outline"}
+                   size="sm"
+                   onClick={handleNearMe}
+                   disabled={isDetecting}
+                   className={`gap-1.5 sm:hidden ${nearMeActive ? "bg-blue-600 hover:bg-blue-700" : ""}`}
+                 >
+                   {isDetecting ? (
+                     <Loader2 className="h-4 w-4 animate-spin" />
+                   ) : (
+                     <Navigation className="h-4 w-4" />
+                   )}
+                   Near Me
+                 </Button>
 
               {/* View Toggle */}
               <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "list" | "map")}>
@@ -312,6 +496,32 @@ const DealerLocatorPage = () => {
             {/* Content */}
             {viewMode === "list" ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                 {/* Near Me Results Empty State */}
+                 {nearMeActive && filteredDealers.length === 0 && userLocation && (
+                   <motion.div
+                     initial={{ opacity: 0, scale: 0.95 }}
+                     animate={{ opacity: 1, scale: 1 }}
+                     className="col-span-full text-center py-16"
+                   >
+                     <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-blue-500/10 flex items-center justify-center">
+                       <Navigation className="h-10 w-10 text-blue-500" />
+                     </div>
+                     <h3 className="text-lg font-semibold mb-2">No dealers within {nearMeRadius}km</h3>
+                     <p className="text-muted-foreground mb-4">Try expanding your search radius</p>
+                     <div className="flex justify-center gap-2">
+                       {[100, 200, 500].map((radius) => (
+                         <Button
+                           key={radius}
+                           variant="outline"
+                           size="sm"
+                           onClick={() => setNearMeRadius(radius)}
+                         >
+                           Try {radius}km
+                         </Button>
+                       ))}
+                     </div>
+                   </motion.div>
+                 )}
                 {filteredDealers.map((dealer, index) => (
                   <motion.div
                     key={dealer.id}
@@ -377,8 +587,9 @@ const DealerLocatorPage = () => {
                   onClick={() => {
                     setSearchQuery("");
                     setSelectedBrand("All Brands");
-                    setSelectedCity("");
-                    setSelectedState("");
+                     setSelectedCity("all");
+                     setSelectedState("all");
+                     setNearMeActive(false);
                   }}
                 >
                   Clear All Filters
