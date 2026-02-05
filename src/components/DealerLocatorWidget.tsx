@@ -44,7 +44,7 @@
  
  export const DealerLocatorWidget = () => {
    const [selectedBrand, setSelectedBrand] = useState("All Brands");
-   const [selectedCity, setSelectedCity] = useState("");
+   const [selectedCity, setSelectedCity] = useState("all");
    const [searchQuery, setSearchQuery] = useState("");
    const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
    const [isDetecting, setIsDetecting] = useState(false);
@@ -63,7 +63,7 @@
        dealers = dealers.filter((d) => d.brand === selectedBrand);
      }
  
-     if (selectedCity) {
+       if (selectedCity && selectedCity !== "all") {
        dealers = dealers.filter((d) => d.city === selectedCity);
      }
  
@@ -248,7 +248,7 @@
                    <SelectValue placeholder="Select City" />
                  </SelectTrigger>
                  <SelectContent>
-                   <SelectItem value="">All Cities</SelectItem>
+                     <SelectItem value="all">All Cities</SelectItem>
                    {cities.map((city) => (
                      <SelectItem key={city} value={city}>
                        {city}
