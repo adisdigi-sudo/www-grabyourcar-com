@@ -100,7 +100,7 @@ const navItems: NavItem[] = [
     label: "Services", 
     icon: Wrench,
     children: [
-      { id: "services-hsrp", label: "HSRP Bookings", icon: Shield },
+      { id: "services-hsrp", label: "HSRP & FASTag", icon: Shield },
       { id: "services-rentals", label: "Self-Drive Rentals", icon: CalendarDays },
       { id: "services-insurance", label: "Insurance", icon: FileText },
       { id: "services-loans", label: "Car Loans", icon: CreditCard },

@@ -1416,6 +1416,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           price_key: string
+          service_type: string
           sort_order: number | null
           subtitle: string | null
           title: string
@@ -1436,6 +1437,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           price_key: string
+          service_type?: string
           sort_order?: number | null
           subtitle?: string | null
           title: string
@@ -1456,6 +1458,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           price_key?: string
+          service_type?: string
           sort_order?: number | null
           subtitle?: string | null
           title?: string

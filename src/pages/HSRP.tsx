@@ -28,7 +28,8 @@ import {
   Sparkles,
   IndianRupee,
   Bike,
-  Truck
+  Truck,
+  CreditCard
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -92,6 +93,7 @@ const HSRP = () => {
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
   const [selectedPrice, setSelectedPrice] = useState(0);
   const [selectedVehicleClass, setSelectedVehicleClass] = useState("");
+  const [activeServiceTab, setActiveServiceTab] = useState<'hsrp' | 'fastag'>('hsrp');
 
   const handleServiceSelect = (serviceId: string, price: number, vehicleClass: string) => {
     setSelectedServiceId(serviceId);
@@ -133,15 +135,15 @@ const HSRP = () => {
   return (
     <>
       <Helmet>
-        <title>HSRP Online Booking | High Security Number Plate | GrabYourCar</title>
+        <title>HSRP & FASTag Online Booking | GrabYourCar</title>
         <meta
           name="description"
-          content="Book HSRP online for your vehicle. Government authorized high security registration plates with quick installation. Avoid fines - book now!"
+          content="Book HSRP and FASTag online. Government authorized high security registration plates and toll stickers with quick installation. Avoid fines - book now!"
         />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://grabyourcar.lovable.app/hsrp" />
-        <meta property="og:title" content="HSRP Online Booking | High Security Number Plate | GrabYourCar" />
-        <meta property="og:description" content="Book HSRP online for your vehicle. Government authorized high security plates." />
+        <meta property="og:title" content="HSRP & FASTag Online Booking | GrabYourCar" />
+        <meta property="og:description" content="Book HSRP and FASTag online. Government authorized plates and toll stickers." />
         <meta property="og:image" content="https://grabyourcar.lovable.app/og-image.png" />
         <meta name="twitter:card" content="summary_large_image" />
       </Helmet>
@@ -151,7 +153,7 @@ const HSRP = () => {
 
         <ServiceBanner
           highlightText="Mandatory"
-          title="Get Your HSRP Before the Deadline!"
+          title="Get Your HSRP & FASTag Today!"
           subtitle="Avoid ₹10,000 fine | Government authorized | Quick installation in 48 hours"
           variant="dark"
           showCountdown
@@ -168,10 +170,10 @@ const HSRP = () => {
             <div className="text-center max-w-3xl mx-auto">
               <Badge className="bg-amber-500/20 text-amber-600 dark:text-amber-400 mb-4">Government Authorized</Badge>
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
-                Book Your HSRP Online
+                HSRP & FASTag Services
               </h1>
               <p className="text-primary-foreground/80 text-base md:text-lg mb-6">
-                High Security Registration Plates as per MoRTH guidelines. Quick booking, easy installation, and pan-India service.
+                High Security Registration Plates & FASTag for seamless toll payments. Quick booking, easy installation, pan-India service.
               </p>
               <div className="flex flex-wrap justify-center gap-3">
                 <Button 
@@ -180,8 +182,20 @@ const HSRP = () => {
                   className="gap-2" 
                   onClick={() => document.getElementById("services")?.scrollIntoView({ behavior: "smooth" })}
                 >
-                  <Car className="h-5 w-5" />
-                  Book HSRP Now
+                  <Shield className="h-5 w-5" />
+                  Book HSRP
+                </Button>
+                <Button 
+                  variant="secondary" 
+                  size="lg" 
+                  className="gap-2" 
+                  onClick={() => {
+                    setActiveServiceTab('fastag');
+                    document.getElementById("services")?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                >
+                  <CreditCard className="h-5 w-5" />
+                  Get FASTag
                 </Button>
                 <Button 
                   variant="outline" 
@@ -224,7 +238,7 @@ const HSRP = () => {
           </div>
         </section>
 
-        {/* HSRP Services Carousel */}
+        {/* HSRP & FASTag Services Section */}
         <section id="services" className="py-12 md:py-16">
           <div className="container mx-auto px-4">
             <div className="text-center mb-10">
@@ -233,15 +247,40 @@ const HSRP = () => {
                 Choose Your Service
               </Badge>
               <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-3">
-                HSRP Services
+                HSRP & FASTag Services
               </h2>
-              <p className="text-muted-foreground">Select the type of HSRP you need for your vehicle</p>
+              <p className="text-muted-foreground">Select the service you need for your vehicle</p>
             </div>
 
-            <HSRPServiceCarousel 
-              onSelectService={handleServiceSelect}
-              selectedServiceId={selectedServiceId}
-            />
+            {/* Service Type Tabs */}
+            <Tabs value={activeServiceTab} onValueChange={(v) => setActiveServiceTab(v as 'hsrp' | 'fastag')} className="w-full">
+              <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-8">
+                <TabsTrigger value="hsrp" className="gap-2">
+                  <Shield className="h-4 w-4" />
+                  HSRP (Number Plate)
+                </TabsTrigger>
+                <TabsTrigger value="fastag" className="gap-2">
+                  <CreditCard className="h-4 w-4" />
+                  FASTag (Toll)
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="hsrp">
+                <HSRPServiceCarousel 
+                  onSelectService={handleServiceSelect}
+                  selectedServiceId={selectedServiceId}
+                  serviceType="hsrp"
+                />
+              </TabsContent>
+
+              <TabsContent value="fastag">
+                <HSRPServiceCarousel 
+                  onSelectService={handleServiceSelect}
+                  selectedServiceId={selectedServiceId}
+                  serviceType="fastag"
+                />
+              </TabsContent>
+            </Tabs>
           </div>
         </section>
 
