@@ -1386,6 +1386,45 @@ export type Database = {
         }
         Relationships: []
       }
+      scheduled_reports: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          enabled: boolean
+          frequency: string
+          id: string
+          last_sent_at: string | null
+          next_scheduled_at: string | null
+          recipients: string[]
+          report_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          enabled?: boolean
+          frequency: string
+          id?: string
+          last_sent_at?: string | null
+          next_scheduled_at?: string | null
+          recipients?: string[]
+          report_type?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          enabled?: boolean
+          frequency?: string
+          id?: string
+          last_sent_at?: string | null
+          next_scheduled_at?: string | null
+          recipients?: string[]
+          report_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       sync_logs: {
         Row: {
           cars_enhanced: number | null

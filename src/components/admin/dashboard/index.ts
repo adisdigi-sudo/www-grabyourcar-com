@@ -8,3 +8,4 @@ export { PerformanceMetrics } from './PerformanceMetrics';
 export { DashboardDateFilter, type DateRange } from './DashboardDateFilter';
 export { DashboardExportButton } from './DashboardExportButton';
 export { TeamPerformanceComparison } from './TeamPerformanceComparison';
+export { ScheduledReportsManager } from './ScheduledReportsManager';
