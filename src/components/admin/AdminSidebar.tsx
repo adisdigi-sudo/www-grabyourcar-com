@@ -77,7 +77,8 @@ const navItems: NavItem[] = [
     icon: Globe,
     children: [
       { id: "website-homepage", label: "Homepage", icon: Home },
-      { id: "website-content", label: "Header & Footer", icon: Menu, badge: "New" },
+      { id: "website-content", label: "Header & Footer", icon: Menu },
+      { id: "website-offers", label: "Offers & Layout", icon: Settings, badge: "New" },
       { id: "website-banners", label: "Banners & Sliders", icon: Image },
       { id: "website-branding", label: "Logo & Branding", icon: Palette },
       { id: "website-seo", label: "SEO Settings", icon: Settings },

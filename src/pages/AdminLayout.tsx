@@ -31,6 +31,7 @@ import { ServiceCategoriesManager } from "@/components/admin/ServiceCategoriesMa
 import { WebsiteContentManagement } from "@/components/admin/WebsiteContentManagement";
 import { SocialProofManagement } from "@/components/admin/SocialProofManagement";
 import { IntegrationsManagement } from "@/components/admin/IntegrationsManagement";
+import { OffersManagement } from "@/components/admin/OffersManagement";
 
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
@@ -118,6 +119,8 @@ const AdminLayout = () => {
         return <WebsiteContentManagement />;
       case "website-banners":
         return <ServiceCategoriesManager />;
+      case "website-offers":
+        return <OffersManagement />;
       case "website-branding":
         return <BrandingSettings />;
       case "website-seo":

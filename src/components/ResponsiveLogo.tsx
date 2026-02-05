@@ -11,45 +11,18 @@ interface ResponsiveLogoProps {
   onClick?: () => void;
 }
 
-// Size presets for different placements
-const sizePresets = {
-  header: {
-    mobile: "h-10 sm:h-12",
-    tablet: "md:h-14",
-    desktop: "lg:h-16 xl:h-[4.5rem]",
-    maxWidth: "max-w-[160px] sm:max-w-[200px] md:max-w-[260px] lg:max-w-[300px]",
-  },
-  footer: {
-    mobile: "h-8 sm:h-10",
-    tablet: "md:h-12",
-    desktop: "lg:h-14",
-    maxWidth: "max-w-[140px] sm:max-w-[180px] md:max-w-[220px]",
-  },
-  mobile: {
-    mobile: "h-8",
-    tablet: "h-10",
-    desktop: "h-10",
-    maxWidth: "max-w-[120px]",
-  },
-  sidebar: {
-    mobile: "h-8",
-    tablet: "h-10",
-    desktop: "h-12",
-    maxWidth: "max-w-[160px]",
-  },
-  auth: {
-    mobile: "h-12 sm:h-14",
-    tablet: "md:h-16",
-    desktop: "lg:h-20",
-    maxWidth: "max-w-[200px] sm:max-w-[260px] md:max-w-[320px]",
-  },
-  compact: {
-    mobile: "h-6",
-    tablet: "h-8",
-    desktop: "h-8",
-    maxWidth: "max-w-[100px]",
-  },
-};
+interface BrandingSettings {
+  logo_url?: string;
+  logo_dark_url?: string;
+  brand_name?: string;
+  tagline?: string;
+  logo_height_header?: number;
+  logo_height_footer?: number;
+  logo_height_mobile?: number;
+  logo_width_header?: number;
+  logo_width_footer?: number;
+  logo_width_mobile?: number;
+}
 
 export const ResponsiveLogo = ({ 
   variant = "header", 
@@ -70,7 +43,7 @@ export const ResponsiveLogo = ({
         .single();
       
       if (error && error.code !== 'PGRST116') return null;
-      return data?.setting_value as Record<string, string> | null;
+      return data?.setting_value as BrandingSettings | null;
     },
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
@@ -84,23 +57,60 @@ export const ResponsiveLogo = ({
     ? logoDark 
     : logoLight;
 
-  const sizes = sizePresets[variant];
   const brandName = brandingSettings?.brand_name || "Grabyourcar";
+
+  // Get dynamic dimensions from backend settings
+  const getDimensions = () => {
+    const defaultDimensions = {
+      header: { height: 64, width: undefined, maxWidth: 300 },
+      footer: { height: 56, width: undefined, maxWidth: 220 },
+      mobile: { height: 40, width: undefined, maxWidth: 120 },
+      sidebar: { height: 48, width: undefined, maxWidth: 160 },
+      auth: { height: 80, width: undefined, maxWidth: 320 },
+      compact: { height: 32, width: undefined, maxWidth: 100 },
+    };
+
+    if (!brandingSettings) return defaultDimensions[variant];
+
+    switch (variant) {
+      case "header":
+        return {
+          height: brandingSettings.logo_height_header || 64,
+          width: brandingSettings.logo_width_header || undefined,
+          maxWidth: 300,
+        };
+      case "footer":
+        return {
+          height: brandingSettings.logo_height_footer || 56,
+          width: brandingSettings.logo_width_footer || undefined,
+          maxWidth: 220,
+        };
+      case "mobile":
+        return {
+          height: brandingSettings.logo_height_mobile || 40,
+          width: brandingSettings.logo_width_mobile || undefined,
+          maxWidth: 120,
+        };
+      default:
+        return defaultDimensions[variant];
+    }
+  };
+
+  const dimensions = getDimensions();
 
   return (
     <img 
       src={logoImage} 
       alt={`${brandName} - India's Smarter Way to Buy New Cars`}
       onClick={onClick}
+      style={{
+        height: dimensions.height,
+        width: dimensions.width || 'auto',
+        maxWidth: dimensions.maxWidth,
+      }}
       className={cn(
         // Base styles
-        "w-auto object-contain transition-all duration-300",
-        // Responsive heights
-        sizes.mobile,
-        sizes.tablet,
-        sizes.desktop,
-        // Max width constraints
-        sizes.maxWidth,
+        "object-contain transition-all duration-300",
         // Hover effect
         "hover:scale-[1.02]",
         // Shadow for visibility
