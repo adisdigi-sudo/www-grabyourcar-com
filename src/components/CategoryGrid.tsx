@@ -1,8 +1,10 @@
 import { useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   Car, 
   Clock, 
@@ -13,87 +15,161 @@ import {
   CarFront, 
   Package,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  LucideIcon
 } from "lucide-react";
 
-const categories = [
+interface CategoryItem {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  color: string;
+  bgColor: string;
+  href: string;
+  type: 'scroll' | 'navigate' | 'coming-soon';
+  sort_order: number;
+  is_active: boolean;
+}
+
+const iconMap: Record<string, LucideIcon> = {
+  Car,
+  Clock,
+  GitCompare,
+  Shield,
+  Banknote,
+  Building2,
+  CarFront,
+  Package,
+};
+
+// Default categories - used when no backend data
+const defaultCategories: CategoryItem[] = [
   {
-    icon: Car,
+    id: "1",
+    icon: "Car",
     title: "New Cars",
     description: "Pan-India Deals from Authorized Dealers",
     color: "text-primary",
     bgColor: "bg-primary/10",
     href: "#cars",
-    type: "scroll" as const,
+    type: "scroll",
+    sort_order: 1,
+    is_active: true,
   },
   {
-    icon: Clock,
+    id: "2",
+    icon: "Clock",
     title: "Zero Waiting",
     description: "Ready Stock Cars Available Now",
     color: "text-accent-foreground",
     bgColor: "bg-accent/50",
     href: "#cars",
-    type: "scroll" as const,
+    type: "scroll",
+    sort_order: 2,
+    is_active: true,
   },
   {
-    icon: GitCompare,
+    id: "3",
+    icon: "GitCompare",
     title: "Compare Offers",
     description: "Best Deals from Multiple Dealers",
     color: "text-success",
     bgColor: "bg-success/10",
     href: "/compare",
-    type: "navigate" as const,
+    type: "navigate",
+    sort_order: 3,
+    is_active: true,
   },
   {
-    icon: Shield,
+    id: "4",
+    icon: "Shield",
     title: "Car Insurance",
     description: "Best Rates from Top Insurers",
     color: "text-primary",
     bgColor: "bg-primary/10",
     href: "/car-insurance",
-    type: "navigate" as const,
+    type: "navigate",
+    sort_order: 4,
+    is_active: true,
   },
   {
-    icon: Banknote,
+    id: "5",
+    icon: "Banknote",
     title: "Car Loans",
     description: "Easy Finance from Banks & NBFCs",
     color: "text-accent-foreground",
     bgColor: "bg-accent/50",
     href: "/car-loans",
-    type: "navigate" as const,
+    type: "navigate",
+    sort_order: 5,
+    is_active: true,
   },
   {
-    icon: Building2,
+    id: "6",
+    icon: "Building2",
     title: "Corporate Buying",
     description: "Bulk Deals for Businesses",
     color: "text-success",
     bgColor: "bg-success/10",
     href: "/corporate",
-    type: "navigate" as const,
+    type: "navigate",
+    sort_order: 6,
+    is_active: true,
   },
   {
-    icon: CarFront,
+    id: "7",
+    icon: "CarFront",
     title: "Self-Drive Rentals",
-    description: "Coming Soon",
-    color: "text-muted-foreground",
-    bgColor: "bg-muted",
-    href: "",
-    type: "coming-soon" as const,
+    description: "Premium Cars on Rent",
+    color: "text-primary",
+    bgColor: "bg-primary/10",
+    href: "/self-drive",
+    type: "navigate",
+    sort_order: 7,
+    is_active: true,
   },
   {
-    icon: Package,
+    id: "8",
+    icon: "Package",
     title: "Accessories",
     description: "HSRP Frames & More",
-    color: "text-muted-foreground",
-    bgColor: "bg-muted",
-    href: "",
-    type: "coming-soon" as const,
+    color: "text-accent-foreground",
+    bgColor: "bg-accent/50",
+    href: "/accessories",
+    type: "navigate",
+    sort_order: 8,
+    is_active: true,
   },
 ];
 
 export const CategoryGrid = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+
+  // Fetch categories from backend
+  const { data: categories = defaultCategories } = useQuery({
+    queryKey: ['service-categories'],
+    queryFn: async () => {
+      try {
+        const { data, error } = await supabase
+          .from('admin_settings')
+          .select('setting_value')
+          .eq('setting_key', 'service_categories')
+          .single();
+
+        if (error || !data) {
+          return defaultCategories;
+        }
+
+        const parsed = data.setting_value as { categories?: CategoryItem[] };
+        return parsed?.categories?.filter(c => c.is_active)?.sort((a, b) => a.sort_order - b.sort_order) || defaultCategories;
+      } catch {
+        return defaultCategories;
+      }
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
   const scroll = (direction: "left" | "right") => {
     if (scrollRef.current) {
@@ -105,7 +181,7 @@ export const CategoryGrid = () => {
     }
   };
 
-  const handleCategoryClick = (category: typeof categories[0]) => {
+  const handleCategoryClick = (category: CategoryItem) => {
     if (category.type === "coming-soon") {
       toast.info(`${category.title} - Coming Soon!`, {
         description: "We're working on this feature. Stay tuned!",
@@ -168,24 +244,34 @@ export const CategoryGrid = () => {
           ref={scrollRef}
           className="flex gap-4 px-12 md:px-20 overflow-x-auto scrollbar-hide scroll-smooth"
         >
-          {categories.map((category) => (
-            <Card
-              key={category.title}
-              variant="deal"
-              className="flex-shrink-0 w-40 md:w-48 p-4 cursor-pointer group"
-              onClick={() => handleCategoryClick(category)}
-            >
-              <div className={`w-10 h-10 md:w-12 md:h-12 rounded-lg ${category.bgColor} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300`}>
-                <category.icon className={`h-5 w-5 md:h-6 md:w-6 ${category.color}`} />
-              </div>
-              <h3 className="font-heading font-semibold text-foreground text-sm md:text-base mb-1">
-                {category.title}
-              </h3>
-              <p className="text-xs text-muted-foreground line-clamp-2">
-                {category.description}
-              </p>
-            </Card>
-          ))}
+          {categories.map((category) => {
+            const IconComponent = iconMap[category.icon] || Car;
+            return (
+              <Card
+                key={category.id}
+                variant="deal"
+                className={`flex-shrink-0 w-40 md:w-48 p-4 cursor-pointer group ${
+                  category.type === 'coming-soon' ? 'opacity-60' : ''
+                }`}
+                onClick={() => handleCategoryClick(category)}
+              >
+                <div className={`w-10 h-10 md:w-12 md:h-12 rounded-lg ${category.bgColor} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300`}>
+                  <IconComponent className={`h-5 w-5 md:h-6 md:w-6 ${category.color}`} />
+                </div>
+                <h3 className="font-heading font-semibold text-foreground text-sm md:text-base mb-1">
+                  {category.title}
+                </h3>
+                <p className="text-xs text-muted-foreground line-clamp-2">
+                  {category.description}
+                </p>
+                {category.type === 'coming-soon' && (
+                  <span className="text-[10px] bg-muted text-muted-foreground px-2 py-0.5 rounded mt-2 inline-block">
+                    Coming Soon
+                  </span>
+                )}
+              </Card>
+            );
+          })}
         </div>
       </div>
     </section>

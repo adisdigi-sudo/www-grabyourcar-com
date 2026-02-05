@@ -81,14 +81,14 @@
      gradient: "from-accent via-accent/90 to-accent/80",
      accent: "bg-primary/20",
    },
-   {
-     id: 7,
-     title: "Self-Drive",
-     subtitle: "Coming Soon",
-     description: "Premium car rentals on demand",
-     icon: CarFront,
-     link: "/self-drive",
-     gradient: "from-muted-foreground/80 via-muted-foreground/70 to-muted-foreground/60",
+  {
+    id: 7,
+    title: "Self-Drive",
+    subtitle: "Rent Now",
+    description: "Premium car rentals on demand",
+    icon: CarFront,
+    link: "/self-drive",
+    gradient: "from-primary via-primary/90 to-primary/80",
      accent: "bg-muted/30",
    },
    {
