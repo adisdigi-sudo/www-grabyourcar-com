@@ -19,6 +19,7 @@ import { AccessoriesManagement } from "@/components/admin/AccessoriesManagement"
 import { WebsiteSettings } from "@/components/admin/WebsiteSettings";
 import { WhatsAppManagement } from "@/components/admin/WhatsAppManagement";
 import { BlogManagement } from "@/components/admin/BlogManagement";
+import { NotificationCenter } from "@/components/admin/NotificationCenter";
 
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
@@ -149,6 +150,11 @@ const AdminLayout = () => {
     <div className="min-h-screen bg-muted/30">
       {/* Sidebar */}
       <AdminSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+
+      {/* Notification Bell - Fixed Position */}
+      <div className="fixed top-4 right-4 z-50 md:right-6">
+        <NotificationCenter />
+      </div>
 
       {/* Main Content */}
       <main className={cn(
