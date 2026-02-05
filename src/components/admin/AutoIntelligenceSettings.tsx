@@ -150,6 +150,24 @@ export const AutoIntelligenceSettings = () => {
     onError: () => toast.error("Failed to save"),
   });
 
+  const refreshNewsMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke("auto-news", {
+        body: { category: "all" },
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["autoNews"] });
+      toast.success(`Successfully refreshed ${data?.articles?.length || 0} news articles`);
+    },
+    onError: (error: any) => {
+      const errorMessage = error?.message || "Failed to refresh news";
+      toast.error(errorMessage);
+    },
+  });
+
   const handleSaveAll = () => {
     saveMutation.mutate({ key: "auto_intelligence_config", value: settings });
     saveMutation.mutate({ key: "featured_content", value: featuredContent });
@@ -320,6 +338,15 @@ export const AutoIntelligenceSettings = () => {
                     <span className="text-sm text-muted-foreground">hours</span>
                   </div>
                 </div>
+                <Button 
+                  onClick={() => refreshNewsMutation.mutate()} 
+                  disabled={refreshNewsMutation.isPending}
+                  variant="outline"
+                  className="mt-4 w-full"
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${refreshNewsMutation.isPending ? 'animate-spin' : ''}`} />
+                  {refreshNewsMutation.isPending ? 'Refreshing News...' : 'Refresh News Now'}
+                </Button>
               </div>
             </CardContent>
           </Card>
