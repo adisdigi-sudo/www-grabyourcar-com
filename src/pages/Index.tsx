@@ -12,6 +12,7 @@ import { TrustBadges } from "@/components/TrustBadges";
 import { Footer } from "@/components/Footer";
 import { FloatingCTA } from "@/components/FloatingCTA";
  import { CustomerStories } from "@/components/CustomerStories";
+ import { DealerLocatorWidget } from "@/components/DealerLocatorWidget";
 
 const Index = () => {
   const [loanPrefill, setLoanPrefill] = useState<string>("");
@@ -64,6 +65,9 @@ const Index = () => {
         {/* Featured Car Listings */}
         <CarListings />
         
+         {/* Nearby Dealer Locator */}
+         <DealerLocatorWidget />
+         
         {/* EMI Calculator */}
         <EMICalculator onGetQuote={handleGetLoanQuote} />
         
