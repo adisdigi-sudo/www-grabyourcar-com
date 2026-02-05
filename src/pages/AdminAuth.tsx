@@ -11,6 +11,7 @@ import { z } from "zod";
 import { motion, AnimatePresence } from "framer-motion";
 import logoImage from "@/assets/logo-grabyourcar-main.png";
 import AdminOTPVerification from "@/components/admin/AdminOTPVerification";
+import AdminForgotPassword from "@/components/admin/AdminForgotPassword";
 
 const emailSchema = z.string().email("Please enter a valid email address");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
@@ -25,6 +26,7 @@ const AdminAuth = () => {
   const [showOTPVerification, setShowOTPVerification] = useState(false);
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   // Redirect if already logged in and verified
   useEffect(() => {
@@ -150,12 +152,12 @@ const AdminAuth = () => {
                 Welcome Back, Admin
               </h1>
               <p className="text-muted-foreground mt-2">
-                {showOTPVerification ? "Verify your identity" : "Sign in to access the control center"}
+                {showOTPVerification ? "Verify your identity" : showForgotPassword ? "Reset your password" : "Sign in to access the control center"}
               </p>
             </motion.div>
           </div>
 
-          {/* OTP Verification or Login Card */}
+          {/* OTP Verification, Forgot Password, or Login Card */}
           <AnimatePresence mode="wait">
             {showOTPVerification && pendingUserId && pendingEmail ? (
               <AdminOTPVerification
@@ -164,6 +166,11 @@ const AdminAuth = () => {
                 userId={pendingUserId}
                 onVerified={handleOTPVerified}
                 onCancel={handleOTPCancel}
+              />
+            ) : showForgotPassword ? (
+              <AdminForgotPassword
+                key="forgot"
+                onBack={() => setShowForgotPassword(false)}
               />
             ) : (
               <motion.div
@@ -251,6 +258,16 @@ const AdminAuth = () => {
                           </>
                         )}
                       </Button>
+
+                      <div className="text-center">
+                        <button
+                          type="button"
+                          onClick={() => setShowForgotPassword(true)}
+                          className="text-sm text-primary hover:underline"
+                        >
+                          Forgot your password?
+                        </button>
+                      </div>
                     </form>
 
                     {/* Security Notice */}
