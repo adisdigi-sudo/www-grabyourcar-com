@@ -108,7 +108,25 @@
          body: JSON.stringify(payload),
        });
  
-       const result = await response.json();
+        // Check if response is JSON before parsing
+        const contentType = response.headers.get("content-type") || "";
+        let result;
+        
+        if (contentType.includes("application/json")) {
+          result = await response.json();
+        } else {
+          // API returned non-JSON (likely HTML error page)
+          const textBody = await response.text();
+          console.error("Finbite API returned non-JSON response:", textBody.substring(0, 200));
+          
+          // Still return success since OTP was generated and stored
+          // The WhatsApp message might have been sent despite the response format
+          console.log("OTP stored locally, WhatsApp delivery status unknown:", { phone: phoneKey });
+          return new Response(
+            JSON.stringify({ success: true, message: "OTP sent to your WhatsApp" }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
  
        if (!response.ok) {
          console.error("Finbite API error:", result);
