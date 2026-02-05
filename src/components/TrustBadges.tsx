@@ -17,10 +17,10 @@ const trustItems = [
   {
     icon: Users,
     title: null, // Will render custom title
-    counterValue: 50000,
+     counterValue: 500,
     counterSuffix: "+",
     titleSuffix: " Happy Customers",
-    description: "Trusted by car buyers across India",
+     description: "And growing every day across India",
     hasCounter: true,
   },
   {

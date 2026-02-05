@@ -10,6 +10,7 @@ import { ShareButtons } from "@/components/ShareButtons";
 import { CarStructuredData } from "@/components/seo/CarStructuredData";
 import { VariantComparisonTable } from "@/components/VariantComparisonTable";
 import { WhatsAppSalesCTA } from "@/components/WhatsAppCTA";
+ import { PriceSummaryCard } from "@/components/PriceSummaryCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -246,17 +247,15 @@ const CarDetail = () => {
                 </div>
 
                 {/* Price */}
-                <div className="bg-secondary/50 rounded-xl p-5">
-                  <div className="flex items-baseline gap-3 mb-2">
-                    <span className="text-3xl font-bold text-primary">{car.price}</span>
-                    <span className="text-lg text-muted-foreground line-through">{car.originalPrice}</span>
-                  </div>
-                  <Badge variant="deal" className="text-sm">
-                    <TrendingDown className="h-3 w-3 mr-1" />
-                    {car.discount}
-                  </Badge>
-                  <p className="text-sm text-muted-foreground mt-2">*Ex-showroom price, Delhi</p>
-                </div>
+                 {/* Price Summary Card - Prominent Pricing */}
+                 <PriceSummaryCard
+                   carName={car.name}
+                   carBrand={car.brand}
+                   exShowroomPrice={car.variants[selectedVariant]?.priceNumeric || (parseFloat(car.price.match(/[\d.]+/)?.[0] || "0") * 100000)}
+                   variants={car.variants}
+                   selectedVariant={selectedVariant}
+                   onVariantChange={setSelectedVariant}
+                 />
 
                 {/* Quick Specs */}
                 <div className="grid grid-cols-3 gap-4">

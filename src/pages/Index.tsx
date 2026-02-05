@@ -5,13 +5,13 @@ import { PromoBanner } from "@/components/PromoBanner";
 import { HeroSection } from "@/components/HeroSection";
 import { CategoryGrid } from "@/components/CategoryGrid";
 import { CarListings } from "@/components/CarListings";
-import { CarFinanceHero } from "@/components/CarFinanceHero";
 import EMICalculator from "@/components/EMICalculator";
 import { LeadForm } from "@/components/LeadForm";
 import { Testimonials } from "@/components/Testimonials";
 import { TrustBadges } from "@/components/TrustBadges";
 import { Footer } from "@/components/Footer";
 import { FloatingCTA } from "@/components/FloatingCTA";
+ import { CustomerStories } from "@/components/CustomerStories";
 
 const Index = () => {
   const [loanPrefill, setLoanPrefill] = useState<string>("");
@@ -64,9 +64,6 @@ const Index = () => {
         {/* Featured Car Listings */}
         <CarListings />
         
-        {/* Car Finance Hero - Midnight Tech */}
-        <CarFinanceHero />
-        
         {/* EMI Calculator */}
         <EMICalculator onGetQuote={handleGetLoanQuote} />
         
@@ -76,6 +73,9 @@ const Index = () => {
         {/* Customer Testimonials */}
         <Testimonials />
         
+         {/* Customer Stories with Delivery Photos */}
+         <CustomerStories />
+         
         {/* Trust Badges */}
         <TrustBadges />
       </main>
