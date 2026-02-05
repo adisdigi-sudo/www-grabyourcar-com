@@ -53,7 +53,7 @@ export const CarListings = () => {
         </div>
 
         {/* 2 columns on mobile/tablet, 3 on desktop */}
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4 lg:gap-6">
           {featuredCars.map((car, index) => (
             <Card
               key={car.id}
@@ -61,147 +61,122 @@ export const CarListings = () => {
               className="overflow-hidden animate-fade-in car-card-glow flex flex-col"
               style={{ animationDelay: `${index * 0.05}s` }}
             >
-              {/* Image Container - With Price Badge Overlay */}
-              <div className="relative aspect-[4/3] overflow-hidden bg-secondary glow-image">
+              {/* Image Container */}
+              <div className="relative aspect-[4/3] overflow-hidden bg-secondary">
                 <img
                   src={car.image}
                   alt={car.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  className="w-full h-full object-cover"
                 />
                 
-                {/* Top Left: Hot Deal Badge */}
-                {car.isHot && (
-                  <div className="absolute top-2 left-2">
-                    <Badge className="text-[10px] sm:text-xs px-2.5 sm:px-3 py-1 bg-primary text-primary-foreground rounded-full font-semibold">
-                      🔥 Hot Deal
+                {/* Top Left: Badge */}
+                <div className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2">
+                  {car.isHot && (
+                    <Badge className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 bg-primary text-primary-foreground rounded-full font-semibold">
+                      🔥 Hot
                     </Badge>
-                  </div>
-                )}
-
-                {/* Coming Soon Badge - Top Left */}
-                {car.isLimited && !car.isHot && (
-                  <div className="absolute top-2 left-2">
-                    <Badge className="text-[10px] sm:text-xs px-2.5 sm:px-3 py-1 bg-orange-500 text-white rounded-full">
-                      ⚡ Coming Soon
+                  )}
+                  {car.isLimited && !car.isHot && (
+                    <Badge className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 bg-orange-500 text-white rounded-full">
+                      ⚡ Soon
                     </Badge>
-                  </div>
-                )}
+                  )}
+                </div>
                 
-                {/* Right Side: Favorite, Compare, Price Badge */}
-                <div className="absolute top-2 right-2 flex flex-col gap-2">
-                  {/* Favorite */}
+                {/* Right Side: Favorite & Compare */}
+                <div className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 flex flex-col gap-1 sm:gap-1.5">
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 sm:h-9 sm:w-9 bg-white/90 hover:bg-white shadow-sm"
+                    className="h-7 w-7 sm:h-8 sm:w-8 bg-white/90 hover:bg-white shadow-sm rounded-full"
                     onClick={() => toggleFavorite(car.id, car.slug)}
                   >
-                    <Heart className={cn("h-4 w-4 sm:h-5 sm:w-5", isFavorite(car.id) && "fill-red-500 text-red-500")} />
+                    <Heart className={cn("h-3.5 w-3.5 sm:h-4 sm:w-4", isFavorite(car.id) && "fill-red-500 text-red-500")} />
                   </Button>
-
-                  {/* Compare */}
                   <Button
                     variant="ghost"
                     size="icon"
                     className={cn(
-                      "h-8 w-8 sm:h-9 sm:w-9 bg-white/90 hover:bg-white shadow-sm",
+                      "h-7 w-7 sm:h-8 sm:w-8 bg-white/90 hover:bg-white shadow-sm rounded-full",
                       isInCompare(car.id) && "text-primary"
                     )}
                     onClick={() => handleCompareToggle(car.id)}
                     disabled={!canAddMore && !isInCompare(car.id)}
                   >
                     {isInCompare(car.id) ? (
-                      <Check className="h-4 w-4 sm:h-5 sm:w-5" />
+                      <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     ) : (
-                      <GitCompare className="h-4 w-4 sm:h-5 sm:w-5" />
+                      <GitCompare className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     )}
                   </Button>
                 </div>
 
-                {/* Price Badge - Bottom Right - Prominent */}
-                <div className="absolute bottom-3 right-3">
-                  <div className="bg-primary text-white rounded-full px-4 sm:px-5 py-1.5 sm:py-2 font-bold text-sm sm:text-base shadow-lg flex items-center gap-1.5">
-                    <TrendingDown className="h-4 w-4 sm:h-5 sm:w-5" />
-                    {car.price.split(" - ")[0]}
+                {/* Price Badge - Bottom Right */}
+                <div className="absolute bottom-1.5 right-1.5 sm:bottom-2 sm:right-2">
+                  <div className="bg-primary text-white rounded-full px-2 sm:px-3 py-1 font-bold text-[10px] sm:text-xs shadow-lg flex items-center gap-1">
+                    <TrendingDown className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                    <span className="truncate max-w-[70px] sm:max-w-none">{car.price.split(" - ")[0]}</span>
                   </div>
                 </div>
               </div>
 
-              {/* Content Section - Flex grow to push buttons to bottom */}
-              <CardContent className="p-3 sm:p-4 flex-grow">
+              {/* Content Section */}
+              <CardContent className="p-2.5 sm:p-3 flex-grow">
                 {/* Car Name */}
-                <h3 className="font-heading text-sm sm:text-base font-bold text-foreground mb-2 line-clamp-2">
+                <h3 className="font-heading text-[11px] sm:text-sm font-bold text-foreground mb-1 line-clamp-1">
                   {car.name}
                 </h3>
                 
-                {/* Price Range */}
-                <div className="mb-2.5 sm:mb-3">
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="text-sm sm:text-base font-bold text-primary">₹{car.price.split(" - ")[0].replace("₹", "")}</span>
-                    <span className="text-xs sm:text-sm text-muted-foreground">onwards</span>
-                  </div>
-                  <p className="text-[9px] sm:text-xs text-muted-foreground">(Base)</p>
+                {/* Specs Row - Compact */}
+                <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-[9px] sm:text-[10px] text-muted-foreground mb-1.5">
+                  <span className="flex items-center gap-0.5">
+                    <Fuel className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-primary" />
+                    {car.fuelTypes[0]}
+                  </span>
+                  <span className="flex items-center gap-0.5">
+                    <Cog className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-primary" />
+                    {car.transmission[0]}
+                  </span>
                 </div>
 
-                {/* Specs - Better organized */}
-                <div className="space-y-1.5 sm:space-y-2">
-                  <div className="flex items-center gap-2 text-[10px] sm:text-xs text-muted-foreground">
-                    <Fuel className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                    <span>{car.fuelTypes.join(" / ")}</span>
+                {/* Availability */}
+                {!car.isLimited && (
+                  <div className="flex items-center gap-1 text-[9px] sm:text-[10px] font-medium text-primary">
+                    <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                    <span>Ready Stock</span>
                   </div>
-                  <div className="flex items-center gap-2 text-[10px] sm:text-xs text-muted-foreground">
-                    <Cog className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                    <span>{car.transmission[0]}</span>
-                  </div>
-                  {!car.isLimited && (
-                    <div className="flex items-center gap-2 text-[10px] sm:text-xs font-medium text-primary">
-                      <Clock className="h-3.5 w-3.5 flex-shrink-0" />
-                      <span>{car.availability}</span>
-                    </div>
-                  )}
-                </div>
+                )}
               </CardContent>
 
-              {/* Action Buttons - Fixed at bottom */}
-              <CardFooter className="p-3 sm:p-4 pt-0 flex flex-col gap-2.5 mt-auto">
-                {/* Primary Action - View Details */}
+              {/* Action Buttons */}
+              <CardFooter className="p-2.5 sm:p-3 pt-0 flex flex-col gap-1.5 sm:gap-2 mt-auto">
+                {/* View Details */}
                 <Link to={`/car/${car.slug}`} className="w-full">
-                  <Button variant="cta" size="sm" className="w-full gap-1.5 text-xs sm:text-sm h-9 sm:h-10 font-semibold">
-                    <Eye className="h-4 w-4" />
-                    View Details
+                  <Button variant="cta" size="sm" className="w-full gap-1 text-[10px] sm:text-xs h-7 sm:h-8 font-semibold px-2">
+                    <Eye className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
+                    <span>View Details</span>
                   </Button>
                 </Link>
                 
-                {/* Secondary Actions Row */}
-                <div className="flex gap-2 w-full">
-                  {/* Unlock Best Price */}
-                  <WhatsAppCardButton carName={car.name} className="flex-1 text-xs sm:text-sm h-9 sm:h-10 font-semibold" />
-                  
-                  {/* Call Expert */}
-                  <a href="tel:+919577200023" className="flex-1">
-                    <Button variant="call" size="sm" className="w-full gap-1.5 text-xs sm:text-sm h-9 sm:h-10 font-semibold">
-                      <Phone className="h-4 w-4" />
-                      <span>Call</span>
+                {/* WhatsApp & Call Row */}
+                <div className="flex gap-1.5 sm:gap-2 w-full">
+                  <WhatsAppCardButton carName={car.name} className="h-7 sm:h-8" />
+                  <a href="tel:+919577200023" className="flex-1 min-w-0">
+                    <Button variant="call" size="sm" className="w-full gap-1 text-[10px] sm:text-xs h-7 sm:h-8 font-semibold px-2">
+                      <Phone className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
+                      <span className="truncate">Call</span>
                     </Button>
                   </a>
                 </div>
-
-                {/* Brochure Download - Optional tertiary action */}
-                <Link to={`/brochures?car=${car.slug}`} className="w-full">
-                  <Button variant="outline" size="sm" className="w-full gap-1.5 text-xs h-8 text-muted-foreground hover:text-foreground">
-                    <FileText className="h-3.5 w-3.5" />
-                    Download Brochure
-                  </Button>
-                </Link>
               </CardFooter>
             </Card>
           ))}
         </div>
 
         {/* Mobile View All Button */}
-        <div className="mt-6 md:hidden">
+        <div className="mt-5 sm:mt-6 md:hidden">
           <Link to="/cars">
-            <Button variant="outline" className="w-full">
+            <Button variant="outline" className="w-full text-sm">
               View All Cars
             </Button>
           </Link>
