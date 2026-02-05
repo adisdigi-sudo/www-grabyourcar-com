@@ -250,8 +250,8 @@ export const HSRPManagement = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">HSRP Management</h1>
-          <p className="text-muted-foreground">Manage HSRP orders and pricing</p>
+          <h1 className="text-3xl font-bold">HSRP & FASTag Management</h1>
+          <p className="text-muted-foreground">Manage HSRP/FASTag orders, banners, and pricing</p>
         </div>
       </div>
 

@@ -31,7 +31,13 @@ interface HSRPBanner {
   sort_order: number;
   is_active: boolean;
   animation_type: string;
+  service_type: string;
 }
+
+const serviceTypes = [
+  { value: "hsrp", label: "HSRP (Number Plate)" },
+  { value: "fastag", label: "FASTag (Toll)" },
+];
 
 const iconOptions = [
   { value: "car", label: "Car", icon: Car },
@@ -78,6 +84,7 @@ const defaultForm = {
   cta_text: "Book Now",
   is_active: true,
   animation_type: "slide",
+  service_type: "hsrp",
 };
 
 export function HSRPBannersManagement() {
@@ -118,6 +125,7 @@ export function HSRPBannersManagement() {
         cta_text: data.cta_text,
         is_active: data.is_active,
         animation_type: data.animation_type,
+        service_type: data.service_type,
         sort_order: maxOrder + 1,
       });
       if (error) throw error;
@@ -149,6 +157,7 @@ export function HSRPBannersManagement() {
         cta_text: data.cta_text,
         is_active: data.is_active,
         animation_type: data.animation_type,
+        service_type: data.service_type,
       }).eq("id", id);
       if (error) throw error;
     },
@@ -205,6 +214,7 @@ export function HSRPBannersManagement() {
       cta_text: banner.cta_text,
       is_active: banner.is_active,
       animation_type: banner.animation_type,
+      service_type: banner.service_type,
     });
     setDialogOpen(true);
   };
@@ -226,7 +236,7 @@ export function HSRPBannersManagement() {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>HSRP Service Banners</CardTitle>
+        <CardTitle>HSRP & FASTag Service Banners</CardTitle>
         <Dialog open={dialogOpen} onOpenChange={(open) => {
           setDialogOpen(open);
           if (!open) {
@@ -245,7 +255,18 @@ export function HSRPBannersManagement() {
               <DialogTitle>{editingBanner ? "Edit Banner" : "Create HSRP Banner"}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>Service Type</Label>
+                  <Select value={form.service_type} onValueChange={(v) => setForm({ ...form, service_type: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {serviceTypes.map((st) => (
+                        <SelectItem key={st.value} value={st.value}>{st.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="space-y-2">
                   <Label>Title</Label>
                   <Input
@@ -459,9 +480,9 @@ export function HSRPBannersManagement() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-12">Order</TableHead>
+                <TableHead>Type</TableHead>
                 <TableHead>Banner</TableHead>
                 <TableHead>Vehicle Class</TableHead>
-                <TableHead>Price Key</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -474,6 +495,11 @@ export function HSRPBannersManagement() {
                     <TableCell>
                       <GripVertical className="h-4 w-4 text-muted-foreground" />
                       <span className="ml-1">{banner.sort_order}</span>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={banner.service_type === 'hsrp' ? 'default' : 'secondary'}>
+                        {banner.service_type === 'hsrp' ? 'HSRP' : 'FASTag'}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-3">

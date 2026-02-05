@@ -28,11 +28,12 @@ const priceKeyMap: Record<string, string> = {
 interface HSRPServiceCarouselProps {
   onSelectService: (serviceId: string, price: number, vehicleClass: string) => void;
   selectedServiceId?: string | null;
+  serviceType?: 'hsrp' | 'fastag';
 }
 
-export function HSRPServiceCarousel({ onSelectService, selectedServiceId }: HSRPServiceCarouselProps) {
+export function HSRPServiceCarousel({ onSelectService, selectedServiceId, serviceType = 'hsrp' }: HSRPServiceCarouselProps) {
   const { data: pricing, isLoading: pricingLoading } = useHSRPPricing();
-  const { data: banners, isLoading: bannersLoading } = useHSRPBanners();
+  const { data: banners, isLoading: bannersLoading } = useHSRPBanners(serviceType);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const [direction, setDirection] = useState(0);

@@ -170,20 +170,27 @@ export interface HSRPBannerData {
   sort_order: number;
   is_active: boolean;
   animation_type: string;
+  service_type: string;
 }
 
-export const useHSRPBanners = () => {
+export const useHSRPBanners = (serviceType?: 'hsrp' | 'fastag' | 'all') => {
   return useQuery({
-    queryKey: ["hsrp-banners-public"],
+    queryKey: ["hsrp-banners-public", serviceType],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("hsrp_service_banners")
         .select("*")
         .eq("is_active", true)
         .order("sort_order");
 
+      if (serviceType && serviceType !== 'all') {
+        query = query.eq("service_type", serviceType);
+      }
+
+      const { data, error } = await query;
+
       if (error) {
-        console.error("Error fetching HSRP banners:", error);
+        console.error("Error fetching banners:", error);
         return [];
       }
       
