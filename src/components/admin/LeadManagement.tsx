@@ -381,7 +381,7 @@ export const LeadManagement = () => {
 
       {/* Lead Detail Dialog */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Lead Details</DialogTitle>
             <DialogDescription>
