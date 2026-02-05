@@ -41,13 +41,13 @@ export const Footer = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-8">
           {/* Brand */}
           <div className="col-span-2">
-            <a href="/" className="flex items-center mb-4">
+            <a href="/" className="inline-block">
               <ResponsiveLogo variant="footer" className="brightness-0 invert" />
             </a>
-            <p className="text-xl md:text-2xl font-heading font-bold text-background mb-2">
-              Grab Your New Car — Hassle-Free & Memorable
+            <p className="text-sm font-medium text-background/80 mt-1 mb-3">
+              New Car — Hassle-Free & Memorable
             </p>
-            <p className="text-background/70 mb-6 text-sm leading-relaxed">
+            <p className="text-background/60 mb-5 text-xs leading-relaxed">
               India's smarter way to buy new cars. Best Price. Faster Delivery. Zero Hassle. 500+ Happy Customers Trust Us Every Day.
             </p>
             
