@@ -22,14 +22,15 @@
  } from "lucide-react";
  
  // Team Photos
- import leadershipTeamPhoto from "@/assets/team/leadership-team.png";
+ import anshdeepPhoto from "@/assets/team/anshdeep-singh.jpg";
+ import ishangeePhoto from "@/assets/team/ishangee-sharma.jpg";
+ import paragPhoto from "@/assets/team/parag-goel.jpg";
  
  // Leadership & Company Information
  const founderInfo = {
    name: "Anshdeep Singh",
    role: "Founder & CEO",
-   image: leadershipTeamPhoto,
-   imagePosition: "0% center", // Left portion of composite image
+   image: anshdeepPhoto,
    bio: "Anshdeep Singh is the Founder & CEO of Grabyourcar, an emerging automotive platform dedicated to transforming the new car buying experience in India. With a strong entrepreneurial vision and deep passion for automobiles, he recognized the challenges customers face — from long waiting periods to inconsistent pricing and limited dealership access. Through Grabyourcar, he aims to create a smarter, faster, and more transparent vehicle purchasing journey by leveraging technology and a growing dealer network.",
    linkedin: "https://www.linkedin.com/in/anshdeep-singh-033407236",
  };
@@ -52,16 +53,14 @@
    {
      name: "Ishangee Sharma",
      role: "Head of Operations",
-     image: leadershipTeamPhoto,
-     imagePosition: "50% center", // Center portion of composite image
+     image: ishangeePhoto,
      bio: "Ishangee oversees operations, ensuring efficiency across processes, partner coordination, and customer fulfillment.",
      linkedin: "https://www.linkedin.com/in/ishangee-sharma-657176146",
    },
    {
      name: "Parag Goel",
      role: "Head of Sales",
-     image: leadershipTeamPhoto,
-     imagePosition: "100% center", // Right portion of composite image
+     image: paragPhoto,
      bio: "Parag leads the sales strategy at Grabyourcar, driving customer acquisition and building strong relationships with dealership partners.",
      linkedin: null,
    },
@@ -230,7 +229,6 @@
                              src={founderInfo.image} 
                              alt={founderInfo.name} 
                              className="w-full h-full object-cover"
-                             style={{ objectPosition: founderInfo.imagePosition }}
                            />
                          ) : (
                            <div className="text-center p-8">
@@ -283,7 +281,6 @@
                                src={member.image} 
                                alt={member.name} 
                                className="w-full h-full object-cover"
-                               style={{ objectPosition: member.imagePosition }}
                              />
                            ) : (
                              <div className="w-full h-full flex items-center justify-center">
