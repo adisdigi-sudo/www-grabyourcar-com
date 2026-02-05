@@ -37,7 +37,9 @@ const AdminLayout = () => {
 
   // Redirect if not authenticated
   if (!isLoading && !user) {
-    navigate('/auth');
+    // Check if on admin subdomain to use dedicated admin auth
+    const isAdminSubdomain = window.location.hostname.startsWith("admin.");
+    navigate(isAdminSubdomain ? '/admin-auth' : '/auth');
     return null;
   }
 

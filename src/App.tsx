@@ -29,14 +29,15 @@ import MyBookings from "./pages/MyBookings";
 import MyOrders from "./pages/MyOrders";
 import CarFinder from "./pages/CarFinder";
 import AdminLayout from "./pages/AdminLayout";
+import AdminAuth from "./pages/AdminAuth";
 import SelfDriveRentals from "./pages/SelfDriveRentals";
 import HSRP from "./pages/HSRP";
 import UpcomingCars from "./pages/UpcomingCars";
 import AutoNews from "./pages/AutoNews";
 import DealerLocator from "./pages/DealerLocator";
 import NotFound from "./pages/NotFound";
- import About from "./pages/About";
- import AutoIntelligence from "./pages/AutoIntelligence";
+import About from "./pages/About";
+import AutoIntelligence from "./pages/AutoIntelligence";
 
 const queryClient = new QueryClient();
 
@@ -71,6 +72,7 @@ const App = () => (
                 <Route path="/my-orders" element={<MyOrders />} />
                 <Route path="/car-finder" element={<CarFinder />} />
                 <Route path="/admin" element={<AdminLayout />} />
+                <Route path="/admin-auth" element={<AdminAuth />} />
                 <Route path="/self-drive" element={<SelfDriveRentals />} />
                 <Route path="/hsrp" element={<HSRP />} />
                 <Route path="/upcoming-cars" element={<UpcomingCars />} />
