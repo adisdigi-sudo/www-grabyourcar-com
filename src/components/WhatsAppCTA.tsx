@@ -1,7 +1,8 @@
-import { Car, Bot, Sparkles } from "lucide-react";
+import { Car, Bot, Sparkles, ChevronRight } from "lucide-react";
 import { Button, ButtonProps } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { leadEngineMessages, getWhatsAppUrl as getLeadEngineUrl } from "@/components/WhatsAppLeadEngine";
 
 const WHATSAPP_NUMBER = "919577200023";
 
@@ -44,34 +45,48 @@ const trackWhatsAppClick = async (context?: string, label?: string, page?: strin
  */
 export const whatsappMessages = {
   // General
-  general: "Hi Grabyourcar! I'm looking for a new car. Please help me find the best deal.",
-  bestPrice: "Hi Grabyourcar! I want to know the best price for a new car.",
+  general: "Hi GrabYourCar! 🚗\n\nI'm looking for a new car. Please help me find the best deal!\n\nThanks!",
+  bestPrice: "Hi GrabYourCar! 💰\n\nI want to know the *best price* for a new car.\n\nPlease share available offers and discounts!\n\nThanks!",
   
   // Car-specific
   carPrice: (carName: string) => 
-    `Hi Grabyourcar! I want the best price for ${carName}. Please share the on-road price and available offers.`,
+    `Hi GrabYourCar! 💰\n\nI want the *best on-road price* for *${carName}*.\n\nPlease share:\n✅ Complete price breakup\n✅ Current offers\n✅ Available stock\n\nThanks!`,
   carWaitingPeriod: (carName: string) => 
-    `Hi Grabyourcar! What's the current waiting period for ${carName}? Also share the on-road price.`,
+    `Hi GrabYourCar! ⏰\n\nWhat's the *current waiting period* for *${carName}*?\n\nDo you have any ready stock available?\n\nThanks!`,
   carTestDrive: (carName: string) => 
-    `Hi Grabyourcar! I'd like to book a test drive for ${carName}. Please share the nearest dealer details.`,
+    `Hi GrabYourCar! 🚗\n\nI'd like to *book a test drive* for *${carName}*.\n\nPlease share nearest showroom details and available slots.\n\nThanks!`,
   carOffers: (carName: string) => 
-    `Hi Grabyourcar! What are the latest offers and discounts on ${carName}?`,
+    `Hi GrabYourCar! 🎁\n\nWhat are the *latest offers* on *${carName}*?\n\n• Cash discounts\n• Exchange bonus\n• Free accessories\n• Finance offers\n\nThanks!`,
+  carBrochure: (carName: string) => 
+    `Hi GrabYourCar! 📄\n\nPlease share the *official brochure* for *${carName}*.\n\nThanks!`,
+  carCompare: (carName: string) =>
+    `Hi GrabYourCar! 📊\n\nI need help *comparing variants* of *${carName}*.\n\nPlease guide me to choose the best one!\n\nThanks!`,
   
   // Services
-  loan: "Hi Grabyourcar! I need a car loan. Please share the best interest rates and EMI options.",
-  insurance: "Hi Grabyourcar! I want to compare car insurance quotes. Please help me find the best deal.",
-  hsrp: "Hi Grabyourcar! I need help with HSRP registration. Please share the process and pricing.",
+  loan: "Hi GrabYourCar! 🏦\n\nI need a *car loan*.\n\nPlease share:\n• Best interest rates\n• EMI options\n• Required documents\n\nThanks!",
+  loanForCar: (carName: string, loanAmount?: number) =>
+    `Hi GrabYourCar! 🏦\n\nI need *EMI details* for *${carName}*${loanAmount ? ` (Loan: ₹${(loanAmount/100000).toFixed(1)}L)` : ''}.\n\nPlease share best financing options.\n\nThanks!`,
+  insurance: "Hi GrabYourCar! 🛡️\n\nI want to *compare car insurance* quotes.\n\nPlease help me find the best deal!\n\nThanks!",
+  insuranceForCar: (carName: string) =>
+    `Hi GrabYourCar! 🛡️\n\nI need *insurance quotes* for *${carName}*.\n\nPlease share best premium rates and coverage options.\n\nThanks!`,
+  hsrp: "Hi GrabYourCar! 🔖\n\nI need help with *HSRP registration*.\n\nPlease share the process and pricing.\n\nThanks!",
   
   // Dealer
-  dealer: "Hi Grabyourcar! I want to visit a dealer near me. Please share the nearest showroom details.",
+  dealer: "Hi GrabYourCar! 📍\n\nI want to visit a *dealer near me*.\n\nPlease share nearest showroom details.\n\nThanks!",
   dealerSpecific: (dealerName: string, city: string) => 
-    `Hi Grabyourcar! I want to visit ${dealerName} in ${city}. Please help me schedule a visit.`,
+    `Hi GrabYourCar! 📍\n\nI want to visit *${dealerName}* in *${city}*.\n\nPlease help me schedule a visit.\n\nThanks!`,
   
   // Corporate
-  corporate: "Hi Grabyourcar! I'm interested in corporate/fleet buying. Please share the bulk purchase options and discounts.",
+  corporate: "Hi GrabYourCar! 🏢\n\nI'm interested in *corporate/fleet buying*.\n\nPlease share:\n• Bulk discounts\n• Fleet management options\n• Leasing solutions\n\nThanks!",
   
   // Accessories
-  accessories: "Hi Grabyourcar! I'm interested in car accessories. Please share the catalog and pricing.",
+  accessories: "Hi GrabYourCar! 🎁\n\nI'm interested in *car accessories*.\n\nPlease share the catalog and pricing.\n\nThanks!",
+  
+  // Expert
+  speakToExpert: (carName?: string) =>
+    carName 
+      ? `Hi GrabYourCar! 👋\n\nI need *expert advice* on *${carName}*.\n\nPlease connect me with a car expert.\n\nThanks!`
+      : `Hi GrabYourCar! 👋\n\nI need *expert advice* to choose the right car.\n\nPlease connect me with a car expert.\n\nThanks!`,
 };
 
 /**

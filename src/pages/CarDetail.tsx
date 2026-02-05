@@ -48,6 +48,7 @@ import { AICarRecommendations } from "@/components/AICarRecommendations";
 import { getCarBySlug } from "@/data/carsData";
 import { calculateStatePriceBreakup } from "@/data/statePricing";
 import { toast } from "sonner";
+import { WhatsAppQuickActions, WhatsAppConversionCard } from "@/components/WhatsAppLeadEngine";
 
 const CompareButton = ({ carId }: { carId: number }) => {
   const { addToCompare, removeFromCompare, isInCompare, canAddMore } = useCompare();
@@ -280,26 +281,14 @@ const CarDetail = () => {
                 </div>
 
                 {/* Additional WhatsApp CTAs */}
-                <div className="flex flex-wrap gap-2">
-                  <WhatsAppSalesCTA 
-                    carName={`${car.brand} ${car.name}`} 
-                    type="waiting" 
-                    size="sm"
-                    className="text-sm"
-                  />
-                  <WhatsAppSalesCTA 
-                    carName={`${car.brand} ${car.name}`} 
-                    type="testDrive" 
-                    size="sm"
-                    className="text-sm"
-                  />
-                  <WhatsAppSalesCTA 
-                    carName={`${car.brand} ${car.name}`} 
-                    type="offers" 
-                    size="sm"
-                    className="text-sm"
-                  />
-                </div>
+                {/* WhatsApp Lead Engine - Quick Actions */}
+                <WhatsAppQuickActions
+                  carName={`${car.brand} ${car.name}`}
+                  variant={car.variants[selectedVariant]?.name}
+                  triggers={['checkWaitingPeriod', 'bookTestDrive', 'getOffers', 'compareVariants']}
+                  layout="horizontal"
+                  size="sm"
+                />
 
                 {/* Trust Badges */}
                 <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
@@ -635,6 +624,19 @@ const CarDetail = () => {
               fuelTypes={car.fuelTypes}
               transmission={car.transmission}
             />
+          </div>
+        </section>
+
+        {/* WhatsApp Conversion Section */}
+        <section className="py-8 md:py-12">
+          <div className="container mx-auto px-4">
+            <div className="max-w-2xl mx-auto">
+              <WhatsAppConversionCard
+                carName={`${car.brand} ${car.name}`}
+                variant={car.variants[selectedVariant]?.name}
+                exShowroomPrice={car.variants[selectedVariant]?.priceNumeric}
+              />
+            </div>
           </div>
         </section>
 
