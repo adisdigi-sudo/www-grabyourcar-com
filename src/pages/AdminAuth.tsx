@@ -8,26 +8,30 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { toast } from "sonner";
 import { Mail, Lock, Loader2, Shield, KeyRound, Building2, Eye, EyeOff } from "lucide-react";
 import { z } from "zod";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import logoImage from "@/assets/logo-grabyourcar-main.png";
+import AdminOTPVerification from "@/components/admin/AdminOTPVerification";
 
 const emailSchema = z.string().email("Please enter a valid email address");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
 
 const AdminAuth = () => {
   const navigate = useNavigate();
-  const { user, signIn, loading } = useAuth();
+  const { user, signIn, signOut, loading } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showOTPVerification, setShowOTPVerification] = useState(false);
+  const [pendingUserId, setPendingUserId] = useState<string | null>(null);
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
 
-  // Redirect if already logged in
+  // Redirect if already logged in and verified
   useEffect(() => {
-    if (user && !loading) {
+    if (user && !loading && !showOTPVerification) {
       navigate("/admin");
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, navigate, showOTPVerification]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,7 +48,7 @@ const AdminAuth = () => {
       }
     }
 
-    const { error } = await signIn(email, password);
+    const { error, data } = await signIn(email, password);
     
     if (error) {
       if (error.message.includes("Invalid login credentials")) {
@@ -52,12 +56,42 @@ const AdminAuth = () => {
       } else {
         toast.error(error.message);
       }
-    } else {
-      toast.success("Welcome to Admin Dashboard!");
-      navigate("/admin");
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Password verified - now require 2FA
+    if (data?.user) {
+      setPendingUserId(data.user.id);
+      setPendingEmail(data.user.email || email);
+      setShowOTPVerification(true);
+      // Sign out temporarily until OTP is verified
+      await signOut();
     }
     
     setIsSubmitting(false);
+  };
+
+  const handleOTPVerified = () => {
+    // Re-authenticate after OTP verification
+    signIn(pendingEmail!, password).then(({ error }) => {
+      if (error) {
+        toast.error("Session expired. Please login again.");
+        setShowOTPVerification(false);
+        setPendingUserId(null);
+        setPendingEmail(null);
+      } else {
+        toast.success("Welcome to Admin Dashboard!");
+        navigate("/admin");
+      }
+    });
+  };
+
+  const handleOTPCancel = async () => {
+    setShowOTPVerification(false);
+    setPendingUserId(null);
+    setPendingEmail(null);
+    setPassword("");
   };
 
   if (loading) {
@@ -116,109 +150,123 @@ const AdminAuth = () => {
                 Welcome Back, Admin
               </h1>
               <p className="text-muted-foreground mt-2">
-                Sign in to access the control center
+                {showOTPVerification ? "Verify your identity" : "Sign in to access the control center"}
               </p>
             </motion.div>
           </div>
 
-          {/* Login Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.4 }}
-          >
-            <Card className="border-border/50 shadow-xl shadow-primary/5 backdrop-blur-sm">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <KeyRound className="h-5 w-5 text-primary" />
-                  Admin Sign In
-                </CardTitle>
-                <CardDescription>
-                  Enter your credentials to continue
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleLogin} className="space-y-5">
-                  <div className="space-y-2">
-                    <Label htmlFor="admin-email" className="text-sm font-medium">
-                      Email Address
-                    </Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="admin-email"
-                        type="email"
-                        placeholder="admin@grabyourcar.com"
-                        className="pl-10 h-11 bg-background/50"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                        autoComplete="email"
-                      />
-                    </div>
-                  </div>
+          {/* OTP Verification or Login Card */}
+          <AnimatePresence mode="wait">
+            {showOTPVerification && pendingUserId && pendingEmail ? (
+              <AdminOTPVerification
+                key="otp"
+                email={pendingEmail}
+                userId={pendingUserId}
+                onVerified={handleOTPVerified}
+                onCancel={handleOTPCancel}
+              />
+            ) : (
+              <motion.div
+                key="login"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ delay: 0.3, duration: 0.4 }}
+              >
+                <Card className="border-border/50 shadow-xl shadow-primary/5 backdrop-blur-sm">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <KeyRound className="h-5 w-5 text-primary" />
+                      Admin Sign In
+                    </CardTitle>
+                    <CardDescription>
+                      Enter your credentials to continue
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handleLogin} className="space-y-5">
+                      <div className="space-y-2">
+                        <Label htmlFor="admin-email" className="text-sm font-medium">
+                          Email Address
+                        </Label>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="admin-email"
+                            type="email"
+                            placeholder="admin@grabyourcar.com"
+                            className="pl-10 h-11 bg-background/50"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                            autoComplete="email"
+                          />
+                        </div>
+                      </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="admin-password" className="text-sm font-medium">
-                      Password
-                    </Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="admin-password"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="Enter your password"
-                        className="pl-10 pr-10 h-11 bg-background/50"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        autoComplete="current-password"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      <div className="space-y-2">
+                        <Label htmlFor="admin-password" className="text-sm font-medium">
+                          Password
+                        </Label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="admin-password"
+                            type={showPassword ? "text" : "password"}
+                            placeholder="Enter your password"
+                            className="pl-10 pr-10 h-11 bg-background/50"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                            autoComplete="current-password"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            {showPassword ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      <Button 
+                        type="submit" 
+                        className="w-full h-11 text-base font-semibold shadow-lg shadow-primary/25" 
+                        disabled={isSubmitting}
                       >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4" />
+                        {isSubmitting ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Authenticating...
+                          </>
                         ) : (
-                          <Eye className="h-4 w-4" />
+                          <>
+                            <Shield className="h-4 w-4 mr-2" />
+                            Sign In to Dashboard
+                          </>
                         )}
-                      </button>
+                      </Button>
+                    </form>
+
+                    {/* Security Notice */}
+                    <div className="mt-6 pt-4 border-t border-border/50">
+                      <div className="flex items-start gap-3 text-xs text-muted-foreground">
+                        <Shield className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                        <p>
+                          This is a protected area. All login attempts are monitored and logged for security purposes.
+                        </p>
+                      </div>
                     </div>
-                  </div>
-
-                  <Button 
-                    type="submit" 
-                    className="w-full h-11 text-base font-semibold shadow-lg shadow-primary/25" 
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Authenticating...
-                      </>
-                    ) : (
-                      <>
-                        <Shield className="h-4 w-4 mr-2" />
-                        Sign In to Dashboard
-                      </>
-                    )}
-                  </Button>
-                </form>
-
-                {/* Security Notice */}
-                <div className="mt-6 pt-4 border-t border-border/50">
-                  <div className="flex items-start gap-3 text-xs text-muted-foreground">
-                    <Shield className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                    <p>
-                      This is a protected area. All login attempts are monitored and logged for security purposes.
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Footer */}
           <motion.div
