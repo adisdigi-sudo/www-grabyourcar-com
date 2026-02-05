@@ -5,6 +5,98 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+interface GNewsArticle {
+  title: string;
+  description: string;
+  content: string;
+  url: string;
+  image: string;
+  publishedAt: string;
+  source: {
+    name: string;
+    url: string;
+  };
+}
+
+interface GNewsResponse {
+  totalArticles: number;
+  articles: GNewsArticle[];
+}
+
+// Fetch real news from GNews API (Google News data)
+async function fetchWithGNews(category: string, apiKey: string) {
+  const categoryQuery = category === "all" 
+    ? "car OR automobile OR automotive India"
+    : category === "Launch" ? "new car launch India 2025"
+    : category === "Review" ? "car review test drive India"
+    : category === "Industry" ? "automotive industry news India"
+    : category === "EV" ? "electric vehicle EV India"
+    : category === "Tips" ? "car buying tips maintenance"
+    : category === "Comparison" ? "car comparison versus"
+    : "automotive news India";
+
+  const url = `https://gnews.io/api/v4/search?q=${encodeURIComponent(categoryQuery)}&lang=en&country=in&max=10&apikey=${apiKey}`;
+  
+  console.log("Fetching from GNews API...");
+  
+  const response = await fetch(url);
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("GNews API error:", response.status, errorText);
+    throw new Error(`GNews API error: ${response.status}`);
+  }
+
+  const data: GNewsResponse = await response.json();
+  
+  if (!data.articles || data.articles.length === 0) {
+    throw new Error("No articles found from GNews");
+  }
+
+  console.log(`GNews returned ${data.articles.length} articles`);
+
+  const articles = data.articles.map((article, index) => {
+    const content = (article.title + " " + article.description).toLowerCase();
+    let articleCategory = "Industry";
+    if (content.includes("launch") || content.includes("unveil") || content.includes("debut")) {
+      articleCategory = "Launch";
+    } else if (content.includes("review") || content.includes("test drive") || content.includes("driven")) {
+      articleCategory = "Review";
+    } else if (content.includes("electric") || content.includes("ev") || content.includes("battery")) {
+      articleCategory = "EV";
+    } else if (content.includes("vs") || content.includes("versus") || content.includes("comparison")) {
+      articleCategory = "Comparison";
+    } else if (content.includes("tips") || content.includes("how to") || content.includes("guide")) {
+      articleCategory = "Tips";
+    }
+
+    const wordCount = article.content ? article.content.split(" ").length : 150;
+    const readTime = Math.max(2, Math.ceil(wordCount / 200));
+
+    return {
+      id: `gnews-${Date.now()}-${index}`,
+      title: article.title,
+      excerpt: article.description || article.content?.substring(0, 200) + "...",
+      category: articleCategory,
+      source: article.source.name,
+      sourceUrl: article.url,
+      author: "Staff Reporter",
+      readTime: `${readTime} min read`,
+      publishedAt: article.publishedAt,
+      imageUrl: article.image,
+      imageDescription: `News image for: ${article.title}`,
+      featured: index < 2,
+      tags: [articleCategory, "India", "Automotive"],
+    };
+  });
+
+  return {
+    articles,
+    source: "gnews",
+    citations: articles.map(a => a.sourceUrl),
+  };
+}
+
 async function fetchWithPerplexity(category: string, currentDate: string, apiKey: string) {
   const categoryQuery = category === "all" 
     ? "latest car launches, automotive reviews, industry news, and EV updates"
@@ -47,7 +139,8 @@ async function fetchWithPerplexity(category: string, currentDate: string, apiKey
   return {
     content: data.choices?.[0]?.message?.content,
     citations: data.citations || [],
-    source: "perplexity"
+    source: "perplexity",
+    articles: null as unknown[] | null,
   };
 }
 
@@ -85,8 +178,9 @@ async function fetchWithLovableAI(category: string, currentDate: string, apiKey:
   const data = await response.json();
   return {
     content: data.choices?.[0]?.message?.content,
-    citations: [],
-    source: "lovable-ai"
+    citations: [] as string[],
+    source: "lovable-ai",
+    articles: null as unknown[] | null,
   };
 }
 
@@ -106,57 +200,73 @@ serve(async (req) => {
       day: 'numeric' 
     });
 
+    const GNEWS_API_KEY = Deno.env.get("GNEWS_API_KEY");
     const PERPLEXITY_API_KEY = Deno.env.get("PERPLEXITY_API_KEY");
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
-    let result;
+    let result: { articles: unknown[] | null; source: string; citations: string[]; content?: string } | null = null;
+    let articles: unknown[] | null = null;
     
-    // Try Perplexity first for real-time search, fallback to Lovable AI
-    if (PERPLEXITY_API_KEY && !PERPLEXITY_API_KEY.includes("your_api_key")) {
+    // Priority: GNews (real news) > Perplexity (AI search) > Lovable AI (fallback)
+    if (GNEWS_API_KEY && !GNEWS_API_KEY.includes("your_api_key")) {
+      try {
+        console.log("Using GNews API for real-time news");
+        result = await fetchWithGNews(category, GNEWS_API_KEY);
+        articles = result.articles;
+      } catch (gnewsError) {
+        console.error("GNews failed, trying Perplexity:", gnewsError);
+        result = null;
+      }
+    }
+    
+    // Fallback to Perplexity if GNews failed or not configured
+    if (!result && PERPLEXITY_API_KEY && !PERPLEXITY_API_KEY.includes("your_api_key")) {
       try {
         console.log("Using Perplexity API for real-time news search");
         result = await fetchWithPerplexity(category, currentDate, PERPLEXITY_API_KEY);
       } catch (perplexityError) {
-        console.error("Perplexity failed, falling back to Lovable AI:", perplexityError);
-        if (!LOVABLE_API_KEY) {
-          throw new Error("No API keys configured");
-        }
-        result = await fetchWithLovableAI(category, currentDate, LOVABLE_API_KEY);
+        console.error("Perplexity failed:", perplexityError);
+        result = null;
       }
-    } else if (LOVABLE_API_KEY) {
-      console.log("Using Lovable AI Gateway (Perplexity not configured)");
+    }
+    
+    // Final fallback to Lovable AI
+    if (!result && LOVABLE_API_KEY) {
+      console.log("Using Lovable AI Gateway as fallback");
       result = await fetchWithLovableAI(category, currentDate, LOVABLE_API_KEY);
-    } else {
+    }
+    
+    if (!result) {
       throw new Error("No API keys configured for news fetching");
     }
 
     const { content, citations, source } = result;
 
-    if (!content) {
-      throw new Error("No content in API response");
-    }
-
-    // Parse the JSON from the response
-    let articles;
-    try {
-      const jsonMatch = content.match(/\[[\s\S]*\]/);
-      const jsonStr = jsonMatch ? jsonMatch[0] : content.trim();
-      articles = JSON.parse(jsonStr);
-      
-      if (!Array.isArray(articles)) {
-        throw new Error("Response is not an array");
+    // Parse AI-generated content if articles weren't directly fetched
+    if (!articles && content) {
+      try {
+        const jsonMatch = content.match(/\[[\s\S]*\]/);
+        const jsonStr = jsonMatch ? jsonMatch[0] : content.trim();
+        articles = JSON.parse(jsonStr);
+        
+        if (!Array.isArray(articles)) {
+          throw new Error("Response is not an array");
+        }
+        
+        articles = (articles as Record<string, unknown>[]).map((article, index) => ({
+          ...article,
+          id: `news-${Date.now()}-${index}`,
+          sourceUrl: citations[index] || null,
+        }));
+        
+      } catch (parseError) {
+        console.error("JSON parse error:", parseError, "Content:", content?.substring(0, 500));
+        throw new Error("Failed to parse API response as JSON");
       }
-      
-      // Add IDs and citation URLs
-      articles = articles.map((article: Record<string, unknown>, index: number) => ({
-        ...article,
-        id: `news-${Date.now()}-${index}`,
-        sourceUrl: citations[index] || null,
-      }));
-      
-    } catch (parseError) {
-      console.error("JSON parse error:", parseError, "Content:", content.substring(0, 500));
-      throw new Error("Failed to parse API response as JSON");
+    }
+    
+    if (!articles || articles.length === 0) {
+      throw new Error("No articles found");
     }
 
     console.log(`Successfully fetched ${articles.length} articles from ${source}`);
