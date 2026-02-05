@@ -21,11 +21,15 @@
    Sparkles
  } from "lucide-react";
  
+ // Team Photos
+ import leadershipTeamPhoto from "@/assets/team/leadership-team.png";
+ 
  // Leadership & Company Information
  const founderInfo = {
    name: "Anshdeep Singh",
    role: "Founder & CEO",
-   image: null, // Will be uploaded
+   image: leadershipTeamPhoto,
+   imagePosition: "0% center", // Left portion of composite image
    bio: "Anshdeep Singh is the Founder & CEO of Grabyourcar, an emerging automotive platform dedicated to transforming the new car buying experience in India. With a strong entrepreneurial vision and deep passion for automobiles, he recognized the challenges customers face — from long waiting periods to inconsistent pricing and limited dealership access. Through Grabyourcar, he aims to create a smarter, faster, and more transparent vehicle purchasing journey by leveraging technology and a growing dealer network.",
    linkedin: "https://www.linkedin.com/in/anshdeep-singh-033407236",
  };
@@ -46,18 +50,20 @@
  
  const teamMembers = [
    {
-     name: "Parag Goel",
-     role: "Head of Sales",
-     image: null,
-     bio: "Parag leads the sales strategy at Grabyourcar, driving customer acquisition and building strong relationships with dealership partners.",
-     linkedin: null,
-   },
-   {
      name: "Ishangee Sharma",
      role: "Head of Operations",
-     image: null,
+     image: leadershipTeamPhoto,
+     imagePosition: "50% center", // Center portion of composite image
      bio: "Ishangee oversees operations, ensuring efficiency across processes, partner coordination, and customer fulfillment.",
      linkedin: "https://www.linkedin.com/in/ishangee-sharma-657176146",
+   },
+   {
+     name: "Parag Goel",
+     role: "Head of Sales",
+     image: leadershipTeamPhoto,
+     imagePosition: "100% center", // Right portion of composite image
+     bio: "Parag leads the sales strategy at Grabyourcar, driving customer acquisition and building strong relationships with dealership partners.",
+     linkedin: null,
    },
  ];
  
@@ -217,19 +223,24 @@
                <Card className="overflow-hidden">
                  <CardContent className="p-0">
                    <div className="grid md:grid-cols-5 gap-0">
-                     {/* Photo placeholder */}
-                     <div className="md:col-span-2 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center min-h-[300px]">
-                       {founderInfo.image ? (
-                         <img src={founderInfo.image} alt={founderInfo.name} className="w-full h-full object-cover" />
-                       ) : (
-                         <div className="text-center p-8">
-                           <div className="w-32 h-32 bg-muted rounded-full mx-auto mb-4 flex items-center justify-center">
-                             <Users className="w-16 h-16 text-muted-foreground/50" />
+                     {/* Founder Photo */}
+                       <div className="md:col-span-2 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center min-h-[300px] overflow-hidden">
+                         {founderInfo.image ? (
+                           <img 
+                             src={founderInfo.image} 
+                             alt={founderInfo.name} 
+                             className="w-full h-full object-cover"
+                             style={{ objectPosition: founderInfo.imagePosition }}
+                           />
+                         ) : (
+                           <div className="text-center p-8">
+                             <div className="w-32 h-32 bg-muted rounded-full mx-auto mb-4 flex items-center justify-center">
+                               <Users className="w-16 h-16 text-muted-foreground/50" />
+                             </div>
+                             <p className="text-sm text-muted-foreground">Photo to be added</p>
                            </div>
-                           <p className="text-sm text-muted-foreground">Photo to be added</p>
-                         </div>
-                       )}
-                     </div>
+                         )}
+                       </div>
                      
                      {/* Info */}
                      <div className="md:col-span-3 p-6 md:p-10 flex flex-col justify-center">
@@ -263,29 +274,36 @@
                </div>
                
                <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-                 {teamMembers.map((member, index) => (
-                   <Card key={index} className="text-center hover:shadow-lg transition-shadow">
-                     <CardContent className="p-6">
-                       <div className="w-24 h-24 bg-gradient-to-br from-primary/20 to-primary/5 rounded-full mx-auto mb-4 flex items-center justify-center">
-                         {member.image ? (
-                           <img src={member.image} alt={member.name} className="w-full h-full object-cover rounded-full" />
-                         ) : (
-                           <Users className="w-10 h-10 text-muted-foreground/50" />
+                   {teamMembers.map((member, index) => (
+                     <Card key={index} className="text-center hover:shadow-lg transition-shadow">
+                       <CardContent className="p-6">
+                         <div className="w-24 h-24 bg-gradient-to-br from-primary/20 to-primary/5 rounded-full mx-auto mb-4 overflow-hidden">
+                           {member.image ? (
+                             <img 
+                               src={member.image} 
+                               alt={member.name} 
+                               className="w-full h-full object-cover"
+                               style={{ objectPosition: member.imagePosition }}
+                             />
+                           ) : (
+                             <div className="w-full h-full flex items-center justify-center">
+                               <Users className="w-10 h-10 text-muted-foreground/50" />
+                             </div>
+                           )}
+                         </div>
+                         <h3 className="font-semibold text-lg">{member.name}</h3>
+                         <p className="text-sm text-primary mb-2">{member.role}</p>
+                         <p className="text-xs text-muted-foreground mb-3">{member.bio}</p>
+                         {member.linkedin && (
+                           <a href={member.linkedin} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-xs text-primary hover:underline">
+                             <Linkedin className="h-3 w-3 mr-1" />
+                             LinkedIn
+                           </a>
                          )}
-                       </div>
-                       <h3 className="font-semibold text-lg">{member.name}</h3>
-                       <p className="text-sm text-primary mb-2">{member.role}</p>
-                       <p className="text-xs text-muted-foreground mb-3">{member.bio}</p>
-                       {member.linkedin && (
-                         <a href={member.linkedin} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-xs text-primary hover:underline">
-                           <Linkedin className="h-3 w-3 mr-1" />
-                           LinkedIn
-                         </a>
-                       )}
-                     </CardContent>
-                   </Card>
-                 ))}
-               </div>
+                       </CardContent>
+                     </Card>
+                   ))}
+                 </div>
              </div>
            </section>
  
