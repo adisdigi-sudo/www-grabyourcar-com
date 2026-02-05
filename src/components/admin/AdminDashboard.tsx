@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, subDays, startOfMonth, endOfMonth } from "date-fns";
@@ -8,7 +9,9 @@ import {
   LeadFunnel,
   RevenueChart,
   RecentActivity,
-  PerformanceMetrics
+  PerformanceMetrics,
+  DashboardDateFilter,
+  type DateRange
 } from "./dashboard";
 
 interface DashboardStats {
@@ -25,11 +28,19 @@ interface DashboardStats {
 }
 
 export const AdminDashboard = () => {
+  // Initialize date range (last 30 days)
+  const [dateRange, setDateRange] = useState<DateRange>({
+    from: subDays(new Date(), 30),
+    to: new Date(),
+  });
+
   // Fetch dashboard stats
   const { data: stats, isLoading: statsLoading } = useQuery({
-    queryKey: ['adminDashboardStats'],
+    queryKey: ['adminDashboardStats', dateRange],
     queryFn: async () => {
       const today = format(new Date(), 'yyyy-MM-dd');
+      const fromDate = format(dateRange.from, 'yyyy-MM-dd');
+      const toDate = format(dateRange.to, 'yyyy-MM-dd');
       
       const [
         leadsResult,
@@ -45,25 +56,45 @@ export const AdminDashboard = () => {
         rentalRevenueResult,
         accessoryRevenueResult,
       ] = await Promise.all([
-        supabase.from('leads').select('id', { count: 'exact', head: true }),
         supabase.from('leads').select('id', { count: 'exact', head: true })
-          .gte('created_at', today),
+          .gte('created_at', fromDate)
+          .lte('created_at', toDate),
         supabase.from('leads').select('id', { count: 'exact', head: true })
-          .eq('status', 'hot'),
+          .eq('created_at', today),
         supabase.from('leads').select('id', { count: 'exact', head: true })
-          .eq('status', 'converted'),
-        supabase.from('hsrp_bookings').select('id', { count: 'exact', head: true }),
+          .eq('status', 'hot')
+          .gte('created_at', fromDate)
+          .lte('created_at', toDate),
+        supabase.from('leads').select('id', { count: 'exact', head: true })
+          .eq('status', 'converted')
+          .gte('created_at', fromDate)
+          .lte('created_at', toDate),
         supabase.from('hsrp_bookings').select('id', { count: 'exact', head: true })
-          .eq('order_status', 'pending'),
-        supabase.from('rental_bookings').select('id', { count: 'exact', head: true }),
-        supabase.from('inquiries').select('id', { count: 'exact', head: true }),
+          .gte('created_at', fromDate)
+          .lte('created_at', toDate),
+        supabase.from('hsrp_bookings').select('id', { count: 'exact', head: true })
+          .eq('order_status', 'pending')
+          .gte('created_at', fromDate)
+          .lte('created_at', toDate),
+        supabase.from('rental_bookings').select('id', { count: 'exact', head: true })
+          .gte('created_at', fromDate)
+          .lte('created_at', toDate),
+        supabase.from('inquiries').select('id', { count: 'exact', head: true })
+          .gte('created_at', fromDate)
+          .lte('created_at', toDate),
         supabase.from('cars').select('id', { count: 'exact', head: true }),
         supabase.from('hsrp_bookings').select('payment_amount')
-          .eq('payment_status', 'paid'),
+          .eq('payment_status', 'paid')
+          .gte('created_at', fromDate)
+          .lte('created_at', toDate),
         supabase.from('rental_bookings').select('total_amount')
-          .eq('payment_status', 'paid'),
+          .eq('payment_status', 'paid')
+          .gte('created_at', fromDate)
+          .lte('created_at', toDate),
         supabase.from('accessory_orders').select('total_amount')
-          .eq('payment_status', 'paid'),
+          .eq('payment_status', 'paid')
+          .gte('created_at', fromDate)
+          .lte('created_at', toDate),
       ]);
 
       // Calculate revenue
@@ -90,23 +121,25 @@ export const AdminDashboard = () => {
     },
   });
 
-  // Fetch leads trend data (last 30 days)
+  // Fetch leads trend data (within date range)
   const { data: leadsTrend, isLoading: leadsTrendLoading } = useQuery({
-    queryKey: ['leadsTrend'],
+    queryKey: ['leadsTrend', dateRange],
     queryFn: async () => {
-      const thirtyDaysAgo = format(subDays(new Date(), 30), 'yyyy-MM-dd');
-      
       const { data: leads } = await supabase
         .from('leads')
         .select('created_at, status')
-        .gte('created_at', thirtyDaysAgo);
+        .gte('created_at', format(dateRange.from, 'yyyy-MM-dd'))
+        .lte('created_at', format(dateRange.to, 'yyyy-MM-dd'));
 
       // Group by date
       const groupedData: Record<string, { leads: number; converted: number }> = {};
       
-      for (let i = 0; i < 30; i++) {
-        const date = format(subDays(new Date(), 29 - i), 'yyyy-MM-dd');
-        groupedData[date] = { leads: 0, converted: 0 };
+      // Create entries for all days in range
+      let currentDate = new Date(dateRange.from);
+      while (currentDate <= dateRange.to) {
+        const dateStr = format(currentDate, 'yyyy-MM-dd');
+        groupedData[dateStr] = { leads: 0, converted: 0 };
+        currentDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000);
       }
 
       leads?.forEach(lead => {
@@ -126,13 +159,15 @@ export const AdminDashboard = () => {
     },
   });
 
-  // Fetch lead sources
+  // Fetch lead sources (within date range)
   const { data: leadSources, isLoading: leadSourcesLoading } = useQuery({
-    queryKey: ['leadSources'],
+    queryKey: ['leadSources', dateRange],
     queryFn: async () => {
       const { data } = await supabase
         .from('leads')
-        .select('source');
+        .select('source')
+        .gte('created_at', format(dateRange.from, 'yyyy-MM-dd'))
+        .lte('created_at', format(dateRange.to, 'yyyy-MM-dd'));
 
       const sourceCounts: Record<string, number> = {};
       data?.forEach(lead => {
@@ -147,13 +182,15 @@ export const AdminDashboard = () => {
     },
   });
 
-  // Fetch lead funnel data
+  // Fetch lead funnel data (within date range)
   const { data: funnelData, isLoading: funnelLoading } = useQuery({
-    queryKey: ['leadFunnel'],
+    queryKey: ['leadFunnel', dateRange],
     queryFn: async () => {
       const { data } = await supabase
         .from('leads')
-        .select('status');
+        .select('status')
+        .gte('created_at', format(dateRange.from, 'yyyy-MM-dd'))
+        .lte('created_at', format(dateRange.to, 'yyyy-MM-dd'));
 
       const statusCounts: Record<string, number> = {};
       data?.forEach(lead => {
@@ -216,13 +253,15 @@ export const AdminDashboard = () => {
     },
   });
 
-  // Fetch recent leads
+  // Fetch recent leads (within date range)
   const { data: recentLeads, isLoading: recentLeadsLoading } = useQuery({
-    queryKey: ['recentLeads'],
+    queryKey: ['recentLeads', dateRange],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('leads')
         .select('*')
+        .gte('created_at', format(dateRange.from, 'yyyy-MM-dd'))
+        .lte('created_at', format(dateRange.to, 'yyyy-MM-dd'))
         .order('created_at', { ascending: false })
         .limit(10);
       
@@ -231,13 +270,15 @@ export const AdminDashboard = () => {
     },
   });
 
-  // Fetch recent HSRP bookings
+  // Fetch recent HSRP bookings (within date range)
   const { data: recentHsrp, isLoading: recentHsrpLoading } = useQuery({
-    queryKey: ['recentHsrpBookings'],
+    queryKey: ['recentHsrpBookings', dateRange],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('hsrp_bookings')
         .select('*')
+        .gte('created_at', format(dateRange.from, 'yyyy-MM-dd'))
+        .lte('created_at', format(dateRange.to, 'yyyy-MM-dd'))
         .order('created_at', { ascending: false })
         .limit(10);
       
@@ -246,12 +287,13 @@ export const AdminDashboard = () => {
     },
   });
 
-  // Fetch performance metrics
+  // Fetch performance metrics (within date range)
   const { data: performanceData, isLoading: performanceLoading } = useQuery({
-    queryKey: ['performanceMetrics'],
+    queryKey: ['performanceMetrics', dateRange],
     queryFn: async () => {
-      const thisMonth = startOfMonth(new Date());
-      const thisMonthStr = format(thisMonth, 'yyyy-MM-dd');
+      const fromDate = format(dateRange.from, 'yyyy-MM-dd');
+      const toDate = format(dateRange.to, 'yyyy-MM-dd');
+      const monthStart = format(startOfMonth(dateRange.to), 'yyyy-MM-dd');
 
       const [
         totalLeads,
@@ -261,12 +303,26 @@ export const AdminDashboard = () => {
         followedUpLeads,
         monthlyLeads,
       ] = await Promise.all([
-        supabase.from('leads').select('id', { count: 'exact', head: true }),
-        supabase.from('leads').select('id', { count: 'exact', head: true }).eq('status', 'converted'),
-        supabase.from('hsrp_bookings').select('id', { count: 'exact', head: true }).eq('order_status', 'completed'),
-        supabase.from('hsrp_bookings').select('id', { count: 'exact', head: true }),
-        supabase.from('leads').select('id', { count: 'exact', head: true }).not('last_contacted_at', 'is', null),
-        supabase.from('leads').select('id', { count: 'exact', head: true }).gte('created_at', thisMonthStr),
+        supabase.from('leads').select('id', { count: 'exact', head: true })
+          .gte('created_at', fromDate)
+          .lte('created_at', toDate),
+        supabase.from('leads').select('id', { count: 'exact', head: true })
+          .eq('status', 'converted')
+          .gte('created_at', fromDate)
+          .lte('created_at', toDate),
+        supabase.from('hsrp_bookings').select('id', { count: 'exact', head: true })
+          .eq('order_status', 'completed')
+          .gte('created_at', fromDate)
+          .lte('created_at', toDate),
+        supabase.from('hsrp_bookings').select('id', { count: 'exact', head: true })
+          .gte('created_at', fromDate)
+          .lte('created_at', toDate),
+        supabase.from('leads').select('id', { count: 'exact', head: true })
+          .not('last_contacted_at', 'is', null)
+          .gte('created_at', fromDate)
+          .lte('created_at', toDate),
+        supabase.from('leads').select('id', { count: 'exact', head: true })
+          .gte('created_at', monthStart),
       ]);
 
       const total = totalLeads.count || 0;
@@ -297,6 +353,14 @@ export const AdminDashboard = () => {
         <p className="text-muted-foreground">
           Welcome to your admin dashboard. Here's what's happening today.
         </p>
+      </div>
+
+      {/* Date Range Filter */}
+      <div className="flex justify-end">
+        <DashboardDateFilter 
+          dateRange={dateRange} 
+          onDateRangeChange={setDateRange} 
+        />
       </div>
 
       {/* Stats Cards */}
