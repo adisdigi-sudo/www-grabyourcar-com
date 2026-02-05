@@ -3,6 +3,7 @@ import { Phone, MessageCircle, Heart, User, LogOut, Settings, Home, Search, Menu
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -20,7 +21,8 @@ import {
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import logoImage from "@/assets/logo-grabyourcar-new.png";
+import logoLight from "@/assets/logo-grabyourcar-new.png";
+import logoDark from "@/assets/logo-grabyourcar-dark.png";
 
 const services = [
   {
@@ -91,8 +93,10 @@ const quickLinks = [
 
 export const Header = () => {
   const { user, signOut } = useAuth();
+  const { theme } = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
+  const logoImage = theme === "dark" ? logoDark : logoLight;
 
   const handleSignOut = async () => {
     await signOut();
@@ -125,7 +129,7 @@ export const Header = () => {
               <img 
                 src={logoImage} 
                 alt="Grabyourcar - India's Smarter Way to Buy New Cars" 
-                className="h-12 sm:h-14 md:h-16 lg:h-[4.5rem] w-auto max-w-[180px] sm:max-w-[220px] md:max-w-[280px] lg:max-w-[320px] object-contain drop-shadow-md transition-transform hover:scale-[1.02] dark:brightness-0 dark:invert" 
+                className="h-12 sm:h-14 md:h-16 lg:h-[4.5rem] w-auto max-w-[180px] sm:max-w-[220px] md:max-w-[280px] lg:max-w-[320px] object-contain drop-shadow-md transition-transform hover:scale-[1.02]" 
               />
             </Link>
 
