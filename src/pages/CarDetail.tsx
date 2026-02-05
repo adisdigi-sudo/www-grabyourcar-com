@@ -12,6 +12,7 @@ import { VariantComparisonTable } from "@/components/VariantComparisonTable";
 import { WhatsAppSalesCTA } from "@/components/WhatsAppCTA";
 import { PriceSummaryCard } from "@/components/PriceSummaryCard";
 import { BookingForm } from "@/components/BookingForm";
+import { ColorGalleryViewer } from "@/components/ColorGalleryViewer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -80,7 +81,6 @@ const CarDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   const car = getCarBySlug(slug || "");
   
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [selectedColor, setSelectedColor] = useState(0);
   const [selectedVariant, setSelectedVariant] = useState(0);
 
@@ -99,14 +99,6 @@ const CarDetail = () => {
       </div>
     );
   }
-
-  const nextImage = () => {
-    setCurrentImageIndex((prev) => (prev + 1) % car.gallery.length);
-  };
-
-  const prevImage = () => {
-    setCurrentImageIndex((prev) => (prev - 1 + car.gallery.length) % car.gallery.length);
-  };
 
   const getOfferIcon = (type: string) => {
     switch (type) {
@@ -200,55 +192,29 @@ const CarDetail = () => {
         <section className="py-8 md:py-12">
           <div className="container mx-auto px-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
-              {/* Image Gallery */}
+              {/* Color Gallery Viewer */}
               <div className="space-y-4">
-                <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-secondary">
-                  <img
-                    src={car.gallery[currentImageIndex]}
-                    alt={`${car.name} - Image ${currentImageIndex + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                  
-                  {/* Navigation Arrows */}
-                  <button
-                    onClick={prevImage}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-background/90 rounded-full flex items-center justify-center shadow-lg hover:bg-background transition-colors"
-                  >
-                    <ChevronLeft className="h-5 w-5" />
-                  </button>
-                  <button
-                    onClick={nextImage}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-background/90 rounded-full flex items-center justify-center shadow-lg hover:bg-background transition-colors"
-                  >
-                    <ChevronRight className="h-5 w-5" />
-                  </button>
-
-                  {/* Badges */}
-                  <div className="absolute top-4 left-4 flex gap-2">
+                {/* Hot/Limited Badges */}
+                {(car.isHot || car.isLimited) && (
+                  <div className="flex gap-2 mb-2">
                     {car.isHot && <Badge variant="hot">🔥 Hot Deal</Badge>}
                     {car.isLimited && <Badge variant="limited">⚡ {car.availability}</Badge>}
                   </div>
-                </div>
+                )}
+                
+                <ColorGalleryViewer
+                  colors={car.colors}
+                  carName={car.name}
+                  carImage={car.image}
+                  gallery={car.gallery}
+                  selectedColor={selectedColor}
+                  onColorChange={setSelectedColor}
+                />
 
-                {/* Thumbnails */}
-                <div className="flex gap-3">
-                  {car.gallery.map((img, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setCurrentImageIndex(index)}
-                      className={`relative w-20 h-16 rounded-lg overflow-hidden border-2 transition-all ${
-                        currentImageIndex === index ? "border-primary" : "border-transparent"
-                      }`}
-                    >
-                      <img src={img} alt="" className="w-full h-full object-cover" />
-                    </button>
-                  ))}
+                {/* Book Your Car Form - Left Side */}
+                <div className="mt-6">
+                  <BookingForm carName={car.name} carBrand={car.brand} />
                 </div>
-
-              {/* Book Your Car Form - Left Side */}
-              <div className="mt-6">
-                <BookingForm carName={car.name} carBrand={car.brand} />
-              </div>
               </div>
 
               {/* Car Info */}
