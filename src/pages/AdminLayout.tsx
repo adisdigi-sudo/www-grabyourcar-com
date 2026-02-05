@@ -32,6 +32,7 @@ import { WebsiteContentManagement } from "@/components/admin/WebsiteContentManag
 import { SocialProofManagement } from "@/components/admin/SocialProofManagement";
 import { IntegrationsManagement } from "@/components/admin/IntegrationsManagement";
 import { OffersManagement } from "@/components/admin/OffersManagement";
+import { AutoIntelligenceSettings } from "@/components/admin/AutoIntelligenceSettings";
 
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
@@ -144,6 +145,8 @@ const AdminLayout = () => {
         return <AIContentManagement />;
       case "content-ai":
         return <AIContentHub />;
+      case "content-intelligence":
+        return <AutoIntelligenceSettings />;
       case "marketing-email":
         return <EmailMarketingManagement />;
       case "marketing-bulk":
