@@ -22,7 +22,7 @@ import { BlogManagement } from "@/components/admin/BlogManagement";
 import { NotificationCenter } from "@/components/admin/NotificationCenter";
 import { SEOBuilder } from "@/components/admin/SEOBuilder";
 import { BrandingSettings } from "@/components/admin/BrandingSettings";
-import { VariantPricingManagement } from "@/components/admin/VariantPricingManagement";
+// VariantPricingManagement consolidated into UnifiedCarManagement
 import { APIIntegrationPortal } from "@/components/admin/APIIntegrationPortal";
 import { EmailMarketingManagement } from "@/components/admin/EmailMarketingManagement";
 import { AIContentHub } from "@/components/admin/AIContentHub";
@@ -100,9 +100,9 @@ const AdminLayout = () => {
         return <LeadManagement />;
       case "cars-list":
       case "cars-images":
-        return <UnifiedCarManagement />;
       case "cars-variants":
-        return <VariantPricingManagement />;
+      case "cars-specs":
+      case "cars-pricing":
       case "cars-compare":
         return <UnifiedCarManagement />;
       case "cars-migration":

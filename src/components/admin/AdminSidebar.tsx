@@ -60,13 +60,13 @@ const navItems: NavItem[] = [
   },
   { 
     id: "cars", 
-    label: "Car Catalog", 
+    label: "Car Management", 
     icon: Car,
     children: [
-      { id: "cars-list", label: "All Cars", icon: Car },
-      { id: "cars-images", label: "Car Images", icon: Image },
-      { id: "cars-variants", label: "Variants & Pricing", icon: Tags },
-      { id: "cars-compare", label: "Compare Manager", icon: PanelLeft },
+      { id: "cars-list", label: "Cars & Details", icon: Car },
+      { id: "cars-images", label: "Images & Gallery", icon: Image },
+      { id: "cars-variants", label: "Variants & Specs", icon: Tags },
+      { id: "cars-pricing", label: "Pricing & Breakup", icon: CreditCard },
       { id: "cars-migration", label: "Data Migration", icon: Database },
       { id: "cars-ai", label: "AI Enhancement", icon: Brain },
     ]
