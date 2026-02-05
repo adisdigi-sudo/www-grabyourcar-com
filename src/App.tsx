@@ -30,6 +30,7 @@ import MyOrders from "./pages/MyOrders";
 import CarFinder from "./pages/CarFinder";
 import AdminLayout from "./pages/AdminLayout";
 import AdminAuth from "./pages/AdminAuth";
+import AdminResetPassword from "./pages/AdminResetPassword";
 import SelfDriveRentals from "./pages/SelfDriveRentals";
 import HSRP from "./pages/HSRP";
 import UpcomingCars from "./pages/UpcomingCars";
@@ -73,6 +74,7 @@ const App = () => (
                 <Route path="/car-finder" element={<CarFinder />} />
                 <Route path="/admin" element={<AdminLayout />} />
                 <Route path="/admin-auth" element={<AdminAuth />} />
+                <Route path="/admin-reset-password" element={<AdminResetPassword />} />
                 <Route path="/self-drive" element={<SelfDriveRentals />} />
                 <Route path="/hsrp" element={<HSRP />} />
                 <Route path="/upcoming-cars" element={<UpcomingCars />} />
