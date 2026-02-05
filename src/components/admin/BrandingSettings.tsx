@@ -31,12 +31,12 @@ export const BrandingSettings = () => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   
   const [formData, setFormData] = useState<BrandingSettings>({
-    logo_url: "/logo-grabyourcar.png",
+    logo_url: "/src/assets/logo-grabyourcar-new.png",
     logo_dark_url: "",
     favicon_url: "/favicon.png",
     og_image_url: "/og-image.png",
-    primary_color: "#2563eb",
-    secondary_color: "#7c3aed",
+    primary_color: "#22c55e",
+    secondary_color: "#1e3a5f",
     brand_name: "Grabyourcar",
     tagline: "Your Trusted Car Partner",
   });
