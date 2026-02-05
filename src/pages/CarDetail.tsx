@@ -81,14 +81,6 @@ const CarDetail = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [selectedColor, setSelectedColor] = useState(0);
   const [selectedVariant, setSelectedVariant] = useState(0);
-  const [bookingForm, setBookingForm] = useState({
-    name: "",
-    phone: "",
-    email: "",
-    city: "",
-    preferredDate: "",
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!car) {
     return (
@@ -105,29 +97,6 @@ const CarDetail = () => {
       </div>
     );
   }
-
-  const handleBookingSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!bookingForm.name || !bookingForm.phone) {
-      toast.error("Please fill in required fields");
-      return;
-    }
-
-    if (!/^\d{10}$/.test(bookingForm.phone)) {
-      toast.error("Please enter a valid 10-digit phone number");
-      return;
-    }
-
-    setIsSubmitting(true);
-    
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    
-    toast.success("Booking request submitted! Our team will contact you shortly.");
-    setBookingForm({ name: "", phone: "", email: "", city: "", preferredDate: "" });
-    setIsSubmitting(false);
-  };
 
   const nextImage = () => {
     setCurrentImageIndex((prev) => (prev + 1) % car.gallery.length);
@@ -671,134 +640,6 @@ const CarDetail = () => {
           </div>
         </section>
 
-        {/* Booking Form */}
-        <section className="py-16 bg-background">
-          <div className="container mx-auto px-4">
-            <div className="max-w-4xl mx-auto">
-              <div className="text-center mb-10">
-                <Badge className="mb-4">Book Now</Badge>
-                <h2 className="font-heading text-3xl md:text-4xl font-bold mb-4">
-                  Book Your {car.name}
-                </h2>
-                <p className="text-muted-foreground">
-                  Fill the form below and our team will get in touch with you
-                </p>
-              </div>
-
-              <Card>
-                <CardContent className="p-6 md:p-8">
-                  <form onSubmit={handleBookingSubmit} className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label htmlFor="name">Full Name *</Label>
-                        <div className="relative">
-                          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            id="name"
-                            placeholder="Enter your name"
-                            className="pl-10"
-                            value={bookingForm.name}
-                            onChange={(e) => setBookingForm({ ...bookingForm, name: e.target.value })}
-                            required
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="phone">Phone Number *</Label>
-                        <div className="relative">
-                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            id="phone"
-                            placeholder="Enter 10-digit number"
-                            className="pl-10"
-                            value={bookingForm.phone}
-                            onChange={(e) => setBookingForm({ ...bookingForm, phone: e.target.value })}
-                            required
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email Address</Label>
-                        <div className="relative">
-                          <MessageCircle className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            id="email"
-                            type="email"
-                            placeholder="Enter your email"
-                            className="pl-10"
-                            value={bookingForm.email}
-                            onChange={(e) => setBookingForm({ ...bookingForm, email: e.target.value })}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="city">City</Label>
-                        <div className="relative">
-                          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            id="city"
-                            placeholder="Enter your city"
-                            className="pl-10"
-                            value={bookingForm.city}
-                            onChange={(e) => setBookingForm({ ...bookingForm, city: e.target.value })}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-2 md:col-span-2">
-                        <Label htmlFor="preferredDate">Preferred Visit Date</Label>
-                        <div className="relative">
-                          <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            id="preferredDate"
-                            type="date"
-                            className="pl-10"
-                            value={bookingForm.preferredDate}
-                            onChange={(e) => setBookingForm({ ...bookingForm, preferredDate: e.target.value })}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Selected Car Info */}
-                    <div className="bg-secondary/50 rounded-xl p-4 flex items-center gap-4">
-                      <img src={car.image} alt={car.name} className="w-24 h-16 object-cover rounded-lg" />
-                      <div className="flex-1">
-                        <p className="font-semibold">{car.name} - {car.variants[selectedVariant].name}</p>
-                        <p className="text-sm text-muted-foreground">{car.colors[selectedColor].name}</p>
-                      </div>
-                      <p className="font-bold text-primary">{car.variants[selectedVariant].price}</p>
-                    </div>
-
-                    <Button type="submit" variant="cta" size="lg" className="w-full" disabled={isSubmitting}>
-                      {isSubmitting ? "Submitting..." : "Book Test Drive"}
-                    </Button>
-
-                    <p className="text-center text-sm text-muted-foreground">
-                      By submitting, you agree to our terms and privacy policy
-                    </p>
-                  </form>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* AI Recommendations Sidebar */}
-            <div className="lg:col-span-1">
-              <div className="sticky top-24">
-                <AICarRecommendations
-                  carName={car.name}
-                  brand={car.brand}
-                  price={car.price}
-                  fuelTypes={car.fuelTypes}
-                  transmission={car.transmission}
-                />
-              </div>
-            </div>
-          </div>
-        </section>
       </main>
 
       <Footer />
