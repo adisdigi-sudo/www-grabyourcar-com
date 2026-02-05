@@ -21,45 +21,43 @@
    Sparkles
  } from "lucide-react";
  
- // Placeholder data - to be filled by admin
+ // Leadership & Company Information
  const founderInfo = {
-   name: "[Founder Name]",
+   name: "Anshdeep Singh",
    role: "Founder & CEO",
    image: null, // Will be uploaded
-   bio: "[A brief biography of the founder will be added here. Share your journey, passion for automobiles, and vision for revolutionizing car buying in India.]",
-   linkedin: "#",
+   bio: "Anshdeep Singh is the Founder & CEO of Grabyourcar, an emerging automotive platform dedicated to transforming the new car buying experience in India. With a strong entrepreneurial vision and deep passion for automobiles, he recognized the challenges customers face — from long waiting periods to inconsistent pricing and limited dealership access. Through Grabyourcar, he aims to create a smarter, faster, and more transparent vehicle purchasing journey by leveraging technology and a growing dealer network.",
+   linkedin: "https://www.linkedin.com/in/anshdeep-singh-033407236",
  };
  
  const companyStory = {
-   founded: "2024",
-   headquarters: "Delhi NCR, India",
-   mission: "To make car buying in India transparent, hassle-free, and delightful for every customer.",
-   vision: "To become India's most trusted and technology-driven automotive platform, empowering millions of car buyers with the best deals and seamless experience.",
-   story: `[Your company story will go here. Share how Grabyourcar started - the spark of the idea, the challenges faced, and how you built the platform to solve real problems for car buyers in India.
+   founded: "2023",
+   headquarters: "Gurugram, Haryana",
+   mission: "To simplify and modernize the way India buys new cars — making car buying smarter, quicker, and completely hassle-free.",
+   vision: "To become a trusted automotive platform that empowers customers with better options, stronger deals, and end-to-end support throughout their journey.",
+   story: `Grabyourcar was founded with a clear purpose — to simplify and modernize the way India buys new cars.
  
- Talk about:
- - What inspired you to start Grabyourcar
- - The problem you saw in the car buying industry
- - How you're different from traditional dealerships
- - Your commitment to customer satisfaction
- - Key milestones and achievements]`,
+ The idea emerged from recognizing a common frustration among buyers: long waiting periods, lack of pricing transparency, and the difficulty of comparing real dealership offers. Traditional car buying often left customers with limited choices and unnecessary delays.
+ 
+ The turning point came when we saw how technology could bridge this gap — connecting customers to multiple dealerships, creating price advantages, and enabling faster vehicle deliveries.
+ 
+ Built on the principles of trust, transparency, and efficiency, Grabyourcar is committed to making car buying smarter, quicker, and completely hassle-free.`,
  };
  
  const teamMembers = [
    {
-     name: "[Team Member 1]",
-     role: "Co-Founder & COO",
-     image: null,
-   },
-   {
-     name: "[Team Member 2]",
+     name: "Parag Goel",
      role: "Head of Sales",
      image: null,
+     bio: "Parag leads the sales strategy at Grabyourcar, driving customer acquisition and building strong relationships with dealership partners.",
+     linkedin: null,
    },
    {
-     name: "[Team Member 3]",
-     role: "Head of Technology",
+     name: "Ishangee Sharma",
+     role: "Head of Operations",
      image: null,
+     bio: "Ishangee oversees operations, ensuring efficiency across processes, partner coordination, and customer fulfillment.",
+     linkedin: "https://www.linkedin.com/in/ishangee-sharma-657176146",
    },
  ];
  
@@ -87,10 +85,11 @@
  ];
  
  const milestones = [
-   { year: "2024", event: "Grabyourcar founded with a vision to transform car buying" },
-   { year: "2024", event: "Partnered with 50+ authorized dealerships across India" },
-   { year: "2025", event: "Launched AI-powered car recommendation engine" },
-   { year: "2025", event: "Expanded to 15+ major cities" },
+   { year: "2023", event: "Grabyourcar founded with a vision to transform car buying in India" },
+   { year: "2023", event: "Established headquarters in Gurugram, Haryana" },
+   { year: "2024", event: "Built expanding dealer network across key markets" },
+   { year: "2024", event: "Crossed 500+ happy customers milestone" },
+   { year: "2025", event: "Launched AI-powered car recommendation and comparison tools" },
  ];
  
  const About = () => {
@@ -117,20 +116,20 @@
              <p className="text-muted-foreground text-lg md:text-xl max-w-3xl mx-auto mb-8">
                {companyStory.mission}
              </p>
-             <div className="flex flex-wrap justify-center gap-6 text-sm">
-               <div className="flex items-center gap-2 text-muted-foreground">
-                 <Car className="h-5 w-5 text-primary" />
-                 <span>87+ Car Models</span>
+               <div className="flex flex-wrap justify-center gap-6 text-sm">
+                 <div className="flex items-center gap-2 text-muted-foreground">
+                   <Car className="h-5 w-5 text-primary" />
+                   <span>87+ Car Models</span>
+                 </div>
+                 <div className="flex items-center gap-2 text-muted-foreground">
+                   <MapPin className="h-5 w-5 text-primary" />
+                   <span>Delhi NCR & Pan-India</span>
+                 </div>
+                 <div className="flex items-center gap-2 text-muted-foreground">
+                   <Users className="h-5 w-5 text-primary" />
+                   <span>500+ Happy Customers</span>
+                 </div>
                </div>
-               <div className="flex items-center gap-2 text-muted-foreground">
-                 <MapPin className="h-5 w-5 text-primary" />
-                 <span>Pan-India Coverage</span>
-               </div>
-               <div className="flex items-center gap-2 text-muted-foreground">
-                 <Users className="h-5 w-5 text-primary" />
-                 <span>15,000+ Happy Customers</span>
-               </div>
-             </div>
            </div>
          </section>
  
@@ -153,21 +152,21 @@
                    
                    <div className="mt-8 pt-6 border-t border-border grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
                      <div>
-                       <p className="text-2xl font-bold text-primary">{companyStory.founded}</p>
-                       <p className="text-sm text-muted-foreground">Founded</p>
-                     </div>
-                     <div>
-                       <p className="text-2xl font-bold text-primary">87+</p>
-                       <p className="text-sm text-muted-foreground">Car Models</p>
-                     </div>
-                     <div>
-                       <p className="text-2xl font-bold text-primary">15K+</p>
-                       <p className="text-sm text-muted-foreground">Customers</p>
-                     </div>
-                     <div>
-                       <p className="text-2xl font-bold text-primary">₹85L+</p>
-                       <p className="text-sm text-muted-foreground">Saved</p>
-                     </div>
+                         <p className="text-2xl font-bold text-primary">{companyStory.founded}</p>
+                         <p className="text-sm text-muted-foreground">Founded</p>
+                       </div>
+                       <div>
+                         <p className="text-2xl font-bold text-primary">87+</p>
+                         <p className="text-sm text-muted-foreground">Car Models</p>
+                       </div>
+                       <div>
+                         <p className="text-2xl font-bold text-primary">500+</p>
+                         <p className="text-sm text-muted-foreground">Customers</p>
+                       </div>
+                       <div>
+                         <p className="text-2xl font-bold text-primary">₹25L+</p>
+                         <p className="text-sm text-muted-foreground">Saved</p>
+                       </div>
                    </div>
                  </CardContent>
                </Card>
@@ -204,15 +203,15 @@
            </div>
          </section>
  
-         {/* Founder Section */}
-         <section className="py-16 md:py-20">
+           {/* Leadership Section */}
+           <section className="py-16 md:py-20">
            <div className="container mx-auto px-4">
              <div className="max-w-4xl mx-auto">
                <div className="text-center mb-10">
                  <Badge variant="outline" className="mb-4">Leadership</Badge>
-                 <h2 className="font-heading text-2xl md:text-4xl font-bold text-foreground">
-                   Meet Our Founder
-                 </h2>
+                   <h2 className="font-heading text-2xl md:text-4xl font-bold text-foreground">
+                     Meet Our Leadership Team
+                   </h2>
                </div>
                
                <Card className="overflow-hidden">
@@ -253,35 +252,42 @@
            </div>
          </section>
  
-         {/* Team Section */}
-         <section className="py-16 md:py-20 bg-secondary/30">
-           <div className="container mx-auto px-4">
-             <div className="text-center mb-12">
-               <Badge variant="outline" className="mb-4">Our Team</Badge>
-               <h2 className="font-heading text-2xl md:text-4xl font-bold text-foreground">
-                 The People Behind Grabyourcar
-               </h2>
-             </div>
-             
-             <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-               {teamMembers.map((member, index) => (
-                 <Card key={index} className="text-center hover:shadow-lg transition-shadow">
-                   <CardContent className="p-6">
-                     <div className="w-24 h-24 bg-gradient-to-br from-primary/20 to-primary/5 rounded-full mx-auto mb-4 flex items-center justify-center">
-                       {member.image ? (
-                         <img src={member.image} alt={member.name} className="w-full h-full object-cover rounded-full" />
-                       ) : (
-                         <Users className="w-10 h-10 text-muted-foreground/50" />
+           {/* Team Section */}
+           <section className="py-16 md:py-20 bg-secondary/30">
+             <div className="container mx-auto px-4">
+               <div className="text-center mb-12">
+                 <Badge variant="outline" className="mb-4">Core Team</Badge>
+                 <h2 className="font-heading text-2xl md:text-4xl font-bold text-foreground">
+                   The People Behind Grabyourcar
+                 </h2>
+               </div>
+               
+               <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+                 {teamMembers.map((member, index) => (
+                   <Card key={index} className="text-center hover:shadow-lg transition-shadow">
+                     <CardContent className="p-6">
+                       <div className="w-24 h-24 bg-gradient-to-br from-primary/20 to-primary/5 rounded-full mx-auto mb-4 flex items-center justify-center">
+                         {member.image ? (
+                           <img src={member.image} alt={member.name} className="w-full h-full object-cover rounded-full" />
+                         ) : (
+                           <Users className="w-10 h-10 text-muted-foreground/50" />
+                         )}
+                       </div>
+                       <h3 className="font-semibold text-lg">{member.name}</h3>
+                       <p className="text-sm text-primary mb-2">{member.role}</p>
+                       <p className="text-xs text-muted-foreground mb-3">{member.bio}</p>
+                       {member.linkedin && (
+                         <a href={member.linkedin} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-xs text-primary hover:underline">
+                           <Linkedin className="h-3 w-3 mr-1" />
+                           LinkedIn
+                         </a>
                        )}
-                     </div>
-                     <h3 className="font-semibold text-lg">{member.name}</h3>
-                     <p className="text-sm text-primary">{member.role}</p>
-                   </CardContent>
-                 </Card>
-               ))}
+                     </CardContent>
+                   </Card>
+                 ))}
+               </div>
              </div>
-           </div>
-         </section>
+           </section>
  
          {/* Milestones */}
          <section className="py-16 md:py-20">
@@ -343,20 +349,25 @@
                </a>
              </div>
              
-             <div className="mt-10 pt-8 border-t border-primary-foreground/20 flex flex-wrap justify-center gap-8 text-sm text-primary-foreground/80">
-               <div className="flex items-center gap-2">
-                 <MapPin className="h-4 w-4" />
-                 <span>{companyStory.headquarters}</span>
+               <div className="mt-10 pt-8 border-t border-primary-foreground/20">
+                 <p className="text-xs text-primary-foreground/60 text-center mb-4">
+                   MS 228, 2nd Floor, DT Mega Mall, Sector 28, Gurugram, Haryana – 122001
+                 </p>
+                 <div className="flex flex-wrap justify-center gap-8 text-sm text-primary-foreground/80">
+                   <div className="flex items-center gap-2">
+                     <MapPin className="h-4 w-4" />
+                     <span>{companyStory.headquarters}</span>
+                   </div>
+                   <div className="flex items-center gap-2">
+                     <Phone className="h-4 w-4" />
+                     <span>+91 98559 24442</span>
+                   </div>
+                   <div className="flex items-center gap-2">
+                     <Mail className="h-4 w-4" />
+                     <span>founder@grabyourcar.com</span>
+                   </div>
+                 </div>
                </div>
-               <div className="flex items-center gap-2">
-                 <Phone className="h-4 w-4" />
-                 <span>+91 98559 24442</span>
-               </div>
-               <div className="flex items-center gap-2">
-                 <Mail className="h-4 w-4" />
-                 <span>contact@grabyourcar.com</span>
-               </div>
-             </div>
            </div>
          </section>
        </main>
