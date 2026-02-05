@@ -143,6 +143,8 @@ export const UnifiedCarManagement = () => {
   });
   const [newSpec, setNewSpec] = useState({ category: "engine", label: "", value: "" });
   const [newColor, setNewColor] = useState({ name: "", hex_code: "#000000", image_url: "" });
+  const [editingColorId, setEditingColorId] = useState<string | null>(null);
+  const [editingColorData, setEditingColorData] = useState<{ name: string; hex_code: string; image_url: string } | null>(null);
   const [editingVariantId, setEditingVariantId] = useState<string | null>(null);
   const [priceBreakupState, setPriceBreakupState] = useState("DL");
 
@@ -410,6 +412,26 @@ export const UnifiedCarManagement = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['unifiedCarManagement'] });
       toast.success('Color deleted');
+    },
+  });
+
+  // Update color mutation
+  const updateColorMutation = useMutation({
+    mutationFn: async ({ colorId, updates }: { colorId: string; updates: { name?: string; hex_code?: string; image_url?: string | null } }) => {
+      const { error } = await supabase
+        .from('car_colors')
+        .update(updates)
+        .eq('id', colorId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['unifiedCarManagement'] });
+      toast.success('Color updated');
+      setEditingColorId(null);
+      setEditingColorData(null);
+    },
+    onError: () => {
+      toast.error('Failed to update color');
     },
   });
 
@@ -984,32 +1006,130 @@ export const UnifiedCarManagement = () => {
 
               {/* Colors Tab */}
               <TabsContent value="colors" className="space-y-4">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   {selectedCar.colors.map((color) => (
-                    <div key={color.id} className="relative group border rounded-lg p-3 hover:shadow-md transition-shadow">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div
-                          className="w-10 h-10 rounded-full border-2 border-border shadow-inner"
-                          style={{ backgroundColor: color.hex_code }}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">{color.name}</p>
-                          <p className="text-xs text-muted-foreground">{color.hex_code}</p>
+                    <div key={color.id} className="relative group border rounded-lg p-4 hover:shadow-md transition-shadow">
+                      {editingColorId === color.id ? (
+                        // Edit mode
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="color"
+                              value={editingColorData?.hex_code || color.hex_code}
+                              onChange={(e) => setEditingColorData(prev => prev ? { ...prev, hex_code: e.target.value } : null)}
+                              className="w-12 h-10 p-1 cursor-pointer"
+                            />
+                            <Input
+                              value={editingColorData?.name || ""}
+                              onChange={(e) => setEditingColorData(prev => prev ? { ...prev, name: e.target.value } : null)}
+                              placeholder="Color Name"
+                              className="flex-1"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Color-Specific Image URL</Label>
+                            <Input
+                              value={editingColorData?.image_url || ""}
+                              onChange={(e) => setEditingColorData(prev => prev ? { ...prev, image_url: e.target.value } : null)}
+                              placeholder="https://example.com/car-in-color.jpg"
+                            />
+                          </div>
+                          {editingColorData?.image_url && (
+                            <div className="h-20 rounded-md overflow-hidden bg-muted">
+                              <img 
+                                src={editingColorData.image_url} 
+                                alt="Preview" 
+                                className="w-full h-full object-cover"
+                                onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
+                              />
+                            </div>
+                          )}
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => {
+                                if (editingColorData) {
+                                  updateColorMutation.mutate({
+                                    colorId: color.id,
+                                    updates: {
+                                      name: editingColorData.name,
+                                      hex_code: editingColorData.hex_code,
+                                      image_url: editingColorData.image_url || null,
+                                    }
+                                  });
+                                }
+                              }}
+                              disabled={updateColorMutation.isPending}
+                            >
+                              <Save className="h-3 w-3 mr-1" />
+                              Save
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setEditingColorId(null);
+                                setEditingColorData(null);
+                              }}
+                            >
+                              <X className="h-3 w-3 mr-1" />
+                              Cancel
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                      {color.image_url && (
-                        <div className="h-24 rounded-md overflow-hidden bg-muted mt-2">
-                          <img src={color.image_url} alt={color.name} className="w-full h-full object-cover" />
-                        </div>
+                      ) : (
+                        // View mode
+                        <>
+                          <div className="flex items-center gap-3 mb-2">
+                            <div
+                              className="w-10 h-10 rounded-full border-2 border-border shadow-inner flex-shrink-0"
+                              style={{ backgroundColor: color.hex_code }}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium truncate">{color.name}</p>
+                              <p className="text-xs text-muted-foreground">{color.hex_code}</p>
+                            </div>
+                          </div>
+                          {color.image_url ? (
+                            <div className="h-24 rounded-md overflow-hidden bg-muted mt-2 relative group/img">
+                              <img src={color.image_url} alt={color.name} className="w-full h-full object-cover" />
+                              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
+                                <Badge variant="secondary" className="text-xs">Color Image</Badge>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="h-24 rounded-md bg-muted/50 border-2 border-dashed border-muted-foreground/30 mt-2 flex items-center justify-center text-xs text-muted-foreground">
+                              <ImageIcon className="h-4 w-4 mr-1" />
+                              No color image
+                            </div>
+                          )}
+                          <div className="flex gap-1 mt-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex-1"
+                              onClick={() => {
+                                setEditingColorId(color.id);
+                                setEditingColorData({
+                                  name: color.name,
+                                  hex_code: color.hex_code,
+                                  image_url: color.image_url || ""
+                                });
+                              }}
+                            >
+                              <Edit className="h-3 w-3 mr-1" />
+                              Edit
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => deleteColorMutation.mutate(color.id)}
+                            >
+                              <Trash2 className="h-3 w-3 text-destructive" />
+                            </Button>
+                          </div>
+                        </>
                       )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => deleteColorMutation.mutate(color.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
                     </div>
                   ))}
                 </div>
@@ -1051,7 +1171,7 @@ export const UnifiedCarManagement = () => {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label>Color-Specific Image URL (optional)</Label>
+                      <Label>Color-Specific Image URL</Label>
                       <Input
                         value={newColor.image_url}
                         onChange={(e) => setNewColor({ ...newColor, image_url: e.target.value })}
@@ -1073,6 +1193,19 @@ export const UnifiedCarManagement = () => {
                       </Button>
                     </div>
                   </div>
+                  {newColor.image_url && (
+                    <div className="mt-3">
+                      <Label className="text-xs text-muted-foreground">Image Preview</Label>
+                      <div className="h-24 w-40 rounded-md overflow-hidden bg-muted mt-1">
+                        <img 
+                          src={newColor.image_url} 
+                          alt="Preview" 
+                          className="w-full h-full object-cover"
+                          onError={(e) => (e.target as HTMLImageElement).src = '/placeholder.svg'}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </TabsContent>
 
