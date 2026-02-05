@@ -14,6 +14,8 @@ interface ResponsiveLogoProps {
 interface BrandingSettings {
   logo_url?: string;
   logo_dark_url?: string;
+  animated_logo_url?: string;
+  use_animated_logo?: boolean;
   brand_name?: string;
   tagline?: string;
   logo_height_header?: number;
@@ -22,6 +24,8 @@ interface BrandingSettings {
   logo_width_header?: number;
   logo_width_footer?: number;
   logo_width_mobile?: number;
+  logo_position_horizontal?: "left" | "center" | "right";
+  logo_position_vertical?: "top" | "center" | "bottom";
 }
 
 export const ResponsiveLogo = ({ 
@@ -48,9 +52,14 @@ export const ResponsiveLogo = ({
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
-  // Determine logo URLs - backend settings take priority
-  const logoLight = brandingSettings?.logo_url || logoLightDefault;
-  const logoDark = brandingSettings?.logo_dark_url || logoDarkDefault;
+  // Determine logo URLs - animated logo takes priority if enabled
+  const useAnimated = brandingSettings?.use_animated_logo && brandingSettings?.animated_logo_url;
+  const logoLight = useAnimated 
+    ? brandingSettings.animated_logo_url 
+    : (brandingSettings?.logo_url || logoLightDefault);
+  const logoDark = useAnimated 
+    ? brandingSettings.animated_logo_url 
+    : (brandingSettings?.logo_dark_url || logoDarkDefault);
   
   // Use dark logo for footer (always on dark bg) or when in dark mode
   const logoImage = variant === "footer" || effectiveTheme === "dark" 
@@ -123,7 +132,7 @@ export const ResponsiveLogo = ({
   );
 };
 
-// Export a hook for getting logo URLs
+// Export a hook for getting logo URLs and settings
 export const useLogoUrls = () => {
   const { data: brandingSettings } = useQuery({
     queryKey: ['brandingSettings'],
@@ -135,15 +144,21 @@ export const useLogoUrls = () => {
         .single();
       
       if (error && error.code !== 'PGRST116') return null;
-      return data?.setting_value as Record<string, string> | null;
+      return data?.setting_value as Record<string, string | number | boolean> | null;
     },
     staleTime: 5 * 60 * 1000,
   });
 
+  const useAnimated = brandingSettings?.use_animated_logo && brandingSettings?.animated_logo_url;
+
   return {
-    logoLight: brandingSettings?.logo_url || logoLightDefault,
-    logoDark: brandingSettings?.logo_dark_url || logoDarkDefault,
-    brandName: brandingSettings?.brand_name || "Grabyourcar",
-    tagline: brandingSettings?.tagline || "Your Trusted Car Partner",
+    logoLight: useAnimated ? String(brandingSettings?.animated_logo_url) : (brandingSettings?.logo_url || logoLightDefault),
+    logoDark: useAnimated ? String(brandingSettings?.animated_logo_url) : (brandingSettings?.logo_dark_url || logoDarkDefault),
+    animatedLogoUrl: brandingSettings?.animated_logo_url || "",
+    useAnimatedLogo: Boolean(brandingSettings?.use_animated_logo),
+    brandName: String(brandingSettings?.brand_name || "Grabyourcar"),
+    tagline: String(brandingSettings?.tagline || "Your Trusted Car Partner"),
+    logoPositionHorizontal: (brandingSettings?.logo_position_horizontal as "left" | "center" | "right") || "left",
+    logoPositionVertical: (brandingSettings?.logo_position_vertical as "top" | "center" | "bottom") || "center",
   };
 };

@@ -6,12 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Upload, Save, Palette, Image as ImageIcon, RefreshCw, Trash2, Eye } from "lucide-react";
+import { Upload, Save, Palette, Image as ImageIcon, RefreshCw, Trash2, Eye, Move } from "lucide-react";
 
 interface BrandingSettings {
   logo_url: string;
   logo_dark_url: string;
+  animated_logo_url: string;
+  use_animated_logo: boolean;
   favicon_url: string;
   og_image_url: string;
   primary_color: string;
@@ -24,6 +29,8 @@ interface BrandingSettings {
   logo_width_header: number;
   logo_width_footer: number;
   logo_width_mobile: number;
+  logo_position_horizontal: "left" | "center" | "right";
+  logo_position_vertical: "top" | "center" | "bottom";
   banner_height_desktop: number;
   banner_height_mobile: number;
 }
@@ -32,6 +39,7 @@ export const BrandingSettings = () => {
   const queryClient = useQueryClient();
   const logoInputRef = useRef<HTMLInputElement>(null);
   const logoDarkInputRef = useRef<HTMLInputElement>(null);
+  const animatedLogoInputRef = useRef<HTMLInputElement>(null);
   const faviconInputRef = useRef<HTMLInputElement>(null);
   const ogImageInputRef = useRef<HTMLInputElement>(null);
   
@@ -41,6 +49,8 @@ export const BrandingSettings = () => {
   const [formData, setFormData] = useState<BrandingSettings>({
     logo_url: "/src/assets/logo-grabyourcar-new.png",
     logo_dark_url: "",
+    animated_logo_url: "",
+    use_animated_logo: false,
     favicon_url: "/favicon.png",
     og_image_url: "/og-image.png",
     primary_color: "#22c55e",
@@ -50,9 +60,11 @@ export const BrandingSettings = () => {
     logo_height_header: 64,
     logo_height_footer: 56,
     logo_height_mobile: 40,
-    logo_width_header: 0, // 0 = auto
+    logo_width_header: 0,
     logo_width_footer: 0,
     logo_width_mobile: 0,
+    logo_position_horizontal: "left",
+    logo_position_vertical: "center",
     banner_height_desktop: 400,
     banner_height_mobile: 280,
   });
@@ -76,10 +88,12 @@ export const BrandingSettings = () => {
   // Load settings when data changes
   useState(() => {
     if (settings?.setting_value) {
-      const value = settings.setting_value as Record<string, string | number>;
+      const value = settings.setting_value as Record<string, string | number | boolean>;
       setFormData({
         logo_url: String(value.logo_url || "/logo-grabyourcar.png"),
         logo_dark_url: String(value.logo_dark_url || ""),
+        animated_logo_url: String(value.animated_logo_url || ""),
+        use_animated_logo: Boolean(value.use_animated_logo) || false,
         favicon_url: String(value.favicon_url || "/favicon.png"),
         og_image_url: String(value.og_image_url || "/og-image.png"),
         primary_color: String(value.primary_color || "#2563eb"),
@@ -92,6 +106,8 @@ export const BrandingSettings = () => {
         logo_width_header: Number(value.logo_width_header) || 0,
         logo_width_footer: Number(value.logo_width_footer) || 0,
         logo_width_mobile: Number(value.logo_width_mobile) || 0,
+        logo_position_horizontal: (value.logo_position_horizontal as "left" | "center" | "right") || "left",
+        logo_position_vertical: (value.logo_position_vertical as "top" | "center" | "bottom") || "center",
         banner_height_desktop: Number(value.banner_height_desktop) || 400,
         banner_height_mobile: Number(value.banner_height_mobile) || 280,
       });
@@ -337,6 +353,63 @@ export const BrandingSettings = () => {
                   value={formData.logo_dark_url}
                   onChange={(e) => setFormData({ ...formData, logo_dark_url: e.target.value })}
                   placeholder="Optional - defaults to main logo"
+                />
+              </CardContent>
+            </Card>
+
+            {/* Animated Logo */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  Animated Logo
+                  <Badge variant="secondary" className="text-xs">GIF/Video</Badge>
+                </CardTitle>
+                <CardDescription>Animated logo for special effects (GIF, WebP, or video)</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
+                  <Switch
+                    checked={formData.use_animated_logo}
+                    onCheckedChange={(v) => setFormData({ ...formData, use_animated_logo: v })}
+                  />
+                  <div>
+                    <Label className="font-medium">Use Animated Logo</Label>
+                    <p className="text-xs text-muted-foreground">Replace static logo with animated version</p>
+                  </div>
+                </div>
+                <div className="border-2 border-dashed rounded-lg p-6 text-center bg-white">
+                  {formData.animated_logo_url ? (
+                    <img 
+                      src={formData.animated_logo_url} 
+                      alt="Animated Logo" 
+                      className="max-h-16 mx-auto object-contain"
+                    />
+                  ) : (
+                    <ImageIcon className="h-16 w-16 mx-auto text-muted-foreground" />
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    ref={animatedLogoInputRef}
+                    type="file"
+                    accept="image/gif,image/webp,video/mp4,video/webm"
+                    className="hidden"
+                    onChange={(e) => handleFileUpload(e, 'animated_logo_url')}
+                  />
+                  <Button 
+                    variant="outline" 
+                    className="flex-1"
+                    onClick={() => animatedLogoInputRef.current?.click()}
+                    disabled={isUploading}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload Animated Logo
+                  </Button>
+                </div>
+                <Input
+                  value={formData.animated_logo_url}
+                  onChange={(e) => setFormData({ ...formData, animated_logo_url: e.target.value })}
+                  placeholder="https://... or /animated-logo.gif"
                 />
               </CardContent>
             </Card>
@@ -630,6 +703,48 @@ export const BrandingSettings = () => {
                     </div>
                   </div>
                 </div>
+              </div>
+
+              {/* Logo Position */}
+              <div className="border-t pt-6">
+                <Label className="text-base font-semibold mb-4 block flex items-center gap-2">
+                  <Move className="h-4 w-4" /> Logo Position
+                </Label>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label className="text-sm">Horizontal Position</Label>
+                    <Select
+                      value={formData.logo_position_horizontal}
+                      onValueChange={(v: "left" | "center" | "right") => setFormData({ ...formData, logo_position_horizontal: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="left">Left</SelectItem>
+                        <SelectItem value="center">Center</SelectItem>
+                        <SelectItem value="right">Right</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm">Vertical Position</Label>
+                    <Select
+                      value={formData.logo_position_vertical}
+                      onValueChange={(v: "top" | "center" | "bottom") => setFormData({ ...formData, logo_position_vertical: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="top">Top</SelectItem>
+                        <SelectItem value="center">Center</SelectItem>
+                        <SelectItem value="bottom">Bottom</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">Controls logo placement in the header</p>
               </div>
 
               {/* Banner Dimensions */}
