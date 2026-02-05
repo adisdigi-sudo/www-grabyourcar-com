@@ -6,3 +6,4 @@ export { RevenueChart } from './RevenueChart';
 export { RecentActivity } from './RecentActivity';
 export { PerformanceMetrics } from './PerformanceMetrics';
 export { DashboardDateFilter, type DateRange } from './DashboardDateFilter';
+export { DashboardExportButton } from './DashboardExportButton';

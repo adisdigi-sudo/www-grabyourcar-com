@@ -11,6 +11,7 @@ import {
   RecentActivity,
   PerformanceMetrics,
   DashboardDateFilter,
+  DashboardExportButton,
   type DateRange
 } from "./dashboard";
 
@@ -355,12 +356,26 @@ export const AdminDashboard = () => {
         </p>
       </div>
 
-      {/* Date Range Filter */}
-      <div className="flex justify-end">
-        <DashboardDateFilter 
-          dateRange={dateRange} 
-          onDateRangeChange={setDateRange} 
-        />
+      {/* Date Range Filter & Export */}
+      <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+        <div />
+        <div className="flex gap-2 items-center">
+          <DashboardDateFilter 
+            dateRange={dateRange} 
+            onDateRangeChange={setDateRange} 
+          />
+          <DashboardExportButton 
+            data={{
+              dateRange,
+              stats,
+              leadsTrend,
+              leadSources,
+              funnelData,
+              revenueData,
+              performanceData,
+            }}
+          />
+        </div>
       </div>
 
       {/* Stats Cards */}
