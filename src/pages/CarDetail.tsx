@@ -10,7 +10,8 @@ import { ShareButtons } from "@/components/ShareButtons";
 import { CarStructuredData } from "@/components/seo/CarStructuredData";
 import { VariantComparisonTable } from "@/components/VariantComparisonTable";
 import { WhatsAppSalesCTA } from "@/components/WhatsAppCTA";
- import { PriceSummaryCard } from "@/components/PriceSummaryCard";
+import { PriceSummaryCard } from "@/components/PriceSummaryCard";
+import { BookingForm } from "@/components/BookingForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -234,6 +235,11 @@ const CarDetail = () => {
                     </button>
                   ))}
                 </div>
+
+              {/* Book Your Car Form - Left Side */}
+              <div className="mt-6">
+                <BookingForm carName={car.name} carBrand={car.brand} />
+              </div>
               </div>
 
               {/* Car Info */}
