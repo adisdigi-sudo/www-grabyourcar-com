@@ -13,13 +13,16 @@ import { HSRPManagement } from "@/components/admin/HSRPManagement";
 import { CarDataManagement } from "@/components/admin/CarDataManagement";
 import { RoleManagement } from "@/components/admin/RoleManagement";
 import { AIContentManagement } from "@/components/admin/AIContentManagement";
-import { CarCatalogManagement } from "@/components/admin/CarCatalogManagement";
+import { UnifiedCarManagement } from "@/components/admin/UnifiedCarManagement";
 import { RentalManagement } from "@/components/admin/RentalManagement";
 import { AccessoriesManagement } from "@/components/admin/AccessoriesManagement";
 import { WebsiteSettings } from "@/components/admin/WebsiteSettings";
 import { WhatsAppManagement } from "@/components/admin/WhatsAppManagement";
 import { BlogManagement } from "@/components/admin/BlogManagement";
 import { NotificationCenter } from "@/components/admin/NotificationCenter";
+import { SEOBuilder } from "@/components/admin/SEOBuilder";
+import { BrandingSettings } from "@/components/admin/BrandingSettings";
+import { VariantPricingManagement } from "@/components/admin/VariantPricingManagement";
 
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
@@ -92,9 +95,11 @@ const AdminLayout = () => {
         return <LeadManagement />;
       case "cars-list":
       case "cars-images":
+        return <UnifiedCarManagement />;
       case "cars-variants":
+        return <VariantPricingManagement />;
       case "cars-compare":
-        return <CarCatalogManagement />;
+        return <UnifiedCarManagement />;
       case "cars-migration":
         return <CarDataManagement />;
       case "cars-ai":
@@ -103,9 +108,11 @@ const AdminLayout = () => {
       case "website-banners":
         return <HomepageManagement />;
       case "website-menu":
-      case "website-branding":
-      case "website-seo":
         return <WebsiteSettings />;
+      case "website-branding":
+        return <BrandingSettings />;
+      case "website-seo":
+        return <SEOBuilder />;
       case "services-hsrp":
         return <HSRPManagement />;
       case "services-rentals":
