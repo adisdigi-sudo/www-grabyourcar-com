@@ -60,6 +60,7 @@ import {
   formatPriceRangesForFilter 
 } from "@/hooks/useVehicleAttributes";
 import { useCars } from "@/hooks/useCars";
+import { useBrands } from "@/hooks/useBrands";
 import { useAuth } from "@/hooks/useAuth";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useCompare } from "@/hooks/useCompare";
@@ -73,6 +74,9 @@ const Cars = () => {
   
   // Fetch cars from database
   const { data: allCars = [], isLoading: carsLoading } = useCars({ useDatabase: true });
+  
+  // Fetch brands from database
+  const { data: dbBrands = [] } = useBrands();
   
   // Fetch vehicle attributes from database
   const { data: vehicleAttributes } = useVehicleAttributes();
@@ -260,11 +264,15 @@ const Cars = () => {
     );
   };
 
-  // Get unique brands from car data
+  // Get brands - prefer database brands, fall back to car data brands
   const availableBrands = useMemo(() => {
+    if (dbBrands.length > 0) {
+      return dbBrands.map(b => b.name);
+    }
+    // Fallback: derive from car data
     const brandSet = new Set(allCars.map((car) => car.brand));
     return Array.from(brandSet).sort();
-  }, [allCars]);
+  }, [dbBrands, allCars]);
 
   // Get unique body types from car data
   const availableBodyTypes = useMemo(() => {
