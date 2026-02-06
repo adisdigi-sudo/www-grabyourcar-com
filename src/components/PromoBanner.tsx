@@ -143,14 +143,6 @@ export const PromoBanner = () => {
       <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-slate-900 to-transparent z-10" />
       <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-slate-900 to-transparent z-10" />
       
-      {/* Center badge */}
-      <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-        <div className="bg-primary/90 backdrop-blur-sm text-primary-foreground px-4 py-1.5 rounded-full text-xs md:text-sm font-bold shadow-lg border border-white/20 flex items-center gap-2">
-          <span className="animate-pulse">🏎️</span>
-          <span>MEGA SAVINGS LIVE</span>
-          <span className="animate-pulse">🏁</span>
-        </div>
-      </div>
     </div>
   );
 };
