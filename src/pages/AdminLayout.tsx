@@ -36,6 +36,7 @@ import { AutoIntelligenceSettings } from "@/components/admin/AutoIntelligenceSet
 import CrossSellManagement from "@/components/admin/CrossSellManagement";
 import EMIPDFSettings from "@/components/admin/EMIPDFSettings";
 import { CarColorManagement } from "@/components/admin/CarColorManagement";
+import { CarImageSyncManager } from "@/components/admin/CarImageSyncManager";
 import { ManualQuoteGenerator } from "@/components/admin/ManualQuoteGenerator";
 import { DiscountManagement } from "@/components/admin/DiscountManagement";
 import { LaunchesManagement } from "@/components/admin/LaunchesManagement";
@@ -131,7 +132,9 @@ const AdminLayout = () => {
       case "cars-colors":
         return <CarColorManagement />;
       case "cars-images":
-        return <UnifiedCarManagement />;
+        return <CarImageSyncManager />;
+      case "cars-image-sync":
+        return <CarImageSyncManager />;
       case "cars-migration":
         return <CarDataManagement />;
       case "cars-brands":

@@ -879,6 +879,9 @@ export type Database = {
           created_at: string
           hex_code: string
           id: string
+          image_source: string | null
+          image_sync_status: string | null
+          image_synced_at: string | null
           image_url: string | null
           name: string
           sort_order: number | null
@@ -888,6 +891,9 @@ export type Database = {
           created_at?: string
           hex_code: string
           id?: string
+          image_source?: string | null
+          image_sync_status?: string | null
+          image_synced_at?: string | null
           image_url?: string | null
           name: string
           sort_order?: number | null
@@ -897,6 +903,9 @@ export type Database = {
           created_at?: string
           hex_code?: string
           id?: string
+          image_source?: string | null
+          image_sync_status?: string | null
+          image_synced_at?: string | null
           image_url?: string | null
           name?: string
           sort_order?: number | null
@@ -1212,6 +1221,8 @@ export type Database = {
           expected_price_min: number | null
           fuel_types: string[] | null
           id: string
+          images_synced: boolean | null
+          images_synced_at: string | null
           is_bestseller: boolean | null
           is_discontinued: boolean | null
           is_hot: boolean | null
@@ -1247,6 +1258,8 @@ export type Database = {
           expected_price_min?: number | null
           fuel_types?: string[] | null
           id?: string
+          images_synced?: boolean | null
+          images_synced_at?: string | null
           is_bestseller?: boolean | null
           is_discontinued?: boolean | null
           is_hot?: boolean | null
@@ -1282,6 +1295,8 @@ export type Database = {
           expected_price_min?: number | null
           fuel_types?: string[] | null
           id?: string
+          images_synced?: boolean | null
+          images_synced_at?: string | null
           is_bestseller?: boolean | null
           is_discontinued?: boolean | null
           is_hot?: boolean | null

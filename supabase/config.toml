@@ -21,13 +21,31 @@ verify_jwt = false
 [functions.enhance-car-data]
 verify_jwt = false
 
+[functions.fetch-brand-data]
+verify_jwt = false
+
+[functions.fetch-car-images]
+verify_jwt = false
+
 [functions.generate-blog]
+verify_jwt = false
+
+[functions.generate-car-data]
+verify_jwt = false
+
+[functions.generate-emi-content]
+verify_jwt = false
+
+[functions.migrate-brands]
 verify_jwt = false
 
 [functions.migrate-car-data]
 verify_jwt = false
 
 [functions.og-image]
+verify_jwt = false
+
+[functions.partner-booking]
 verify_jwt = false
 
 [functions.razorpay-create-order]
@@ -40,6 +58,9 @@ verify_jwt = true
 verify_jwt = false
 
 [functions.send-alert-email]
+verify_jwt = false
+
+[functions.send-automated-email]
 verify_jwt = false
 
 [functions.send-dashboard-report]
@@ -57,6 +78,9 @@ verify_jwt = false
 [functions.upcoming-cars]
 verify_jwt = false
 
+[functions.update-pricing]
+verify_jwt = false
+
 [functions.validate-car-data]
 verify_jwt = false
 
@@ -67,22 +91,4 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.whatsapp-webhook]
-verify_jwt = false
-
-[functions.generate-emi-content]
-verify_jwt = false
-
-[functions.generate-car-data]
-verify_jwt = false
-
-[functions.send-automated-email]
-verify_jwt = false
-
-[functions.update-pricing]
-verify_jwt = false
-
-[functions.fetch-brand-data]
-verify_jwt = false
-
-[functions.migrate-car-data]
 verify_jwt = false
