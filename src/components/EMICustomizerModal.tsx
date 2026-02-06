@@ -24,8 +24,17 @@ import {
   TrendingUp,
   Edit3,
   RotateCcw,
+  Gift,
+  Tag,
 } from "lucide-react";
-import { generateEMIPdf, generateEMIWhatsAppMessage, EMIData, OnRoadPriceBreakup, EMIPDFConfig } from "@/lib/generateEMIPdf";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { generateEMIPdf, generateEMIWhatsAppMessage, EMIData, OnRoadPriceBreakup, EMIPDFConfig, DiscountDetails } from "@/lib/generateEMIPdf";
 
 interface EMICustomizerModalProps {
   open: boolean;
@@ -61,6 +70,12 @@ export const EMICustomizerModal = ({
   const [tenure, setTenure] = useState(defaultTenure);
   const [isEditing, setIsEditing] = useState(false);
   
+  // Discount state
+  const [enableDiscount, setEnableDiscount] = useState(false);
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [discountType, setDiscountType] = useState<DiscountDetails['type']>('cash');
+  const [discountRemarks, setDiscountRemarks] = useState('');
+  
   // Reset to defaults when modal opens
   useEffect(() => {
     if (open) {
@@ -68,6 +83,10 @@ export const EMICustomizerModal = ({
       setInterestRate(defaultInterestRate);
       setTenure(defaultTenure);
       setIsEditing(false);
+      setEnableDiscount(false);
+      setDiscountAmount(0);
+      setDiscountType('cash');
+      setDiscountRemarks('');
     }
   }, [open]);
 
@@ -97,6 +116,11 @@ export const EMICustomizerModal = ({
     setTenure(defaultTenure);
   };
 
+  // Build discount object if enabled
+  const discount: DiscountDetails | undefined = enableDiscount && discountAmount > 0 
+    ? { amount: discountAmount, type: discountType, remarks: discountRemarks || undefined }
+    : undefined;
+
   const handleDownloadPdf = () => {
     const emiData: EMIData = {
       loanAmount: basePrice,
@@ -112,6 +136,7 @@ export const EMICustomizerModal = ({
       selectedColor,
       selectedCity,
       onRoadPrice,
+      discount,
     };
     
     generateEMIPdf(emiData, pdfConfig);
@@ -133,11 +158,21 @@ export const EMICustomizerModal = ({
       selectedColor,
       selectedCity,
       onRoadPrice,
+      discount,
     };
     
     const message = generateEMIWhatsAppMessage(emiData, pdfConfig);
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank");
   };
+
+  const discountTypes = [
+    { value: 'cash', label: 'Cash Discount' },
+    { value: 'exchange', label: 'Exchange Bonus' },
+    { value: 'accessory', label: 'Accessory Discount' },
+    { value: 'corporate', label: 'Corporate Discount' },
+    { value: 'festival', label: 'Festival Offer' },
+    { value: 'custom', label: 'Special Discount' },
+  ];
 
   const tenureOptions = [12, 24, 36, 48, 60, 72, 84, 96, 108, 120];
 
@@ -283,6 +318,77 @@ export const EMICustomizerModal = ({
                 </Button>
               ))}
             </div>
+          </div>
+
+          {/* Discount Section */}
+          <div className="space-y-3 pt-4 border-t">
+            <div className="flex items-center justify-between">
+              <Label className="flex items-center gap-2">
+                <Gift className="h-4 w-4 text-success" />
+                Add Discount Offer
+              </Label>
+              <Button
+                variant={enableDiscount ? "default" : "outline"}
+                size="sm"
+                onClick={() => setEnableDiscount(!enableDiscount)}
+                className="h-8"
+              >
+                {enableDiscount ? "Remove" : "Add Discount"}
+              </Button>
+            </div>
+
+            {enableDiscount && (
+              <div className="space-y-3 p-4 bg-success/5 rounded-lg border border-success/20">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs mb-1.5 block">Discount Type</Label>
+                    <Select value={discountType} onValueChange={(v) => setDiscountType(v as DiscountDetails['type'])}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {discountTypes.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            {type.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs mb-1.5 block">Discount Amount</Label>
+                    <div className="relative">
+                      <IndianRupee className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input
+                        type="number"
+                        value={discountAmount || ''}
+                        onChange={(e) => setDiscountAmount(Math.max(0, Number(e.target.value)))}
+                        placeholder="e.g. 25000"
+                        className="pl-8 h-9"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs mb-1.5 block">Remarks (Optional)</Label>
+                  <Input
+                    value={discountRemarks}
+                    onChange={(e) => setDiscountRemarks(e.target.value)}
+                    placeholder="e.g. Limited time offer, valid till month-end"
+                    className="h-9"
+                  />
+                </div>
+                {discountAmount > 0 && (
+                  <div className="flex items-center justify-between p-2 bg-success/10 rounded-md">
+                    <span className="text-sm font-medium flex items-center gap-1.5">
+                      <Tag className="h-3.5 w-3.5" />
+                      Final Price After Discount
+                    </span>
+                    <span className="font-bold text-success">{formatCurrency(basePrice - discountAmount)}</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

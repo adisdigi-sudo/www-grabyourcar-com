@@ -34,6 +34,13 @@ export interface EMIPDFConfig {
   };
 }
 
+export interface DiscountDetails {
+  amount: number;
+  type: 'cash' | 'exchange' | 'accessory' | 'corporate' | 'festival' | 'custom';
+  label?: string;
+  remarks?: string;
+}
+
 export interface EMIData {
   loanAmount: number;
   downPayment: number;
@@ -48,6 +55,7 @@ export interface EMIData {
   onRoadPrice?: OnRoadPriceBreakup;
   selectedColor?: string;
   selectedCity?: string;
+  discount?: DiscountDetails;
 }
 
 // Default company details
@@ -286,6 +294,70 @@ export const generateEMIPdf = async (data: EMIData, config?: Partial<EMIPDFConfi
     doc.text(formatCurrency(data.onRoadPrice.onRoadPrice), pageWidth - margin - 6, yPos + 3, { align: "right" });
     
     yPos += 18;
+    
+    // ============ DISCOUNT SECTION ============
+    if (data.discount && data.discount.amount > 0) {
+      const discountLabels: Record<string, string> = {
+        cash: "Cash Discount",
+        exchange: "Exchange Bonus",
+        accessory: "Accessory Discount",
+        corporate: "Corporate Discount",
+        festival: "Festival Offer",
+        custom: data.discount.label || "Special Discount",
+      };
+      
+      // Discount card with gold accent
+      doc.setFillColor(255, 251, 235); // Amber 50
+      doc.roundedRect(margin, yPos, pageWidth - margin * 2, 28, 3, 3, "F");
+      
+      // Gold left accent
+      doc.setFillColor(...COLORS.gold);
+      doc.roundedRect(margin, yPos, 5, 28, 3, 0, "F");
+      doc.rect(margin + 3, yPos, 2, 28, "F");
+      
+      // Discount badge
+      doc.setFillColor(...COLORS.gold);
+      doc.roundedRect(margin + 12, yPos + 3, 50, 6, 1, 1, "F");
+      doc.setFontSize(6);
+      doc.setTextColor(...COLORS.darkText);
+      doc.setFont("helvetica", "bold");
+      doc.text("EXCLUSIVE OFFER", margin + 37, yPos + 7, { align: "center" });
+      
+      // Discount label
+      doc.setFontSize(10);
+      doc.setTextColor(...COLORS.darkText);
+      doc.setFont("helvetica", "bold");
+      doc.text(discountLabels[data.discount.type], margin + 12, yPos + 17);
+      
+      // Discount amount
+      doc.setFontSize(14);
+      doc.setTextColor(21, 128, 61); // Green
+      doc.text(`- ${formatCurrency(data.discount.amount)}`, pageWidth - margin - 8, yPos + 17, { align: "right" });
+      
+      // Remarks if any
+      if (data.discount.remarks) {
+        doc.setFontSize(7);
+        doc.setTextColor(...COLORS.grayText);
+        doc.setFont("helvetica", "italic");
+        doc.text(data.discount.remarks, margin + 12, yPos + 24);
+      }
+      
+      yPos += 34;
+      
+      // Final price after discount
+      const finalPrice = data.onRoadPrice.onRoadPrice - data.discount.amount;
+      doc.setFillColor(21, 128, 61); // Success green
+      doc.roundedRect(margin, yPos, pageWidth - margin * 2, 14, 2, 2, "F");
+      
+      doc.setFontSize(10);
+      doc.setTextColor(...COLORS.white);
+      doc.setFont("helvetica", "bold");
+      doc.text("YOUR FINAL PRICE (After Discount)", margin + 6, yPos + 9);
+      doc.setFontSize(12);
+      doc.text(formatCurrency(finalPrice), pageWidth - margin - 6, yPos + 9, { align: "right" });
+      
+      yPos += 20;
+    }
   }
 
   // ============ EMI HERO SECTION ============
@@ -535,6 +607,23 @@ export const generateEMIWhatsAppMessage = (data: EMIData, config?: Partial<EMIPD
     if (data.onRoadPrice.tcs > 0) message += `• TCS: ${formatCurrency(data.onRoadPrice.tcs)}\n`;
     message += `• Other Charges: ${formatCurrency(data.onRoadPrice.fastag + data.onRoadPrice.registration + data.onRoadPrice.handling)}\n`;
     message += `*On-Road Price: ${formatCurrency(data.onRoadPrice.onRoadPrice)}*\n\n`;
+    
+    // Discount section
+    if (data.discount && data.discount.amount > 0) {
+      const discountLabels: Record<string, string> = {
+        cash: "Cash Discount",
+        exchange: "Exchange Bonus",
+        accessory: "Accessory Discount",
+        corporate: "Corporate Discount",
+        festival: "Festival Offer",
+        custom: data.discount.label || "Special Discount",
+      };
+      message += `🎁 *${discountLabels[data.discount.type]}*\n`;
+      message += `   *- ${formatCurrency(data.discount.amount)}*\n`;
+      if (data.discount.remarks) message += `   _${data.discount.remarks}_\n`;
+      const finalPrice = data.onRoadPrice.onRoadPrice - data.discount.amount;
+      message += `\n✅ *FINAL PRICE: ${formatCurrency(finalPrice)}*\n\n`;
+    }
   }
   
   message += `💰 *Loan Details*\n`;
