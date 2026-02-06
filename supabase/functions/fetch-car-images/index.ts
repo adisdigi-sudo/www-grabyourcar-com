@@ -17,6 +17,7 @@ interface FetchImageRequest {
   model?: string;
   batchMode?: boolean;
   limit?: number;
+  syncPrimaryImages?: boolean;
 }
 
 interface ImageSearchResult {
@@ -25,7 +26,7 @@ interface ImageSearchResult {
   description?: string;
 }
 
-// Use Perplexity API to search for car images
+// Use Perplexity API to search for car images with improved search
 async function searchCarImages(
   brand: string,
   model: string,
@@ -43,16 +44,16 @@ async function searchCarImages(
   const cleanModel = model.replace(/\s+/g, ' ').trim();
   const cleanColor = colorName.replace(/\s+/g, ' ').trim();
 
-  const searchQuery = `Find direct CDN image URLs for ${cleanBrand} ${cleanModel} car in ${cleanColor} color India.
-  
-  I need the actual image file URLs from these sources:
-  - imgd.aeplcdn.com (CarDekho CDN)
-  - imgcdn.carwale.com (CarWale CDN) 
-  - stimg.cardekho.com (CarDekho Static)
-  - imgd.zigcdn.com (ZigWheels CDN)
-  - img.gaadicdn.com (Gaadi CDN)
-  
-  Search for "${cleanBrand} ${cleanModel} ${cleanColor}" and find direct .jpg or .png image links.`;
+  // More targeted search query
+  const searchQuery = `Search for official high-quality image of ${cleanBrand} ${cleanModel} ${cleanColor} car India 2024 2025. 
+  Find the ACTUAL working image URL that I can directly access.
+  Look specifically in these CDN sources which host Indian car images:
+  - imgd.aeplcdn.com (CarDekho)
+  - stimg.cardekho.com
+  - cdni.autocarindia.com
+  - autocarpro.in
+  - gaadiwaadi.com
+  Return ONLY real, verified image URLs that exist and are publicly accessible.`;
 
   try {
     const response = await fetch(PERPLEXITY_API_URL, {
@@ -62,29 +63,20 @@ async function searchCarImages(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'sonar-pro',
+        model: 'sonar',
         messages: [
           {
             role: 'system',
-            content: `You are a web scraping assistant that finds direct image CDN URLs.
-
-IMPORTANT: Return ONLY the JSON response, no explanations.
-IMPORTANT: Only include URLs that end with .jpg, .jpeg, .png, or .webp
-IMPORTANT: Do NOT include webpage URLs - only direct image file URLs
-
-Look for image URLs from these CDN patterns:
-- https://imgd.aeplcdn.com/...
-- https://stimg.cardekho.com/...
-- https://imgcdn.carwale.com/...
-- https://imgd.zigcdn.com/...
-- https://img.gaadicdn.com/...
-
-Response format (JSON only, no markdown):
-{"images":[{"url":"https://imgd.aeplcdn.com/example.jpg","source":"CarDekho"}]}`
+            content: `You find real, working image URLs for cars. Only return URLs that actually exist and can be accessed. 
+Focus on finding images from official automotive news sites and CDNs.
+Return JSON format: {"images":[{"url":"https://...","source":"site_name"}]}
+Only include URLs ending in .jpg, .jpeg, .png, .webp
+Do NOT fabricate or guess URLs - only include ones you find in search results.`
           },
           { role: 'user', content: searchQuery }
         ],
-        search_domain_filter: ['cardekho.com', 'carwale.com', 'zigwheels.com', 'gaadi.com'],
+        return_images: true,
+        return_related_questions: false,
       }),
     });
 
@@ -97,17 +89,34 @@ Response format (JSON only, no markdown):
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || '';
     const citations = data.citations || [];
+    const images = data.images || []; // Perplexity can return images directly
     
     console.log('Perplexity response preview:', content.substring(0, 300));
-    console.log('Citations:', JSON.stringify(citations));
+    console.log('Citations count:', citations.length);
+    console.log('Direct images from API:', images.length);
 
-    // First try to extract from citations which often contain direct URLs
+    // Process images from Perplexity's direct image response
+    const apiImages: ImageSearchResult[] = [];
+    for (const img of images) {
+      if (typeof img === 'string') {
+        const urlLower = img.toLowerCase();
+        if (urlLower.match(/\.(jpg|jpeg|png|webp)(\?|$)/)) {
+          apiImages.push({ url: img, source: 'perplexity_images' });
+        }
+      } else if (img && typeof img === 'object' && img.url) {
+        const urlLower = (img.url as string).toLowerCase();
+        if (urlLower.match(/\.(jpg|jpeg|png|webp)(\?|$)/)) {
+          apiImages.push({ url: img.url, source: img.source || 'perplexity_images' });
+        }
+      }
+    }
+
+    // Extract from citations which often contain direct URLs
     const citationImages: ImageSearchResult[] = [];
     for (const citation of citations) {
       if (typeof citation === 'string') {
         const urlLower = citation.toLowerCase();
-        if (urlLower.endsWith('.jpg') || urlLower.endsWith('.jpeg') || 
-            urlLower.endsWith('.png') || urlLower.endsWith('.webp')) {
+        if (urlLower.match(/\.(jpg|jpeg|png|webp)(\?|$)/)) {
           citationImages.push({ url: citation, source: 'citation' });
         }
       }
@@ -129,8 +138,7 @@ Response format (JSON only, no markdown):
         const parsed = JSON.parse(jsonMatch[0]);
         parsedImages = (parsed.images || []).filter((img: ImageSearchResult) => {
           const url = (img.url || '').toLowerCase();
-          return url.endsWith('.jpg') || url.endsWith('.jpeg') || 
-                 url.endsWith('.png') || url.endsWith('.webp');
+          return url.match(/\.(jpg|jpeg|png|webp)(\?|$)/);
         });
       }
     } catch (e) {
@@ -138,15 +146,15 @@ Response format (JSON only, no markdown):
     }
 
     // Extract URLs via regex as fallback
-    const urlRegex = /(https?:\/\/[^\s"'<>\)]+\.(?:jpg|jpeg|png|webp))/gi;
+    const urlRegex = /(https?:\/\/[^\s"'<>\)]+\.(jpg|jpeg|png|webp)(\?[^\s"'<>\)]*)?)/gi;
     const extractedUrls = content.match(urlRegex) || [];
     const regexImages = extractedUrls.map((url: string) => ({
       url: url.replace(/["\s]/g, ''),
       source: 'extracted'
     }));
 
-    // Combine all images, remove duplicates
-    const allImages = [...citationImages, ...parsedImages, ...regexImages];
+    // Combine all images, prioritize API images, remove duplicates
+    const allImages = [...apiImages, ...citationImages, ...parsedImages, ...regexImages];
     const uniqueUrls = new Set<string>();
     const uniqueImages = allImages.filter(img => {
       if (uniqueUrls.has(img.url)) return false;
@@ -333,6 +341,52 @@ serve(async (req) => {
     if (body.batchMode) {
       // Batch mode: fetch images for all cars without synced images
       const limit = body.limit || 10;
+      const syncPrimaryImages = body.syncPrimaryImages !== false; // Default true
+
+      // First, sync primary images for cars without any images
+      if (syncPrimaryImages) {
+        const { data: carsWithoutImages, error: carsError } = await supabase
+          .from('cars')
+          .select('id, name, brand, slug')
+          .not('id', 'in', `(SELECT DISTINCT car_id FROM car_images)`)
+          .limit(Math.ceil(limit / 2));
+
+        if (!carsError && carsWithoutImages?.length) {
+          console.log(`Found ${carsWithoutImages.length} cars without any images`);
+          
+          for (const car of carsWithoutImages) {
+            // Search for primary image
+            const images = await searchCarImages(car.brand, car.name, 'exterior');
+            
+            if (images.length > 0) {
+              const storagePath = `${car.brand.toLowerCase().replace(/\s+/g, '-')}/${car.slug}/primary-${Date.now()}`;
+              const uploadedUrl = await downloadAndUploadImage(images[0].url, storagePath, supabase);
+              
+              if (uploadedUrl) {
+                await supabase.from('car_images').insert({
+                  car_id: car.id,
+                  url: uploadedUrl,
+                  alt_text: `${car.brand} ${car.name}`,
+                  is_primary: true,
+                  sort_order: 0
+                });
+                
+                results.push({
+                  carId: car.id,
+                  colorId: 'primary',
+                  colorName: 'Primary Image',
+                  success: true,
+                  imageUrl: uploadedUrl
+                });
+                
+                console.log(`Added primary image for ${car.name}`);
+              }
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, 1500));
+          }
+        }
+      }
 
       // Get cars with colors that need image sync
       const { data: colorsToSync, error: queryError } = await supabase
