@@ -68,10 +68,12 @@ const navItems: NavItem[] = [
     icon: Car,
     children: [
       { id: "cars-list", label: "Cars & Details", icon: Car },
+      { id: "cars-brands", label: "🏭 Brands Management", icon: Database, badge: "New" },
       { id: "cars-ai-entry", label: "🚗 AI Car Entry", icon: Sparkles, badge: "New" },
       { id: "cars-bulk-import", label: "📊 Bulk Import", icon: Database, badge: "New" },
+      { id: "cars-quick-import", label: "💬 Quick Text Import", icon: MessageSquare, badge: "New" },
       { id: "cars-city-pricing", label: "📍 State/City Pricing", icon: CreditCard, badge: "New" },
-      { id: "cars-attributes", label: "🏷️ Brands & Attributes", icon: Tags, badge: "New" },
+      { id: "cars-attributes", label: "🏷️ Vehicle Attributes", icon: Tags, badge: "New" },
       { id: "cars-colors", label: "Colors & Images", icon: Palette },
       { id: "cars-images", label: "Gallery", icon: Image },
       { id: "cars-variants", label: "Variants & Specs", icon: Tags },

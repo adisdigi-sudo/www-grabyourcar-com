@@ -709,6 +709,45 @@ export type Database = {
           },
         ]
       }
+      car_brands: {
+        Row: {
+          country: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          is_luxury: boolean | null
+          logo_url: string | null
+          name: string
+          slug: string
+          sort_order: number | null
+          updated_at: string
+        }
+        Insert: {
+          country: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          is_luxury?: boolean | null
+          logo_url?: string | null
+          name: string
+          slug: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Update: {
+          country?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          is_luxury?: boolean | null
+          logo_url?: string | null
+          name?: string
+          slug?: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       car_brochures: {
         Row: {
           car_id: string
