@@ -13,6 +13,7 @@ import { WhatsAppSalesCTA } from "@/components/WhatsAppCTA";
 import { PriceSummaryCard } from "@/components/PriceSummaryCard";
 import { BookingForm } from "@/components/BookingForm";
 import { ColorGalleryViewer } from "@/components/ColorGalleryViewer";
+import { CarPricingConfigurator } from "@/components/CarPricingConfigurator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -361,81 +362,11 @@ const CarDetail = () => {
                   </div>
                 </div>
 
-                {/* Compact On-Road Price Card */}
-                <Card className="border-2 border-primary/20 bg-gradient-to-br from-card via-card to-primary/5 overflow-hidden">
-                  <CardHeader className="pb-2 bg-gradient-to-r from-primary to-success p-4">
-                    <div className="flex items-center gap-3 text-white">
-                      <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-                        <IndianRupee className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-base text-white">On-Road Price</CardTitle>
-                        <p className="text-xs text-white/80">{car.variants[selectedVariant]?.name || 'Base Variant'}</p>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-4 space-y-3">
-                    {/* Price Breakdown */}
-                    {(() => {
-                      const basePrice = car.variants[selectedVariant]?.priceNumeric || (parseFloat(car.price.match(/[\d.]+/)?.[0] || "0") * 100000);
-                      const rto = Math.round(basePrice * 0.08);
-                      const insurance = Math.round(basePrice * 0.03);
-                      const tcs = basePrice > 1000000 ? Math.round(basePrice * 0.01) : 0;
-                      const others = 16500;
-                      const onRoad = basePrice + rto + insurance + tcs + others;
-                      
-                      return (
-                        <>
-                          <div className="space-y-1.5 text-sm">
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Ex-Showroom</span>
-                              <span className="font-medium">₹{(basePrice/100000).toFixed(2)} L</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">RTO & Taxes</span>
-                              <span className="font-medium">₹{(rto/100000).toFixed(2)} L</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Insurance</span>
-                              <span className="font-medium">₹{(insurance/1000).toFixed(1)} K</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Others</span>
-                              <span className="font-medium">₹{(others/1000).toFixed(1)} K</span>
-                            </div>
-                          </div>
-                          <Separator />
-                          <div className="flex justify-between items-center">
-                            <span className="font-semibold">On-Road Price</span>
-                            <span className="text-lg font-bold text-primary">₹{(onRoad/100000).toFixed(2)} L*</span>
-                          </div>
-                          <p className="text-[10px] text-muted-foreground">*Estimated. Actual may vary by city</p>
-                          
-                          {/* EMI Estimate */}
-                          <div className="p-2.5 rounded-lg bg-success/10 border border-success/20">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-1.5">
-                                <Calculator className="h-3.5 w-3.5 text-success" />
-                                <span className="text-xs text-muted-foreground">EMI from</span>
-                              </div>
-                              <span className="text-sm font-bold text-success">
-                                ₹{Math.round((onRoad * 0.8 * 0.085/12) / (1 - Math.pow(1 + 0.085/12, -60))).toLocaleString()}/mo
-                              </span>
-                            </div>
-                          </div>
-                          
-                          {/* CTA */}
-                          <Link to={`/car/${car.slug}/on-road-price`} className="block">
-                            <Button variant="cta" size="sm" className="w-full gap-2">
-                              <IndianRupee className="h-4 w-4" />
-                              Get Exact Price
-                            </Button>
-                          </Link>
-                        </>
-                      );
-                    })()}
-                  </CardContent>
-                </Card>
+                {/* Full Pricing Configurator */}
+                <CarPricingConfigurator
+                  car={car}
+                  colors={displayColors}
+                />
               </div>
             </div>
           </div>
