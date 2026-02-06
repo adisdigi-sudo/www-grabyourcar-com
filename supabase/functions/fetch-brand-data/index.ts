@@ -30,21 +30,26 @@ serve(async (req) => {
 
     console.log(`[FetchBrandData] Fetching ${dataType || 'full'} data for brand: ${brand}`);
 
-    // Build comprehensive prompt for full car data
-    const prompt = `List the top 5 best-selling ${brand} car models in India February 2025.
+    // Build comprehensive prompt for car data
+    const models = [
+      "Alto K10", "S-Presso", "Celerio", "WagonR", "Ignis", 
+      "Swift", "Dzire", "Baleno", "Ciaz", "Fronx", 
+      "Brezza", "Grand Vitara", "Ertiga", "XL6", "Invicto", "Jimny"
+    ];
+    
+    const prompt = `Provide data for these 5 ${brand} cars in India 2025: Grand Vitara, Ertiga, XL6, Invicto, Jimny.
 
-Return a JSON object with this structure:
+Return EXACTLY this JSON structure:
 {"cars":[
-{"name":"Swift","brand":"${brand}","body_type":"Hatchback","tagline":"Play Bold","price_range":"₹6.49 - ₹9.64 Lakh","price_numeric":649000,"fuel_types":["Petrol","CNG"],"transmission_types":["Manual","AMT"],"is_new":false,"is_bestseller":true,"overview":"India's most loved premium hatchback.","key_highlights":["Bold design","SmartPlay Pro+"],
-"variants":[{"name":"LXi","price":"₹6.49 Lakh","price_numeric":649000,"fuel_type":"Petrol","transmission":"Manual"},{"name":"ZXi+","price":"₹9.64 Lakh","price_numeric":964000,"fuel_type":"Petrol","transmission":"AMT"}],
-"colors":[{"name":"Solid Fire Red","hex_code":"#C41E3A"},{"name":"Pearl Arctic White","hex_code":"#FAFAFA"}],
-"specifications":[{"category":"Engine","label":"Displacement","value":"1197 cc"},{"category":"Engine","label":"Power","value":"82 bhp"},{"category":"Dimensions","label":"Length","value":"3860 mm"}],
-"features":[{"category":"Safety","feature_name":"6 Airbags"},{"category":"Infotainment","feature_name":"9-inch Touchscreen"}]}
+{"name":"Grand Vitara","brand":"${brand}","body_type":"Mid-Size SUV","tagline":"Live Grand","price_range":"₹10.99 - ₹19.99 Lakh","price_numeric":1099000,"fuel_types":["Petrol","Hybrid"],"transmission_types":["Manual","AT"],"is_new":false,"is_bestseller":true,"overview":"Premium mid-size SUV with strong hybrid technology.","key_highlights":["AllGrip AWD","Strong Hybrid","Panoramic Sunroof"],
+"variants":[{"name":"Sigma","price":"₹10.99 Lakh","price_numeric":1099000,"fuel_type":"Petrol","transmission":"Manual"},{"name":"Delta","price":"₹12.49 Lakh","price_numeric":1249000,"fuel_type":"Petrol","transmission":"Manual"},{"name":"Zeta","price":"₹14.99 Lakh","price_numeric":1499000,"fuel_type":"Petrol","transmission":"AT"},{"name":"Alpha","price":"₹17.49 Lakh","price_numeric":1749000,"fuel_type":"Hybrid","transmission":"AT"},{"name":"Alpha+ AWD","price":"₹19.99 Lakh","price_numeric":1999000,"fuel_type":"Hybrid","transmission":"AT"}],
+"colors":[{"name":"Arctic White","hex_code":"#FAFAFA"},{"name":"Grandeur Grey","hex_code":"#5C5C5C"},{"name":"Opulent Red","hex_code":"#8B0000"},{"name":"Celestial Blue","hex_code":"#4B9CD3"},{"name":"Chestnut Brown","hex_code":"#954535"}],
+"specifications":[{"category":"Engine","label":"Displacement","value":"1490 cc"},{"category":"Engine","label":"Power","value":"103 bhp"},{"category":"Engine","label":"Torque","value":"137 Nm"},{"category":"Dimensions","label":"Length","value":"4345 mm"},{"category":"Dimensions","label":"Width","value":"1795 mm"},{"category":"Dimensions","label":"Height","value":"1645 mm"},{"category":"Performance","label":"Mileage","value":"27.97 kmpl (Hybrid)"}],
+"features":[{"category":"Safety","feature_name":"6 Airbags"},{"category":"Comfort","feature_name":"Ventilated Seats"},{"category":"Technology","feature_name":"360 Camera"},{"category":"Exterior","feature_name":"LED Headlamps"},{"category":"Infotainment","feature_name":"9-inch Touchscreen"}]}
 ]}
 
-Include at least 3 variants, 3 colors, 5 specifications, and 5 features for EACH car.
-Prices must be accurate February 2025 ex-showroom Delhi prices.
-Return ONLY valid JSON, no markdown.`;
+Now add Ertiga, XL6, Invicto, Jimny following same structure. Each car MUST have 5 variants, 5 colors with hex codes, 7 specifications, 5 features.
+Return ONLY valid JSON.`;
 
     console.log(`[FetchBrandData] Sending prompt to Perplexity...`);
 
