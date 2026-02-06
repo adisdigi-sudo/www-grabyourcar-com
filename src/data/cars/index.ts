@@ -1,6 +1,6 @@
 // Re-export types and data
 export * from "./types";
-// Luxury brands first for migration priority
+// Luxury/Supercar brands first for migration priority
 import bmwCars from "./bmw";
 import mercedesCars from "./mercedes";
 import audiCars from "./audi";
@@ -11,6 +11,11 @@ import porscheCars from "./porsche";
 import jaguarCars from "./jaguar";
 import miniCars from "./mini";
 import bydCars from "./byd";
+import lamborghiniCars from "./lamborghini";
+import ferrariCars from "./ferrari";
+import rollsRoyceCars from "./rollsroyce";
+import bentleyCars from "./bentley";
+import maseratiCars from "./maserati";
 // Other brands
 import marutiCars from "./maruti";
 import hyundaiCars from "./hyundai";
@@ -42,6 +47,11 @@ export const allCars: Car[] = [
   ...jaguarCars,
   ...miniCars,
   ...bydCars,
+  ...lamborghiniCars,
+  ...ferrariCars,
+  ...rollsRoyceCars,
+  ...bentleyCars,
+  ...maseratiCars,
   ...marutiCars,
   ...hyundaiCars,
   ...tataCars,
