@@ -6,16 +6,19 @@ import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
  import { Calculator, IndianRupee, Percent, Calendar, FileText, MessageCircle, TrendingDown, Building2, Download, Share2 } from "lucide-react";
- import { generateEMIPdf, generateEMIWhatsAppMessage, EMIData } from "@/lib/generateEMIPdf";
- import { toast } from "sonner";
+import { generateEMIPdf, generateEMIWhatsAppMessage, EMIData, OnRoadPriceBreakup } from "@/lib/generateEMIPdf";
+import { toast } from "sonner";
 
 interface EMICalculatorProps {
   onGetQuote?: (loanDetails: string) => void;
-   carName?: string;
-   variantName?: string;
+  carName?: string;
+  variantName?: string;
+  onRoadPrice?: OnRoadPriceBreakup;
+  selectedColor?: string;
+  selectedCity?: string;
 }
 
- const EMICalculator = ({ onGetQuote, carName, variantName }: EMICalculatorProps) => {
+const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selectedColor, selectedCity }: EMICalculatorProps) => {
   const [loanAmount, setLoanAmount] = useState(800000);
   const [interestRate, setInterestRate] = useState(8.5);
   const [tenure, setTenure] = useState(60);
@@ -70,18 +73,21 @@ interface EMICalculatorProps {
     onGetQuote?.(loanDetails);
   };
 
-   const getEMIData = (): EMIData => ({
-     loanAmount,
-     downPayment,
-     loanPrincipal: emiDetails.loanPrincipal,
-     interestRate,
-     tenure,
-     emi: emiDetails.emi,
-     totalPayment: emiDetails.totalPayment,
-     totalInterest: emiDetails.totalInterest,
-     carName,
-     variantName,
-   });
+  const getEMIData = (): EMIData => ({
+    loanAmount,
+    downPayment,
+    loanPrincipal: emiDetails.loanPrincipal,
+    interestRate,
+    tenure,
+    emi: emiDetails.emi,
+    totalPayment: emiDetails.totalPayment,
+    totalInterest: emiDetails.totalInterest,
+    carName,
+    variantName,
+    onRoadPrice,
+    selectedColor,
+    selectedCity,
+  });
  
    const handleDownloadPdf = () => {
      try {
