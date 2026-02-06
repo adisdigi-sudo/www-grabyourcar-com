@@ -76,14 +76,15 @@ export const useEMIPDFSettings = () => {
         .from("admin_settings")
         .select("*")
         .eq("setting_key", "emi_pdf_config")
-        .single();
+        .maybeSingle();
 
       if (data && !error) {
         const savedConfig = data.setting_value as unknown as Partial<EMIPDFConfig>;
         setConfig({ ...defaultConfig, ...savedConfig });
       }
+      // If no data found, use defaults silently
     } catch (error) {
-      console.log("Using default EMI PDF settings");
+      // Use default settings on any error
     } finally {
       setIsLoading(false);
     }
