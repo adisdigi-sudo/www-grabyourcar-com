@@ -1627,9 +1627,11 @@ export type Database = {
           notes: string | null
           phone: string
           priority: string | null
+          service_category: string | null
           source: string
           status: string
           tags: string[] | null
+          team_assigned: string | null
           updated_at: string | null
           utm_campaign: string | null
           utm_medium: string | null
@@ -1657,9 +1659,11 @@ export type Database = {
           notes?: string | null
           phone: string
           priority?: string | null
+          service_category?: string | null
           source: string
           status?: string
           tags?: string[] | null
+          team_assigned?: string | null
           updated_at?: string | null
           utm_campaign?: string | null
           utm_medium?: string | null
@@ -1687,9 +1691,11 @@ export type Database = {
           notes?: string | null
           phone?: string
           priority?: string | null
+          service_category?: string | null
           source?: string
           status?: string
           tags?: string[] | null
+          team_assigned?: string | null
           updated_at?: string | null
           utm_campaign?: string | null
           utm_medium?: string | null

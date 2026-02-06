@@ -32,6 +32,14 @@ import {
   Clock,
   User,
   Car,
+  Tag,
+  Users,
+  Shield,
+  CreditCard,
+  Package,
+  Building2,
+  X,
+  UserCheck,
 } from "lucide-react";
 
 interface Lead {
@@ -55,6 +63,8 @@ interface Lead {
   next_follow_up_at: string | null;
   notes: string | null;
   tags: string[];
+  service_category: string | null;
+  team_assigned: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -73,17 +83,47 @@ const statusOptions = [
 const sourceOptions = ['website', 'whatsapp', 'chatbot', 'landing_page', 'phone', 'referral'];
 const leadTypeOptions = ['car_inquiry', 'test_drive', 'finance', 'insurance', 'hsrp', 'rental'];
 
+// Service categories with icons and colors
+const serviceCategoryOptions = [
+  { value: 'car_inquiry', label: 'Car Inquiry', icon: Car, color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' },
+  { value: 'insurance', label: 'Insurance', icon: Shield, color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' },
+  { value: 'finance', label: 'Car Loan', icon: CreditCard, color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' },
+  { value: 'hsrp', label: 'HSRP', icon: Tag, color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' },
+  { value: 'rental', label: 'Rental', icon: Car, color: 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200' },
+  { value: 'accessories', label: 'Accessories', icon: Package, color: 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200' },
+  { value: 'corporate', label: 'Corporate', icon: Building2, color: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200' },
+];
+
+// Team assignment options
+const teamOptions = [
+  { value: 'sales', label: 'Sales Team', color: 'bg-blue-500' },
+  { value: 'insurance_team', label: 'Insurance Team', color: 'bg-green-500' },
+  { value: 'finance_team', label: 'Finance Team', color: 'bg-purple-500' },
+  { value: 'hsrp_team', label: 'HSRP Team', color: 'bg-orange-500' },
+  { value: 'rental_team', label: 'Rental Team', color: 'bg-teal-500' },
+  { value: 'corporate_team', label: 'Corporate Team', color: 'bg-indigo-500' },
+];
+
+// Quick tags for leads
+const quickTags = [
+  'VIP', 'Urgent', 'Follow-up', 'Callback', 'Document Pending', 'Price Negotiation',
+  'Test Drive Done', 'Finance Approved', 'Insurance Quoted', 'Ready to Buy'
+];
+
 export const LeadManagement = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [teamFilter, setTeamFilter] = useState<string>("all");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [noteText, setNoteText] = useState("");
   const [isAddLeadOpen, setIsAddLeadOpen] = useState(false);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
+  const [newTag, setNewTag] = useState("");
   const [newLeadForm, setNewLeadForm] = useState({
     customer_name: "",
     phone: "",
@@ -93,13 +133,16 @@ export const LeadManagement = () => {
     car_model: "",
     source: "website",
     lead_type: "car_inquiry",
+    service_category: "car_inquiry",
+    team_assigned: "",
     status: "new",
     notes: "",
+    tags: [] as string[],
   });
 
-  // Fetch leads
+  // Fetch leads with category filter
   const { data: leads, isLoading } = useQuery({
-    queryKey: ['adminLeads', statusFilter, searchQuery],
+    queryKey: ['adminLeads', statusFilter, categoryFilter, teamFilter, searchQuery],
     queryFn: async () => {
       let query = supabase
         .from('leads')
@@ -108,6 +151,14 @@ export const LeadManagement = () => {
       
       if (statusFilter !== 'all') {
         query = query.eq('status', statusFilter);
+      }
+      
+      if (categoryFilter !== 'all') {
+        query = query.eq('service_category', categoryFilter);
+      }
+      
+      if (teamFilter !== 'all') {
+        query = query.eq('team_assigned', teamFilter);
       }
       
       if (searchQuery) {
@@ -189,8 +240,11 @@ export const LeadManagement = () => {
           car_model: leadData.car_model || null,
           source: leadData.source,
           lead_type: leadData.lead_type,
+          service_category: leadData.service_category,
+          team_assigned: leadData.team_assigned || null,
           status: leadData.status,
           notes: leadData.notes || null,
+          tags: leadData.tags,
         }]);
       if (error) throw error;
     },
@@ -207,8 +261,11 @@ export const LeadManagement = () => {
         car_model: "",
         source: "website",
         lead_type: "car_inquiry",
+        service_category: "car_inquiry",
+        team_assigned: "",
         status: "new",
         notes: "",
+        tags: [],
       });
     },
     onError: (error) => {
@@ -308,6 +365,53 @@ export const LeadManagement = () => {
     );
   };
 
+  const getCategoryBadge = (category: string | null) => {
+    const categoryConfig = serviceCategoryOptions.find(c => c.value === category);
+    if (!categoryConfig) return <Badge variant="outline">{category || 'General'}</Badge>;
+    
+    const Icon = categoryConfig.icon;
+    return (
+      <Badge className={`${categoryConfig.color} gap-1`}>
+        <Icon className="h-3 w-3" />
+        {categoryConfig.label}
+      </Badge>
+    );
+  };
+
+  const getTeamBadge = (team: string | null) => {
+    if (!team) return <span className="text-muted-foreground text-sm">Unassigned</span>;
+    const teamConfig = teamOptions.find(t => t.value === team);
+    return (
+      <Badge variant="secondary" className="gap-1">
+        <Users className="h-3 w-3" />
+        {teamConfig?.label || team}
+      </Badge>
+    );
+  };
+
+  const handleAddTag = (leadId: string, tag: string) => {
+    const lead = leads?.find(l => l.id === leadId);
+    if (!lead) return;
+    const newTags = [...(lead.tags || []), tag].filter((t, i, a) => a.indexOf(t) === i);
+    updateLeadMutation.mutate({ id: leadId, updates: { tags: newTags } });
+  };
+
+  const handleRemoveTag = (leadId: string, tag: string) => {
+    const lead = leads?.find(l => l.id === leadId);
+    if (!lead) return;
+    const newTags = (lead.tags || []).filter(t => t !== tag);
+    updateLeadMutation.mutate({ id: leadId, updates: { tags: newTags } });
+  };
+
+  const handleAssignTeam = (leadId: string, team: string) => {
+    updateLeadMutation.mutate({ id: leadId, updates: { team_assigned: team } });
+    toast.success(`Lead assigned to ${teamOptions.find(t => t.value === team)?.label || team}`);
+  };
+
+  const handleUpdateCategory = (leadId: string, category: string) => {
+    updateLeadMutation.mutate({ id: leadId, updates: { service_category: category } });
+  };
+
   const formatBudget = (min: number | null, max: number | null) => {
     if (!min && !max) return '-';
     const formatNum = (n: number) => `₹${(n / 100000).toFixed(0)}L`;
@@ -317,13 +421,20 @@ export const LeadManagement = () => {
     return '-';
   };
 
+  // Category stats
+  const categoryStats = leads?.reduce((acc, lead) => {
+    const cat = lead.service_category || 'car_inquiry';
+    acc[cat] = (acc[cat] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>) || {};
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold">Lead Management</h1>
           <p className="text-muted-foreground">
-            Manage and track all customer leads
+            Manage, tag, and assign leads across all services
           </p>
         </div>
         <div className="flex gap-2">
@@ -338,10 +449,37 @@ export const LeadManagement = () => {
         </div>
       </div>
 
+      {/* Category Quick Filters */}
+      <div className="flex gap-2 flex-wrap">
+        <Button
+          variant={categoryFilter === 'all' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setCategoryFilter('all')}
+        >
+          All ({leads?.length || 0})
+        </Button>
+        {serviceCategoryOptions.map((cat) => {
+          const Icon = cat.icon;
+          const count = categoryStats[cat.value] || 0;
+          return (
+            <Button
+              key={cat.value}
+              variant={categoryFilter === cat.value ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setCategoryFilter(cat.value)}
+              className="gap-1"
+            >
+              <Icon className="h-3 w-3" />
+              {cat.label} ({count})
+            </Button>
+          );
+        })}
+      </div>
+
       {/* Filters */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex flex-col md:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -352,15 +490,29 @@ export const LeadManagement = () => {
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[150px]">
                 <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Filter by status" />
+                <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
                 {statusOptions.map((status) => (
                   <SelectItem key={status.value} value={status.value}>
                     {status.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={teamFilter} onValueChange={setTeamFilter}>
+              <SelectTrigger className="w-[160px]">
+                <Users className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Team" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Teams</SelectItem>
+                {teamOptions.map((team) => (
+                  <SelectItem key={team.value} value={team.value}>
+                    {team.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -377,11 +529,10 @@ export const LeadManagement = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Customer</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Interest</TableHead>
-                  <TableHead>Budget</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Team</TableHead>
+                  <TableHead>Tags</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Source</TableHead>
                   <TableHead>Created</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -389,7 +540,7 @@ export const LeadManagement = () => {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8">
+                    <TableCell colSpan={7} className="text-center py-8">
                       Loading leads...
                     </TableCell>
                   </TableRow>
@@ -403,48 +554,71 @@ export const LeadManagement = () => {
                           </div>
                           <div>
                             <p className="font-medium">{lead.customer_name}</p>
-                            {lead.city && (
-                              <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                <MapPin className="h-3 w-3" />
-                                {lead.city}
-                              </p>
-                            )}
+                            <p className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Phone className="h-3 w-3" />
+                              {lead.phone}
+                            </p>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="space-y-1">
-                          <p className="text-sm flex items-center gap-1">
-                            <Phone className="h-3 w-3" />
-                            {lead.phone}
-                          </p>
-                          {lead.email && (
-                            <p className="text-xs text-muted-foreground flex items-center gap-1">
-                              <Mail className="h-3 w-3" />
-                              {lead.email}
-                            </p>
+                        <Select
+                          value={lead.service_category || 'car_inquiry'}
+                          onValueChange={(value) => handleUpdateCategory(lead.id, value)}
+                        >
+                          <SelectTrigger className="w-[130px] h-8 border-0 p-0">
+                            {getCategoryBadge(lead.service_category)}
+                          </SelectTrigger>
+                          <SelectContent>
+                            {serviceCategoryOptions.map((cat) => (
+                              <SelectItem key={cat.value} value={cat.value}>
+                                {cat.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        <Select
+                          value={lead.team_assigned || ''}
+                          onValueChange={(value) => handleAssignTeam(lead.id, value)}
+                        >
+                          <SelectTrigger className="w-[140px] h-8 border-0 p-0">
+                            {getTeamBadge(lead.team_assigned)}
+                          </SelectTrigger>
+                          <SelectContent>
+                            {teamOptions.map((team) => (
+                              <SelectItem key={team.value} value={team.value}>
+                                {team.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1 max-w-[180px]">
+                          {(lead.tags || []).slice(0, 2).map((tag) => (
+                            <Badge key={tag} variant="secondary" className="text-xs gap-1">
+                              {tag}
+                              <X 
+                                className="h-3 w-3 cursor-pointer hover:text-destructive" 
+                                onClick={() => handleRemoveTag(lead.id, tag)}
+                              />
+                            </Badge>
+                          ))}
+                          {(lead.tags || []).length > 2 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{lead.tags.length - 2}
+                            </Badge>
                           )}
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        {lead.car_brand ? (
-                          <div className="flex items-center gap-1">
-                            <Car className="h-4 w-4 text-muted-foreground" />
-                            <span>{lead.car_brand} {lead.car_model}</span>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {formatBudget(lead.budget_min, lead.budget_max)}
                       </TableCell>
                       <TableCell>
                         <Select
                           value={lead.status}
                           onValueChange={(value) => handleStatusChange(lead.id, value)}
                         >
-                          <SelectTrigger className="w-[130px] h-8">
+                          <SelectTrigger className="w-[120px] h-8 border-0 p-0">
                             {getStatusBadge(lead.status)}
                           </SelectTrigger>
                           <SelectContent>
@@ -456,11 +630,8 @@ export const LeadManagement = () => {
                           </SelectContent>
                         </Select>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{lead.source}</Badge>
-                      </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {format(new Date(lead.created_at), 'dd MMM yyyy')}
+                        {format(new Date(lead.created_at), 'dd MMM')}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
@@ -494,7 +665,7 @@ export const LeadManagement = () => {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                       No leads found
                     </TableCell>
                   </TableRow>
@@ -507,16 +678,131 @@ export const LeadManagement = () => {
 
       {/* Lead Detail Dialog */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Lead Details</DialogTitle>
+            <DialogTitle className="flex items-center gap-3">
+              Lead Details
+              {selectedLead && getCategoryBadge(selectedLead.service_category)}
+            </DialogTitle>
             <DialogDescription>
-              View and manage lead information
+              View, tag, and manage lead information
             </DialogDescription>
           </DialogHeader>
           
           {selectedLead && (
             <div className="space-y-6">
+              {/* Category & Team Assignment */}
+              <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Service Category</label>
+                  <Select
+                    value={selectedLead.service_category || 'car_inquiry'}
+                    onValueChange={(value) => {
+                      handleUpdateCategory(selectedLead.id, value);
+                      setSelectedLead({ ...selectedLead, service_category: value });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {serviceCategoryOptions.map((cat) => (
+                        <SelectItem key={cat.value} value={cat.value}>
+                          {cat.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Assign to Team</label>
+                  <Select
+                    value={selectedLead.team_assigned || ''}
+                    onValueChange={(value) => {
+                      handleAssignTeam(selectedLead.id, value);
+                      setSelectedLead({ ...selectedLead, team_assigned: value });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select team..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {teamOptions.map((team) => (
+                        <SelectItem key={team.value} value={team.value}>
+                          {team.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Tags Section */}
+              <div className="space-y-3">
+                <label className="text-sm font-medium flex items-center gap-2">
+                  <Tag className="h-4 w-4" />
+                  Tags
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {(selectedLead.tags || []).map((tag) => (
+                    <Badge key={tag} variant="secondary" className="gap-1 px-3 py-1">
+                      {tag}
+                      <X 
+                        className="h-3 w-3 cursor-pointer hover:text-destructive" 
+                        onClick={() => {
+                          handleRemoveTag(selectedLead.id, tag);
+                          setSelectedLead({ ...selectedLead, tags: selectedLead.tags.filter(t => t !== tag) });
+                        }}
+                      />
+                    </Badge>
+                  ))}
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  {quickTags.filter(t => !(selectedLead.tags || []).includes(t)).slice(0, 6).map((tag) => (
+                    <Button
+                      key={tag}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        handleAddTag(selectedLead.id, tag);
+                        setSelectedLead({ ...selectedLead, tags: [...(selectedLead.tags || []), tag] });
+                      }}
+                    >
+                      + {tag}
+                    </Button>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Add custom tag..."
+                    value={newTag}
+                    onChange={(e) => setNewTag(e.target.value)}
+                    className="max-w-[200px]"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && newTag.trim()) {
+                        handleAddTag(selectedLead.id, newTag.trim());
+                        setSelectedLead({ ...selectedLead, tags: [...(selectedLead.tags || []), newTag.trim()] });
+                        setNewTag('');
+                      }
+                    }}
+                  />
+                  <Button 
+                    variant="secondary" 
+                    size="sm"
+                    onClick={() => {
+                      if (newTag.trim()) {
+                        handleAddTag(selectedLead.id, newTag.trim());
+                        setSelectedLead({ ...selectedLead, tags: [...(selectedLead.tags || []), newTag.trim()] });
+                        setNewTag('');
+                      }
+                    }}
+                  >
+                    Add Tag
+                  </Button>
+                </div>
+              </div>
+
+              {/* Customer Info */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Customer Name</label>
@@ -549,14 +835,6 @@ export const LeadManagement = () => {
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Budget</label>
                   <p>{formatBudget(selectedLead.budget_min, selectedLead.budget_max)}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Buying Timeline</label>
-                  <p>{selectedLead.buying_timeline || '-'}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Follow-ups</label>
-                  <p>{selectedLead.follow_up_count || 0}</p>
                 </div>
               </div>
 
@@ -615,6 +893,38 @@ export const LeadManagement = () => {
           </DialogHeader>
           
           <div className="space-y-4">
+            {/* Category & Team Assignment - First */}
+            <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Service Category *</label>
+                <Select 
+                  value={newLeadForm.service_category} 
+                  onValueChange={(v) => setNewLeadForm({ ...newLeadForm, service_category: v })}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {serviceCategoryOptions.map(cat => (
+                      <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Assign to Team</label>
+                <Select 
+                  value={newLeadForm.team_assigned} 
+                  onValueChange={(v) => setNewLeadForm({ ...newLeadForm, team_assigned: v })}
+                >
+                  <SelectTrigger><SelectValue placeholder="Select team..." /></SelectTrigger>
+                  <SelectContent>
+                    {teamOptions.map(team => (
+                      <SelectItem key={team.value} value={team.value}>{team.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Customer Name *</label>
