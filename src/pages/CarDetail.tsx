@@ -489,28 +489,54 @@ const CarDetail = () => {
                   const exShowroomPrice = selectedVar.priceNumeric || priceInLakh * 100000;
                   const breakup = calculateStatePriceBreakup(exShowroomPrice);
                   
+                  // Prepare on-road price breakup for PDF
+                  const onRoadPriceData = {
+                    exShowroom: breakup.exShowroom,
+                    rto: breakup.rto,
+                    insurance: breakup.insurance,
+                    tcs: breakup.tcs,
+                    fastag: breakup.fastag,
+                    registration: breakup.registration,
+                    handling: breakup.handling,
+                    onRoadPrice: breakup.onRoadPrice,
+                  };
+                  
                   return (
                     <div className="space-y-6">
-                      {/* Selected Variant Info */}
-                      <Card className="border-primary/20 bg-primary/5">
-                        <CardContent className="p-4">
+                      {/* Selected Variant Info with Get On-Road Price */}
+                      <Card className="border-primary/20 bg-gradient-to-r from-primary/5 via-success/5 to-primary/5">
+                        <CardContent className="p-5">
                           <div className="flex items-center justify-between flex-wrap gap-4">
                             <div>
                               <p className="text-sm text-muted-foreground">Calculating EMI for</p>
-                              <h3 className="font-semibold text-lg">{car.name} {selectedVar.name}</h3>
+                              <h3 className="font-semibold text-lg">{car.brand} {car.name} {selectedVar.name}</h3>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {selectedVar.fuelType || car.fuelTypes[0]} • {selectedVar.transmission || car.transmission[0]}
+                              </p>
                             </div>
                             <div className="text-right">
                               <p className="text-sm text-muted-foreground">On-Road Price</p>
-                              <p className="text-xl font-bold text-primary">
+                              <p className="text-2xl font-bold text-primary">
                                 ₹{(breakup.onRoadPrice / 100000).toFixed(2)} Lakh
                               </p>
+                              <a href="#price-section">
+                                <Button variant="link" size="sm" className="text-xs p-0 h-auto mt-1">
+                                  <IndianRupee className="h-3 w-3 mr-1" />
+                                  Get Full Price Breakup
+                                </Button>
+                              </a>
                             </div>
                           </div>
                         </CardContent>
                       </Card>
                       
-                      {/* EMI Calculator - pre-filled with 80% loan amount */}
+                      {/* EMI Calculator with all data for PDF */}
                       <EMICalculator 
+                        carName={`${car.brand} ${car.name}`}
+                        variantName={selectedVar.name}
+                        onRoadPrice={onRoadPriceData}
+                        selectedColor={car.colors[selectedColor]?.name}
+                        selectedCity="Delhi NCR"
                         onGetQuote={(loanDetails) => {
                           toast.success("Loan quote request submitted!", {
                             description: `${loanDetails} for ${car.name} ${selectedVar.name}`
