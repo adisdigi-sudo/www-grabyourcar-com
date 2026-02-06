@@ -192,7 +192,7 @@ const CarDetail = () => {
                 <ColorGalleryViewer
                   colors={displayColors}
                   carName={car.name}
-                  carImage={dbGalleryImages?.[0] || car.image}
+                  carImage={displayGallery[0] || car.image}
                   gallery={displayGallery}
                   selectedColor={selectedColor}
                   onColorChange={setSelectedColor}
