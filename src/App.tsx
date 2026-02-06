@@ -18,6 +18,7 @@ import FeaturesSpecs from "./pages/FeaturesSpecs";
 import Brochures from "./pages/Brochures";
 import CarLoans from "./pages/CarLoans";
 import CarDetail from "./pages/CarDetail";
+import CarOnRoadPrice from "./pages/CarOnRoadPrice";
 import CompareCars from "./pages/CompareCards";
 import CarInsurance from "./pages/CarInsurance";
 import CorporateBuying from "./pages/CorporateBuying";
@@ -77,6 +78,7 @@ const App = () => (
                   <Route path="/brochures" element={<Brochures />} />
                   <Route path="/car-loans" element={<CarLoans />} />
                   <Route path="/car/:slug" element={<CarDetail />} />
+                  <Route path="/car/:slug/on-road-price" element={<CarOnRoadPrice />} />
                   <Route path="/compare" element={<CompareCars />} />
                   <Route path="/car-insurance" element={<CarInsurance />} />
                   <Route path="/corporate" element={<CorporateBuying />} />
