@@ -32,6 +32,7 @@ import {
   ChevronLeft,
   Sparkles,
   FileSignature,
+  Rocket,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
@@ -128,8 +129,9 @@ const navItems: NavItem[] = [
     children: [
       { id: "content-blog", label: "Blog Posts", icon: FileText },
       { id: "content-news", label: "Auto News", icon: Newspaper },
+      { id: "content-launches", label: "Launches & Upcoming", icon: Rocket, badge: "New" },
       { id: "content-ai", label: "AI Content Hub", icon: Brain },
-      { id: "content-intelligence", label: "Auto Intelligence", icon: Sparkles, badge: "New" },
+      { id: "content-intelligence", label: "Auto Intelligence", icon: Sparkles },
     ]
   },
   { 

@@ -38,6 +38,7 @@ import EMIPDFSettings from "@/components/admin/EMIPDFSettings";
 import { CarColorManagement } from "@/components/admin/CarColorManagement";
 import { ManualQuoteGenerator } from "@/components/admin/ManualQuoteGenerator";
 import { DiscountManagement } from "@/components/admin/DiscountManagement";
+import { LaunchesManagement } from "@/components/admin/LaunchesManagement";
 
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
@@ -159,6 +160,8 @@ const AdminLayout = () => {
         return <BlogManagement />;
       case "content-news":
         return <AIContentManagement />;
+      case "content-launches":
+        return <LaunchesManagement />;
       case "content-ai":
         return <AIContentHub />;
       case "content-intelligence":
