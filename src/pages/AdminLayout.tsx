@@ -39,6 +39,7 @@ import { CarColorManagement } from "@/components/admin/CarColorManagement";
 import { ManualQuoteGenerator } from "@/components/admin/ManualQuoteGenerator";
 import { DiscountManagement } from "@/components/admin/DiscountManagement";
 import { LaunchesManagement } from "@/components/admin/LaunchesManagement";
+import { ProfileSettings } from "@/components/admin/ProfileSettings";
 
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
@@ -179,6 +180,12 @@ const AdminLayout = () => {
         return <IntegrationsManagement />;
       case "integrations-payments":
         return <WebsiteSettings />;
+      case "profile-business":
+      case "profile-logo":
+      case "profile-users":
+      case "profile-contact":
+      case "profile-otp":
+        return <ProfileSettings />;
       case "roles":
         return <RoleManagement />;
       case "settings":
