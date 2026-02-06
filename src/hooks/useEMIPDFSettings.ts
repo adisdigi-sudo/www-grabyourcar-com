@@ -14,7 +14,12 @@ export interface EMIPDFConfig {
   accentColor: string;
   partnerBanks: string[];
   disclaimer: string;
+  termsAndConditions: string[];
+  validityDays: number;
   footerCTA: string;
+  defaultDownPaymentPercent: number;
+  defaultInterestRate: number;
+  defaultTenure: number;
 }
 
 const defaultConfig: EMIPDFConfig = {
@@ -30,7 +35,17 @@ const defaultConfig: EMIPDFConfig = {
   accentColor: "#f59e0b",
   partnerBanks: ["SBI", "HDFC Bank", "ICICI Bank", "Axis Bank", "Kotak", "IDFC First", "Yes Bank"],
   disclaimer: "This is an indicative estimate. Actual EMI may vary based on bank policies, credit score, and prevailing interest rates. Processing fee and pre-payment charges may apply.",
+  termsAndConditions: [
+    "Quote is valid for 7 days from generation date.",
+    "Prices are subject to change based on manufacturer price revisions or government regulations.",
+    "Actual EMI may vary based on bank policies, credit score, and prevailing interest rates.",
+    "Processing fees and other bank charges may apply as per financing institution.",
+  ],
+  validityDays: 7,
   footerCTA: "Get the Best Car Loan - Lowest Interest Rates Guaranteed!",
+  defaultDownPaymentPercent: 20,
+  defaultInterestRate: 8.5,
+  defaultTenure: 60,
 };
 
 export const useEMIPDFSettings = () => {
