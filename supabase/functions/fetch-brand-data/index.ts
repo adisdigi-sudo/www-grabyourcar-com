@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { brand, dataType } = await req.json();
+    const { brand, dataType, saveToDatabase = true } = await req.json();
     
     if (!brand) {
       throw new Error('Brand is required');
@@ -24,88 +24,27 @@ serve(async (req) => {
       throw new Error('Perplexity API key not configured');
     }
 
-    console.log(`[FetchBrandData] Fetching ${dataType || 'all'} data for brand: ${brand}`);
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Build the prompt based on data type
-    let prompt = '';
-    
-    if (dataType === 'cars_list') {
-      prompt = `List ALL current Maruti Suzuki car models available for sale in India in 2025. 
-      For each car provide:
-      - Model name
-      - Body type (Hatchback/Sedan/SUV/MPV/MUV)
-      - Starting ex-showroom price in Delhi (in Lakhs)
-      - Fuel types available (Petrol/Diesel/CNG/Hybrid)
-      - Transmission options (Manual/AMT/CVT/Automatic)
-      - Is it new launch in last 6 months?
-      
-      Format as JSON array. Be accurate with 2025 prices from marutisuzuki.com`;
-    } else if (dataType === 'variants') {
-      prompt = `List ALL variants with prices for ${brand} cars currently sold in India.
-      For each model, list every variant with:
-      - Car model name
-      - Variant name (like LXi, VXi, ZXi, etc.)
-      - Ex-showroom price Delhi in INR (exact number)
-      - Fuel type
-      - Transmission type
-      
-      Get data from official ${brand.toLowerCase().replace(' ', '')}.com website.
-      Format as JSON. Include ALL variants, not just base variants.`;
-    } else if (dataType === 'colors') {
-      prompt = `List all color options available for each ${brand} car model in India 2025.
-      For each model provide:
-      - Model name
-      - Array of colors with: color name, approximate hex code
-      
-      Get accurate colors from official website. Format as JSON.`;
-    } else if (dataType === 'specifications') {
-      prompt = `Provide detailed specifications for all ${brand} car models in India.
-      For each model include:
-      - Engine specs: displacement, power (bhp), torque (Nm), cylinders
-      - Dimensions: length, width, height, wheelbase, ground clearance (all in mm)
-      - Performance: mileage (kmpl), top speed, 0-100 time
-      - Safety: airbags count, ABS, ESC, ISOFIX, NCAP rating
-      
-      Get accurate 2025 data from official sources. Format as JSON.`;
-    } else {
-      // Full data fetch
-      prompt = `Provide COMPLETE and ACCURATE data for ALL ${brand} car models currently sold in India in 2025.
+    console.log(`[FetchBrandData] Fetching ${dataType || 'full'} data for brand: ${brand}`);
 
-For each car model, provide:
+    // Build comprehensive prompt for full car data
+    const prompt = `List the top 5 best-selling ${brand} car models in India February 2025.
 
-1. BASIC INFO:
-- name: Full model name
-- bodyType: Hatchback/Sedan/Compact SUV/Mid-Size SUV/MPV/MUV
-- tagline: Marketing tagline
-- priceRange: "₹X.XX - ₹X.XX Lakh"
-- startingPrice: Numeric starting price in INR
-- fuelTypes: Array of available fuels
-- transmissions: Array of transmission types
-- isNew: true if launched in last 6 months
-- isUpcoming: false (only current models)
+Return a JSON object with this structure:
+{"cars":[
+{"name":"Swift","brand":"${brand}","body_type":"Hatchback","tagline":"Play Bold","price_range":"₹6.49 - ₹9.64 Lakh","price_numeric":649000,"fuel_types":["Petrol","CNG"],"transmission_types":["Manual","AMT"],"is_new":false,"is_bestseller":true,"overview":"India's most loved premium hatchback.","key_highlights":["Bold design","SmartPlay Pro+"],
+"variants":[{"name":"LXi","price":"₹6.49 Lakh","price_numeric":649000,"fuel_type":"Petrol","transmission":"Manual"},{"name":"ZXi+","price":"₹9.64 Lakh","price_numeric":964000,"fuel_type":"Petrol","transmission":"AMT"}],
+"colors":[{"name":"Solid Fire Red","hex_code":"#C41E3A"},{"name":"Pearl Arctic White","hex_code":"#FAFAFA"}],
+"specifications":[{"category":"Engine","label":"Displacement","value":"1197 cc"},{"category":"Engine","label":"Power","value":"82 bhp"},{"category":"Dimensions","label":"Length","value":"3860 mm"}],
+"features":[{"category":"Safety","feature_name":"6 Airbags"},{"category":"Infotainment","feature_name":"9-inch Touchscreen"}]}
+]}
 
-2. VARIANTS (ALL variants, not just examples):
-Each variant must have:
-- name: Variant name (LXi, VXi, ZXi, etc.)
-- price: "₹X.XX Lakh" format
-- priceNumeric: Exact ex-showroom Delhi price in INR
-- fuelType: Petrol/Diesel/CNG
-- transmission: Manual/AMT/CVT/AT
-
-3. COLORS:
-- name: Official color name
-- hex: Approximate hex code
-
-4. SPECIFICATIONS:
-Engine: displacement, power, torque, cylinders
-Dimensions: length, width, height, wheelbase, ground_clearance (mm)
-Performance: mileage_city, mileage_highway, top_speed
-Safety: airbags, abs, esc, isofix, ncap_rating
-
-Get ALL data from official ${brand.toLowerCase().replace(/\s/g, '')}.com website.
-Format response as valid JSON array of car objects.
-Include EVERY model and EVERY variant - this is for a complete database.`;
-    }
+Include at least 3 variants, 3 colors, 5 specifications, and 5 features for EACH car.
+Prices must be accurate February 2025 ex-showroom Delhi prices.
+Return ONLY valid JSON, no markdown.`;
 
     console.log(`[FetchBrandData] Sending prompt to Perplexity...`);
 
@@ -128,7 +67,7 @@ Include EVERY model and EVERY variant - this is for a complete database.`;
           { role: 'user', content: prompt }
         ],
         temperature: 0.1,
-        max_tokens: 8000,
+        max_tokens: 16000,
       }),
     });
 
@@ -144,10 +83,9 @@ Include EVERY model and EVERY variant - this is for a complete database.`;
 
     console.log(`[FetchBrandData] Received response with ${citations.length} citations`);
 
-    // Try to extract JSON from the response
+    // Parse JSON from response
     let parsedData = null;
     try {
-      // Remove markdown code blocks if present
       let jsonStr = content;
       if (jsonStr.includes('```json')) {
         jsonStr = jsonStr.replace(/```json\n?/g, '').replace(/```\n?/g, '');
@@ -156,7 +94,179 @@ Include EVERY model and EVERY variant - this is for a complete database.`;
       }
       parsedData = JSON.parse(jsonStr.trim());
     } catch (e) {
-      console.log('[FetchBrandData] Could not parse as JSON, returning raw content');
+      console.error('[FetchBrandData] JSON parse error:', e);
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Failed to parse AI response as JSON',
+        rawContent: content
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Save to database if requested
+    const savedCars: any[] = [];
+    const errors: string[] = [];
+
+    if (saveToDatabase && parsedData?.cars) {
+      console.log(`[FetchBrandData] Saving ${parsedData.cars.length} cars to database...`);
+
+      for (const car of parsedData.cars) {
+        try {
+          const slug = `${brand.toLowerCase().replace(/\s+/g, '-')}-${car.name.toLowerCase().replace(/\s+/g, '-')}`;
+          
+          // Check if car exists
+          const { data: existingCar } = await supabase
+            .from('cars')
+            .select('id')
+            .eq('slug', slug)
+            .single();
+
+          let carId: string;
+
+          if (existingCar) {
+            // Update existing car
+            const { error: updateError } = await supabase
+              .from('cars')
+              .update({
+                name: car.name,
+                brand: brand,
+                body_type: car.body_type,
+                tagline: car.tagline,
+                price_range: car.price_range,
+                price_numeric: car.price_numeric,
+                fuel_types: car.fuel_types,
+                transmission_types: car.transmission_types,
+                is_new: car.is_new || false,
+                is_bestseller: car.is_bestseller || false,
+                overview: car.overview,
+                key_highlights: car.key_highlights,
+                updated_at: new Date().toISOString(),
+                last_verified_at: new Date().toISOString(),
+              })
+              .eq('id', existingCar.id);
+
+            if (updateError) throw updateError;
+            carId = existingCar.id;
+            console.log(`[FetchBrandData] Updated car: ${car.name}`);
+          } else {
+            // Insert new car
+            const { data: newCar, error: insertError } = await supabase
+              .from('cars')
+              .insert({
+                name: car.name,
+                brand: brand,
+                slug: slug,
+                body_type: car.body_type,
+                tagline: car.tagline,
+                price_range: car.price_range,
+                price_numeric: car.price_numeric,
+                fuel_types: car.fuel_types,
+                transmission_types: car.transmission_types,
+                is_new: car.is_new || false,
+                is_bestseller: car.is_bestseller || false,
+                overview: car.overview,
+                key_highlights: car.key_highlights,
+                last_verified_at: new Date().toISOString(),
+              })
+              .select('id')
+              .single();
+
+            if (insertError) throw insertError;
+            carId = newCar.id;
+            console.log(`[FetchBrandData] Inserted new car: ${car.name}`);
+          }
+
+          // Delete existing related data for fresh insert
+          await supabase.from('car_variants').delete().eq('car_id', carId);
+          await supabase.from('car_colors').delete().eq('car_id', carId);
+          await supabase.from('car_specifications').delete().eq('car_id', carId);
+          await supabase.from('car_features').delete().eq('car_id', carId);
+
+          // Insert variants
+          if (car.variants?.length) {
+            const variants = car.variants.map((v: any, idx: number) => ({
+              car_id: carId,
+              name: v.name,
+              price: v.price,
+              price_numeric: v.price_numeric,
+              fuel_type: v.fuel_type,
+              transmission: v.transmission,
+              features: v.features || [],
+              sort_order: idx,
+            }));
+            
+            const { error: variantError } = await supabase
+              .from('car_variants')
+              .insert(variants);
+            
+            if (variantError) console.error(`Variant insert error for ${car.name}:`, variantError);
+          }
+
+          // Insert colors
+          if (car.colors?.length) {
+            const colors = car.colors.map((c: any, idx: number) => ({
+              car_id: carId,
+              name: c.name,
+              hex_code: c.hex_code || '#CCCCCC',
+              sort_order: idx,
+            }));
+            
+            const { error: colorError } = await supabase
+              .from('car_colors')
+              .insert(colors);
+            
+            if (colorError) console.error(`Color insert error for ${car.name}:`, colorError);
+          }
+
+          // Insert specifications
+          if (car.specifications?.length) {
+            const specs = car.specifications.map((s: any, idx: number) => ({
+              car_id: carId,
+              category: s.category,
+              label: s.label,
+              value: s.value,
+              sort_order: idx,
+            }));
+            
+            const { error: specError } = await supabase
+              .from('car_specifications')
+              .insert(specs);
+            
+            if (specError) console.error(`Spec insert error for ${car.name}:`, specError);
+          }
+
+          // Insert features
+          if (car.features?.length) {
+            const features = car.features.map((f: any, idx: number) => ({
+              car_id: carId,
+              category: f.category,
+              feature_name: f.feature_name,
+              is_standard: true,
+              sort_order: idx,
+            }));
+            
+            const { error: featureError } = await supabase
+              .from('car_features')
+              .insert(features);
+            
+            if (featureError) console.error(`Feature insert error for ${car.name}:`, featureError);
+          }
+
+          savedCars.push({
+            id: carId,
+            name: car.name,
+            slug: slug,
+            variants_count: car.variants?.length || 0,
+            colors_count: car.colors?.length || 0,
+          });
+
+        } catch (carError: any) {
+          console.error(`[FetchBrandData] Error saving ${car.name}:`, carError);
+          errors.push(`${car.name}: ${carError.message}`);
+        }
+      }
     }
 
     return new Response(JSON.stringify({
@@ -164,14 +274,16 @@ Include EVERY model and EVERY variant - this is for a complete database.`;
       brand,
       dataType: dataType || 'full',
       data: parsedData,
-      rawContent: parsedData ? null : content,
+      savedToDatabase: saveToDatabase,
+      savedCars,
+      errors: errors.length ? errors : undefined,
       citations,
       fetchedAt: new Date().toISOString()
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('[FetchBrandData] Error:', error);
     return new Response(JSON.stringify({
       success: false,
