@@ -14,7 +14,9 @@ import {
   Palette,
   Package,
   Sparkles,
-  Info
+  Info,
+  Calculator,
+  IndianRupee
 } from "lucide-react";
 import { WhatsAppSalesCTA } from "@/components/WhatsAppCTA";
 import {
@@ -35,7 +37,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { calculateStatePriceBreakup, stateRates } from "@/data/statePricing";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -349,6 +351,64 @@ export const PriceSummaryCard = ({
             </div>
           </div>
         </Collapsible>
+
+        {/* EMI Calculator Section */}
+        <div className="bg-gradient-to-br from-primary/5 via-success/5 to-accent/5 rounded-xl p-4 border border-primary/20">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Calculator className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold">EMI Calculator</p>
+              <p className="text-xs text-muted-foreground">Based on selected variant</p>
+            </div>
+          </div>
+          
+          {(() => {
+            // Calculate EMI based on 80% loan and 8.5% interest for 5 years
+            const loanAmount = finalOnRoadPrice * 0.8;
+            const interestRate = 8.5;
+            const tenureMonths = 60;
+            const monthlyRate = interestRate / 12 / 100;
+            const emi = Math.round(
+              (loanAmount * monthlyRate * Math.pow(1 + monthlyRate, tenureMonths)) /
+              (Math.pow(1 + monthlyRate, tenureMonths) - 1)
+            );
+            const downPayment = finalOnRoadPrice * 0.2;
+            
+            return (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-background/80 rounded-lg p-3 text-center border">
+                    <p className="text-xs text-muted-foreground mb-1">Down Payment (20%)</p>
+                    <p className="font-bold text-primary">{formatPrice(downPayment)}</p>
+                  </div>
+                  <div className="bg-background/80 rounded-lg p-3 text-center border">
+                    <p className="text-xs text-muted-foreground mb-1">Loan Amount (80%)</p>
+                    <p className="font-bold text-foreground">{formatPrice(loanAmount)}</p>
+                  </div>
+                </div>
+                
+                <div className="bg-primary/10 rounded-xl p-4 text-center border border-primary/20">
+                  <p className="text-xs text-muted-foreground mb-1">Estimated Monthly EMI</p>
+                  <p className="text-2xl font-bold text-primary">
+                    Rs. {emi.toLocaleString('en-IN')}
+                    <span className="text-sm font-normal text-muted-foreground">/month</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">@ {interestRate}% p.a. for {tenureMonths / 12} years</p>
+                </div>
+                
+                <div className="flex items-center justify-between text-xs text-muted-foreground bg-muted/50 rounded-lg p-2">
+                  <span>Selected: {currentVariant?.name}</span>
+                  <a href="#emi-calculator" className="text-primary font-medium hover:underline flex items-center gap-1">
+                    <IndianRupee className="h-3 w-3" />
+                    Customize EMI
+                  </a>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
 
         {/* Optional Accessories */}
         <Collapsible>
