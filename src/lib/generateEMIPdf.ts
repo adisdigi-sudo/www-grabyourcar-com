@@ -25,6 +25,13 @@ export interface EMIPDFConfig {
   disclaimer?: string;
   footerCTA?: string;
   logoBase64?: string;
+  socialLinks?: {
+    instagram?: string;
+    facebook?: string;
+    twitter?: string;
+    youtube?: string;
+    linkedin?: string;
+  };
 }
 
 export interface EMIData {
@@ -56,6 +63,13 @@ const DEFAULT_COMPANY: EMIPDFConfig = {
   partnerBanks: ["SBI", "HDFC Bank", "ICICI Bank", "Axis Bank", "Kotak", "IDFC First", "Yes Bank"],
   disclaimer: "This is an indicative estimate. Actual EMI may vary based on bank policies, credit score, and prevailing interest rates.",
   footerCTA: "Get the Best Car Loan - Lowest Interest Rates Guaranteed!",
+  socialLinks: {
+    instagram: "@grabyourcar",
+    facebook: "grabyourcar",
+    youtube: "GrabYourCar",
+    twitter: "@grabyourcar",
+    linkedin: "grabyourcar",
+  },
 };
 
 // Premium Brand Colors
@@ -451,12 +465,29 @@ export const generateEMIPdf = async (data: EMIData, config?: Partial<EMIPDFConfi
   // Contact info
   doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
-  doc.text(`${COMPANY.phone}  |  ${COMPANY.email}  |  ${COMPANY.website}`, pageWidth / 2, footerY + 11, { align: "center" });
+  doc.text(`${COMPANY.phone}  |  ${COMPANY.email}  |  ${COMPANY.website}`, pageWidth / 2, footerY + 9, { align: "center" });
+  
+  // Social Media Links
+  if (COMPANY.socialLinks) {
+    doc.setFontSize(7);
+    doc.setTextColor(...COLORS.grayText);
+    const socials = [];
+    if (COMPANY.socialLinks.instagram) socials.push(`IG: ${COMPANY.socialLinks.instagram}`);
+    if (COMPANY.socialLinks.facebook) socials.push(`FB: ${COMPANY.socialLinks.facebook}`);
+    if (COMPANY.socialLinks.youtube) socials.push(`YT: ${COMPANY.socialLinks.youtube}`);
+    if (COMPANY.socialLinks.twitter) socials.push(`X: ${COMPANY.socialLinks.twitter}`);
+    if (COMPANY.socialLinks.linkedin) socials.push(`LI: ${COMPANY.socialLinks.linkedin}`);
+    
+    if (socials.length > 0) {
+      doc.text(`Follow Us: ${socials.join("  |  ")}`, pageWidth / 2, footerY + 14, { align: "center" });
+    }
+  }
   
   // Founder info
   if (COMPANY.founder) {
     doc.setFontSize(7);
-    doc.text(`${COMPANY.founder}, ${COMPANY.founderTitle}  |  ${COMPANY.address}`, pageWidth / 2, footerY + 17, { align: "center" });
+    doc.setTextColor(...COLORS.darkText);
+    doc.text(`${COMPANY.founder}, ${COMPANY.founderTitle}  |  ${COMPANY.address}`, pageWidth / 2, footerY + 19, { align: "center" });
   }
 
   // Generated timestamp (above footer)
@@ -535,6 +566,14 @@ export const generateEMIWhatsAppMessage = (data: EMIData, config?: Partial<EMIPD
   message += `🌐 ${COMPANY.website}\n`;
   if (COMPANY.founder) {
     message += `👤 ${COMPANY.founder}, ${COMPANY.founderTitle}\n`;
+  }
+  
+  // Social media links
+  if (COMPANY.socialLinks) {
+    message += `\n📱 *Follow Us:*\n`;
+    if (COMPANY.socialLinks.instagram) message += `IG: ${COMPANY.socialLinks.instagram} | `;
+    if (COMPANY.socialLinks.facebook) message += `FB: ${COMPANY.socialLinks.facebook} | `;
+    if (COMPANY.socialLinks.youtube) message += `YT: ${COMPANY.socialLinks.youtube}\n`;
   }
   message += `───────────────────`;
   
