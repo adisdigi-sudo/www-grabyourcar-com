@@ -46,6 +46,7 @@ interface ImportJob {
 
 const DATA_MODULES = [
   { id: 'cars', label: 'Car Catalog', icon: Car, description: 'Import car models, variants, and pricing' },
+  { id: 'car_variants', label: 'Variant Pricing', icon: CreditCard, description: 'Import variant-wise pricing with on-road breakup' },
   { id: 'car_colors', label: 'Car Colors', icon: Car, description: 'Import car colors with images by variant' },
   { id: 'leads', label: 'Leads', icon: Users, description: 'Import customer leads and inquiries' },
   { id: 'accessories', label: 'Accessories', icon: Package, description: 'Import car accessories inventory' },
@@ -62,17 +63,40 @@ Maruti,Brezza,maruti-brezza,8.29 - 14.14 Lakh,SUV,Petrol;CNG,Manual;Automatic,tr
 Hyundai,Creta,hyundai-creta,11.00 - 20.15 Lakh,SUV,Petrol;Diesel,Manual;Automatic,true,false,false,The Ultimate SUV,Hyundai Creta is a premium compact SUV with segment-leading features and powerful performance.,ADAS;Panoramic Sunroof;Bose Audio;Ventilated Seats,Premium interiors;Powerful engines;Safety features,Expensive top variants;Firm ride quality
 Tata,Nexon,tata-nexon,8.10 - 15.50 Lakh,SUV,Petrol;Diesel;Electric,Manual;AMT,true,false,true,Play Safe Play Smart,The Nexon is India's safest car with 5-star Global NCAP rating and modern design.,5-Star Safety;Electric Option;Connected Tech;Terrain Modes,Excellent safety;Multiple powertrain options;Good build quality,AMT could be smoother;Boot space average`,
   
+  car_variants: `car_slug,variant_name,fuel_type,transmission,ex_showroom,rto,insurance,tcs,fastag,registration,handling,on_road_price,features
+maruti-swift,LXi,Petrol,Manual,649000,51920,22715,0,500,1000,15000,740135,Power Steering;Front Power Windows;Dual Airbags;ABS with EBD
+maruti-swift,VXi,Petrol,Manual,749000,59920,26215,0,500,1000,15000,851635,SmartPlay Studio;Rear AC Vents;Electrically Adjustable ORVMs;All Power Windows
+maruti-swift,VXi AMT,Petrol,AMT,799000,63920,27965,0,500,1000,15000,907385,Auto Gear Shift;Idle Start-Stop;ECO Mode;Hill Hold Assist
+maruti-swift,ZXi,Petrol,Manual,849000,67920,29715,0,500,1000,15000,963135,Push Button Start;Cruise Control;Auto Climate Control;LED Projector Headlamps
+maruti-swift,ZXi+ AMT,Petrol,AMT,959000,76720,33565,0,500,1000,15000,1085785,Sunroof;360 Camera;6 Airbags;Wireless Charger;Head-Up Display
+hyundai-creta,E,Petrol,Manual,1099900,87992,38497,10999,500,1000,15000,1253888,17-inch Wheels;LED DRLs;Digital Cluster;Type-C USB Charger
+hyundai-creta,EX,Petrol,Manual,1245900,99672,43606,12459,500,1000,15000,1418137,Sunroof;10.25 inch Display;Wireless Android Auto;Ventilated Front Seats
+hyundai-creta,SX,Diesel,Automatic,1659900,132792,58097,16599,500,1000,15000,1883888,ADAS Level 2;Panoramic Sunroof;Bose 8 Speaker;Air Purifier
+hyundai-creta,SX(O),Diesel,Automatic,2015000,161200,70525,20150,500,1000,15000,2283375,Digital Key;Voice Recognition;360 Camera;Front Parking Sensors
+tata-nexon,Smart,Petrol,Manual,809900,64792,28347,0,500,1000,15000,919539,LED DRLs;Digital Instrument Cluster;Rear Wiper;Follow Me Home Headlamps
+tata-nexon,Smart+ S,Petrol,AMT,959900,76792,33597,0,500,1000,15000,1085789,10.25 inch Display;Apple CarPlay;Android Auto;Reverse Camera
+tata-nexon,Creative+,Diesel,Manual,1199900,95992,41997,11999,500,1000,15000,1365388,Sunroof;Wireless Charger;Ambient Lighting;Auto Headlamps
+tata-nexon,Fearless+ S,Diesel,AMT,1549900,123992,54247,15499,500,1000,15000,1759638,Ventilated Seats;Air Purifier;360 Camera;6 Airbags;TPMS`,
+  
   car_colors: `car_slug,color_name,hex_code,image_url
-maruti-swift,Pearl Arctic White,#FAFAFA,https://example.com/swift-white.jpg
-maruti-swift,Midnight Blue,#1A237E,https://example.com/swift-blue.jpg
-maruti-swift,Solid Fire Red,#C62828,https://example.com/swift-red.jpg
-maruti-swift,Magma Grey,#616161,https://example.com/swift-grey.jpg
-hyundai-creta,Atlas White,#F5F5F5,https://example.com/creta-white.jpg
-hyundai-creta,Titan Grey,#4A4A4A,https://example.com/creta-grey.jpg
-hyundai-creta,Abyss Black,#1A1A1A,https://example.com/creta-black.jpg
-tata-nexon,Pristine White,#FFFFFF,https://example.com/nexon-white.jpg
-tata-nexon,Flame Red,#D32F2F,https://example.com/nexon-red.jpg
-tata-nexon,Daytona Grey,#757575,https://example.com/nexon-grey.jpg`,
+maruti-swift,Pearl Arctic White,#FAFAFA,https://cdn.example.com/maruti/swift/pearl-arctic-white.jpg
+maruti-swift,Midnight Blue,#1A237E,https://cdn.example.com/maruti/swift/midnight-blue.jpg
+maruti-swift,Solid Fire Red,#C62828,https://cdn.example.com/maruti/swift/solid-fire-red.jpg
+maruti-swift,Magma Grey,#616161,https://cdn.example.com/maruti/swift/magma-grey.jpg
+maruti-swift,Luster Blue,#1976D2,https://cdn.example.com/maruti/swift/luster-blue.jpg
+maruti-swift,Sizzling Red,#B71C1C,https://cdn.example.com/maruti/swift/sizzling-red.jpg
+hyundai-creta,Atlas White,#F5F5F5,https://cdn.example.com/hyundai/creta/atlas-white.jpg
+hyundai-creta,Titan Grey,#4A4A4A,https://cdn.example.com/hyundai/creta/titan-grey.jpg
+hyundai-creta,Abyss Black,#1A1A1A,https://cdn.example.com/hyundai/creta/abyss-black.jpg
+hyundai-creta,Fiery Red,#D50000,https://cdn.example.com/hyundai/creta/fiery-red.jpg
+hyundai-creta,Ranger Khaki,#8D6E63,https://cdn.example.com/hyundai/creta/ranger-khaki.jpg
+hyundai-creta,Robust Emerald,#2E7D32,https://cdn.example.com/hyundai/creta/robust-emerald.jpg
+tata-nexon,Pristine White,#FFFFFF,https://cdn.example.com/tata/nexon/pristine-white.jpg
+tata-nexon,Flame Red,#D32F2F,https://cdn.example.com/tata/nexon/flame-red.jpg
+tata-nexon,Daytona Grey,#757575,https://cdn.example.com/tata/nexon/daytona-grey.jpg
+tata-nexon,Foliage Green,#388E3C,https://cdn.example.com/tata/nexon/foliage-green.jpg
+tata-nexon,Creative Ocean,#0277BD,https://cdn.example.com/tata/nexon/creative-ocean.jpg
+tata-nexon,Fearless Purple,#7B1FA2,https://cdn.example.com/tata/nexon/fearless-purple.jpg`,
   
   leads: `customer_name,phone,email,city,car_brand,car_model,car_variant,source,lead_type,status,priority,notes,budget_min,budget_max,buying_timeline,tags
 Rahul Sharma,9876543210,rahul@email.com,Delhi,Maruti,Swift,VXi,website,car_inquiry,new,high,Interested in petrol variant with accessories,600000,800000,within_week,hot;ready_to_buy
