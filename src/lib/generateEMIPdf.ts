@@ -589,19 +589,32 @@ export const generateEMIPdf = async (data: EMIData, config?: Partial<EMIPDFConfi
   doc.setFont("helvetica", "normal");
   doc.text(`${COMPANY.phone}  |  ${COMPANY.email}  |  ${COMPANY.website}`, pageWidth / 2, footerY + 9, { align: "center" });
   
-  // Social Media Links
+  // Social Media Links with Icons
   if (COMPANY.socialLinks) {
-    doc.setFontSize(7);
-    doc.setTextColor(...COLORS.grayText);
+    const socialIcons: Record<string, string> = {
+      instagram: "📷",
+      facebook: "f",
+      youtube: "▶️",
+      twitter: "𝕏",
+      linkedin: "in",
+    };
+    
     const socials = [];
-    if (COMPANY.socialLinks.instagram) socials.push(`IG: ${COMPANY.socialLinks.instagram}`);
-    if (COMPANY.socialLinks.facebook) socials.push(`FB: ${COMPANY.socialLinks.facebook}`);
-    if (COMPANY.socialLinks.youtube) socials.push(`YT: ${COMPANY.socialLinks.youtube}`);
-    if (COMPANY.socialLinks.twitter) socials.push(`X: ${COMPANY.socialLinks.twitter}`);
-    if (COMPANY.socialLinks.linkedin) socials.push(`LI: ${COMPANY.socialLinks.linkedin}`);
+    if (COMPANY.socialLinks.instagram) socials.push({ icon: "📷", label: COMPANY.socialLinks.instagram });
+    if (COMPANY.socialLinks.facebook) socials.push({ icon: "👍", label: COMPANY.socialLinks.facebook });
+    if (COMPANY.socialLinks.youtube) socials.push({ icon: "▶️", label: COMPANY.socialLinks.youtube });
+    if (COMPANY.socialLinks.twitter) socials.push({ icon: "𝕏", label: COMPANY.socialLinks.twitter });
+    if (COMPANY.socialLinks.linkedin) socials.push({ icon: "💼", label: COMPANY.socialLinks.linkedin });
     
     if (socials.length > 0) {
-      doc.text(`Follow Us: ${socials.join("  |  ")}`, pageWidth / 2, footerY + 14, { align: "center" });
+      doc.setFontSize(8);
+      doc.setTextColor(...COLORS.white);
+      let socialText = "Follow Us:  ";
+      socials.forEach((social, idx) => {
+        socialText += `${social.icon} ${social.label}`;
+        if (idx < socials.length - 1) socialText += "   |   ";
+      });
+      doc.text(socialText, pageWidth / 2, footerY + 14, { align: "center" });
     }
   }
   
