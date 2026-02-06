@@ -40,6 +40,7 @@ import { ManualQuoteGenerator } from "@/components/admin/ManualQuoteGenerator";
 import { DiscountManagement } from "@/components/admin/DiscountManagement";
 import { LaunchesManagement } from "@/components/admin/LaunchesManagement";
 import { ProfileSettings } from "@/components/admin/ProfileSettings";
+import { TeamUserManagement } from "@/components/admin/TeamUserManagement";
 
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
@@ -187,7 +188,7 @@ const AdminLayout = () => {
       case "profile-otp":
         return <ProfileSettings />;
       case "roles":
-        return <RoleManagement />;
+        return <TeamUserManagement />;
       case "settings":
         return <WebsiteSettings />;
       default:
