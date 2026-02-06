@@ -16,7 +16,8 @@ import {
   Sparkles,
   Info,
   Calculator,
-  IndianRupee
+  IndianRupee,
+  Share2
 } from "lucide-react";
 import { WhatsAppSalesCTA } from "@/components/WhatsAppCTA";
 import {
@@ -40,6 +41,7 @@ import {
 import { useState, useMemo } from "react";
 import { calculateStatePriceBreakup, stateRates } from "@/data/statePricing";
 import { motion, AnimatePresence } from "framer-motion";
+import { generateEMIPdf, generateEMIWhatsAppMessage } from "@/lib/generateEMIPdf";
 
 // Standard accessories that can be added
 const standardAccessories = [
@@ -360,7 +362,7 @@ export const PriceSummaryCard = ({
             </div>
             <div>
               <p className="text-sm font-semibold">EMI Calculator</p>
-              <p className="text-xs text-muted-foreground">Based on selected variant</p>
+              <p className="text-xs text-muted-foreground">{currentVariant?.name}</p>
             </div>
           </div>
           
@@ -375,35 +377,119 @@ export const PriceSummaryCard = ({
               (Math.pow(1 + monthlyRate, tenureMonths) - 1)
             );
             const downPayment = finalOnRoadPrice * 0.2;
+            const totalPayment = emi * tenureMonths;
+            const totalInterest = totalPayment - loanAmount;
+            
+            // PDF data based on selected variant only
+            const handleDownloadPdf = () => {
+              generateEMIPdf({
+                loanAmount: finalOnRoadPrice,
+                downPayment: downPayment,
+                loanPrincipal: loanAmount,
+                interestRate: interestRate,
+                tenure: tenureMonths,
+                emi: emi,
+                totalPayment: totalPayment,
+                totalInterest: totalInterest,
+                carName: `${carBrand} ${carName}`,
+                variantName: currentVariant?.name,
+                selectedColor: colors[selectedColor]?.name,
+                selectedCity: stateRates.find(s => s.code === selectedState)?.name,
+                onRoadPrice: {
+                  exShowroom: breakup.exShowroom,
+                  rto: breakup.rto,
+                  insurance: breakup.insurance,
+                  tcs: breakup.tcs,
+                  fastag: breakup.fastag,
+                  registration: breakup.registration,
+                  handling: breakup.handling,
+                  onRoadPrice: finalOnRoadPrice,
+                }
+              });
+            };
+
+            const handleShareWhatsApp = () => {
+              const message = generateEMIWhatsAppMessage({
+                loanAmount: finalOnRoadPrice,
+                downPayment: downPayment,
+                loanPrincipal: loanAmount,
+                interestRate: interestRate,
+                tenure: tenureMonths,
+                emi: emi,
+                totalPayment: totalPayment,
+                totalInterest: totalInterest,
+                carName: `${carBrand} ${carName}`,
+                variantName: currentVariant?.name,
+                selectedColor: colors[selectedColor]?.name,
+                selectedCity: stateRates.find(s => s.code === selectedState)?.name,
+                onRoadPrice: {
+                  exShowroom: breakup.exShowroom,
+                  rto: breakup.rto,
+                  insurance: breakup.insurance,
+                  tcs: breakup.tcs,
+                  fastag: breakup.fastag,
+                  registration: breakup.registration,
+                  handling: breakup.handling,
+                  onRoadPrice: finalOnRoadPrice,
+                }
+              });
+              window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank");
+            };
             
             return (
               <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-background/80 rounded-lg p-3 text-center border">
-                    <p className="text-xs text-muted-foreground mb-1">Down Payment (20%)</p>
-                    <p className="font-bold text-primary">{formatPrice(downPayment)}</p>
+                {/* Selected Variant Summary */}
+                <div className="bg-background/80 rounded-lg p-3 border">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-muted-foreground">Selected Variant</span>
+                    <span className="font-semibold text-sm">{currentVariant?.name}</span>
                   </div>
-                  <div className="bg-background/80 rounded-lg p-3 text-center border">
-                    <p className="text-xs text-muted-foreground mb-1">Loan Amount (80%)</p>
-                    <p className="font-bold text-foreground">{formatPrice(loanAmount)}</p>
+                  <div className="flex justify-between items-center mt-1">
+                    <span className="text-xs text-muted-foreground">On-Road Price</span>
+                    <span className="font-bold text-primary">{formatPrice(finalOnRoadPrice)}</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-background/80 rounded-lg p-2.5 text-center border">
+                    <p className="text-xs text-muted-foreground">Down Payment</p>
+                    <p className="font-bold text-sm text-primary">{formatPrice(downPayment)}</p>
+                  </div>
+                  <div className="bg-background/80 rounded-lg p-2.5 text-center border">
+                    <p className="text-xs text-muted-foreground">Loan Amount</p>
+                    <p className="font-bold text-sm">{formatPrice(loanAmount)}</p>
                   </div>
                 </div>
                 
                 <div className="bg-primary/10 rounded-xl p-4 text-center border border-primary/20">
-                  <p className="text-xs text-muted-foreground mb-1">Estimated Monthly EMI</p>
+                  <p className="text-xs text-muted-foreground mb-1">Monthly EMI</p>
                   <p className="text-2xl font-bold text-primary">
                     Rs. {emi.toLocaleString('en-IN')}
-                    <span className="text-sm font-normal text-muted-foreground">/month</span>
+                    <span className="text-xs font-normal text-muted-foreground">/month</span>
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">@ {interestRate}% p.a. for {tenureMonths / 12} years</p>
+                  <p className="text-xs text-muted-foreground mt-1">@ {interestRate}% p.a. • {tenureMonths / 12} years</p>
                 </div>
-                
-                <div className="flex items-center justify-between text-xs text-muted-foreground bg-muted/50 rounded-lg p-2">
-                  <span>Selected: {currentVariant?.name}</span>
-                  <a href="#emi-calculator" className="text-primary font-medium hover:underline flex items-center gap-1">
-                    <IndianRupee className="h-3 w-3" />
-                    Customize EMI
-                  </a>
+
+                {/* Download & Share */}
+                <div className="grid grid-cols-2 gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full text-xs"
+                    onClick={handleDownloadPdf}
+                  >
+                    <Download className="h-3.5 w-3.5 mr-1.5" />
+                    Download PDF
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full text-xs"
+                    onClick={handleShareWhatsApp}
+                  >
+                    <Share2 className="h-3.5 w-3.5 mr-1.5" />
+                    Share
+                  </Button>
                 </div>
               </div>
             );
