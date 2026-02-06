@@ -234,12 +234,23 @@ export const ColorGalleryViewer = ({
               )}>
                 {color.name}
               </span>
+              {color.image && (
+                <ImageIcon className="h-3 w-3 text-success" />
+              )}
               {selectedColor === index && (
                 <Check className="h-4 w-4 text-primary" />
               )}
             </motion.button>
           ))}
         </div>
+        
+        {/* Info message when color image not available */}
+        {currentColor && !currentColor.image && (
+          <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1.5">
+            <ImageIcon className="h-3 w-3" />
+            Showing gallery images. Color-specific photo coming soon.
+          </p>
+        )}
       </div>
     </div>
   );

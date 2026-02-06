@@ -44,7 +44,7 @@ import {
   GitCompareArrows
 } from "lucide-react";
 import { useCompare } from "@/hooks/useCompare";
-import { useCarColors } from "@/hooks/useCarColors";
+import { useCarColors, useCarGalleryImages } from "@/hooks/useCarColors";
 import EMICalculator from "@/components/EMICalculator";
 import { AICarRecommendations } from "@/components/AICarRecommendations";
 import { CrossSellWidget } from "@/components/CrossSellWidget";
@@ -85,6 +85,9 @@ const CarDetail = () => {
   // Fetch colors from database
   const { data: dbColors } = useCarColors(slug);
   
+  // Fetch gallery images from database
+  const { data: dbGalleryImages } = useCarGalleryImages(slug);
+  
   const [selectedColor, setSelectedColor] = useState(0);
   const [selectedVariant, setSelectedVariant] = useState(0);
 
@@ -95,6 +98,14 @@ const CarDetail = () => {
     }
     return car?.colors || [];
   }, [dbColors, car?.colors]);
+
+  // Use database gallery images if available, otherwise fall back to static data
+  const displayGallery = useMemo(() => {
+    if (dbGalleryImages && dbGalleryImages.length > 0) {
+      return dbGalleryImages;
+    }
+    return car?.gallery || [];
+  }, [dbGalleryImages, car?.gallery]);
 
   if (!car) {
     return (
@@ -217,8 +228,8 @@ const CarDetail = () => {
                 <ColorGalleryViewer
                   colors={displayColors}
                   carName={car.name}
-                  carImage={car.image}
-                  gallery={car.gallery}
+                  carImage={dbGalleryImages?.[0] || car.image}
+                  gallery={displayGallery}
                   selectedColor={selectedColor}
                   onColorChange={setSelectedColor}
                 />
