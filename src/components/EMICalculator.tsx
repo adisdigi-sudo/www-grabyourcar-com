@@ -104,44 +104,48 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
    };
  
   const handleLoanAmountChange = (value: string) => {
-    const num = parseInt(value.replace(/,/g, ''), 10);
-    if (!isNaN(num)) {
-      setLoanAmount(Math.min(Math.max(num, 100000), 100000000));
-    } else if (value === '') {
-      setLoanAmount(100000);
+    // Remove commas and parse
+    const cleanValue = value.replace(/,/g, '');
+    const num = parseInt(cleanValue, 10);
+    if (!isNaN(num) && num >= 0) {
+      // Allow minimum 10000 (10K) to maximum 10 Crore
+      setLoanAmount(Math.min(Math.max(num, 10000), 100000000));
+    } else if (cleanValue === '') {
+      setLoanAmount(10000);
     }
   };
 
   const handleDownPaymentChange = (value: string) => {
-    const num = parseInt(value.replace(/,/g, ''), 10);
-    if (!isNaN(num)) {
-      setDownPayment(Math.min(Math.max(num, 0), loanAmount * 0.5));
-    } else if (value === '') {
+    const cleanValue = value.replace(/,/g, '');
+    const num = parseInt(cleanValue, 10);
+    if (!isNaN(num) && num >= 0) {
+      setDownPayment(Math.min(Math.max(num, 0), loanAmount * 0.9));
+    } else if (cleanValue === '') {
       setDownPayment(0);
     }
   };
 
   const handleInterestRateChange = (value: string) => {
     const num = parseFloat(value);
-    if (!isNaN(num)) {
-      setInterestRate(Math.min(Math.max(num, 6), 18));
+    if (!isNaN(num) && num >= 0) {
+      setInterestRate(Math.min(Math.max(num, 1), 30));
     } else if (value === '') {
-      setInterestRate(6);
+      setInterestRate(1);
     }
   };
 
   const handleTenureChange = (value: string) => {
     const num = parseInt(value, 10);
-    if (!isNaN(num)) {
-      setTenure(Math.min(Math.max(num, 12), 84));
+    if (!isNaN(num) && num >= 0) {
+      setTenure(Math.min(Math.max(num, 6), 120));
     } else if (value === '') {
-      setTenure(12);
+      setTenure(6);
     }
   };
 
   // Quick EMI reference table
   const quickEmiTable = useMemo(() => {
-    const tenures = [36, 48, 60, 72, 84];
+    const tenures = [12, 24, 36, 48, 60];
     const principal = loanAmount - downPayment;
     const monthlyRate = interestRate / 12 / 100;
     
@@ -205,13 +209,13 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
                     <Slider
                       value={[loanAmount]}
                       onValueChange={(value) => setLoanAmount(value[0])}
-                      min={100000}
+                      min={10000}
                       max={100000000}
-                      step={100000}
+                      step={10000}
                       className="w-full"
                     />
                     <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>₹1 Lakh</span>
+                      <span>₹10K</span>
                       <span>₹10 Crore</span>
                     </div>
                   </div>
@@ -237,13 +241,13 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
                       value={[downPayment]}
                       onValueChange={(value) => setDownPayment(value[0])}
                       min={0}
-                      max={loanAmount * 0.5}
-                      step={10000}
+                      max={loanAmount * 0.9}
+                      step={5000}
                       className="w-full"
                     />
                     <div className="flex justify-between text-xs text-muted-foreground">
                       <span>₹0</span>
-                      <span>{formatCurrency(loanAmount * 0.5)} (50%)</span>
+                      <span>{formatCurrency(loanAmount * 0.9)} (90%)</span>
                     </div>
                   </div>
 
@@ -270,14 +274,14 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
                     <Slider
                       value={[interestRate]}
                       onValueChange={(value) => setInterestRate(value[0])}
-                      min={6}
-                      max={18}
+                      min={1}
+                      max={30}
                       step={0.1}
                       className="w-full"
                     />
                     <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>6%</span>
-                      <span>18%</span>
+                      <span>1%</span>
+                      <span>30%</span>
                     </div>
                   </div>
 
@@ -303,14 +307,14 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
                     <Slider
                       value={[tenure]}
                       onValueChange={(value) => setTenure(value[0])}
-                      min={12}
-                      max={84}
+                      min={6}
+                      max={120}
                       step={1}
                       className="w-full"
                     />
                     <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>1 Year</span>
-                      <span>7 Years</span>
+                      <span>6 Months</span>
+                      <span>10 Years</span>
                     </div>
                   </div>
                 </div>
