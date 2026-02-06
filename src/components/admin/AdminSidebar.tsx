@@ -110,6 +110,8 @@ const navItems: NavItem[] = [
     children: [
       { id: "services-hsrp", label: "HSRP & FASTag", icon: Shield },
       { id: "services-rentals", label: "Self-Drive Rentals", icon: CalendarDays },
+      { id: "services-driver-bookings", label: "🚗 Driver Bookings", icon: Car, badge: "New" },
+      { id: "services-api-partners", label: "🔗 API Partners", icon: Globe, badge: "New" },
       { id: "services-insurance", label: "Insurance", icon: FileText },
       { id: "services-loans", label: "Car Loans", icon: CreditCard },
       { id: "services-discounts", label: "Discount Presets", icon: Tags, badge: "New" },
