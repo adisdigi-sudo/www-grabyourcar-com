@@ -5,6 +5,67 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+// AI models to try in order of preference
+const AI_MODELS = [
+  "google/gemini-2.5-flash",
+  "google/gemini-2.5-flash-lite",
+  "openai/gpt-5-mini",
+];
+
+async function callAIWithFallback(prompt: string, apiKey: string): Promise<string> {
+  let lastError: Error | null = null;
+
+  for (const model of AI_MODELS) {
+    try {
+      console.log(`Trying model: ${model}`);
+      
+      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.7,
+          max_tokens: 1000
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const content = data.choices?.[0]?.message?.content?.trim();
+        if (content) {
+          console.log(`Success with model: ${model}`);
+          return content;
+        }
+      }
+
+      if (response.status === 429) {
+        console.log(`Rate limited on ${model}, trying next...`);
+        continue;
+      }
+      if (response.status === 402) {
+        throw new Error("AI credits exhausted. Please check your Lovable plan.");
+      }
+      if (response.status === 404 || response.status === 410) {
+        console.log(`Model ${model} unavailable, trying next...`);
+        continue;
+      }
+
+      const errorText = await response.text();
+      console.error(`Error with ${model}: ${response.status} - ${errorText}`);
+      lastError = new Error(`AI error: ${response.status}`);
+    } catch (error) {
+      console.error(`Exception with ${model}:`, error);
+      lastError = error instanceof Error ? error : new Error(String(error));
+    }
+  }
+
+  throw lastError || new Error("All AI models failed");
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -13,8 +74,13 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')!;
+    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
     
+    if (!lovableApiKey) {
+      console.error("LOVABLE_API_KEY not configured");
+      throw new Error("AI service not configured");
+    }
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const { carId, enhanceType } = await req.json();
@@ -118,34 +184,7 @@ ${carContext}`;
 
     console.log(`Enhancing ${car.name} - ${enhanceType}`);
 
-    // Call Lovable AI Gateway
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${lovableApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.7,
-        max_tokens: 1000
-      })
-    });
-
-    if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      console.error('AI API error:', errorText);
-      return new Response(
-        JSON.stringify({ success: false, error: 'AI enhancement failed' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const aiData = await aiResponse.json();
-    const generatedContent = aiData.choices?.[0]?.message?.content?.trim();
+    const generatedContent = await callAIWithFallback(prompt, lovableApiKey);
 
     if (!generatedContent) {
       return new Response(
@@ -154,7 +193,7 @@ ${carContext}`;
       );
     }
 
-    console.log('Generated content:', generatedContent);
+    console.log('Generated content:', generatedContent.substring(0, 200));
 
     // Parse and update based on type
     let updateData: Record<string, unknown> = {};
@@ -164,7 +203,6 @@ ${carContext}`;
         const highlights = JSON.parse(generatedContent);
         updateData = { key_highlights: highlights };
       } catch {
-        // Try to extract array from text
         const matches = generatedContent.match(/\[[\s\S]*\]/);
         if (matches) {
           updateData = { key_highlights: JSON.parse(matches[0]) };
@@ -222,12 +260,12 @@ ${carContext}`;
     );
   } catch (error) {
     console.error('Enhancement error:', error);
+    const message = error instanceof Error ? error.message : 'Enhancement failed';
+    const status = message.includes("credits") ? 402 : 500;
+    
     return new Response(
-      JSON.stringify({
-        success: false,
-        error: error instanceof Error ? error.message : 'Enhancement failed'
-      }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ success: false, error: message }),
+      { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });

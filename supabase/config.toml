@@ -22,7 +22,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.generate-blog]
-verify_jwt = true
+verify_jwt = false
 
 [functions.migrate-car-data]
 verify_jwt = false
@@ -73,4 +73,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.generate-car-data]
-verify_jwt = true
+verify_jwt = false
+
+[functions.send-automated-email]
+verify_jwt = false
