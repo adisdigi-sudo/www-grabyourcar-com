@@ -48,6 +48,8 @@ import EmailAutomationManager from "@/components/admin/EmailAutomationManager";
 import StateCityPricingManager from "@/components/admin/StateCityPricingManager";
 import { MarketingCommandCenter } from "@/components/admin/marketing";
 import VehicleAttributesManager from "@/components/admin/VehicleAttributesManager";
+import DriverBookingsManagement from "@/components/admin/DriverBookingsManagement";
+import APIPartnersManagement from "@/components/admin/APIPartnersManagement";
 
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
@@ -159,6 +161,10 @@ const AdminLayout = () => {
         return <HSRPManagement />;
       case "services-rentals":
         return <RentalManagement />;
+      case "services-driver-bookings":
+        return <DriverBookingsManagement />;
+      case "services-api-partners":
+        return <APIPartnersManagement />;
       case "services-insurance":
       case "services-loans":
         return <WebsiteSettings />;

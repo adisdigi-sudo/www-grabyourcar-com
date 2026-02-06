@@ -440,6 +440,131 @@ export type Database = {
         }
         Relationships: []
       }
+      api_logs: {
+        Row: {
+          created_at: string | null
+          duration_ms: number | null
+          endpoint: string
+          id: string
+          ip_address: string | null
+          method: string
+          partner_id: string | null
+          request_body: Json | null
+          response_body: Json | null
+          response_code: number | null
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          duration_ms?: number | null
+          endpoint: string
+          id?: string
+          ip_address?: string | null
+          method: string
+          partner_id?: string | null
+          request_body?: Json | null
+          response_body?: Json | null
+          response_code?: number | null
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          duration_ms?: number | null
+          endpoint?: string
+          id?: string
+          ip_address?: string | null
+          method?: string
+          partner_id?: string | null
+          request_body?: Json | null
+          response_body?: Json | null
+          response_code?: number | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_logs_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "api_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_partners: {
+        Row: {
+          allowed_services: string[] | null
+          api_key_hash: string | null
+          api_secret_hash: string | null
+          branding_enabled: boolean | null
+          callback_url: string | null
+          commission_percentage: number | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string | null
+          custom_branding: Json | null
+          description: string | null
+          id: string
+          ip_whitelist: string[] | null
+          is_active: boolean | null
+          logo_url: string | null
+          name: string
+          notes: string | null
+          rate_limit_per_minute: number | null
+          slug: string
+          updated_at: string | null
+          webhook_url: string | null
+        }
+        Insert: {
+          allowed_services?: string[] | null
+          api_key_hash?: string | null
+          api_secret_hash?: string | null
+          branding_enabled?: boolean | null
+          callback_url?: string | null
+          commission_percentage?: number | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          custom_branding?: Json | null
+          description?: string | null
+          id?: string
+          ip_whitelist?: string[] | null
+          is_active?: boolean | null
+          logo_url?: string | null
+          name: string
+          notes?: string | null
+          rate_limit_per_minute?: number | null
+          slug: string
+          updated_at?: string | null
+          webhook_url?: string | null
+        }
+        Update: {
+          allowed_services?: string[] | null
+          api_key_hash?: string | null
+          api_secret_hash?: string | null
+          branding_enabled?: boolean | null
+          callback_url?: string | null
+          commission_percentage?: number | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          custom_branding?: Json | null
+          description?: string | null
+          id?: string
+          ip_whitelist?: string[] | null
+          is_active?: boolean | null
+          logo_url?: string | null
+          name?: string
+          notes?: string | null
+          rate_limit_per_minute?: number | null
+          slug?: string
+          updated_at?: string | null
+          webhook_url?: string | null
+        }
+        Relationships: []
+      }
       broadcast_recipients: {
         Row: {
           broadcast_id: string | null
@@ -1466,6 +1591,137 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      driver_bookings: {
+        Row: {
+          api_partner_id: string | null
+          api_reference_id: string | null
+          base_amount: number
+          created_at: string | null
+          customer_email: string | null
+          customer_name: string
+          customer_phone: string
+          discount_amount: number | null
+          discount_reason: string | null
+          distance_km: number | null
+          driver_assigned_at: string | null
+          driver_charges: number | null
+          driver_name: string | null
+          driver_phone: string | null
+          dropoff_address: string | null
+          dropoff_date: string | null
+          dropoff_time: string | null
+          duration_days: number | null
+          extra_km_charges: number | null
+          id: string
+          night_charges: number | null
+          payment_id: string | null
+          payment_status: string | null
+          pickup_address: string
+          pickup_date: string
+          pickup_time: string
+          service_type: string
+          source: string | null
+          special_instructions: string | null
+          status: string | null
+          taxes: number | null
+          toll_charges: number | null
+          total_amount: number
+          trip_type: string | null
+          updated_at: string | null
+          user_id: string | null
+          vehicle_id: string | null
+          vehicle_name: string | null
+        }
+        Insert: {
+          api_partner_id?: string | null
+          api_reference_id?: string | null
+          base_amount: number
+          created_at?: string | null
+          customer_email?: string | null
+          customer_name: string
+          customer_phone: string
+          discount_amount?: number | null
+          discount_reason?: string | null
+          distance_km?: number | null
+          driver_assigned_at?: string | null
+          driver_charges?: number | null
+          driver_name?: string | null
+          driver_phone?: string | null
+          dropoff_address?: string | null
+          dropoff_date?: string | null
+          dropoff_time?: string | null
+          duration_days?: number | null
+          extra_km_charges?: number | null
+          id?: string
+          night_charges?: number | null
+          payment_id?: string | null
+          payment_status?: string | null
+          pickup_address: string
+          pickup_date: string
+          pickup_time: string
+          service_type?: string
+          source?: string | null
+          special_instructions?: string | null
+          status?: string | null
+          taxes?: number | null
+          toll_charges?: number | null
+          total_amount: number
+          trip_type?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          vehicle_id?: string | null
+          vehicle_name?: string | null
+        }
+        Update: {
+          api_partner_id?: string | null
+          api_reference_id?: string | null
+          base_amount?: number
+          created_at?: string | null
+          customer_email?: string | null
+          customer_name?: string
+          customer_phone?: string
+          discount_amount?: number | null
+          discount_reason?: string | null
+          distance_km?: number | null
+          driver_assigned_at?: string | null
+          driver_charges?: number | null
+          driver_name?: string | null
+          driver_phone?: string | null
+          dropoff_address?: string | null
+          dropoff_date?: string | null
+          dropoff_time?: string | null
+          duration_days?: number | null
+          extra_km_charges?: number | null
+          id?: string
+          night_charges?: number | null
+          payment_id?: string | null
+          payment_status?: string | null
+          pickup_address?: string
+          pickup_date?: string
+          pickup_time?: string
+          service_type?: string
+          source?: string | null
+          special_instructions?: string | null
+          status?: string | null
+          taxes?: number | null
+          toll_charges?: number | null
+          total_amount?: number
+          trip_type?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          vehicle_id?: string | null
+          vehicle_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_bookings_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "rental_vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_logs: {
         Row: {
@@ -2590,6 +2846,123 @@ export type Database = {
           vehicle_image?: string | null
           vehicle_name?: string
           vehicle_type?: string
+        }
+        Relationships: []
+      }
+      rental_services: {
+        Row: {
+          base_price: number | null
+          created_at: string | null
+          description: string | null
+          features: Json | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          price_unit: string | null
+          slug: string
+          sort_order: number | null
+          terms: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          base_price?: number | null
+          created_at?: string | null
+          description?: string | null
+          features?: Json | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          price_unit?: string | null
+          slug: string
+          sort_order?: number | null
+          terms?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          base_price?: number | null
+          created_at?: string | null
+          description?: string | null
+          features?: Json | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          price_unit?: string | null
+          slug?: string
+          sort_order?: number | null
+          terms?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      rental_vehicles: {
+        Row: {
+          brand: string
+          color: string | null
+          created_at: string | null
+          features: Json | null
+          fuel_type: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          is_available: boolean | null
+          location: string | null
+          name: string
+          registration_number: string | null
+          rent_outstation_per_km: number | null
+          rent_self_drive: number | null
+          rent_with_driver: number | null
+          seats: number | null
+          transmission: string | null
+          updated_at: string | null
+          vehicle_type: string
+          year: number | null
+        }
+        Insert: {
+          brand: string
+          color?: string | null
+          created_at?: string | null
+          features?: Json | null
+          fuel_type?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          is_available?: boolean | null
+          location?: string | null
+          name: string
+          registration_number?: string | null
+          rent_outstation_per_km?: number | null
+          rent_self_drive?: number | null
+          rent_with_driver?: number | null
+          seats?: number | null
+          transmission?: string | null
+          updated_at?: string | null
+          vehicle_type: string
+          year?: number | null
+        }
+        Update: {
+          brand?: string
+          color?: string | null
+          created_at?: string | null
+          features?: Json | null
+          fuel_type?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          is_available?: boolean | null
+          location?: string | null
+          name?: string
+          registration_number?: string | null
+          rent_outstation_per_km?: number | null
+          rent_self_drive?: number | null
+          rent_with_driver?: number | null
+          seats?: number | null
+          transmission?: string | null
+          updated_at?: string | null
+          vehicle_type?: string
+          year?: number | null
         }
         Relationships: []
       }
