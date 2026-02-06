@@ -156,6 +156,19 @@ const navItems: NavItem[] = [
       { id: "integrations-payments", label: "Payment Gateway", icon: CreditCard },
     ]
   },
+  { 
+    id: "profile", 
+    label: "Profile & Settings", 
+    icon: UserCog,
+    badge: "New",
+    children: [
+      { id: "profile-business", label: "Business Profile", icon: Settings },
+      { id: "profile-logo", label: "Logo & Branding", icon: Palette },
+      { id: "profile-users", label: "User Management", icon: Users },
+      { id: "profile-contact", label: "Contact Config", icon: MessageSquare },
+      { id: "profile-otp", label: "OTP & Verification", icon: Shield },
+    ]
+  },
   { id: "roles", label: "User Roles", icon: UserCog },
   { id: "settings", label: "Settings", icon: Settings },
 ];
