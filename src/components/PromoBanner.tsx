@@ -3,60 +3,93 @@ import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 
-// Racing car SVG component
-const RacingCar = ({ color, delay, speed }: { color: string; delay: number; speed: number }) => (
-  <motion.div
-    className="absolute top-1/2 -translate-y-1/2"
-    initial={{ x: "100vw" }}
-    animate={{ x: "-150px" }}
-    transition={{
-      duration: speed,
-      delay: delay,
-      repeat: Infinity,
-      ease: "linear",
-    }}
+// Modern sleek supercar SVG
+const ModernSupercar = ({ color, accentColor }: { color: string; accentColor: string }) => (
+  <svg
+    width="100"
+    height="40"
+    viewBox="0 0 100 40"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className="drop-shadow-xl"
   >
-    <svg
-      width="80"
-      height="32"
-      viewBox="0 0 80 32"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className="drop-shadow-lg"
-    >
-      {/* Car body */}
-      <path
-        d="M12 20C12 20 16 12 28 10C40 8 52 8 60 10C68 12 72 16 72 20H12Z"
-        fill={color}
-      />
-      {/* Windshield */}
-      <path
-        d="M30 10C30 10 32 6 40 6C48 6 52 8 54 10L30 10Z"
-        fill="rgba(255,255,255,0.3)"
-      />
-      {/* Front wheel */}
-      <circle cx="22" cy="22" r="6" fill="#1a1a1a" />
-      <circle cx="22" cy="22" r="3" fill="#333" />
-      {/* Rear wheel */}
-      <circle cx="58" cy="22" r="6" fill="#1a1a1a" />
-      <circle cx="58" cy="22" r="3" fill="#333" />
-      {/* Headlight */}
-      <ellipse cx="68" cy="16" rx="3" ry="2" fill="#fff" opacity="0.9" />
-      {/* Speed lines */}
-      <line x1="0" y1="14" x2="8" y2="14" stroke="rgba(255,255,255,0.5)" strokeWidth="1" />
-      <line x1="2" y1="18" x2="10" y2="18" stroke="rgba(255,255,255,0.4)" strokeWidth="1" />
-      <line x1="4" y1="22" x2="10" y2="22" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
-    </svg>
-  </motion.div>
+    {/* Speed trail effect */}
+    <defs>
+      <linearGradient id={`trail-${color}`} x1="0%" y1="50%" x2="100%" y2="50%">
+        <stop offset="0%" stopColor={accentColor} stopOpacity="0" />
+        <stop offset="100%" stopColor={accentColor} stopOpacity="0.6" />
+      </linearGradient>
+      <linearGradient id={`body-${color}`} x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor={color} />
+        <stop offset="50%" stopColor={color} />
+        <stop offset="100%" stopColor={accentColor} />
+      </linearGradient>
+    </defs>
+    
+    {/* Speed lines */}
+    <rect x="0" y="18" width="20" height="2" fill={`url(#trail-${color})`} rx="1" />
+    <rect x="5" y="22" width="15" height="1.5" fill={`url(#trail-${color})`} rx="1" />
+    <rect x="8" y="26" width="12" height="1" fill={`url(#trail-${color})`} rx="1" />
+    
+    {/* Car body - sleek modern design */}
+    <path
+      d="M25 28 L30 22 L38 18 L55 16 L70 16 L82 18 L90 22 L92 26 L92 30 L25 30 Z"
+      fill={`url(#body-${color})`}
+    />
+    
+    {/* Roof/cabin */}
+    <path
+      d="M42 18 L48 12 L62 12 L70 16 L42 16 Z"
+      fill="rgba(0,0,0,0.3)"
+    />
+    
+    {/* Windows */}
+    <path
+      d="M44 17 L49 13 L60 13 L66 16 L44 16 Z"
+      fill="rgba(135,206,235,0.6)"
+    />
+    
+    {/* Front headlight */}
+    <ellipse cx="88" cy="24" rx="3" ry="2" fill="#fff" opacity="0.95" />
+    <ellipse cx="88" cy="24" rx="2" ry="1" fill="#fef08a" opacity="0.8" />
+    
+    {/* Rear light */}
+    <rect x="26" y="24" width="4" height="3" rx="1" fill="#ef4444" opacity="0.9" />
+    
+    {/* Body accent line */}
+    <path
+      d="M30 25 L88 25"
+      stroke={accentColor}
+      strokeWidth="1"
+      opacity="0.8"
+    />
+    
+    {/* Front wheel */}
+    <circle cx="78" cy="30" r="6" fill="#1f2937" />
+    <circle cx="78" cy="30" r="4" fill="#374151" />
+    <circle cx="78" cy="30" r="2" fill="#6b7280" />
+    {/* Wheel spokes */}
+    <line x1="78" y1="26" x2="78" y2="34" stroke="#9ca3af" strokeWidth="0.5" />
+    <line x1="74" y1="30" x2="82" y2="30" stroke="#9ca3af" strokeWidth="0.5" />
+    
+    {/* Rear wheel */}
+    <circle cx="38" cy="30" r="6" fill="#1f2937" />
+    <circle cx="38" cy="30" r="4" fill="#374151" />
+    <circle cx="38" cy="30" r="2" fill="#6b7280" />
+    {/* Wheel spokes */}
+    <line x1="38" y1="26" x2="38" y2="34" stroke="#9ca3af" strokeWidth="0.5" />
+    <line x1="34" y1="30" x2="42" y2="30" stroke="#9ca3af" strokeWidth="0.5" />
+  </svg>
 );
 
-// Different supercar colors
-const carColors = [
-  "#ef4444", // Red Ferrari
-  "#f59e0b", // Orange Lambo
-  "#3b82f6", // Blue Porsche
-  "#10b981", // Green McLaren
-  "#8b5cf6", // Purple Bugatti
+// Racing car data with colors
+const racingCars = [
+  { color: "#dc2626", accentColor: "#991b1b", name: "Ferrari" },
+  { color: "#f97316", accentColor: "#c2410c", name: "McLaren" },
+  { color: "#eab308", accentColor: "#a16207", name: "Lambo" },
+  { color: "#22c55e", accentColor: "#15803d", name: "Aston" },
+  { color: "#3b82f6", accentColor: "#1d4ed8", name: "Porsche" },
+  { color: "#8b5cf6", accentColor: "#6d28d9", name: "Bugatti" },
 ];
 
 export const PromoBanner = () => {
@@ -84,79 +117,116 @@ export const PromoBanner = () => {
   }, []);
 
   return (
-    <div className="relative bg-gradient-to-r from-primary via-primary to-success text-primary-foreground py-2 md:py-3 overflow-hidden shadow-md">
-      {/* Racing cars animation layer */}
+    <div className="relative bg-gradient-to-r from-primary via-primary/95 to-success text-primary-foreground py-3 md:py-4 overflow-hidden shadow-lg">
+      {/* Animated road pattern background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {carColors.map((color, index) => (
-          <RacingCar
-            key={index}
-            color={color}
-            delay={index * 1.5}
-            speed={4 + index * 0.5}
-          />
-        ))}
+        {/* Road surface texture */}
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/5 to-transparent" />
+        
+        {/* Moving dashed center line */}
+        <div className="absolute bottom-1 left-0 right-0 h-[2px] overflow-hidden">
+          <motion.div
+            className="flex gap-4 absolute"
+            animate={{ x: [0, -80] }}
+            transition={{ duration: 0.5, repeat: Infinity, ease: "linear" }}
+          >
+            {[...Array(50)].map((_, i) => (
+              <div key={i} className="w-6 h-[2px] bg-white/20 rounded-full flex-shrink-0" />
+            ))}
+          </motion.div>
+        </div>
       </div>
 
-      {/* Road/track lines decoration */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
-        <div className="absolute top-1/2 left-0 right-0 h-[2px] bg-white/30 -translate-y-1/2" />
+      {/* Racing cars animation - continuous line racing */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div
-          className="absolute top-1/2 -translate-y-1/2 flex gap-8"
-          animate={{ x: [0, -100] }}
-          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          className="absolute flex items-center gap-6"
+          style={{ top: "50%", transform: "translateY(-50%)" }}
+          animate={{ 
+            x: ["100vw", "-800px"]
+          }}
+          transition={{
+            duration: 8,
+            repeat: Infinity,
+            ease: "linear",
+          }}
         >
-          {[...Array(30)].map((_, i) => (
-            <div key={i} className="w-8 h-1 bg-white/40 rounded-full" />
+          {racingCars.map((car, index) => (
+            <div key={index} className="flex-shrink-0">
+              <ModernSupercar color={car.color} accentColor={car.accentColor} />
+            </div>
+          ))}
+        </motion.div>
+        
+        {/* Second wave of cars with offset */}
+        <motion.div
+          className="absolute flex items-center gap-6"
+          style={{ top: "50%", transform: "translateY(-50%)" }}
+          animate={{ 
+            x: ["100vw", "-800px"]
+          }}
+          transition={{
+            duration: 8,
+            delay: 4,
+            repeat: Infinity,
+            ease: "linear",
+          }}
+        >
+          {[...racingCars].reverse().map((car, index) => (
+            <div key={index} className="flex-shrink-0">
+              <ModernSupercar color={car.color} accentColor={car.accentColor} />
+            </div>
           ))}
         </motion.div>
       </div>
 
+      {/* Content */}
       <div className="container mx-auto px-3 md:px-4 relative z-10">
-        {/* Mobile: Single line compact layout */}
+        {/* Mobile layout */}
         <div className="flex md:hidden items-center justify-center gap-2 text-xs">
-          <Sparkles className="h-3.5 w-3.5 animate-pulse flex-shrink-0" />
-          <span className="font-heading font-bold truncate">
-            Mega Savings Live — Up to ₹2.5L OFF
-          </span>
-          <span className="text-primary-foreground/60">•</span>
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <Badge variant="secondary" className="bg-primary-foreground/20 text-primary-foreground border-0 font-mono text-xs px-1.5 py-0">
+          <div className="bg-white/20 backdrop-blur-sm rounded-full px-3 py-1.5 flex items-center gap-2">
+            <Sparkles className="h-3.5 w-3.5 animate-pulse flex-shrink-0" />
+            <span className="font-heading font-bold truncate">
+              Mega Savings Live — Up to ₹2.5L OFF
+            </span>
+            <span className="text-primary-foreground/60">•</span>
+            <Badge variant="secondary" className="bg-white/30 text-primary-foreground border-0 font-mono text-xs px-1.5 py-0">
               {String(timeLeft.hours).padStart(2, "0")}:{String(timeLeft.minutes).padStart(2, "0")}:{String(timeLeft.seconds).padStart(2, "0")}
             </Badge>
           </div>
         </div>
 
-        {/* Desktop: Full layout - Premium Announcement Strip */}
-        <div className="hidden md:flex items-center justify-center gap-8 text-center">
-          <div className="flex items-center gap-2">
-            <Flame className="h-5 w-5 animate-pulse" />
+        {/* Desktop layout */}
+        <div className="hidden md:flex items-center justify-center gap-6 text-center">
+          <div className="bg-white/15 backdrop-blur-sm rounded-full px-5 py-2 flex items-center gap-3 shadow-lg border border-white/20">
+            <Flame className="h-5 w-5 animate-pulse text-yellow-300" />
             <span className="font-heading font-bold text-base tracking-wide">
-              🚗 Mega Savings Live
+              🏎️ Mega Savings Live
             </span>
           </div>
           
-          <div className="w-px h-6 bg-primary-foreground/30" />
+          <div className="w-px h-8 bg-white/30" />
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2">
             <TrendingUp className="h-4 w-4" />
-            <span className="text-sm font-medium">Unlock Exclusive Dealer Offers Today — Up to ₹2,50,000 OFF</span>
+            <span className="text-sm font-medium">Unlock Exclusive Dealer Offers — Up to ₹2,50,000 OFF</span>
           </div>
           
-          <div className="w-px h-6 bg-primary-foreground/30" />
+          <div className="w-px h-8 bg-white/30" />
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 bg-white/15 backdrop-blur-sm rounded-full px-4 py-2 border border-white/20">
             <Timer className="h-4 w-4" />
             <span className="text-sm font-medium">Ends in:</span>
             <div className="flex items-center gap-1">
-              <Badge variant="secondary" className="bg-primary-foreground/25 text-primary-foreground border-0 font-mono font-bold">
+              <Badge variant="secondary" className="bg-white/30 text-primary-foreground border-0 font-mono font-bold shadow-inner">
                 {String(timeLeft.hours).padStart(2, "0")}h
               </Badge>
-              <span className="font-bold">:</span>
-              <Badge variant="secondary" className="bg-primary-foreground/25 text-primary-foreground border-0 font-mono font-bold">
+              <span className="font-bold text-yellow-300">:</span>
+              <Badge variant="secondary" className="bg-white/30 text-primary-foreground border-0 font-mono font-bold shadow-inner">
                 {String(timeLeft.minutes).padStart(2, "0")}m
               </Badge>
-              <span className="font-bold">:</span>
-              <Badge variant="secondary" className="bg-primary-foreground/25 text-primary-foreground border-0 font-mono font-bold">
+              <span className="font-bold text-yellow-300">:</span>
+              <Badge variant="secondary" className="bg-white/30 text-primary-foreground border-0 font-mono font-bold shadow-inner">
                 {String(timeLeft.seconds).padStart(2, "0")}s
               </Badge>
             </div>
