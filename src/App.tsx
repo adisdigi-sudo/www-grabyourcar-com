@@ -10,6 +10,7 @@ import { FloatingCompareBar } from "@/components/FloatingCompareBar";
 import { WhatsAppFloatingButton } from "@/components/WhatsAppCTA";
 import { AdminSubdomainRouter } from "@/components/AdminSubdomainRouter";
 import { isAdminSubdomain } from "@/hooks/useAdminSubdomain";
+import { useGlobalRealtimeSync } from "@/hooks/useRealtimeSync";
 import Index from "./pages/Index";
 import Cars from "./pages/Cars";
 import CarImages from "./pages/CarImages";
@@ -41,14 +42,29 @@ import NotFound from "./pages/NotFound";
 import About from "./pages/About";
 import AutoIntelligence from "./pages/AutoIntelligence";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 30, // 30 seconds default
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
+    },
+  },
+});
+
+// Component to initialize global real-time sync
+const RealtimeSyncProvider = ({ children }: { children: React.ReactNode }) => {
+  useGlobalRealtimeSync();
+  return <>{children}</>;
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <CartProvider>
         <CompareProvider>
-          <TooltipProvider>
+          <RealtimeSyncProvider>
+            <TooltipProvider>
             <Toaster />
             <Sonner />
             <BrowserRouter>
@@ -95,7 +111,8 @@ const App = () => (
                 )}
               </AdminSubdomainRouter>
             </BrowserRouter>
-          </TooltipProvider>
+            </TooltipProvider>
+          </RealtimeSyncProvider>
         </CompareProvider>
       </CartProvider>
     </AuthProvider>

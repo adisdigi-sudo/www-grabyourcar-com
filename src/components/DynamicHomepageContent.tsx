@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -20,20 +21,50 @@ interface HomepageContent {
   sort_order: number;
 }
 
-export const DynamicHeroBanners = () => {
-  const { data: banners } = useQuery({
-    queryKey: ['homepage-hero-banners'],
+// Shared hook for homepage content with real-time sync
+const useHomepageContent = (sectionType: string) => {
+  const queryClient = useQueryClient();
+  const queryKey = ['homepage-content', sectionType];
+
+  const query = useQuery({
+    queryKey,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('homepage_content')
         .select('*')
-        .eq('section_type', 'hero_banner')
+        .eq('section_type', sectionType)
         .eq('is_active', true)
         .order('sort_order');
       if (error) throw error;
       return data as HomepageContent[];
     },
+    staleTime: 1000 * 30,
+    refetchOnWindowFocus: true,
   });
+
+  // Real-time subscription
+  useEffect(() => {
+    const channel = supabase
+      .channel(`homepage-${sectionType}-realtime`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'homepage_content' },
+        () => {
+          queryClient.invalidateQueries({ queryKey });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [sectionType, queryClient]);
+
+  return query;
+};
+
+export const DynamicHeroBanners = () => {
+  const { data: banners } = useHomepageContent('hero_banner');
 
   if (!banners?.length) return null;
 
@@ -84,19 +115,7 @@ export const DynamicHeroBanners = () => {
 };
 
 export const DynamicPromoBanners = () => {
-  const { data: promos } = useQuery({
-    queryKey: ['homepage-promo-banners'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('homepage_content')
-        .select('*')
-        .eq('section_type', 'promo_banner')
-        .eq('is_active', true)
-        .order('sort_order');
-      if (error) throw error;
-      return data as HomepageContent[];
-    },
-  });
+  const { data: promos } = useHomepageContent('promo_banner');
 
   if (!promos?.length) return null;
 
@@ -147,19 +166,7 @@ export const DynamicPromoBanners = () => {
 };
 
 export const DynamicFeaturedCars = () => {
-  const { data: featured } = useQuery({
-    queryKey: ['homepage-featured-cars'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('homepage_content')
-        .select('*')
-        .eq('section_type', 'featured_cars')
-        .eq('is_active', true)
-        .order('sort_order');
-      if (error) throw error;
-      return data as HomepageContent[];
-    },
-  });
+  const { data: featured } = useHomepageContent('featured_cars');
 
   if (!featured?.length) return null;
 
@@ -224,19 +231,7 @@ export const DynamicFeaturedCars = () => {
 };
 
 export const DynamicTestimonials = () => {
-  const { data: testimonials } = useQuery({
-    queryKey: ['homepage-testimonials'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('homepage_content')
-        .select('*')
-        .eq('section_type', 'testimonial')
-        .eq('is_active', true)
-        .order('sort_order');
-      if (error) throw error;
-      return data as HomepageContent[];
-    },
-  });
+  const { data: testimonials } = useHomepageContent('testimonial');
 
   if (!testimonials?.length) return null;
 
@@ -290,19 +285,7 @@ export const DynamicTestimonials = () => {
 };
 
 export const DynamicCTABanners = () => {
-  const { data: ctas } = useQuery({
-    queryKey: ['homepage-cta-banners'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('homepage_content')
-        .select('*')
-        .eq('section_type', 'cta')
-        .eq('is_active', true)
-        .order('sort_order');
-      if (error) throw error;
-      return data as HomepageContent[];
-    },
-  });
+  const { data: ctas } = useHomepageContent('cta');
 
   if (!ctas?.length) return null;
 

@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface RentalService {
@@ -107,7 +108,9 @@ export interface APIPartner {
 }
 
 export const useRentalServices = () => {
-  return useQuery({
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
     queryKey: ['rental-services'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -118,26 +121,72 @@ export const useRentalServices = () => {
       
       if (error) throw error;
       return data as RentalService[];
-    }
+    },
+    staleTime: 1000 * 30,
+    refetchOnWindowFocus: true,
   });
+
+  // Real-time subscription
+  useEffect(() => {
+    const channel = supabase
+      .channel('rental-services-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'rental_services' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['rental-services'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
+  return query;
 };
 
 export const useRentalVehicles = (serviceType?: string) => {
-  return useQuery({
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
     queryKey: ['rental-vehicles', serviceType],
     queryFn: async () => {
-      let query = supabase
+      let q = supabase
         .from('rental_vehicles')
         .select('*')
         .eq('is_active', true)
         .eq('is_available', true)
         .order('brand');
       
-      const { data, error } = await query;
+      const { data, error } = await q;
       if (error) throw error;
       return data as RentalVehicle[];
-    }
+    },
+    staleTime: 1000 * 30,
+    refetchOnWindowFocus: true,
   });
+
+  // Real-time subscription
+  useEffect(() => {
+    const channel = supabase
+      .channel('rental-vehicles-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'rental_vehicles' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['rental-vehicles'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
+  return query;
 };
 
 export const useAdminRentalVehicles = () => {
