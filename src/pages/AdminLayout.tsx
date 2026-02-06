@@ -37,6 +37,7 @@ import CrossSellManagement from "@/components/admin/CrossSellManagement";
 import EMIPDFSettings from "@/components/admin/EMIPDFSettings";
 import { CarColorManagement } from "@/components/admin/CarColorManagement";
 import { ManualQuoteGenerator } from "@/components/admin/ManualQuoteGenerator";
+import { DiscountManagement } from "@/components/admin/DiscountManagement";
 
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
@@ -145,6 +146,8 @@ const AdminLayout = () => {
         return <WebsiteSettings />;
       case "services-emi-pdf":
         return <EMIPDFSettings />;
+      case "services-discounts":
+        return <DiscountManagement />;
       case "services-quote-generator":
         return <ManualQuoteGenerator />;
       case "ecommerce-accessories":

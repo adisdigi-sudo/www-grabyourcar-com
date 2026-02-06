@@ -47,6 +47,9 @@ interface AccessoryOrder {
   order_status: string;
   notes: string | null;
   created_at: string;
+  discount_amount?: number | null;
+  discount_reason?: string | null;
+  discount_applied_by?: string | null;
 }
 
 interface AccessoryProduct {
@@ -101,6 +104,8 @@ export const AccessoriesManagement = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedOrder, setSelectedOrder] = useState<AccessoryOrder | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isEditingDiscount, setIsEditingDiscount] = useState(false);
+  const [discountForm, setDiscountForm] = useState({ amount: 0, reason: "" });
   
   // Product management state
   const [products, setProducts] = useState<AccessoryProduct[]>(getStoredProducts);
@@ -142,7 +147,7 @@ export const AccessoriesManagement = () => {
 
   // Update order mutation
   const updateOrderMutation = useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: { order_status?: string; payment_status?: string } }) => {
+    mutationFn: async ({ id, updates }: { id: string; updates: { order_status?: string; payment_status?: string; discount_amount?: number | null; discount_reason?: string | null } }) => {
       const { error } = await supabase
         .from('accessory_orders')
         .update(updates)
@@ -153,6 +158,7 @@ export const AccessoriesManagement = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminAccessoryOrders'] });
       toast.success('Order updated successfully');
+      setIsEditingDiscount(false);
     },
     onError: (error) => {
       toast.error('Failed to update order');
@@ -162,6 +168,18 @@ export const AccessoriesManagement = () => {
 
   const handleStatusChange = (orderId: string, newStatus: string) => {
     updateOrderMutation.mutate({ id: orderId, updates: { order_status: newStatus } });
+  };
+
+  const handleSaveDiscount = () => {
+    if (selectedOrder) {
+      updateOrderMutation.mutate({
+        id: selectedOrder.id,
+        updates: {
+          discount_amount: discountForm.amount || null,
+          discount_reason: discountForm.reason || null,
+        },
+      });
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -603,6 +621,36 @@ export const AccessoriesManagement = () => {
                 <div><label className="text-sm font-medium text-muted-foreground">Delivery</label><p>₹{Number(selectedOrder.delivery_fee).toLocaleString()}</p></div>
                 <div><label className="text-sm font-medium text-muted-foreground">Total</label><p className="text-lg font-bold">₹{Number(selectedOrder.total_amount).toLocaleString()}</p></div>
                 <div><label className="text-sm font-medium text-muted-foreground">Payment ID</label><p className="font-mono text-sm">{selectedOrder.payment_id || '-'}</p></div>
+              </div>
+
+              {/* Discount Section (Admin Only) */}
+              <div className="border-t pt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <Label className="flex items-center gap-2">
+                    💰 Discount (Internal Only)
+                    <Badge variant="outline" className="text-xs">Not shown to customer</Badge>
+                  </Label>
+                  {!isEditingDiscount && (
+                    <Button variant="outline" size="sm" onClick={() => {
+                      setDiscountForm({ amount: selectedOrder.discount_amount || 0, reason: selectedOrder.discount_reason || "" });
+                      setIsEditingDiscount(true);
+                    }}>Edit</Button>
+                  )}
+                </div>
+                {isEditingDiscount ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <Input type="number" placeholder="Discount ₹" value={discountForm.amount} onChange={(e) => setDiscountForm({ ...discountForm, amount: Number(e.target.value) })} />
+                      <Input placeholder="Reason" value={discountForm.reason} onChange={(e) => setDiscountForm({ ...discountForm, reason: e.target.value })} />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={handleSaveDiscount} disabled={updateOrderMutation.isPending}>Save</Button>
+                      <Button size="sm" variant="outline" onClick={() => setIsEditingDiscount(false)}>Cancel</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm">{selectedOrder.discount_amount ? `₹${selectedOrder.discount_amount} - ${selectedOrder.discount_reason || 'No reason'}` : 'No discount applied'}</p>
+                )}
               </div>
             </div>
           )}

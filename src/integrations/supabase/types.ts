@@ -18,6 +18,9 @@ export type Database = {
         Row: {
           created_at: string
           delivery_fee: number
+          discount_amount: number | null
+          discount_applied_by: string | null
+          discount_reason: string | null
           id: string
           items: Json
           notes: string | null
@@ -40,6 +43,9 @@ export type Database = {
         Insert: {
           created_at?: string
           delivery_fee?: number
+          discount_amount?: number | null
+          discount_applied_by?: string | null
+          discount_reason?: string | null
           id?: string
           items: Json
           notes?: string | null
@@ -62,6 +68,9 @@ export type Database = {
         Update: {
           created_at?: string
           delivery_fee?: number
+          discount_amount?: number | null
+          discount_applied_by?: string | null
+          discount_reason?: string | null
           id?: string
           items?: Json
           notes?: string | null
@@ -1242,6 +1251,39 @@ export type Database = {
         }
         Relationships: []
       }
+      discount_presets: {
+        Row: {
+          applicable_to: string[] | null
+          created_at: string
+          discount_type: string
+          discount_value: number
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          applicable_to?: string[] | null
+          created_at?: string
+          discount_type?: string
+          discount_value: number
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          applicable_to?: string[] | null
+          created_at?: string
+          discount_type?: string
+          discount_value?: number
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       favorites: {
         Row: {
           car_id: number
@@ -1320,6 +1362,9 @@ export type Database = {
           chassis_number: string | null
           completed_at: string | null
           created_at: string
+          discount_amount: number | null
+          discount_applied_by: string | null
+          discount_reason: string | null
           email: string
           engine_number: string | null
           home_installation: boolean | null
@@ -1348,6 +1393,9 @@ export type Database = {
           chassis_number?: string | null
           completed_at?: string | null
           created_at?: string
+          discount_amount?: number | null
+          discount_applied_by?: string | null
+          discount_reason?: string | null
           email: string
           engine_number?: string | null
           home_installation?: boolean | null
@@ -1376,6 +1424,9 @@ export type Database = {
           chassis_number?: string | null
           completed_at?: string | null
           created_at?: string
+          discount_amount?: number | null
+          discount_applied_by?: string | null
+          discount_reason?: string | null
           email?: string
           engine_number?: string | null
           home_installation?: boolean | null
@@ -1650,6 +1701,9 @@ export type Database = {
         Row: {
           created_at: string | null
           daily_rate: number
+          discount_amount: number | null
+          discount_applied_by: string | null
+          discount_reason: string | null
           driver_license_number: string | null
           dropoff_date: string
           dropoff_location: string
@@ -1675,6 +1729,9 @@ export type Database = {
         Insert: {
           created_at?: string | null
           daily_rate: number
+          discount_amount?: number | null
+          discount_applied_by?: string | null
+          discount_reason?: string | null
           driver_license_number?: string | null
           dropoff_date: string
           dropoff_location: string
@@ -1700,6 +1757,9 @@ export type Database = {
         Update: {
           created_at?: string | null
           daily_rate?: number
+          discount_amount?: number | null
+          discount_applied_by?: string | null
+          discount_reason?: string | null
           driver_license_number?: string | null
           dropoff_date?: string
           dropoff_location?: string
