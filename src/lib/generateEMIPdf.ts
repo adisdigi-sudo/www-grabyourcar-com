@@ -12,6 +12,20 @@ export interface OnRoadPriceBreakup {
   onRoadPrice: number;
 }
 
+export interface EMIPDFConfig {
+  companyName: string;
+  tagline: string;
+  phone: string;
+  email: string;
+  website: string;
+  address?: string;
+  founder?: string;
+  founderTitle?: string;
+  partnerBanks?: string[];
+  disclaimer?: string;
+  footerCTA?: string;
+}
+
 export interface EMIData {
   loanAmount: number;
   downPayment: number;
@@ -28,9 +42,9 @@ export interface EMIData {
   selectedCity?: string;
 }
 
-// Company details
-const COMPANY = {
-  name: "GRABYOURCAR",
+// Default company details
+const DEFAULT_COMPANY: EMIPDFConfig = {
+  companyName: "GRABYOURCAR",
   tagline: "India's Smarter Way to Buy New Cars",
   website: "www.grabyourcar.com",
   phone: "+91 95772 00023",
@@ -38,9 +52,13 @@ const COMPANY = {
   address: "Mumbai, Maharashtra, India",
   founder: "Anshdeep Singh",
   founderTitle: "Founder & CEO",
+  partnerBanks: ["SBI", "HDFC Bank", "ICICI Bank", "Axis Bank", "Kotak", "IDFC First", "Yes Bank"],
+  disclaimer: "This is an indicative estimate. Actual EMI may vary based on bank policies, credit score, and prevailing interest rates. Processing fee and pre-payment charges may apply.",
+  footerCTA: "Get the Best Car Loan - Lowest Interest Rates Guaranteed!",
 };
 
-export const generateEMIPdf = (data: EMIData) => {
+export const generateEMIPdf = (data: EMIData, config?: Partial<EMIPDFConfig>) => {
+  const COMPANY = { ...DEFAULT_COMPANY, ...config };
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -74,7 +92,7 @@ export const generateEMIPdf = (data: EMIData) => {
   doc.setFontSize(24);
   doc.setTextColor(...white);
   doc.setFont("helvetica", "bold");
-  doc.text(COMPANY.name, margin, 20);
+  doc.text(COMPANY.companyName, margin, 20);
   
   // Tagline
   doc.setFontSize(10);
@@ -433,7 +451,9 @@ export const generateEMIPdf = (data: EMIData) => {
 };
 
 // Generate shareable WhatsApp message
-export const generateEMIWhatsAppMessage = (data: EMIData): string => {
+export const generateEMIWhatsAppMessage = (data: EMIData, config?: Partial<EMIPDFConfig>): string => {
+  const COMPANY = { ...DEFAULT_COMPANY, ...config };
+  
   const formatCurrency = (amount: number) => {
     const rounded = Math.round(amount);
     if (rounded >= 10000000) return `Rs. ${(rounded / 10000000).toFixed(2)} Cr`;
@@ -444,7 +464,7 @@ export const generateEMIWhatsAppMessage = (data: EMIData): string => {
   // Clean car name
   const cleanCarName = data.carName?.replace(/(\w+)\s+\1/gi, '$1') || '';
 
-  let message = `🚗 *EMI Estimate from Grabyourcar*\n`;
+  let message = `🚗 *EMI Estimate from ${COMPANY.companyName}*\n`;
   message += `━━━━━━━━━━━━━━━━━━\n\n`;
   
   if (cleanCarName) {
@@ -474,21 +494,24 @@ export const generateEMIWhatsAppMessage = (data: EMIData): string => {
   message += `• Tenure: ${data.tenure} months\n\n`;
   
   message += `━━━━━━━━━━━━━━━━━━\n`;
-  message += `📅 *Monthly EMI: ₹${data.emi.toLocaleString("en-IN")}*\n`;
+  message += `📅 *Monthly EMI: Rs. ${data.emi.toLocaleString("en-IN")}*\n`;
   message += `━━━━━━━━━━━━━━━━━━\n\n`;
   
   message += `📊 *Payment Summary*\n`;
   message += `• Total Payable: ${formatCurrency(data.totalPayment)}\n`;
   message += `• Total Interest: ${formatCurrency(data.totalInterest)}\n\n`;
   
-  message += `🏦 *Partner Banks:* SBI, HDFC, ICICI, Axis, Kotak\n\n`;
+  const banks = COMPANY.partnerBanks?.slice(0, 5).join(', ') || 'SBI, HDFC, ICICI, Axis, Kotak';
+  message += `🏦 *Partner Banks:* ${banks}\n\n`;
   
   message += `───────────────────\n`;
-  message += `*${COMPANY.name}*\n`;
+  message += `*${COMPANY.companyName}*\n`;
   message += `${COMPANY.tagline}\n`;
   message += `📞 ${COMPANY.phone}\n`;
   message += `🌐 ${COMPANY.website}\n`;
-  message += `👤 ${COMPANY.founder}, ${COMPANY.founderTitle}\n`;
+  if (COMPANY.founder) {
+    message += `👤 ${COMPANY.founder}, ${COMPANY.founderTitle}\n`;
+  }
   message += `───────────────────`;
   
   return message;

@@ -38,10 +38,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { calculateStatePriceBreakup, stateRates } from "@/data/statePricing";
 import { motion, AnimatePresence } from "framer-motion";
 import { generateEMIPdf, generateEMIWhatsAppMessage } from "@/lib/generateEMIPdf";
+import { useEMIPDFSettings } from "@/hooks/useEMIPDFSettings";
 
 // Standard accessories that can be added
 const standardAccessories = [
@@ -91,6 +92,9 @@ export const PriceSummaryCard = ({
   const [selectedState, setSelectedState] = useState("DL");
   const [selectedAccessories, setSelectedAccessories] = useState<string[]>([]);
   const [showFullBreakup, setShowFullBreakup] = useState(false);
+  
+  // Fetch EMI PDF settings from backend
+  const { config: emiPdfConfig } = useEMIPDFSettings();
   
   const breakup = calculateStatePriceBreakup(exShowroomPrice, selectedState);
   
@@ -405,7 +409,7 @@ export const PriceSummaryCard = ({
                   handling: breakup.handling,
                   onRoadPrice: finalOnRoadPrice,
                 }
-              });
+              }, emiPdfConfig);
             };
 
             const handleShareWhatsApp = () => {
@@ -432,7 +436,7 @@ export const PriceSummaryCard = ({
                   handling: breakup.handling,
                   onRoadPrice: finalOnRoadPrice,
                 }
-              });
+              }, emiPdfConfig);
               window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank");
             };
             
