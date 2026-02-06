@@ -62,12 +62,12 @@ export const generateCorporateBrochure = () => {
   doc.roundedRect(margin, boxY, contentWidth, 70, 3, 3, "F");
 
   const highlights = [
-    "✓ Volume Discounts up to 15%",
-    "✓ Dedicated Account Manager",
-    "✓ Priority Vehicle Allocation",
-    "✓ Pan-India Dealer Network",
-    "✓ Flexible Financing Options",
-    "✓ End-to-End Documentation",
+    "• Volume Discounts up to 15%",
+    "• Dedicated Account Manager",
+    "• Priority Vehicle Allocation",
+    "• Pan-India Dealer Network",
+    "• Flexible Financing Options",
+    "• End-to-End Documentation",
   ];
 
   doc.setFontSize(11);
