@@ -44,16 +44,11 @@ async function searchCarImages(
   const cleanModel = model.replace(/\s+/g, ' ').trim();
   const cleanColor = colorName.replace(/\s+/g, ' ').trim();
 
-  // More targeted search query
-  const searchQuery = `Search for official high-quality image of ${cleanBrand} ${cleanModel} ${cleanColor} car India 2024 2025. 
-  Find the ACTUAL working image URL that I can directly access.
-  Look specifically in these CDN sources which host Indian car images:
-  - imgd.aeplcdn.com (CarDekho)
-  - stimg.cardekho.com
-  - cdni.autocarindia.com
-  - autocarpro.in
-  - gaadiwaadi.com
-  Return ONLY real, verified image URLs that exist and are publicly accessible.`;
+  // Direct search for CDN image URLs
+  const searchQuery = `Find direct CDN image URL for ${cleanBrand} ${cleanModel} ${cleanColor} color car India. 
+I need the ACTUAL .jpg or .png URL from automotive image CDNs. 
+Search for images on: CarDekho (imgd.aeplcdn.com), Autocar India (cdni.autocarindia.com), CarWale (imgk.timesauto.com).
+Return the direct image file URL ending in .jpg or .png.`;
 
   try {
     const response = await fetch(PERPLEXITY_API_URL, {
@@ -63,20 +58,18 @@ async function searchCarImages(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'sonar',
+        model: 'sonar-pro',
         messages: [
           {
             role: 'system',
-            content: `You find real, working image URLs for cars. Only return URLs that actually exist and can be accessed. 
-Focus on finding images from official automotive news sites and CDNs.
-Return JSON format: {"images":[{"url":"https://...","source":"site_name"}]}
-Only include URLs ending in .jpg, .jpeg, .png, .webp
-Do NOT fabricate or guess URLs - only include ones you find in search results.`
+            content: `You are a web scraper that finds image URLs. Return ONLY working image URLs from automotive sites. 
+Format response as JSON: {"images":[{"url":"https://imgd.aeplcdn.com/...jpg","source":"cardekho"}]}
+Only include valid URLs that end with .jpg, .jpeg, .png or .webp
+Do not explain - just return the JSON with image URLs you found.`
           },
           { role: 'user', content: searchQuery }
         ],
-        return_images: true,
-        return_related_questions: false,
+        temperature: 0.1,
       }),
     });
 
@@ -89,27 +82,12 @@ Do NOT fabricate or guess URLs - only include ones you find in search results.`
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || '';
     const citations = data.citations || [];
-    const images = data.images || []; // Perplexity can return images directly
     
-    console.log('Perplexity response preview:', content.substring(0, 300));
-    console.log('Citations count:', citations.length);
-    console.log('Direct images from API:', images.length);
+    console.log('Perplexity response:', content.substring(0, 500));
+    console.log('Citations:', citations.length);
 
-    // Process images from Perplexity's direct image response
+    // Since sonar-pro doesn't return images directly, we extract from content
     const apiImages: ImageSearchResult[] = [];
-    for (const img of images) {
-      if (typeof img === 'string') {
-        const urlLower = img.toLowerCase();
-        if (urlLower.match(/\.(jpg|jpeg|png|webp)(\?|$)/)) {
-          apiImages.push({ url: img, source: 'perplexity_images' });
-        }
-      } else if (img && typeof img === 'object' && img.url) {
-        const urlLower = (img.url as string).toLowerCase();
-        if (urlLower.match(/\.(jpg|jpeg|png|webp)(\?|$)/)) {
-          apiImages.push({ url: img.url, source: img.source || 'perplexity_images' });
-        }
-      }
-    }
 
     // Extract from citations which often contain direct URLs
     const citationImages: ImageSearchResult[] = [];
@@ -307,6 +285,102 @@ async function processCarColor(
   }
 }
 
+// Declare EdgeRuntime for background tasks
+declare const EdgeRuntime: {
+  waitUntil: (promise: Promise<unknown>) => void;
+};
+
+// Background processing function
+async function processBatchInBackground(
+  supabase: ReturnType<typeof createClient>,
+  limit: number,
+  syncPrimaryImages: boolean
+): Promise<void> {
+  console.log(`Starting background batch processing - limit: ${limit}`);
+  
+  try {
+    // Sync primary images for cars without any images
+    if (syncPrimaryImages) {
+      const { data: carsWithoutImages, error: carsError } = await supabase
+        .from('cars')
+        .select('id, name, brand, slug')
+        .not('id', 'in', `(SELECT DISTINCT car_id FROM car_images)`)
+        .limit(Math.ceil(limit / 2));
+
+      if (!carsError && carsWithoutImages?.length) {
+        console.log(`Found ${carsWithoutImages.length} cars without any images`);
+        
+        for (const car of carsWithoutImages) {
+          const images = await searchCarImages(car.brand, car.name, 'exterior');
+          
+          if (images.length > 0) {
+            const storagePath = `${car.brand.toLowerCase().replace(/\s+/g, '-')}/${car.slug}/primary-${Date.now()}`;
+            const uploadedUrl = await downloadAndUploadImage(images[0].url, storagePath, supabase);
+            
+            if (uploadedUrl) {
+              await supabase.from('car_images').insert({
+                car_id: car.id,
+                url: uploadedUrl,
+                alt_text: `${car.brand} ${car.name}`,
+                is_primary: true,
+                sort_order: 0
+              });
+              console.log(`Added primary image for ${car.name}`);
+            }
+          }
+          await new Promise(resolve => setTimeout(resolve, 1500));
+        }
+      }
+    }
+
+    // Get colors that need image sync
+    const { data: colorsToSync, error: queryError } = await supabase
+      .from('car_colors')
+      .select(`
+        id,
+        name,
+        car_id,
+        cars!inner(id, name, brand)
+      `)
+      .or('image_url.is.null,image_sync_status.eq.pending,image_sync_status.eq.failed')
+      .limit(limit);
+
+    if (queryError) {
+      console.error('Query error:', queryError.message);
+      return;
+    }
+
+    console.log(`Found ${colorsToSync?.length || 0} colors to sync`);
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const color of colorsToSync || []) {
+      const car = color.cars as any;
+      const result = await processCarColor(
+        supabase,
+        color.car_id,
+        color.id,
+        car.brand,
+        car.name,
+        color.name
+      );
+
+      if (result.success) {
+        successCount++;
+      } else {
+        failCount++;
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+
+    console.log(`Background processing complete - Success: ${successCount}, Failed: ${failCount}`);
+  } catch (error) {
+    console.error('Background processing error:', error);
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -337,6 +411,24 @@ serve(async (req) => {
       imageUrl?: string;
       error?: string;
     }> = [];
+
+    // Check for async/background mode
+    if (body.batchMode && (body as any).async) {
+      const limit = body.limit || 10;
+      const syncPrimaryImages = body.syncPrimaryImages !== false;
+      
+      // Start background processing
+      EdgeRuntime.waitUntil(processBatchInBackground(supabase, limit, syncPrimaryImages));
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: `Background sync started for up to ${limit} images. Check logs for progress.`,
+          async: true
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     if (body.batchMode) {
       // Batch mode: fetch images for all cars without synced images
