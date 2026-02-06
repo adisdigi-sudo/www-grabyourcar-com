@@ -14,8 +14,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Loader2, Sparkles, CheckCircle, AlertCircle, Eye } from "lucide-react";
+import { Loader2, Sparkles, CheckCircle, AlertCircle, MessageSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AICarChatAssistant } from "./AICarChatAssistant";
 
 interface GeneratedCarData {
   brand: string;
@@ -138,10 +140,27 @@ export const AICarEntryGenerator = () => {
           AI Car Entry Generator
         </h2>
         <p className="text-muted-foreground">
-          Enter any car name and AI will generate complete data: variants, colors, specifications, and pricing
+          Add cars using AI - choose Quick Add for instant generation or Chat for conversational input
         </p>
       </div>
 
+      <Tabs defaultValue="quick" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-4">
+          <TabsTrigger value="quick" className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4" />
+            Quick Add
+          </TabsTrigger>
+          <TabsTrigger value="chat" className="flex items-center gap-2">
+            <MessageSquare className="h-4 w-4" />
+            Chat Assistant
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="chat">
+          <AICarChatAssistant />
+        </TabsContent>
+
+        <TabsContent value="quick" className="space-y-6">
       {/* Input Card */}
       <Card>
         <CardHeader>
@@ -355,6 +374,8 @@ export const AICarEntryGenerator = () => {
           </div>
         </CardContent>
       </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
