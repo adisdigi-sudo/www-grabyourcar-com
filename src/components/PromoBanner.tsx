@@ -1,185 +1,156 @@
-import { TrendingUp, Flame, Timer, Sparkles } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 
-// Modern sleek supercar SVG
-const ModernSupercar = ({ color, accentColor }: { color: string; accentColor: string }) => (
+// Sleek F1-style supercar SVG
+const SuperCar = ({ color, index }: { color: string; index: number }) => (
   <svg
-    width="100"
-    height="40"
-    viewBox="0 0 100 40"
+    width="120"
+    height="36"
+    viewBox="0 0 120 36"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
-    className="drop-shadow-xl"
+    className="drop-shadow-lg"
   >
-    {/* Speed trail effect */}
     <defs>
-      <linearGradient id={`trail-${color}`} x1="0%" y1="50%" x2="100%" y2="50%">
-        <stop offset="0%" stopColor={accentColor} stopOpacity="0" />
-        <stop offset="100%" stopColor={accentColor} stopOpacity="0.6" />
-      </linearGradient>
-      <linearGradient id={`body-${color}`} x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stopColor={color} />
-        <stop offset="50%" stopColor={color} />
-        <stop offset="100%" stopColor={accentColor} />
+      <linearGradient id={`carGrad${index}`} x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stopColor={color} stopOpacity="0.9" />
+        <stop offset="100%" stopColor={color} />
       </linearGradient>
     </defs>
     
-    {/* Speed lines */}
-    <rect x="0" y="18" width="20" height="2" fill={`url(#trail-${color})`} rx="1" />
-    <rect x="5" y="22" width="15" height="1.5" fill={`url(#trail-${color})`} rx="1" />
-    <rect x="8" y="26" width="12" height="1" fill={`url(#trail-${color})`} rx="1" />
+    {/* Speed blur lines */}
+    <rect x="0" y="14" width="25" height="2" rx="1" fill="white" opacity="0.4" />
+    <rect x="5" y="18" width="20" height="1.5" rx="1" fill="white" opacity="0.3" />
+    <rect x="10" y="22" width="15" height="1" rx="1" fill="white" opacity="0.2" />
     
-    {/* Car body - sleek modern design */}
+    {/* Main body */}
     <path
-      d="M25 28 L30 22 L38 18 L55 16 L70 16 L82 18 L90 22 L92 26 L92 30 L25 30 Z"
-      fill={`url(#body-${color})`}
+      d="M30 26 L35 18 L50 14 L75 12 L95 12 L108 16 L115 22 L115 28 L30 28 Z"
+      fill={`url(#carGrad${index})`}
     />
     
-    {/* Roof/cabin */}
+    {/* Cockpit/Window */}
     <path
-      d="M42 18 L48 12 L62 12 L70 16 L42 16 Z"
-      fill="rgba(0,0,0,0.3)"
+      d="M55 14 L62 8 L80 8 L88 12 L55 12 Z"
+      fill="rgba(50,50,50,0.8)"
+    />
+    <path
+      d="M58 13 L64 9 L78 9 L84 12 L58 12 Z"
+      fill="rgba(100,180,255,0.5)"
     />
     
-    {/* Windows */}
+    {/* Front spoiler */}
     <path
-      d="M44 17 L49 13 L60 13 L66 16 L44 16 Z"
-      fill="rgba(135,206,235,0.6)"
+      d="M108 20 L118 18 L118 24 L112 24 Z"
+      fill={color}
+      opacity="0.9"
     />
     
-    {/* Front headlight */}
-    <ellipse cx="88" cy="24" rx="3" ry="2" fill="#fff" opacity="0.95" />
-    <ellipse cx="88" cy="24" rx="2" ry="1" fill="#fef08a" opacity="0.8" />
+    {/* Rear wing */}
+    <rect x="28" y="8" width="8" height="3" rx="1" fill={color} opacity="0.8" />
+    <rect x="30" y="11" width="4" height="6" fill={color} opacity="0.6" />
     
-    {/* Rear light */}
-    <rect x="26" y="24" width="4" height="3" rx="1" fill="#ef4444" opacity="0.9" />
+    {/* Headlights */}
+    <ellipse cx="112" cy="20" rx="2" ry="3" fill="white" opacity="0.95" />
     
-    {/* Body accent line */}
-    <path
-      d="M30 25 L88 25"
-      stroke={accentColor}
-      strokeWidth="1"
-      opacity="0.8"
-    />
+    {/* Tail lights */}
+    <rect x="30" y="22" width="3" height="4" rx="1" fill="#ff3333" opacity="0.9" />
     
     {/* Front wheel */}
-    <circle cx="78" cy="30" r="6" fill="#1f2937" />
-    <circle cx="78" cy="30" r="4" fill="#374151" />
-    <circle cx="78" cy="30" r="2" fill="#6b7280" />
-    {/* Wheel spokes */}
-    <line x1="78" y1="26" x2="78" y2="34" stroke="#9ca3af" strokeWidth="0.5" />
-    <line x1="74" y1="30" x2="82" y2="30" stroke="#9ca3af" strokeWidth="0.5" />
+    <ellipse cx="100" cy="28" rx="8" ry="6" fill="#1a1a1a" />
+    <ellipse cx="100" cy="28" rx="5" ry="4" fill="#333" />
+    <ellipse cx="100" cy="28" rx="2" ry="1.5" fill="#666" />
     
     {/* Rear wheel */}
-    <circle cx="38" cy="30" r="6" fill="#1f2937" />
-    <circle cx="38" cy="30" r="4" fill="#374151" />
-    <circle cx="38" cy="30" r="2" fill="#6b7280" />
-    {/* Wheel spokes */}
-    <line x1="38" y1="26" x2="38" y2="34" stroke="#9ca3af" strokeWidth="0.5" />
-    <line x1="34" y1="30" x2="42" y2="30" stroke="#9ca3af" strokeWidth="0.5" />
+    <ellipse cx="48" cy="28" rx="8" ry="6" fill="#1a1a1a" />
+    <ellipse cx="48" cy="28" rx="5" ry="4" fill="#333" />
+    <ellipse cx="48" cy="28" rx="2" ry="1.5" fill="#666" />
+    
+    {/* Body details */}
+    <path d="M40 24 L105 22" stroke="white" strokeWidth="0.5" opacity="0.3" />
   </svg>
 );
 
-// Racing car data with colors
-const racingCars = [
-  { color: "#dc2626", accentColor: "#991b1b", name: "Ferrari" },
-  { color: "#f97316", accentColor: "#c2410c", name: "McLaren" },
-  { color: "#eab308", accentColor: "#a16207", name: "Lambo" },
-  { color: "#22c55e", accentColor: "#15803d", name: "Aston" },
-  { color: "#3b82f6", accentColor: "#1d4ed8", name: "Porsche" },
-  { color: "#8b5cf6", accentColor: "#6d28d9", name: "Bugatti" },
+// Supercar colors - Ferrari, Lambo, McLaren, Porsche, Bugatti, Aston Martin
+const carColors = [
+  "#e11d48", // Rose/Ferrari Red
+  "#f97316", // Orange/McLaren
+  "#facc15", // Yellow/Lambo
+  "#22c55e", // Green/Aston
+  "#3b82f6", // Blue/Porsche
+  "#a855f7", // Purple/Bugatti
+  "#06b6d4", // Cyan/Maserati
+  "#ef4444", // Red variant
 ];
 
 export const PromoBanner = () => {
-  const [timeLeft, setTimeLeft] = useState({
-    hours: 47,
-    minutes: 59,
-    seconds: 59,
-  });
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev.seconds > 0) {
-          return { ...prev, seconds: prev.seconds - 1 };
-        } else if (prev.minutes > 0) {
-          return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
-        } else if (prev.hours > 0) {
-          return { hours: prev.hours - 1, minutes: 59, seconds: 59 };
-        }
-        return prev;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, []);
-
   return (
-    <div className="relative bg-gradient-to-r from-primary via-primary/95 to-success text-primary-foreground py-3 md:py-4 overflow-hidden shadow-lg">
-      {/* Animated road pattern background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {/* Road surface texture */}
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/5 to-transparent" />
+    <div className="relative h-12 md:h-14 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 overflow-hidden shadow-lg">
+      {/* Racing track lines */}
+      <div className="absolute inset-0 pointer-events-none">
+        {/* Top track line */}
+        <div className="absolute top-2 left-0 right-0 h-px bg-white/10" />
+        {/* Bottom track line */}
+        <div className="absolute bottom-2 left-0 right-0 h-px bg-white/10" />
         
-        {/* Moving dashed center line */}
-        <div className="absolute bottom-1 left-0 right-0 h-[2px] overflow-hidden">
+        {/* Animated road markings */}
+        <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 h-1 overflow-hidden">
           <motion.div
-            className="flex gap-4 absolute"
-            animate={{ x: [0, -80] }}
-            transition={{ duration: 0.5, repeat: Infinity, ease: "linear" }}
+            className="flex gap-6 absolute whitespace-nowrap"
+            animate={{ x: [0, -120] }}
+            transition={{ duration: 0.3, repeat: Infinity, ease: "linear" }}
           >
-            {[...Array(50)].map((_, i) => (
-              <div key={i} className="w-6 h-[2px] bg-white/20 rounded-full flex-shrink-0" />
+            {[...Array(40)].map((_, i) => (
+              <div key={i} className="w-10 h-0.5 bg-yellow-400/40 rounded-full flex-shrink-0" />
             ))}
           </motion.div>
         </div>
       </div>
 
-      {/* Racing cars animation - continuous line racing */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <motion.div
-          className="absolute flex items-center gap-6"
-          style={{ top: "50%", transform: "translateY(-50%)" }}
-          animate={{ 
-            x: ["100vw", "-800px"]
-          }}
-          transition={{
-            duration: 8,
-            repeat: Infinity,
-            ease: "linear",
-          }}
-        >
-          {racingCars.map((car, index) => (
-            <div key={index} className="flex-shrink-0">
-              <ModernSupercar color={car.color} accentColor={car.accentColor} />
-            </div>
-          ))}
-        </motion.div>
-        
-        {/* Second wave of cars with offset */}
-        <motion.div
-          className="absolute flex items-center gap-6"
-          style={{ top: "50%", transform: "translateY(-50%)" }}
-          animate={{ 
-            x: ["100vw", "-800px"]
-          }}
-          transition={{
-            duration: 8,
-            delay: 4,
-            repeat: Infinity,
-            ease: "linear",
-          }}
-        >
-          {[...racingCars].reverse().map((car, index) => (
-            <div key={index} className="flex-shrink-0">
-              <ModernSupercar color={car.color} accentColor={car.accentColor} />
-            </div>
-          ))}
-        </motion.div>
-      </div>
+      {/* Racing supercars - Wave 1 */}
+      <motion.div
+        className="absolute top-1/2 -translate-y-1/2 flex items-center gap-10"
+        initial={{ x: "100vw" }}
+        animate={{ x: "-1200px" }}
+        transition={{
+          duration: 3,
+          repeat: Infinity,
+          ease: "linear",
+        }}
+      >
+        {carColors.map((color, index) => (
+          <SuperCar key={`w1-${index}`} color={color} index={index} />
+        ))}
+      </motion.div>
 
+      {/* Racing supercars - Wave 2 (staggered) */}
+      <motion.div
+        className="absolute top-1/2 -translate-y-1/2 flex items-center gap-10"
+        initial={{ x: "100vw" }}
+        animate={{ x: "-1200px" }}
+        transition={{
+          duration: 3,
+          delay: 1.5,
+          repeat: Infinity,
+          ease: "linear",
+        }}
+      >
+        {[...carColors].reverse().map((color, index) => (
+          <SuperCar key={`w2-${index}`} color={color} index={index + 10} />
+        ))}
+      </motion.div>
+
+      {/* Checkered flag pattern on edges */}
+      <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-slate-900 to-transparent z-10" />
+      <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-slate-900 to-transparent z-10" />
+      
+      {/* Center badge */}
+      <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+        <div className="bg-primary/90 backdrop-blur-sm text-primary-foreground px-4 py-1.5 rounded-full text-xs md:text-sm font-bold shadow-lg border border-white/20 flex items-center gap-2">
+          <span className="animate-pulse">🏎️</span>
+          <span>MEGA SAVINGS LIVE</span>
+          <span className="animate-pulse">🏁</span>
+        </div>
+      </div>
     </div>
   );
 };
