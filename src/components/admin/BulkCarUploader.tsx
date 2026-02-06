@@ -8,7 +8,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download, Upload, FileSpreadsheet, CheckCircle, XCircle, AlertTriangle, Eye, Trash2, Car } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Download, Upload, FileSpreadsheet, CheckCircle, XCircle, AlertTriangle, Eye, Trash2, Car, RefreshCw, Database, FileCheck, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -29,12 +30,15 @@ interface ParsedCar {
   isLimited: boolean;
   isNew: boolean;
   isUpcoming: boolean;
+  isBestseller: boolean;
   launchDate?: string;
   overview: string;
   keyHighlights: string[];
   pros: string[];
   cons: string[];
   competitors: string[];
+  brochureUrl?: string;
+  officialUrl?: string;
   variants: {
     name: string;
     price: string;
@@ -50,7 +54,7 @@ interface ParsedCar {
     tcs: number;
     fastag: number;
   }[];
-  colors: { name: string; hex: string }[];
+  colors: { name: string; hex: string; imageUrl?: string }[];
   specifications: {
     engine: { label: string; value: string }[];
     dimensions: { label: string; value: string }[];
@@ -61,73 +65,101 @@ interface ParsedCar {
   image: string;
   gallery: string[];
   errors?: string[];
+  selected?: boolean;
 }
 
+// Extended CSV template with up to 10 variants and 15 colors
 const CSV_TEMPLATE_HEADERS = [
+  // Basic car info
   "brand", "name", "slug", "body_type", "tagline", "price_display", "price_numeric",
   "original_price", "discount", "fuel_types", "transmission_types", "availability",
-  "is_hot", "is_limited", "is_new", "is_upcoming", "launch_date", "overview",
-  "key_highlights", "pros", "cons", "competitors", "image_url", "gallery_urls",
-  // Variant columns (up to 5 variants)
-  "variant_1_name", "variant_1_price", "variant_1_price_numeric", "variant_1_fuel_type", 
-  "variant_1_transmission", "variant_1_features", "variant_1_ex_showroom", "variant_1_rto",
-  "variant_1_insurance", "variant_1_registration", "variant_1_handling", "variant_1_tcs", "variant_1_fastag",
-  "variant_2_name", "variant_2_price", "variant_2_price_numeric", "variant_2_fuel_type",
-  "variant_2_transmission", "variant_2_features", "variant_2_ex_showroom", "variant_2_rto",
-  "variant_2_insurance", "variant_2_registration", "variant_2_handling", "variant_2_tcs", "variant_2_fastag",
-  "variant_3_name", "variant_3_price", "variant_3_price_numeric", "variant_3_fuel_type",
-  "variant_3_transmission", "variant_3_features", "variant_3_ex_showroom", "variant_3_rto",
-  "variant_3_insurance", "variant_3_registration", "variant_3_handling", "variant_3_tcs", "variant_3_fastag",
-  // Color columns (up to 10 colors)
-  "color_1_name", "color_1_hex", "color_2_name", "color_2_hex", "color_3_name", "color_3_hex",
-  "color_4_name", "color_4_hex", "color_5_name", "color_5_hex", "color_6_name", "color_6_hex",
-  "color_7_name", "color_7_hex", "color_8_name", "color_8_hex", "color_9_name", "color_9_hex",
-  "color_10_name", "color_10_hex",
-  // Specification columns
-  "spec_engine_displacement", "spec_engine_max_power", "spec_engine_max_torque", "spec_engine_cylinders",
-  "spec_dim_length", "spec_dim_width", "spec_dim_height", "spec_dim_wheelbase", "spec_dim_ground_clearance",
-  "spec_perf_top_speed", "spec_perf_0_100", "spec_perf_mileage",
-  "spec_feat_infotainment", "spec_feat_ac", "spec_feat_seats",
-  "spec_safety_airbags", "spec_safety_abs", "spec_safety_esc", "spec_safety_ncap"
+  "is_hot", "is_limited", "is_new", "is_upcoming", "is_bestseller", "launch_date", 
+  "overview", "key_highlights", "pros", "cons", "competitors", 
+  "image_url", "gallery_urls", "brochure_url", "official_url",
+  // Variants (up to 10)
+  ...Array.from({ length: 10 }, (_, i) => [
+    `variant_${i + 1}_name`, `variant_${i + 1}_price`, `variant_${i + 1}_price_numeric`,
+    `variant_${i + 1}_fuel_type`, `variant_${i + 1}_transmission`, `variant_${i + 1}_features`,
+    `variant_${i + 1}_ex_showroom`, `variant_${i + 1}_rto`, `variant_${i + 1}_insurance`,
+    `variant_${i + 1}_registration`, `variant_${i + 1}_handling`, `variant_${i + 1}_tcs`, `variant_${i + 1}_fastag`
+  ]).flat(),
+  // Colors (up to 15)
+  ...Array.from({ length: 15 }, (_, i) => [
+    `color_${i + 1}_name`, `color_${i + 1}_hex`, `color_${i + 1}_image_url`
+  ]).flat(),
+  // Specifications
+  "spec_engine_displacement", "spec_engine_max_power", "spec_engine_max_torque", 
+  "spec_engine_cylinders", "spec_engine_fuel_tank", "spec_engine_emission",
+  "spec_dim_length", "spec_dim_width", "spec_dim_height", "spec_dim_wheelbase", 
+  "spec_dim_ground_clearance", "spec_dim_boot_space", "spec_dim_kerb_weight",
+  "spec_perf_top_speed", "spec_perf_0_100", "spec_perf_mileage_city", "spec_perf_mileage_highway",
+  "spec_feat_infotainment", "spec_feat_ac", "spec_feat_seats", "spec_feat_sunroof",
+  "spec_feat_keyless", "spec_feat_cruise_control", "spec_feat_parking_sensors",
+  "spec_safety_airbags", "spec_safety_abs", "spec_safety_esc", "spec_safety_ncap",
+  "spec_safety_isofix", "spec_safety_tpms", "spec_safety_hill_assist"
 ];
 
 const SAMPLE_DATA = [
+  // Basic info
   "Maruti Suzuki", "Swift 2024", "maruti-swift-2024", "Hatchback", "Drive with Passion",
   "₹6.49 - 9.64 Lakh", "649000", "₹6.99 Lakh", "₹50,000", "Petrol|CNG", "Manual|AMT",
-  "Available", "TRUE", "FALSE", "TRUE", "FALSE", "", 
-  "The all-new Maruti Swift 2024 comes with a refreshed design and improved features.",
-  "New Design|Better Mileage|Feature Rich", "Great mileage|Reliable|Low maintenance",
-  "Smaller boot|Basic interiors", "Hyundai i20|Tata Altroz|Honda Jazz",
-  "https://example.com/swift.jpg", "https://example.com/swift-1.jpg|https://example.com/swift-2.jpg",
+  "Available", "TRUE", "FALSE", "TRUE", "FALSE", "TRUE", "", 
+  "The all-new Maruti Swift 2024 comes with a refreshed design, improved features, and better fuel efficiency.",
+  "New Z-Series Engine|Better Mileage|Feature Rich|ADAS Ready", 
+  "Great mileage|Reliable|Low maintenance|Wide service network",
+  "Smaller boot|Basic interiors in lower variants", "Hyundai i20|Tata Altroz|Honda Jazz",
+  "https://example.com/swift.jpg", "https://example.com/swift-1.jpg|https://example.com/swift-2.jpg|https://example.com/swift-3.jpg",
+  "https://example.com/swift-brochure.pdf", "https://www.marutisuzuki.com/swift",
   // Variant 1
-  "LXi", "₹6.49 Lakh", "649000", "Petrol", "Manual", "AC|Power Steering|Airbags",
-  "649000", "52000", "25000", "1000", "15000", "0", "500",
-  // Variant 2
-  "VXi", "₹7.49 Lakh", "749000", "Petrol", "Manual", "AC|Power Steering|Airbags|Touchscreen",
-  "749000", "60000", "28000", "1000", "15000", "0", "500",
+  "LXi", "₹6.49 Lakh", "649000", "Petrol", "Manual", "AC|Power Steering|Dual Airbags|ABS with EBD",
+  "649000", "51920", "22715", "1000", "15000", "0", "500",
+  // Variant 2  
+  "VXi", "₹7.49 Lakh", "749000", "Petrol", "Manual", "SmartPlay Studio|Rear AC Vents|Electrically Adjustable ORVMs",
+  "749000", "59920", "26215", "1000", "15000", "0", "500",
   // Variant 3
-  "ZXi", "₹8.49 Lakh", "849000", "Petrol", "AMT", "AC|Power Steering|6 Airbags|Sunroof",
-  "849000", "68000", "32000", "1000", "15000", "8490", "500",
-  // Colors
-  "Pearl Arctic White", "#FFFFFF", "Solid Fire Red", "#FF0000", "Midnight Blue", "#191970",
-  "Sizzling Red", "#FF2400", "Magma Grey", "#3D3D3D", "Luster Blue", "#4169E1",
-  "Grandeur Grey", "#808080", "Prime Lucent Orange", "#FF7F00", "", "",
-  "", "",
-  // Specs
-  "1197 cc", "81.06 bhp @ 6000 rpm", "112 Nm @ 4200 rpm", "4",
-  "3845 mm", "1735 mm", "1530 mm", "2450 mm", "163 mm",
-  "180 kmph", "12.5 sec", "22.56 kmpl",
-  "9-inch Smartplay Pro+", "Auto Climate Control", "5 Seater",
-  "6 Airbags", "Yes with EBD", "Yes", "4 Star"
+  "ZXi", "₹8.49 Lakh", "849000", "Petrol", "Manual", "Push Button Start|Cruise Control|Auto Climate|LED Projector Headlamps",
+  "849000", "67920", "29715", "1000", "15000", "0", "500",
+  // Variant 4
+  "ZXi+", "₹9.19 Lakh", "919000", "Petrol", "AMT", "Sunroof|360 Camera|6 Airbags|Wireless Charger|HUD",
+  "919000", "73520", "32165", "1000", "15000", "9190", "500",
+  // Variant 5
+  "ZXi+ Dual Tone", "₹9.64 Lakh", "964000", "Petrol", "AMT", "Dual Tone Roof|Premium Interiors|All ZXi+ Features",
+  "964000", "77120", "33740", "1000", "15000", "9640", "500",
+  // Variants 6-10 (empty)
+  ...Array(65).fill(""),
+  // Colors (6 colors)
+  "Pearl Arctic White", "#FAFAFA", "https://cdn.example.com/swift/white.jpg",
+  "Solid Fire Red", "#C62828", "https://cdn.example.com/swift/red.jpg",
+  "Midnight Blue", "#1A237E", "https://cdn.example.com/swift/blue.jpg",
+  "Magma Grey", "#616161", "https://cdn.example.com/swift/grey.jpg",
+  "Luster Blue", "#1976D2", "https://cdn.example.com/swift/luster-blue.jpg",
+  "Sizzling Red with Black Roof", "#B71C1C", "https://cdn.example.com/swift/dual-tone.jpg",
+  // Colors 7-15 (empty)
+  ...Array(27).fill(""),
+  // Engine specs
+  "1197 cc", "81.06 bhp @ 6000 rpm", "112 Nm @ 4200 rpm", "4", "37 Litres", "BS6 Phase 2",
+  // Dimension specs
+  "3845 mm", "1735 mm", "1530 mm", "2450 mm", "163 mm", "268 Litres", "898 kg",
+  // Performance specs  
+  "180 kmph", "12.5 sec", "22.56 kmpl", "28.09 kmpl",
+  // Feature specs
+  "9-inch Smartplay Pro+", "Auto Climate Control", "5 Seater", "Electric Sunroof",
+  "Smart Key with Push Button", "Yes", "Front & Rear",
+  // Safety specs
+  "6 Airbags", "Yes with EBD", "ESP with Hill Hold", "4 Star Global NCAP",
+  "Yes", "Yes", "Yes"
 ];
 
 export default function BulkCarUploader() {
   const [parsedCars, setParsedCars] = useState<ParsedCar[]>([]);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [currentCarIndex, setCurrentCarIndex] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadResults, setUploadResults] = useState<{ success: number; failed: number; errors: string[] } | null>(null);
+  const [uploadResults, setUploadResults] = useState<{ success: number; failed: number; errors: string[]; duplicates: number } | null>(null);
   const [previewCar, setPreviewCar] = useState<ParsedCar | null>(null);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [selectAll, setSelectAll] = useState(true);
+  const [uploadMode, setUploadMode] = useState<'insert' | 'upsert'>('upsert');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -226,9 +258,9 @@ export default function BulkCarUploader() {
     if (!brand) errors.push("Brand is required");
     if (!name) errors.push("Name is required");
 
-    // Parse variants
+    // Parse variants (up to 10)
     const variants = [];
-    for (let i = 1; i <= 3; i++) {
+    for (let i = 1; i <= 10; i++) {
       const variantName = getValue(`variant_${i}_name`);
       if (variantName) {
         variants.push({
@@ -249,23 +281,26 @@ export default function BulkCarUploader() {
       }
     }
 
-    // Parse colors
+    // Parse colors (up to 15)
     const colors = [];
-    for (let i = 1; i <= 10; i++) {
+    for (let i = 1; i <= 15; i++) {
       const colorName = getValue(`color_${i}_name`);
       const colorHex = getValue(`color_${i}_hex`);
+      const colorImage = getValue(`color_${i}_image_url`);
       if (colorName && colorHex) {
-        colors.push({ name: colorName, hex: colorHex });
+        colors.push({ name: colorName, hex: colorHex, imageUrl: colorImage || undefined });
       }
     }
 
-    // Parse specifications
+    // Parse specifications with extended fields
     const specifications = {
       engine: [
         { label: "Displacement", value: getValue("spec_engine_displacement") },
         { label: "Max Power", value: getValue("spec_engine_max_power") },
         { label: "Max Torque", value: getValue("spec_engine_max_torque") },
         { label: "Cylinders", value: getValue("spec_engine_cylinders") },
+        { label: "Fuel Tank", value: getValue("spec_engine_fuel_tank") },
+        { label: "Emission Standard", value: getValue("spec_engine_emission") },
       ].filter(s => s.value),
       dimensions: [
         { label: "Length", value: getValue("spec_dim_length") },
@@ -273,22 +308,32 @@ export default function BulkCarUploader() {
         { label: "Height", value: getValue("spec_dim_height") },
         { label: "Wheelbase", value: getValue("spec_dim_wheelbase") },
         { label: "Ground Clearance", value: getValue("spec_dim_ground_clearance") },
+        { label: "Boot Space", value: getValue("spec_dim_boot_space") },
+        { label: "Kerb Weight", value: getValue("spec_dim_kerb_weight") },
       ].filter(s => s.value),
       performance: [
         { label: "Top Speed", value: getValue("spec_perf_top_speed") },
         { label: "0-100 kmph", value: getValue("spec_perf_0_100") },
-        { label: "Mileage", value: getValue("spec_perf_mileage") },
+        { label: "Mileage (City)", value: getValue("spec_perf_mileage_city") },
+        { label: "Mileage (Highway)", value: getValue("spec_perf_mileage_highway") },
       ].filter(s => s.value),
       features: [
         { label: "Infotainment", value: getValue("spec_feat_infotainment") },
         { label: "AC", value: getValue("spec_feat_ac") },
         { label: "Seating Capacity", value: getValue("spec_feat_seats") },
+        { label: "Sunroof", value: getValue("spec_feat_sunroof") },
+        { label: "Keyless Entry", value: getValue("spec_feat_keyless") },
+        { label: "Cruise Control", value: getValue("spec_feat_cruise_control") },
+        { label: "Parking Sensors", value: getValue("spec_feat_parking_sensors") },
       ].filter(s => s.value),
       safety: [
         { label: "Airbags", value: getValue("spec_safety_airbags") },
         { label: "ABS", value: getValue("spec_safety_abs") },
         { label: "ESC", value: getValue("spec_safety_esc") },
         { label: "NCAP Rating", value: getValue("spec_safety_ncap") },
+        { label: "ISOFIX", value: getValue("spec_safety_isofix") },
+        { label: "TPMS", value: getValue("spec_safety_tpms") },
+        { label: "Hill Assist", value: getValue("spec_safety_hill_assist") },
       ].filter(s => s.value),
     };
 
@@ -309,18 +354,22 @@ export default function BulkCarUploader() {
       isLimited: getBool("is_limited"),
       isNew: getBool("is_new"),
       isUpcoming: getBool("is_upcoming"),
-      launchDate: getValue("launch_date"),
+      isBestseller: getBool("is_bestseller"),
+      launchDate: getValue("launch_date") || undefined,
       overview: getValue("overview"),
       keyHighlights: getArray("key_highlights"),
       pros: getArray("pros"),
       cons: getArray("cons"),
       competitors: getArray("competitors"),
+      brochureUrl: getValue("brochure_url") || undefined,
+      officialUrl: getValue("official_url") || undefined,
       variants,
       colors,
       specifications,
       image: getValue("image_url"),
       gallery: getArray("gallery_urls"),
       errors: errors.length > 0 ? errors : undefined,
+      selected: true,
     };
   };
 
@@ -372,69 +421,173 @@ export default function BulkCarUploader() {
   };
 
   const uploadCars = async () => {
-    if (parsedCars.length === 0) return;
+    const selectedCars = parsedCars.filter(c => c.selected && (!c.errors || c.errors.length === 0));
+    if (selectedCars.length === 0) return;
 
     setIsUploading(true);
     setUploadProgress(0);
+    setCurrentCarIndex(0);
     setUploadResults(null);
 
-    const results = { success: 0, failed: 0, errors: [] as string[] };
+    const results = { success: 0, failed: 0, errors: [] as string[], duplicates: 0 };
 
-    for (let i = 0; i < parsedCars.length; i++) {
-      const car = parsedCars[i];
+    for (let i = 0; i < selectedCars.length; i++) {
+      const car = selectedCars[i];
+      setCurrentCarIndex(i + 1);
       
       try {
-        // Transform to match the migrate-car-data format
-        const carData = {
+        // Check if car already exists
+        const { data: existingCar } = await supabase
+          .from('cars')
+          .select('id')
+          .eq('slug', car.slug)
+          .maybeSingle();
+
+        if (existingCar && uploadMode === 'insert') {
+          results.duplicates++;
+          results.errors.push(`${car.brand} ${car.name}: Already exists (skipped)`);
+          setUploadProgress(Math.round(((i + 1) / selectedCars.length) * 100));
+          continue;
+        }
+
+        // Insert or update the main car record
+        const carPayload = {
           slug: car.slug,
           name: car.name,
           brand: car.brand,
-          bodyType: car.bodyType,
+          body_type: car.bodyType,
           tagline: car.tagline,
-          price: car.price,
-          priceNumeric: car.priceNumeric,
-          originalPrice: car.originalPrice,
+          price_range: car.price,
+          price_numeric: car.priceNumeric,
+          original_price: car.originalPrice,
           discount: car.discount,
-          fuelTypes: car.fuelTypes,
-          transmission: car.transmission,
+          fuel_types: car.fuelTypes,
+          transmission_types: car.transmission,
           availability: car.availability,
-          isHot: car.isHot,
-          isLimited: car.isLimited,
-          isNew: car.isNew,
-          isUpcoming: car.isUpcoming,
-          launchDate: car.launchDate,
+          is_hot: car.isHot,
+          is_limited: car.isLimited,
+          is_new: car.isNew,
+          is_upcoming: car.isUpcoming,
+          is_bestseller: car.isBestseller,
+          launch_date: car.launchDate || null,
           overview: car.overview,
-          keyHighlights: car.keyHighlights,
-          specifications: car.specifications,
-          colors: car.colors.map(c => ({ name: c.name, hex: c.hex })),
-          variants: car.variants.map(v => ({
-            name: v.name,
-            price: v.price,
-            priceNumeric: v.priceNumeric,
-            fuelType: v.fuelType,
-            transmission: v.transmission,
-            features: v.features,
-          })),
-          offers: [],
+          key_highlights: car.keyHighlights,
           pros: car.pros,
           cons: car.cons,
           competitors: car.competitors,
-          image: car.image,
-          gallery: car.gallery,
+          brochure_url: car.brochureUrl || null,
+          official_url: car.officialUrl || null,
         };
 
-        const { error } = await supabase.functions.invoke("migrate-car-data", {
-          body: { cars: [carData] },
-        });
+        let carId: string;
 
-        if (error) throw error;
+        if (existingCar) {
+          // Update existing car
+          const { error: updateError } = await supabase
+            .from('cars')
+            .update(carPayload)
+            .eq('id', existingCar.id);
+          
+          if (updateError) throw updateError;
+          carId = existingCar.id;
+
+          // Delete existing related data for refresh
+          await Promise.all([
+            supabase.from('car_variants').delete().eq('car_id', carId),
+            supabase.from('car_colors').delete().eq('car_id', carId),
+            supabase.from('car_specifications').delete().eq('car_id', carId),
+            supabase.from('car_images').delete().eq('car_id', carId),
+          ]);
+        } else {
+          // Insert new car
+          const { data: newCar, error: insertError } = await supabase
+            .from('cars')
+            .insert(carPayload)
+            .select('id')
+            .single();
+          
+          if (insertError) throw insertError;
+          carId = newCar.id;
+        }
+
+        // Insert variants
+        if (car.variants.length > 0) {
+          const variantsPayload = car.variants.map((v, idx) => ({
+            car_id: carId,
+            name: v.name,
+            price: v.price,
+            price_numeric: v.priceNumeric,
+            fuel_type: v.fuelType,
+            transmission: v.transmission,
+            features: v.features,
+            ex_showroom: v.exShowroom,
+            rto: v.rto,
+            insurance: v.insurance,
+            registration: v.registration,
+            handling: v.handling,
+            tcs: v.tcs,
+            fastag: v.fastag,
+            on_road_price: v.exShowroom + v.rto + v.insurance + v.registration + v.handling + v.tcs + v.fastag,
+            sort_order: idx,
+          }));
+          
+          const { error: variantError } = await supabase.from('car_variants').insert(variantsPayload);
+          if (variantError) console.error('Variant insert error:', variantError);
+        }
+
+        // Insert colors
+        if (car.colors.length > 0) {
+          const colorsPayload = car.colors.map((c, idx) => ({
+            car_id: carId,
+            name: c.name,
+            hex_code: c.hex,
+            image_url: c.imageUrl || null,
+            sort_order: idx,
+          }));
+          
+          const { error: colorError } = await supabase.from('car_colors').insert(colorsPayload);
+          if (colorError) console.error('Color insert error:', colorError);
+        }
+
+        // Insert specifications
+        const specsPayload: { car_id: string; category: string; label: string; value: string; sort_order: number }[] = [];
+        let specOrder = 0;
+        for (const [category, specs] of Object.entries(car.specifications)) {
+          for (const spec of specs) {
+            specsPayload.push({
+              car_id: carId,
+              category,
+              label: spec.label,
+              value: spec.value,
+              sort_order: specOrder++,
+            });
+          }
+        }
+        if (specsPayload.length > 0) {
+          const { error: specError } = await supabase.from('car_specifications').insert(specsPayload);
+          if (specError) console.error('Spec insert error:', specError);
+        }
+
+        // Insert images
+        const imagesPayload: { car_id: string; url: string; is_primary: boolean; sort_order: number; alt_text: string }[] = [];
+        if (car.image) {
+          imagesPayload.push({ car_id: carId, url: car.image, is_primary: true, sort_order: 0, alt_text: `${car.brand} ${car.name}` });
+        }
+        car.gallery.forEach((url, idx) => {
+          imagesPayload.push({ car_id: carId, url, is_primary: false, sort_order: idx + 1, alt_text: `${car.brand} ${car.name} Gallery ${idx + 1}` });
+        });
+        if (imagesPayload.length > 0) {
+          const { error: imgError } = await supabase.from('car_images').insert(imagesPayload);
+          if (imgError) console.error('Image insert error:', imgError);
+        }
+
         results.success++;
       } catch (error) {
         results.failed++;
         results.errors.push(`${car.brand} ${car.name}: ${error instanceof Error ? error.message : "Unknown error"}`);
       }
 
-      setUploadProgress(Math.round(((i + 1) / parsedCars.length) * 100));
+      setUploadProgress(Math.round(((i + 1) / selectedCars.length) * 100));
     }
 
     setUploadResults(results);
@@ -443,58 +596,160 @@ export default function BulkCarUploader() {
     if (results.success > 0) {
       toast({
         title: "Import Complete",
-        description: `Successfully imported ${results.success} cars`,
+        description: `Successfully imported ${results.success} cars${results.duplicates > 0 ? `, ${results.duplicates} duplicates skipped` : ''}`,
       });
     }
   };
 
+  const toggleCarSelection = (index: number) => {
+    setParsedCars(prev => prev.map((car, i) => 
+      i === index ? { ...car, selected: !car.selected } : car
+    ));
+  };
+
+  const toggleSelectAll = () => {
+    const newValue = !selectAll;
+    setSelectAll(newValue);
+    setParsedCars(prev => prev.map(car => ({ ...car, selected: newValue })));
+  };
+
   const validCars = parsedCars.filter(c => !c.errors || c.errors.length === 0);
   const invalidCars = parsedCars.filter(c => c.errors && c.errors.length > 0);
+  const selectedCount = parsedCars.filter(c => c.selected && (!c.errors || c.errors.length === 0)).length;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {/* Header with Stats */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold">Bulk Car Import</h2>
-          <p className="text-muted-foreground">Import 100+ cars at once from CSV/Excel</p>
+          <h2 className="text-2xl font-bold flex items-center gap-2">
+            <Database className="h-6 w-6 text-primary" />
+            Bulk Car Import
+          </h2>
+          <p className="text-muted-foreground">Import 50+ cars at once from CSV/Excel templates</p>
         </div>
-        <Button onClick={downloadTemplate} variant="outline">
-          <Download className="h-4 w-4 mr-2" />
-          Download Template
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={downloadTemplate} variant="outline">
+            <Download className="h-4 w-4 mr-2" />
+            Download Template
+          </Button>
+        </div>
       </div>
+
+      {/* Quick Stats */}
+      {parsedCars.length > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <FileSpreadsheet className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{parsedCars.length}</p>
+                <p className="text-sm text-muted-foreground">Total Cars</p>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-emerald-500/10 rounded-lg">
+                <CheckCircle className="h-5 w-5 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{validCars.length}</p>
+                <p className="text-sm text-muted-foreground">Valid</p>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-destructive/10 rounded-lg">
+                <XCircle className="h-5 w-5 text-destructive" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{invalidCars.length}</p>
+                <p className="text-sm text-muted-foreground">Invalid</p>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <FileCheck className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{selectedCount}</p>
+                <p className="text-sm text-muted-foreground">Selected</p>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
 
       {/* Upload Section */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <FileSpreadsheet className="h-5 w-5" />
+            <Upload className="h-5 w-5" />
             Upload CSV File
           </CardTitle>
           <CardDescription>
-            Upload a CSV file with car data. Use the template for the correct format.
+            Upload a CSV file with car data. Supports up to 10 variants and 15 colors per car.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center">
+        <CardContent className="space-y-4">
+          <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center hover:border-primary/50 transition-colors">
             <input
               ref={fileInputRef}
               type="file"
-              accept=".csv,.xlsx,.xls"
+              accept=".csv"
               onChange={handleFileUpload}
               className="hidden"
             />
-            <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <Button onClick={() => fileInputRef.current?.click()}>
+            <FileSpreadsheet className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <Button onClick={() => fileInputRef.current?.click()} size="lg">
+              <Upload className="h-4 w-4 mr-2" />
               Select CSV File
             </Button>
-            <p className="text-sm text-muted-foreground mt-2">
-              Supports CSV format with up to 500 cars
+            <p className="text-sm text-muted-foreground mt-3">
+              Supports CSV format with up to 500 cars per file
             </p>
+            <div className="flex flex-wrap justify-center gap-2 mt-4">
+              <Badge variant="outline">10 Variants/Car</Badge>
+              <Badge variant="outline">15 Colors/Car</Badge>
+              <Badge variant="outline">Full Specs</Badge>
+              <Badge variant="outline">Price Breakup</Badge>
+            </div>
+          </div>
+
+          {/* Import Mode Selection */}
+          <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
+            <span className="text-sm font-medium">Import Mode:</span>
+            <div className="flex gap-2">
+              <Button 
+                variant={uploadMode === 'upsert' ? 'default' : 'outline'} 
+                size="sm"
+                onClick={() => setUploadMode('upsert')}
+              >
+                <RefreshCw className="h-3 w-3 mr-1" />
+                Update Existing
+              </Button>
+              <Button 
+                variant={uploadMode === 'insert' ? 'default' : 'outline'} 
+                size="sm"
+                onClick={() => setUploadMode('insert')}
+              >
+                <Sparkles className="h-3 w-3 mr-1" />
+                Insert New Only
+              </Button>
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {uploadMode === 'upsert' ? 'Existing cars will be updated based on slug' : 'Duplicates will be skipped'}
+            </span>
           </div>
 
           {validationErrors.length > 0 && (
-            <Alert variant="destructive" className="mt-4">
+            <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
                 {validationErrors.map((err, i) => (
@@ -534,46 +789,77 @@ export default function BulkCarUploader() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-[40px]">
+                          <Checkbox 
+                            checked={selectAll} 
+                            onCheckedChange={() => toggleSelectAll()} 
+                          />
+                        </TableHead>
                         <TableHead>Brand</TableHead>
                         <TableHead>Model</TableHead>
                         <TableHead>Body Type</TableHead>
                         <TableHead>Price</TableHead>
                         <TableHead>Variants</TableHead>
                         <TableHead>Colors</TableHead>
+                        <TableHead>Specs</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {validCars.map((car, index) => (
-                        <TableRow key={index}>
-                          <TableCell className="font-medium">{car.brand}</TableCell>
-                          <TableCell>{car.name}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{car.bodyType}</Badge>
-                          </TableCell>
-                          <TableCell>{car.price || `₹${(car.priceNumeric / 100000).toFixed(2)} Lakh`}</TableCell>
-                          <TableCell>{car.variants.length} variants</TableCell>
-                          <TableCell>{car.colors.length} colors</TableCell>
-                          <TableCell>
-                            <div className="flex gap-1">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => setPreviewCar(car)}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => removeCar(parsedCars.indexOf(car))}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {validCars.map((car, index) => {
+                        const originalIndex = parsedCars.indexOf(car);
+                        const specCount = Object.values(car.specifications).reduce((acc, arr) => acc + arr.length, 0);
+                        return (
+                          <TableRow key={index} className={!car.selected ? 'opacity-50' : ''}>
+                            <TableCell>
+                              <Checkbox 
+                                checked={car.selected} 
+                                onCheckedChange={() => toggleCarSelection(originalIndex)} 
+                              />
+                            </TableCell>
+                            <TableCell className="font-medium">{car.brand}</TableCell>
+                            <TableCell>
+                              <div>
+                                <p className="font-medium">{car.name}</p>
+                                <p className="text-xs text-muted-foreground">{car.slug}</p>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{car.bodyType || 'N/A'}</Badge>
+                            </TableCell>
+                            <TableCell>{car.price || `₹${(car.priceNumeric / 100000).toFixed(2)} Lakh`}</TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">{car.variants.length}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">{car.colors.length}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">{specCount}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => setPreviewCar(car)}
+                                  title="Preview"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => removeCar(originalIndex)}
+                                  title="Remove"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </ScrollArea>
@@ -621,12 +907,15 @@ export default function BulkCarUploader() {
 
             {/* Upload Progress */}
             {isUploading && (
-              <div className="mt-4 space-y-2">
+              <div className="mt-4 space-y-3 p-4 bg-muted/50 rounded-lg">
                 <div className="flex justify-between text-sm">
-                  <span>Uploading cars...</span>
-                  <span>{uploadProgress}%</span>
+                  <span className="flex items-center gap-2">
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    Importing car {currentCarIndex} of {selectedCount}...
+                  </span>
+                  <span className="font-medium">{uploadProgress}%</span>
                 </div>
-                <Progress value={uploadProgress} />
+                <Progress value={uploadProgress} className="h-2" />
               </div>
             )}
 
@@ -641,6 +930,7 @@ export default function BulkCarUploader() {
                   )}
                   <AlertDescription>
                     <strong>Import Complete:</strong> {uploadResults.success} successful, {uploadResults.failed} failed
+                    {uploadResults.duplicates > 0 && `, ${uploadResults.duplicates} duplicates skipped`}
                     {uploadResults.errors.length > 0 && (
                       <ul className="mt-2 text-sm">
                         {uploadResults.errors.slice(0, 5).map((err, i) => (
@@ -657,17 +947,39 @@ export default function BulkCarUploader() {
             )}
 
             {/* Action Buttons */}
-            <div className="flex justify-end gap-2 mt-4">
-              <Button variant="outline" onClick={() => setParsedCars([])}>
-                Clear All
-              </Button>
-              <Button
-                onClick={uploadCars}
-                disabled={validCars.length === 0 || isUploading}
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                Import {validCars.length} Cars
-              </Button>
+            <div className="flex flex-col sm:flex-row justify-between gap-4 mt-4">
+              <div className="flex items-center gap-2">
+                <Checkbox 
+                  id="select-all" 
+                  checked={selectAll} 
+                  onCheckedChange={() => toggleSelectAll()} 
+                />
+                <label htmlFor="select-all" className="text-sm cursor-pointer">
+                  Select All Valid Cars
+                </label>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setParsedCars([])}>
+                  Clear All
+                </Button>
+                <Button
+                  onClick={uploadCars}
+                  disabled={selectedCount === 0 || isUploading}
+                  className="min-w-[160px]"
+                >
+                  {isUploading ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Importing...
+                    </>
+                  ) : (
+                    <>
+                      <Database className="h-4 w-4 mr-2" />
+                      Import {selectedCount} Cars
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
