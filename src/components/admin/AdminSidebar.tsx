@@ -31,6 +31,7 @@ import {
   Globe,
   ChevronLeft,
   Sparkles,
+  FileSignature,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
@@ -105,7 +106,8 @@ const navItems: NavItem[] = [
       { id: "services-rentals", label: "Self-Drive Rentals", icon: CalendarDays },
       { id: "services-insurance", label: "Insurance", icon: FileText },
       { id: "services-loans", label: "Car Loans", icon: CreditCard },
-      { id: "services-emi-pdf", label: "EMI PDF Settings", icon: FileText, badge: "New" },
+      { id: "services-emi-pdf", label: "EMI PDF Settings", icon: FileText },
+      { id: "services-quote-generator", label: "Manual Quote", icon: FileSignature, badge: "New" },
     ]
   },
   { 
