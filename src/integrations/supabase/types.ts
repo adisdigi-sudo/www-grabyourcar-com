@@ -1344,6 +1344,39 @@ export type Database = {
         }
         Relationships: []
       }
+      corporate_clients: {
+        Row: {
+          company_name: string
+          created_at: string
+          id: string
+          industry: string | null
+          is_active: boolean | null
+          logo_url: string
+          sort_order: number | null
+          website_url: string | null
+        }
+        Insert: {
+          company_name: string
+          created_at?: string
+          id?: string
+          industry?: string | null
+          is_active?: boolean | null
+          logo_url: string
+          sort_order?: number | null
+          website_url?: string | null
+        }
+        Update: {
+          company_name?: string
+          created_at?: string
+          id?: string
+          industry?: string | null
+          is_active?: boolean | null
+          logo_url?: string
+          sort_order?: number | null
+          website_url?: string | null
+        }
+        Relationships: []
+      }
       cross_sell_analytics: {
         Row: {
           bundle_id: string | null
@@ -1610,6 +1643,48 @@ export type Database = {
           trigger_type?: string
           trigger_value?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      customer_stories: {
+        Row: {
+          car_brand: string | null
+          car_name: string
+          created_at: string
+          customer_name: string
+          delivery_date: string | null
+          id: string
+          image_url: string
+          is_active: boolean | null
+          location: string | null
+          sort_order: number | null
+          testimonial: string | null
+        }
+        Insert: {
+          car_brand?: string | null
+          car_name: string
+          created_at?: string
+          customer_name: string
+          delivery_date?: string | null
+          id?: string
+          image_url: string
+          is_active?: boolean | null
+          location?: string | null
+          sort_order?: number | null
+          testimonial?: string | null
+        }
+        Update: {
+          car_brand?: string | null
+          car_name?: string
+          created_at?: string
+          customer_name?: string
+          delivery_date?: string | null
+          id?: string
+          image_url?: string
+          is_active?: boolean | null
+          location?: string | null
+          sort_order?: number | null
+          testimonial?: string | null
         }
         Relationships: []
       }
@@ -2011,6 +2086,36 @@ export type Database = {
         }
         Relationships: []
       }
+      faqs: {
+        Row: {
+          answer: string
+          category: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          question: string
+          sort_order: number | null
+        }
+        Insert: {
+          answer: string
+          category?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          question: string
+          sort_order?: number | null
+        }
+        Update: {
+          answer?: string
+          category?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          question?: string
+          sort_order?: number | null
+        }
+        Relationships: []
+      }
       favorites: {
         Row: {
           car_id: number
@@ -2032,6 +2137,90 @@ export type Database = {
           created_at?: string
           id?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      finance_partners: {
+        Row: {
+          created_at: string
+          id: string
+          interest_rate_from: number | null
+          interest_rate_to: number | null
+          is_active: boolean | null
+          logo_url: string | null
+          max_tenure_months: number | null
+          name: string
+          processing_fee: string | null
+          sort_order: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          interest_rate_from?: number | null
+          interest_rate_to?: number | null
+          is_active?: boolean | null
+          logo_url?: string | null
+          max_tenure_months?: number | null
+          name: string
+          processing_fee?: string | null
+          sort_order?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          interest_rate_from?: number | null
+          interest_rate_to?: number | null
+          is_active?: boolean | null
+          logo_url?: string | null
+          max_tenure_months?: number | null
+          name?: string
+          processing_fee?: string | null
+          sort_order?: number | null
+        }
+        Relationships: []
+      }
+      homepage_banners: {
+        Row: {
+          created_at: string
+          cta_link: string | null
+          cta_text: string | null
+          display_from: string | null
+          display_until: string | null
+          id: string
+          image_url: string
+          is_active: boolean | null
+          sort_order: number | null
+          subtitle: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          cta_link?: string | null
+          cta_text?: string | null
+          display_from?: string | null
+          display_until?: string | null
+          id?: string
+          image_url: string
+          is_active?: boolean | null
+          sort_order?: number | null
+          subtitle?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          cta_link?: string | null
+          cta_text?: string | null
+          display_from?: string | null
+          display_until?: string | null
+          id?: string
+          image_url?: string
+          is_active?: boolean | null
+          sort_order?: number | null
+          subtitle?: string | null
+          title?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -2356,6 +2545,36 @@ export type Database = {
           status?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      insurance_partners: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean | null
+          logo_url: string
+          name: string
+          sort_order: number | null
+          website_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          logo_url: string
+          name: string
+          sort_order?: number | null
+          website_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string
+          name?: string
+          sort_order?: number | null
+          website_url?: string | null
         }
         Relationships: []
       }
@@ -3059,6 +3278,78 @@ export type Database = {
         }
         Relationships: []
       }
+      service_pages: {
+        Row: {
+          content: Json | null
+          created_at: string
+          hero_image: string | null
+          hero_subtitle: string | null
+          hero_title: string | null
+          id: string
+          is_active: boolean | null
+          meta_description: string | null
+          meta_title: string | null
+          slug: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content?: Json | null
+          created_at?: string
+          hero_image?: string | null
+          hero_subtitle?: string | null
+          hero_title?: string | null
+          id?: string
+          is_active?: boolean | null
+          meta_description?: string | null
+          meta_title?: string | null
+          slug: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: Json | null
+          created_at?: string
+          hero_image?: string | null
+          hero_subtitle?: string | null
+          hero_title?: string | null
+          id?: string
+          is_active?: boolean | null
+          meta_description?: string | null
+          meta_title?: string | null
+          slug?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      site_settings: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          setting_key: string
+          setting_value: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       sync_logs: {
         Row: {
           cars_enhanced: number | null
@@ -3095,6 +3386,51 @@ export type Database = {
           started_at?: string
           status?: string
           sync_type?: string
+        }
+        Relationships: []
+      }
+      testimonials: {
+        Row: {
+          car_purchased: string | null
+          created_at: string
+          customer_image: string | null
+          customer_location: string | null
+          customer_name: string
+          id: string
+          is_active: boolean | null
+          is_featured: boolean | null
+          rating: number | null
+          sort_order: number | null
+          testimonial_text: string
+          video_url: string | null
+        }
+        Insert: {
+          car_purchased?: string | null
+          created_at?: string
+          customer_image?: string | null
+          customer_location?: string | null
+          customer_name: string
+          id?: string
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          rating?: number | null
+          sort_order?: number | null
+          testimonial_text: string
+          video_url?: string | null
+        }
+        Update: {
+          car_purchased?: string | null
+          created_at?: string
+          customer_image?: string | null
+          customer_location?: string | null
+          customer_name?: string
+          id?: string
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          rating?: number | null
+          sort_order?: number | null
+          testimonial_text?: string
+          video_url?: string | null
         }
         Relationships: []
       }
