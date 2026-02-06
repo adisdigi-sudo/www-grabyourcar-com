@@ -48,6 +48,9 @@ interface RentalBooking {
   driver_license_number: string | null;
   notes: string | null;
   created_at: string;
+  discount_amount?: number | null;
+  discount_reason?: string | null;
+  discount_applied_by?: string | null;
 }
 
 interface RentalVehicle {
@@ -121,6 +124,8 @@ export const RentalManagement = () => {
     payment_status: "",
     driver_license_number: "",
     notes: "",
+    discount_amount: 0,
+    discount_reason: "",
   });
   
   // Vehicle management state
@@ -225,6 +230,8 @@ export const RentalManagement = () => {
       payment_status: booking.payment_status,
       driver_license_number: booking.driver_license_number || "",
       notes: booking.notes || "",
+      discount_amount: booking.discount_amount || 0,
+      discount_reason: booking.discount_reason || "",
     });
     setIsEditBookingOpen(true);
   };
@@ -919,6 +926,41 @@ Toyota Innova,Toyota,Tempo Traveller,Diesel,Automatic,7,2024,White,4000,Gurugram
                 rows={3}
               />
             </div>
+
+            {/* Discount (Admin Only) */}
+            <div className="border-t pt-4">
+              <Label className="flex items-center gap-2 mb-3">
+                💰 Discount (Internal Only)
+                <Badge variant="outline" className="text-xs">Not shown to customer</Badge>
+              </Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Discount Amount (₹)</Label>
+                  <Input
+                    type="number"
+                    value={editBookingForm.discount_amount}
+                    onChange={(e) => setEditBookingForm({ ...editBookingForm, discount_amount: Number(e.target.value) })}
+                    placeholder="0"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Discount Reason</Label>
+                  <Input
+                    value={editBookingForm.discount_reason}
+                    onChange={(e) => setEditBookingForm({ ...editBookingForm, discount_reason: e.target.value })}
+                    placeholder="e.g., Weekend Special"
+                  />
+                </div>
+              </div>
+              {editBookingForm.discount_amount > 0 && (
+                <div className="mt-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                  <p className="text-sm text-green-700 dark:text-green-400">
+                    Final Amount: ₹{((selectedBooking?.total_amount || 0) - editBookingForm.discount_amount).toLocaleString()}
+                    <span className="text-muted-foreground ml-2">(Original: ₹{selectedBooking?.total_amount?.toLocaleString()})</span>
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
 
           <DialogFooter>
@@ -933,6 +975,8 @@ Toyota Innova,Toyota,Tempo Traveller,Diesel,Automatic,7,2024,White,4000,Gurugram
                       payment_status: editBookingForm.payment_status,
                       driver_license_number: editBookingForm.driver_license_number || null,
                       notes: editBookingForm.notes || null,
+                      discount_amount: editBookingForm.discount_amount || null,
+                      discount_reason: editBookingForm.discount_reason || null,
                     },
                   });
                 }

@@ -65,6 +65,9 @@ interface HSRPBooking {
   completed_at: string | null;
   created_at: string;
   updated_at: string;
+  discount_amount?: number | null;
+  discount_reason?: string | null;
+  discount_applied_by?: string | null;
 }
 
 interface HSRPPricing {
@@ -119,6 +122,8 @@ export const HSRPManagement = () => {
     pincode: "",
     chassis_number: "",
     engine_number: "",
+    discount_amount: 0,
+    discount_reason: "",
   });
 
   // Fetch HSRP pricing from settings
@@ -496,6 +501,8 @@ export const HSRPManagement = () => {
                                 pincode: booking.pincode,
                                 chassis_number: booking.chassis_number || "",
                                 engine_number: booking.engine_number || "",
+                                discount_amount: (booking as any).discount_amount || 0,
+                                discount_reason: (booking as any).discount_reason || "",
                               });
                               setIsEditMode(true);
                             }}
@@ -680,6 +687,8 @@ export const HSRPManagement = () => {
                   pincode: selectedBooking?.pincode || "",
                   chassis_number: selectedBooking?.chassis_number || "",
                   engine_number: selectedBooking?.engine_number || "",
+                  discount_amount: (selectedBooking as any)?.discount_amount || 0,
+                  discount_reason: (selectedBooking as any)?.discount_reason || "",
                 });
                 setIsEditMode(true);
               }}
@@ -816,6 +825,41 @@ export const HSRPManagement = () => {
                 </div>
               </div>
             </div>
+
+            {/* Discount (Admin Only) */}
+            <div className="border-t pt-4">
+              <h4 className="font-medium mb-3 flex items-center gap-2">
+                💰 Discount (Internal Only)
+                <Badge variant="outline" className="text-xs">Not shown to customer</Badge>
+              </h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Discount Amount (₹)</Label>
+                  <Input
+                    type="number"
+                    value={editForm.discount_amount}
+                    onChange={(e) => setEditForm({ ...editForm, discount_amount: Number(e.target.value) })}
+                    placeholder="0"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Discount Reason</Label>
+                  <Input
+                    value={editForm.discount_reason}
+                    onChange={(e) => setEditForm({ ...editForm, discount_reason: e.target.value })}
+                    placeholder="e.g., Festival Offer, Loyalty Discount"
+                  />
+                </div>
+              </div>
+              {editForm.discount_amount > 0 && (
+                <div className="mt-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                  <p className="text-sm text-green-700 dark:text-green-400">
+                    Final Amount: ₹{((selectedBooking?.payment_amount || 0) - editForm.discount_amount).toLocaleString()}
+                    <span className="text-muted-foreground ml-2">(Original: ₹{selectedBooking?.payment_amount?.toLocaleString()})</span>
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
 
           <DialogFooter>
@@ -837,6 +881,8 @@ export const HSRPManagement = () => {
                       pincode: editForm.pincode,
                       chassis_number: editForm.chassis_number || null,
                       engine_number: editForm.engine_number || null,
+                      discount_amount: editForm.discount_amount || null,
+                      discount_reason: editForm.discount_reason || null,
                     },
                   });
                   setIsEditMode(false);
