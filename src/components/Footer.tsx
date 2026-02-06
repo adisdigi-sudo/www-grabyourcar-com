@@ -21,10 +21,10 @@ const footerLinks = {
     { label: "Toyota", href: "#" },
   ],
   company: [
-    { label: "About Us", href: "#" },
     { label: "About Us", href: "/about" },
     { label: "Partner With Us", href: "/corporate" },
     { label: "Blog", href: "/blog" },
+    { label: "Careers", href: "#" },
   ],
   legal: [
     { label: "Privacy Policy", href: "#" },
@@ -38,147 +38,161 @@ export const Footer = () => {
     <footer className="bg-foreground text-background">
       {/* Main Footer */}
       <div className="container mx-auto px-4 py-12 md:py-16">
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8">
-          {/* Services */}
-
-          {/* Services */}
-          <div>
-            <h4 className="font-heading font-semibold mb-4 text-background">Services</h4>
-            <ul className="space-y-3">
-              {footerLinks.services.map((link) => (
-                <li key={link.label}>
-                  <a href={link.href} className="text-sm text-background/70 hover:text-accent transition-colors">
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Brands */}
-          <div>
-            <h4 className="font-heading font-semibold mb-4 text-background">Popular Brands</h4>
-            <ul className="space-y-3">
-              {footerLinks.brands.map((link) => (
-                <li key={link.label}>
-                  <a href={link.href} className="text-sm text-background/70 hover:text-accent transition-colors">
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Company */}
-          <div>
-            <h4 className="font-heading font-semibold mb-4 text-background">Company</h4>
-            <ul className="space-y-3">
-              {footerLinks.company.map((link) => (
-                <li key={link.label}>
-                  <a href={link.href} className="text-sm text-background/70 hover:text-accent transition-colors">
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Contact */}
-          <div>
-            <h4 className="font-heading font-semibold mb-4 text-background">Contact Us</h4>
-            <ul className="space-y-4">
-              <li className="flex items-start gap-3">
-                <Phone className="h-4 w-4 text-accent mt-1" />
-                <div>
-                  <a href="tel:+919577200023" className="text-sm text-background/70 hover:text-accent transition-colors">
-                    +91 95772 00023
-                  </a>
-                  <p className="text-xs text-background/50">Mon-Sat, 9am-7pm</p>
-                </div>
-              </li>
-              <li className="flex items-start gap-3">
-                <MessageCircle className="h-4 w-4 text-accent mt-1" />
-                <a 
-                  href="https://wa.me/919577200023" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-sm text-background/70 hover:text-accent transition-colors"
-                >
-                  WhatsApp Us
-                </a>
-              </li>
-              <li className="flex items-start gap-3">
-                <Mail className="h-4 w-4 text-accent mt-1" />
-                <a href="mailto:hello@grabyourcar.com" className="text-sm text-background/70 hover:text-accent transition-colors">
-                  hello@grabyourcar.com
-                </a>
-              </li>
-              <li className="flex items-start gap-3">
-                <MapPin className="h-4 w-4 text-accent mt-1" />
-                <p className="text-sm text-background/70">Mumbai, Maharashtra, India</p>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom Bar with Logo */}
-      <div className="border-t border-background/10">
-        <div className="container mx-auto px-4 py-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-            {/* Logo & Brand Section */}
-            <div className="space-y-4">
-              <a href="/" className="inline-block">
-                <ResponsiveLogo variant="footer" className="brightness-0 invert" />
-              </a>
-              <p className="text-sm font-medium text-background/80">
-                New Car — Hassle-Free & Memorable
-              </p>
-              <p className="text-background/60 text-xs leading-relaxed max-w-md">
-                India's smarter way to buy new cars. Best Price. Faster Delivery. Zero Hassle. 500+ Happy Customers Trust Us Every Day.
-              </p>
-              
-              {/* Newsletter */}
-              <div className="flex gap-2 max-w-sm">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
+          
+          {/* Left Side - Logo & Brand Info */}
+          <div className="lg:col-span-4 space-y-5">
+            {/* Logo at Top */}
+            <a href="/" className="inline-block">
+              <ResponsiveLogo variant="footer" className="brightness-0 invert" />
+            </a>
+            
+            {/* Tagline */}
+            <p className="text-sm font-medium text-background/90">
+              New Car — Hassle-Free & Memorable
+            </p>
+            
+            {/* Description */}
+            <p className="text-background/60 text-sm leading-relaxed">
+              India's smarter way to buy new cars. Best Price. Faster Delivery. Zero Hassle. 500+ Happy Customers Trust Us Every Day.
+            </p>
+            
+            {/* Newsletter */}
+            <div className="pt-2">
+              <p className="text-sm font-medium text-background/80 mb-3">Subscribe to Updates</p>
+              <div className="flex gap-2">
                 <Input
                   placeholder="Enter your email"
-                  className="bg-background/10 border-background/20 text-background placeholder:text-background/50"
+                  className="bg-background/10 border-background/20 text-background placeholder:text-background/50 max-w-xs"
                 />
                 <Button variant="accent">Subscribe</Button>
               </div>
             </div>
 
-            {/* Right Side - Social & Legal */}
-            <div className="flex flex-col items-start md:items-end gap-4">
-              {/* Social Links */}
-              <div className="flex items-center gap-4">
-                {[Facebook, Instagram, Twitter, Youtube].map((Icon, index) => (
-                  <a
-                    key={index}
-                    href="#"
-                    className="w-10 h-10 rounded-full bg-background/10 flex items-center justify-center hover:bg-accent transition-colors group"
-                  >
-                    <Icon className="h-5 w-5 text-background/70 group-hover:text-accent-foreground" />
-                  </a>
-                ))}
+            {/* Social Links */}
+            <div className="flex items-center gap-3 pt-2">
+              {[
+                { Icon: Facebook, href: "#" },
+                { Icon: Instagram, href: "#" },
+                { Icon: Twitter, href: "#" },
+                { Icon: Youtube, href: "#" },
+              ].map(({ Icon, href }, index) => (
+                <a
+                  key={index}
+                  href={href}
+                  className="w-10 h-10 rounded-full bg-background/10 flex items-center justify-center hover:bg-accent transition-colors group"
+                >
+                  <Icon className="h-5 w-5 text-background/70 group-hover:text-accent-foreground" />
+                </a>
+              ))}
+            </div>
+          </div>
+
+          {/* Right Side - All Links in a Grid */}
+          <div className="lg:col-span-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+              {/* Services */}
+              <div>
+                <h4 className="font-heading font-semibold mb-4 text-background">Services</h4>
+                <ul className="space-y-3">
+                  {footerLinks.services.map((link) => (
+                    <li key={link.label}>
+                      <a href={link.href} className="text-sm text-background/70 hover:text-accent transition-colors">
+                        {link.label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
               </div>
 
-              {/* Legal Links */}
-              <div className="flex items-center gap-6">
-                {footerLinks.legal.map((link) => (
-                  <a
-                    key={link.label}
-                    href={link.href}
-                    className="text-sm text-background/50 hover:text-accent transition-colors"
-                  >
-                    {link.label}
-                  </a>
-                ))}
+              {/* Popular Brands */}
+              <div>
+                <h4 className="font-heading font-semibold mb-4 text-background">Popular Brands</h4>
+                <ul className="space-y-3">
+                  {footerLinks.brands.map((link) => (
+                    <li key={link.label}>
+                      <a href={link.href} className="text-sm text-background/70 hover:text-accent transition-colors">
+                        {link.label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
               </div>
 
-              <p className="text-sm text-background/50">
-                © 2024 Grabyourcar. All rights reserved.
-              </p>
+              {/* Company */}
+              <div>
+                <h4 className="font-heading font-semibold mb-4 text-background">Company</h4>
+                <ul className="space-y-3">
+                  {footerLinks.company.map((link) => (
+                    <li key={link.label}>
+                      <a href={link.href} className="text-sm text-background/70 hover:text-accent transition-colors">
+                        {link.label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Contact Us */}
+              <div>
+                <h4 className="font-heading font-semibold mb-4 text-background">Contact Us</h4>
+                <ul className="space-y-4">
+                  <li className="flex items-start gap-3">
+                    <Phone className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
+                    <div>
+                      <a href="tel:+919577200023" className="text-sm text-background/70 hover:text-accent transition-colors">
+                        +91 95772 00023
+                      </a>
+                      <p className="text-xs text-background/50">Mon-Sat, 9am-7pm</p>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <MessageCircle className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
+                    <a 
+                      href="https://wa.me/919577200023" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-sm text-background/70 hover:text-accent transition-colors"
+                    >
+                      WhatsApp Us
+                    </a>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <Mail className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
+                    <a href="mailto:hello@grabyourcar.com" className="text-sm text-background/70 hover:text-accent transition-colors">
+                      hello@grabyourcar.com
+                    </a>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <MapPin className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-background/70">Mumbai, Maharashtra, India</p>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Bar */}
+      <div className="border-t border-background/10">
+        <div className="container mx-auto px-4 py-5">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <p className="text-sm text-background/50">
+              © 2024 Grabyourcar. All rights reserved.
+            </p>
+            
+            {/* Legal Links */}
+            <div className="flex items-center gap-6">
+              {footerLinks.legal.map((link) => (
+                <a
+                  key={link.label}
+                  href={link.href}
+                  className="text-sm text-background/50 hover:text-accent transition-colors"
+                >
+                  {link.label}
+                </a>
+              ))}
             </div>
           </div>
         </div>
