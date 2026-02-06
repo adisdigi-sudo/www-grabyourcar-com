@@ -19,7 +19,7 @@ serve(async (req) => {
       throw new Error('Brand is required');
     }
 
-    const perplexityKey = Deno.env.get('PERPLEXITY_API_KEY');
+    const perplexityKey = Deno.env.get('PERPLEXITY_API_KEY_1') || Deno.env.get('PERPLEXITY_API_KEY');
     if (!perplexityKey) {
       throw new Error('Perplexity API key not configured');
     }
