@@ -44,6 +44,7 @@ import { TeamUserManagement } from "@/components/admin/TeamUserManagement";
 import { AICarEntryGenerator } from "@/components/admin/AICarEntryGenerator";
 import BulkCarUploader from "@/components/admin/BulkCarUploader";
 import WhatsAppTemplateManager from "@/components/admin/WhatsAppTemplateManager";
+import EmailAutomationManager from "@/components/admin/EmailAutomationManager";
 
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
@@ -185,7 +186,8 @@ const AdminLayout = () => {
         return <WhatsAppManagement />;
       case "marketing-templates":
         return <WhatsAppTemplateManager />;
-      case "integrations-chatbot":
+      case "marketing-automation":
+        return <EmailAutomationManager />;
       case "integrations-shipping":
         return <IntegrationsManagement />;
       case "integrations-payments":
