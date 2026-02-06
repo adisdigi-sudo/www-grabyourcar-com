@@ -38,28 +38,8 @@ export const Footer = () => {
     <footer className="bg-foreground text-background">
       {/* Main Footer */}
       <div className="container mx-auto px-4 py-12 md:py-16">
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-8">
-          {/* Brand */}
-          <div className="col-span-2">
-            <a href="/" className="inline-block">
-              <ResponsiveLogo variant="footer" className="brightness-0 invert" />
-            </a>
-            <p className="text-sm font-medium text-background/80 mt-1 mb-3">
-              New Car — Hassle-Free & Memorable
-            </p>
-            <p className="text-background/60 mb-5 text-xs leading-relaxed">
-              India's smarter way to buy new cars. Best Price. Faster Delivery. Zero Hassle. 500+ Happy Customers Trust Us Every Day.
-            </p>
-            
-            {/* Newsletter */}
-            <div className="flex gap-2">
-              <Input
-                placeholder="Enter your email"
-                className="bg-background/10 border-background/20 text-background placeholder:text-background/50"
-              />
-              <Button variant="accent">Subscribe</Button>
-            </div>
-          </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8">
+          {/* Services */}
 
           {/* Services */}
           <div>
@@ -142,38 +122,63 @@ export const Footer = () => {
         </div>
       </div>
 
-      {/* Bottom Bar */}
+      {/* Bottom Bar with Logo */}
       <div className="border-t border-background/10">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-background/50">
-              © 2024 Grabyourcar. All rights reserved.
-            </p>
-            
-            {/* Social Links */}
-            <div className="flex items-center gap-4">
-              {[Facebook, Instagram, Twitter, Youtube].map((Icon, index) => (
-                <a
-                  key={index}
-                  href="#"
-                  className="w-10 h-10 rounded-full bg-background/10 flex items-center justify-center hover:bg-accent transition-colors group"
-                >
-                  <Icon className="h-5 w-5 text-background/70 group-hover:text-accent-foreground" />
-                </a>
-              ))}
+        <div className="container mx-auto px-4 py-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+            {/* Logo & Brand Section */}
+            <div className="space-y-4">
+              <a href="/" className="inline-block">
+                <ResponsiveLogo variant="footer" className="brightness-0 invert" />
+              </a>
+              <p className="text-sm font-medium text-background/80">
+                New Car — Hassle-Free & Memorable
+              </p>
+              <p className="text-background/60 text-xs leading-relaxed max-w-md">
+                India's smarter way to buy new cars. Best Price. Faster Delivery. Zero Hassle. 500+ Happy Customers Trust Us Every Day.
+              </p>
+              
+              {/* Newsletter */}
+              <div className="flex gap-2 max-w-sm">
+                <Input
+                  placeholder="Enter your email"
+                  className="bg-background/10 border-background/20 text-background placeholder:text-background/50"
+                />
+                <Button variant="accent">Subscribe</Button>
+              </div>
             </div>
 
-            {/* Legal Links */}
-            <div className="flex items-center gap-6">
-              {footerLinks.legal.map((link) => (
-                <a
-                  key={link.label}
-                  href={link.href}
-                  className="text-sm text-background/50 hover:text-accent transition-colors"
-                >
-                  {link.label}
-                </a>
-              ))}
+            {/* Right Side - Social & Legal */}
+            <div className="flex flex-col items-start md:items-end gap-4">
+              {/* Social Links */}
+              <div className="flex items-center gap-4">
+                {[Facebook, Instagram, Twitter, Youtube].map((Icon, index) => (
+                  <a
+                    key={index}
+                    href="#"
+                    className="w-10 h-10 rounded-full bg-background/10 flex items-center justify-center hover:bg-accent transition-colors group"
+                  >
+                    <Icon className="h-5 w-5 text-background/70 group-hover:text-accent-foreground" />
+                  </a>
+                ))}
+              </div>
+
+              {/* Legal Links */}
+              <div className="flex items-center gap-6">
+                {footerLinks.legal.map((link) => (
+                  <a
+                    key={link.label}
+                    href={link.href}
+                    className="text-sm text-background/50 hover:text-accent transition-colors"
+                  >
+                    {link.label}
+                  </a>
+                ))}
+              </div>
+
+              <p className="text-sm text-background/50">
+                © 2024 Grabyourcar. All rights reserved.
+              </p>
             </div>
           </div>
         </div>
