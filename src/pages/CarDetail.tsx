@@ -238,6 +238,69 @@ const CarDetail = () => {
                 <div className="mt-6">
                   <BookingForm carName={car.name} carBrand={car.brand} />
                 </div>
+
+                {/* Why Buy From Us - Utilizing blank space */}
+                <Card className="mt-6 border-border/50 bg-gradient-to-br from-card to-secondary/20">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Star className="h-5 w-5 text-accent" />
+                      Why Buy From Grabyourcar?
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="flex items-start gap-2 p-2.5 rounded-lg bg-background/60 border border-border/30">
+                        <div className="w-8 h-8 rounded-full bg-success/10 flex items-center justify-center flex-shrink-0">
+                          <TrendingDown className="h-4 w-4 text-success" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold text-foreground">Best Price</p>
+                          <p className="text-[10px] text-muted-foreground">Guaranteed lowest price</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2 p-2.5 rounded-lg bg-background/60 border border-border/30">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <Clock className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold text-foreground">Fast Delivery</p>
+                          <p className="text-[10px] text-muted-foreground">Priority delivery slots</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2 p-2.5 rounded-lg bg-background/60 border border-border/30">
+                        <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0">
+                          <Gift className="h-4 w-4 text-accent" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold text-foreground">Free Accessories</p>
+                          <p className="text-[10px] text-muted-foreground">Worth ₹25,000+</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2 p-2.5 rounded-lg bg-background/60 border border-border/30">
+                        <div className="w-8 h-8 rounded-full bg-success/10 flex items-center justify-center flex-shrink-0">
+                          <Shield className="h-4 w-4 text-success" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold text-foreground">100% Genuine</p>
+                          <p className="text-[10px] text-muted-foreground">Authorized dealer</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Quick Contact */}
+                    <div className="mt-4 p-3 rounded-lg bg-gradient-to-r from-primary/10 to-success/10 border border-primary/20">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-primary" />
+                          <span className="text-xs font-medium">Need Help?</span>
+                        </div>
+                        <a href="tel:+919577200023" className="text-xs font-bold text-primary hover:underline">
+                          +91 95772 00023
+                        </a>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
 
               {/* Car Info */}
