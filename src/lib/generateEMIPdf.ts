@@ -55,13 +55,10 @@ export const generateEMIPdf = (data: EMIData) => {
   const lightGray: [number, number, number] = [241, 245, 249];
   const white: [number, number, number] = [255, 255, 255];
 
-  // Helper function for currency formatting
+  // Helper function for currency formatting - clean INR format
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0,
-    }).format(amount);
+    const formatted = Math.round(amount).toLocaleString('en-IN');
+    return `Rs. ${formatted}`;
   };
 
   // ============ HEADER SECTION ============
@@ -339,7 +336,7 @@ export const generateEMIPdf = (data: EMIData) => {
   doc.setFontSize(8);
   doc.setTextColor(...grayText);
   doc.setFont("helvetica", "normal");
-  doc.text(`(${principalPercent.toFixed(1)}%)`, margin + 100, yPos + 2);
+  doc.text(`(${Math.round(principalPercent)}%)`, margin + 100, yPos + 2);
   
   // Interest legend
   doc.setFillColor(245, 158, 11);
@@ -353,7 +350,7 @@ export const generateEMIPdf = (data: EMIData) => {
   doc.setFontSize(8);
   doc.setTextColor(...grayText);
   doc.setFont("helvetica", "normal");
-  doc.text(`(${interestPercent.toFixed(1)}%)`, pageWidth / 2 + 88, yPos + 2);
+  doc.text(`(${Math.round(interestPercent)}%)`, pageWidth / 2 + 88, yPos + 2);
   
   yPos += 12;
   
@@ -438,9 +435,10 @@ export const generateEMIPdf = (data: EMIData) => {
 // Generate shareable WhatsApp message
 export const generateEMIWhatsAppMessage = (data: EMIData): string => {
   const formatCurrency = (amount: number) => {
-    if (amount >= 10000000) return `₹${(amount / 10000000).toFixed(2)} Cr`;
-    if (amount >= 100000) return `₹${(amount / 100000).toFixed(2)} L`;
-    return `₹${amount.toLocaleString("en-IN")}`;
+    const rounded = Math.round(amount);
+    if (rounded >= 10000000) return `Rs. ${(rounded / 10000000).toFixed(2)} Cr`;
+    if (rounded >= 100000) return `Rs. ${(rounded / 100000).toFixed(2)} L`;
+    return `Rs. ${rounded.toLocaleString("en-IN")}`;
   };
 
   // Clean car name
