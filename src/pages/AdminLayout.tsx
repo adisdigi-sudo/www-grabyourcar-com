@@ -50,6 +50,8 @@ import { MarketingCommandCenter } from "@/components/admin/marketing";
 import VehicleAttributesManager from "@/components/admin/VehicleAttributesManager";
 import DriverBookingsManagement from "@/components/admin/DriverBookingsManagement";
 import APIPartnersManagement from "@/components/admin/APIPartnersManagement";
+import BrandsManagement from "@/components/admin/BrandsManagement";
+import QuickTextImporter from "@/components/admin/QuickTextImporter";
 
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
@@ -132,10 +134,14 @@ const AdminLayout = () => {
         return <UnifiedCarManagement />;
       case "cars-migration":
         return <CarDataManagement />;
+      case "cars-brands":
+        return <BrandsManagement />;
       case "cars-ai-entry":
         return <AICarEntryGenerator />;
       case "cars-bulk-import":
         return <BulkCarUploader />;
+      case "cars-quick-import":
+        return <QuickTextImporter />;
       case "cars-city-pricing":
         return <StateCityPricingManager />;
       case "cars-attributes":
