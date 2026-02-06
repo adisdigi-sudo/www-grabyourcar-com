@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, Palette, Check, Image as ImageIcon, Expand, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Palette, Check, Image as ImageIcon, Expand, X, Car } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
@@ -21,6 +21,9 @@ interface ColorGalleryViewerProps {
   onColorChange: (index: number) => void;
 }
 
+// Fallback placeholder for broken images
+const PLACEHOLDER_IMAGE = "/placeholder.svg";
+
 export const ColorGalleryViewer = ({
   colors,
   carName,
@@ -31,16 +34,22 @@ export const ColorGalleryViewer = ({
 }: ColorGalleryViewerProps) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [imageError, setImageError] = useState<Record<string, boolean>>({});
   
   // Get color-specific images or fall back to main gallery
   const currentColor = colors[selectedColor];
+  
+  // Ensure we always have at least carImage as fallback
+  const fallbackGallery = gallery.length > 0 ? gallery : (carImage ? [carImage] : []);
+  
   const colorImages = currentColor?.image 
-    ? [currentColor.image, ...gallery.slice(0, 3)] 
-    : gallery;
+    ? [currentColor.image, ...fallbackGallery.slice(0, 3)] 
+    : fallbackGallery.length > 0 ? fallbackGallery : [PLACEHOLDER_IMAGE];
 
   // Reset image index when color changes
   useEffect(() => {
     setCurrentImageIndex(0);
+    setImageError({});
   }, [selectedColor]);
 
   const nextImage = () => {
@@ -49,6 +58,16 @@ export const ColorGalleryViewer = ({
 
   const prevImage = () => {
     setCurrentImageIndex((prev) => (prev - 1 + colorImages.length) % colorImages.length);
+  };
+
+  // Handle image error - use placeholder
+  const handleImageError = (imageUrl: string) => {
+    setImageError(prev => ({ ...prev, [imageUrl]: true }));
+  };
+
+  const getImageSrc = (url: string) => {
+    if (imageError[url] || !url) return PLACEHOLDER_IMAGE;
+    return url;
   };
 
   // Generate a tinted overlay based on the selected color
@@ -65,16 +84,31 @@ export const ColorGalleryViewer = ({
         />
         
         <AnimatePresence mode="wait">
-          <motion.img
-            key={`${selectedColor}-${currentImageIndex}`}
-            src={colorImages[currentImageIndex]}
-            alt={`${carName} in ${currentColor?.name || 'default'} - Image ${currentImageIndex + 1}`}
-            className="w-full h-full object-cover"
-            initial={{ opacity: 0, scale: 1.02 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.98 }}
-            transition={{ duration: 0.3 }}
-          />
+          {getImageSrc(colorImages[currentImageIndex]) === PLACEHOLDER_IMAGE ? (
+            <motion.div
+              key={`placeholder-${selectedColor}-${currentImageIndex}`}
+              className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-secondary to-muted"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <Car className="h-24 w-24 text-muted-foreground/30 mb-4" />
+              <p className="text-muted-foreground text-sm font-medium">{carName}</p>
+              <p className="text-muted-foreground/60 text-xs mt-1">{currentColor?.name || 'View Details'}</p>
+            </motion.div>
+          ) : (
+            <motion.img
+              key={`${selectedColor}-${currentImageIndex}`}
+              src={getImageSrc(colorImages[currentImageIndex])}
+              alt={`${carName} in ${currentColor?.name || 'default'} - Image ${currentImageIndex + 1}`}
+              className="w-full h-full object-cover"
+              initial={{ opacity: 0, scale: 1.02 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              transition={{ duration: 0.3 }}
+              onError={() => handleImageError(colorImages[currentImageIndex])}
+            />
+          )}
         </AnimatePresence>
 
         {/* Navigation Arrows */}
@@ -118,11 +152,19 @@ export const ColorGalleryViewer = ({
           </DialogTrigger>
           <DialogContent className="max-w-5xl w-[95vw] p-0 bg-black/95">
             <div className="relative aspect-video">
-              <img
-                src={colorImages[currentImageIndex]}
-                alt={`${carName} in ${currentColor?.name || 'default'}`}
-                className="w-full h-full object-contain"
-              />
+              {getImageSrc(colorImages[currentImageIndex]) === PLACEHOLDER_IMAGE ? (
+                <div className="w-full h-full flex flex-col items-center justify-center">
+                  <Car className="h-32 w-32 text-white/20 mb-4" />
+                  <p className="text-white/60 text-lg">{carName}</p>
+                </div>
+              ) : (
+                <img
+                  src={getImageSrc(colorImages[currentImageIndex])}
+                  alt={`${carName} in ${currentColor?.name || 'default'}`}
+                  className="w-full h-full object-contain"
+                  onError={() => handleImageError(colorImages[currentImageIndex])}
+                />
+              )}
               <button
                 onClick={() => setIsFullscreen(false)}
                 className="absolute top-4 right-4 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-colors"
@@ -184,7 +226,18 @@ export const ColorGalleryViewer = ({
                 : "border-transparent hover:border-muted-foreground/30"
             )}
           >
-            <img src={img} alt="" className="w-full h-full object-cover" />
+            {getImageSrc(img) === PLACEHOLDER_IMAGE ? (
+              <div className="w-full h-full bg-muted flex items-center justify-center">
+                <Car className="h-4 w-4 text-muted-foreground/40" />
+              </div>
+            ) : (
+              <img 
+                src={getImageSrc(img)} 
+                alt="" 
+                className="w-full h-full object-cover" 
+                onError={() => handleImageError(img)}
+              />
+            )}
             {currentImageIndex === index && (
               <div className="absolute inset-0 bg-primary/20" />
             )}
