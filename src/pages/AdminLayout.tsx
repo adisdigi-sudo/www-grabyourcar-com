@@ -45,6 +45,7 @@ import { AICarEntryGenerator } from "@/components/admin/AICarEntryGenerator";
 import BulkCarUploader from "@/components/admin/BulkCarUploader";
 import WhatsAppTemplateManager from "@/components/admin/WhatsAppTemplateManager";
 import EmailAutomationManager from "@/components/admin/EmailAutomationManager";
+import StateCityPricingManager from "@/components/admin/StateCityPricingManager";
 
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
@@ -131,6 +132,8 @@ const AdminLayout = () => {
         return <AICarEntryGenerator />;
       case "cars-bulk-import":
         return <BulkCarUploader />;
+      case "cars-city-pricing":
+        return <StateCityPricingManager />;
       case "cars-ai":
         return <AIContentManagement />;
       case "website-homepage":
