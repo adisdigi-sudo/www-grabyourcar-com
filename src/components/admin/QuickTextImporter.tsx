@@ -28,6 +28,7 @@ interface ImportResult {
 }
 
 const IMPORT_TYPES = [
+  { id: 'cars', label: 'Cars', icon: Car, format: 'Brand,Name,BodyType,PriceNumeric,FuelTypes(|sep),Transmissions(|sep)[,Tagline]', example: 'Maruti Suzuki,Swift,Hatchback,649000,Petrol|CNG,Manual|AMT,The Bold New Swift\nHyundai,Creta,Compact SUV,1099000,Petrol|Diesel,Manual|Automatic,The Ultimate SUV' },
   { id: 'brands', label: 'Car Brands', icon: Car, format: 'BrandName,Country[,luxury]', example: 'Maruti Suzuki,India\nHyundai,South Korea\nBMW,Germany,luxury' },
   { id: 'variants', label: 'Car Variants', icon: Car, format: 'car_slug,VariantName,Price,PriceNumeric,FuelType,Transmission[,Features]', example: 'maruti-swift,LXI,₹6.49 Lakh,649000,Petrol,Manual,ABS|Airbags\nmaruti-swift,ZXI AT,₹8.99 Lakh,899000,Petrol,Automatic,ABS|Airbags|Sunroof' },
   { id: 'colors', label: 'Car Colors', icon: Palette, format: 'car_slug,ColorName,HexCode[,ImageURL]', example: 'maruti-swift,Pearl White,#FFFFFF\nmaruti-swift,Midnight Blue,#1A237E' },
@@ -62,6 +63,56 @@ export const QuickTextImporter = () => {
       const errors: string[] = [];
 
       switch (importType) {
+        case 'cars': {
+          for (const row of data) {
+            const brand = row[0]?.trim();
+            const name = row[1]?.trim();
+            const bodyType = row[2]?.trim();
+            const priceNumeric = parseInt(row[3]) || 0;
+            const fuelTypes = row[4] ? row[4].split('|').map(f => f.trim()) : ['Petrol'];
+            const transmissions = row[5] ? row[5].split('|').map(t => t.trim()) : ['Manual'];
+            const tagline = row[6]?.trim() || null;
+
+            if (!brand || !name) {
+              failed++;
+              errors.push(`Missing brand or name: ${row.join(',')}`);
+              continue;
+            }
+
+            const slug = `${brand}-${name}`.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+            
+            // Format price range
+            const priceInLakhs = priceNumeric / 100000;
+            const priceRange = priceInLakhs >= 100 
+              ? `₹${(priceInLakhs / 100).toFixed(2)} Cr` 
+              : `₹${priceInLakhs.toFixed(2)} Lakh`;
+
+            const { error } = await supabase
+              .from('cars')
+              .upsert({
+                brand,
+                name,
+                slug,
+                body_type: bodyType || 'Hatchback',
+                price_numeric: priceNumeric,
+                price_range: priceRange,
+                fuel_types: fuelTypes,
+                transmission_types: transmissions,
+                tagline,
+                availability: 'In Stock',
+                is_new: true
+              }, { onConflict: 'slug' });
+
+            if (error) {
+              failed++;
+              errors.push(`${brand} ${name}: ${error.message}`);
+            } else {
+              success++;
+            }
+          }
+          break;
+        }
+
         case 'brands': {
           const brandsToAdd = data.map((row, idx) => ({
             name: row[0],
