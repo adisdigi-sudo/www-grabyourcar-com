@@ -15,6 +15,11 @@ import hondaCars from "./honda";
 import mgCars from "./mg";
 import skodaCars from "./skoda";
 import volkswagenCars from "./volkswagen";
+// New brands
+import citroenCars from "./citroen";
+import jeepCars from "./jeep";
+import nissanCars from "./nissan";
+import renaultCars from "./renault";
 import { Car } from "./types";
 
 // Combine all brand cars - luxury brands first for migration priority
@@ -32,6 +37,10 @@ export const allCars: Car[] = [
   ...mgCars,
   ...skodaCars,
   ...volkswagenCars,
+  ...citroenCars,
+  ...jeepCars,
+  ...nissanCars,
+  ...renaultCars,
 ];
 
 export default allCars;
