@@ -71,3 +71,6 @@ verify_jwt = false
 
 [functions.generate-emi-content]
 verify_jwt = false
+
+[functions.generate-car-data]
+verify_jwt = true
