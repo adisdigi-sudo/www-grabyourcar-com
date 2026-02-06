@@ -1928,6 +1928,69 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_templates: {
+        Row: {
+          approval_status: string | null
+          category: string
+          content: string
+          created_at: string | null
+          created_by: string | null
+          example_data: Json | null
+          id: string
+          is_active: boolean | null
+          is_approved: boolean | null
+          language: string | null
+          name: string
+          preview: string | null
+          template_type: string
+          updated_at: string | null
+          updated_by: string | null
+          use_cases: string[] | null
+          variables: string[] | null
+          wbiztool_template_id: string | null
+        }
+        Insert: {
+          approval_status?: string | null
+          category: string
+          content: string
+          created_at?: string | null
+          created_by?: string | null
+          example_data?: Json | null
+          id?: string
+          is_active?: boolean | null
+          is_approved?: boolean | null
+          language?: string | null
+          name: string
+          preview?: string | null
+          template_type: string
+          updated_at?: string | null
+          updated_by?: string | null
+          use_cases?: string[] | null
+          variables?: string[] | null
+          wbiztool_template_id?: string | null
+        }
+        Update: {
+          approval_status?: string | null
+          category?: string
+          content?: string
+          created_at?: string | null
+          created_by?: string | null
+          example_data?: Json | null
+          id?: string
+          is_active?: boolean | null
+          is_approved?: boolean | null
+          language?: string | null
+          name?: string
+          preview?: string | null
+          template_type?: string
+          updated_at?: string | null
+          updated_by?: string | null
+          use_cases?: string[] | null
+          variables?: string[] | null
+          wbiztool_template_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
