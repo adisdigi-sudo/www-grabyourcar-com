@@ -17,7 +17,8 @@ import {
   Info,
   Calculator,
   IndianRupee,
-  Share2
+  Share2,
+  Settings2
 } from "lucide-react";
 import { WhatsAppSalesCTA } from "@/components/WhatsAppCTA";
 import {
@@ -41,8 +42,8 @@ import {
 import { useState } from "react";
 import { calculateStatePriceBreakup, stateRates } from "@/data/statePricing";
 import { motion, AnimatePresence } from "framer-motion";
-import { generateEMIPdf, generateEMIWhatsAppMessage } from "@/lib/generateEMIPdf";
 import { useEMIPDFSettings } from "@/hooks/useEMIPDFSettings";
+import { EMICustomizerModal } from "@/components/EMICustomizerModal";
 
 // Standard accessories that can be added
 const standardAccessories = [
@@ -92,6 +93,7 @@ export const PriceSummaryCard = ({
   const [selectedState, setSelectedState] = useState("DL");
   const [selectedAccessories, setSelectedAccessories] = useState<string[]>([]);
   const [showFullBreakup, setShowFullBreakup] = useState(false);
+  const [showEMIModal, setShowEMIModal] = useState(false);
   
   // Fetch EMI PDF settings from backend
   const { config: emiPdfConfig } = useEMIPDFSettings();
@@ -381,64 +383,6 @@ export const PriceSummaryCard = ({
               (Math.pow(1 + monthlyRate, tenureMonths) - 1)
             );
             const downPayment = finalOnRoadPrice * 0.2;
-            const totalPayment = emi * tenureMonths;
-            const totalInterest = totalPayment - loanAmount;
-            
-            // PDF data based on selected variant only
-            const handleDownloadPdf = () => {
-              generateEMIPdf({
-                loanAmount: finalOnRoadPrice,
-                downPayment: downPayment,
-                loanPrincipal: loanAmount,
-                interestRate: interestRate,
-                tenure: tenureMonths,
-                emi: emi,
-                totalPayment: totalPayment,
-                totalInterest: totalInterest,
-                carName: `${carBrand} ${carName}`,
-                variantName: currentVariant?.name,
-                selectedColor: colors[selectedColor]?.name,
-                selectedCity: stateRates.find(s => s.code === selectedState)?.name,
-                onRoadPrice: {
-                  exShowroom: breakup.exShowroom,
-                  rto: breakup.rto,
-                  insurance: breakup.insurance,
-                  tcs: breakup.tcs,
-                  fastag: breakup.fastag,
-                  registration: breakup.registration,
-                  handling: breakup.handling,
-                  onRoadPrice: finalOnRoadPrice,
-                }
-              }, emiPdfConfig);
-            };
-
-            const handleShareWhatsApp = () => {
-              const message = generateEMIWhatsAppMessage({
-                loanAmount: finalOnRoadPrice,
-                downPayment: downPayment,
-                loanPrincipal: loanAmount,
-                interestRate: interestRate,
-                tenure: tenureMonths,
-                emi: emi,
-                totalPayment: totalPayment,
-                totalInterest: totalInterest,
-                carName: `${carBrand} ${carName}`,
-                variantName: currentVariant?.name,
-                selectedColor: colors[selectedColor]?.name,
-                selectedCity: stateRates.find(s => s.code === selectedState)?.name,
-                onRoadPrice: {
-                  exShowroom: breakup.exShowroom,
-                  rto: breakup.rto,
-                  insurance: breakup.insurance,
-                  tcs: breakup.tcs,
-                  fastag: breakup.fastag,
-                  registration: breakup.registration,
-                  handling: breakup.handling,
-                  onRoadPrice: finalOnRoadPrice,
-                }
-              }, emiPdfConfig);
-              window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank");
-            };
             
             return (
               <div className="space-y-3">
@@ -466,39 +410,49 @@ export const PriceSummaryCard = ({
                 </div>
                 
                 <div className="bg-primary/10 rounded-xl p-4 text-center border border-primary/20">
-                  <p className="text-xs text-muted-foreground mb-1">Monthly EMI</p>
+                  <p className="text-xs text-muted-foreground mb-1">Monthly EMI (Estimated)</p>
                   <p className="text-2xl font-bold text-primary">
-                    Rs. {emi.toLocaleString('en-IN')}
+                    ₹{emi.toLocaleString('en-IN')}
                     <span className="text-xs font-normal text-muted-foreground">/month</span>
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">@ {interestRate}% p.a. • {tenureMonths / 12} years</p>
                 </div>
 
-                {/* Download & Share */}
-                <div className="grid grid-cols-2 gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full text-xs"
-                    onClick={handleDownloadPdf}
-                  >
-                    <Download className="h-3.5 w-3.5 mr-1.5" />
-                    Download PDF
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full text-xs"
-                    onClick={handleShareWhatsApp}
-                  >
-                    <Share2 className="h-3.5 w-3.5 mr-1.5" />
-                    Share
-                  </Button>
-                </div>
+                {/* Customize & Download */}
+                <Button 
+                  variant="default" 
+                  size="sm" 
+                  className="w-full"
+                  onClick={() => setShowEMIModal(true)}
+                >
+                  <Settings2 className="h-4 w-4 mr-2" />
+                  Customize EMI & Download Quote
+                </Button>
               </div>
             );
           })()}
         </div>
+
+        {/* EMI Customizer Modal */}
+        <EMICustomizerModal
+          open={showEMIModal}
+          onOpenChange={setShowEMIModal}
+          carName={`${carBrand} ${carName}`}
+          variantName={currentVariant?.name || ''}
+          selectedColor={colors[selectedColor]?.name}
+          selectedCity={stateRates.find(s => s.code === selectedState)?.name}
+          onRoadPrice={{
+            exShowroom: breakup.exShowroom,
+            rto: breakup.rto,
+            insurance: breakup.insurance,
+            tcs: breakup.tcs,
+            fastag: breakup.fastag,
+            registration: breakup.registration,
+            handling: breakup.handling,
+            onRoadPrice: finalOnRoadPrice,
+          }}
+          pdfConfig={emiPdfConfig}
+        />
 
         {/* Optional Accessories */}
         <Collapsible>
