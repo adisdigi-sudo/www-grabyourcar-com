@@ -42,6 +42,7 @@ import { LaunchesManagement } from "@/components/admin/LaunchesManagement";
 import { ProfileSettings } from "@/components/admin/ProfileSettings";
 import { TeamUserManagement } from "@/components/admin/TeamUserManagement";
 import { AICarEntryGenerator } from "@/components/admin/AICarEntryGenerator";
+import BulkCarUploader from "@/components/admin/BulkCarUploader";
 
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
@@ -126,6 +127,8 @@ const AdminLayout = () => {
         return <CarDataManagement />;
       case "cars-ai-entry":
         return <AICarEntryGenerator />;
+      case "cars-bulk-import":
+        return <BulkCarUploader />;
       case "cars-ai":
         return <AIContentManagement />;
       case "website-homepage":
