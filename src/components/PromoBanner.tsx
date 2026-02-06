@@ -180,59 +180,6 @@ export const PromoBanner = () => {
         </motion.div>
       </div>
 
-      {/* Content */}
-      <div className="container mx-auto px-3 md:px-4 relative z-10">
-        {/* Mobile layout */}
-        <div className="flex md:hidden items-center justify-center gap-2 text-xs">
-          <div className="bg-white/20 backdrop-blur-sm rounded-full px-3 py-1.5 flex items-center gap-2">
-            <Sparkles className="h-3.5 w-3.5 animate-pulse flex-shrink-0" />
-            <span className="font-heading font-bold truncate">
-              Mega Savings Live — Up to ₹2.5L OFF
-            </span>
-            <span className="text-primary-foreground/60">•</span>
-            <Badge variant="secondary" className="bg-white/30 text-primary-foreground border-0 font-mono text-xs px-1.5 py-0">
-              {String(timeLeft.hours).padStart(2, "0")}:{String(timeLeft.minutes).padStart(2, "0")}:{String(timeLeft.seconds).padStart(2, "0")}
-            </Badge>
-          </div>
-        </div>
-
-        {/* Desktop layout */}
-        <div className="hidden md:flex items-center justify-center gap-6 text-center">
-          <div className="bg-white/15 backdrop-blur-sm rounded-full px-5 py-2 flex items-center gap-3 shadow-lg border border-white/20">
-            <Flame className="h-5 w-5 animate-pulse text-yellow-300" />
-            <span className="font-heading font-bold text-base tracking-wide">
-              🏎️ Mega Savings Live
-            </span>
-          </div>
-          
-          <div className="w-px h-8 bg-white/30" />
-          
-          <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2">
-            <TrendingUp className="h-4 w-4" />
-            <span className="text-sm font-medium">Unlock Exclusive Dealer Offers — Up to ₹2,50,000 OFF</span>
-          </div>
-          
-          <div className="w-px h-8 bg-white/30" />
-          
-          <div className="flex items-center gap-3 bg-white/15 backdrop-blur-sm rounded-full px-4 py-2 border border-white/20">
-            <Timer className="h-4 w-4" />
-            <span className="text-sm font-medium">Ends in:</span>
-            <div className="flex items-center gap-1">
-              <Badge variant="secondary" className="bg-white/30 text-primary-foreground border-0 font-mono font-bold shadow-inner">
-                {String(timeLeft.hours).padStart(2, "0")}h
-              </Badge>
-              <span className="font-bold text-yellow-300">:</span>
-              <Badge variant="secondary" className="bg-white/30 text-primary-foreground border-0 font-mono font-bold shadow-inner">
-                {String(timeLeft.minutes).padStart(2, "0")}m
-              </Badge>
-              <span className="font-bold text-yellow-300">:</span>
-              <Badge variant="secondary" className="bg-white/30 text-primary-foreground border-0 font-mono font-bold shadow-inner">
-                {String(timeLeft.seconds).padStart(2, "0")}s
-              </Badge>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };
