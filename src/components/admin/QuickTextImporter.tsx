@@ -29,6 +29,7 @@ interface ImportResult {
 
 const IMPORT_TYPES = [
   { id: 'brands', label: 'Car Brands', icon: Car, format: 'BrandName,Country[,luxury]', example: 'Maruti Suzuki,India\nHyundai,South Korea\nBMW,Germany,luxury' },
+  { id: 'variants', label: 'Car Variants', icon: Car, format: 'car_slug,VariantName,Price,PriceNumeric,FuelType,Transmission[,Features]', example: 'maruti-swift,LXI,₹6.49 Lakh,649000,Petrol,Manual,ABS|Airbags\nmaruti-swift,ZXI AT,₹8.99 Lakh,899000,Petrol,Automatic,ABS|Airbags|Sunroof' },
   { id: 'colors', label: 'Car Colors', icon: Palette, format: 'car_slug,ColorName,HexCode[,ImageURL]', example: 'maruti-swift,Pearl White,#FFFFFF\nmaruti-swift,Midnight Blue,#1A237E' },
   { id: 'images', label: 'Car Images', icon: Image, format: 'car_slug,ImageURL[,alt_text][,is_primary]', example: 'maruti-swift,https://example.com/swift-front.jpg,Front View,true\nmaruti-swift,https://example.com/swift-side.jpg,Side View' },
   { id: 'specifications', label: 'Car Specs', icon: FileText, format: 'car_slug,Category,Label,Value', example: 'maruti-swift,Engine,Displacement,1197 cc\nmaruti-swift,Engine,Max Power,90 PS\nmaruti-swift,Performance,Top Speed,180 kmph' },
@@ -77,6 +78,47 @@ export const QuickTextImporter = () => {
 
           if (error) throw error;
           success = result?.length || 0;
+          break;
+        }
+
+        case 'variants': {
+          const slugs = [...new Set(data.map(row => row[0]))];
+          const { data: cars } = await supabase
+            .from('cars')
+            .select('id, slug')
+            .in('slug', slugs);
+
+          const carMap = new Map(cars?.map(c => [c.slug, c.id]) || []);
+
+          for (const row of data) {
+            const carId = carMap.get(row[0]);
+            if (!carId) {
+              failed++;
+              errors.push(`Car not found: ${row[0]}`);
+              continue;
+            }
+
+            const features = row[6] ? row[6].split('|').map(f => f.trim()) : [];
+            
+            const { error } = await supabase
+              .from('car_variants')
+              .insert({
+                car_id: carId,
+                name: row[1],
+                price: row[2],
+                price_numeric: parseInt(row[3]) || 0,
+                fuel_type: row[4] || null,
+                transmission: row[5] || null,
+                features: features.length > 0 ? features : null
+              });
+
+            if (error) {
+              failed++;
+              errors.push(`${row[1]}: ${error.message}`);
+            } else {
+              success++;
+            }
+          }
           break;
         }
 
