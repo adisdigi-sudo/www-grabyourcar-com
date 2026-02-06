@@ -440,6 +440,63 @@ export type Database = {
         }
         Relationships: []
       }
+      broadcast_recipients: {
+        Row: {
+          broadcast_id: string | null
+          created_at: string
+          delivered_at: string | null
+          error_message: string | null
+          id: string
+          lead_id: string | null
+          phone: string
+          read_at: string | null
+          replied_at: string | null
+          sent_at: string | null
+          status: string | null
+        }
+        Insert: {
+          broadcast_id?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          id?: string
+          lead_id?: string | null
+          phone: string
+          read_at?: string | null
+          replied_at?: string | null
+          sent_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          broadcast_id?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          id?: string
+          lead_id?: string | null
+          phone?: string
+          read_at?: string | null
+          replied_at?: string | null
+          sent_at?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "broadcast_recipients_broadcast_id_fkey"
+            columns: ["broadcast_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_broadcasts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "broadcast_recipients_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       call_bookings: {
         Row: {
           created_at: string
@@ -481,6 +538,51 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      campaign_conversions: {
+        Row: {
+          attributed_revenue: number | null
+          campaign_id: string | null
+          conversion_type: string
+          conversion_value: number | null
+          converted_at: string
+          id: string
+          lead_id: string | null
+        }
+        Insert: {
+          attributed_revenue?: number | null
+          campaign_id?: string | null
+          conversion_type: string
+          conversion_value?: number | null
+          converted_at?: string
+          id?: string
+          lead_id?: string | null
+        }
+        Update: {
+          attributed_revenue?: number | null
+          campaign_id?: string | null
+          conversion_type?: string
+          conversion_value?: number | null
+          converted_at?: string
+          id?: string
+          lead_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_conversions_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_conversions_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       car_brochures: {
         Row: {
@@ -1947,8 +2049,165 @@ export type Database = {
         }
         Relationships: []
       }
+      journey_automations: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          total_completed: number | null
+          total_converted: number | null
+          total_enrolled: number | null
+          trigger_config: Json | null
+          trigger_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          total_completed?: number | null
+          total_converted?: number | null
+          total_enrolled?: number | null
+          trigger_config?: Json | null
+          trigger_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          total_completed?: number | null
+          total_converted?: number | null
+          total_enrolled?: number | null
+          trigger_config?: Json | null
+          trigger_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      journey_enrollments: {
+        Row: {
+          completed_at: string | null
+          current_step_id: string | null
+          enrolled_at: string
+          id: string
+          journey_id: string | null
+          lead_id: string | null
+          metadata: Json | null
+          next_action_at: string | null
+          status: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          current_step_id?: string | null
+          enrolled_at?: string
+          id?: string
+          journey_id?: string | null
+          lead_id?: string | null
+          metadata?: Json | null
+          next_action_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          current_step_id?: string | null
+          enrolled_at?: string
+          id?: string
+          journey_id?: string | null
+          lead_id?: string | null
+          metadata?: Json | null
+          next_action_at?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journey_enrollments_current_step_id_fkey"
+            columns: ["current_step_id"]
+            isOneToOne: false
+            referencedRelation: "journey_steps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journey_enrollments_journey_id_fkey"
+            columns: ["journey_id"]
+            isOneToOne: false
+            referencedRelation: "journey_automations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journey_enrollments_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      journey_steps: {
+        Row: {
+          condition_rules: Json | null
+          created_at: string
+          delay_days: number | null
+          delay_hours: number | null
+          delay_minutes: number | null
+          id: string
+          is_active: boolean | null
+          journey_id: string | null
+          step_config: Json
+          step_order: number
+          step_type: string
+          template_id: string | null
+        }
+        Insert: {
+          condition_rules?: Json | null
+          created_at?: string
+          delay_days?: number | null
+          delay_hours?: number | null
+          delay_minutes?: number | null
+          id?: string
+          is_active?: boolean | null
+          journey_id?: string | null
+          step_config?: Json
+          step_order: number
+          step_type: string
+          template_id?: string | null
+        }
+        Update: {
+          condition_rules?: Json | null
+          created_at?: string
+          delay_days?: number | null
+          delay_hours?: number | null
+          delay_minutes?: number | null
+          id?: string
+          is_active?: boolean | null
+          journey_id?: string | null
+          step_config?: Json
+          step_order?: number
+          step_type?: string
+          template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journey_steps_journey_id_fkey"
+            columns: ["journey_id"]
+            isOneToOne: false
+            referencedRelation: "journey_automations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_activities: {
         Row: {
+          activity_source: string | null
           activity_type: string
           created_at: string | null
           description: string | null
@@ -1957,8 +2216,10 @@ export type Database = {
           metadata: Json | null
           outcome: string | null
           performed_by: string | null
+          score_impact: number | null
         }
         Insert: {
+          activity_source?: string | null
           activity_type: string
           created_at?: string | null
           description?: string | null
@@ -1967,8 +2228,10 @@ export type Database = {
           metadata?: Json | null
           outcome?: string | null
           performed_by?: string | null
+          score_impact?: number | null
         }
         Update: {
+          activity_source?: string | null
           activity_type?: string
           created_at?: string | null
           description?: string | null
@@ -1977,10 +2240,67 @@ export type Database = {
           metadata?: Json | null
           outcome?: string | null
           performed_by?: string | null
+          score_impact?: number | null
         }
         Relationships: [
           {
             foreignKeyName: "lead_activities_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_scores: {
+        Row: {
+          created_at: string
+          email_clicks: number | null
+          email_opens: number | null
+          engagement_level: string | null
+          form_submissions: number | null
+          id: string
+          last_activity_at: string | null
+          lead_id: string | null
+          page_views: number | null
+          score: number | null
+          score_breakdown: Json | null
+          updated_at: string
+          whatsapp_replies: number | null
+        }
+        Insert: {
+          created_at?: string
+          email_clicks?: number | null
+          email_opens?: number | null
+          engagement_level?: string | null
+          form_submissions?: number | null
+          id?: string
+          last_activity_at?: string | null
+          lead_id?: string | null
+          page_views?: number | null
+          score?: number | null
+          score_breakdown?: Json | null
+          updated_at?: string
+          whatsapp_replies?: number | null
+        }
+        Update: {
+          created_at?: string
+          email_clicks?: number | null
+          email_opens?: number | null
+          engagement_level?: string | null
+          form_submissions?: number | null
+          id?: string
+          last_activity_at?: string | null
+          lead_id?: string | null
+          page_views?: number | null
+          score?: number | null
+          score_breakdown?: Json | null
+          updated_at?: string
+          whatsapp_replies?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_scores_lead_id_fkey"
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
@@ -2084,6 +2404,105 @@ export type Database = {
           utm_campaign?: string | null
           utm_medium?: string | null
           utm_source?: string | null
+        }
+        Relationships: []
+      }
+      marketing_alerts: {
+        Row: {
+          alert_type: string
+          conditions: Json
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          notification_channels: Json | null
+        }
+        Insert: {
+          alert_type: string
+          conditions?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          notification_channels?: Json | null
+        }
+        Update: {
+          alert_type?: string
+          conditions?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          notification_channels?: Json | null
+        }
+        Relationships: []
+      }
+      marketing_campaigns: {
+        Row: {
+          ab_test_enabled: boolean | null
+          ab_test_variants: Json | null
+          campaign_type: string
+          click_count: number | null
+          conversion_count: number | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          end_date: string | null
+          id: string
+          name: string
+          open_count: number | null
+          sent_count: number | null
+          start_date: string | null
+          status: string | null
+          target_segment: Json | null
+          total_recipients: number | null
+          updated_at: string
+          winning_variant: string | null
+        }
+        Insert: {
+          ab_test_enabled?: boolean | null
+          ab_test_variants?: Json | null
+          campaign_type: string
+          click_count?: number | null
+          conversion_count?: number | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          name: string
+          open_count?: number | null
+          sent_count?: number | null
+          start_date?: string | null
+          status?: string | null
+          target_segment?: Json | null
+          total_recipients?: number | null
+          updated_at?: string
+          winning_variant?: string | null
+        }
+        Update: {
+          ab_test_enabled?: boolean | null
+          ab_test_variants?: Json | null
+          campaign_type?: string
+          click_count?: number | null
+          conversion_count?: number | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          name?: string
+          open_count?: number | null
+          sent_count?: number | null
+          start_date?: string | null
+          status?: string | null
+          target_segment?: Json | null
+          total_recipients?: number | null
+          updated_at?: string
+          winning_variant?: string | null
         }
         Relationships: []
       }
@@ -2278,6 +2697,83 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      whatsapp_broadcasts: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          delivered_count: number | null
+          failed_count: number | null
+          id: string
+          message_content: string | null
+          name: string
+          read_count: number | null
+          reply_count: number | null
+          scheduled_at: string | null
+          segment_filters: Json | null
+          sent_count: number | null
+          started_at: string | null
+          status: string | null
+          target_segment: Json | null
+          template_id: string | null
+          total_recipients: number | null
+          updated_at: string
+          variables_data: Json | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          delivered_count?: number | null
+          failed_count?: number | null
+          id?: string
+          message_content?: string | null
+          name: string
+          read_count?: number | null
+          reply_count?: number | null
+          scheduled_at?: string | null
+          segment_filters?: Json | null
+          sent_count?: number | null
+          started_at?: string | null
+          status?: string | null
+          target_segment?: Json | null
+          template_id?: string | null
+          total_recipients?: number | null
+          updated_at?: string
+          variables_data?: Json | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          delivered_count?: number | null
+          failed_count?: number | null
+          id?: string
+          message_content?: string | null
+          name?: string
+          read_count?: number | null
+          reply_count?: number | null
+          scheduled_at?: string | null
+          segment_filters?: Json | null
+          sent_count?: number | null
+          started_at?: string | null
+          status?: string | null
+          target_segment?: Json | null
+          template_id?: string | null
+          total_recipients?: number | null
+          updated_at?: string
+          variables_data?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_broadcasts_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       whatsapp_conversations: {
         Row: {
