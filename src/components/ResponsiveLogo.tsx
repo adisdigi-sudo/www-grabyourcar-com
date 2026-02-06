@@ -53,13 +53,21 @@ export const ResponsiveLogo = ({
   });
 
   // Determine logo URLs - animated logo takes priority if enabled
+  // IMPORTANT: Only use backend URLs if they're valid and not empty
   const useAnimated = brandingSettings?.use_animated_logo && brandingSettings?.animated_logo_url;
-  const logoLight = useAnimated 
-    ? brandingSettings.animated_logo_url 
-    : (brandingSettings?.logo_url || logoLightDefault);
-  const logoDark = useAnimated 
-    ? brandingSettings.animated_logo_url 
-    : (brandingSettings?.logo_dark_url || logoDarkDefault);
+  
+  const isValidUrl = (url: string | undefined | null): boolean => {
+    if (!url || url.trim() === '') return false;
+    // Check if it's a valid URL or a valid local path
+    return url.startsWith('http') || url.startsWith('/') || url.startsWith('data:');
+  };
+  
+  const logoLight = useAnimated && isValidUrl(brandingSettings?.animated_logo_url)
+    ? brandingSettings!.animated_logo_url 
+    : (isValidUrl(brandingSettings?.logo_url) ? brandingSettings!.logo_url : logoLightDefault);
+  const logoDark = useAnimated && isValidUrl(brandingSettings?.animated_logo_url)
+    ? brandingSettings!.animated_logo_url 
+    : (isValidUrl(brandingSettings?.logo_dark_url) ? brandingSettings!.logo_dark_url : logoDarkDefault);
   
   // Use dark logo for footer (always on dark bg) or when in dark mode
   const logoImage = variant === "footer" || effectiveTheme === "dark" 
