@@ -259,12 +259,12 @@ const CarDetail = () => {
                       <p className="text-xs text-muted-foreground">Ex-showroom price</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <a href="#price-section">
+                      <Link to={`/car/${car.slug}/on-road-price`}>
                         <Button variant="cta" size="sm">
                           <IndianRupee className="h-4 w-4 mr-1" />
-                          View Price Breakup
+                          On Road Price
                         </Button>
-                      </a>
+                      </Link>
                     </div>
                   </div>
                 </div>
