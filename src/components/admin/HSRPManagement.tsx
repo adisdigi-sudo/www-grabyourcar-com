@@ -18,14 +18,26 @@ import {
   Phone,
   Eye,
   Edit,
+  Trash2,
   Home,
   Shield,
   Settings,
   Save,
   Loader2,
   Image as ImageIcon,
+  AlertTriangle,
 } from "lucide-react";
 import { HSRPBannersManagement } from "./HSRPBannersManagement";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface HSRPBooking {
   id: string;
@@ -91,6 +103,8 @@ export const HSRPManagement = () => {
   const [selectedBooking, setSelectedBooking] = useState<HSRPBooking | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [bookingToDelete, setBookingToDelete] = useState<HSRPBooking | null>(null);
   const [isSavingPricing, setIsSavingPricing] = useState(false);
   const [pricing, setPricing] = useState<HSRPPricing>(defaultPricing);
   const [editForm, setEditForm] = useState({
@@ -98,6 +112,13 @@ export const HSRPManagement = () => {
     scheduled_date: "",
     order_status: "",
     payment_status: "",
+    owner_name: "",
+    mobile: "",
+    email: "",
+    address: "",
+    pincode: "",
+    chassis_number: "",
+    engine_number: "",
   });
 
   // Fetch HSRP pricing from settings
@@ -171,6 +192,39 @@ export const HSRPManagement = () => {
       console.error(error);
     },
   });
+
+  // Delete booking mutation
+  const deleteBookingMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('hsrp_bookings')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminHsrpBookings'] });
+      toast.success('Booking deleted');
+      setIsDeleteDialogOpen(false);
+      setBookingToDelete(null);
+    },
+    onError: (error) => {
+      toast.error('Failed to delete booking');
+      console.error(error);
+    },
+  });
+
+  const handleDeleteBooking = (booking: HSRPBooking) => {
+    setBookingToDelete(booking);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteBooking = () => {
+    if (bookingToDelete) {
+      deleteBookingMutation.mutate(bookingToDelete.id);
+    }
+  };
 
   const handleStatusChange = (bookingId: string, newStatus: string) => {
     const updates: Partial<HSRPBooking> = { order_status: newStatus };
@@ -414,16 +468,49 @@ export const HSRPManagement = () => {
                         {format(new Date(booking.created_at), 'dd MMM yyyy')}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setSelectedBooking(booking);
-                            setIsDetailOpen(true);
-                          }}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setSelectedBooking(booking);
+                              setIsDetailOpen(true);
+                            }}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setSelectedBooking(booking);
+                              setEditForm({
+                                tracking_id: booking.tracking_id || "",
+                                scheduled_date: booking.scheduled_date || "",
+                                order_status: booking.order_status,
+                                payment_status: booking.payment_status,
+                                owner_name: booking.owner_name,
+                                mobile: booking.mobile,
+                                email: booking.email,
+                                address: booking.address || "",
+                                pincode: booking.pincode,
+                                chassis_number: booking.chassis_number || "",
+                                engine_number: booking.engine_number || "",
+                              });
+                              setIsEditMode(true);
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => handleDeleteBooking(booking)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -563,6 +650,18 @@ export const HSRPManagement = () => {
           )}
 
           <DialogFooter>
+            <Button 
+              variant="destructive" 
+              onClick={() => {
+                if (selectedBooking) {
+                  handleDeleteBooking(selectedBooking);
+                  setIsDetailOpen(false);
+                }
+              }}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </Button>
             <Button variant="outline" onClick={() => setIsDetailOpen(false)}>
               Close
             </Button>
@@ -574,6 +673,13 @@ export const HSRPManagement = () => {
                   scheduled_date: selectedBooking?.scheduled_date || "",
                   order_status: selectedBooking?.order_status || "",
                   payment_status: selectedBooking?.payment_status || "",
+                  owner_name: selectedBooking?.owner_name || "",
+                  mobile: selectedBooking?.mobile || "",
+                  email: selectedBooking?.email || "",
+                  address: selectedBooking?.address || "",
+                  pincode: selectedBooking?.pincode || "",
+                  chassis_number: selectedBooking?.chassis_number || "",
+                  engine_number: selectedBooking?.engine_number || "",
                 });
                 setIsEditMode(true);
               }}
@@ -591,54 +697,124 @@ export const HSRPManagement = () => {
 
       {/* Edit HSRP Booking Dialog */}
       <Dialog open={isEditMode} onOpenChange={setIsEditMode}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit HSRP Booking</DialogTitle>
             <DialogDescription>
-              Update tracking and status for {selectedBooking?.registration_number}
+              Update details for {selectedBooking?.registration_number}
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Tracking ID</label>
-              <Input
-                value={editForm.tracking_id}
-                onChange={(e) => setEditForm({ ...editForm, tracking_id: e.target.value })}
-                placeholder="Enter tracking ID"
-              />
+          <div className="space-y-6">
+            {/* Owner Details */}
+            <div>
+              <h4 className="font-medium mb-3">Owner Details</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Owner Name</Label>
+                  <Input
+                    value={editForm.owner_name}
+                    onChange={(e) => setEditForm({ ...editForm, owner_name: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Mobile</Label>
+                  <Input
+                    value={editForm.mobile}
+                    onChange={(e) => setEditForm({ ...editForm, mobile: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <Input
+                    type="email"
+                    value={editForm.email}
+                    onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Pincode</Label>
+                  <Input
+                    value={editForm.pincode}
+                    onChange={(e) => setEditForm({ ...editForm, pincode: e.target.value })}
+                  />
+                </div>
+                <div className="col-span-2 space-y-2">
+                  <Label>Address</Label>
+                  <Input
+                    value={editForm.address}
+                    onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                  />
+                </div>
+              </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Scheduled Date</label>
-              <Input
-                type="date"
-                value={editForm.scheduled_date}
-                onChange={(e) => setEditForm({ ...editForm, scheduled_date: e.target.value })}
-              />
+
+            {/* Vehicle Details */}
+            <div>
+              <h4 className="font-medium mb-3">Vehicle Details</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Chassis Number</Label>
+                  <Input
+                    value={editForm.chassis_number}
+                    onChange={(e) => setEditForm({ ...editForm, chassis_number: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Engine Number</Label>
+                  <Input
+                    value={editForm.engine_number}
+                    onChange={(e) => setEditForm({ ...editForm, engine_number: e.target.value })}
+                  />
+                </div>
+              </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Order Status</label>
-              <Select value={editForm.order_status} onValueChange={(v) => setEditForm({ ...editForm, order_status: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {orderStatusOptions.map((status) => (
-                    <SelectItem key={status.value} value={status.value}>
-                      {status.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Payment Status</label>
-              <Select value={editForm.payment_status} onValueChange={(v) => setEditForm({ ...editForm, payment_status: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="paid">Paid</SelectItem>
-                  <SelectItem value="refunded">Refunded</SelectItem>
-                </SelectContent>
-              </Select>
+
+            {/* Order & Tracking */}
+            <div>
+              <h4 className="font-medium mb-3">Order & Tracking</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Tracking ID</Label>
+                  <Input
+                    value={editForm.tracking_id}
+                    onChange={(e) => setEditForm({ ...editForm, tracking_id: e.target.value })}
+                    placeholder="Enter tracking ID"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Scheduled Date</Label>
+                  <Input
+                    type="date"
+                    value={editForm.scheduled_date}
+                    onChange={(e) => setEditForm({ ...editForm, scheduled_date: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Order Status</Label>
+                  <Select value={editForm.order_status} onValueChange={(v) => setEditForm({ ...editForm, order_status: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {orderStatusOptions.map((status) => (
+                        <SelectItem key={status.value} value={status.value}>
+                          {status.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Payment Status</Label>
+                  <Select value={editForm.payment_status} onValueChange={(v) => setEditForm({ ...editForm, payment_status: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="paid">Paid</SelectItem>
+                      <SelectItem value="refunded">Refunded</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -654,6 +830,13 @@ export const HSRPManagement = () => {
                       scheduled_date: editForm.scheduled_date || null,
                       order_status: editForm.order_status,
                       payment_status: editForm.payment_status,
+                      owner_name: editForm.owner_name,
+                      mobile: editForm.mobile,
+                      email: editForm.email,
+                      address: editForm.address || null,
+                      pincode: editForm.pincode,
+                      chassis_number: editForm.chassis_number || null,
+                      engine_number: editForm.engine_number || null,
                     },
                   });
                   setIsEditMode(false);
@@ -666,6 +849,31 @@ export const HSRPManagement = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Delete HSRP Booking
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the booking for vehicle{" "}
+              <strong>{bookingToDelete?.registration_number}</strong>? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeleteBooking}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete Booking
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
         </TabsContent>
 
         {/* Banners Tab */}

@@ -14,7 +14,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Search, Filter, Eye, Phone, RefreshCw, Car, Calendar, MapPin, CreditCard, CheckCircle, XCircle, Clock, Plus, Edit, Trash2, Upload, Download, Image, FileSpreadsheet } from "lucide-react";
+import { Search, Filter, Eye, Phone, RefreshCw, Car, Calendar, MapPin, CreditCard, CheckCircle, XCircle, Clock, Plus, Edit, Trash2, Upload, Download, Image, FileSpreadsheet, AlertTriangle } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface RentalBooking {
   id: string;
@@ -103,6 +113,15 @@ export const RentalManagement = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedBooking, setSelectedBooking] = useState<RentalBooking | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isEditBookingOpen, setIsEditBookingOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [bookingToDelete, setBookingToDelete] = useState<RentalBooking | null>(null);
+  const [editBookingForm, setEditBookingForm] = useState({
+    status: "",
+    payment_status: "",
+    driver_license_number: "",
+    notes: "",
+  });
   
   // Vehicle management state
   const [vehicles, setVehicles] = useState<RentalVehicle[]>(getStoredVehicles);
@@ -154,6 +173,7 @@ export const RentalManagement = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminRentals'] });
       toast.success('Booking updated successfully');
+      setIsEditBookingOpen(false);
     },
     onError: (error) => {
       toast.error('Failed to update booking');
@@ -161,8 +181,52 @@ export const RentalManagement = () => {
     },
   });
 
+  // Delete booking mutation
+  const deleteBookingMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('rental_bookings')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminRentals'] });
+      toast.success('Booking deleted');
+      setIsDeleteDialogOpen(false);
+      setBookingToDelete(null);
+    },
+    onError: (error) => {
+      toast.error('Failed to delete booking');
+      console.error(error);
+    },
+  });
+
   const handleStatusChange = (bookingId: string, newStatus: string) => {
     updateBookingMutation.mutate({ id: bookingId, updates: { status: newStatus } });
+  };
+
+  const handleDeleteBooking = (booking: RentalBooking) => {
+    setBookingToDelete(booking);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteBooking = () => {
+    if (bookingToDelete) {
+      deleteBookingMutation.mutate(bookingToDelete.id);
+    }
+  };
+
+  const handleEditBooking = (booking: RentalBooking) => {
+    setSelectedBooking(booking);
+    setEditBookingForm({
+      status: booking.status,
+      payment_status: booking.payment_status,
+      driver_license_number: booking.driver_license_number || "",
+      notes: booking.notes || "",
+    });
+    setIsEditBookingOpen(true);
   };
 
   const getStatusBadge = (status: string) => {
@@ -511,16 +575,33 @@ Toyota Innova,Toyota,Tempo Traveller,Diesel,Automatic,7,2024,White,4000,Gurugram
                             </Select>
                           </TableCell>
                           <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => {
-                                setSelectedBooking(booking);
-                                setIsDetailOpen(true);
-                              }}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  setSelectedBooking(booking);
+                                  setIsDetailOpen(true);
+                                }}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEditBooking(booking)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => handleDeleteBooking(booking)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))
@@ -745,10 +826,149 @@ Toyota Innova,Toyota,Tempo Traveller,Diesel,Automatic,7,2024,White,4000,Gurugram
                   </div>
                 )}
               </div>
+              
+              <DialogFooter>
+                <Button 
+                  variant="destructive" 
+                  onClick={() => {
+                    if (selectedBooking) {
+                      handleDeleteBooking(selectedBooking);
+                      setIsDetailOpen(false);
+                    }
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </Button>
+                <Button variant="outline" onClick={() => setIsDetailOpen(false)}>
+                  Close
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    if (selectedBooking) {
+                      handleEditBooking(selectedBooking);
+                      setIsDetailOpen(false);
+                    }
+                  }}
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit
+                </Button>
+              </DialogFooter>
             </div>
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Edit Rental Booking Dialog */}
+      <Dialog open={isEditBookingOpen} onOpenChange={setIsEditBookingOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Rental Booking</DialogTitle>
+            <DialogDescription>
+              Update booking for {selectedBooking?.vehicle_name}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Booking Status</Label>
+              <Select 
+                value={editBookingForm.status} 
+                onValueChange={(v) => setEditBookingForm({ ...editBookingForm, status: v })}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {statusOptions.map((status) => (
+                    <SelectItem key={status.value} value={status.value}>
+                      {status.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Payment Status</Label>
+              <Select 
+                value={editBookingForm.payment_status} 
+                onValueChange={(v) => setEditBookingForm({ ...editBookingForm, payment_status: v })}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="paid">Paid</SelectItem>
+                  <SelectItem value="refunded">Refunded</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Driver License Number</Label>
+              <Input
+                value={editBookingForm.driver_license_number}
+                onChange={(e) => setEditBookingForm({ ...editBookingForm, driver_license_number: e.target.value })}
+                placeholder="Enter license number"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Notes</Label>
+              <Textarea
+                value={editBookingForm.notes}
+                onChange={(e) => setEditBookingForm({ ...editBookingForm, notes: e.target.value })}
+                placeholder="Add notes about this booking"
+                rows={3}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditBookingOpen(false)}>Cancel</Button>
+            <Button 
+              onClick={() => {
+                if (selectedBooking) {
+                  updateBookingMutation.mutate({
+                    id: selectedBooking.id,
+                    updates: {
+                      status: editBookingForm.status,
+                      payment_status: editBookingForm.payment_status,
+                      driver_license_number: editBookingForm.driver_license_number || null,
+                      notes: editBookingForm.notes || null,
+                    },
+                  });
+                }
+              }}
+              disabled={updateBookingMutation.isPending}
+            >
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Delete Rental Booking
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the booking for{" "}
+              <strong>{bookingToDelete?.vehicle_name}</strong>? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeleteBooking}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete Booking
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Add/Edit Vehicle Dialog */}
       <Dialog open={isVehicleModalOpen} onOpenChange={setIsVehicleModalOpen}>
