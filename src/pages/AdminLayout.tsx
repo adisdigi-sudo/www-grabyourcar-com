@@ -47,6 +47,7 @@ import WhatsAppTemplateManager from "@/components/admin/WhatsAppTemplateManager"
 import EmailAutomationManager from "@/components/admin/EmailAutomationManager";
 import StateCityPricingManager from "@/components/admin/StateCityPricingManager";
 import { MarketingCommandCenter } from "@/components/admin/marketing";
+import VehicleAttributesManager from "@/components/admin/VehicleAttributesManager";
 
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
@@ -135,6 +136,8 @@ const AdminLayout = () => {
         return <BulkCarUploader />;
       case "cars-city-pricing":
         return <StateCityPricingManager />;
+      case "cars-attributes":
+        return <VehicleAttributesManager />;
       case "cars-ai":
         return <AIContentManagement />;
       case "website-homepage":
