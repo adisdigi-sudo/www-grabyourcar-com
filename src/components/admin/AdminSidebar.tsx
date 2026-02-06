@@ -75,6 +75,7 @@ const navItems: NavItem[] = [
       { id: "cars-city-pricing", label: "📍 State/City Pricing", icon: CreditCard, badge: "New" },
       { id: "cars-attributes", label: "🏷️ Vehicle Attributes", icon: Tags, badge: "New" },
       { id: "cars-colors", label: "Colors & Images", icon: Palette },
+      { id: "cars-image-sync", label: "🤖 AI Image Sync", icon: Sparkles, badge: "AI" },
       { id: "cars-images", label: "Gallery", icon: Image },
       { id: "cars-variants", label: "Variants & Specs", icon: Tags },
       { id: "cars-pricing", label: "Pricing & Breakup", icon: CreditCard },
