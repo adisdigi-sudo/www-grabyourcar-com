@@ -3,10 +3,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Check, X, ChevronDown, ChevronUp, Fuel, Cog, IndianRupee, MessageCircle } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Check, X, ChevronDown, ChevronUp, Fuel, Cog, IndianRupee, MessageCircle, MapPin } from "lucide-react";
 import { CarVariant } from "@/data/cars/types";
-import { calculateStatePriceBreakup } from "@/data/statePricing";
+import { calculateStatePriceBreakup, stateRates } from "@/data/statePricing";
 import { cn } from "@/lib/utils";
+
+// Major cities for quick comparison
+const MAJOR_CITIES = [
+  { code: "DL", name: "Delhi" },
+  { code: "MH", name: "Mumbai" },
+  { code: "KA", name: "Bangalore" },
+  { code: "TN", name: "Chennai" },
+  { code: "TS", name: "Hyderabad" },
+];
 
 interface VariantComparisonTableProps {
   carName: string;
@@ -24,6 +34,8 @@ export const VariantComparisonTable = ({
   selectedVariantIndex = 0,
 }: VariantComparisonTableProps) => {
   const [showFullTable, setShowFullTable] = useState(false);
+  const [selectedState, setSelectedState] = useState("DL");
+  const [showStatePricing, setShowStatePricing] = useState(false);
 
   // Extract all unique features across all variants
   const allFeatures = [...new Set(variants.flatMap((v) => v.features))];
@@ -123,23 +135,100 @@ export const VariantComparisonTable = ({
               })}
             </div>
 
-            {/* On-Road Price Row */}
-            <div className="grid border-b border-border" style={{ gridTemplateColumns: `200px repeat(${variants.length}, minmax(160px, 1fr))` }}>
-              <div className="p-4 font-semibold text-sm text-foreground sticky left-0 bg-card z-10">
-                On-Road Price (Delhi)
+            {/* On-Road Price Row with State Selector */}
+            <div className="grid border-b border-border bg-success/5" style={{ gridTemplateColumns: `200px repeat(${variants.length}, minmax(160px, 1fr))` }}>
+              <div className="p-4 sticky left-0 bg-success/5 z-10">
+                <div className="flex flex-col gap-2">
+                  <span className="font-semibold text-sm text-foreground flex items-center gap-1">
+                    <MapPin className="h-4 w-4 text-primary" />
+                    On-Road Price
+                  </span>
+                  <Select value={selectedState} onValueChange={setSelectedState}>
+                    <SelectTrigger className="w-[130px] h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {stateRates.map((state) => (
+                        <SelectItem key={state.code} value={state.code} className="text-xs">
+                          {state.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               {variants.map((variant, index) => {
                 const price = getNumericPrice(variant);
-                const breakup = calculateStatePriceBreakup(price);
+                const breakup = calculateStatePriceBreakup(price, selectedState);
+                const selectedStateName = stateRates.find(s => s.code === selectedState)?.name || "Delhi";
                 return (
                   <div key={index} className="p-4 text-center">
-                    <p className="font-bold text-base text-success">
+                    <p className="font-bold text-lg text-success">
                       ₹{(breakup.onRoadPrice / 100000).toFixed(2)} L
                     </p>
+                    <p className="text-xs text-muted-foreground">{selectedStateName}</p>
                   </div>
                 );
               })}
             </div>
+
+            {/* Toggle for City-wise Comparison */}
+            <div className="grid border-b border-border bg-muted/30" style={{ gridTemplateColumns: `200px repeat(${variants.length}, minmax(160px, 1fr))` }}>
+              <div className="p-2 sticky left-0 bg-muted/30 z-10">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowStatePricing(!showStatePricing)}
+                  className="text-xs gap-1 h-7"
+                >
+                  {showStatePricing ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                  {showStatePricing ? "Hide" : "Compare"} City Prices
+                </Button>
+              </div>
+              {variants.map((_, index) => (
+                <div key={index} className="p-2" />
+              ))}
+            </div>
+
+            {/* City-wise Price Comparison (Collapsible) */}
+            {showStatePricing && MAJOR_CITIES.map((city) => (
+              <div 
+                key={city.code}
+                className={cn(
+                  "grid border-b border-border/50",
+                  selectedState === city.code ? "bg-primary/5" : "bg-card"
+                )}
+                style={{ gridTemplateColumns: `200px repeat(${variants.length}, minmax(160px, 1fr))` }}
+              >
+                <div 
+                  className={cn(
+                    "p-3 text-sm sticky left-0 z-10 flex items-center gap-2 cursor-pointer hover:text-primary transition-colors",
+                    selectedState === city.code ? "bg-primary/5 text-primary font-medium" : "bg-card"
+                  )}
+                  onClick={() => setSelectedState(city.code)}
+                >
+                  <MapPin className="h-3 w-3" />
+                  {city.name}
+                  {selectedState === city.code && (
+                    <Badge variant="default" className="text-[10px] px-1.5 py-0">Selected</Badge>
+                  )}
+                </div>
+                {variants.map((variant, variantIndex) => {
+                  const price = getNumericPrice(variant);
+                  const breakup = calculateStatePriceBreakup(price, city.code);
+                  return (
+                    <div key={variantIndex} className="p-3 text-center">
+                      <p className={cn(
+                        "font-semibold text-sm",
+                        selectedState === city.code ? "text-primary" : "text-foreground"
+                      )}>
+                        ₹{(breakup.onRoadPrice / 100000).toFixed(2)} L
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
 
             {/* Features Rows */}
             {displayedFeatures.map((feature, featureIndex) => (
