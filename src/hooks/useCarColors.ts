@@ -60,6 +60,43 @@ export const useCarColors = (carSlug: string | undefined) => {
   });
 };
 
+// Fetch car gallery images from database
+export const useCarGalleryImages = (carSlug: string | undefined) => {
+  return useQuery({
+    queryKey: ['carGalleryImages', carSlug],
+    queryFn: async (): Promise<string[]> => {
+      if (!carSlug) return [];
+
+      // Get car ID from slug
+      const { data: car, error: carError } = await supabase
+        .from('cars')
+        .select('id')
+        .eq('slug', carSlug)
+        .single();
+
+      if (carError || !car) {
+        return [];
+      }
+
+      // Fetch all images for this car
+      const { data: images, error: imagesError } = await supabase
+        .from('car_images')
+        .select('url, is_primary, sort_order')
+        .eq('car_id', car.id)
+        .order('is_primary', { ascending: false })
+        .order('sort_order');
+
+      if (imagesError || !images) {
+        return [];
+      }
+
+      return images.map(img => img.url);
+    },
+    enabled: !!carSlug,
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
 // Fetch all colors for all cars (admin use)
 export const useAllCarColors = () => {
   return useQuery({
