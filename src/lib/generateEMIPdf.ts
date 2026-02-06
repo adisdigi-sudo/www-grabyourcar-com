@@ -25,6 +25,10 @@ export interface EMIPDFConfig {
   disclaimer?: string;
   footerCTA?: string;
   logoBase64?: string;
+  // Colors from backend (HEX format)
+  primaryColor?: string;
+  accentColor?: string;
+  // Social links
   socialLinks?: {
     instagram?: string;
     facebook?: string;
@@ -32,6 +36,9 @@ export interface EMIPDFConfig {
     youtube?: string;
     linkedin?: string;
   };
+  // Terms
+  termsAndConditions?: string[];
+  validityDays?: number;
 }
 
 export interface DiscountDetails {
@@ -71,6 +78,8 @@ const DEFAULT_COMPANY: EMIPDFConfig = {
   partnerBanks: ["SBI", "HDFC Bank", "ICICI Bank", "Axis Bank", "Kotak", "IDFC First", "Yes Bank"],
   disclaimer: "This is an indicative estimate. Actual EMI may vary based on bank policies, credit score, and prevailing interest rates.",
   footerCTA: "Get the Best Car Loan - Lowest Interest Rates Guaranteed!",
+  primaryColor: "#22c55e",
+  accentColor: "#f59e0b",
   socialLinks: {
     instagram: "@grabyourcar",
     facebook: "grabyourcar",
@@ -78,20 +87,48 @@ const DEFAULT_COMPANY: EMIPDFConfig = {
     twitter: "@grabyourcar",
     linkedin: "grabyourcar",
   },
+  termsAndConditions: [
+    "Quote is valid for 7 days from generation date.",
+    "Prices are subject to change based on manufacturer price revisions or government regulations.",
+    "Actual EMI may vary based on bank policies, credit score, and prevailing interest rates.",
+    "Processing fees and other bank charges may apply as per financing institution.",
+  ],
+  validityDays: 7,
 };
 
-// Premium Brand Colors
-const COLORS = {
-  primary: [22, 163, 74] as [number, number, number],        // Green
-  primaryLight: [34, 197, 94] as [number, number, number],   // Light Green
-  primaryDark: [21, 128, 61] as [number, number, number],    // Dark Green
-  accent: [14, 165, 233] as [number, number, number],        // Sky Blue
-  gold: [234, 179, 8] as [number, number, number],           // Gold
-  darkText: [15, 23, 42] as [number, number, number],        // Slate 900
-  grayText: [71, 85, 105] as [number, number, number],       // Slate 600
-  lightGray: [241, 245, 249] as [number, number, number],    // Slate 100
+// Helper: Convert HEX color to RGB tuple
+const hexToRgb = (hex: string): [number, number, number] => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result 
+    ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)]
+    : [22, 163, 74]; // Default green
+};
+
+// Helper: Lighten a color
+const lightenColor = (rgb: [number, number, number], amount: number): [number, number, number] => {
+  return [
+    Math.min(255, rgb[0] + amount),
+    Math.min(255, rgb[1] + amount),
+    Math.min(255, rgb[2] + amount),
+  ];
+};
+
+// Helper: Darken a color
+const darkenColor = (rgb: [number, number, number], amount: number): [number, number, number] => {
+  return [
+    Math.max(0, rgb[0] - amount),
+    Math.max(0, rgb[1] - amount),
+    Math.max(0, rgb[2] - amount),
+  ];
+};
+
+// Static colors
+const STATIC_COLORS = {
+  darkText: [15, 23, 42] as [number, number, number],
+  grayText: [71, 85, 105] as [number, number, number],
+  lightGray: [241, 245, 249] as [number, number, number],
   white: [255, 255, 255] as [number, number, number],
-  watermark: [229, 231, 235] as [number, number, number],    // Gray 200
+  watermark: [229, 231, 235] as [number, number, number],
 };
 
 export const generateEMIPdf = async (data: EMIData, config?: Partial<EMIPDFConfig>) => {
@@ -101,6 +138,19 @@ export const generateEMIPdf = async (data: EMIData, config?: Partial<EMIPDFConfi
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 15;
   let yPos = 0;
+
+  // Dynamic colors from config
+  const primaryRgb = hexToRgb(COMPANY.primaryColor || "#22c55e");
+  const accentRgb = hexToRgb(COMPANY.accentColor || "#f59e0b");
+  
+  const COLORS = {
+    primary: primaryRgb,
+    primaryLight: lightenColor(primaryRgb, 30),
+    primaryDark: darkenColor(primaryRgb, 20),
+    accent: accentRgb,
+    gold: accentRgb, // Use accent as gold
+    ...STATIC_COLORS,
+  };
 
   // Helper function for currency formatting
   const formatCurrency = (amount: number) => {
@@ -331,7 +381,7 @@ export const generateEMIPdf = async (data: EMIData, config?: Partial<EMIPDFConfi
       
       // Discount amount
       doc.setFontSize(14);
-      doc.setTextColor(21, 128, 61); // Green
+      doc.setTextColor(...COLORS.primary);
       doc.text(`- ${formatCurrency(data.discount.amount)}`, pageWidth - margin - 8, yPos + 17, { align: "right" });
       
       // Remarks if any
@@ -346,7 +396,7 @@ export const generateEMIPdf = async (data: EMIData, config?: Partial<EMIPDFConfi
       
       // Final price after discount
       const finalPrice = data.onRoadPrice.onRoadPrice - data.discount.amount;
-      doc.setFillColor(21, 128, 61); // Success green
+      doc.setFillColor(...COLORS.primaryDark);
       doc.roundedRect(margin, yPos, pageWidth - margin * 2, 14, 2, 2, "F");
       
       doc.setFontSize(10);
