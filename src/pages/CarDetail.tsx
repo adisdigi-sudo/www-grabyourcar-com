@@ -396,6 +396,81 @@ const CarDetail = () => {
                     <span>15+ Showrooms</span>
                   </div>
                 </div>
+
+                {/* On-Road Price Details Card - Aligned with Booking Form */}
+                <Card className="border-2 border-primary/20 bg-gradient-to-br from-card via-card to-primary/5 shadow-lg">
+                  <CardHeader className="pb-3 bg-gradient-to-r from-primary/10 to-success/10 border-b border-border/50">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
+                        <IndianRupee className="h-4 w-4 text-white" />
+                      </div>
+                      <div>
+                        <span className="block">On-Road Price Details</span>
+                        <span className="text-xs font-normal text-muted-foreground">Delhi NCR • {car.variants[selectedVariant]?.name}</span>
+                      </div>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-4 space-y-3">
+                    {/* Price Breakdown */}
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center py-1.5 border-b border-border/30">
+                        <span className="text-sm text-muted-foreground">Ex-Showroom Price</span>
+                        <span className="text-sm font-semibold">
+                          ₹{((car.variants[selectedVariant]?.priceNumeric || parseFloat(car.price.match(/[\d.]+/)?.[0] || "0") * 100000) / 100000).toFixed(2)} L
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-1.5 border-b border-border/30">
+                        <span className="text-sm text-muted-foreground">RTO & Registration</span>
+                        <span className="text-sm font-medium text-muted-foreground">
+                          ₹{(((car.variants[selectedVariant]?.priceNumeric || parseFloat(car.price.match(/[\d.]+/)?.[0] || "0") * 100000) * 0.08) / 100000).toFixed(2)} L
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-1.5 border-b border-border/30">
+                        <span className="text-sm text-muted-foreground">Insurance (1 Year)</span>
+                        <span className="text-sm font-medium text-muted-foreground">
+                          ₹{(((car.variants[selectedVariant]?.priceNumeric || parseFloat(car.price.match(/[\d.]+/)?.[0] || "0") * 100000) * 0.03) / 100000).toFixed(2)} L
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-1.5 border-b border-border/30">
+                        <span className="text-sm text-muted-foreground">Other Charges</span>
+                        <span className="text-sm font-medium text-muted-foreground">₹16,500</span>
+                      </div>
+                    </div>
+
+                    {/* Total On-Road Price */}
+                    <div className="bg-gradient-to-r from-primary/10 to-success/10 rounded-lg p-3 border border-primary/20">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-semibold text-foreground">On-Road Price</span>
+                        <span className="text-lg font-bold text-primary">
+                          ₹{(((car.variants[selectedVariant]?.priceNumeric || parseFloat(car.price.match(/[\d.]+/)?.[0] || "0") * 100000) * 1.12 + 16500) / 100000).toFixed(2)} L
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground mt-1">*Approximate price. Actual may vary by city.</p>
+                    </div>
+
+                    {/* EMI Highlight */}
+                    <div className="bg-secondary/50 rounded-lg p-3 border border-border/50">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Calculator className="h-4 w-4 text-primary" />
+                          <span className="text-xs font-medium">EMI Starting</span>
+                        </div>
+                        <span className="text-sm font-bold text-primary">
+                          ₹{Math.round(((car.variants[selectedVariant]?.priceNumeric || parseFloat(car.price.match(/[\d.]+/)?.[0] || "0") * 100000) * 0.8 * 0.085 / 12 * Math.pow(1 + 0.085/12, 60)) / (Math.pow(1 + 0.085/12, 60) - 1)).toLocaleString('en-IN')}/mo
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground mt-1">@ 8.5% p.a. • 5 Years • 20% Down Payment</p>
+                    </div>
+
+                    {/* CTA */}
+                    <Link to={`/car/${car.slug}/on-road-price`} className="block">
+                      <Button variant="outline" size="sm" className="w-full border-primary/30 hover:bg-primary/5">
+                        <Calculator className="h-4 w-4 mr-2" />
+                        Customize & Get Exact Price
+                      </Button>
+                    </Link>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           </div>
