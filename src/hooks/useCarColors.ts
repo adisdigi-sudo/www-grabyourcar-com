@@ -16,6 +16,25 @@ interface DatabaseCarColor {
   sort_order: number | null;
 }
 
+interface CarImage {
+  url: string;
+  alt_text: string | null;
+}
+
+// Helper to find matching color image from car_images
+const findColorImageFromGallery = (colorName: string, images: CarImage[]): string | undefined => {
+  const normalizedColorName = colorName.toLowerCase().replace(/\s+/g, '-');
+  
+  // Look for images that contain the color name in alt_text or URL
+  const matchingImage = images.find(img => {
+    const altMatch = img.alt_text?.toLowerCase().includes(colorName.toLowerCase());
+    const urlMatch = img.url.toLowerCase().includes(normalizedColorName);
+    return altMatch || urlMatch;
+  });
+  
+  return matchingImage?.url;
+};
+
 // Fetch colors from database for a specific car
 export const useCarColors = (carSlug: string | undefined) => {
   return useQuery({
@@ -35,25 +54,45 @@ export const useCarColors = (carSlug: string | undefined) => {
         return [];
       }
 
-      // Fetch colors for this car
-      const { data: colors, error: colorsError } = await supabase
-        .from('car_colors')
-        .select('*')
-        .eq('car_id', car.id)
-        .order('sort_order');
+      // Fetch colors and images in parallel
+      const [colorsResult, imagesResult] = await Promise.all([
+        supabase
+          .from('car_colors')
+          .select('*')
+          .eq('car_id', car.id)
+          .order('sort_order'),
+        supabase
+          .from('car_images')
+          .select('url, alt_text')
+          .eq('car_id', car.id)
+          .order('sort_order')
+      ]);
 
-      if (colorsError) {
-        console.error('Error fetching colors:', colorsError);
+      if (colorsResult.error) {
+        console.error('Error fetching colors:', colorsResult.error);
         return [];
       }
 
+      const colors = colorsResult.data as DatabaseCarColor[];
+      const images = (imagesResult.data || []) as CarImage[];
+
       // Transform to the format expected by ColorGalleryViewer
-      return (colors as DatabaseCarColor[]).map(color => ({
-        id: color.id,
-        name: color.name,
-        hex: color.hex_code,
-        image: color.image_url || undefined,
-      }));
+      // Try to match color images from car_images if not directly set
+      return colors.map(color => {
+        let imageUrl = color.image_url;
+        
+        // If no direct image, try to find from gallery
+        if (!imageUrl) {
+          imageUrl = findColorImageFromGallery(color.name, images) || null;
+        }
+        
+        return {
+          id: color.id,
+          name: color.name,
+          hex: color.hex_code,
+          image: imageUrl || undefined,
+        };
+      });
     },
     enabled: !!carSlug,
     staleTime: 5 * 60 * 1000, // 5 minutes
