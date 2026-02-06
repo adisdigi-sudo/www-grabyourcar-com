@@ -122,11 +122,11 @@ serve(async (req) => {
       }
     }
 
-    // Update cars table with price range from variants
+    // Update cars table with price range from variants - all brands
     const { data: cars } = await supabase
       .from('cars')
       .select('id, name')
-      .in('brand', ['Maruti Suzuki', 'Kia', 'Hyundai', 'Tata', 'Mahindra']);
+      .not('brand', 'is', null);
 
     for (const car of cars || []) {
       const { data: carVariants } = await supabase
