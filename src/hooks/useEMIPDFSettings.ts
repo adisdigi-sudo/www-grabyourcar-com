@@ -20,6 +20,13 @@ export interface EMIPDFConfig {
   defaultDownPaymentPercent: number;
   defaultInterestRate: number;
   defaultTenure: number;
+  socialLinks?: {
+    instagram?: string;
+    facebook?: string;
+    twitter?: string;
+    youtube?: string;
+    linkedin?: string;
+  };
 }
 
 const defaultConfig: EMIPDFConfig = {
@@ -46,6 +53,13 @@ const defaultConfig: EMIPDFConfig = {
   defaultDownPaymentPercent: 20,
   defaultInterestRate: 8.5,
   defaultTenure: 60,
+  socialLinks: {
+    instagram: "@grabyourcar",
+    facebook: "grabyourcar",
+    youtube: "GrabYourCar",
+    twitter: "@grabyourcar",
+    linkedin: "grabyourcar",
+  },
 };
 
 export const useEMIPDFSettings = () => {
