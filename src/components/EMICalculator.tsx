@@ -108,8 +108,8 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
     const cleanValue = value.replace(/,/g, '');
     const num = parseInt(cleanValue, 10);
     if (!isNaN(num) && num >= 0) {
-      // Allow minimum 10000 (10K) to maximum 10 Crore
-      setLoanAmount(Math.min(Math.max(num, 10000), 100000000));
+      // Allow minimum 10000 (10K) to maximum 5 Crore
+      setLoanAmount(Math.min(Math.max(num, 10000), 50000000));
     } else if (cleanValue === '') {
       setLoanAmount(10000);
     }
@@ -210,13 +210,13 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
                       value={[loanAmount]}
                       onValueChange={(value) => setLoanAmount(value[0])}
                       min={10000}
-                      max={100000000}
+                      max={50000000}
                       step={10000}
                       className="w-full"
                     />
                     <div className="flex justify-between text-xs text-muted-foreground">
                       <span>₹10K</span>
-                      <span>₹10 Crore</span>
+                      <span>₹5 Crore</span>
                     </div>
                   </div>
 
