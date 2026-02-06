@@ -99,13 +99,33 @@ export function VehicleAttributesManager() {
         supabase.from("vehicle_price_ranges").select("*").order("sort_order"),
       ]);
 
-      if (brandsRes.data) setBrands(brandsRes.data);
-      if (bodyTypesRes.data) setBodyTypes(bodyTypesRes.data);
-      if (fuelTypesRes.data) setFuelTypes(fuelTypesRes.data);
-      if (transmissionsRes.data) setTransmissions(transmissionsRes.data);
-      if (priceRangesRes.data) setPriceRanges(priceRangesRes.data);
+      // Check for errors
+      if (brandsRes.error) console.error("Brands fetch error:", brandsRes.error);
+      if (bodyTypesRes.error) console.error("Body types fetch error:", bodyTypesRes.error);
+      if (fuelTypesRes.error) console.error("Fuel types fetch error:", fuelTypesRes.error);
+      if (transmissionsRes.error) console.error("Transmissions fetch error:", transmissionsRes.error);
+      if (priceRangesRes.error) console.error("Price ranges fetch error:", priceRangesRes.error);
+
+      setBrands(brandsRes.data || []);
+      setBodyTypes(bodyTypesRes.data || []);
+      setFuelTypes(fuelTypesRes.data || []);
+      setTransmissions(transmissionsRes.data || []);
+      setPriceRanges(priceRangesRes.data || []);
+      
+      console.log("Vehicle attributes loaded:", {
+        brands: brandsRes.data?.length || 0,
+        bodyTypes: bodyTypesRes.data?.length || 0,
+        fuelTypes: fuelTypesRes.data?.length || 0,
+        transmissions: transmissionsRes.data?.length || 0,
+        priceRanges: priceRangesRes.data?.length || 0
+      });
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error("Error fetching vehicle attributes:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load vehicle attributes",
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
