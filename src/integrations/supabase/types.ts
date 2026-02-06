@@ -526,6 +526,87 @@ export type Database = {
           },
         ]
       }
+      car_city_pricing: {
+        Row: {
+          car_id: string
+          city: string
+          created_at: string
+          effective_from: string | null
+          effective_till: string | null
+          ex_showroom: number
+          fastag: number
+          handling: number
+          id: string
+          insurance: number
+          is_active: boolean | null
+          on_road_price: number
+          other_charges: number
+          registration: number
+          rto: number
+          state: string
+          tcs: number
+          updated_at: string
+          variant_id: string | null
+        }
+        Insert: {
+          car_id: string
+          city: string
+          created_at?: string
+          effective_from?: string | null
+          effective_till?: string | null
+          ex_showroom: number
+          fastag?: number
+          handling?: number
+          id?: string
+          insurance?: number
+          is_active?: boolean | null
+          on_road_price: number
+          other_charges?: number
+          registration?: number
+          rto?: number
+          state: string
+          tcs?: number
+          updated_at?: string
+          variant_id?: string | null
+        }
+        Update: {
+          car_id?: string
+          city?: string
+          created_at?: string
+          effective_from?: string | null
+          effective_till?: string | null
+          ex_showroom?: number
+          fastag?: number
+          handling?: number
+          id?: string
+          insurance?: number
+          is_active?: boolean | null
+          on_road_price?: number
+          other_charges?: number
+          registration?: number
+          rto?: number
+          state?: string
+          tcs?: number
+          updated_at?: string
+          variant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "car_city_pricing_car_id_fkey"
+            columns: ["car_id"]
+            isOneToOne: false
+            referencedRelation: "cars"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "car_city_pricing_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "car_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       car_colors: {
         Row: {
           car_id: string
@@ -1749,6 +1830,75 @@ export type Database = {
           title?: string
           updated_at?: string
           vehicle_class?: string
+        }
+        Relationships: []
+      }
+      indian_cities: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean | null
+          is_metro: boolean | null
+          name: string
+          rto_code: string | null
+          rto_percentage_override: number | null
+          sort_order: number | null
+          state_code: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          is_metro?: boolean | null
+          name: string
+          rto_code?: string | null
+          rto_percentage_override?: number | null
+          sort_order?: number | null
+          state_code: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          is_metro?: boolean | null
+          name?: string
+          rto_code?: string | null
+          rto_percentage_override?: number | null
+          sort_order?: number | null
+          state_code?: string
+        }
+        Relationships: []
+      }
+      indian_states: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          name: string
+          road_tax_percentage: number | null
+          rto_percentage: number | null
+          sort_order: number | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          road_tax_percentage?: number | null
+          rto_percentage?: number | null
+          sort_order?: number | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          road_tax_percentage?: number | null
+          rto_percentage?: number | null
+          sort_order?: number | null
         }
         Relationships: []
       }
