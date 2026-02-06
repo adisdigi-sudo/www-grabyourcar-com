@@ -503,32 +503,35 @@ const CarDetail = () => {
                   
                   return (
                     <div className="space-y-6">
-                      {/* Selected Variant Info with Get On-Road Price */}
-                      <Card className="border-primary/20 bg-gradient-to-r from-primary/5 via-success/5 to-primary/5">
-                        <CardContent className="p-5">
-                          <div className="flex items-center justify-between flex-wrap gap-4">
-                            <div>
-                              <p className="text-sm text-muted-foreground">Calculating EMI for</p>
-                              <h3 className="font-semibold text-lg">{car.brand} {car.name} {selectedVar.name}</h3>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {selectedVar.fuelType || car.fuelTypes[0]} • {selectedVar.transmission || car.transmission[0]}
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-sm text-muted-foreground">On-Road Price</p>
-                              <p className="text-2xl font-bold text-primary">
-                                ₹{(breakup.onRoadPrice / 100000).toFixed(2)} Lakh
-                              </p>
-                              <a href="#price-section">
-                                <Button variant="link" size="sm" className="text-xs p-0 h-auto mt-1">
-                                  <IndianRupee className="h-3 w-3 mr-1" />
-                                  Get Full Price Breakup
-                                </Button>
-                              </a>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
+                       {/* Selected Variant Info with Get On-Road Price */}
+                       <Card className="border-primary/20 bg-gradient-to-r from-primary/5 via-success/5 to-primary/5">
+                         <CardContent className="p-6">
+                           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+                             <div>
+                               <p className="text-sm text-muted-foreground font-medium">Calculate EMI for</p>
+                               <h3 className="font-bold text-xl mt-1">{car.brand} {car.name}</h3>
+                               <p className="text-sm font-semibold text-primary mt-0.5">{selectedVar.name}</p>
+                               <p className="text-xs text-muted-foreground mt-2">
+                                 {selectedVar.fuelType || car.fuelTypes[0]} • {selectedVar.transmission || car.transmission[0]}
+                               </p>
+                             </div>
+                             <div className="flex flex-col items-end gap-3">
+                               <div>
+                                 <p className="text-sm text-muted-foreground mb-1">Starting On-Road Price</p>
+                                 <p className="text-3xl font-bold text-primary">
+                                   ₹{(breakup.onRoadPrice / 100000).toFixed(2)} Lakh
+                                 </p>
+                               </div>
+                               <a href="#price-section" className="w-full lg:w-auto">
+                                 <Button size="lg" className="bg-success hover:bg-success/90 text-white font-semibold gap-2 w-full lg:w-auto">
+                                   <IndianRupee className="h-5 w-5" />
+                                   Get On-Road Price
+                                 </Button>
+                               </a>
+                             </div>
+                           </div>
+                         </CardContent>
+                       </Card>
                       
                       {/* EMI Calculator with all data for PDF */}
                       <EMICalculator 
