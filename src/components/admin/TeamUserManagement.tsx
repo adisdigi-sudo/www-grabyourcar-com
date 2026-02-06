@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,8 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { 
   Users, UserPlus, Trash2, Loader2, Search, Shield, 
-  Car, CreditCard, FileText, Building2, Megaphone, 
-  Wrench, Package, Check, AlertCircle, Mail
+  Car, CreditCard, FileText, Building2, Check, AlertCircle, Mail
 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -24,11 +23,11 @@ type AppRole = Database["public"]["Enums"]["app_role"];
 interface UserRole {
   id: string;
   user_id: string;
+  user_email?: string;
   role: AppRole;
   created_at: string;
 }
 
-// Extended team roles - mapped to app_role enum
 interface TeamConfig {
   role: AppRole;
   label: string;
@@ -87,18 +86,6 @@ const teamConfigs: TeamConfig[] = [
   },
 ];
 
-// Service-based team assignment
-const serviceTeamMapping = {
-  car_inquiry: "sales",
-  test_drive: "sales",
-  insurance: "dealer",
-  finance: "finance",
-  hsrp: "sales",
-  rental: "sales",
-  accessories: "sales",
-  corporate: "admin",
-};
-
 export const TeamUserManagement = () => {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("overview");
@@ -106,10 +93,13 @@ export const TeamUserManagement = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [selectedTeam, setSelectedTeam] = useState<AppRole | "all">("all");
+  const [isLookingUpEmail, setIsLookingUpEmail] = useState(false);
+  const [emailLookupStatus, setEmailLookupStatus] = useState<{ success: boolean; userId?: string; message: string } | null>(null);
   
-  const [newUserForm, setNewUserForm] = useState({
+  
+  const [newUserForm, setNewUserForm] = useState<{ email: string; role: AppRole }>({
     email: "",
-    role: "" as AppRole | "",
+    role: "sales",
   });
 
   // Fetch all user roles
@@ -125,10 +115,56 @@ export const TeamUserManagement = () => {
     },
   });
 
+  // Lookup user by email using admin API
+  const handleLookupEmail = async (email: string) => {
+    if (!email) {
+      setEmailLookupStatus(null);
+      return;
+    }
+
+    try {
+      setIsLookingUpEmail(true);
+      const trimmedEmail = email.trim().toLowerCase();
+
+      // Check if email is valid
+      if (!trimmedEmail.includes("@")) {
+        throw new Error("Invalid email format");
+      }
+      
+      // Use Supabase admin API to find user by email
+      const { data: userData, error } = await (supabase.auth.admin as any).listUsers();
+
+      if (error) {
+        throw new Error("Could not fetch users - make sure you're logged in as admin");
+      }
+
+      const user = userData?.users?.find((u: any) => u.email?.toLowerCase() === trimmedEmail);
+      
+      if (user?.id) {
+        setEmailLookupStatus({ 
+          success: true, 
+          userId: user.id,
+          message: `✓ Found: ${user.email}`
+        });
+      } else {
+        setEmailLookupStatus({ 
+          success: false,
+          message: `No user found with this email. They must sign up first.`
+        });
+      }
+    } catch (error: any) {
+      setEmailLookupStatus({ 
+        success: false,
+        message: error.message || "Error looking up email"
+      });
+    } finally {
+      setIsLookingUpEmail(false);
+    }
+  };
+
   // Add role mutation
   const addRoleMutation = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: AppRole }) => {
-      // Check if already exists
       const existing = userRoles.find(r => r.user_id === userId && r.role === role);
       if (existing) throw new Error("User already has this role");
       
@@ -140,12 +176,13 @@ export const TeamUserManagement = () => {
       if (error) throw error;
       return data;
     },
-    onSuccess: (data, variables) => {
-      const teamLabel = teamConfigs.find(t => t.role === variables.role)?.label || variables.role;
+    onSuccess: () => {
+      const teamLabel = teamConfigs.find(t => t.role === newUserForm.role)?.label || newUserForm.role;
       queryClient.invalidateQueries({ queryKey: ['teamUserRoles'] });
-      toast.success(`User added to ${teamLabel}`);
+      toast.success(`${newUserForm.email} added to ${teamLabel}`);
       setIsAddDialogOpen(false);
-      setNewUserForm({ email: "", role: "" });
+      setNewUserForm({ email: "", role: "sales" });
+      setEmailLookupStatus(null);
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to add user");
@@ -168,34 +205,11 @@ export const TeamUserManagement = () => {
     },
   });
 
-  // Lookup user by email
-  const handleAddUserByEmail = async () => {
-    if (!newUserForm.email || !newUserForm.role) {
-      toast.error("Please enter email and select a team");
-      return;
-    }
-
-    // For now, we need to look up the user ID from the email
-    // In production, you'd have a profiles table or use admin API
-    toast.info(
-      "To add a user:\n1. User must first sign up on the platform\n2. Find their User ID from auth logs\n3. Use 'Add by User ID' option",
-      { duration: 5000 }
-    );
-  };
-
-  // Add by User ID
-  const handleAddByUserId = async (userId: string, role: AppRole) => {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(userId)) {
-      toast.error("Invalid User ID format");
-      return;
-    }
-    addRoleMutation.mutate({ userId, role });
-  };
-
   // Filter roles
   const filteredRoles = userRoles.filter(role => {
-    const matchesSearch = role.user_id.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = 
+      role.user_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (role.user_email?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
     const matchesTeam = selectedTeam === "all" || role.role === selectedTeam;
     return matchesSearch && matchesTeam;
   });
@@ -218,7 +232,7 @@ export const TeamUserManagement = () => {
             Team & User Management
           </h2>
           <p className="text-muted-foreground">
-            Assign users to teams based on their job role - each team has specific feature access
+            Add users by email and assign them to teams with specific feature access
           </p>
         </div>
         <Button onClick={() => setIsAddDialogOpen(true)}>
@@ -242,9 +256,7 @@ export const TeamUserManagement = () => {
               return (
                 <Card 
                   key={team.role} 
-                  className={`cursor-pointer hover:shadow-md transition-shadow ${
-                    selectedTeam === team.role ? 'ring-2 ring-primary' : ''
-                  }`}
+                  className="cursor-pointer hover:shadow-md transition-shadow"
                   onClick={() => {
                     setSelectedTeam(team.role);
                     setActiveTab("members");
@@ -294,44 +306,44 @@ export const TeamUserManagement = () => {
                   variant="outline" 
                   className="h-auto py-4 flex-col gap-2"
                   onClick={() => {
-                    setNewUserForm({ ...newUserForm, role: "sales" });
+                    setNewUserForm({ email: newUserForm.email, role: "sales" });
                     setIsAddDialogOpen(true);
                   }}
                 >
-                  <Car className="h-5 w-5 text-blue-600" />
-                  <span className="text-sm">Add Sales Person</span>
+                  <Car className="h-5 w-5" />
+                  <span className="text-sm">Add Sales</span>
                 </Button>
                 <Button 
                   variant="outline" 
                   className="h-auto py-4 flex-col gap-2"
                   onClick={() => {
-                    setNewUserForm({ ...newUserForm, role: "dealer" });
+                    setNewUserForm({ email: newUserForm.email, role: "dealer" });
                     setIsAddDialogOpen(true);
                   }}
                 >
-                  <FileText className="h-5 w-5 text-green-600" />
-                  <span className="text-sm">Add Insurance Person</span>
+                  <FileText className="h-5 w-5" />
+                  <span className="text-sm">Add Insurance</span>
                 </Button>
                 <Button 
                   variant="outline" 
                   className="h-auto py-4 flex-col gap-2"
                   onClick={() => {
-                    setNewUserForm({ ...newUserForm, role: "finance" });
+                    setNewUserForm({ email: newUserForm.email, role: "finance" });
                     setIsAddDialogOpen(true);
                   }}
                 >
-                  <CreditCard className="h-5 w-5 text-amber-600" />
-                  <span className="text-sm">Add Finance Person</span>
+                  <CreditCard className="h-5 w-5" />
+                  <span className="text-sm">Add Finance</span>
                 </Button>
                 <Button 
                   variant="outline" 
                   className="h-auto py-4 flex-col gap-2"
                   onClick={() => {
-                    setNewUserForm({ ...newUserForm, role: "admin" });
+                    setNewUserForm({ email: newUserForm.email, role: "admin" });
                     setIsAddDialogOpen(true);
                   }}
                 >
-                  <Building2 className="h-5 w-5 text-purple-600" />
+                  <Building2 className="h-5 w-5" />
                   <span className="text-sm">Add Admin</span>
                 </Button>
               </div>
@@ -352,7 +364,7 @@ export const TeamUserManagement = () => {
                   <div className="relative w-64">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                      placeholder="Search by User ID..."
+                      placeholder="Search by email or ID..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="pl-9"
@@ -393,67 +405,70 @@ export const TeamUserManagement = () => {
                   </Button>
                 </div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>User ID</TableHead>
-                      <TableHead>Team / Role</TableHead>
-                      <TableHead>Access Modules</TableHead>
-                      <TableHead>Assigned On</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredRoles.map((userRole) => {
-                      const teamConfig = getTeamConfig(userRole.role);
-                      const Icon = teamConfig?.icon || Users;
-                      return (
-                        <TableRow key={userRole.id}>
-                          <TableCell>
-                            <code className="text-xs bg-muted px-2 py-1 rounded">
-                              {userRole.user_id.substring(0, 8)}...{userRole.user_id.slice(-4)}
-                            </code>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <div className={`p-1.5 rounded ${teamConfig?.bgColor}`}>
-                                <Icon className={`h-4 w-4 ${teamConfig?.color}`} />
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Team / Role</TableHead>
+                        <TableHead>Access Modules</TableHead>
+                        <TableHead>Assigned On</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredRoles.map((userRole) => {
+                        const teamConfig = getTeamConfig(userRole.role);
+                        const Icon = teamConfig?.icon || Users;
+                        return (
+                          <TableRow key={userRole.id}>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Mail className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-sm font-medium">{userRole.user_email || "—"}</span>
                               </div>
-                              <span className="font-medium">{teamConfig?.label}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap gap-1 max-w-[250px]">
-                              {teamConfig?.accessModules.slice(0, 2).map((module) => (
-                                <Badge key={module} variant="secondary" className="text-xs">
-                                  {module}
-                                </Badge>
-                              ))}
-                              {(teamConfig?.accessModules.length || 0) > 2 && (
-                                <Badge variant="outline" className="text-xs">
-                                  +{(teamConfig?.accessModules.length || 0) - 2}
-                                </Badge>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {new Date(userRole.created_at).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-destructive hover:text-destructive"
-                              onClick={() => setDeleteConfirm(userRole.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <div className={`p-1.5 rounded ${teamConfig?.bgColor}`}>
+                                  <Icon className={`h-4 w-4 ${teamConfig?.color}`} />
+                                </div>
+                                <span className="font-medium text-sm">{teamConfig?.label}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-wrap gap-1 max-w-[250px]">
+                                {teamConfig?.accessModules.slice(0, 2).map((module) => (
+                                  <Badge key={module} variant="secondary" className="text-xs">
+                                    {module}
+                                  </Badge>
+                                ))}
+                                {(teamConfig?.accessModules.length || 0) > 2 && (
+                                  <Badge variant="outline" className="text-xs">
+                                    +{(teamConfig?.accessModules.length || 0) - 2}
+                                  </Badge>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {new Date(userRole.created_at).toLocaleDateString()}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => setDeleteConfirm(userRole.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
               )}
             </CardContent>
           </Card>
@@ -496,34 +511,6 @@ export const TeamUserManagement = () => {
                   </div>
                 );
               })}
-
-              <div className="bg-muted/50 p-4 rounded-lg">
-                <div className="flex gap-2 mb-2">
-                  <AlertCircle className="h-5 w-5 text-amber-600" />
-                  <span className="font-medium">Lead Assignment by Service</span>
-                </div>
-                <p className="text-sm text-muted-foreground mb-3">
-                  Leads are automatically categorized and can be assigned to the appropriate team:
-                </p>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-                  <div className="flex items-center gap-2">
-                    <Car className="h-4 w-4 text-blue-600" />
-                    Car Inquiry → Sales
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-green-600" />
-                    Insurance → Insurance Team
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CreditCard className="h-4 w-4 text-amber-600" />
-                    Finance → Finance Team
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4 text-purple-600" />
-                    Corporate → Admin
-                  </div>
-                </div>
-              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -535,11 +522,50 @@ export const TeamUserManagement = () => {
           <DialogHeader>
             <DialogTitle>Add Team Member</DialogTitle>
             <DialogDescription>
-              Add a user to a team to give them access to specific features
+              Enter their email to add them to a team
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
+            {/* Email Input */}
+            <div className="space-y-2">
+              <Label>Email Address *</Label>
+              <Input
+                type="email"
+                placeholder="user@example.com"
+                value={newUserForm.email}
+                onChange={(e) => {
+                  setNewUserForm({ ...newUserForm, email: e.target.value });
+                  setEmailLookupStatus(null);
+                }}
+                onBlur={(e) => {
+                  if (e.target.value) {
+                    handleLookupEmail(e.target.value);
+                  }
+                }}
+              />
+              {emailLookupStatus && (
+                <div className={`flex items-center gap-2 text-sm p-2 rounded ${
+                  emailLookupStatus.success 
+                    ? 'bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300' 
+                    : 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300'
+                }`}>
+                  {emailLookupStatus.success ? (
+                    <Check className="h-4 w-4" />
+                  ) : (
+                    <AlertCircle className="h-4 w-4" />
+                  )}
+                  {emailLookupStatus.message}
+                </div>
+              )}
+              {isLookingUpEmail && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Looking up user...
+                </div>
+              )}
+            </div>
+
             {/* Team Selection */}
             <div className="space-y-2">
               <Label>Select Team *</Label>
@@ -555,7 +581,7 @@ export const TeamUserManagement = () => {
                       onClick={() => setNewUserForm({ ...newUserForm, role: team.role })}
                     >
                       <Icon className="h-4 w-4" />
-                      <span className="text-xs">{team.label}</span>
+                      <span className="text-xs text-center">{team.label}</span>
                     </Button>
                   );
                 })}
@@ -567,23 +593,10 @@ export const TeamUserManagement = () => {
               )}
             </div>
 
-            {/* User ID Input */}
-            <div className="space-y-2">
-              <Label>User ID (UUID) *</Label>
-              <Input
-                placeholder="e.g., ff237d62-41f7-4dbc-b5ba-4056c510bb3c"
-                value={newUserForm.email}
-                onChange={(e) => setNewUserForm({ ...newUserForm, email: e.target.value })}
-              />
-              <p className="text-xs text-muted-foreground">
-                The user must first sign up on the platform. Get their User ID from the backend → Authentication logs.
-              </p>
-            </div>
-
             {/* Access Preview */}
             {newUserForm.role && (
               <div className="bg-muted/50 p-3 rounded-lg">
-                <p className="text-sm font-medium mb-2">This user will have access to:</p>
+                <p className="text-sm font-medium mb-2">This team gets access to:</p>
                 <div className="flex flex-wrap gap-1">
                   {teamConfigs.find(t => t.role === newUserForm.role)?.accessModules.map((module) => (
                     <Badge key={module} variant="secondary" className="text-xs">
@@ -600,9 +613,17 @@ export const TeamUserManagement = () => {
               Cancel
             </Button>
             <Button 
-              onClick={() => newUserForm.email && newUserForm.role && 
-                handleAddByUserId(newUserForm.email, newUserForm.role as AppRole)}
-              disabled={!newUserForm.email || !newUserForm.role || addRoleMutation.isPending}
+              onClick={() => {
+                if (emailLookupStatus?.success && emailLookupStatus.userId && newUserForm.role) {
+                  addRoleMutation.mutate({ 
+                    userId: emailLookupStatus.userId, 
+                    role: newUserForm.role as AppRole 
+                  });
+                } else {
+                  toast.error("Please select a valid email and team");
+                }
+              }}
+              disabled={!emailLookupStatus?.success || !newUserForm.role || addRoleMutation.isPending}
             >
               {addRoleMutation.isPending ? (
                 <>
@@ -626,7 +647,7 @@ export const TeamUserManagement = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Remove Team Member?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will revoke the user's access to team-specific features. They can be re-added later.
+              This will revoke their access to team features. They can be re-added later.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
