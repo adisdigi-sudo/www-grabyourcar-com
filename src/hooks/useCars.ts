@@ -1,4 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   fetchCarsFromDatabase, 
   fetchCarBySlug, 
@@ -9,16 +11,17 @@ import {
 } from "@/lib/carDataService";
 import { allCars as staticCars, Car } from "@/data/cars";
 
-// Hook to fetch all cars
+// Hook to fetch all cars with real-time updates
 export const useCars = (options?: {
   brand?: string;
   bodyType?: string;
   isUpcoming?: boolean;
   useDatabase?: boolean;
 }) => {
-  const useDatabase = options?.useDatabase ?? false;
+  const queryClient = useQueryClient();
+  const useDatabase = options?.useDatabase ?? true; // Default to database now
 
-  return useQuery({
+  const query = useQuery({
     queryKey: ['cars', options],
     queryFn: async () => {
       if (useDatabase) {
@@ -29,7 +32,7 @@ export const useCars = (options?: {
         });
       }
       
-      // Use static data by default for now
+      // Use static data as fallback
       let cars = [...staticCars];
       
       if (options?.brand && options.brand !== 'All') {
@@ -44,13 +47,39 @@ export const useCars = (options?: {
       
       return cars;
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 1000 * 30, // 30 seconds - shorter for real-time feel
+    refetchOnWindowFocus: true,
   });
+
+  // Real-time subscription for cars table
+  useEffect(() => {
+    if (!useDatabase) return;
+
+    const channel = supabase
+      .channel('cars-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'cars' },
+        () => {
+          console.log('[Cars] Real-time update received');
+          queryClient.invalidateQueries({ queryKey: ['cars'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [useDatabase, queryClient]);
+
+  return query;
 };
 
-// Hook to fetch a single car by slug
-export const useCarBySlug = (slug: string | undefined, useDatabase = false) => {
-  return useQuery({
+// Hook to fetch a single car by slug with real-time updates
+export const useCarBySlug = (slug: string | undefined, useDatabase = true) => {
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
     queryKey: ['car', slug],
     queryFn: async () => {
       if (!slug) return null;
@@ -59,17 +88,42 @@ export const useCarBySlug = (slug: string | undefined, useDatabase = false) => {
         return fetchCarBySlug(slug);
       }
       
-      // Use static data
+      // Use static data as fallback
       return staticCars.find(c => c.slug === slug) || null;
     },
     enabled: !!slug,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 1000 * 30,
+    refetchOnWindowFocus: true,
   });
+
+  // Real-time subscription
+  useEffect(() => {
+    if (!slug || !useDatabase) return;
+
+    const channel = supabase
+      .channel(`car-${slug}-realtime`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'cars' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['car', slug] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [slug, useDatabase, queryClient]);
+
+  return query;
 };
 
-// Hook to get all cars (for admin)
-export const useAllCars = (useDatabase = false) => {
-  return useQuery({
+// Hook to get all cars (for admin) with real-time updates
+export const useAllCars = (useDatabase = true) => {
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
     queryKey: ['allCars', useDatabase],
     queryFn: async () => {
       if (useDatabase) {
@@ -77,8 +131,31 @@ export const useAllCars = (useDatabase = false) => {
       }
       return staticCars;
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 1000 * 30,
+    refetchOnWindowFocus: true,
   });
+
+  // Real-time subscription
+  useEffect(() => {
+    if (!useDatabase) return;
+
+    const channel = supabase
+      .channel('allCars-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'cars' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['allCars'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [useDatabase, queryClient]);
+
+  return query;
 };
 
 // Hook to check if database has cars
