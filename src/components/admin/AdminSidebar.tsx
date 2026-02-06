@@ -142,6 +142,7 @@ const navItems: NavItem[] = [
     icon: Users,
     badge: "New",
     children: [
+      { id: "marketing-templates", label: "📱 WhatsApp Templates", icon: MessageSquare, badge: "New" },
       { id: "marketing-email", label: "Email Campaigns", icon: MessageSquare },
       { id: "marketing-bulk", label: "Bulk Data Manager", icon: Database },
     ]
