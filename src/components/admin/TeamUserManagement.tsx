@@ -102,16 +102,19 @@ export const TeamUserManagement = () => {
     role: "sales",
   });
 
-  // Fetch all user roles
+  // Fetch all user roles with email
   const { data: userRoles = [], isLoading } = useQuery({
     queryKey: ['teamUserRoles'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("user_roles")
-        .select("*")
+        .select("id, user_id, role, created_at, email")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as UserRole[];
+      return (data || []).map(r => ({
+        ...r,
+        user_email: r.email || undefined
+      })) as UserRole[];
     },
   });
 
@@ -162,15 +165,15 @@ export const TeamUserManagement = () => {
     }
   };
 
-  // Add role mutation
+  // Add role mutation - now stores email directly
   const addRoleMutation = useMutation({
-    mutationFn: async ({ userId, role }: { userId: string; role: AppRole }) => {
+    mutationFn: async ({ userId, role, email }: { userId: string; role: AppRole; email: string }) => {
       const existing = userRoles.find(r => r.user_id === userId && r.role === role);
       if (existing) throw new Error("User already has this role");
       
       const { data, error } = await supabase
         .from("user_roles")
-        .insert({ user_id: userId, role })
+        .insert({ user_id: userId, role, email: email.toLowerCase().trim() })
         .select()
         .single();
       if (error) throw error;
@@ -205,10 +208,9 @@ export const TeamUserManagement = () => {
     },
   });
 
-  // Filter roles
+  // Filter roles by email only
   const filteredRoles = userRoles.filter(role => {
-    const matchesSearch = 
-      role.user_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    const matchesSearch = searchQuery === "" || 
       (role.user_email?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
     const matchesTeam = selectedTeam === "all" || role.role === selectedTeam;
     return matchesSearch && matchesTeam;
@@ -364,7 +366,7 @@ export const TeamUserManagement = () => {
                   <div className="relative w-64">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                      placeholder="Search by email or ID..."
+                      placeholder="Search by email..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="pl-9"
@@ -425,7 +427,7 @@ export const TeamUserManagement = () => {
                             <TableCell>
                               <div className="flex items-center gap-2">
                                 <Mail className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-sm font-medium">{userRole.user_email || "—"}</span>
+                                <span className="font-medium">{userRole.user_email || "No email saved"}</span>
                               </div>
                             </TableCell>
                             <TableCell>
@@ -614,13 +616,14 @@ export const TeamUserManagement = () => {
             </Button>
             <Button 
               onClick={() => {
-                if (emailLookupStatus?.success && emailLookupStatus.userId && newUserForm.role) {
+                if (emailLookupStatus?.success && emailLookupStatus.userId && newUserForm.role && newUserForm.email) {
                   addRoleMutation.mutate({ 
                     userId: emailLookupStatus.userId, 
-                    role: newUserForm.role as AppRole 
+                    role: newUserForm.role as AppRole,
+                    email: newUserForm.email
                   });
                 } else {
-                  toast.error("Please select a valid email and team");
+                  toast.error("Please enter a valid email and select a team");
                 }
               }}
               disabled={!emailLookupStatus?.success || !newUserForm.role || addRoleMutation.isPending}
