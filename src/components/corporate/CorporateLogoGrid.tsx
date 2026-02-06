@@ -212,11 +212,11 @@ export const CorporateLogoGrid = () => {
           viewport={{ once: true }}
           className="mt-20 grid grid-cols-3 gap-8 max-w-3xl mx-auto"
         >
-          {[
-            { value: "8+", label: "Enterprise Clients", icon: Building2 },
-            { value: "70+", label: "Vehicles Delivered", icon: CheckCircle2 },
-            { value: "100%", label: "Satisfaction Rate", icon: Award },
-          ].map((stat, index) => (
+           {[
+             { value: "50+", label: "Trusted Ventures Trust Us", icon: Building2 },
+             { value: "70+", label: "Vehicles Delivered", icon: CheckCircle2 },
+             { value: "100%", label: "Satisfaction Rate", icon: Award },
+           ].map((stat, index) => (
             <motion.div 
               key={stat.label} 
               initial={{ opacity: 0, scale: 0.8 }}
