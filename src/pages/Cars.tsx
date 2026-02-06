@@ -53,7 +53,12 @@ import {
   Check,
   FileText,
 } from "lucide-react";
-import { brands, bodyTypes, fuelTypes, transmissionTypes, priceRanges } from "@/data/cars";
+import { 
+  useVehicleAttributes, 
+  formatFuelTypesForFilter, 
+  formatTransmissionsForFilter,
+  formatPriceRangesForFilter 
+} from "@/hooks/useVehicleAttributes";
 import { useCars } from "@/hooks/useCars";
 import { useAuth } from "@/hooks/useAuth";
 import { useFavorites } from "@/hooks/useFavorites";
@@ -68,6 +73,20 @@ const Cars = () => {
   
   // Fetch cars from database
   const { data: allCars = [], isLoading: carsLoading } = useCars({ useDatabase: true });
+  
+  // Fetch vehicle attributes from database
+  const { data: vehicleAttributes } = useVehicleAttributes();
+  
+  // Format attributes for filters (with fallbacks)
+  const fuelTypes = vehicleAttributes ? formatFuelTypesForFilter(vehicleAttributes.fuelTypes) : ["All", "Petrol", "Diesel", "Electric", "Hybrid", "CNG"];
+  const transmissionTypes = vehicleAttributes ? formatTransmissionsForFilter(vehicleAttributes.transmissions) : ["All", "Manual", "Automatic", "AMT", "CVT", "DCT"];
+  const priceRanges = vehicleAttributes ? formatPriceRangesForFilter(vehicleAttributes.priceRanges) : [
+    { label: "All", min: 0, max: Infinity },
+    { label: "Under ₹5 Lakh", min: 0, max: 500000 },
+    { label: "₹5-10 Lakh", min: 500000, max: 1000000 },
+    { label: "₹10-15 Lakh", min: 1000000, max: 1500000 },
+    { label: "₹15-20 Lakh", min: 1500000, max: 2000000 },
+  ];
   
   const handleCompareToggle = (carId: number) => {
     if (isInCompare(carId)) {
