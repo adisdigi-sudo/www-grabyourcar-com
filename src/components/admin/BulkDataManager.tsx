@@ -46,6 +46,7 @@ interface ImportJob {
 
 const DATA_MODULES = [
   { id: 'cars', label: 'Car Catalog', icon: Car, description: 'Import car models, variants, and pricing' },
+  { id: 'car_colors', label: 'Car Colors', icon: Car, description: 'Import car colors with images by variant' },
   { id: 'leads', label: 'Leads', icon: Users, description: 'Import customer leads and inquiries' },
   { id: 'accessories', label: 'Accessories', icon: Package, description: 'Import car accessories inventory' },
   { id: 'rentals', label: 'Self-Drive Vehicles', icon: Calendar, description: 'Import rental fleet vehicles' },
@@ -60,6 +61,18 @@ Maruti,Swift,maruti-swift,6.49 - 9.59 Lakh,Hatchback,Petrol;CNG,Manual;AMT,true,
 Maruti,Brezza,maruti-brezza,8.29 - 14.14 Lakh,SUV,Petrol;CNG,Manual;Automatic,true,true,true,Smart Choice for Smart Buyers,The Brezza is a compact SUV that offers a perfect blend of style comfort and performance.,Sunroof;360 Camera;HUD Display;Wireless Charging,Stylish design;Feature-loaded;Good ground clearance,No diesel option;Average rear AC
 Hyundai,Creta,hyundai-creta,11.00 - 20.15 Lakh,SUV,Petrol;Diesel,Manual;Automatic,true,false,false,The Ultimate SUV,Hyundai Creta is a premium compact SUV with segment-leading features and powerful performance.,ADAS;Panoramic Sunroof;Bose Audio;Ventilated Seats,Premium interiors;Powerful engines;Safety features,Expensive top variants;Firm ride quality
 Tata,Nexon,tata-nexon,8.10 - 15.50 Lakh,SUV,Petrol;Diesel;Electric,Manual;AMT,true,false,true,Play Safe Play Smart,The Nexon is India's safest car with 5-star Global NCAP rating and modern design.,5-Star Safety;Electric Option;Connected Tech;Terrain Modes,Excellent safety;Multiple powertrain options;Good build quality,AMT could be smoother;Boot space average`,
+  
+  car_colors: `car_slug,color_name,hex_code,image_url
+maruti-swift,Pearl Arctic White,#FAFAFA,https://example.com/swift-white.jpg
+maruti-swift,Midnight Blue,#1A237E,https://example.com/swift-blue.jpg
+maruti-swift,Solid Fire Red,#C62828,https://example.com/swift-red.jpg
+maruti-swift,Magma Grey,#616161,https://example.com/swift-grey.jpg
+hyundai-creta,Atlas White,#F5F5F5,https://example.com/creta-white.jpg
+hyundai-creta,Titan Grey,#4A4A4A,https://example.com/creta-grey.jpg
+hyundai-creta,Abyss Black,#1A1A1A,https://example.com/creta-black.jpg
+tata-nexon,Pristine White,#FFFFFF,https://example.com/nexon-white.jpg
+tata-nexon,Flame Red,#D32F2F,https://example.com/nexon-red.jpg
+tata-nexon,Daytona Grey,#757575,https://example.com/nexon-grey.jpg`,
   
   leads: `customer_name,phone,email,city,car_brand,car_model,car_variant,source,lead_type,status,priority,notes,budget_min,budget_max,buying_timeline,tags
 Rahul Sharma,9876543210,rahul@email.com,Delhi,Maruti,Swift,VXi,website,car_inquiry,new,high,Interested in petrol variant with accessories,600000,800000,within_week,hot;ready_to_buy

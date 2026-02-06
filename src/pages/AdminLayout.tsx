@@ -35,6 +35,7 @@ import { OffersManagement } from "@/components/admin/OffersManagement";
 import { AutoIntelligenceSettings } from "@/components/admin/AutoIntelligenceSettings";
 import CrossSellManagement from "@/components/admin/CrossSellManagement";
 import EMIPDFSettings from "@/components/admin/EMIPDFSettings";
+import { CarColorManagement } from "@/components/admin/CarColorManagement";
 
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
@@ -106,11 +107,14 @@ const AdminLayout = () => {
       case "leads-whatsapp":
         return <LeadManagement />;
       case "cars-list":
-      case "cars-images":
       case "cars-variants":
       case "cars-specs":
       case "cars-pricing":
       case "cars-compare":
+        return <UnifiedCarManagement />;
+      case "cars-colors":
+        return <CarColorManagement />;
+      case "cars-images":
         return <UnifiedCarManagement />;
       case "cars-migration":
         return <CarDataManagement />;

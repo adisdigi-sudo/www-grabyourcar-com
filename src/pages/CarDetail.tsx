@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { Header } from "@/components/Header";
@@ -44,6 +44,7 @@ import {
   GitCompareArrows
 } from "lucide-react";
 import { useCompare } from "@/hooks/useCompare";
+import { useCarColors } from "@/hooks/useCarColors";
 import EMICalculator from "@/components/EMICalculator";
 import { AICarRecommendations } from "@/components/AICarRecommendations";
 import { CrossSellWidget } from "@/components/CrossSellWidget";
@@ -81,8 +82,19 @@ const CarDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   const car = getCarBySlug(slug || "");
   
+  // Fetch colors from database
+  const { data: dbColors } = useCarColors(slug);
+  
   const [selectedColor, setSelectedColor] = useState(0);
   const [selectedVariant, setSelectedVariant] = useState(0);
+
+  // Use database colors if available, otherwise fall back to static data
+  const displayColors = useMemo(() => {
+    if (dbColors && dbColors.length > 0) {
+      return dbColors;
+    }
+    return car?.colors || [];
+  }, [dbColors, car?.colors]);
 
   if (!car) {
     return (
@@ -177,7 +189,7 @@ const CarDetail = () => {
                   fuelType: v.fuelType || car.fuelTypes[0],
                   transmission: v.transmission || car.transmission[0]
                 }))}
-                colors={car.colors}
+                colors={displayColors}
                 selectedVariant={selectedVariant}
                 selectedColor={selectedColor}
                 onVariantChange={setSelectedVariant}
@@ -203,7 +215,7 @@ const CarDetail = () => {
                 )}
                 
                 <ColorGalleryViewer
-                  colors={car.colors}
+                  colors={displayColors}
                   carName={car.name}
                   carImage={car.image}
                   gallery={car.gallery}

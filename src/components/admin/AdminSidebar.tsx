@@ -65,7 +65,8 @@ const navItems: NavItem[] = [
     icon: Car,
     children: [
       { id: "cars-list", label: "Cars & Details", icon: Car },
-      { id: "cars-images", label: "Images & Gallery", icon: Image },
+      { id: "cars-colors", label: "Colors & Images", icon: Palette, badge: "New" },
+      { id: "cars-images", label: "Gallery", icon: Image },
       { id: "cars-variants", label: "Variants & Specs", icon: Tags },
       { id: "cars-pricing", label: "Pricing & Breakup", icon: CreditCard },
       { id: "cars-migration", label: "Data Migration", icon: Database },
