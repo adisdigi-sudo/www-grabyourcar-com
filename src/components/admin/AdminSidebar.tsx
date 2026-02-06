@@ -104,6 +104,7 @@ const navItems: NavItem[] = [
       { id: "services-rentals", label: "Self-Drive Rentals", icon: CalendarDays },
       { id: "services-insurance", label: "Insurance", icon: FileText },
       { id: "services-loans", label: "Car Loans", icon: CreditCard },
+      { id: "services-emi-pdf", label: "EMI PDF Settings", icon: FileText, badge: "New" },
     ]
   },
   { 

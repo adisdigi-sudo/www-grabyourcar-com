@@ -34,6 +34,7 @@ import { IntegrationsManagement } from "@/components/admin/IntegrationsManagemen
 import { OffersManagement } from "@/components/admin/OffersManagement";
 import { AutoIntelligenceSettings } from "@/components/admin/AutoIntelligenceSettings";
 import CrossSellManagement from "@/components/admin/CrossSellManagement";
+import EMIPDFSettings from "@/components/admin/EMIPDFSettings";
 
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
@@ -137,6 +138,8 @@ const AdminLayout = () => {
       case "services-insurance":
       case "services-loans":
         return <WebsiteSettings />;
+      case "services-emi-pdf":
+        return <EMIPDFSettings />;
       case "ecommerce-accessories":
       case "ecommerce-orders":
         return <AccessoriesManagement />;
