@@ -33,6 +33,7 @@ import {
   Sparkles,
   FileSignature,
   Rocket,
+  Mail,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
@@ -143,6 +144,7 @@ const navItems: NavItem[] = [
     badge: "New",
     children: [
       { id: "marketing-templates", label: "📱 WhatsApp Templates", icon: MessageSquare, badge: "New" },
+      { id: "marketing-automation", label: "📧 Email Automation", icon: Mail, badge: "New" },
       { id: "marketing-email", label: "Email Campaigns", icon: MessageSquare },
       { id: "marketing-bulk", label: "Bulk Data Manager", icon: Database },
     ]
