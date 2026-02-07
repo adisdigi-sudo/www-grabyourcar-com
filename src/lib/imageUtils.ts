@@ -6,29 +6,47 @@
 // Official OEM domains that are allowed (including CDN/asset subpaths)
 const OFFICIAL_OEM_DOMAINS = [
   'supabase.co',
+  // Maruti Suzuki
   'marutisuzuki.com',
   'nexaexperience.com',
+  // Hyundai
   'hyundai.com',
   'hyundai.co.in',
+  // Tata Motors
   'tatamotors.com',
+  'cars.tatamotors.com',
+  'ev.tatamotors.com',
+  // Mahindra
   'mahindra.com',
+  'auto.mahindra.com',
   'mahindrarise.com',
+  // Kia
   'kia.com',
   'kia.in',
+  'www.kia.com',
+  // Toyota
   'toyota.com',
   'toyotabharat.com',
+  // Honda
   'honda.com',
   'hondacarindia.com',
+  // MG
   'mg.co.in',
   'mgmotor.co.in',
+  // Skoda
   'skoda-auto.co.in',
   'skoda-auto.com',
+  // Volkswagen
   'volkswagen.co.in',
   'volkswagen.com',
+  // Renault
   'renault.co.in',
   'renault.com',
+  // Jeep
   'jeep-india.com',
+  // Citroen
   'citroen.in',
+  // Luxury brands
   'bmw.in',
   'mercedes-benz.co.in',
   'audi.in',

@@ -36,6 +36,9 @@ verify_jwt = false
 [functions.firecrawl-oem-data]
 verify_jwt = false
 
+[functions.firecrawl-scrape]
+verify_jwt = false
+
 [functions.generate-blog]
 verify_jwt = false
 
@@ -124,4 +127,19 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.migrate-images-to-storage]
+verify_jwt = false
+
+[functions.extract-oem-catalog]
+verify_jwt = false
+
+[functions.batch-extract-brands]
+verify_jwt = false
+
+[functions.download-brochure]
+verify_jwt = false
+
+[functions.sync-brochure]
+verify_jwt = false
+
+[functions.sync-all-brochures]
 verify_jwt = false
