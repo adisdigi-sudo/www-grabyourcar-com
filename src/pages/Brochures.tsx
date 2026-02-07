@@ -244,7 +244,7 @@ const Brochures = () => {
                             </Link>
                             <WhatsAppCardButton carName={car.name} className="h-8" />
                             <a href="tel:+919577200023">
-                              <Button variant="outline" size="sm" className="gap-1 h-8">
+                              <Button variant="call" size="sm" className="gap-1 h-8">
                                 <Phone className="h-3.5 w-3.5" />
                                 Call
                               </Button>
