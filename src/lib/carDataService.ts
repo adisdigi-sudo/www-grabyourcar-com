@@ -1,5 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
-import { allCars as staticCars, Car } from "@/data/cars";
+import { Car } from "@/data/cars/types";
+
+// NOTE: Static data fallback removed - using database only for accurate, real OEM/CarDekho data
 
 interface FetchCarsOptions {
   slug?: string;
@@ -162,12 +164,12 @@ export const fetchCarsFromDatabase = async (options: FetchCarsOptions = {}): Pro
 
     if (error) {
       console.error('Database fetch error:', error);
-      return filterStaticCars(options);
+      return []; // Database-only mode - no static fallback
     }
 
     if (!dbCars || dbCars.length === 0) {
-      console.log('No cars in database, using static data');
-      return filterStaticCars(options);
+      console.log('No cars found in database');
+      return []; // Database-only mode - no static fallback
     }
 
     // Helper: Check if image URL is likely to work (Supabase-hosted)
@@ -299,28 +301,8 @@ export const fetchCarsFromDatabase = async (options: FetchCarsOptions = {}): Pro
     return cars;
   } catch (error) {
     console.error('Error fetching from database:', error);
-    return filterStaticCars(options);
+    return []; // Database-only mode - no static fallback
   }
-};
-
-// Filter static cars based on options
-const filterStaticCars = (options: FetchCarsOptions): Car[] => {
-  let cars = [...staticCars];
-  
-  if (options.slug) {
-    cars = cars.filter(c => c.slug === options.slug);
-  }
-  if (options.brand && options.brand !== 'All') {
-    cars = cars.filter(c => c.brand === options.brand);
-  }
-  if (options.bodyType && options.bodyType !== 'All') {
-    cars = cars.filter(c => c.bodyType === options.bodyType);
-  }
-  if (options.isUpcoming) {
-    cars = cars.filter(c => c.isUpcoming);
-  }
-  
-  return cars;
 };
 
 // Fetch single car by slug
@@ -334,44 +316,8 @@ export const getAllCars = async (): Promise<Car[]> => {
   return fetchCarsFromDatabase();
 };
 
-// Migrate static data to database
-export const migrateStaticDataToDatabase = async (): Promise<{
-  success: boolean;
-  results?: { success: number; failed: number; errors: string[] };
-  error?: string;
-}> => {
-  try {
-    // Prepare cars data for migration (convert image imports to URLs)
-    const carsToMigrate = staticCars.map(car => ({
-      ...car,
-      // Convert imported images to placeholder URLs for now
-      // In production, you'd upload these to storage
-      image: typeof car.image === 'string' ? car.image : '/placeholder.svg',
-      gallery: car.gallery.map(img => typeof img === 'string' ? img : '/placeholder.svg')
-    }));
-
-    const { data, error } = await supabase.functions.invoke('migrate-car-data', {
-      body: { cars: carsToMigrate }
-    });
-
-    if (error) {
-      console.error('Migration error:', error);
-      return { success: false, error: error.message };
-    }
-
-    return {
-      success: data?.success || false,
-      results: data?.results,
-      error: data?.error
-    };
-  } catch (error) {
-    console.error('Migration failed:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Migration failed'
-    };
-  }
-};
+// NOTE: Migration function removed - database is now the single source of truth
+// All car data is scraped from OEM/CarDekho via Firecrawl and stored in database
 
 // Enhance car data with AI
 export const enhanceCarWithAI = async (

@@ -5,11 +5,10 @@ import {
   fetchCarsFromDatabase, 
   fetchCarBySlug, 
   getAllCars,
-  migrateStaticDataToDatabase,
   enhanceCarWithAI,
   checkDatabaseHasCars
 } from "@/lib/carDataService";
-import { allCars as staticCars, Car } from "@/data/cars";
+import { Car } from "@/data/cars/types";
 
 // Hook to fetch all cars with real-time updates
 export const useCars = (options?: {
@@ -24,28 +23,12 @@ export const useCars = (options?: {
   const query = useQuery({
     queryKey: ['cars', options],
     queryFn: async () => {
-      if (useDatabase) {
-        return fetchCarsFromDatabase({
-          brand: options?.brand,
-          bodyType: options?.bodyType,
-          isUpcoming: options?.isUpcoming
-        });
-      }
-      
-      // Use static data as fallback
-      let cars = [...staticCars];
-      
-      if (options?.brand && options.brand !== 'All') {
-        cars = cars.filter(c => c.brand === options.brand);
-      }
-      if (options?.bodyType && options.bodyType !== 'All') {
-        cars = cars.filter(c => c.bodyType === options.bodyType);
-      }
-      if (options?.isUpcoming) {
-        cars = cars.filter(c => c.isUpcoming);
-      }
-      
-      return cars;
+      // Database-only mode - no static fallback
+      return fetchCarsFromDatabase({
+        brand: options?.brand,
+        bodyType: options?.bodyType,
+        isUpcoming: options?.isUpcoming
+      });
     },
     staleTime: 1000 * 30, // 30 seconds - shorter for real-time feel
     refetchOnWindowFocus: true,
@@ -83,13 +66,8 @@ export const useCarBySlug = (slug: string | undefined, useDatabase = true) => {
     queryKey: ['car', slug],
     queryFn: async () => {
       if (!slug) return null;
-      
-      if (useDatabase) {
-        return fetchCarBySlug(slug);
-      }
-      
-      // Use static data as fallback
-      return staticCars.find(c => c.slug === slug) || null;
+      // Database-only mode
+      return fetchCarBySlug(slug);
     },
     enabled: !!slug,
     staleTime: 1000 * 30,
@@ -120,16 +98,14 @@ export const useCarBySlug = (slug: string | undefined, useDatabase = true) => {
 };
 
 // Hook to get all cars (for admin) with real-time updates
-export const useAllCars = (useDatabase = true) => {
+export const useAllCars = () => {
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ['allCars', useDatabase],
+    queryKey: ['allCars'],
     queryFn: async () => {
-      if (useDatabase) {
-        return getAllCars();
-      }
-      return staticCars;
+      // Database-only mode
+      return getAllCars();
     },
     staleTime: 1000 * 30,
     refetchOnWindowFocus: true,
@@ -137,8 +113,6 @@ export const useAllCars = (useDatabase = true) => {
 
   // Real-time subscription
   useEffect(() => {
-    if (!useDatabase) return;
-
     const channel = supabase
       .channel('allCars-realtime')
       .on(
@@ -153,7 +127,7 @@ export const useAllCars = (useDatabase = true) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [useDatabase, queryClient]);
+  }, [queryClient]);
 
   return query;
 };
@@ -167,20 +141,8 @@ export const useDatabaseStatus = () => {
   });
 };
 
-// Hook to migrate data to database
-export const useMigrateData = () => {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: migrateStaticDataToDatabase,
-    onSuccess: () => {
-      // Invalidate all car queries
-      queryClient.invalidateQueries({ queryKey: ['cars'] });
-      queryClient.invalidateQueries({ queryKey: ['allCars'] });
-      queryClient.invalidateQueries({ queryKey: ['databaseStatus'] });
-    }
-  });
-};
+// NOTE: Migration hook removed - database is now the single source of truth
+// All data comes from OEM/CarDekho via Firecrawl scraping
 
 // Hook to enhance car with AI
 export const useEnhanceCarAI = () => {

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useDatabaseStatus, useMigrateData, useEnhanceCarAI } from "@/hooks/useCars";
+import { useDatabaseStatus, useEnhanceCarAI } from "@/hooks/useCars";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -66,7 +66,6 @@ interface SyncLog {
 
 export const CarDataManagement = () => {
   const { data: hasData, isLoading: statusLoading, refetch: refetchStatus } = useDatabaseStatus();
-  const migrateMutation = useMigrateData();
   const enhanceMutation = useEnhanceCarAI();
   
   const [selectedCar, setSelectedCar] = useState<string>("");
@@ -126,27 +125,8 @@ export const CarDataManagement = () => {
       toast.error(`Validation failed: ${error.message}`);
     }
   });
-
-  const handleMigrate = async () => {
-    toast.loading('Migrating data to database...', { id: 'migrate' });
-    
-    try {
-      const result = await migrateMutation.mutateAsync();
-      
-      if (result.success) {
-        toast.success(
-          `Migration complete! ${result.results?.success} cars migrated, ${result.results?.failed} failed.`,
-          { id: 'migrate' }
-        );
-        refetchStatus();
-        refetchCars();
-      } else {
-        toast.error(result.error || 'Migration failed', { id: 'migrate' });
-      }
-    } catch (error) {
-      toast.error('Migration failed', { id: 'migrate' });
-    }
-  };
+  // NOTE: Migration removed - database is the single source of truth
+  // Use Firecrawl scraping via fetch-car-images for real data
 
   const handleEnhance = async () => {
     if (!selectedCar || !enhanceType) {
@@ -249,31 +229,23 @@ export const CarDataManagement = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Upload className="h-5 w-5" />
-                Data Migration
+                <Zap className="h-5 w-5" />
+                Real-Time Data Sync
               </CardTitle>
               <CardDescription>
-                Migrate all static car data from TypeScript files to the database
+                All car data is sourced from OEM websites and CarDekho via Firecrawl. 
+                Use the Image Sync Manager to fetch real images.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center gap-4">
-                <Button 
-                  onClick={handleMigrate}
-                  disabled={migrateMutation.isPending}
-                >
-                  {migrateMutation.isPending ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      Migrating...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="h-4 w-4 mr-2" />
-                      Migrate Static Data
-                    </>
-                  )}
-                </Button>
+                <Badge variant="secondary" className="gap-1">
+                  <CheckCircle2 className="h-3 w-3" />
+                  Database-Only Mode
+                </Badge>
+                <span className="text-sm text-muted-foreground">
+                  Static data fallback disabled for 100% accuracy
+                </span>
               </div>
             </CardContent>
           </Card>

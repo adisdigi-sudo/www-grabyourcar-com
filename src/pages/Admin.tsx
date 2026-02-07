@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { useDatabaseStatus, useMigrateData, useEnhanceCarAI } from "@/hooks/useCars";
+import { useDatabaseStatus, useEnhanceCarAI } from "@/hooks/useCars";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Header } from "@/components/Header";
@@ -74,7 +74,6 @@ const Admin = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { data: hasData, isLoading: statusLoading, refetch: refetchStatus } = useDatabaseStatus();
-  const migrateMutation = useMigrateData();
   const enhanceMutation = useEnhanceCarAI();
   
   const [selectedCar, setSelectedCar] = useState<string>("");
@@ -141,26 +140,8 @@ const Admin = () => {
     return null;
   }
 
-  const handleMigrate = async () => {
-    toast.loading('Migrating data to database...', { id: 'migrate' });
-    
-    try {
-      const result = await migrateMutation.mutateAsync();
-      
-      if (result.success) {
-        toast.success(
-          `Migration complete! ${result.results?.success} cars migrated, ${result.results?.failed} failed.`,
-          { id: 'migrate' }
-        );
-        refetchStatus();
-        refetchCars();
-      } else {
-        toast.error(result.error || 'Migration failed', { id: 'migrate' });
-      }
-    } catch (error) {
-      toast.error('Migration failed', { id: 'migrate' });
-    }
-  };
+  // NOTE: Migration removed - database is the single source of truth
+  // Use Firecrawl scraping via fetch-car-images for real data
 
   const handleEnhance = async () => {
     if (!selectedCar || !enhanceType) {
@@ -279,56 +260,28 @@ const Admin = () => {
               </Card>
             </div>
 
-            {/* Migration Section */}
+            {/* Database-Only Mode Info */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Upload className="h-5 w-5" />
-                  Data Migration
+                  <Zap className="h-5 w-5" />
+                  Real-Time Data Sync
                 </CardTitle>
                 <CardDescription>
-                  Migrate all static car data from TypeScript files to the database
+                  All car data is sourced from OEM websites and CarDekho via Firecrawl. 
+                  Use the Image Sync Manager in the admin panel for real images.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-4">
-                  <Button 
-                    onClick={handleMigrate}
-                    disabled={migrateMutation.isPending}
-                    className="min-w-[200px]"
-                  >
-                    {migrateMutation.isPending ? (
-                      <>
-                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                        Migrating...
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="h-4 w-4 mr-2" />
-                        Migrate Static Data
-                      </>
-                    )}
-                  </Button>
+                  <Badge variant="secondary" className="gap-1">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Database-Only Mode
+                  </Badge>
                   <span className="text-sm text-muted-foreground">
-                    This will migrate all 75+ cars from static files to the database
+                    Static data fallback disabled for 100% accuracy
                   </span>
                 </div>
-                
-                {migrateMutation.data?.results && (
-                  <div className="p-4 bg-muted rounded-lg">
-                    <p className="font-medium">Migration Results:</p>
-                    <ul className="mt-2 space-y-1 text-sm">
-                      <li className="text-green-600">
-                        ✓ {migrateMutation.data.results.success} cars migrated successfully
-                      </li>
-                      {migrateMutation.data.results.failed > 0 && (
-                        <li className="text-red-600">
-                          ✗ {migrateMutation.data.results.failed} cars failed
-                        </li>
-                      )}
-                    </ul>
-                  </div>
-                )}
               </CardContent>
             </Card>
           </TabsContent>
