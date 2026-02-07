@@ -7,6 +7,7 @@ import { useFavorites } from "@/hooks/useFavorites";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompare } from "@/hooks/useCompare";
 import { cn } from "@/lib/utils";
+import { isValidImage } from "@/lib/imageUtils";
 import { WhatsAppCardButton } from "@/components/WhatsAppCTA";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,12 +28,6 @@ interface CarWithImage {
   discount: string | null;
   image_url: string | null;
 }
-
-// STRICT: Only allow Supabase-hosted authentic images
-const isValidImage = (url: string | undefined | null): boolean => {
-  if (!url || url === '/placeholder.svg') return false;
-  return url.includes('supabase.co/storage');
-};
 
 // Fetch featured cars from database with their primary images
 const useFeaturedCars = () => {
@@ -70,17 +65,17 @@ const useFeaturedCars = () => {
         .in('car_id', cars.map(c => c.id))
         .order('sort_order', { ascending: true });
       
-      // Create a map of car_id to best Supabase-hosted image_url
+      // Create a map of car_id to best authentic image_url
       const imageMap = new Map<string, string | null>();
       
       for (const car of cars) {
         const carImages = (allImages || []).filter(img => img.car_id === car.id);
         
-        // Only use Supabase-hosted images
-        const hostedImages = carImages.filter(img => img.url?.includes('supabase.co'));
+        // Filter for authentic images (Supabase + OEM domains)
+        const authenticImages = carImages.filter(img => isValidImage(img.url));
         
         // Sort by is_primary, then sort_order
-        const sortedImages = hostedImages.sort((a, b) => {
+        const sortedImages = authenticImages.sort((a, b) => {
           if (a.is_primary && !b.is_primary) return -1;
           if (!a.is_primary && b.is_primary) return 1;
           return (a.sort_order || 0) - (b.sort_order || 0);
