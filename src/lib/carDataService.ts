@@ -172,12 +172,32 @@ export const fetchCarsFromDatabase = async (options: FetchCarsOptions = {}): Pro
       return []; // Database-only mode - no static fallback
     }
 
-    // Helper: Check if image is real/authentic (only Supabase-hosted images)
-    // STRICT: No external CDN, no AI-generated, no placeholders
+    // Helper: Check if image is real/authentic (OEM or Supabase-hosted)
+    // Allow: Official OEM websites, Supabase storage
+    // Block: AI-generated, generic placeholders
     const isAuthenticImage = (url: string | null | undefined): boolean => {
       if (!url) return false;
-      // Only allow Supabase-hosted images (verified real OEM/CarDekho scraped images)
-      return url.includes('supabase.co');
+      
+      // Allow Supabase-hosted images
+      if (url.includes('supabase.co')) return true;
+      
+      // Allow official OEM website images
+      const officialOEMDomains = [
+        'marutisuzuki.com',
+        'nexaexperience.com',
+        'hyundai.com',
+        'tatamotors.com',
+        'mahindra.com',
+        'kia.com',
+        'toyota.com',
+        'honda.com',
+        'mg.co.in',
+        'skoda-auto.co.in',
+        'volkswagen.co.in',
+        'renault.co.in'
+      ];
+      
+      return officialOEMDomains.some(domain => url.includes(domain));
     };
     
     // Transform database cars to static format
