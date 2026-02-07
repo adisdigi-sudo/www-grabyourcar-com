@@ -23,31 +23,78 @@ declare const EdgeRuntime: {
 
 // Car model specifications for accurate image generation
 const carModelSpecs: Record<string, string> = {
+  // MG Models
   'MG Hector': 'MG Hector SUV, muscular body, bold chrome grille, LED projector headlamps, 5-seater mid-size SUV, panoramic sunroof',
   'MG Hector Plus': 'MG Hector Plus 6/7-seater SUV, three-row seating, bold front grille, LED headlamps',
   'MG Astor': 'MG Astor compact SUV, split LED headlamps, sleek design, AI-powered features',
   'MG Comet EV': 'MG Comet EV micro electric car, compact city car, cute rounded design, small hatchback',
+  'MG ZS EV': 'MG ZS EV electric SUV, modern design, electric crossover',
+  'MG Windsor EV': 'MG Windsor EV electric crossover, futuristic design, electric vehicle',
+  
+  // Toyota Models - Complete Range
+  'Innova Hycross': 'Toyota Innova Hycross premium MPV, bold front grille, LED headlamps, hybrid badge, modern MPV design, 7-seater',
+  'Toyota Innova Hycross': 'Toyota Innova Hycross premium MPV, bold front grille, LED headlamps, hybrid badge, modern MPV design, 7-seater',
+  'Toyota Innova Crysta': 'Toyota Innova Crysta MPV, chrome grille, projector headlamps, premium MPV, reliable family vehicle',
+  'Innova Crysta': 'Toyota Innova Crysta MPV, chrome grille, projector headlamps, premium MPV, reliable family vehicle',
+  'Toyota Fortuner': 'Toyota Fortuner full-size SUV, rugged body, bold grille, 4x4 capable, adventure SUV',
+  'Fortuner': 'Toyota Fortuner full-size SUV, rugged body, bold grille, 4x4 capable, adventure SUV',
+  'Toyota Taisor': 'Toyota Taisor compact SUV crossover, sporty design, youthful styling, urban crossover based on Suzuki Fronx',
+  'Taisor': 'Toyota Taisor compact SUV crossover, sporty design, youthful styling, urban crossover based on Suzuki Fronx',
+  'Toyota Urban Cruiser Hyryder': 'Toyota Urban Cruiser Hyryder compact SUV, hybrid technology, modern design, split LED headlamps',
+  'Urban Cruiser Hyryder': 'Toyota Urban Cruiser Hyryder compact SUV, hybrid technology, modern design, split LED headlamps',
+  'Urban Cruiser Ebella': 'Toyota Urban Cruiser Ebella subcompact crossover, stylish design, based on Suzuki Fronx, urban SUV',
+  'Toyota Urban Cruiser Ebella': 'Toyota Urban Cruiser Ebella subcompact crossover, stylish design, based on Suzuki Fronx, urban SUV',
+  'Hilux': 'Toyota Hilux pickup truck, rugged double cab, off-road capable, muscular design, adventure truck',
+  'Toyota Hilux': 'Toyota Hilux pickup truck, rugged double cab, off-road capable, muscular design, adventure truck',
+  'Rumion': 'Toyota Rumion MPV, practical family car, spacious interior, based on Maruti Ertiga',
+  'Toyota Rumion': 'Toyota Rumion MPV, practical family car, spacious interior, based on Maruti Ertiga',
+  'Vellfire': 'Toyota Vellfire luxury MPV, premium van, bold front grille, executive seating, ultra-luxury MPV',
+  'Toyota Vellfire': 'Toyota Vellfire luxury MPV, premium van, bold front grille, executive seating, ultra-luxury MPV',
+  'Land Cruiser 300': 'Toyota Land Cruiser 300 flagship SUV, iconic off-roader, premium luxury, legendary design',
+  'Toyota Land Cruiser 300': 'Toyota Land Cruiser 300 flagship SUV, iconic off-roader, premium luxury, legendary design',
+  'Camry': 'Toyota Camry executive sedan, elegant design, hybrid technology, premium sedan',
+  'Toyota Camry': 'Toyota Camry executive sedan, elegant design, hybrid technology, premium sedan',
+  'Glanza': 'Toyota Glanza premium hatchback, sporty design, based on Maruti Baleno, efficient hatchback',
+  'Toyota Glanza': 'Toyota Glanza premium hatchback, sporty design, based on Maruti Baleno, efficient hatchback',
+  
+  // Maserati Models
   'Maserati Ghibli': 'Maserati Ghibli luxury sedan, Italian sports sedan, trident grille, aggressive styling',
   'Maserati Levante': 'Maserati Levante luxury SUV, Italian design, sporty stance, premium SUV',
   'Maserati Quattroporte': 'Maserati Quattroporte flagship sedan, elegant Italian design, long wheelbase',
   'Maserati GranTurismo': 'Maserati GranTurismo grand tourer, Italian coupe, sporty GT design',
+  'Maserati MC20': 'Maserati MC20 supercar, mid-engine design, butterfly doors, Italian supercar',
+  'Maserati Grecale': 'Maserati Grecale compact luxury SUV, sporty crossover, Italian craftsmanship',
+  
+  // Ferrari Models
   'Ferrari F8 Tributo': 'Ferrari F8 Tributo supercar, mid-engine V8, aggressive aero design, Italian supercar',
   'Ferrari Roma': 'Ferrari Roma grand tourer, elegant coupe, front-engine V8, classic Ferrari design',
   'Ferrari Purosangue': 'Ferrari Purosangue SUV, first Ferrari 4-door, prancing horse luxury SUV',
   'Ferrari SF90 Stradale': 'Ferrari SF90 Stradale hybrid supercar, extreme aero, plug-in hybrid hypercar',
+  'Ferrari 296 GTB': 'Ferrari 296 GTB hybrid sports car, V6 plug-in hybrid, compact supercar',
+  'Ferrari 812 Superfast': 'Ferrari 812 Superfast grand tourer, powerful V12, front-engine GT',
+  
+  // Lamborghini Models
   'Lamborghini Urus': 'Lamborghini Urus super SUV, aggressive Y-shaped design, Italian styling',
   'Lamborghini Huracan': 'Lamborghini Huracan supercar, mid-engine V10, sharp angular design',
   'Lamborghini Revuelto': 'Lamborghini Revuelto hybrid supercar, V12 plug-in hybrid, extreme design',
+  
+  // Rolls-Royce Models
   'Rolls-Royce Ghost': 'Rolls-Royce Ghost luxury sedan, iconic Spirit of Ecstasy, British ultra-luxury',
   'Rolls-Royce Phantom': 'Rolls-Royce Phantom flagship, pinnacle of luxury, majestic presence',
   'Rolls-Royce Cullinan': 'Rolls-Royce Cullinan luxury SUV, first Rolls-Royce SUV, commanding presence',
+  'Rolls-Royce Spectre': 'Rolls-Royce Spectre electric coupe, ultra-luxury electric, iconic design',
+  
+  // Bentley Models
   'Bentley Continental GT': 'Bentley Continental GT grand tourer, powerful British coupe, elegant design',
   'Bentley Bentayga': 'Bentley Bentayga luxury SUV, British craftsmanship, premium SUV design',
   'Bentley Flying Spur': 'Bentley Flying Spur luxury sedan, four-door grand tourer, British elegance',
+  
+  // Porsche Models
   'Porsche 911': 'Porsche 911 sports car, iconic rear-engine design, German engineering',
   'Porsche Cayenne': 'Porsche Cayenne luxury SUV, sporty SUV design, German performance',
   'Porsche Taycan': 'Porsche Taycan electric sports car, futuristic design, electric Porsche',
   'Porsche Macan': 'Porsche Macan compact SUV, sporty crossover, Porsche design language',
+  'Porsche Panamera': 'Porsche Panamera luxury sedan, sports car design, four-door grand tourer',
 };
 
 // Generate car image using Lovable AI
@@ -243,8 +290,8 @@ async function processCarColor(
   }
 }
 
-// Priority brands for image generation
-const PRIORITY_BRANDS = ['Maserati', 'Ferrari', 'Lamborghini', 'Rolls-Royce', 'Bentley', 'Porsche', 'MG', 'Maruti Suzuki', 'Hyundai', 'Tata'];
+// Priority brands for image generation - Toyota added for complete coverage
+const PRIORITY_BRANDS = ['Toyota', 'Maserati', 'Ferrari', 'Lamborghini', 'Rolls-Royce', 'Bentley', 'Porsche', 'MG', 'Maruti Suzuki', 'Hyundai', 'Tata'];
 
 // Background processing function
 async function processBatchInBackground(
