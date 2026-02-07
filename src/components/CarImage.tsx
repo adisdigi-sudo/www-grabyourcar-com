@@ -29,9 +29,9 @@ export const CarImage = ({
     if (!url) return false;
     if (url === '/placeholder.svg') return false;
     // ONLY allow Supabase storage URLs - these are verified scraped images
-    if (url.includes('supabase.co/storage')) return true;
+    if (url.includes('supabase.co')) return true;
     // Allow local asset imports (for banners, logos, etc.)
-    if (url.startsWith('/src/assets') || url.startsWith('data:')) return true;
+    if (url.startsWith('/src/assets') || url.startsWith('data:') || url.startsWith('/assets')) return true;
     return false;
   }, []);
 

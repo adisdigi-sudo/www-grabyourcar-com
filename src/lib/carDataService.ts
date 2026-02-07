@@ -182,21 +182,23 @@ export const fetchCarsFromDatabase = async (options: FetchCarsOptions = {}): Pro
     
     // Transform database cars to static format
     const cars = dbCars.map((car: any) => {
-      // ONLY include Supabase-hosted authentic images - no external CDNs
-      const authenticImages = (car.car_images || [])
-        .filter((img: any) => isAuthenticImage(img.url))
-        .sort((a: any, b: any) => {
-          // Primary first
-          if (a.is_primary && !b.is_primary) return -1;
-          if (!a.is_primary && b.is_primary) return 1;
-          // Then by sort_order
-          return (a.sort_order || 0) - (b.sort_order || 0);
-        });
+      // Get all car images and filter for Supabase-hosted ones
+      const allImages = car.car_images || [];
       
-      // Get first authentic image ONLY - no fallback to external
+      // Sort: primary first, then by sort_order
+      const sortedImages = [...allImages].sort((a: any, b: any) => {
+        if (a.is_primary && !b.is_primary) return -1;
+        if (!a.is_primary && b.is_primary) return 1;
+        return (a.sort_order || 999) - (b.sort_order || 999);
+      });
+      
+      // Filter for authentic Supabase-hosted images
+      const authenticImages = sortedImages.filter((img: any) => isAuthenticImage(img.url));
+      
+      // Get first authentic image - prioritize primary, then first by sort order
       const primaryImage = authenticImages[0]?.url || null;
       
-      // Build gallery - ONLY authentic Supabase-hosted images
+      // Build gallery from authentic images only
       const gallery = authenticImages.map((img: any) => img.url);
 
       // Build specifications object
