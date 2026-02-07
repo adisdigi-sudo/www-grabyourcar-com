@@ -33,7 +33,13 @@ verify_jwt = false
 [functions.generate-car-data]
 verify_jwt = false
 
+[functions.generate-car-images]
+verify_jwt = false
+
 [functions.generate-emi-content]
+verify_jwt = false
+
+[functions.migrate-all-cars]
 verify_jwt = false
 
 [functions.migrate-brands]
