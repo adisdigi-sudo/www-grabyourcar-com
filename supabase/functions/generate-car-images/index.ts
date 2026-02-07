@@ -243,6 +243,9 @@ async function processCarColor(
   }
 }
 
+// Priority brands for image generation
+const PRIORITY_BRANDS = ['Maserati', 'Ferrari', 'Lamborghini', 'Rolls-Royce', 'Bentley', 'Porsche', 'MG', 'Maruti Suzuki', 'Hyundai', 'Tata'];
+
 // Background processing function
 async function processBatchInBackground(
   supabase: ReturnType<typeof createClient>,
@@ -251,8 +254,22 @@ async function processBatchInBackground(
   console.log(`Starting background AI image generation - limit: ${limit}`);
   
   try {
-    // Get colors that need image sync
-    const { data: colorsToSync, error: queryError } = await supabase
+    // First, prioritize luxury brands and important cars
+    const { data: priorityColors, error: priorityError } = await supabase
+      .from('car_colors')
+      .select(`
+        id,
+        name,
+        hex_code,
+        car_id,
+        cars!inner(id, name, brand)
+      `)
+      .or('image_url.is.null,image_sync_status.eq.pending,image_sync_status.eq.failed,image_sync_status.eq.not_found')
+      .in('cars.brand', PRIORITY_BRANDS)
+      .limit(Math.ceil(limit * 0.7)); // 70% for priority brands
+
+    // Then get other pending colors
+    const { data: otherColors, error: otherError } = await supabase
       .from('car_colors')
       .select(`
         id,
@@ -262,10 +279,13 @@ async function processBatchInBackground(
         cars!inner(id, name, brand)
       `)
       .or('image_url.is.null,image_sync_status.eq.pending,image_sync_status.eq.failed')
-      .limit(limit);
+      .not('cars.brand', 'in', `(${PRIORITY_BRANDS.map(b => `"${b}"`).join(',')})`)
+      .limit(Math.ceil(limit * 0.3)); // 30% for others
 
-    if (queryError) {
-      console.error('Query error:', queryError.message);
+    const colorsToSync = [...(priorityColors || []), ...(otherColors || [])].slice(0, limit);
+    
+    if (priorityError || otherError) {
+      console.error('Query error:', priorityError?.message || otherError?.message);
       return;
     }
 
