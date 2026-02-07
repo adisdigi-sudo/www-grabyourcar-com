@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Fuel, Cog, Clock, TrendingDown, Phone, Heart, GitCompare, Check, Eye, Loader2 } from "lucide-react";
+import { Fuel, Cog, Clock, TrendingDown, Phone, Heart, GitCompare, Check, Eye, Loader2, Car } from "lucide-react";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompare } from "@/hooks/useCompare";
@@ -56,41 +56,36 @@ const useFeaturedCars = () => {
       if (error) throw error;
       if (!cars?.length) return [];
       
-      // Get primary images for all cars (fallback to any image if no primary)
-      const { data: primaryImages } = await supabase
+      // Get ALL images for these cars to pick the best ones
+      const { data: allImages } = await supabase
         .from('car_images')
-        .select('car_id, url')
+        .select('car_id, url, is_primary, sort_order')
         .in('car_id', cars.map(c => c.id))
-        .eq('is_primary', true);
+        .order('sort_order', { ascending: true });
       
-      // Get first images for cars without primary
-      const carsWithoutPrimary = cars
-        .filter(c => !primaryImages?.some(img => img.car_id === c.id))
-        .map(c => c.id);
-      
-      let fallbackImages: { car_id: string; url: string }[] = [];
-      if (carsWithoutPrimary.length > 0) {
-        const { data: fallback } = await supabase
-          .from('car_images')
-          .select('car_id, url')
-          .in('car_id', carsWithoutPrimary)
-          .order('sort_order', { ascending: true });
-        
-        // Dedupe - get only first image per car
-        const seen = new Set<string>();
-        fallbackImages = (fallback || []).filter(img => {
-          if (seen.has(img.car_id)) return false;
-          seen.add(img.car_id);
-          return true;
-        });
-      }
-      
-      // Create a map of car_id to image_url
+      // Create a map of car_id to best image_url
+      // Priority: 1) Supabase-hosted primary, 2) Supabase-hosted any, 3) External primary, 4) External any
       const imageMap = new Map<string, string>();
-      primaryImages?.forEach(img => imageMap.set(img.car_id, img.url));
-      fallbackImages.forEach(img => {
-        if (!imageMap.has(img.car_id)) imageMap.set(img.car_id, img.url);
-      });
+      
+      const isSupabaseHosted = (url: string) => url?.includes('supabase.co');
+      
+      for (const car of cars) {
+        const carImages = (allImages || []).filter(img => img.car_id === car.id);
+        
+        // Sort by priority: Supabase-hosted first, then is_primary, then sort_order
+        const sortedImages = carImages.sort((a, b) => {
+          const aHosted = isSupabaseHosted(a.url) ? 0 : 1;
+          const bHosted = isSupabaseHosted(b.url) ? 0 : 1;
+          if (aHosted !== bHosted) return aHosted - bHosted;
+          
+          if (a.is_primary && !b.is_primary) return -1;
+          if (!a.is_primary && b.is_primary) return 1;
+          
+          return (a.sort_order || 0) - (b.sort_order || 0);
+        });
+        
+        imageMap.set(car.id, sortedImages[0]?.url || '/placeholder.svg');
+      }
       
       // Merge car data with images
       return cars.map(car => ({
@@ -166,15 +161,31 @@ export const CarListings = () => {
                 style={{ animationDelay: `${index * 0.05}s` }}
               >
                 {/* Image Container */}
-                <div className="relative aspect-[4/3] overflow-hidden bg-secondary">
-                  <img
-                    src={car.image_url || '/placeholder.svg'}
-                    alt={car.name}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = '/placeholder.svg';
-                    }}
-                  />
+                <div className="relative aspect-[4/3] overflow-hidden bg-muted">
+                  {car.image_url && car.image_url !== '/placeholder.svg' && car.image_url.includes('supabase.co') ? (
+                    <img
+                      src={car.image_url}
+                      alt={car.name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const parent = target.parentElement;
+                        if (parent && !parent.querySelector('.car-placeholder')) {
+                          const placeholder = document.createElement('div');
+                          placeholder.className = 'car-placeholder absolute inset-0 flex items-center justify-center bg-gradient-to-br from-muted to-muted/50';
+                          placeholder.innerHTML = '<div class="flex flex-col items-center gap-1 text-muted-foreground/40"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg></div>';
+                          parent.appendChild(placeholder);
+                        }
+                      }}
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-muted to-muted/50">
+                      <div className="flex flex-col items-center gap-1 text-muted-foreground/40">
+                        <Car className="h-8 w-8 sm:h-10 sm:w-10" />
+                      </div>
+                    </div>
+                  )}
                   
                   {/* Top Left: Badge */}
                   <div className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2">

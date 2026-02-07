@@ -170,17 +170,39 @@ export const fetchCarsFromDatabase = async (options: FetchCarsOptions = {}): Pro
       return filterStaticCars(options);
     }
 
+    // Helper: Check if image URL is likely to work (Supabase-hosted)
+    const isWorkingImage = (url: string) => url?.includes('supabase.co');
+    
     // Transform database cars to static format
     const cars = dbCars.map((car: any) => {
-      // Get primary image
-      const primaryImage = car.car_images?.find((img: any) => img.is_primary)?.url 
-        || car.car_images?.[0]?.url 
+      // Prioritize Supabase-hosted images (external CDNs are blocked)
+      const sortedImages = (car.car_images || [])
+        .sort((a: any, b: any) => {
+          // Supabase images first
+          const aHosted = isWorkingImage(a.url) ? 0 : 1;
+          const bHosted = isWorkingImage(b.url) ? 0 : 1;
+          if (aHosted !== bHosted) return aHosted - bHosted;
+          // Then by is_primary
+          if (a.is_primary && !b.is_primary) return -1;
+          if (!a.is_primary && b.is_primary) return 1;
+          // Then by sort_order
+          return (a.sort_order || 0) - (b.sort_order || 0);
+        });
+      
+      // Get first working image or placeholder
+      const primaryImage = sortedImages.find((img: any) => isWorkingImage(img.url))?.url
+        || sortedImages[0]?.url
         || '/placeholder.svg';
       
-      // Build gallery
-      const gallery = car.car_images
-        ?.sort((a: any, b: any) => (a.sort_order || 0) - (b.sort_order || 0))
-        .map((img: any) => img.url) || [];
+      // Build gallery - prioritize working images
+      const gallery = sortedImages
+        .filter((img: any) => isWorkingImage(img.url))
+        .map((img: any) => img.url);
+      
+      // If no working images, include external as fallback
+      if (gallery.length === 0) {
+        gallery.push(...sortedImages.map((img: any) => img.url));
+      }
 
       // Build specifications object
       const specifications: Car['specifications'] = {
