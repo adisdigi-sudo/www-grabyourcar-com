@@ -26,18 +26,14 @@ export const CarImage = ({
   const [hasError, setHasError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check if URL is likely to work
-  const isLikelyWorking = useCallback((url: string | undefined | null) => {
+  // STRICT: Only allow verified authentic images (Supabase-hosted or local assets)
+  // No external CDNs - they have hotlink protection and break frequently
+  const isAuthenticImage = useCallback((url: string | undefined | null) => {
     if (!url) return false;
-    if (url.startsWith('/')) return true; // Local assets
-    if (url.includes('supabase.co')) return true; // Supabase storage
-    // Allow common car image CDNs - they mostly work
-    if (url.includes('aeplcdn.com')) return true; // CarDekho/CarWale CDN
-    if (url.includes('imgd.aeplcdn.com')) return true;
-    if (url.includes('stimg.cardekho.com')) return true;
-    if (url.includes('imgcdn.zigwheels.com')) return true;
-    // Allow any HTTPS URL - let it try to load
-    if (url.startsWith('https://')) return true;
+    if (url === '/placeholder.svg') return false; // Not an image
+    if (url.startsWith('/')) return true; // Local assets (src/assets)
+    if (url.includes('supabase.co')) return true; // Supabase storage (verified)
+    // BLOCK all external CDNs - use placeholder until image is scraped & hosted
     return false;
   }, []);
 
@@ -50,10 +46,10 @@ export const CarImage = ({
     setIsLoading(false);
   }, []);
 
-  // If no source or known broken, show placeholder immediately
-  const showPlaceholder = !src || hasError || (!isLikelyWorking(src) && hasError);
+  // If no source OR not authentic OR error, show branded placeholder immediately
+  const showPlaceholder = !src || hasError || !isAuthenticImage(src);
 
-  if (showPlaceholder || !src) {
+  if (showPlaceholder) {
     return (
       <div
         className={cn(

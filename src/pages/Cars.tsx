@@ -72,13 +72,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { CarImage } from "@/components/CarImage";
 
-// Helper to check if image URL is valid
+// STRICT: Only allow Supabase-hosted authentic images
+// No external CDNs (hotlink protection), no AI-generated, no placeholders
 const isValidImage = (url: string | undefined | null): boolean => {
   if (!url || url === '/placeholder.svg') return false;
-  if (url.startsWith('/')) return true; // Local assets
-  if (url.includes('supabase.co')) return true; // Supabase storage
-  if (url.startsWith('https://')) return true; // Allow HTTPS URLs
-  return false;
+  // ONLY Supabase-hosted images (verified real OEM/CarDekho scraped)
+  return url.includes('supabase.co');
 };
 
 const Cars = () => {

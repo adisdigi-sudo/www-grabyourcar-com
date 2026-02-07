@@ -172,39 +172,32 @@ export const fetchCarsFromDatabase = async (options: FetchCarsOptions = {}): Pro
       return []; // Database-only mode - no static fallback
     }
 
-    // Helper: Check if image URL is likely to work (Supabase-hosted)
-    const isWorkingImage = (url: string) => url?.includes('supabase.co');
+    // Helper: Check if image is real/authentic (only Supabase-hosted images)
+    // STRICT: No external CDN, no AI-generated, no placeholders
+    const isAuthenticImage = (url: string | null | undefined): boolean => {
+      if (!url) return false;
+      // Only allow Supabase-hosted images (verified real OEM/CarDekho scraped images)
+      return url.includes('supabase.co');
+    };
     
     // Transform database cars to static format
     const cars = dbCars.map((car: any) => {
-      // Prioritize Supabase-hosted images (external CDNs are blocked)
-      const sortedImages = (car.car_images || [])
+      // ONLY include Supabase-hosted authentic images - no external CDNs
+      const authenticImages = (car.car_images || [])
+        .filter((img: any) => isAuthenticImage(img.url))
         .sort((a: any, b: any) => {
-          // Supabase images first
-          const aHosted = isWorkingImage(a.url) ? 0 : 1;
-          const bHosted = isWorkingImage(b.url) ? 0 : 1;
-          if (aHosted !== bHosted) return aHosted - bHosted;
-          // Then by is_primary
+          // Primary first
           if (a.is_primary && !b.is_primary) return -1;
           if (!a.is_primary && b.is_primary) return 1;
           // Then by sort_order
           return (a.sort_order || 0) - (b.sort_order || 0);
         });
       
-      // Get first working image or placeholder
-      const primaryImage = sortedImages.find((img: any) => isWorkingImage(img.url))?.url
-        || sortedImages[0]?.url
-        || '/placeholder.svg';
+      // Get first authentic image ONLY - no fallback to external
+      const primaryImage = authenticImages[0]?.url || null;
       
-      // Build gallery - prioritize working images
-      const gallery = sortedImages
-        .filter((img: any) => isWorkingImage(img.url))
-        .map((img: any) => img.url);
-      
-      // If no working images, include external as fallback
-      if (gallery.length === 0) {
-        gallery.push(...sortedImages.map((img: any) => img.url));
-      }
+      // Build gallery - ONLY authentic Supabase-hosted images
+      const gallery = authenticImages.map((img: any) => img.url);
 
       // Build specifications object
       const specifications: Car['specifications'] = {

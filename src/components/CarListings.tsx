@@ -28,12 +28,12 @@ interface CarWithImage {
   image_url: string | null;
 }
 
-// Helper to check if image URL is valid
+// STRICT: Only allow Supabase-hosted authentic images
+// No external CDNs (hotlink protection), no AI-generated, no placeholders
 const isValidImage = (url: string | undefined | null): boolean => {
   if (!url || url === '/placeholder.svg') return false;
-  if (url.includes('supabase.co')) return true; // Supabase storage
-  if (url.startsWith('https://')) return true; // Allow HTTPS URLs
-  return false;
+  // ONLY Supabase-hosted images are verified authentic
+  return url.includes('supabase.co');
 };
 
 // Fetch featured cars from database with their primary images
