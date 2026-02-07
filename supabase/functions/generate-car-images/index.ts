@@ -21,6 +21,35 @@ declare const EdgeRuntime: {
   waitUntil: (promise: Promise<unknown>) => void;
 };
 
+// Car model specifications for accurate image generation
+const carModelSpecs: Record<string, string> = {
+  'MG Hector': 'MG Hector SUV, muscular body, bold chrome grille, LED projector headlamps, 5-seater mid-size SUV, panoramic sunroof',
+  'MG Hector Plus': 'MG Hector Plus 6/7-seater SUV, three-row seating, bold front grille, LED headlamps',
+  'MG Astor': 'MG Astor compact SUV, split LED headlamps, sleek design, AI-powered features',
+  'MG Comet EV': 'MG Comet EV micro electric car, compact city car, cute rounded design, small hatchback',
+  'Maserati Ghibli': 'Maserati Ghibli luxury sedan, Italian sports sedan, trident grille, aggressive styling',
+  'Maserati Levante': 'Maserati Levante luxury SUV, Italian design, sporty stance, premium SUV',
+  'Maserati Quattroporte': 'Maserati Quattroporte flagship sedan, elegant Italian design, long wheelbase',
+  'Maserati GranTurismo': 'Maserati GranTurismo grand tourer, Italian coupe, sporty GT design',
+  'Ferrari F8 Tributo': 'Ferrari F8 Tributo supercar, mid-engine V8, aggressive aero design, Italian supercar',
+  'Ferrari Roma': 'Ferrari Roma grand tourer, elegant coupe, front-engine V8, classic Ferrari design',
+  'Ferrari Purosangue': 'Ferrari Purosangue SUV, first Ferrari 4-door, prancing horse luxury SUV',
+  'Ferrari SF90 Stradale': 'Ferrari SF90 Stradale hybrid supercar, extreme aero, plug-in hybrid hypercar',
+  'Lamborghini Urus': 'Lamborghini Urus super SUV, aggressive Y-shaped design, Italian styling',
+  'Lamborghini Huracan': 'Lamborghini Huracan supercar, mid-engine V10, sharp angular design',
+  'Lamborghini Revuelto': 'Lamborghini Revuelto hybrid supercar, V12 plug-in hybrid, extreme design',
+  'Rolls-Royce Ghost': 'Rolls-Royce Ghost luxury sedan, iconic Spirit of Ecstasy, British ultra-luxury',
+  'Rolls-Royce Phantom': 'Rolls-Royce Phantom flagship, pinnacle of luxury, majestic presence',
+  'Rolls-Royce Cullinan': 'Rolls-Royce Cullinan luxury SUV, first Rolls-Royce SUV, commanding presence',
+  'Bentley Continental GT': 'Bentley Continental GT grand tourer, powerful British coupe, elegant design',
+  'Bentley Bentayga': 'Bentley Bentayga luxury SUV, British craftsmanship, premium SUV design',
+  'Bentley Flying Spur': 'Bentley Flying Spur luxury sedan, four-door grand tourer, British elegance',
+  'Porsche 911': 'Porsche 911 sports car, iconic rear-engine design, German engineering',
+  'Porsche Cayenne': 'Porsche Cayenne luxury SUV, sporty SUV design, German performance',
+  'Porsche Taycan': 'Porsche Taycan electric sports car, futuristic design, electric Porsche',
+  'Porsche Macan': 'Porsche Macan compact SUV, sporty crossover, Porsche design language',
+};
+
 // Generate car image using Lovable AI
 async function generateCarImage(
   brand: string,
@@ -35,9 +64,22 @@ async function generateCarImage(
     return null;
   }
 
-  const prompt = `Professional automotive photograph of a ${brand} ${model} car in ${colorName} color (${colorHex}). 
-Front 3/4 view, showroom lighting, high resolution, photorealistic, Indian car market styling, white studio background.
-Clean, sharp, dealership quality product photo.`;
+  // Get specific car description or use generic
+  const carKey = `${brand} ${model}`.replace('MG MG', 'MG');
+  const carSpecs = carModelSpecs[model] || carModelSpecs[carKey] || `${brand} ${model} car`;
+
+  const prompt = `Ultra-realistic professional automotive photography of a ${brand} ${model} car.
+Car specifications: ${carSpecs}
+Exact color: ${colorName} (${colorHex})
+Requirements:
+- Front 3/4 angle view showing the car's front and side profile
+- Studio showroom environment with gradient white/light gray background
+- Professional automotive lighting highlighting the car's design lines
+- The car body MUST be painted in the exact ${colorName} color matching hex code ${colorHex}
+- Sharp, high-resolution, 8K quality photograph
+- Clean, dealership-quality product shot
+- Indian market variant with right-hand drive if interior visible
+- No text, watermarks, or logos overlaid on image`;
 
   try {
     console.log(`Generating image for ${brand} ${model} in ${colorName}...`);
