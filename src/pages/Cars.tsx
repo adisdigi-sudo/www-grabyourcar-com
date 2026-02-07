@@ -70,15 +70,8 @@ import { useFavorites } from "@/hooks/useFavorites";
 import { useCompare } from "@/hooks/useCompare";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { isValidImage } from "@/lib/imageUtils";
 import { CarImage } from "@/components/CarImage";
-
-// STRICT: Only allow Supabase-hosted authentic images
-// No external CDNs (hotlink protection), no AI-generated, no placeholders
-const isValidImage = (url: string | undefined | null): boolean => {
-  if (!url || url === '/placeholder.svg') return false;
-  // ONLY Supabase-hosted images (verified real OEM/CarDekho scraped)
-  return url.includes('supabase.co');
-};
 
 const Cars = () => {
   const { user } = useAuth();
