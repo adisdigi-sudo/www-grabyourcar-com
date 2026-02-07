@@ -131,47 +131,148 @@ const convertToStaticFormat = (dbCar: DatabaseCar): Car => ({
 // Fetch cars from database with fallback to static data
 export const fetchCarsFromDatabase = async (options: FetchCarsOptions = {}): Promise<Car[]> => {
   try {
-    const params = new URLSearchParams();
-    if (options.slug) params.set('slug', options.slug);
-    if (options.brand) params.set('brand', options.brand);
-    if (options.bodyType) params.set('bodyType', options.bodyType);
-    if (options.isUpcoming) params.set('isUpcoming', 'true');
+    // Build query to fetch cars directly from database
+    let query = supabase.from('cars').select(`
+      id, slug, name, brand, body_type, tagline, price_range, price_numeric,
+      original_price, discount, fuel_types, transmission_types, availability,
+      is_hot, is_limited, is_new, is_upcoming, launch_date, overview, key_highlights,
+      pros, cons, competitors,
+      car_images(url, alt_text, is_primary, sort_order),
+      car_colors(id, name, hex_code, image_url, sort_order),
+      car_variants(id, name, price, price_numeric, fuel_type, transmission, features, ex_showroom, rto, insurance, tcs, fastag, registration, handling, on_road_price, sort_order),
+      car_specifications(category, label, value, sort_order),
+      car_offers(id, title, description, discount, valid_till, offer_type, sort_order)
+    `);
 
-    const { data, error } = await supabase.functions.invoke('sync-car-database', {
-      body: null,
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
+    // Apply filters
+    if (options.slug) {
+      query = query.eq('slug', options.slug);
+    }
+    if (options.brand && options.brand !== 'All') {
+      query = query.eq('brand', options.brand);
+    }
+    if (options.bodyType && options.bodyType !== 'All') {
+      query = query.eq('body_type', options.bodyType);
+    }
+    if (options.isUpcoming) {
+      query = query.eq('is_upcoming', true);
+    }
 
-    // If using query params, we need a different approach
-    // For now, fetch all and filter client-side
+    const { data: dbCars, error } = await query.order('brand').order('name');
+
     if (error) {
       console.error('Database fetch error:', error);
       return filterStaticCars(options);
     }
 
-    if (!data?.success || !data?.cars || data.cars.length === 0) {
+    if (!dbCars || dbCars.length === 0) {
       console.log('No cars in database, using static data');
       return filterStaticCars(options);
     }
 
-    const dbCars = Array.isArray(data.cars) ? data.cars : [data.cars];
-    let cars = dbCars.map(convertToStaticFormat);
+    // Transform database cars to static format
+    const cars = dbCars.map((car: any) => {
+      // Get primary image
+      const primaryImage = car.car_images?.find((img: any) => img.is_primary)?.url 
+        || car.car_images?.[0]?.url 
+        || '/placeholder.svg';
+      
+      // Build gallery
+      const gallery = car.car_images
+        ?.sort((a: any, b: any) => (a.sort_order || 0) - (b.sort_order || 0))
+        .map((img: any) => img.url) || [];
 
-    // Apply filters
-    if (options.slug) {
-      cars = cars.filter(c => c.slug === options.slug);
-    }
-    if (options.brand && options.brand !== 'All') {
-      cars = cars.filter(c => c.brand === options.brand);
-    }
-    if (options.bodyType && options.bodyType !== 'All') {
-      cars = cars.filter(c => c.bodyType === options.bodyType);
-    }
-    if (options.isUpcoming) {
-      cars = cars.filter(c => c.isUpcoming);
-    }
+      // Build specifications object
+      const specifications: Car['specifications'] = {
+        engine: [],
+        dimensions: [],
+        performance: [],
+        features: [],
+        safety: []
+      };
+      
+      car.car_specifications?.forEach((spec: any) => {
+        const category = spec.category as keyof typeof specifications;
+        if (specifications[category]) {
+          specifications[category].push({ label: spec.label, value: spec.value });
+        }
+      });
+
+      // Build colors
+      const colors = car.car_colors
+        ?.sort((a: any, b: any) => (a.sort_order || 0) - (b.sort_order || 0))
+        .map((c: any) => ({
+          name: c.name,
+          hex: c.hex_code,
+          image: c.image_url || undefined
+        })) || [];
+
+      // Build variants
+      const variants = car.car_variants
+        ?.sort((a: any, b: any) => (a.sort_order || 0) - (b.sort_order || 0))
+        .map((v: any) => ({
+          name: v.name,
+          price: v.price,
+          priceNumeric: v.price_numeric,
+          features: v.features || [],
+          fuelType: v.fuel_type,
+          transmission: v.transmission,
+          priceBreakup: v.ex_showroom ? {
+            exShowroom: v.ex_showroom,
+            rto: v.rto || 0,
+            insurance: v.insurance || 0,
+            tcs: v.tcs || 0,
+            fastag: v.fastag || 0,
+            registration: v.registration || 0,
+            handling: v.handling || 0,
+            onRoadPrice: v.on_road_price || v.ex_showroom
+          } : undefined
+        })) || [];
+
+      // Build offers
+      const offers = car.car_offers
+        ?.sort((a: any, b: any) => (a.sort_order || 0) - (b.sort_order || 0))
+        .map((o: any, idx: number) => ({
+          id: idx + 1,
+          title: o.title,
+          description: o.description || '',
+          discount: o.discount,
+          validTill: o.valid_till || '',
+          type: o.offer_type as "cashback" | "accessory" | "exchange" | "finance"
+        })) || [];
+
+      return {
+        id: car.id,
+        slug: car.slug,
+        name: car.name,
+        brand: car.brand,
+        bodyType: car.body_type || '',
+        tagline: car.tagline || '',
+        image: primaryImage,
+        gallery,
+        price: car.price_range || '',
+        priceNumeric: car.price_numeric || 0,
+        originalPrice: car.original_price || '',
+        discount: car.discount || '',
+        fuelTypes: car.fuel_types || [],
+        transmission: car.transmission_types || [],
+        availability: car.availability || 'Available',
+        isHot: car.is_hot || false,
+        isLimited: car.is_limited || false,
+        isNew: car.is_new || false,
+        isUpcoming: car.is_upcoming || false,
+        launchDate: car.launch_date,
+        overview: car.overview || '',
+        keyHighlights: car.key_highlights || [],
+        specifications,
+        colors,
+        variants,
+        offers,
+        pros: car.pros || [],
+        cons: car.cons || [],
+        competitors: car.competitors || []
+      } as Car;
+    });
 
     return cars;
   } catch (error) {

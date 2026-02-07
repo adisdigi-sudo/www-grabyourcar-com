@@ -26,6 +26,42 @@ interface ImageSearchResult {
   description?: string;
 }
 
+// Known CDN patterns for Indian car images
+const CDN_PATTERNS = [
+  'imgd.aeplcdn.com',
+  'stimg.cardekho.com',
+  'cdni.autocarindia.com',
+  'imgk.timesauto.com',
+  'imgcdnk.gaadi.com',
+  'c.ndtvimg.com',
+  'gaadiwaadi.com',
+  'akm-img-a-in.tosshub.com',
+  'images.carandbike.com'
+];
+
+// Generate direct CDN URLs based on known patterns
+function generateCDNUrls(brand: string, model: string, colorName: string): string[] {
+  const cleanBrand = brand.toLowerCase().replace(/\s+/g, '-');
+  const cleanModel = model.toLowerCase().replace(/\s+/g, '-');
+  const cleanColor = colorName.toLowerCase().replace(/\s+/g, '-');
+  
+  // Generate potential URLs based on known CDN patterns
+  const urls: string[] = [];
+  
+  // CarDekho pattern - most reliable
+  const aeplSizes = ['1600x900', '664x374', '600x400', '300x200'];
+  aeplSizes.forEach(size => {
+    urls.push(`https://imgd.aeplcdn.com/${size}/n/cw/ec/${cleanBrand}/${cleanModel}-${cleanColor}.jpeg`);
+    urls.push(`https://imgd.aeplcdn.com/${size}/n/cw/ec/${cleanModel}/${cleanColor}.jpeg`);
+  });
+  
+  // CardekhoStatic pattern
+  urls.push(`https://stimg.cardekho.com/images/carexteriorimages/930x620/${cleanBrand}/${cleanModel}/${cleanColor}.jpg`);
+  urls.push(`https://stimg.cardekho.com/images/carexteriorimages/630x420/${cleanBrand}/${cleanModel}/${cleanColor}.jpg`);
+  
+  return urls;
+}
+
 // Use Perplexity API to search for car images with improved search
 async function searchCarImages(
   brand: string,
@@ -44,11 +80,13 @@ async function searchCarImages(
   const cleanModel = model.replace(/\s+/g, ' ').trim();
   const cleanColor = colorName.replace(/\s+/g, ' ').trim();
 
-  // Direct search for CDN image URLs
-  const searchQuery = `Find direct CDN image URL for ${cleanBrand} ${cleanModel} ${cleanColor} color car India. 
-I need the ACTUAL .jpg or .png URL from automotive image CDNs. 
-Search for images on: CarDekho (imgd.aeplcdn.com), Autocar India (cdni.autocarindia.com), CarWale (imgk.timesauto.com).
-Return the direct image file URL ending in .jpg or .png.`;
+  // More specific search query asking for image links from galleries
+  const searchQuery = `${cleanBrand} ${cleanModel} ${cleanColor} color car image India 2024 2025
+  
+Search CarDekho, CarWale, and AutocarIndia for official gallery images of this car.
+I need the actual CDN image URL that ends in .jpg, .jpeg, .png or .webp.
+Look for URLs from domains: imgd.aeplcdn.com, stimg.cardekho.com, imgk.timesauto.com
+Return the exact image file URL, not the page URL.`;
 
   try {
     const response = await fetch(PERPLEXITY_API_URL, {
@@ -62,14 +100,21 @@ Return the direct image file URL ending in .jpg or .png.`;
         messages: [
           {
             role: 'system',
-            content: `You are a web scraper that finds image URLs. Return ONLY working image URLs from automotive sites. 
-Format response as JSON: {"images":[{"url":"https://imgd.aeplcdn.com/...jpg","source":"cardekho"}]}
-Only include valid URLs that end with .jpg, .jpeg, .png or .webp
-Do not explain - just return the JSON with image URLs you found.`
+            content: `You are an image URL finder. Your task is to find and return direct image URLs from car websites.
+IMPORTANT: Return ONLY valid image URLs in JSON format.
+Format: {"images":[{"url":"https://...","source":"website_name"}]}
+
+Rules:
+1. URLs must end with .jpg, .jpeg, .png, or .webp
+2. Prefer URLs from: imgd.aeplcdn.com, stimg.cardekho.com, imgk.timesauto.com
+3. Include the color name in the URL if possible
+4. Return 3-5 image URLs maximum
+5. Do NOT include page URLs - only direct image file URLs`
           },
           { role: 'user', content: searchQuery }
         ],
         temperature: 0.1,
+        max_tokens: 1000,
       }),
     });
 
@@ -83,28 +128,25 @@ Do not explain - just return the JSON with image URLs you found.`
     const content = data.choices?.[0]?.message?.content || '';
     const citations = data.citations || [];
     
-    console.log('Perplexity response:', content.substring(0, 500));
-    console.log('Citations:', citations.length);
+    console.log('Perplexity response preview:', content.substring(0, 300));
+    console.log('Citations count:', citations.length);
 
-    // Since sonar-pro doesn't return images directly, we extract from content
-    const apiImages: ImageSearchResult[] = [];
+    const allImages: ImageSearchResult[] = [];
 
-    // Extract from citations which often contain direct URLs
-    const citationImages: ImageSearchResult[] = [];
+    // Extract from citations (if they contain direct image URLs)
     for (const citation of citations) {
       if (typeof citation === 'string') {
         const urlLower = citation.toLowerCase();
         if (urlLower.match(/\.(jpg|jpeg|png|webp)(\?|$)/)) {
-          citationImages.push({ url: citation, source: 'citation' });
+          allImages.push({ url: citation, source: 'citation' });
         }
       }
     }
 
     // Try to parse JSON from response
-    let parsedImages: ImageSearchResult[] = [];
     try {
-      // Remove markdown code blocks if present
       let jsonContent = content;
+      // Remove markdown code blocks if present
       if (jsonContent.includes('```')) {
         const match = jsonContent.match(/```(?:json)?\s*([\s\S]*?)```/);
         if (match) jsonContent = match[1];
@@ -114,10 +156,11 @@ Do not explain - just return the JSON with image URLs you found.`
       const jsonMatch = jsonContent.match(/\{[\s\S]*"images"[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
-        parsedImages = (parsed.images || []).filter((img: ImageSearchResult) => {
+        const parsedImages = (parsed.images || []).filter((img: ImageSearchResult) => {
           const url = (img.url || '').toLowerCase();
           return url.match(/\.(jpg|jpeg|png|webp)(\?|$)/);
         });
+        allImages.push(...parsedImages);
       }
     } catch (e) {
       console.log('JSON parsing failed, using regex extraction');
@@ -130,20 +173,120 @@ Do not explain - just return the JSON with image URLs you found.`
       url: url.replace(/["\s]/g, ''),
       source: 'extracted'
     }));
+    allImages.push(...regexImages);
 
-    // Combine all images, prioritize API images, remove duplicates
-    const allImages = [...apiImages, ...citationImages, ...parsedImages, ...regexImages];
+    // Filter for known CDN patterns
+    const cdnImages = allImages.filter(img => 
+      CDN_PATTERNS.some(pattern => img.url.includes(pattern))
+    );
+
+    // If we have CDN images, prefer those
+    const resultImages = cdnImages.length > 0 ? cdnImages : allImages;
+
+    // Remove duplicates
     const uniqueUrls = new Set<string>();
-    const uniqueImages = allImages.filter(img => {
+    const uniqueImages = resultImages.filter(img => {
       if (uniqueUrls.has(img.url)) return false;
       uniqueUrls.add(img.url);
       return true;
     });
 
-    console.log(`Found ${uniqueImages.length} unique image URLs`);
+    console.log(`Found ${uniqueImages.length} unique image URLs (${cdnImages.length} from CDN)`);
     return uniqueImages.slice(0, 5);
   } catch (error) {
     console.error('Error searching for images:', error);
+    return [];
+  }
+}
+
+// Search for primary car image (exterior shot)
+async function searchPrimaryCarImage(
+  brand: string,
+  model: string
+): Promise<ImageSearchResult[]> {
+  const PERPLEXITY_API_KEY = Deno.env.get('PERPLEXITY_API_KEY_1') || Deno.env.get('PERPLEXITY_API_KEY');
+  
+  if (!PERPLEXITY_API_KEY) {
+    return [];
+  }
+
+  const cleanBrand = brand.replace(/\s+/g, ' ').trim();
+  const cleanModel = model.replace(/\s+/g, ' ').trim();
+
+  const searchQuery = `${cleanBrand} ${cleanModel} official car image India 2024 2025 exterior front view
+  
+Find the main promotional image or front three-quarter view image.
+I need the actual CDN image URL that ends in .jpg, .jpeg, .png or .webp.
+Look for URLs from: imgd.aeplcdn.com, stimg.cardekho.com, imgk.timesauto.com, akm-img-a-in.tosshub.com`;
+
+  try {
+    const response = await fetch(PERPLEXITY_API_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${PERPLEXITY_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'sonar-pro',
+        messages: [
+          {
+            role: 'system',
+            content: `You are an image URL finder. Find and return direct image URLs for cars.
+Return ONLY valid image URLs in JSON format.
+Format: {"images":[{"url":"https://...","source":"website_name"}]}
+Only include URLs ending with .jpg, .jpeg, .png, or .webp`
+          },
+          { role: 'user', content: searchQuery }
+        ],
+        temperature: 0.1,
+        max_tokens: 800,
+      }),
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || '';
+    const citations = data.citations || [];
+    
+    const allImages: ImageSearchResult[] = [];
+
+    // Extract from citations
+    for (const citation of citations) {
+      if (typeof citation === 'string') {
+        const urlLower = citation.toLowerCase();
+        if (urlLower.match(/\.(jpg|jpeg|png|webp)(\?|$)/)) {
+          allImages.push({ url: citation, source: 'citation' });
+        }
+      }
+    }
+
+    // Extract URLs via regex
+    const urlRegex = /(https?:\/\/[^\s"'<>\)]+\.(jpg|jpeg|png|webp)(\?[^\s"'<>\)]*)?)/gi;
+    const extractedUrls = content.match(urlRegex) || [];
+    allImages.push(...extractedUrls.map((url: string) => ({
+      url: url.replace(/["\s]/g, ''),
+      source: 'extracted'
+    })));
+
+    // Prefer CDN images
+    const cdnImages = allImages.filter(img => 
+      CDN_PATTERNS.some(pattern => img.url.includes(pattern))
+    );
+
+    const resultImages = cdnImages.length > 0 ? cdnImages : allImages;
+
+    // Remove duplicates
+    const uniqueUrls = new Set<string>();
+    return resultImages.filter(img => {
+      if (uniqueUrls.has(img.url)) return false;
+      uniqueUrls.add(img.url);
+      return true;
+    }).slice(0, 3);
+  } catch (error) {
+    console.error('Error searching for primary image:', error);
     return [];
   }
 }
@@ -159,7 +302,9 @@ async function downloadAndUploadImage(
     
     const response = await fetch(imageUrl, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+        'Referer': 'https://www.cardekho.com/'
       }
     });
 
@@ -172,7 +317,12 @@ async function downloadAndUploadImage(
     const arrayBuffer = await response.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
 
-    // Validate it's actually an image
+    // Validate minimum size and content type
+    if (uint8Array.length < 1000) {
+      console.error('Image too small, likely invalid');
+      return null;
+    }
+
     if (!contentType.includes('image')) {
       console.error('Not an image content type:', contentType);
       return null;
@@ -224,6 +374,12 @@ async function processCarColor(
   try {
     console.log(`Processing ${brand} ${model} in ${colorName}...`);
 
+    // Mark as processing
+    await supabase
+      .from('car_colors')
+      .update({ image_sync_status: 'processing' })
+      .eq('id', colorId);
+
     // Search for images using Perplexity
     const images = await searchCarImages(brand, model, colorName);
 
@@ -231,8 +387,9 @@ async function processCarColor(
       // Update status to failed
       await supabase
         .from('car_colors')
-        .update({ image_sync_status: 'failed' })
+        .update({ image_sync_status: 'not_found' })
         .eq('id', colorId);
+      console.log(`No images found for ${brand} ${model} ${colorName}`);
       return { success: false, error: 'No images found' };
     }
 
@@ -268,6 +425,7 @@ async function processCarColor(
           sort_order: 10
         });
 
+        console.log(`✓ Synced ${brand} ${model} ${colorName}`);
         return { success: true, imageUrl: uploadedUrl };
       }
     }
@@ -281,6 +439,10 @@ async function processCarColor(
     return { success: false, error: 'Failed to download any images' };
   } catch (error) {
     console.error('Error processing car color:', error);
+    await supabase
+      .from('car_colors')
+      .update({ image_sync_status: 'error' })
+      .eq('id', colorId);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
@@ -296,39 +458,53 @@ async function processBatchInBackground(
   limit: number,
   syncPrimaryImages: boolean
 ): Promise<void> {
-  console.log(`Starting background batch processing - limit: ${limit}`);
+  console.log(`Starting background batch processing - limit: ${limit}, syncPrimary: ${syncPrimaryImages}`);
   
   try {
-    // Sync primary images for cars without any images
+    // First, sync primary images for cars without any images
     if (syncPrimaryImages) {
-      const { data: carsWithoutImages, error: carsError } = await supabase
+      console.log('Looking for cars without primary images...');
+      
+      // Get cars with no images
+      const { data: carsWithoutImages } = await supabase
         .from('cars')
         .select('id, name, brand, slug')
-        .not('id', 'in', `(SELECT DISTINCT car_id FROM car_images)`)
-        .limit(Math.ceil(limit / 2));
+        .eq('images_synced', false)
+        .limit(Math.min(10, Math.ceil(limit / 3)));
 
-      if (!carsError && carsWithoutImages?.length) {
-        console.log(`Found ${carsWithoutImages.length} cars without any images`);
+      if (carsWithoutImages?.length) {
+        console.log(`Found ${carsWithoutImages.length} cars needing primary images`);
         
         for (const car of carsWithoutImages) {
-          const images = await searchCarImages(car.brand, car.name, 'exterior');
+          const images = await searchPrimaryCarImage(car.brand, car.name);
           
           if (images.length > 0) {
-            const storagePath = `${car.brand.toLowerCase().replace(/\s+/g, '-')}/${car.slug}/primary-${Date.now()}`;
-            const uploadedUrl = await downloadAndUploadImage(images[0].url, storagePath, supabase);
-            
-            if (uploadedUrl) {
-              await supabase.from('car_images').insert({
-                car_id: car.id,
-                url: uploadedUrl,
-                alt_text: `${car.brand} ${car.name}`,
-                is_primary: true,
-                sort_order: 0
-              });
-              console.log(`Added primary image for ${car.name}`);
+            for (const image of images) {
+              const storagePath = `${car.brand.toLowerCase().replace(/\s+/g, '-')}/${car.slug}/primary-${Date.now()}`;
+              const uploadedUrl = await downloadAndUploadImage(image.url, storagePath, supabase);
+              
+              if (uploadedUrl) {
+                await supabase.from('car_images').insert({
+                  car_id: car.id,
+                  url: uploadedUrl,
+                  alt_text: `${car.brand} ${car.name}`,
+                  is_primary: true,
+                  sort_order: 0
+                });
+                
+                await supabase.from('cars').update({
+                  images_synced: true,
+                  images_synced_at: new Date().toISOString()
+                }).eq('id', car.id);
+                
+                console.log(`✓ Added primary image for ${car.name}`);
+                break;
+              }
             }
           }
-          await new Promise(resolve => setTimeout(resolve, 1500));
+          
+          // Rate limiting
+          await new Promise(resolve => setTimeout(resolve, 2000));
         }
       }
     }
@@ -342,7 +518,7 @@ async function processBatchInBackground(
         car_id,
         cars!inner(id, name, brand)
       `)
-      .or('image_url.is.null,image_sync_status.eq.pending,image_sync_status.eq.failed')
+      .or('image_url.is.null,image_sync_status.eq.pending,image_sync_status.eq.failed,image_sync_status.eq.not_found')
       .limit(limit);
 
     if (queryError) {
@@ -372,7 +548,8 @@ async function processBatchInBackground(
         failCount++;
       }
 
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Rate limiting to avoid API limits
+      await new Promise(resolve => setTimeout(resolve, 2500));
     }
 
     console.log(`Background processing complete - Success: ${successCount}, Failed: ${failCount}`);
@@ -403,18 +580,9 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const body: FetchImageRequest = await req.json();
 
-    const results: Array<{
-      carId: string;
-      colorId: string;
-      colorName: string;
-      success: boolean;
-      imageUrl?: string;
-      error?: string;
-    }> = [];
-
     // Check for async/background mode
     if (body.batchMode && (body as any).async) {
-      const limit = body.limit || 10;
+      const limit = body.limit || 20;
       const syncPrimaryImages = body.syncPrimaryImages !== false;
       
       // Start background processing
@@ -430,58 +598,60 @@ serve(async (req) => {
       );
     }
 
-    if (body.batchMode) {
-      // Batch mode: fetch images for all cars without synced images
-      const limit = body.limit || 10;
-      const syncPrimaryImages = body.syncPrimaryImages !== false; // Default true
-
-      // First, sync primary images for cars without any images
-      if (syncPrimaryImages) {
-        const { data: carsWithoutImages, error: carsError } = await supabase
-          .from('cars')
-          .select('id, name, brand, slug')
-          .not('id', 'in', `(SELECT DISTINCT car_id FROM car_images)`)
-          .limit(Math.ceil(limit / 2));
-
-        if (!carsError && carsWithoutImages?.length) {
-          console.log(`Found ${carsWithoutImages.length} cars without any images`);
-          
-          for (const car of carsWithoutImages) {
-            // Search for primary image
-            const images = await searchCarImages(car.brand, car.name, 'exterior');
-            
-            if (images.length > 0) {
-              const storagePath = `${car.brand.toLowerCase().replace(/\s+/g, '-')}/${car.slug}/primary-${Date.now()}`;
-              const uploadedUrl = await downloadAndUploadImage(images[0].url, storagePath, supabase);
-              
-              if (uploadedUrl) {
-                await supabase.from('car_images').insert({
-                  car_id: car.id,
-                  url: uploadedUrl,
-                  alt_text: `${car.brand} ${car.name}`,
-                  is_primary: true,
-                  sort_order: 0
-                });
-                
-                results.push({
-                  carId: car.id,
-                  colorId: 'primary',
-                  colorName: 'Primary Image',
-                  success: true,
-                  imageUrl: uploadedUrl
-                });
-                
-                console.log(`Added primary image for ${car.name}`);
-              }
-            }
-            
-            await new Promise(resolve => setTimeout(resolve, 1500));
-          }
-        }
+    // Single car/color processing
+    if (body.carId || body.carSlug) {
+      // Get car details
+      const carQuery = body.carId 
+        ? supabase.from('cars').select('id, name, brand').eq('id', body.carId).single()
+        : supabase.from('cars').select('id, name, brand').eq('slug', body.carSlug).single();
+      
+      const { data: car, error: carError } = await carQuery;
+      
+      if (carError || !car) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Car not found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
 
-      // Get cars with colors that need image sync
-      const { data: colorsToSync, error: queryError } = await supabase
+      // Get colors for this car
+      const { data: colors } = await supabase
+        .from('car_colors')
+        .select('id, name')
+        .eq('car_id', car.id)
+        .or('image_url.is.null,image_sync_status.eq.pending,image_sync_status.eq.failed');
+
+      const results = [];
+      for (const color of colors || []) {
+        const result = await processCarColor(
+          supabase,
+          car.id,
+          color.id,
+          car.brand,
+          car.name,
+          color.name
+        );
+        results.push({
+          colorId: color.id,
+          colorName: color.name,
+          ...result
+        });
+        
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, results }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Batch mode (synchronous)
+    if (body.batchMode) {
+      const limit = body.limit || 10;
+      
+      // Get colors that need sync
+      const { data: colorsToSync } = await supabase
         .from('car_colors')
         .select(`
           id,
@@ -492,15 +662,7 @@ serve(async (req) => {
         .or('image_url.is.null,image_sync_status.eq.pending,image_sync_status.eq.failed')
         .limit(limit);
 
-      if (queryError) {
-        return new Response(
-          JSON.stringify({ success: false, error: queryError.message }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      console.log(`Found ${colorsToSync?.length || 0} colors to sync`);
-
+      const results = [];
       for (const color of colorsToSync || []) {
         const car = color.cars as any;
         const result = await processCarColor(
@@ -511,132 +673,30 @@ serve(async (req) => {
           car.name,
           color.name
         );
-
         results.push({
           carId: color.car_id,
           colorId: color.id,
           colorName: color.name,
           ...result
         });
-
-        // Add delay to avoid rate limiting
+        
         await new Promise(resolve => setTimeout(resolve, 2000));
       }
-    } else if (body.carId || body.carSlug) {
-      // Single car mode
-      let carQuery = supabase
-        .from('cars')
-        .select('id, name, brand');
 
-      if (body.carId) {
-        carQuery = carQuery.eq('id', body.carId);
-      } else if (body.carSlug) {
-        carQuery = carQuery.eq('slug', body.carSlug);
-      }
-
-      const { data: car, error: carError } = await carQuery.single();
-
-      if (carError || !car) {
-        return new Response(
-          JSON.stringify({ success: false, error: 'Car not found' }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      // Get colors for this car
-      let colorsQuery = supabase
-        .from('car_colors')
-        .select('id, name')
-        .eq('car_id', car.id);
-
-      if (body.colorId) {
-        colorsQuery = colorsQuery.eq('id', body.colorId);
-      } else if (body.colorName) {
-        colorsQuery = colorsQuery.ilike('name', `%${body.colorName}%`);
-      }
-
-      const { data: colors, error: colorsError } = await colorsQuery;
-
-      if (colorsError) {
-        return new Response(
-          JSON.stringify({ success: false, error: colorsError.message }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      for (const color of colors || []) {
-        const result = await processCarColor(
-          supabase,
-          car.id,
-          color.id,
-          car.brand,
-          car.name,
-          color.name
-        );
-
-        results.push({
-          carId: car.id,
-          colorId: color.id,
-          colorName: color.name,
-          ...result
-        });
-
-        // Add delay between requests
-        await new Promise(resolve => setTimeout(resolve, 1500));
-      }
-
-      // Update car's images_synced flag
-      await supabase
-        .from('cars')
-        .update({
-          images_synced: true,
-          images_synced_at: new Date().toISOString()
-        })
-        .eq('id', car.id);
-    } else if (body.brand && body.model && body.colorName) {
-      // Direct search mode without database lookup
-      const images = await searchCarImages(body.brand, body.model, body.colorName);
-      
       return new Response(
-        JSON.stringify({
-          success: true,
-          images: images,
-          query: { brand: body.brand, model: body.model, color: body.colorName }
-        }),
+        JSON.stringify({ success: true, processed: results.length, results }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    } else {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'Please provide carId, carSlug, or enable batchMode'
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const successful = results.filter(r => r.success).length;
-    const failed = results.filter(r => !r.success).length;
-
     return new Response(
-      JSON.stringify({
-        success: true,
-        summary: {
-          total: results.length,
-          successful,
-          failed
-        },
-        results
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ success: false, error: 'Invalid request - provide carId, carSlug, or batchMode' }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('Error in fetch-car-images:', error);
+    console.error('Edge function error:', error);
     return new Response(
-      JSON.stringify({
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      }),
+      JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Unknown error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
