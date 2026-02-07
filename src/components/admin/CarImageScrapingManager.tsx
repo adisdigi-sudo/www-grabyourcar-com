@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +16,8 @@ import {
   Clock,
   Loader2,
   Play,
-  AlertTriangle
+  AlertTriangle,
+  Pause
 } from "lucide-react";
 
 interface CarWithImageStatus {
@@ -29,17 +30,25 @@ interface CarWithImageStatus {
   images_synced_at: string | null;
 }
 
+interface BatchProgress {
+  current: number;
+  total: number;
+  currentCar: string;
+  imagesAdded: number;
+  failed: string[];
+}
+
 export const CarImageScrapingManager = () => {
   const queryClient = useQueryClient();
   const [isBatchScraping, setIsBatchScraping] = useState(false);
-  const [batchProgress, setBatchProgress] = useState(0);
-  const [batchResults, setBatchResults] = useState<{ processed: number; imagesAdded: number; failed: string[] } | null>(null);
+  const [shouldStop, setShouldStop] = useState(false);
+  const [batchProgress, setBatchProgress] = useState<BatchProgress | null>(null);
 
   // Fetch cars with their image counts
   const { data: carsWithStatus, isLoading, refetch } = useQuery({
     queryKey: ['admin-car-image-status'],
     queryFn: async () => {
-      // Get all cars
+      // Get all active cars
       const { data: cars, error } = await supabase
         .from('cars')
         .select('id, name, brand, slug, images_synced, images_synced_at')
@@ -49,7 +58,7 @@ export const CarImageScrapingManager = () => {
 
       if (error) throw error;
 
-      // Get image counts per car (only Supabase-hosted)
+      // Get image counts per car (only Supabase-hosted authentic images)
       const { data: imageCounts } = await supabase
         .from('car_images')
         .select('car_id')
@@ -72,6 +81,7 @@ export const CarImageScrapingManager = () => {
     total: carsWithStatus?.length || 0,
     withImages: carsWithStatus?.filter(c => c.image_count > 0).length || 0,
     withoutImages: carsWithStatus?.filter(c => c.image_count === 0).length || 0,
+    totalImages: carsWithStatus?.reduce((sum, c) => sum + c.image_count, 0) || 0,
   };
 
   // Scrape single car
@@ -96,36 +106,77 @@ export const CarImageScrapingManager = () => {
     }
   });
 
-  // Batch scrape
-  const startBatchScrape = async () => {
+  // Sequential batch scrape (one car at a time to avoid timeout)
+  const startSequentialScrape = useCallback(async () => {
+    const carsWithoutImages = carsWithStatus?.filter(c => c.image_count === 0) || [];
+    if (carsWithoutImages.length === 0) {
+      toast.info('All cars already have images!');
+      return;
+    }
+
     setIsBatchScraping(true);
-    setBatchProgress(0);
-    setBatchResults(null);
+    setShouldStop(false);
+    setBatchProgress({
+      current: 0,
+      total: Math.min(carsWithoutImages.length, 50), // Max 50 at a time
+      currentCar: '',
+      imagesAdded: 0,
+      failed: []
+    });
 
-    try {
-      const { data, error } = await supabase.functions.invoke('scrape-car-images', {
-        body: { mode: 'batch', limit: 10 }
-      });
+    const toProcess = carsWithoutImages.slice(0, 50);
 
-      if (error) throw error;
-
-      if (data.success) {
-        setBatchResults(data.results);
-        toast.success(`Batch complete: ${data.results.imagesAdded} images added for ${data.results.processed} cars`);
-      } else {
-        toast.error(data.error || 'Batch scrape failed');
+    for (let i = 0; i < toProcess.length; i++) {
+      if (shouldStop) {
+        toast.info('Batch scrape stopped by user');
+        break;
       }
 
-      queryClient.invalidateQueries({ queryKey: ['admin-car-image-status'] });
-    } catch (error) {
-      toast.error(`Batch failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setIsBatchScraping(false);
-      setBatchProgress(100);
+      const car = toProcess[i];
+      setBatchProgress(prev => prev ? {
+        ...prev,
+        current: i + 1,
+        currentCar: `${car.brand} ${car.name}`
+      } : null);
+
+      try {
+        const { data, error } = await supabase.functions.invoke('scrape-car-images', {
+          body: { carId: car.id, mode: 'single' }
+        });
+
+        if (error || !data?.success) {
+          setBatchProgress(prev => prev ? {
+            ...prev,
+            failed: [...prev.failed, `${car.brand} ${car.name}`]
+          } : null);
+        } else {
+          setBatchProgress(prev => prev ? {
+            ...prev,
+            imagesAdded: prev.imagesAdded + (data.imagesAdded || 0)
+          } : null);
+        }
+      } catch (e) {
+        setBatchProgress(prev => prev ? {
+          ...prev,
+          failed: [...prev.failed, `${car.brand} ${car.name}`]
+        } : null);
+      }
+
+      // Small delay between cars
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
-  };
+
+    setIsBatchScraping(false);
+    queryClient.invalidateQueries({ queryKey: ['admin-car-image-status'] });
+    toast.success(`Batch complete: ${batchProgress?.imagesAdded || 0} images added`);
+  }, [carsWithStatus, shouldStop, queryClient, batchProgress]);
+
+  const stopBatchScrape = useCallback(() => {
+    setShouldStop(true);
+  }, []);
 
   const carsWithoutImages = carsWithStatus?.filter(c => c.image_count === 0) || [];
+  const carsWithImages = carsWithStatus?.filter(c => c.image_count > 0) || [];
 
   return (
     <div className="space-y-6">
@@ -136,29 +187,33 @@ export const CarImageScrapingManager = () => {
             Image Scraping Manager
           </h2>
           <p className="text-muted-foreground">
-            Scrape real car images from CarDekho, CarWale & OEM sites via Firecrawl
+            Scrape real car images from CardekHo & CarWale via Firecrawl
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => refetch()}>
+          <Button variant="outline" onClick={() => refetch()} disabled={isBatchScraping}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
-          <Button 
-            onClick={startBatchScrape} 
-            disabled={isBatchScraping || stats.withoutImages === 0}
-          >
-            {isBatchScraping ? (
-              <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Scraping...</>
-            ) : (
-              <><Play className="h-4 w-4 mr-2" />Batch Scrape ({Math.min(10, stats.withoutImages)})</>
-            )}
-          </Button>
+          {isBatchScraping ? (
+            <Button variant="destructive" onClick={stopBatchScrape}>
+              <Pause className="h-4 w-4 mr-2" />
+              Stop
+            </Button>
+          ) : (
+            <Button 
+              onClick={startSequentialScrape} 
+              disabled={stats.withoutImages === 0}
+            >
+              <Play className="h-4 w-4 mr-2" />
+              Scrape All ({Math.min(50, stats.withoutImages)})
+            </Button>
+          )}
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="pt-4">
             <div className="text-2xl font-bold">{stats.total}</div>
@@ -174,31 +229,49 @@ export const CarImageScrapingManager = () => {
         <Card>
           <CardContent className="pt-4">
             <div className="text-2xl font-bold text-yellow-600">{stats.withoutImages}</div>
-            <p className="text-xs text-muted-foreground">Missing Images</p>
+            <p className="text-xs text-muted-foreground">Need Images</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <div className="text-2xl font-bold text-blue-600">{stats.totalImages}</div>
+            <p className="text-xs text-muted-foreground">Total Images</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Batch Progress */}
-      {isBatchScraping && (
-        <Card>
+      {isBatchScraping && batchProgress && (
+        <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950 dark:border-blue-800">
           <CardHeader>
-            <CardTitle className="text-lg">Batch Scraping in Progress...</CardTitle>
-            <CardDescription>Scraping images from CardekHo, CarWale, and OEM websites</CardDescription>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+              Scraping in Progress...
+            </CardTitle>
+            <CardDescription>
+              Processing {batchProgress.current} of {batchProgress.total} cars
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-4">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
-              <span className="text-sm text-muted-foreground">
-                Processing up to 10 cars. This may take a few minutes...
-              </span>
+          <CardContent className="space-y-4">
+            <Progress value={(batchProgress.current / batchProgress.total) * 100} />
+            <div className="flex justify-between text-sm">
+              <span>Current: <strong>{batchProgress.currentCar}</strong></span>
+              <span className="text-green-600">{batchProgress.imagesAdded} images added</span>
             </div>
+            {batchProgress.failed.length > 0 && (
+              <div className="p-2 bg-red-100 dark:bg-red-900 rounded text-sm">
+                <span className="text-red-600 dark:text-red-300">
+                  Failed: {batchProgress.failed.slice(-3).join(', ')}
+                  {batchProgress.failed.length > 3 && ` (+${batchProgress.failed.length - 3} more)`}
+                </span>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
 
-      {/* Batch Results */}
-      {batchResults && (
+      {/* Batch Results Summary (after completion) */}
+      {!isBatchScraping && batchProgress && batchProgress.current > 0 && (
         <Card className="border-green-200 bg-green-50 dark:bg-green-950 dark:border-green-800">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
@@ -209,24 +282,18 @@ export const CarImageScrapingManager = () => {
           <CardContent>
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
-                <div className="text-2xl font-bold">{batchResults.processed}</div>
+                <div className="text-2xl font-bold">{batchProgress.current}</div>
                 <p className="text-xs text-muted-foreground">Cars Processed</p>
               </div>
               <div>
-                <div className="text-2xl font-bold text-green-600">{batchResults.imagesAdded}</div>
+                <div className="text-2xl font-bold text-green-600">{batchProgress.imagesAdded}</div>
                 <p className="text-xs text-muted-foreground">Images Added</p>
               </div>
               <div>
-                <div className="text-2xl font-bold text-red-600">{batchResults.failed.length}</div>
+                <div className="text-2xl font-bold text-red-600">{batchProgress.failed.length}</div>
                 <p className="text-xs text-muted-foreground">Failed</p>
               </div>
             </div>
-            {batchResults.failed.length > 0 && (
-              <div className="mt-4 p-3 bg-red-100 dark:bg-red-900 rounded-lg">
-                <p className="text-sm font-medium text-red-800 dark:text-red-200">Failed cars:</p>
-                <p className="text-sm text-red-600 dark:text-red-300">{batchResults.failed.join(', ')}</p>
-              </div>
-            )}
           </CardContent>
         </Card>
       )}
@@ -236,10 +303,10 @@ export const CarImageScrapingManager = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-yellow-600" />
-            Cars Missing Images ({carsWithoutImages.length})
+            Cars Needing Images ({carsWithoutImages.length})
           </CardTitle>
           <CardDescription>
-            These cars need images scraped from external sources
+            Click "Scrape" to fetch real images from CardekHo/CarWale
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
@@ -276,7 +343,7 @@ export const CarImageScrapingManager = () => {
                           variant="outline"
                           size="sm"
                           onClick={() => scrapeSingle.mutate(car.id)}
-                          disabled={scrapeSingle.isPending}
+                          disabled={scrapeSingle.isPending || isBatchScraping}
                         >
                           {scrapeSingle.isPending ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -306,8 +373,11 @@ export const CarImageScrapingManager = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CheckCircle className="h-5 w-5 text-green-600" />
-            Cars With Images ({stats.withImages})
+            Cars With Images ({carsWithImages.length})
           </CardTitle>
+          <CardDescription>
+            Cars with authentic scraped images from CardekHo/CarWale
+          </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           <div className="max-h-[300px] overflow-y-auto">
@@ -321,7 +391,7 @@ export const CarImageScrapingManager = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {carsWithStatus?.filter(c => c.image_count > 0).slice(0, 30).map((car) => (
+                {carsWithImages.slice(0, 30).map((car) => (
                   <TableRow key={car.id}>
                     <TableCell className="font-medium">{car.name}</TableCell>
                     <TableCell>{car.brand}</TableCell>
