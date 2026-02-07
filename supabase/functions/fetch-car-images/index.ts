@@ -6,7 +6,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-const PERPLEXITY_API_URL = 'https://api.perplexity.ai/chat/completions';
 const FIRECRAWL_API_URL = 'https://api.firecrawl.dev/v1';
 
 interface FetchImageRequest {
@@ -26,113 +25,7 @@ interface ImageSearchResult {
   source: string;
 }
 
-// Use Perplexity to find real OEM images
-async function searchCarImagesPerplexity(
-  brand: string,
-  model: string,
-  colorName: string
-): Promise<ImageSearchResult[]> {
-  const PERPLEXITY_API_KEY = Deno.env.get('PERPLEXITY_API_KEY_1') || Deno.env.get('PERPLEXITY_API_KEY');
-  
-  if (!PERPLEXITY_API_KEY) return [];
-
-  const cleanBrand = brand.replace(/\s+/g, ' ').trim();
-  const cleanModel = model.replace(/\s+/g, ' ').trim();
-  const cleanColor = colorName.replace(/\s+/g, ' ').trim();
-
-  const searchQuery = `Find the direct image file URL (ending in .jpg, .jpeg, .png, or .webp) for the ${cleanBrand} ${cleanModel} car in ${cleanColor} color from India.
-
-Look on CardekHo.com or CarWale.com image galleries.
-I need the CDN image URL from imgd.aeplcdn.com or media.zigcdn.com domains.
-Return JSON format: {"images":[{"url":"https://imgd.aeplcdn.com/...","source":"cardekho"}]}`;
-
-  try {
-    const response = await fetch(PERPLEXITY_API_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${PERPLEXITY_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'sonar-pro',
-        messages: [
-          {
-            role: 'system',
-            content: `Find direct image URLs from Indian car websites.
-RULES:
-1. Only return URLs ending with .jpg, .jpeg, .png, .webp
-2. Prefer imgd.aeplcdn.com and media.zigcdn.com domains
-3. Return valid JSON only`
-          },
-          { role: 'user', content: searchQuery }
-        ],
-        temperature: 0.1,
-        max_tokens: 800,
-        return_images: true,
-      }),
-    });
-
-    if (!response.ok) return [];
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || '';
-    const citations = data.citations || [];
-    
-    console.log(`Perplexity: ${cleanModel} ${cleanColor} - ${citations.length} citations`);
-
-    const allImages: ImageSearchResult[] = [];
-
-    // From citations
-    for (const c of citations) {
-      if (typeof c === 'string' && c.match(/\.(jpg|jpeg|png|webp)(\?|$)/i)) {
-        allImages.push({ url: c, source: 'citation' });
-      }
-    }
-
-    // Parse JSON
-    try {
-      const jsonMatch = content.match(/\{[\s\S]*"images"[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        for (const img of (parsed.images || [])) {
-          if (img.url?.match(/\.(jpg|jpeg|png|webp)(\?|$)/i)) {
-            allImages.push({ url: img.url.trim(), source: 'json' });
-          }
-        }
-      }
-    } catch {}
-
-    // Regex extraction
-    const urlRegex = /(https?:\/\/[^\s"'<>\)]+\.(jpg|jpeg|png|webp)(\?[^\s"'<>\)]*)?)/gi;
-    const urls = content.match(urlRegex) || [];
-    for (const url of urls) {
-      const cleanUrl = url.replace(/["\s]/g, '').replace(/\)$/, '');
-      if (!allImages.some(img => img.url === cleanUrl)) {
-        allImages.push({ url: cleanUrl, source: 'regex' });
-      }
-    }
-
-    // Prioritize aeplcdn/zigcdn
-    const prioritized = allImages.sort((a, b) => {
-      const aScore = a.url.includes('aeplcdn') ? 2 : a.url.includes('zigcdn') ? 1 : 0;
-      const bScore = b.url.includes('aeplcdn') ? 2 : b.url.includes('zigcdn') ? 1 : 0;
-      return bScore - aScore;
-    });
-
-    // Dedupe
-    const seen = new Set<string>();
-    return prioritized.filter(img => {
-      if (seen.has(img.url)) return false;
-      seen.add(img.url);
-      return true;
-    }).slice(0, 5);
-  } catch (error) {
-    console.error('Perplexity error:', error);
-    return [];
-  }
-}
-
-// Scrape car images using Firecrawl
+// Scrape car images using Firecrawl ONLY - real images from automotive portals
 async function scrapeCarImagesFirecrawl(
   brand: string,
   model: string,
@@ -162,12 +55,13 @@ async function scrapeCarImagesFirecrawl(
     `https://www.cardekho.com/${brandSlug}/${modelSlug}/images`,
     `https://www.cardekho.com/${brandSlug}/${modelSlug}-images`,
     `https://www.carwale.com/${brandSlug}-cars/${modelSlug}/images`,
+    `https://www.zigwheels.com/${brandSlug}-cars/${modelSlug}/pictures`,
   ];
 
   const allImages: ImageSearchResult[] = [];
 
   for (const url of searchUrls) {
-    if (allImages.length >= 5) break;
+    if (allImages.length >= 8) break;
     
     try {
       console.log(`Firecrawl scraping: ${url}`);
@@ -200,9 +94,9 @@ async function scrapeCarImagesFirecrawl(
         if (typeof link === 'string') {
           // Check for direct image URLs
           if (link.match(/\.(jpg|jpeg|png|webp)(\?|$)/i)) {
-            if (link.includes('aeplcdn') || link.includes('zigcdn') || link.includes('carwale') || link.includes('cardekho')) {
-              // Skip thumbnails
-              if (link.includes('200x') || link.includes('100x') || link.includes('thumb')) continue;
+            if (link.includes('aeplcdn') || link.includes('zigcdn') || link.includes('carwale') || link.includes('cardekho') || link.includes('imgcdn')) {
+              // Skip thumbnails and small images
+              if (link.includes('200x') || link.includes('100x') || link.includes('thumb') || link.includes('50x') || link.includes('80x')) continue;
               allImages.push({ url: link, source: 'firecrawl-link' });
             }
           }
@@ -215,6 +109,7 @@ async function scrapeCarImagesFirecrawl(
         /(https?:\/\/media\.zigcdn\.com\/[^\s"'<>]+\.(jpg|jpeg|png|webp))/gi,
         /(https?:\/\/stimg\.cardekho\.com\/[^\s"'<>]+\.(jpg|jpeg|png|webp))/gi,
         /(https?:\/\/imgcdn\.carwale\.com\/[^\s"'<>]+\.(jpg|jpeg|png|webp))/gi,
+        /(https?:\/\/cdni\.autocarindia\.com\/[^\s"'<>]+\.(jpg|jpeg|png|webp))/gi,
       ];
       
       for (const pattern of cdnPatterns) {
@@ -222,7 +117,7 @@ async function scrapeCarImagesFirecrawl(
         for (const imgUrl of htmlMatches) {
           const cleanUrl = imgUrl.replace(/["\s]/g, '').replace(/\\u002F/g, '/');
           // Skip small thumbnails
-          if (cleanUrl.includes('200x') || cleanUrl.includes('100x') || cleanUrl.includes('thumb')) continue;
+          if (cleanUrl.includes('200x') || cleanUrl.includes('100x') || cleanUrl.includes('thumb') || cleanUrl.includes('50x') || cleanUrl.includes('80x')) continue;
           if (!allImages.some(img => img.url === cleanUrl)) {
             allImages.push({ url: cleanUrl, source: 'firecrawl-html' });
           }
@@ -236,17 +131,18 @@ async function scrapeCarImagesFirecrawl(
     }
     
     // Small delay between requests
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise(r => setTimeout(r, 1500));
   }
 
   // Prioritize high-resolution images
   const prioritized = allImages.sort((a, b) => {
     // Prefer larger image dimensions in URL
     const getScore = (url: string) => {
-      if (url.includes('1920') || url.includes('1600')) return 4;
-      if (url.includes('1280') || url.includes('1200')) return 3;
-      if (url.includes('900') || url.includes('800')) return 2;
-      if (url.includes('664') || url.includes('600')) return 1;
+      if (url.includes('1920') || url.includes('1600')) return 5;
+      if (url.includes('1280') || url.includes('1200')) return 4;
+      if (url.includes('900') || url.includes('800')) return 3;
+      if (url.includes('664') || url.includes('600')) return 2;
+      if (url.includes('400') || url.includes('500')) return 1;
       return 0;
     };
     return getScore(b.url) - getScore(a.url);
@@ -262,94 +158,62 @@ async function scrapeCarImagesFirecrawl(
     return true;
   });
 
-  console.log(`Firecrawl found ${deduped.length} unique images for ${brand} ${model}`);
+  console.log(`Firecrawl found ${deduped.length} unique real images for ${brand} ${model}`);
   return deduped.slice(0, 10);
 }
 
-// Download and upload image
+// Download and upload image to Supabase storage
 async function downloadAndUploadImage(
   imageUrl: string,
   storagePath: string,
   supabase: ReturnType<typeof createClient>
 ): Promise<string | null> {
   try {
-    // Handle base64 data URLs (from AI generation)
-    if (imageUrl.startsWith('data:image/')) {
-      const match = imageUrl.match(/^data:image\/(\w+);base64,(.+)$/);
-      if (!match) return null;
-      
-      const [, format, base64Data] = match;
-      const binaryData = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
-      
-      if (binaryData.length < 5000) {
-        console.log('AI image too small');
-        return null;
-      }
-
-      const finalPath = `${storagePath}.${format === 'jpeg' ? 'jpg' : format}`;
-      
-      const { error } = await supabase.storage
-        .from('car-images')
-        .upload(finalPath, binaryData, { 
-          contentType: `image/${format}`, 
-          upsert: true 
-        });
-
-      if (error) {
-        console.error('Upload error:', error.message);
-        return null;
-      }
-
-      const { data: urlData } = supabase.storage
-        .from('car-images')
-        .getPublicUrl(finalPath);
-
-      console.log('✓ AI image uploaded');
-      return urlData.publicUrl;
-    }
-
     // Skip unreliable domains and unsupported formats
     if (imageUrl.includes('imgk.timesauto.com') || imageUrl.includes('gaadiwaadi.com')) {
       return null;
     }
 
-    // Convert AVIF URLs to JPG equivalents if possible
-    let fetchUrl = imageUrl;
+    // Skip AVIF URLs
     if (imageUrl.includes('.avif')) {
-      // Try JPG version first
-      fetchUrl = imageUrl.replace('.avif', '.jpg').replace('/avif/', '/jpg/');
+      console.log('Skipping AVIF (unsupported format)');
+      return null;
     }
 
-    console.log(`Downloading: ${fetchUrl.substring(0, 60)}...`);
+    console.log(`Downloading: ${imageUrl.substring(0, 80)}...`);
     
-    const response = await fetch(fetchUrl, {
+    const response = await fetch(imageUrl, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'image/jpeg,image/png,image/webp,image/*;q=0.8',
         'Referer': 'https://www.cardekho.com/',
       }
     });
 
     if (!response.ok) {
-      console.log(`HTTP ${response.status}`);
+      console.log(`HTTP ${response.status} for ${imageUrl}`);
       return null;
     }
 
     const contentType = response.headers.get('content-type') || '';
     
-    // Skip AVIF as Supabase storage doesn't support it
+    // Skip AVIF as Supabase storage doesn't support it well
     if (contentType.includes('avif')) {
-      console.log('Skipping AVIF (unsupported)');
+      console.log('Skipping AVIF content-type');
       return null;
     }
     
-    if (!contentType.includes('image')) return null;
+    if (!contentType.includes('image')) {
+      console.log('Not an image:', contentType);
+      return null;
+    }
 
     const buffer = await response.arrayBuffer();
     const uint8 = new Uint8Array(buffer);
 
-    if (uint8.length < 5000) {
-      console.log('Too small:', uint8.length);
+    // Skip very small images (likely placeholders)
+    if (uint8.length < 10000) {
+      console.log('Image too small:', uint8.length, 'bytes');
       return null;
     }
 
@@ -378,7 +242,7 @@ async function downloadAndUploadImage(
       .from('car-images')
       .getPublicUrl(finalPath);
 
-    console.log('✓ Real image uploaded');
+    console.log('✓ Real image uploaded successfully');
     return urlData.publicUrl;
   } catch (error) {
     console.log('Download error:', error instanceof Error ? error.message : 'unknown');
@@ -386,7 +250,7 @@ async function downloadAndUploadImage(
   }
 }
 
-// Process single color - uses Perplexity + Firecrawl (real images only)
+// Process single color - uses Firecrawl ONLY (100% real images)
 async function processCarColor(
   supabase: ReturnType<typeof createClient>,
   carId: string,
@@ -396,35 +260,23 @@ async function processCarColor(
   colorName: string
 ): Promise<{ success: boolean; imageUrl?: string; source?: string; error?: string }> {
   try {
-    console.log(`\n>>> ${brand} ${model} - ${colorName}`);
+    console.log(`\n>>> Processing: ${brand} ${model} - ${colorName}`);
 
     await supabase
       .from('car_colors')
       .update({ image_sync_status: 'processing' })
       .eq('id', colorId);
 
-    // Step 1: Try Perplexity first for real images
-    let images = await searchCarImagesPerplexity(brand, model, colorName);
+    // Use Firecrawl ONLY to scrape real images
+    let images = await scrapeCarImagesFirecrawl(brand, model, colorName);
 
-    // Step 2: If no color-specific results, try generic with Perplexity
+    // If no color-specific results, try without color filter
     if (images.length === 0) {
-      console.log('Trying Perplexity generic search...');
-      images = await searchCarImagesPerplexity(brand, model, 'exterior');
-    }
-
-    // Step 3: If still no results, use Firecrawl to scrape car websites
-    if (images.length === 0) {
-      console.log('Trying Firecrawl scraping...');
-      images = await scrapeCarImagesFirecrawl(brand, model, colorName);
-    }
-
-    // Step 4: Last resort - Firecrawl without color filter
-    if (images.length === 0) {
-      console.log('Trying Firecrawl without color filter...');
+      console.log('Retrying Firecrawl without color filter...');
       images = await scrapeCarImagesFirecrawl(brand, model);
     }
 
-    // Try each real image URL
+    // Try each real image URL until one works
     for (const image of images) {
       const path = `${brand.toLowerCase().replace(/\s+/g, '-')}/${model.toLowerCase().replace(/\s+/g, '-')}/${colorName.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`;
       const uploadedUrl = await downloadAndUploadImage(image.url, path, supabase);
@@ -436,7 +288,7 @@ async function processCarColor(
             image_url: uploadedUrl,
             image_sync_status: 'synced',
             image_synced_at: new Date().toISOString(),
-            image_source: image.source.includes('firecrawl') ? 'firecrawl_scraped' : 'perplexity_search'
+            image_source: 'firecrawl_real'
           })
           .eq('id', colorId);
 
@@ -448,35 +300,36 @@ async function processCarColor(
           sort_order: 10
         });
 
-        console.log(`✓ SUCCESS (${image.source}): ${brand} ${model} ${colorName}`);
-        return { success: true, imageUrl: uploadedUrl, source: image.source };
+        console.log(`✓ SUCCESS: ${brand} ${model} ${colorName} - Real image from ${image.source}`);
+        return { success: true, imageUrl: uploadedUrl, source: 'firecrawl_real' };
       }
     }
 
     await supabase
       .from('car_colors')
-      .update({ image_sync_status: 'failed' })
+      .update({ image_sync_status: 'not_found' })
       .eq('id', colorId);
 
-    return { success: false, error: 'No valid images found from any source' };
+    console.log(`✗ No valid real images found for ${brand} ${model} ${colorName}`);
+    return { success: false, error: 'No valid real images found from Firecrawl scraping' };
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Processing error:', error);
     await supabase
       .from('car_colors')
       .update({ image_sync_status: 'error' })
       .eq('id', colorId);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown' };
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
 
 declare const EdgeRuntime: { waitUntil: (p: Promise<unknown>) => void };
 
-// Background processing
+// Background batch processing
 async function processBatchInBackground(
   supabase: ReturnType<typeof createClient>,
   limit: number
 ): Promise<void> {
-  console.log(`\n=== BATCH SYNC: ${limit} images (Perplexity + Firecrawl) ===\n`);
+  console.log(`\n=== FIRECRAWL ONLY BATCH SYNC: ${limit} images ===\n`);
   
   try {
     const { data: colors } = await supabase
@@ -485,7 +338,7 @@ async function processBatchInBackground(
       .or('image_url.is.null,image_sync_status.eq.pending,image_sync_status.eq.failed,image_sync_status.eq.not_found')
       .limit(limit);
 
-    console.log(`Processing ${colors?.length || 0} colors...\n`);
+    console.log(`Processing ${colors?.length || 0} colors with Firecrawl only...\n`);
 
     let success = 0, fail = 0;
 
@@ -503,13 +356,13 @@ async function processBatchInBackground(
       if (result.success) success++;
       else fail++;
 
-      // Rate limiting - increased for Firecrawl
-      await new Promise(r => setTimeout(r, 4000));
+      // Rate limiting for Firecrawl
+      await new Promise(r => setTimeout(r, 3000));
     }
 
     console.log(`\n=== DONE: ${success} success, ${fail} failed ===\n`);
   } catch (error) {
-    console.error('Background error:', error);
+    console.error('Background processing error:', error);
   }
 }
 
@@ -522,10 +375,10 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
-    const PERPLEXITY_API_KEY = Deno.env.get('PERPLEXITY_API_KEY_1') || Deno.env.get('PERPLEXITY_API_KEY');
-    if (!PERPLEXITY_API_KEY) {
+    const FIRECRAWL_API_KEY = Deno.env.get('FIRECRAWL_API_KEY');
+    if (!FIRECRAWL_API_KEY) {
       return new Response(
-        JSON.stringify({ success: false, error: 'Perplexity API key not configured' }),
+        JSON.stringify({ success: false, error: 'Firecrawl API key not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -541,14 +394,14 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: `Background sync started for ${limit} images (Perplexity + Firecrawl)`, 
+          message: `Background sync started for ${limit} images (Firecrawl only - 100% real images)`, 
           async: true 
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Single car
+    // Single car processing
     if (body.carId || body.carSlug) {
       const query = body.carId 
         ? supabase.from('cars').select('id, name, brand').eq('id', body.carId).single()
@@ -572,7 +425,7 @@ serve(async (req) => {
       for (const color of colors || []) {
         const result = await processCarColor(supabase, car.id, color.id, car.brand, car.name, color.name);
         results.push({ colorId: color.id, colorName: color.name, ...result });
-        await new Promise(r => setTimeout(r, 4000));
+        await new Promise(r => setTimeout(r, 3000));
       }
 
       return new Response(
@@ -581,7 +434,7 @@ serve(async (req) => {
       );
     }
 
-    // Sync batch
+    // Sync batch mode
     if (body.batchMode) {
       const limit = body.limit || 10;
       
@@ -596,7 +449,7 @@ serve(async (req) => {
         const car = color.cars as { id: string; name: string; brand: string };
         const result = await processCarColor(supabase, color.car_id, color.id, car.brand, car.name, color.name);
         results.push({ carId: color.car_id, colorId: color.id, colorName: color.name, ...result });
-        await new Promise(r => setTimeout(r, 4000));
+        await new Promise(r => setTimeout(r, 3000));
       }
 
       return new Response(
@@ -612,7 +465,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error:', error);
     return new Response(
-      JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Unknown' }),
+      JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Unknown error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
