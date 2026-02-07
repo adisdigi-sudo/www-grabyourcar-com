@@ -728,9 +728,15 @@ const Cars = () => {
                     <Card key={car.id} className="group overflow-hidden hover:shadow-lg transition-all duration-300">
                       <div className="relative aspect-[16/10] overflow-hidden bg-muted">
                         <img
-                          src={car.image}
+                          src={car.image || '/placeholder.svg'}
                           alt={car.name}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            if (target.src !== '/placeholder.svg') {
+                              target.src = '/placeholder.svg';
+                            }
+                          }}
                         />
                         <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
                           {car.isNew && (
@@ -851,9 +857,15 @@ const Cars = () => {
                       <div className="flex flex-col sm:flex-row">
                         <div className="relative sm:w-72 aspect-[16/10] sm:aspect-auto shrink-0 overflow-hidden bg-muted">
                           <img
-                            src={car.image}
+                            src={car.image || '/placeholder.svg'}
                             alt={car.name}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              if (target.src !== '/placeholder.svg') {
+                                target.src = '/placeholder.svg';
+                              }
+                            }}
                           />
                           <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
                             {car.isNew && (
