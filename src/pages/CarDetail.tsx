@@ -165,7 +165,7 @@ const CarDetail = () => {
       <CarStructuredData car={car} selectedVariant={selectedVariant} />
       <Helmet>
         <title>{car.name} Price, Specs, Features | Grabyourcar</title>
-        <meta name="description" content={`${car.brand} ${car.name} price starts at ${car.price}. Check out specifications, features, colors, mileage and more. ${car.variants.length} variants available.`} />
+        <meta name="description" content={`${car.brand} ${car.name} price starts at ${car.price}. Check out specifications, features, colors, mileage and more.${car.variants?.length ? ` ${car.variants.length} variants available.` : ''}`} />
         <meta property="og:title" content={`${car.brand} ${car.name} - Price, Specs & Features`} />
         <meta property="og:description" content={car.overview || car.tagline} />
         {/* Use AI-generated branded OG image with car photo */}
