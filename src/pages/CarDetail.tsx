@@ -364,7 +364,7 @@ const CarDetail = () => {
                 {/* WhatsApp Lead Engine - Quick Actions */}
                 <WhatsAppQuickActions
                   carName={`${car.brand} ${car.name}`}
-                  variant={car.variants[selectedVariant]?.name}
+                  variant={car.variants?.[selectedVariant]?.name}
                   triggers={['checkWaitingPeriod', 'bookTestDrive', 'getOffers', 'compareVariants']}
                   layout="horizontal"
                   size="sm"
@@ -515,59 +515,65 @@ const CarDetail = () => {
                 <VariantComparisonTable
                   carName={car.name}
                   carBrand={car.brand}
-                  variants={car.variants}
+                  variants={car.variants || []}
                   onVariantSelect={setSelectedVariant}
                   selectedVariantIndex={selectedVariant}
                 />
                 
-                {/* Selected Variant Details */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Price Breakup */}
-                  <div className="space-y-4">
-                    {(() => {
-                      const selectedVar = car.variants[selectedVariant];
-                      const priceMatch = selectedVar.price.match(/[\d.]+/);
-                      const priceInLakh = priceMatch ? parseFloat(priceMatch[0]) : 0;
-                      const exShowroomPrice = selectedVar.priceNumeric || priceInLakh * 100000;
-                      
-                      return (
-                        <PriceBreakup
-                          variantName={selectedVar.name}
-                          carName={car.name}
-                          exShowroomPrice={exShowroomPrice}
-                        />
-                      );
-                    })()}
+                {/* Selected Variant Details - Only show if variants exist */}
+                {car.variants && car.variants.length > 0 && car.variants[selectedVariant] ? (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Price Breakup */}
+                    <div className="space-y-4">
+                      {(() => {
+                        const selectedVar = car.variants[selectedVariant];
+                        const priceMatch = selectedVar?.price?.match(/[\d.]+/);
+                        const priceInLakh = priceMatch ? parseFloat(priceMatch[0]) : 0;
+                        const exShowroomPrice = selectedVar?.priceNumeric || priceInLakh * 100000 || car.priceNumeric || 0;
+                        
+                        return (
+                          <PriceBreakup
+                            variantName={selectedVar?.name || 'Base'}
+                            carName={car.name}
+                            exShowroomPrice={exShowroomPrice}
+                          />
+                        );
+                      })()}
+                    </div>
+                    
+                    {/* Features for selected variant */}
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <Check className="h-5 w-5 text-success" />
+                          Features - {car.name} {car.variants[selectedVariant]?.name || ''}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {(car.variants[selectedVariant]?.features || []).map((feature, fIndex) => (
+                            <div key={fIndex} className="flex items-center gap-2 py-1.5 px-2 bg-muted/30 rounded-lg">
+                              <Check className="h-4 w-4 text-success flex-shrink-0" />
+                              <span className="text-sm">{feature}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
                   </div>
-                  
-                  {/* Features for selected variant */}
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <Check className="h-5 w-5 text-success" />
-                        Features - {car.name} {car.variants[selectedVariant].name}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {car.variants[selectedVariant].features.map((feature, fIndex) => (
-                          <div key={fIndex} className="flex items-center gap-2 py-1.5 px-2 bg-muted/30 rounded-lg">
-                            <Check className="h-4 w-4 text-success flex-shrink-0" />
-                            <span className="text-sm">{feature}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
+                ) : (
+                  <Card className="p-8 text-center">
+                    <p className="text-muted-foreground">Variant details coming soon for this model.</p>
                   </Card>
-                </div>
+                )}
               </TabsContent>
 
               <TabsContent value="emi" className="space-y-6">
                 {(() => {
-                  const selectedVar = car.variants[selectedVariant];
-                  const priceMatch = selectedVar.price.match(/[\d.]+/);
+                  const selectedVar = car.variants?.[selectedVariant];
+                  const priceMatch = selectedVar?.price?.match(/[\d.]+/);
                   const priceInLakh = priceMatch ? parseFloat(priceMatch[0]) : 0;
-                  const exShowroomPrice = selectedVar.priceNumeric || priceInLakh * 100000;
+                  const exShowroomPrice = selectedVar?.priceNumeric || priceInLakh * 100000 || car.priceNumeric || 500000;
                   const breakup = calculateStatePriceBreakup(exShowroomPrice);
                   
                   // Prepare on-road price breakup for PDF
@@ -591,9 +597,9 @@ const CarDetail = () => {
                              <div>
                                <p className="text-sm text-muted-foreground font-medium">Calculate EMI for</p>
                                <h3 className="font-bold text-xl mt-1">{car.brand} {car.name}</h3>
-                               <p className="text-sm font-semibold text-primary mt-0.5">{selectedVar.name}</p>
+                               <p className="text-sm font-semibold text-primary mt-0.5">{selectedVar?.name || 'Base Variant'}</p>
                                <p className="text-xs text-muted-foreground mt-2">
-                                 {selectedVar.fuelType || car.fuelTypes[0]} • {selectedVar.transmission || car.transmission[0]}
+                                 {selectedVar?.fuelType || car.fuelTypes?.[0] || 'Petrol'} • {selectedVar?.transmission || car.transmission?.[0] || 'Manual'}
                                </p>
                              </div>
                              <div className="flex flex-col items-end gap-3">
@@ -617,13 +623,13 @@ const CarDetail = () => {
                       {/* EMI Calculator with all data for PDF */}
                       <EMICalculator 
                         carName={`${car.brand} ${car.name}`}
-                        variantName={selectedVar.name}
+                        variantName={selectedVar?.name || 'Base Variant'}
                         onRoadPrice={onRoadPriceData}
-                        selectedColor={car.colors[selectedColor]?.name}
+                        selectedColor={car.colors?.[selectedColor]?.name || displayColors?.[selectedColor]?.name}
                         selectedCity="Delhi NCR"
                         onGetQuote={(loanDetails) => {
                           toast.success("Loan quote request submitted!", {
-                            description: `${loanDetails} for ${car.name} ${selectedVar.name}`
+                            description: `${loanDetails} for ${car.name} ${selectedVar?.name || ''}`
                           });
                         }}
                       />
@@ -759,8 +765,8 @@ const CarDetail = () => {
             <div className="max-w-2xl mx-auto">
               <WhatsAppConversionCard
                 carName={`${car.brand} ${car.name}`}
-                variant={car.variants[selectedVariant]?.name}
-                exShowroomPrice={car.variants[selectedVariant]?.priceNumeric}
+                variant={car.variants?.[selectedVariant]?.name}
+                exShowroomPrice={car.variants?.[selectedVariant]?.priceNumeric || car.priceNumeric}
               />
             </div>
           </div>
