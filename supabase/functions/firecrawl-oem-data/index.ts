@@ -59,6 +59,31 @@ const OEM_SITES: Record<string, { baseUrl: string; modelsPath: string }> = {
   'Audi': {
     baseUrl: 'https://www.audi.in/in/web/en',
     modelsPath: '/models'
+  },
+  // NEW BRANDS - Upcoming in India
+  'Tesla': {
+    baseUrl: 'https://www.tesla.com',
+    modelsPath: '/en_in'
+  },
+  'VinFast': {
+    baseUrl: 'https://vinfastauto.com',
+    modelsPath: '/in_en/vehicles'
+  },
+  'BYD': {
+    baseUrl: 'https://www.byd.com/in',
+    modelsPath: '/car'
+  },
+  'Rivian': {
+    baseUrl: 'https://rivian.com',
+    modelsPath: '/vehicles'
+  },
+  'Lucid': {
+    baseUrl: 'https://lucidmotors.com',
+    modelsPath: '/air'
+  },
+  'Polestar': {
+    baseUrl: 'https://www.polestar.com/in',
+    modelsPath: '/cars'
   }
 };
 
