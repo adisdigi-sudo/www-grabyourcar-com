@@ -24,15 +24,30 @@ export const CarImage = ({
   const [hasError, setHasError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // STRICT: Only Supabase-hosted images are authentic (scraped from OEM/CarDekho)
+  // Allow Supabase-hosted images AND official OEM domain images
   const isAuthenticImage = useCallback((url: string | undefined | null): boolean => {
     if (!url) return false;
     if (url === '/placeholder.svg') return false;
-    // ONLY allow Supabase storage URLs - these are verified scraped images
+    // Allow Supabase storage URLs
     if (url.includes('supabase.co')) return true;
     // Allow local asset imports (for banners, logos, etc.)
     if (url.startsWith('/src/assets') || url.startsWith('data:') || url.startsWith('/assets')) return true;
-    return false;
+    // Allow official OEM website images
+    const officialOEMDomains = [
+      'marutisuzuki.com',
+      'nexaexperience.com',
+      'hyundai.com',
+      'tatamotors.com',
+      'mahindra.com',
+      'kia.com',
+      'toyota.com',
+      'honda.com',
+      'mg.co.in',
+      'skoda-auto.co.in',
+      'volkswagen.co.in',
+      'renault.co.in'
+    ];
+    return officialOEMDomains.some(domain => url.includes(domain));
   }, []);
 
   const handleError = useCallback(() => {
