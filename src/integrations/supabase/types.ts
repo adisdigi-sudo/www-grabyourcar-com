@@ -565,6 +565,57 @@ export type Database = {
         }
         Relationships: []
       }
+      banners: {
+        Row: {
+          created_at: string
+          end_date: string | null
+          id: string
+          image_url: string
+          is_active: boolean | null
+          link_text: string | null
+          link_url: string | null
+          mobile_image_url: string | null
+          position: string | null
+          sort_order: number | null
+          start_date: string | null
+          subtitle: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          image_url: string
+          is_active?: boolean | null
+          link_text?: string | null
+          link_url?: string | null
+          mobile_image_url?: string | null
+          position?: string | null
+          sort_order?: number | null
+          start_date?: string | null
+          subtitle?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          image_url?: string
+          is_active?: boolean | null
+          link_text?: string | null
+          link_url?: string | null
+          mobile_image_url?: string | null
+          position?: string | null
+          sort_order?: number | null
+          start_date?: string | null
+          subtitle?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       broadcast_recipients: {
         Row: {
           broadcast_id: string | null
@@ -2272,6 +2323,51 @@ export type Database = {
         }
         Relationships: []
       }
+      homepage_sections: {
+        Row: {
+          background_color: string | null
+          background_image: string | null
+          content: Json | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          section_type: string
+          settings: Json | null
+          sort_order: number | null
+          subtitle: string | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          background_color?: string | null
+          background_image?: string | null
+          content?: Json | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          section_type: string
+          settings?: Json | null
+          sort_order?: number | null
+          subtitle?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          background_color?: string | null
+          background_image?: string | null
+          content?: Json | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          section_type?: string
+          settings?: Json | null
+          sort_order?: number | null
+          subtitle?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       hsrp_bookings: {
         Row: {
           address: string | null
@@ -3035,6 +3131,92 @@ export type Database = {
         }
         Relationships: []
       }
+      navigation_menu: {
+        Row: {
+          created_at: string
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          is_external: boolean | null
+          menu_location: string
+          parent_id: string | null
+          sort_order: number | null
+          title: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_external?: boolean | null
+          menu_location: string
+          parent_id?: string | null
+          sort_order?: number | null
+          title: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_external?: boolean | null
+          menu_location?: string
+          parent_id?: string | null
+          sort_order?: number | null
+          title?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "navigation_menu_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "navigation_menu"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pages: {
+        Row: {
+          content: Json | null
+          created_at: string
+          id: string
+          is_published: boolean | null
+          meta_description: string | null
+          meta_title: string | null
+          slug: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content?: Json | null
+          created_at?: string
+          id?: string
+          is_published?: boolean | null
+          meta_description?: string | null
+          meta_title?: string | null
+          slug: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: Json | null
+          created_at?: string
+          id?: string
+          is_published?: boolean | null
+          meta_description?: string | null
+          meta_title?: string | null
+          slug?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       rental_bookings: {
         Row: {
           created_at: string | null
@@ -3323,29 +3505,95 @@ export type Database = {
         }
         Relationships: []
       }
-      site_settings: {
+      service_pricing: {
         Row: {
+          base_price: number
+          category: string
           created_at: string
           description: string | null
+          discount_amount: number | null
+          features: Json | null
+          final_price: number | null
+          gst_rate: number | null
           id: string
-          setting_key: string
-          setting_value: Json
+          is_active: boolean | null
+          name: string
+          service_type: string
+          sort_order: number | null
           updated_at: string
         }
         Insert: {
+          base_price: number
+          category: string
           created_at?: string
           description?: string | null
+          discount_amount?: number | null
+          features?: Json | null
+          final_price?: number | null
+          gst_rate?: number | null
           id?: string
-          setting_key: string
-          setting_value: Json
+          is_active?: boolean | null
+          name: string
+          service_type: string
+          sort_order?: number | null
           updated_at?: string
         }
         Update: {
+          base_price?: number
+          category?: string
           created_at?: string
           description?: string | null
+          discount_amount?: number | null
+          features?: Json | null
+          final_price?: number | null
+          gst_rate?: number | null
           id?: string
+          is_active?: boolean | null
+          name?: string
+          service_type?: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      site_settings: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          field_type: string | null
+          id: string
+          is_public: boolean | null
+          label: string | null
+          setting_key: string
+          setting_value: Json
+          sort_order: number | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          field_type?: string | null
+          id?: string
+          is_public?: boolean | null
+          label?: string | null
+          setting_key: string
+          setting_value: Json
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          field_type?: string | null
+          id?: string
+          is_public?: boolean | null
+          label?: string | null
           setting_key?: string
           setting_value?: Json
+          sort_order?: number | null
           updated_at?: string
         }
         Relationships: []
