@@ -175,7 +175,7 @@ const CarImages = () => {
                     <div className="flex gap-2 w-full">
                       <WhatsAppCardButton carName={car.name} className="flex-1 h-8" />
                       <a href="tel:+919577200023" className="flex-1">
-                        <Button variant="outline" size="sm" className="w-full gap-1 text-xs h-8">
+                        <Button variant="call" size="sm" className="w-full gap-1 text-xs h-8">
                           <Phone className="h-3.5 w-3.5" />
                           Call
                         </Button>

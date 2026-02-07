@@ -833,7 +833,7 @@ const Cars = () => {
                           <div className="flex gap-2 w-full">
                             <WhatsAppCardButton carName={car.name} className="flex-1 h-9" />
                             <a href="tel:+919577200023" className="flex-1">
-                              <Button variant="outline" size="sm" className="w-full gap-1.5 h-9">
+                              <Button variant="call" size="sm" className="w-full gap-1.5 h-9">
                                 <Phone className="h-4 w-4" />
                                 Call
                               </Button>
@@ -904,7 +904,7 @@ const Cars = () => {
                             </Link>
                             <WhatsAppCardButton carName={car.name} className="flex-1 min-w-[120px] h-9" />
                             <a href="tel:+919577200023" className="flex-1 min-w-[100px]">
-                              <Button variant="outline" size="sm" className="w-full gap-1.5 h-9">
+                              <Button variant="call" size="sm" className="w-full gap-1.5 h-9">
                                 <Phone className="h-4 w-4" />
                                 Call
                               </Button>
