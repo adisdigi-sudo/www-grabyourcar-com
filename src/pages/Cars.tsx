@@ -72,12 +72,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { CarImage } from "@/components/CarImage";
 
-// Helper to check if image URL is valid (Supabase-hosted or local asset)
+// Helper to check if image URL is valid
 const isValidImage = (url: string | undefined | null): boolean => {
   if (!url || url === '/placeholder.svg') return false;
   if (url.startsWith('/')) return true; // Local assets
   if (url.includes('supabase.co')) return true; // Supabase storage
-  return false; // External CDNs are blocked
+  if (url.startsWith('https://')) return true; // Allow HTTPS URLs
+  return false;
 };
 
 const Cars = () => {

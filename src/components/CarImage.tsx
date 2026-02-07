@@ -26,12 +26,19 @@ export const CarImage = ({
   const [hasError, setHasError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check if URL is likely to work (Supabase-hosted or local)
+  // Check if URL is likely to work
   const isLikelyWorking = useCallback((url: string | undefined | null) => {
     if (!url) return false;
     if (url.startsWith('/')) return true; // Local assets
     if (url.includes('supabase.co')) return true; // Supabase storage
-    return false; // External CDNs often blocked
+    // Allow common car image CDNs - they mostly work
+    if (url.includes('aeplcdn.com')) return true; // CarDekho/CarWale CDN
+    if (url.includes('imgd.aeplcdn.com')) return true;
+    if (url.includes('stimg.cardekho.com')) return true;
+    if (url.includes('imgcdn.zigwheels.com')) return true;
+    // Allow any HTTPS URL - let it try to load
+    if (url.startsWith('https://')) return true;
+    return false;
   }, []);
 
   const handleError = useCallback(() => {
