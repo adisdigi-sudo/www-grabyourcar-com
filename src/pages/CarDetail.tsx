@@ -47,13 +47,14 @@ import {
 } from "lucide-react";
 import { useCompare } from "@/hooks/useCompare";
 import { useCarColors, useCarGalleryImages } from "@/hooks/useCarColors";
+import { useCarBySlug } from "@/hooks/useCars";
 import EMICalculator from "@/components/EMICalculator";
 import { AICarRecommendations } from "@/components/AICarRecommendations";
 import { CrossSellWidget } from "@/components/CrossSellWidget";
-import { getCarBySlug } from "@/data/carsData";
 import { calculateStatePriceBreakup } from "@/data/statePricing";
 import { toast } from "sonner";
 import { WhatsAppQuickActions, WhatsAppConversionCard } from "@/components/WhatsAppLeadEngine";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const CompareButton = ({ carId }: { carId: number }) => {
   const { addToCompare, removeFromCompare, isInCompare, canAddMore } = useCompare();
@@ -82,7 +83,9 @@ const CompareButton = ({ carId }: { carId: number }) => {
 
 const CarDetail = () => {
   const { slug } = useParams<{ slug: string }>();
-  const car = getCarBySlug(slug || "");
+  
+  // Fetch car from database
+  const { data: car, isLoading, error } = useCarBySlug(slug);
   
   // Fetch colors from database
   const { data: dbColors } = useCarColors(slug);
@@ -109,15 +112,36 @@ const CarDetail = () => {
     return car?.gallery || [];
   }, [dbGalleryImages, car?.gallery]);
 
-  if (!car) {
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-12">
+          <div className="grid md:grid-cols-2 gap-8">
+            <Skeleton className="h-[400px] w-full rounded-xl" />
+            <div className="space-y-4">
+              <Skeleton className="h-8 w-3/4" />
+              <Skeleton className="h-6 w-1/2" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-32 w-full" />
+            </div>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!car || error) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
         <div className="container mx-auto px-4 py-24 text-center">
           <h1 className="text-3xl font-bold mb-4">Car Not Found</h1>
           <p className="text-muted-foreground mb-8">The car you're looking for doesn't exist.</p>
-          <Link to="/">
-            <Button>Back to Home</Button>
+          <Link to="/cars">
+            <Button>Browse All Cars</Button>
           </Link>
         </div>
         <Footer />
