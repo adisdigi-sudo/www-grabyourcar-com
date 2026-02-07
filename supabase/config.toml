@@ -21,10 +21,16 @@ verify_jwt = false
 [functions.enhance-car-data]
 verify_jwt = false
 
+[functions.enrich-car-data]
+verify_jwt = false
+
 [functions.fetch-brand-data]
 verify_jwt = false
 
 [functions.fetch-car-images]
+verify_jwt = false
+
+[functions.firecrawl-oem-data]
 verify_jwt = false
 
 [functions.generate-blog]
@@ -61,6 +67,12 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.scheduled-sync]
+verify_jwt = false
+
+[functions.scrape-car-pricing]
+verify_jwt = false
+
+[functions.scrape-new-brands]
 verify_jwt = false
 
 [functions.send-alert-email]
