@@ -54,6 +54,12 @@ import DriverBookingsManagement from "@/components/admin/DriverBookingsManagemen
 import APIPartnersManagement from "@/components/admin/APIPartnersManagement";
 import BrandsManagement from "@/components/admin/BrandsManagement";
 import QuickTextImporter from "@/components/admin/QuickTextImporter";
+import SiteSettingsManager from "@/components/admin/SiteSettingsManager";
+import BannersManager from "@/components/admin/BannersManager";
+import TestimonialsManager from "@/components/admin/TestimonialsManager";
+import FAQManager from "@/components/admin/FAQManager";
+import ServicePricingManager from "@/components/admin/ServicePricingManager";
+import PartnersManager from "@/components/admin/PartnersManager";
 
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
@@ -157,11 +163,15 @@ const AdminLayout = () => {
       case "website-content":
         return <WebsiteContentManagement />;
       case "website-banners":
-        return <ServiceCategoriesManager />;
+        return <BannersManager />;
       case "website-offers":
         return <OffersManagement />;
       case "website-branding":
         return <BrandingSettings />;
+      case "website-testimonials":
+        return <TestimonialsManager />;
+      case "website-faqs":
+        return <FAQManager />;
       case "website-seo":
         return <SEOBuilder />;
       case "socialproof-reviews":
@@ -226,7 +236,11 @@ const AdminLayout = () => {
       case "roles":
         return <TeamUserManagement />;
       case "settings":
-        return <WebsiteSettings />;
+        return <SiteSettingsManager />;
+      case "services-pricing":
+        return <ServicePricingManager />;
+      case "services-partners":
+        return <PartnersManager />;
       default:
         return <AdminDashboard />;
     }
