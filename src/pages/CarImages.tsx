@@ -3,13 +3,13 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, Camera, Grid3X3, LayoutGrid, ChevronRight } from "lucide-react";
+import { Search, Camera, Grid3X3, LayoutGrid, Eye, Phone } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useCars } from "@/hooks/useCars";
 import { CarPagination } from "@/components/CarPagination";
-
+import { WhatsAppCardButton } from "@/components/WhatsAppCTA";
 const ITEMS_PER_PAGE = 12;
 
 const CarImages = () => {
@@ -140,8 +140,8 @@ const CarImages = () => {
           <>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
               {paginatedCars.map((car) => (
-                <Link key={car.id} to={`/cars/${car.slug}`}>
-                  <Card className="overflow-hidden group hover:shadow-lg transition-all duration-300 border-border/50">
+                <Card key={car.id} className="overflow-hidden group hover:shadow-lg transition-all duration-300 border-border/50 flex flex-col">
+                  <Link to={`/cars/${car.slug}`}>
                     <div className="aspect-[4/3] relative overflow-hidden bg-muted">
                       <img
                         src={car.image || "/placeholder.svg"}
@@ -156,18 +156,33 @@ const CarImages = () => {
                         </Badge>
                       </div>
                     </div>
-                    <CardContent className="p-4">
-                      <p className="text-xs text-muted-foreground mb-1">{car.brand}</p>
-                      <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1">
-                        {car.name}
-                      </h3>
-                      <div className="flex items-center justify-between mt-2">
-                        <span className="text-sm text-primary font-medium">{car.price}</span>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
+                  </Link>
+                  <CardContent className="p-3 flex-grow">
+                    <p className="text-xs text-muted-foreground mb-1">{car.brand}</p>
+                    <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1 text-sm">
+                      {car.name}
+                    </h3>
+                    <span className="text-sm text-primary font-medium">{car.price}</span>
+                  </CardContent>
+                  {/* Action Buttons - 3 CTAs */}
+                  <CardFooter className="p-3 pt-0 flex flex-col gap-2">
+                    <Link to={`/cars/${car.slug}`} className="w-full">
+                      <Button variant="default" size="sm" className="w-full gap-1.5 text-xs h-8">
+                        <Eye className="h-3.5 w-3.5" />
+                        View Details
+                      </Button>
+                    </Link>
+                    <div className="flex gap-2 w-full">
+                      <WhatsAppCardButton carName={car.name} className="flex-1 h-8" />
+                      <a href="tel:+919577200023" className="flex-1">
+                        <Button variant="outline" size="sm" className="w-full gap-1 text-xs h-8">
+                          <Phone className="h-3.5 w-3.5" />
+                          Call
+                        </Button>
+                      </a>
+                    </div>
+                  </CardFooter>
+                </Card>
               ))}
             </div>
 
