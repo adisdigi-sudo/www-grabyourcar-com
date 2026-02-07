@@ -110,3 +110,9 @@ verify_jwt = false
 
 [functions.whatsapp-webhook]
 verify_jwt = false
+
+[functions.enrich-new-brands]
+verify_jwt = false
+
+[functions.migrate-images-to-storage]
+verify_jwt = false
