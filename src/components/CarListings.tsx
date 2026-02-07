@@ -56,17 +56,40 @@ const useFeaturedCars = () => {
       if (error) throw error;
       if (!cars?.length) return [];
       
-      // Get primary images for all cars
-      const { data: images } = await supabase
+      // Get primary images for all cars (fallback to any image if no primary)
+      const { data: primaryImages } = await supabase
         .from('car_images')
         .select('car_id, url')
         .in('car_id', cars.map(c => c.id))
         .eq('is_primary', true);
       
+      // Get first images for cars without primary
+      const carsWithoutPrimary = cars
+        .filter(c => !primaryImages?.some(img => img.car_id === c.id))
+        .map(c => c.id);
+      
+      let fallbackImages: { car_id: string; url: string }[] = [];
+      if (carsWithoutPrimary.length > 0) {
+        const { data: fallback } = await supabase
+          .from('car_images')
+          .select('car_id, url')
+          .in('car_id', carsWithoutPrimary)
+          .order('sort_order', { ascending: true });
+        
+        // Dedupe - get only first image per car
+        const seen = new Set<string>();
+        fallbackImages = (fallback || []).filter(img => {
+          if (seen.has(img.car_id)) return false;
+          seen.add(img.car_id);
+          return true;
+        });
+      }
+      
       // Create a map of car_id to image_url
       const imageMap = new Map<string, string>();
-      images?.forEach(img => {
-        imageMap.set(img.car_id, img.url);
+      primaryImages?.forEach(img => imageMap.set(img.car_id, img.url));
+      fallbackImages.forEach(img => {
+        if (!imageMap.has(img.car_id)) imageMap.set(img.car_id, img.url);
       });
       
       // Merge car data with images

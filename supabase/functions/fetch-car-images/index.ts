@@ -144,19 +144,31 @@ async function scrapeCarImagesFirecrawl(
     return [];
   }
 
-  const cleanBrand = brand.toLowerCase().replace(/\s+/g, '-');
-  const cleanModel = model.toLowerCase().replace(/\s+/g, '-');
+  // Clean brand and model for URL generation
+  const brandSlug = brand.toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace('maruti suzuki', 'maruti')
+    .replace('mercedes-benz', 'mercedes');
   
-  // Build search URLs for Indian car websites
+  const modelSlug = model.toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(brand.toLowerCase(), '')
+    .replace('--', '-')
+    .replace(/^-|-$/g, '')
+    .trim();
+  
+  // Build search URLs for Indian car websites with correct URL formats
   const searchUrls = [
-    `https://www.cardekho.com/${cleanBrand}/${cleanModel}/images`,
-    `https://www.carwale.com/${cleanBrand}-cars/${cleanModel}/images`,
-    `https://www.zigwheels.com/${cleanBrand}-cars/${cleanModel}/gallery`,
+    `https://www.cardekho.com/${brandSlug}/${modelSlug}/images`,
+    `https://www.cardekho.com/${brandSlug}/${modelSlug}-images`,
+    `https://www.carwale.com/${brandSlug}-cars/${modelSlug}/images`,
   ];
 
   const allImages: ImageSearchResult[] = [];
 
   for (const url of searchUrls) {
+    if (allImages.length >= 5) break;
+    
     try {
       console.log(`Firecrawl scraping: ${url}`);
       
@@ -170,7 +182,7 @@ async function scrapeCarImagesFirecrawl(
           url,
           formats: ['links', 'html'],
           onlyMainContent: false,
-          waitFor: 2000,
+          waitFor: 3000,
         }),
       });
 
@@ -183,53 +195,75 @@ async function scrapeCarImagesFirecrawl(
       const links = data.data?.links || data.links || [];
       const html = data.data?.html || data.html || '';
 
-      // Extract image URLs from links
+      // Extract image URLs from links - look for car gallery image patterns
       for (const link of links) {
-        if (typeof link === 'string' && link.match(/\.(jpg|jpeg|png|webp)(\?|$)/i)) {
-          if (link.includes('aeplcdn') || link.includes('zigcdn') || link.includes('carwale')) {
-            // Filter by color if specified
-            if (colorName) {
-              const colorLower = colorName.toLowerCase();
-              if (link.toLowerCase().includes(colorLower) || !colorName) {
-                allImages.push({ url: link, source: 'firecrawl-link' });
-              }
-            } else {
+        if (typeof link === 'string') {
+          // Check for direct image URLs
+          if (link.match(/\.(jpg|jpeg|png|webp)(\?|$)/i)) {
+            if (link.includes('aeplcdn') || link.includes('zigcdn') || link.includes('carwale') || link.includes('cardekho')) {
+              // Skip thumbnails
+              if (link.includes('200x') || link.includes('100x') || link.includes('thumb')) continue;
               allImages.push({ url: link, source: 'firecrawl-link' });
             }
           }
         }
       }
 
-      // Also extract from HTML using regex
-      const imgRegex = /(https?:\/\/[^\s"'<>]+(?:imgd\.aeplcdn\.com|media\.zigcdn\.com|img\.carwale\.com)[^\s"'<>]+\.(jpg|jpeg|png|webp))/gi;
-      const htmlMatches = html.match(imgRegex) || [];
-      for (const imgUrl of htmlMatches) {
-        const cleanUrl = imgUrl.replace(/["\s]/g, '');
-        if (!allImages.some(img => img.url === cleanUrl)) {
-          allImages.push({ url: cleanUrl, source: 'firecrawl-html' });
+      // Extract from HTML using multiple patterns for CDN images
+      const cdnPatterns = [
+        /(https?:\/\/imgd\.aeplcdn\.com\/[^\s"'<>]+\.(jpg|jpeg|png|webp))/gi,
+        /(https?:\/\/media\.zigcdn\.com\/[^\s"'<>]+\.(jpg|jpeg|png|webp))/gi,
+        /(https?:\/\/stimg\.cardekho\.com\/[^\s"'<>]+\.(jpg|jpeg|png|webp))/gi,
+        /(https?:\/\/imgcdn\.carwale\.com\/[^\s"'<>]+\.(jpg|jpeg|png|webp))/gi,
+      ];
+      
+      for (const pattern of cdnPatterns) {
+        const htmlMatches = html.match(pattern) || [];
+        for (const imgUrl of htmlMatches) {
+          const cleanUrl = imgUrl.replace(/["\s]/g, '').replace(/\\u002F/g, '/');
+          // Skip small thumbnails
+          if (cleanUrl.includes('200x') || cleanUrl.includes('100x') || cleanUrl.includes('thumb')) continue;
+          if (!allImages.some(img => img.url === cleanUrl)) {
+            allImages.push({ url: cleanUrl, source: 'firecrawl-html' });
+          }
         }
       }
 
-      // If we found images, break early
-      if (allImages.length >= 5) break;
+      console.log(`Found ${allImages.length} images from ${url}`);
       
     } catch (error) {
       console.error(`Firecrawl error for ${url}:`, error);
     }
+    
+    // Small delay between requests
+    await new Promise(r => setTimeout(r, 1000));
   }
 
   // Prioritize high-resolution images
   const prioritized = allImages.sort((a, b) => {
     // Prefer larger image dimensions in URL
-    const aHasSize = a.url.includes('1200') || a.url.includes('900') || a.url.includes('800');
-    const bHasSize = b.url.includes('1200') || b.url.includes('900') || b.url.includes('800');
-    if (aHasSize && !bHasSize) return -1;
-    if (!aHasSize && bHasSize) return 1;
-    return 0;
+    const getScore = (url: string) => {
+      if (url.includes('1920') || url.includes('1600')) return 4;
+      if (url.includes('1280') || url.includes('1200')) return 3;
+      if (url.includes('900') || url.includes('800')) return 2;
+      if (url.includes('664') || url.includes('600')) return 1;
+      return 0;
+    };
+    return getScore(b.url) - getScore(a.url);
   });
 
-  console.log(`Firecrawl found ${prioritized.length} images for ${brand} ${model}`);
-  return prioritized.slice(0, 10);
+  // Dedupe
+  const seen = new Set<string>();
+  const deduped = prioritized.filter(img => {
+    // Normalize URL for deduplication
+    const normalized = img.url.split('?')[0];
+    if (seen.has(normalized)) return false;
+    seen.add(normalized);
+    return true;
+  });
+
+  console.log(`Firecrawl found ${deduped.length} unique images for ${brand} ${model}`);
+  return deduped.slice(0, 10);
 }
 
 // Download and upload image
@@ -274,17 +308,24 @@ async function downloadAndUploadImage(
       return urlData.publicUrl;
     }
 
-    // Skip unreliable domains
+    // Skip unreliable domains and unsupported formats
     if (imageUrl.includes('imgk.timesauto.com') || imageUrl.includes('gaadiwaadi.com')) {
       return null;
     }
 
-    console.log(`Downloading: ${imageUrl.substring(0, 60)}...`);
+    // Convert AVIF URLs to JPG equivalents if possible
+    let fetchUrl = imageUrl;
+    if (imageUrl.includes('.avif')) {
+      // Try JPG version first
+      fetchUrl = imageUrl.replace('.avif', '.jpg').replace('/avif/', '/jpg/');
+    }
+
+    console.log(`Downloading: ${fetchUrl.substring(0, 60)}...`);
     
-    const response = await fetch(imageUrl, {
+    const response = await fetch(fetchUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+        'Accept': 'image/jpeg,image/png,image/webp,image/*;q=0.8',
         'Referer': 'https://www.cardekho.com/',
       }
     });
@@ -295,6 +336,13 @@ async function downloadAndUploadImage(
     }
 
     const contentType = response.headers.get('content-type') || '';
+    
+    // Skip AVIF as Supabase storage doesn't support it
+    if (contentType.includes('avif')) {
+      console.log('Skipping AVIF (unsupported)');
+      return null;
+    }
+    
     if (!contentType.includes('image')) return null;
 
     const buffer = await response.arrayBuffer();
@@ -306,14 +354,20 @@ async function downloadAndUploadImage(
     }
 
     let ext = 'jpg';
-    if (contentType.includes('png')) ext = 'png';
-    else if (contentType.includes('webp')) ext = 'webp';
+    let uploadContentType = 'image/jpeg';
+    if (contentType.includes('png')) {
+      ext = 'png';
+      uploadContentType = 'image/png';
+    } else if (contentType.includes('webp')) {
+      ext = 'webp';
+      uploadContentType = 'image/webp';
+    }
 
     const finalPath = `${storagePath}.${ext}`;
 
     const { error } = await supabase.storage
       .from('car-images')
-      .upload(finalPath, uint8, { contentType, upsert: true });
+      .upload(finalPath, uint8, { contentType: uploadContentType, upsert: true });
 
     if (error) {
       console.error('Upload error:', error.message);
