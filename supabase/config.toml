@@ -75,6 +75,9 @@ verify_jwt = false
 [functions.scrape-new-brands]
 verify_jwt = false
 
+[functions.scrape-car-images]
+verify_jwt = false
+
 [functions.send-alert-email]
 verify_jwt = false
 
