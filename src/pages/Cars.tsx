@@ -52,7 +52,11 @@ import {
   GitCompare,
   Check,
   FileText,
+  Phone,
+  Eye,
+  MessageCircle,
 } from "lucide-react";
+import { WhatsAppCardButton } from "@/components/WhatsAppCTA";
 import { 
   useVehicleAttributes, 
   formatFuelTypesForFilter, 
@@ -816,18 +820,25 @@ const Cars = () => {
                             {car.transmission.join(" / ")}
                           </Badge>
                         </div>
-                        <div className="flex gap-2">
-                          <Link to={`/car/${car.slug}`} className="flex-1">
-                            <Button className="w-full gap-2">
+                        {/* Action Buttons - 3 CTAs */}
+                        <div className="flex flex-col gap-2">
+                          {/* View Details - Primary */}
+                          <Link to={`/car/${car.slug}`} className="w-full">
+                            <Button className="w-full gap-2" size="sm">
+                              <Eye className="h-4 w-4" />
                               View Details
-                              <ChevronRight className="h-4 w-4" />
                             </Button>
                           </Link>
-                          <Link to={`/brochures?car=${car.slug}`}>
-                            <Button variant="outline" size="icon" title="Download Brochure">
-                              <FileText className="h-4 w-4" />
-                            </Button>
-                          </Link>
+                          {/* WhatsApp & Call Row */}
+                          <div className="flex gap-2 w-full">
+                            <WhatsAppCardButton carName={car.name} className="flex-1 h-9" />
+                            <a href="tel:+919577200023" className="flex-1">
+                              <Button variant="outline" size="sm" className="w-full gap-1.5 h-9">
+                                <Phone className="h-4 w-4" />
+                                Call
+                              </Button>
+                            </a>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
@@ -883,22 +894,26 @@ const Cars = () => {
                               )}
                             </div>
                           </div>
-                          <div className="flex items-center gap-2 mt-4">
-                            <Link to={`/car/${car.slug}`} className="flex-1">
-                              <Button className="w-full gap-2">
+                          {/* Action Buttons - 3 CTAs for List View */}
+                          <div className="flex flex-wrap items-center gap-2 mt-4">
+                            <Link to={`/car/${car.slug}`} className="flex-1 min-w-[140px]">
+                              <Button className="w-full gap-2" size="sm">
+                                <Eye className="h-4 w-4" />
                                 View Details
-                                <ChevronRight className="h-4 w-4" />
                               </Button>
                             </Link>
-                            <Link to={`/brochures?car=${car.slug}`}>
-                              <Button variant="outline" size="icon" title="Download Brochure">
-                                <FileText className="h-4 w-4" />
+                            <WhatsAppCardButton carName={car.name} className="flex-1 min-w-[120px] h-9" />
+                            <a href="tel:+919577200023" className="flex-1 min-w-[100px]">
+                              <Button variant="outline" size="sm" className="w-full gap-1.5 h-9">
+                                <Phone className="h-4 w-4" />
+                                Call
                               </Button>
-                            </Link>
+                            </a>
                             {user && (
                               <Button
                                 variant="outline"
                                 size="icon"
+                                className="h-9 w-9"
                                 onClick={() => toggleFavorite(car.id, car.slug)}
                               >
                                 <Heart
@@ -915,6 +930,7 @@ const Cars = () => {
                               variant="outline"
                               size="icon"
                               className={cn(
+                                "h-9 w-9",
                                 isInCompare(car.id) && "border-primary text-primary"
                               )}
                               onClick={() => handleCompareToggle(car.id)}

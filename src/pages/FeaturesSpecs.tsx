@@ -5,10 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, Settings2, Fuel, Gauge, Users, ChevronRight, Zap, Shield, Cog } from "lucide-react";
+import { Search, Settings2, Fuel, Gauge, Users, Eye, Zap, Shield, Cog, Phone } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useCars } from "@/hooks/useCars";
 import { CarPagination } from "@/components/CarPagination";
+import { WhatsAppCardButton } from "@/components/WhatsAppCTA";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -194,12 +195,22 @@ const FeaturesSpecs = () => {
                             </Link>
                             <p className="text-primary font-medium">{car.price}</p>
                           </div>
-                          <Link to={`/cars/${car.slug}`}>
-                            <Button variant="outline" size="sm" className="gap-1">
-                              View All Specs
-                              <ChevronRight className="h-4 w-4" />
-                            </Button>
-                          </Link>
+                          {/* Action Buttons - 3 CTAs */}
+                          <div className="flex flex-wrap gap-2">
+                            <Link to={`/cars/${car.slug}`}>
+                              <Button size="sm" className="gap-1.5">
+                                <Eye className="h-4 w-4" />
+                                View Details
+                              </Button>
+                            </Link>
+                            <WhatsAppCardButton carName={car.name} className="h-9" />
+                            <a href="tel:+919577200023">
+                              <Button variant="outline" size="sm" className="gap-1.5 h-9">
+                                <Phone className="h-4 w-4" />
+                                Call
+                              </Button>
+                            </a>
+                          </div>
                         </div>
 
                         {/* Quick Specs */}

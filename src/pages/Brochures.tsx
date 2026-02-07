@@ -6,11 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, FileText, Download, ExternalLink, AlertCircle } from "lucide-react";
+import { Search, FileText, Download, ExternalLink, AlertCircle, Eye, Phone } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useCars } from "@/hooks/useCars";
 import { useAllCarsForBrochures, CarWithBrochure } from "@/hooks/useBrochures";
 import { CarPagination } from "@/components/CarPagination";
+import { WhatsAppCardButton } from "@/components/WhatsAppCTA";
 
 const ITEMS_PER_PAGE = 12;
 
@@ -233,22 +234,31 @@ const Brochures = () => {
                           </Link>
                           <p className="text-sm text-primary font-medium mb-3">{car.price}</p>
 
-                          <div className="flex items-center gap-2">
+                          {/* Action Buttons - 3 CTAs + Download */}
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Link to={`/cars/${car.slug}`}>
+                              <Button variant="outline" size="sm" className="gap-1.5 h-8">
+                                <Eye className="h-3.5 w-3.5" />
+                                Details
+                              </Button>
+                            </Link>
+                            <WhatsAppCardButton carName={car.name} className="h-8" />
+                            <a href="tel:+919577200023">
+                              <Button variant="outline" size="sm" className="gap-1 h-8">
+                                <Phone className="h-3.5 w-3.5" />
+                                Call
+                              </Button>
+                            </a>
                             <Button
                               variant={hasBrochure(car) ? "default" : "secondary"}
                               size="sm"
-                              className="flex-1 gap-1.5"
+                              className="gap-1 h-8"
                               onClick={() => handleDownload(car)}
                               disabled={!hasBrochure(car)}
                             >
                               <Download className="h-3.5 w-3.5" />
-                              {hasBrochure(car) ? "Download" : "Unavailable"}
+                              {hasBrochure(car) ? "Brochure" : "N/A"}
                             </Button>
-                            <Link to={`/cars/${car.slug}`}>
-                              <Button variant="outline" size="sm" className="gap-1">
-                                <ExternalLink className="h-3.5 w-3.5" />
-                              </Button>
-                            </Link>
                           </div>
                         </div>
                       </div>
