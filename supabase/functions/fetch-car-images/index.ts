@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 const PERPLEXITY_API_URL = 'https://api.perplexity.ai/chat/completions';
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent';
+const FIRECRAWL_API_URL = 'https://api.firecrawl.dev/v1';
 
 interface FetchImageRequest {
   carId?: string;
@@ -19,7 +19,6 @@ interface FetchImageRequest {
   limit?: number;
   syncPrimaryImages?: boolean;
   async?: boolean;
-  useAIFallback?: boolean;
 }
 
 interface ImageSearchResult {
@@ -133,62 +132,104 @@ RULES:
   }
 }
 
-// Generate AI image using Gemini as fallback
-async function generateAIImage(
+// Scrape car images using Firecrawl
+async function scrapeCarImagesFirecrawl(
   brand: string,
   model: string,
-  colorName: string,
-  hexCode?: string
-): Promise<string | null> {
-  const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-  if (!GEMINI_API_KEY) {
-    console.log('Gemini API key not configured');
-    return null;
+  colorName?: string
+): Promise<ImageSearchResult[]> {
+  const FIRECRAWL_API_KEY = Deno.env.get('FIRECRAWL_API_KEY');
+  if (!FIRECRAWL_API_KEY) {
+    console.log('Firecrawl API key not configured');
+    return [];
   }
 
-  // Build detailed prompt for car image generation
-  const colorDesc = hexCode ? `${colorName} (hex: ${hexCode})` : colorName;
-  const prompt = `Generate a photorealistic studio image of a ${brand} ${model} car in ${colorDesc} color.
-The car should be shown in a 3/4 front view angle on a clean white/grey gradient background.
-High quality, professional automotive photography style, sharp details, proper lighting.
-The image should look like an official manufacturer press photo.`;
+  const cleanBrand = brand.toLowerCase().replace(/\s+/g, '-');
+  const cleanModel = model.toLowerCase().replace(/\s+/g, '-');
+  
+  // Build search URLs for Indian car websites
+  const searchUrls = [
+    `https://www.cardekho.com/${cleanBrand}/${cleanModel}/images`,
+    `https://www.carwale.com/${cleanBrand}-cars/${cleanModel}/images`,
+    `https://www.zigwheels.com/${cleanBrand}-cars/${cleanModel}/gallery`,
+  ];
 
-  try {
-    console.log(`Generating AI image for ${brand} ${model} ${colorName}...`);
-    
-    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          responseModalities: ['image', 'text'],
-          responseMimeType: 'image/png',
+  const allImages: ImageSearchResult[] = [];
+
+  for (const url of searchUrls) {
+    try {
+      console.log(`Firecrawl scraping: ${url}`);
+      
+      const response = await fetch(`${FIRECRAWL_API_URL}/scrape`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${FIRECRAWL_API_KEY}`,
+          'Content-Type': 'application/json',
         },
-      }),
-    });
+        body: JSON.stringify({
+          url,
+          formats: ['links', 'html'],
+          onlyMainContent: false,
+          waitFor: 2000,
+        }),
+      });
 
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error(`Gemini error [${response.status}]:`, errText.substring(0, 200));
-      return null;
-    }
-
-    const data = await response.json();
-    const parts = data.candidates?.[0]?.content?.parts || [];
-    
-    for (const part of parts) {
-      if (part.inlineData?.mimeType?.startsWith('image/')) {
-        console.log('✓ AI image generated');
-        return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+      if (!response.ok) {
+        console.log(`Firecrawl failed for ${url}: ${response.status}`);
+        continue;
       }
-    }
 
-    return null;
-  } catch (error) {
-    console.error('Gemini error:', error);
-    return null;
+      const data = await response.json();
+      const links = data.data?.links || data.links || [];
+      const html = data.data?.html || data.html || '';
+
+      // Extract image URLs from links
+      for (const link of links) {
+        if (typeof link === 'string' && link.match(/\.(jpg|jpeg|png|webp)(\?|$)/i)) {
+          if (link.includes('aeplcdn') || link.includes('zigcdn') || link.includes('carwale')) {
+            // Filter by color if specified
+            if (colorName) {
+              const colorLower = colorName.toLowerCase();
+              if (link.toLowerCase().includes(colorLower) || !colorName) {
+                allImages.push({ url: link, source: 'firecrawl-link' });
+              }
+            } else {
+              allImages.push({ url: link, source: 'firecrawl-link' });
+            }
+          }
+        }
+      }
+
+      // Also extract from HTML using regex
+      const imgRegex = /(https?:\/\/[^\s"'<>]+(?:imgd\.aeplcdn\.com|media\.zigcdn\.com|img\.carwale\.com)[^\s"'<>]+\.(jpg|jpeg|png|webp))/gi;
+      const htmlMatches = html.match(imgRegex) || [];
+      for (const imgUrl of htmlMatches) {
+        const cleanUrl = imgUrl.replace(/["\s]/g, '');
+        if (!allImages.some(img => img.url === cleanUrl)) {
+          allImages.push({ url: cleanUrl, source: 'firecrawl-html' });
+        }
+      }
+
+      // If we found images, break early
+      if (allImages.length >= 5) break;
+      
+    } catch (error) {
+      console.error(`Firecrawl error for ${url}:`, error);
+    }
   }
+
+  // Prioritize high-resolution images
+  const prioritized = allImages.sort((a, b) => {
+    // Prefer larger image dimensions in URL
+    const aHasSize = a.url.includes('1200') || a.url.includes('900') || a.url.includes('800');
+    const bHasSize = b.url.includes('1200') || b.url.includes('900') || b.url.includes('800');
+    if (aHasSize && !bHasSize) return -1;
+    if (!aHasSize && bHasSize) return 1;
+    return 0;
+  });
+
+  console.log(`Firecrawl found ${prioritized.length} images for ${brand} ${model}`);
+  return prioritized.slice(0, 10);
 }
 
 // Download and upload image
@@ -291,28 +332,14 @@ async function downloadAndUploadImage(
   }
 }
 
-// Get hex code for color
-async function getColorHexCode(
-  supabase: ReturnType<typeof createClient>,
-  colorId: string
-): Promise<string | undefined> {
-  const { data } = await supabase
-    .from('car_colors')
-    .select('hex_code')
-    .eq('id', colorId)
-    .single();
-  return data?.hex_code;
-}
-
-// Process single color
+// Process single color - uses Perplexity + Firecrawl (real images only)
 async function processCarColor(
   supabase: ReturnType<typeof createClient>,
   carId: string,
   colorId: string,
   brand: string,
   model: string,
-  colorName: string,
-  useAIFallback: boolean = true
+  colorName: string
 ): Promise<{ success: boolean; imageUrl?: string; source?: string; error?: string }> {
   try {
     console.log(`\n>>> ${brand} ${model} - ${colorName}`);
@@ -322,13 +349,25 @@ async function processCarColor(
       .update({ image_sync_status: 'processing' })
       .eq('id', colorId);
 
-    // Try Perplexity first for real images
+    // Step 1: Try Perplexity first for real images
     let images = await searchCarImagesPerplexity(brand, model, colorName);
 
-    // If no color-specific results, try generic
+    // Step 2: If no color-specific results, try generic with Perplexity
     if (images.length === 0) {
-      console.log('Trying generic search...');
+      console.log('Trying Perplexity generic search...');
       images = await searchCarImagesPerplexity(brand, model, 'exterior');
+    }
+
+    // Step 3: If still no results, use Firecrawl to scrape car websites
+    if (images.length === 0) {
+      console.log('Trying Firecrawl scraping...');
+      images = await scrapeCarImagesFirecrawl(brand, model, colorName);
+    }
+
+    // Step 4: Last resort - Firecrawl without color filter
+    if (images.length === 0) {
+      console.log('Trying Firecrawl without color filter...');
+      images = await scrapeCarImagesFirecrawl(brand, model);
     }
 
     // Try each real image URL
@@ -343,7 +382,7 @@ async function processCarColor(
             image_url: uploadedUrl,
             image_sync_status: 'synced',
             image_synced_at: new Date().toISOString(),
-            image_source: 'real_oem'
+            image_source: image.source.includes('firecrawl') ? 'firecrawl_scraped' : 'perplexity_search'
           })
           .eq('id', colorId);
 
@@ -355,43 +394,8 @@ async function processCarColor(
           sort_order: 10
         });
 
-        console.log(`✓ SUCCESS (real): ${brand} ${model} ${colorName}`);
-        return { success: true, imageUrl: uploadedUrl, source: 'real_oem' };
-      }
-    }
-
-    // Fallback to AI-generated image
-    if (useAIFallback) {
-      console.log('Using AI fallback...');
-      const hexCode = await getColorHexCode(supabase, colorId);
-      const aiImageData = await generateAIImage(brand, model, colorName, hexCode);
-
-      if (aiImageData) {
-        const path = `${brand.toLowerCase().replace(/\s+/g, '-')}/${model.toLowerCase().replace(/\s+/g, '-')}/${colorName.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`;
-        const uploadedUrl = await downloadAndUploadImage(aiImageData, path, supabase);
-
-        if (uploadedUrl) {
-          await supabase
-            .from('car_colors')
-            .update({
-              image_url: uploadedUrl,
-              image_sync_status: 'synced',
-              image_synced_at: new Date().toISOString(),
-              image_source: 'ai_generated'
-            })
-            .eq('id', colorId);
-
-          await supabase.from('car_images').insert({
-            car_id: carId,
-            url: uploadedUrl,
-            alt_text: `${brand} ${model} in ${colorName}`,
-            is_primary: false,
-            sort_order: 10
-          });
-
-          console.log(`✓ SUCCESS (AI): ${brand} ${model} ${colorName}`);
-          return { success: true, imageUrl: uploadedUrl, source: 'ai_generated' };
-        }
+        console.log(`✓ SUCCESS (${image.source}): ${brand} ${model} ${colorName}`);
+        return { success: true, imageUrl: uploadedUrl, source: image.source };
       }
     }
 
@@ -400,7 +404,7 @@ async function processCarColor(
       .update({ image_sync_status: 'failed' })
       .eq('id', colorId);
 
-    return { success: false, error: 'All methods failed' };
+    return { success: false, error: 'No valid images found from any source' };
   } catch (error) {
     console.error('Error:', error);
     await supabase
@@ -416,10 +420,9 @@ declare const EdgeRuntime: { waitUntil: (p: Promise<unknown>) => void };
 // Background processing
 async function processBatchInBackground(
   supabase: ReturnType<typeof createClient>,
-  limit: number,
-  useAIFallback: boolean
+  limit: number
 ): Promise<void> {
-  console.log(`\n=== BATCH SYNC: ${limit} images, AI fallback: ${useAIFallback} ===\n`);
+  console.log(`\n=== BATCH SYNC: ${limit} images (Perplexity + Firecrawl) ===\n`);
   
   try {
     const { data: colors } = await supabase
@@ -440,15 +443,14 @@ async function processBatchInBackground(
         color.id, 
         car.brand, 
         car.name, 
-        color.name,
-        useAIFallback
+        color.name
       );
 
       if (result.success) success++;
       else fail++;
 
-      // Rate limiting
-      await new Promise(r => setTimeout(r, 3000));
+      // Rate limiting - increased for Firecrawl
+      await new Promise(r => setTimeout(r, 4000));
     }
 
     console.log(`\n=== DONE: ${success} success, ${fail} failed ===\n`);
@@ -476,17 +478,16 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
     const body: FetchImageRequest = await req.json();
-    const useAIFallback = body.useAIFallback !== false; // Default true
 
     // Async batch mode
     if (body.batchMode && body.async) {
       const limit = body.limit || 20;
-      EdgeRuntime.waitUntil(processBatchInBackground(supabase, limit, useAIFallback));
+      EdgeRuntime.waitUntil(processBatchInBackground(supabase, limit));
       
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: `Background sync started for ${limit} images (AI fallback: ${useAIFallback})`, 
+          message: `Background sync started for ${limit} images (Perplexity + Firecrawl)`, 
           async: true 
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -515,9 +516,9 @@ serve(async (req) => {
 
       const results = [];
       for (const color of colors || []) {
-        const result = await processCarColor(supabase, car.id, color.id, car.brand, car.name, color.name, useAIFallback);
+        const result = await processCarColor(supabase, car.id, color.id, car.brand, car.name, color.name);
         results.push({ colorId: color.id, colorName: color.name, ...result });
-        await new Promise(r => setTimeout(r, 3000));
+        await new Promise(r => setTimeout(r, 4000));
       }
 
       return new Response(
@@ -539,9 +540,9 @@ serve(async (req) => {
       const results = [];
       for (const color of colors || []) {
         const car = color.cars as { id: string; name: string; brand: string };
-        const result = await processCarColor(supabase, color.car_id, color.id, car.brand, car.name, color.name, useAIFallback);
+        const result = await processCarColor(supabase, color.car_id, color.id, car.brand, car.name, color.name);
         results.push({ carId: color.car_id, colorId: color.id, colorName: color.name, ...result });
-        await new Promise(r => setTimeout(r, 3000));
+        await new Promise(r => setTimeout(r, 4000));
       }
 
       return new Response(
