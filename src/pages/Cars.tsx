@@ -70,6 +70,15 @@ import { useFavorites } from "@/hooks/useFavorites";
 import { useCompare } from "@/hooks/useCompare";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { CarImage } from "@/components/CarImage";
+
+// Helper to check if image URL is valid (Supabase-hosted or local asset)
+const isValidImage = (url: string | undefined | null): boolean => {
+  if (!url || url === '/placeholder.svg') return false;
+  if (url.startsWith('/')) return true; // Local assets
+  if (url.includes('supabase.co')) return true; // Supabase storage
+  return false; // External CDNs are blocked
+};
 
 const Cars = () => {
   const { user } = useAuth();
@@ -727,32 +736,12 @@ const Cars = () => {
                   {filteredCars.map((car) => (
                     <Card key={car.id} className="group overflow-hidden hover:shadow-lg transition-all duration-300">
                       <div className="relative aspect-[16/10] overflow-hidden bg-muted">
-                        {car.image && car.image !== '/placeholder.svg' ? (
-                          <img
-                            src={car.image}
-                            alt={car.name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              // Replace with a nice placeholder div
-                              target.style.display = 'none';
-                              const parent = target.parentElement;
-                              if (parent && !parent.querySelector('.car-placeholder')) {
-                                const placeholder = document.createElement('div');
-                                placeholder.className = 'car-placeholder absolute inset-0 flex items-center justify-center bg-gradient-to-br from-muted to-muted/50';
-                                placeholder.innerHTML = '<div class="flex flex-col items-center gap-2 text-muted-foreground/50"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg><span class="text-xs font-medium opacity-60">Image Coming Soon</span></div>';
-                                parent.appendChild(placeholder);
-                              }
-                            }}
-                          />
-                        ) : (
-                          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-muted to-muted/50">
-                            <div className="flex flex-col items-center gap-2 text-muted-foreground/50">
-                              <Car className="h-12 w-12" />
-                              <span className="text-xs font-medium opacity-60">Image Coming Soon</span>
-                            </div>
-                          </div>
-                        )}
+                        <CarImage
+                          src={isValidImage(car.image) ? car.image : undefined}
+                          alt={car.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          fallbackClassName="w-full h-full"
+                        />
                         <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
                           {car.isNew && (
                             <Badge className="bg-green-500 text-white">New</Badge>
@@ -871,16 +860,11 @@ const Cars = () => {
                     <Card key={car.id} className="group overflow-hidden hover:shadow-lg transition-all duration-300">
                       <div className="flex flex-col sm:flex-row">
                         <div className="relative sm:w-72 aspect-[16/10] sm:aspect-auto shrink-0 overflow-hidden bg-muted">
-                          <img
-                            src={car.image || '/placeholder.svg'}
+                          <CarImage
+                            src={isValidImage(car.image) ? car.image : undefined}
                             alt={car.name}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              if (target.src !== '/placeholder.svg') {
-                                target.src = '/placeholder.svg';
-                              }
-                            }}
+                            fallbackClassName="w-full h-full"
                           />
                           <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
                             {car.isNew && (
