@@ -12,6 +12,7 @@ const OFFICIAL_OEM_DOMAINS = [
   // Hyundai
   'hyundai.com',
   'hyundai.co.in',
+  'www.hyundai.com',
   // Tata Motors
   'tatamotors.com',
   'cars.tatamotors.com',
@@ -27,18 +28,23 @@ const OFFICIAL_OEM_DOMAINS = [
   // Toyota
   'toyota.com',
   'toyotabharat.com',
+  'www.toyotabharat.com',
   // Honda
   'honda.com',
   'hondacarindia.com',
-  // MG
+  'www.hondacarindia.com',
+  // MG Motor
   'mg.co.in',
   'mgmotor.co.in',
+  'www.mgmotor.co.in',
   // Skoda
   'skoda-auto.co.in',
   'skoda-auto.com',
+  'www.skoda-auto.co.in',
   // Volkswagen
   'volkswagen.co.in',
   'volkswagen.com',
+  'www.volkswagen.co.in',
   // Renault
   'renault.co.in',
   'renault.com',
@@ -46,6 +52,12 @@ const OFFICIAL_OEM_DOMAINS = [
   'jeep-india.com',
   // Citroen
   'citroen.in',
+  // VinFast
+  'vinfastauto.in',
+  'vinfast.com',
+  // Tesla
+  'tesla.com',
+  'www.tesla.com',
   // Luxury brands
   'bmw.in',
   'mercedes-benz.co.in',
