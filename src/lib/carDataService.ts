@@ -173,28 +173,40 @@ export const fetchCarsFromDatabase = async (options: FetchCarsOptions = {}): Pro
     }
 
     // Helper: Check if image is real/authentic (OEM or Supabase-hosted)
-    // Allow: Official OEM websites, Supabase storage
+    // Allow: Official OEM websites (including CDN subdomains), Supabase storage
     // Block: AI-generated, generic placeholders
     const isAuthenticImage = (url: string | null | undefined): boolean => {
       if (!url) return false;
+      if (url === '/placeholder.svg') return false;
       
       // Allow Supabase-hosted images
       if (url.includes('supabase.co')) return true;
       
-      // Allow official OEM website images
+      // Allow official OEM website images (including CDN/adobe asset URLs)
       const officialOEMDomains = [
         'marutisuzuki.com',
         'nexaexperience.com',
         'hyundai.com',
+        'hyundai.co.in',
         'tatamotors.com',
         'mahindra.com',
+        'mahindrarise.com',
         'kia.com',
+        'kia.in',
         'toyota.com',
+        'toyotabharat.com',
         'honda.com',
+        'hondacarindia.com',
         'mg.co.in',
+        'mgmotor.co.in',
         'skoda-auto.co.in',
+        'skoda-auto.com',
         'volkswagen.co.in',
-        'renault.co.in'
+        'volkswagen.com',
+        'renault.co.in',
+        'renault.com',
+        'jeep-india.com',
+        'citroen.in'
       ];
       
       return officialOEMDomains.some(domain => url.includes(domain));

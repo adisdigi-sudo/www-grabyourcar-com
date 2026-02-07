@@ -32,20 +32,31 @@ export const CarImage = ({
     if (url.includes('supabase.co')) return true;
     // Allow local asset imports (for banners, logos, etc.)
     if (url.startsWith('/src/assets') || url.startsWith('data:') || url.startsWith('/assets')) return true;
-    // Allow official OEM website images
+    // Allow official OEM website images (including CDN/adobe asset URLs)
     const officialOEMDomains = [
       'marutisuzuki.com',
       'nexaexperience.com',
       'hyundai.com',
+      'hyundai.co.in',
       'tatamotors.com',
       'mahindra.com',
+      'mahindrarise.com',
       'kia.com',
+      'kia.in',
       'toyota.com',
+      'toyotabharat.com',
       'honda.com',
+      'hondacarindia.com',
       'mg.co.in',
+      'mgmotor.co.in',
       'skoda-auto.co.in',
+      'skoda-auto.com',
       'volkswagen.co.in',
-      'renault.co.in'
+      'volkswagen.com',
+      'renault.co.in',
+      'renault.com',
+      'jeep-india.com',
+      'citroen.in'
     ];
     return officialOEMDomains.some(domain => url.includes(domain));
   }, []);
