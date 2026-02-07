@@ -39,15 +39,16 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { motion, AnimatePresence } from "framer-motion";
-import { getCarBySlug } from "@/data/carsData";
 import { calculateStatePriceBreakup, stateRates } from "@/data/statePricing";
 import { useCarColors } from "@/hooks/useCarColors";
+import { useCarBySlug } from "@/hooks/useCars";
 import { WhatsAppSalesCTA } from "@/components/WhatsAppCTA";
 import { EMICustomizerModal } from "@/components/EMICustomizerModal";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const CarOnRoadPrice = () => {
   const { slug } = useParams<{ slug: string }>();
-  const car = getCarBySlug(slug || "");
+  const { data: car, isLoading, error } = useCarBySlug(slug);
   
   const { data: dbColors } = useCarColors(slug);
   
@@ -64,7 +65,23 @@ const CarOnRoadPrice = () => {
     return car?.colors || [];
   }, [dbColors, car?.colors]);
 
-  if (!car) {
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-12">
+          <div className="max-w-4xl mx-auto space-y-6">
+            <Skeleton className="h-8 w-3/4" />
+            <Skeleton className="h-64 w-full rounded-xl" />
+            <Skeleton className="h-48 w-full rounded-xl" />
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!car || error) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
