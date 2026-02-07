@@ -188,9 +188,14 @@ export const fetchCarsFromDatabase = async (options: FetchCarsOptions = {}): Pro
         'nexaexperience.com',
         'hyundai.com',
         'hyundai.co.in',
+        'ioniq5.hyundai',
         'tatamotors.com',
+        'tata.com',
+        'ev.tatamotors',
+        'cars.tatamotors',
         'mahindra.com',
         'mahindrarise.com',
+        'auto.mahindra',
         'kia.com',
         'kia.in',
         'toyota.com',
@@ -206,7 +211,12 @@ export const fetchCarsFromDatabase = async (options: FetchCarsOptions = {}): Pro
         'renault.co.in',
         'renault.com',
         'jeep-india.com',
-        'citroen.in'
+        'citroen.in',
+        'vinfastauto.in',
+        'tesla.com',
+        'bmw.in',
+        'mercedes-benz.co.in',
+        'audi.in'
       ];
       
       return officialOEMDomains.some(domain => url.includes(domain));
@@ -214,7 +224,7 @@ export const fetchCarsFromDatabase = async (options: FetchCarsOptions = {}): Pro
     
     // Transform database cars to static format
     const cars = dbCars.map((car: any) => {
-      // Get all car images and filter for Supabase-hosted ones
+      // Get all car images and filter for authentic ones
       const allImages = car.car_images || [];
       
       // Sort: primary first, then by sort_order
@@ -224,8 +234,17 @@ export const fetchCarsFromDatabase = async (options: FetchCarsOptions = {}): Pro
         return (a.sort_order || 999) - (b.sort_order || 999);
       });
       
-      // Filter for authentic Supabase-hosted images
-      const authenticImages = sortedImages.filter((img: any) => isAuthenticImage(img.url));
+      // Filter for authentic images (prioritize OEM domains over Supabase due to scraping issues)
+      // First try OEM images, then Supabase images as fallback
+      const oemImages = sortedImages.filter((img: any) => 
+        isAuthenticImage(img.url) && !img.url.includes('supabase.co')
+      );
+      const supabaseImages = sortedImages.filter((img: any) => 
+        img.url?.includes('supabase.co')
+      );
+      
+      // Prioritize OEM images (they're unique and real), use Supabase as last resort
+      const authenticImages = oemImages.length > 0 ? oemImages : supabaseImages.filter((img: any) => isAuthenticImage(img.url));
       
       // Get first authentic image - prioritize primary, then first by sort order
       const primaryImage = authenticImages[0]?.url || null;
