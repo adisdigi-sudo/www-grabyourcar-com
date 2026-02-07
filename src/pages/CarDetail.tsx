@@ -43,7 +43,8 @@ import {
   IndianRupee,
   Calculator,
   Building2,
-  GitCompareArrows
+  GitCompareArrows,
+  FileText
 } from "lucide-react";
 import { useCompare } from "@/hooks/useCompare";
 import { useCarColors, useCarGalleryImages } from "@/hooks/useCarColors";
@@ -347,6 +348,14 @@ const CarDetail = () => {
                   </Button>
                   <CompareButton carId={car.id} />
                   <ShareButtons title={`Check out ${car.name} on Grabyourcar`} />
+                  {car.brochureUrl && (
+                    <a href={car.brochureUrl} target="_blank" rel="noopener noreferrer">
+                      <Button variant="outline" size="lg" className="font-semibold hover:scale-105 transition-transform">
+                        <FileText className="h-5 w-5 mr-2" />
+                        Brochure
+                      </Button>
+                    </a>
+                  )}
                   <WhatsAppSalesCTA 
                     carName={`${car.brand} ${car.name}`} 
                     type="price" 

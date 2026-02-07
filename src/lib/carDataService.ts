@@ -138,7 +138,7 @@ export const fetchCarsFromDatabase = async (options: FetchCarsOptions = {}): Pro
       id, slug, name, brand, body_type, tagline, price_range, price_numeric,
       original_price, discount, fuel_types, transmission_types, availability,
       is_hot, is_limited, is_new, is_upcoming, launch_date, overview, key_highlights,
-      pros, cons, competitors,
+      pros, cons, competitors, brochure_url,
       car_images(url, alt_text, is_primary, sort_order),
       car_colors(id, name, hex_code, image_url, sort_order),
       car_variants(id, name, price, price_numeric, fuel_type, transmission, features, ex_showroom, rto, insurance, tcs, fastag, registration, handling, on_road_price, sort_order),
@@ -309,7 +309,8 @@ export const fetchCarsFromDatabase = async (options: FetchCarsOptions = {}): Pro
         offers,
         pros: car.pros || [],
         cons: car.cons || [],
-        competitors: car.competitors || []
+        competitors: car.competitors || [],
+        brochureUrl: car.brochure_url || undefined
       } as Car;
     });
 
