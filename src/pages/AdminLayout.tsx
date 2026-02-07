@@ -37,6 +37,7 @@ import CrossSellManagement from "@/components/admin/CrossSellManagement";
 import EMIPDFSettings from "@/components/admin/EMIPDFSettings";
 import { CarColorManagement } from "@/components/admin/CarColorManagement";
 import { CarImageSyncManager } from "@/components/admin/CarImageSyncManager";
+import { CarImageScrapingManager } from "@/components/admin/CarImageScrapingManager";
 import { ManualQuoteGenerator } from "@/components/admin/ManualQuoteGenerator";
 import { DiscountManagement } from "@/components/admin/DiscountManagement";
 import { LaunchesManagement } from "@/components/admin/LaunchesManagement";
@@ -132,9 +133,9 @@ const AdminLayout = () => {
       case "cars-colors":
         return <CarColorManagement />;
       case "cars-images":
-        return <CarImageSyncManager />;
+        return <CarImageScrapingManager />;
       case "cars-image-sync":
-        return <CarImageSyncManager />;
+        return <CarImageScrapingManager />;
       case "cars-migration":
         return <CarDataManagement />;
       case "cars-brands":

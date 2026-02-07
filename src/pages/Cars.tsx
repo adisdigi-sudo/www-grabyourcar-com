@@ -203,12 +203,22 @@ const Cars = () => {
         result.sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0));
         break;
       default:
-        // Relevance - hot cars first, then new, then rest
+        // Relevance - cars with images first, then hot, then new
         result.sort((a, b) => {
+          // Cars with images come first
+          const aHasImage = isValidImage(a.image);
+          const bHasImage = isValidImage(b.image);
+          if (aHasImage && !bHasImage) return -1;
+          if (!aHasImage && bHasImage) return 1;
+          
+          // Then hot cars
           if (a.isHot && !b.isHot) return -1;
           if (!a.isHot && b.isHot) return 1;
+          
+          // Then new cars
           if (a.isNew && !b.isNew) return -1;
           if (!a.isNew && b.isNew) return 1;
+          
           return 0;
         });
     }

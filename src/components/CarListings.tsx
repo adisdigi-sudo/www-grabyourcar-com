@@ -29,11 +29,9 @@ interface CarWithImage {
 }
 
 // STRICT: Only allow Supabase-hosted authentic images
-// No external CDNs (hotlink protection), no AI-generated, no placeholders
 const isValidImage = (url: string | undefined | null): boolean => {
   if (!url || url === '/placeholder.svg') return false;
-  // ONLY Supabase-hosted images are verified authentic
-  return url.includes('supabase.co');
+  return url.includes('supabase.co/storage');
 };
 
 // Fetch featured cars from database with their primary images

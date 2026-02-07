@@ -11,10 +11,8 @@ interface CarImageProps {
 }
 
 /**
- * Smart car image component that handles:
- * - Broken external CDN links (hotlink protection)
- * - Missing images
- * - Loading states
+ * Smart car image component - ONLY shows Supabase-hosted authentic images
+ * All other sources show "Image Coming Soon" placeholder
  */
 export const CarImage = ({
   src,
@@ -26,14 +24,14 @@ export const CarImage = ({
   const [hasError, setHasError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // STRICT: Only allow verified authentic images (Supabase-hosted or local assets)
-  // No external CDNs - they have hotlink protection and break frequently
-  const isAuthenticImage = useCallback((url: string | undefined | null) => {
+  // STRICT: Only Supabase-hosted images are authentic (scraped from OEM/CarDekho)
+  const isAuthenticImage = useCallback((url: string | undefined | null): boolean => {
     if (!url) return false;
-    if (url === '/placeholder.svg') return false; // Not an image
-    if (url.startsWith('/')) return true; // Local assets (src/assets)
-    if (url.includes('supabase.co')) return true; // Supabase storage (verified)
-    // BLOCK all external CDNs - use placeholder until image is scraped & hosted
+    if (url === '/placeholder.svg') return false;
+    // ONLY allow Supabase storage URLs - these are verified scraped images
+    if (url.includes('supabase.co/storage')) return true;
+    // Allow local asset imports (for banners, logos, etc.)
+    if (url.startsWith('/src/assets') || url.startsWith('data:')) return true;
     return false;
   }, []);
 
@@ -46,7 +44,7 @@ export const CarImage = ({
     setIsLoading(false);
   }, []);
 
-  // If no source OR not authentic OR error, show branded placeholder immediately
+  // Show placeholder if: no source, has error, or not authentic Supabase image
   const showPlaceholder = !src || hasError || !isAuthenticImage(src);
 
   if (showPlaceholder) {
