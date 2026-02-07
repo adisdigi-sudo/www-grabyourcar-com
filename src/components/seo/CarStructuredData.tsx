@@ -74,13 +74,16 @@ export const CarStructuredData = ({ car, selectedVariant = 0 }: CarStructuredDat
     return 0;
   };
   
-  // Get the selected variant for price details
-  const variant = car.variants[selectedVariant] || car.variants[0];
+  // Get the selected variant for price details - safely handle empty variants
+  const hasVariants = car.variants && car.variants.length > 0;
+  const variant = hasVariants ? (car.variants[selectedVariant] || car.variants[0]) : null;
   const basePriceNumeric = car.priceNumeric || parsePriceFromString(car.price);
   const priceValue = variant?.priceNumeric || basePriceNumeric;
   
-  // Calculate high price from variants
-  const variantPrices = car.variants.map(v => v.priceNumeric || parsePriceFromString(v.price));
+  // Calculate high price from variants - safely handle empty arrays
+  const variantPrices = hasVariants 
+    ? car.variants.map(v => v.priceNumeric || parsePriceFromString(v.price || '0')).filter(p => p > 0)
+    : [];
   const highPrice = variantPrices.length > 0 ? Math.max(...variantPrices) : basePriceNumeric;
   
   // Extract mileage from specifications if available
@@ -117,7 +120,7 @@ export const CarStructuredData = ({ car, selectedVariant = 0 }: CarStructuredDat
       "priceCurrency": "INR",
       "lowPrice": basePriceNumeric,
       "highPrice": highPrice,
-      "offerCount": car.variants.length || 1,
+      "offerCount": hasVariants ? car.variants.length : 1,
       "availability": car.isUpcoming 
         ? "https://schema.org/PreOrder" 
         : "https://schema.org/InStock",
@@ -168,7 +171,7 @@ export const CarStructuredData = ({ car, selectedVariant = 0 }: CarStructuredDat
       "name": car.brand
     },
     "model": car.name,
-    "vehicleConfiguration": car.variants.map(v => v.name).join(", "),
+    "vehicleConfiguration": hasVariants ? car.variants.map(v => v.name).join(", ") : car.name,
     "fuelType": car.fuelTypes.join(", "),
     "vehicleTransmission": car.transmission.join(", "),
     "bodyType": bodyType,
@@ -251,7 +254,7 @@ export const CarStructuredData = ({ car, selectedVariant = 0 }: CarStructuredDat
       "name": `What is the price of ${car.brand} ${car.name}?`,
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": `The ${car.brand} ${car.name} price starts from ${car.price} (ex-showroom). It is available in ${car.variants.length} variants with ${car.fuelTypes.join(" and ")} fuel options.`
+        "text": `The ${car.brand} ${car.name} price starts from ${car.price} (ex-showroom). It is available ${hasVariants ? `in ${car.variants.length} variants` : ''} with ${car.fuelTypes.join(" and ")} fuel options.`
       }
     },
     {
