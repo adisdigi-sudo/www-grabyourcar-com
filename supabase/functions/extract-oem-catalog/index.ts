@@ -30,6 +30,54 @@ const OEM_CONFIG: Record<string, {
     modelsUrl: 'https://www.kia.com/in/our-vehicles.html',
     carPatterns: [/\/our-vehicles\/[a-z0-9-]+\/?/i],
     pricePattern: /₹\s*([\d,]+(?:\.\d+)?)\s*(Lakh|Cr)?/gi,
+  },
+  'Toyota': {
+    baseUrl: 'https://www.toyotabharat.com',
+    modelsUrl: 'https://www.toyotabharat.com/car-range',
+    carPatterns: [/\/car-range\/[a-z0-9-]+\/?$/i, /\/showroom\/[a-z0-9-]+\/?$/i],
+    pricePattern: /₹\s*([\d,]+(?:\.\d+)?)\s*(Lakh|Cr)?/gi,
+  },
+  'VinFast': {
+    baseUrl: 'https://vinfastauto.in',
+    modelsUrl: 'https://vinfastauto.in/en',
+    carPatterns: [/\/en\/vehicles\/[a-z0-9-]+\/?$/i, /\/en\/vf[0-9]+\/?$/i],
+    pricePattern: /₹\s*([\d,]+(?:\.\d+)?)\s*(Lakh|Cr)?/gi,
+  },
+  'Hyundai': {
+    baseUrl: 'https://www.hyundai.com/in/en',
+    modelsUrl: 'https://www.hyundai.com/in/en/find-a-car/all-vehicles',
+    carPatterns: [/\/find-a-car\/[a-z0-9-]+\/?$/i, /\/[a-z0-9-]+\/highlights\/?$/i],
+    pricePattern: /₹\s*([\d,]+(?:\.\d+)?)\s*(Lakh|Cr)?/gi,
+  },
+  'MG': {
+    baseUrl: 'https://www.mgmotor.co.in',
+    modelsUrl: 'https://www.mgmotor.co.in',
+    carPatterns: [/\/vehicles\/[a-z0-9-]+\/?$/i, /\/mg-[a-z0-9-]+\/?$/i],
+    pricePattern: /₹\s*([\d,]+(?:\.\d+)?)\s*(Lakh|Cr)?/gi,
+  },
+  'Honda': {
+    baseUrl: 'https://www.hondacarindia.com',
+    modelsUrl: 'https://www.hondacarindia.com/cars',
+    carPatterns: [/\/cars\/[a-z0-9-]+\/?$/i, /\/[a-z0-9-]+\/overview\/?$/i],
+    pricePattern: /₹\s*([\d,]+(?:\.\d+)?)\s*(Lakh|Cr)?/gi,
+  },
+  'Skoda': {
+    baseUrl: 'https://www.skoda-auto.co.in',
+    modelsUrl: 'https://www.skoda-auto.co.in/models',
+    carPatterns: [/\/models\/[a-z0-9-]+\/?$/i, /\/[a-z0-9-]+\/overview\/?$/i],
+    pricePattern: /₹\s*([\d,]+(?:\.\d+)?)\s*(Lakh|Cr)?/gi,
+  },
+  'Volkswagen': {
+    baseUrl: 'https://www.volkswagen.co.in',
+    modelsUrl: 'https://www.volkswagen.co.in/en/models.html',
+    carPatterns: [/\/models\/[a-z0-9-]+\/?/i, /\/en\/[a-z0-9-]+\.html$/i],
+    pricePattern: /₹\s*([\d,]+(?:\.\d+)?)\s*(Lakh|Cr)?/gi,
+  },
+  'Tesla': {
+    baseUrl: 'https://www.tesla.com',
+    modelsUrl: 'https://www.tesla.com/en_in',
+    carPatterns: [/\/model[sxy3]\/?$/i, /\/cybertruck\/?$/i, /\/semi\/?$/i],
+    pricePattern: /₹\s*([\d,]+(?:\.\d+)?)\s*(Lakh|Cr)?/gi,
   }
 };
 
