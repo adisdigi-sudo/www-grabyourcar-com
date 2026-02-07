@@ -183,6 +183,8 @@ async function scrapePricingCarwale(brand: string, model: string): Promise<Prici
     const html = data.data?.html || data.html || '';
 
     const pricingData: PricingData[] = [];
+
+    // Extract prices from CarWale format
     const pricePattern = /₹\s*([\d,\.]+)\s*(Lakh|Cr)/gi;
     let match;
     const prices: number[] = [];
@@ -216,127 +218,6 @@ async function scrapePricingCarwale(brand: string, model: string): Promise<Prici
     console.error('CarWale scraping error:', error);
     return [];
   }
-}
-
-// OEM Website URLs mapping
-const OEM_URLS: Record<string, string> = {
-  'Tata': 'https://cars.tatamotors.com',
-  'Mahindra': 'https://auto.mahindra.com',
-  'Maruti Suzuki': 'https://www.marutisuzuki.com',
-  'Hyundai': 'https://www.hyundai.com/in',
-  'Honda': 'https://www.hondacarindia.com',
-  'Toyota': 'https://www.toyotabharat.com',
-  'Kia': 'https://www.kia.com/in',
-  'MG': 'https://www.mgmotor.co.in',
-  'Renault': 'https://www.renaultindia.com',
-  'Nissan': 'https://www.nissan.in',
-};
-
-// Scrape pricing from Official OEM Website (for newer models)
-async function scrapePricingOEM(brand: string, model: string): Promise<PricingData[]> {
-  const FIRECRAWL_API_KEY = Deno.env.get('FIRECRAWL_API_KEY');
-  if (!FIRECRAWL_API_KEY) return [];
-
-  const brandKey = Object.keys(OEM_URLS).find(k => 
-    brand.toLowerCase().includes(k.toLowerCase()) || k.toLowerCase().includes(brand.toLowerCase())
-  );
-  
-  if (!brandKey) {
-    console.log(`No OEM URL for brand: ${brand}`);
-    return [];
-  }
-
-  const baseUrl = OEM_URLS[brandKey];
-  const modelSlug = model.toLowerCase()
-    .replace(/\s+/g, '-')
-    .replace(brand.toLowerCase(), '')
-    .replace('--', '-')
-    .replace(/^-|-$/g, '')
-    .trim();
-
-  // Try common OEM URL patterns
-  const urlPatterns = [
-    `${baseUrl}/cars/${modelSlug}`,
-    `${baseUrl}/${modelSlug}`,
-    `${baseUrl}/en/cars/${modelSlug}`,
-    `${baseUrl}/vehicles/${modelSlug}`,
-  ];
-
-  for (const url of urlPatterns) {
-    console.log(`Scraping OEM pricing from: ${url}`);
-    
-    try {
-      const response = await fetch(`${FIRECRAWL_API_URL}/scrape`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${FIRECRAWL_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          url,
-          formats: ['markdown', 'html'],
-          onlyMainContent: true,
-          waitFor: 5000, // OEM sites often need more time
-        }),
-      });
-
-      if (!response.ok) continue;
-
-      const data = await response.json();
-      const markdown = data.data?.markdown || data.markdown || '';
-      const html = data.data?.html || data.html || '';
-      const content = markdown + html;
-
-      // Skip if page not found
-      if (content.toLowerCase().includes('page not found') || 
-          content.toLowerCase().includes('404') ||
-          content.length < 500) {
-        continue;
-      }
-
-      const pricingData: PricingData[] = [];
-      
-      // OEM sites often show "Starting from ₹X.XX Lakh*" or "Price: ₹X.XX Lakh"
-      const oemPricePatterns = [
-        /(?:starting\s*(?:from|at|price)?|price\s*(?:starts?)?|ex-?showroom|₹)\s*₹?\s*([\d,\.]+)\s*(Lakh|Lakhs?|Cr|Crore)/gi,
-        /₹\s*([\d,\.]+)\s*(Lakh|Lakhs?|Cr|Crore)/gi,
-      ];
-
-      const prices: number[] = [];
-      for (const pattern of oemPricePatterns) {
-        let match;
-        while ((match = pattern.exec(content)) !== null) {
-          const priceValue = parseFloat(match[1].replace(/,/g, ''));
-          const unit = match[2].toLowerCase();
-          const price = unit.startsWith('cr') ? priceValue * 10000000 : priceValue * 100000;
-          if (price >= 300000 && price <= 100000000) {
-            prices.push(price);
-          }
-        }
-      }
-
-      if (prices.length > 0) {
-        const uniquePrices = [...new Set(prices)].sort((a, b) => a - b);
-        pricingData.push({
-          variantName: 'Base',
-          exShowroom: uniquePrices[0],
-        });
-        if (uniquePrices.length > 1) {
-          pricingData.push({
-            variantName: 'Top',
-            exShowroom: uniquePrices[uniquePrices.length - 1],
-          });
-        }
-        console.log(`✓ OEM SUCCESS: Found ${pricingData.length} pricing entries from ${url}`);
-        return pricingData;
-      }
-    } catch (error) {
-      console.error(`OEM scraping error for ${url}:`, error);
-    }
-  }
-
-  console.log(`No OEM pricing found for ${brand} ${model}`);
-  return [];
 }
 
 // Update car and variant pricing in database
@@ -410,7 +291,7 @@ function formatPrice(price: number): string {
   return `₹${(price / 100000).toFixed(2)} Lakh`;
 }
 
-// Process a single car with 3-tier fallback: CardekHo → CarWale → OEM
+// Process a single car
 async function processCarPricing(
   supabase: ReturnType<typeof createClient>,
   car: { id: string; name: string; brand: string }
@@ -425,13 +306,6 @@ async function processCarPricing(
   if (pricingData.length === 0) {
     pricingData = await scrapePricingCarwale(car.brand, car.name);
     source = 'carwale';
-  }
-
-  // Final fallback to Official OEM Website (for newer EVs and recent launches)
-  if (pricingData.length === 0) {
-    console.log(`Trying OEM fallback for ${car.brand} ${car.name}...`);
-    pricingData = await scrapePricingOEM(car.brand, car.name);
-    source = 'oem-official';
   }
 
   if (pricingData.length > 0) {
