@@ -180,11 +180,9 @@ export default function WhatsAppTemplateManager() {
     }
     setIsAIGenerating(true);
     try {
-      const { data, error } = await supabase.functions.invoke("car-advisor", {
+      const { data, error } = await supabase.functions.invoke("ai-generate", {
         body: {
-          messages: [{
-            role: "user",
-            content: `You are a WhatsApp marketing template expert for GrabYourCar (an Indian car buying platform). Generate a WhatsApp message template based on this request: "${aiPrompt}"
+          prompt: `You are a WhatsApp marketing template expert for GrabYourCar (an Indian car buying platform). Generate a WhatsApp message template based on this request: "${aiPrompt}"
 
 Requirements:
 - Use {customer_name} for personalization
@@ -195,14 +193,13 @@ Requirements:
 - Include a clear call-to-action
 - Format for WhatsApp (no HTML)
 
-Return ONLY the template text, nothing else.`
-          }],
+Return ONLY the template text, nothing else.`,
         },
       });
 
       if (error) throw error;
 
-      const generatedContent = data?.response || data?.message || "";
+      const generatedContent = data?.content || "";
       setEditingTemplate(prev => ({
         ...prev,
         content: generatedContent,
