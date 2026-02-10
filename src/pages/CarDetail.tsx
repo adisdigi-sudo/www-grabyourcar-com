@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useEventTracking } from "@/hooks/useEventTracking";
 import { useParams, Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { Header } from "@/components/Header";
@@ -96,6 +97,14 @@ const CarDetail = () => {
   
   const [selectedColor, setSelectedColor] = useState(0);
   const [selectedVariant, setSelectedVariant] = useState(0);
+  const { trackCarView, trackBrochureDownload, trackVariantClick, trackColorChange } = useEventTracking();
+
+  // Track car view
+  useEffect(() => {
+    if (car && slug) {
+      trackCarView(slug, car.name, car.brand);
+    }
+  }, [car?.slug]);
 
   // Use database colors if available, otherwise fall back to static data
   const displayColors = useMemo(() => {
@@ -363,6 +372,7 @@ const CarDetail = () => {
                         link.click();
                         document.body.removeChild(link);
                         toast.success("Downloading brochure...");
+                        trackBrochureDownload(car.slug, car.name);
                       }}
                     >
                       <FileText className="h-5 w-5 mr-2" />

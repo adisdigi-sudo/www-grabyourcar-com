@@ -3965,6 +3965,7 @@ export type Database = {
           description: string | null
           id: string
           is_active: boolean | null
+          last_triggered_at: string | null
           max_sends_per_lead: number | null
           message_content: string | null
           name: string
@@ -3984,6 +3985,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean | null
+          last_triggered_at?: string | null
           max_sends_per_lead?: number | null
           message_content?: string | null
           name: string
@@ -4003,6 +4005,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean | null
+          last_triggered_at?: string | null
           max_sends_per_lead?: number | null
           message_content?: string | null
           name?: string
@@ -4223,6 +4226,7 @@ export type Database = {
       wa_message_queue: {
         Row: {
           attempts: number | null
+          automation_rule_id: string | null
           campaign_id: string | null
           created_at: string | null
           delivered_at: string | null
@@ -4241,6 +4245,7 @@ export type Database = {
           provider_message_id: string | null
           read_at: string | null
           replied_at: string | null
+          scheduled_at: string | null
           sent_at: string | null
           status: string
           updated_at: string | null
@@ -4248,6 +4253,7 @@ export type Database = {
         }
         Insert: {
           attempts?: number | null
+          automation_rule_id?: string | null
           campaign_id?: string | null
           created_at?: string | null
           delivered_at?: string | null
@@ -4266,6 +4272,7 @@ export type Database = {
           provider_message_id?: string | null
           read_at?: string | null
           replied_at?: string | null
+          scheduled_at?: string | null
           sent_at?: string | null
           status?: string
           updated_at?: string | null
@@ -4273,6 +4280,7 @@ export type Database = {
         }
         Update: {
           attempts?: number | null
+          automation_rule_id?: string | null
           campaign_id?: string | null
           created_at?: string | null
           delivered_at?: string | null
@@ -4291,12 +4299,20 @@ export type Database = {
           provider_message_id?: string | null
           read_at?: string | null
           replied_at?: string | null
+          scheduled_at?: string | null
           sent_at?: string | null
           status?: string
           updated_at?: string | null
           variables_data?: Json | null
         }
         Relationships: [
+          {
+            foreignKeyName: "wa_message_queue_automation_rule_id_fkey"
+            columns: ["automation_rule_id"]
+            isOneToOne: false
+            referencedRelation: "wa_automation_rules"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "wa_message_queue_campaign_id_fkey"
             columns: ["campaign_id"]
