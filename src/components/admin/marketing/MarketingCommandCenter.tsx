@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 // Sub-components
 import { LeadScoringDashboard } from "./LeadScoringDashboard";
 import { JourneyBuilder } from "./JourneyBuilder";
-import { WhatsAppBroadcastManager } from "./WhatsAppBroadcastManager";
+import { WhatsAppMarketingPortal } from "./WhatsAppMarketingPortal";
 import { CampaignAnalytics } from "./CampaignAnalytics";
 import { MarketingAlerts } from "./MarketingAlerts";
 import { EmailCampaignBuilder } from "./EmailCampaignBuilder";
@@ -287,7 +287,7 @@ export function MarketingCommandCenter() {
 
         {/* WhatsApp Tab */}
         <TabsContent value="whatsapp">
-          <WhatsAppBroadcastManager />
+          <WhatsAppMarketingPortal />
         </TabsContent>
 
         {/* Alerts Tab */}
