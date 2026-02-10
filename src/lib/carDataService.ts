@@ -138,7 +138,7 @@ export const fetchCarsFromDatabase = async (options: FetchCarsOptions = {}): Pro
       id, slug, name, brand, body_type, tagline, price_range, price_numeric,
       original_price, discount, fuel_types, transmission_types, availability,
       is_hot, is_limited, is_new, is_upcoming, launch_date, overview, key_highlights,
-      pros, cons, competitors, brochure_url,
+      pros, cons, competitors, brochure_url, is_discontinued,
       car_images(url, alt_text, is_primary, sort_order),
       car_colors(id, name, hex_code, image_url, sort_order),
       car_variants(id, name, price, price_numeric, fuel_type, transmission, features, ex_showroom, rto, insurance, tcs, fastag, registration, handling, on_road_price, sort_order),
@@ -160,16 +160,19 @@ export const fetchCarsFromDatabase = async (options: FetchCarsOptions = {}): Pro
       query = query.eq('is_upcoming', true);
     }
 
+    // Exclude discontinued cars from public listings
+    query = query.or('is_discontinued.is.null,is_discontinued.eq.false');
+
     const { data: dbCars, error } = await query.order('brand').order('name');
 
     if (error) {
       console.error('Database fetch error:', error);
-      return []; // Database-only mode - no static fallback
+      return [];
     }
 
     if (!dbCars || dbCars.length === 0) {
       console.log('No cars found in database');
-      return []; // Database-only mode - no static fallback
+      return [];
     }
 
     // Helper: Check if image is real/authentic (OEM or Supabase-hosted)
@@ -213,10 +216,32 @@ export const fetchCarsFromDatabase = async (options: FetchCarsOptions = {}): Pro
         'jeep-india.com',
         'citroen.in',
         'vinfastauto.in',
+        'static-cms-prod.vinfastauto.in',
+        'storage.googleapis.com',
         'tesla.com',
+        'digitalassets.tesla.com',
         'bmw.in',
         'mercedes-benz.co.in',
-        'audi.in'
+        'audi.in',
+        'volvo.in',
+        'volvocars.com',
+        'porsche.com',
+        'landrover.in',
+        'jaguar.in',
+        'lexusindia.co.in',
+        'mini.in',
+        'nissan.in',
+        'byd.com',
+        'forcemotors.com',
+        'isuzu.in',
+        'lamborghini.com',
+        'ferrari.com',
+        'rolls-roycemotorcars.com',
+        'bentleymotors.com',
+        'maserati.com',
+        'lucidmotors.com',
+        'polestar.com',
+        'rivian.com',
       ];
       
       return officialOEMDomains.some(domain => url.includes(domain));
@@ -345,6 +370,11 @@ export const fetchCarsFromDatabase = async (options: FetchCarsOptions = {}): Pro
       } as Car;
     });
 
+    // For listing pages: filter out cars with 0 variants (incomplete data)
+    // Single car fetch by slug still returns the car for detail/admin access
+    if (!options.slug) {
+      return cars.filter((car: Car) => car.variants && car.variants.length > 0);
+    }
     return cars;
   } catch (error) {
     console.error('Error fetching from database:', error);
