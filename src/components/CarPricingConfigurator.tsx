@@ -463,6 +463,12 @@ export const CarPricingConfigurator = ({ car, colors: dbColors }: CarPricingConf
         selectedCity={stateRates.find(s => s.code === selectedState)?.name}
         onRoadPrice={onRoadPriceBreakup}
         pdfConfig={emiPdfConfig}
+        brochureUrl={car.brochureUrl}
+        availableColors={displayColors.map(c => ({ name: c.name, hex: c.hex }))}
+        onColorChange={(colorName) => {
+          const idx = displayColors.findIndex(c => c.name === colorName);
+          if (idx >= 0) setSelectedColor(idx);
+        }}
       />
     </>
   );
