@@ -5,215 +5,119 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface CarRecord {
-  id: string;
-  name: string;
-  brand: string;
-  price_range: string;
-  price_numeric: number;
-  updated_at: string;
-  data_freshness_score: number;
-  last_verified_at: string | null;
-  is_upcoming: boolean;
-  launch_date: string | null;
-}
-
 interface ValidationResult {
   carId: string;
   carName: string;
+  brand: string;
   issues: string[];
-  freshnessScore: number;
-  needsUpdate: boolean;
-}
-
-// Calculate data freshness score based on multiple factors
-function calculateFreshnessScore(car: CarRecord): { score: number; issues: string[] } {
-  const issues: string[] = [];
-  let score = 100;
-  
-  const now = new Date();
-  const updatedAt = new Date(car.updated_at);
-  const daysSinceUpdate = Math.floor((now.getTime() - updatedAt.getTime()) / (1000 * 60 * 60 * 24));
-  
-  // Deduct points for stale data
-  if (daysSinceUpdate > 90) {
-    score -= 40;
-    issues.push(`Data is ${daysSinceUpdate} days old (over 90 days)`);
-  } else if (daysSinceUpdate > 60) {
-    score -= 25;
-    issues.push(`Data is ${daysSinceUpdate} days old (over 60 days)`);
-  } else if (daysSinceUpdate > 30) {
-    score -= 10;
-    issues.push(`Data is ${daysSinceUpdate} days old (over 30 days)`);
-  }
-  
-  // Check for missing price
-  if (!car.price_numeric || car.price_numeric === 0) {
-    score -= 20;
-    issues.push('Missing numeric price');
-  }
-  
-  // Check for upcoming cars with past launch dates
-  if (car.is_upcoming && car.launch_date) {
-    const launchDate = new Date(car.launch_date);
-    if (launchDate < now) {
-      score -= 30;
-      issues.push(`Upcoming car has past launch date: ${car.launch_date}`);
-    }
-  }
-  
-  // Never verified
-  if (!car.last_verified_at) {
-    score -= 15;
-    issues.push('Never manually verified');
-  }
-  
-  return { score: Math.max(0, score), issues };
-}
-
-// Check for potential price changes (simplified - in production, would compare with external data)
-function detectPotentialPriceIssues(car: CarRecord): string[] {
-  const issues: string[] = [];
-  
-  // Flag cars with unusually round prices that might need verification
-  if (car.price_numeric && car.price_numeric % 100000 === 0) {
-    issues.push('Price is a round number - may need verification');
-  }
-  
-  // Flag very low or very high prices
-  if (car.price_numeric && car.price_numeric < 300000) {
-    issues.push('Price seems too low for a new car');
-  }
-  
-  if (car.price_numeric && car.price_numeric > 50000000) {
-    issues.push('Price is very high - verify for accuracy');
-  }
-  
-  return issues;
+  severity: 'critical' | 'warning' | 'info';
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
-  
+
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('Missing Supabase configuration');
-    }
-    
+    if (!supabaseUrl || !supabaseServiceKey) throw new Error('Missing config');
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    
-    const { action, carId } = await req.json().catch(() => ({ action: 'validate-all' }));
-    
-    console.log(`Validation action: ${action}, carId: ${carId}`);
-    
-    if (action === 'validate-single' && carId) {
-      // Validate a single car
-      const { data: car, error } = await supabase
-        .from('cars')
-        .select('*')
-        .eq('id', carId)
-        .single();
-      
-      if (error || !car) {
-        throw new Error(`Car not found: ${carId}`);
-      }
-      
-      const { score, issues } = calculateFreshnessScore(car as CarRecord);
-      const priceIssues = detectPotentialPriceIssues(car as CarRecord);
-      const allIssues = [...issues, ...priceIssues];
-      
-      // Update the car's freshness score
-      await supabase
-        .from('cars')
-        .update({ data_freshness_score: score })
-        .eq('id', carId);
-      
-      const result: ValidationResult = {
-        carId: car.id,
-        carName: car.name,
-        issues: allIssues,
-        freshnessScore: score,
-        needsUpdate: score < 70 || allIssues.length > 0,
-      };
-      
-      return new Response(JSON.stringify({ success: true, result }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    
-    // Validate all cars
-    const { data: cars, error: carsError } = await supabase
+    const { action } = await req.json().catch(() => ({ action: 'full-audit' }));
+
+    // 1. Cars with 0 variants
+    const { data: noVariants } = await supabase
       .from('cars')
-      .select('*')
-      .order('updated_at', { ascending: true });
-    
-    if (carsError) {
-      throw new Error(`Failed to fetch cars: ${carsError.message}`);
-    }
-    
-    console.log(`Validating ${cars?.length || 0} cars`);
-    
+      .select('id, name, brand, slug')
+      .or('is_discontinued.is.null,is_discontinued.eq.false');
+
+    const { data: variantCounts } = await supabase
+      .from('car_variants')
+      .select('car_id');
+
+    const variantCarIds = new Set((variantCounts || []).map((v: any) => v.car_id));
+    const carsNoVariants = (noVariants || []).filter((c: any) => !variantCarIds.has(c.id));
+
+    // 2. Variants with missing pricing
+    const { data: badVariants } = await supabase
+      .from('car_variants')
+      .select('id, name, car_id, price_numeric, on_road_price')
+      .or('on_road_price.is.null,on_road_price.eq.0,price_numeric.is.null,price_numeric.eq.0');
+
+    // 3. Cars with 0 images
+    const { data: imageCounts } = await supabase
+      .from('car_images')
+      .select('car_id');
+
+    const imageCarIds = new Set((imageCounts || []).map((i: any) => i.car_id));
+    const carsNoImages = (noVariants || []).filter((c: any) => !imageCarIds.has(c.id));
+
+    // 4. Cars with 0 colors
+    const { data: colorCounts } = await supabase
+      .from('car_colors')
+      .select('car_id');
+
+    const colorCarIds = new Set((colorCounts || []).map((c: any) => c.car_id));
+    const carsNoColors = (noVariants || []).filter((c: any) => !colorCarIds.has(c.id));
+
+    // 5. Duplicate slugs
+    const { data: allCars } = await supabase.from('cars').select('slug');
+    const slugCounts: Record<string, number> = {};
+    (allCars || []).forEach((c: any) => { slugCounts[c.slug] = (slugCounts[c.slug] || 0) + 1; });
+    const duplicateSlugs = Object.entries(slugCounts).filter(([_, count]) => count > 1);
+
+    // 6. Cars with no pricing
+    const { data: noPricing } = await supabase
+      .from('cars')
+      .select('id, name, brand')
+      .or('price_numeric.is.null,price_numeric.eq.0')
+      .or('is_discontinued.is.null,is_discontinued.eq.false');
+
     const results: ValidationResult[] = [];
-    const updates: { id: string; data_freshness_score: number }[] = [];
-    
-    for (const car of (cars || []) as CarRecord[]) {
-      const { score, issues } = calculateFreshnessScore(car);
-      const priceIssues = detectPotentialPriceIssues(car);
-      const allIssues = [...issues, ...priceIssues];
-      
-      updates.push({ id: car.id, data_freshness_score: score });
-      
-      if (score < 70 || allIssues.length > 0) {
-        results.push({
-          carId: car.id,
-          carName: car.name,
-          issues: allIssues,
-          freshnessScore: score,
-          needsUpdate: true,
-        });
-      }
-    }
-    
-    // Batch update freshness scores
-    for (const update of updates) {
-      await supabase
-        .from('cars')
-        .update({ data_freshness_score: update.data_freshness_score })
-        .eq('id', update.id);
-    }
-    
-    // Sort by freshness score (lowest first)
-    results.sort((a, b) => a.freshnessScore - b.freshnessScore);
-    
+
+    carsNoVariants.forEach((c: any) => results.push({
+      carId: c.id, carName: c.name, brand: c.brand,
+      issues: ['No variants defined'], severity: 'critical'
+    }));
+
+    carsNoImages.forEach((c: any) => results.push({
+      carId: c.id, carName: c.name, brand: c.brand,
+      issues: ['No images in car_images table'], severity: 'critical'
+    }));
+
+    carsNoColors.forEach((c: any) => results.push({
+      carId: c.id, carName: c.name, brand: c.brand,
+      issues: ['No color options defined'], severity: 'warning'
+    }));
+
+    (noPricing || []).forEach((c: any) => results.push({
+      carId: c.id, carName: c.name, brand: c.brand,
+      issues: ['Missing base pricing (price_numeric)'], severity: 'critical'
+    }));
+
     const summary = {
-      totalCars: cars?.length || 0,
-      carsNeedingUpdate: results.length,
-      averageFreshnessScore: updates.length > 0 
-        ? Math.round(updates.reduce((sum, u) => sum + u.data_freshness_score, 0) / updates.length)
-        : 0,
-      criticalIssues: results.filter(r => r.freshnessScore < 50).length,
+      totalActiveCars: (noVariants || []).length,
+      carsWithVariants: variantCarIds.size,
+      carsWithoutVariants: carsNoVariants.length,
+      carsWithoutImages: carsNoImages.length,
+      carsWithoutColors: carsNoColors.length,
+      variantsMissingPricing: (badVariants || []).length,
+      duplicateSlugs: duplicateSlugs.length,
+      carsMissingBasePricing: (noPricing || []).length,
+      totalIssues: results.length,
+      criticalIssues: results.filter(r => r.severity === 'critical').length,
+      warnings: results.filter(r => r.severity === 'warning').length,
+      launchReady: results.filter(r => r.severity === 'critical').length === 0,
     };
-    
-    console.log(`Validation complete: ${summary.carsNeedingUpdate}/${summary.totalCars} cars need updates`);
-    
-    return new Response(JSON.stringify({ 
-      success: true, 
-      summary,
-      results: results.slice(0, 20), // Return top 20 issues
-    }), {
+
+    return new Response(JSON.stringify({ success: true, summary, results: results.slice(0, 50) }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
-    
   } catch (error) {
     console.error('Validation error:', error);
-    return new Response(JSON.stringify({ 
-      success: false, 
+    return new Response(JSON.stringify({
+      success: false,
       error: error instanceof Error ? error.message : 'Validation failed',
     }), {
       status: 500,

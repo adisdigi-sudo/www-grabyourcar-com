@@ -55,17 +55,50 @@ const OFFICIAL_OEM_DOMAINS = [
   // VinFast
   'vinfastauto.in',
   'vinfast.com',
+  'static-cms-prod.vinfastauto.in',
+  'storage.googleapis.com', // VinFast CDN
   // Tesla
   'tesla.com',
   'www.tesla.com',
+  'digitalassets.tesla.com',
+  // Nissan
+  'nissan.in',
+  'www-asia.nissan-cdn.net',
+  // BYD
+  'byd.com',
+  // Force Motors
+  'forcemotors.com',
+  // Isuzu
+  'isuzu.in',
   // Luxury brands
   'bmw.in',
+  'www.bmw.in',
   'mercedes-benz.co.in',
+  'www.mercedes-benz.co.in',
   'audi.in',
+  'www.audi.in',
   'volvo.in',
+  'volvocars.com',
   'porsche.com',
+  'www.porsche.com',
   'landrover.in',
-  'jaguar.in'
+  'www.landrover.in',
+  'jaguar.in',
+  'www.jaguar.in',
+  'lexusindia.co.in',
+  'www.lexusindia.co.in',
+  'mini.in',
+  'www.mini.in',
+  // Supercar brands
+  'lamborghini.com',
+  'ferrari.com',
+  'rolls-roycemotorcars.com',
+  'bentleymotors.com',
+  'maserati.com',
+  // EV brands
+  'lucidmotors.com',
+  'polestar.com',
+  'rivian.com',
 ];
 
 /**
