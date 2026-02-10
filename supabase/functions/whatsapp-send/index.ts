@@ -42,7 +42,7 @@ async function sendV2(
   to: string,
   payload: Record<string, unknown>
 ): Promise<{ success: boolean; data?: unknown; error?: string }> {
-  const requestBody = { messaging_product: "whatsapp", to, ...payload };
+  const requestBody = { messaging_product: "whatsapp", to, phone_number_id: phoneId, ...payload };
   console.log("Finbite v2 body:", JSON.stringify(requestBody));
 
   const response = await fetch(FINBITE_V2_URL, {
