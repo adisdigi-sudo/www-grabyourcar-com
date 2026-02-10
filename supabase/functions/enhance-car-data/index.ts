@@ -7,8 +7,8 @@ const corsHeaders = {
 
 // AI models to try in order of preference
 const AI_MODELS = [
+  "google/gemini-3-flash-preview",
   "google/gemini-2.5-flash",
-  "google/gemini-2.5-flash-lite",
   "openai/gpt-5-mini",
 ];
 

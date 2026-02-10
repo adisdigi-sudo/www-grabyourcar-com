@@ -164,16 +164,15 @@ export const SEOBuilder = () => {
         ? `Generate an SEO-optimized meta description (max 160 chars) for a car dealership's ${page?.name} page.`
         : `Generate SEO keywords (comma-separated) for a car dealership's ${page?.name} page.`;
 
-      const { data, error } = await supabase.functions.invoke('car-advisor', {
+      const { data, error } = await supabase.functions.invoke('ai-generate', {
         body: { 
-          messages: [{ role: 'user', content: prompt }],
-          context: 'seo_generation'
+          prompt,
         }
       });
 
       if (error) throw error;
 
-      const response = data?.response || data?.message || '';
+      const response = data?.content || '';
       
       if (type === 'all') {
         try {

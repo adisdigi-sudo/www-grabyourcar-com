@@ -164,3 +164,6 @@ verify_jwt = false
 
 [functions.batch-sync-brochures]
 verify_jwt = false
+
+[functions.ai-generate]
+verify_jwt = false
