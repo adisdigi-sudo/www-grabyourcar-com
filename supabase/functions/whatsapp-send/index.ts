@@ -5,14 +5,102 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Finbite API endpoint (same as whatsapp-otp)
-const FINBITE_API_URL = "https://wbiztool.com/api/v1/send_msg/";
+/**
+ * WhatsApp Send — Updated for Finbite v2 API
+ * Base URL: https://app.finbite.in/api/v2/whatsapp-business/messages
+ * Auth: API Key (Bearer) + Phone ID (X-Phone-ID header)
+ * 
+ * Supports: text, template, image, document, video, audio
+ * Falls back to v1 if v2 fails.
+ */
+
+const FINBITE_V2_URL = "https://app.finbite.in/api/v2/whatsapp-business/messages";
+const FINBITE_V1_URL = "https://wbiztool.com/api/v1/send_msg/";
 
 interface SendMessageRequest {
   to: string;
   message?: string;
-  messageType?: number;
+  messageType?: "text" | "template" | "image" | "document" | "video" | "audio";
+  template_name?: string;
+  template_variables?: Record<string, string>;
   mediaUrl?: string;
+}
+
+function normalizePhone(phone: string): { full: string; short: string; valid: boolean } {
+  const clean = phone.replace(/\D/g, "").replace(/^0+/, "");
+  let short = clean;
+  if (clean.startsWith("91") && clean.length === 12) {
+    short = clean.slice(2);
+  }
+  const valid = /^[6-9]\d{9}$/.test(short);
+  return { full: `91${short}`, short, valid };
+}
+
+async function sendV2(
+  apiKey: string,
+  phoneId: string,
+  to: string,
+  payload: Record<string, unknown>
+): Promise<{ success: boolean; data?: unknown; error?: string }> {
+  console.log("Sending via Finbite v2:", JSON.stringify(payload));
+
+  const response = await fetch(FINBITE_V2_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`,
+      "X-Phone-ID": phoneId,
+    },
+    body: JSON.stringify({ messaging_product: "whatsapp", to, ...payload }),
+  });
+
+  const ct = response.headers.get("content-type") || "";
+  if (ct.includes("application/json")) {
+    const result = await response.json();
+    console.log("Finbite v2 response:", JSON.stringify(result));
+    if (response.ok && !result.error) {
+      return { success: true, data: result };
+    }
+    return { success: false, error: JSON.stringify(result) };
+  }
+
+  const text = await response.text();
+  console.error("Finbite v2 non-JSON:", text.substring(0, 200));
+  return { success: false, error: `Non-JSON response (${response.status})` };
+}
+
+async function sendV1Fallback(
+  clientId: string,
+  apiKey: string,
+  waClient: string,
+  phone: string,
+  message: string
+): Promise<{ success: boolean; data?: unknown; error?: string }> {
+  const formData = new URLSearchParams();
+  formData.append("client_id", clientId);
+  formData.append("api_key", apiKey);
+  formData.append("whatsapp_client", waClient);
+  formData.append("phone", phone);
+  formData.append("country_code", "91");
+  formData.append("msg", message);
+  formData.append("msg_type", "0");
+
+  const response = await fetch(FINBITE_V1_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: formData.toString(),
+  });
+
+  const ct = response.headers.get("content-type") || "";
+  if (ct.includes("application/json")) {
+    const result = await response.json();
+    if (response.ok && result.status !== false && !result.error) {
+      return { success: true, data: result };
+    }
+    return { success: false, error: JSON.stringify(result) };
+  }
+  const text = await response.text();
+  return { success: false, error: `Non-JSON (${response.status})` };
 }
 
 serve(async (req) => {
@@ -21,23 +109,18 @@ serve(async (req) => {
   }
 
   try {
-    const FINBITE_CLIENT_ID = Deno.env.get("FINBITE_CLIENT_ID");
     const FINBITE_API_KEY = Deno.env.get("FINBITE_API_KEY");
     const FINBITE_WHATSAPP_CLIENT = Deno.env.get("FINBITE_WHATSAPP_CLIENT");
+    const FINBITE_CLIENT_ID = Deno.env.get("FINBITE_CLIENT_ID");
 
-    if (!FINBITE_CLIENT_ID || !FINBITE_API_KEY || !FINBITE_WHATSAPP_CLIENT) {
-      console.error("Missing Finbite configuration:", { 
-        hasClientId: !!FINBITE_CLIENT_ID, 
-        hasApiKey: !!FINBITE_API_KEY, 
-        hasWhatsAppClient: !!FINBITE_WHATSAPP_CLIENT 
-      });
+    if (!FINBITE_API_KEY || !FINBITE_WHATSAPP_CLIENT) {
       return new Response(
         JSON.stringify({ error: "WhatsApp not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const { to, message, messageType = 0, mediaUrl }: SendMessageRequest = await req.json();
+    const { to, message, messageType = "text", template_name, template_variables, mediaUrl }: SendMessageRequest = await req.json();
 
     if (!to) {
       return new Response(
@@ -46,75 +129,76 @@ serve(async (req) => {
       );
     }
 
-    // Format phone number - extract just the 10-digit number
-    const cleanPhone = to.replace(/\D/g, "").replace(/^0+/, "");
-    let normalizedPhone = cleanPhone;
-    if (cleanPhone.startsWith("91") && cleanPhone.length === 12) {
-      normalizedPhone = cleanPhone.slice(2);
-    }
-
-    if (!/^[6-9]\d{9}$/.test(normalizedPhone)) {
+    const phone = normalizePhone(to);
+    if (!phone.valid) {
       return new Response(
         JSON.stringify({ error: "Invalid phone number format" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Build form-encoded payload (matching whatsapp-otp format)
-    const formData = new URLSearchParams();
-    formData.append("client_id", FINBITE_CLIENT_ID);
-    formData.append("api_key", FINBITE_API_KEY);
-    formData.append("whatsapp_client", FINBITE_WHATSAPP_CLIENT);
-    formData.append("phone", normalizedPhone);
-    formData.append("country_code", "91");
-    formData.append("msg", message || "Hello from GrabYourCar!");
-    formData.append("msg_type", messageType.toString());
-    
-    if (mediaUrl && messageType > 0) {
-      formData.append("media_url", mediaUrl);
-    }
+    let result: { success: boolean; data?: unknown; error?: string };
 
-    console.log("Sending WhatsApp message to:", normalizedPhone);
-    console.log("DEBUG - client_id length:", FINBITE_CLIENT_ID.length, "api_key length:", FINBITE_API_KEY.length, "wa_client length:", FINBITE_WHATSAPP_CLIENT.length);
-    console.log("DEBUG - api_key first 8 chars:", FINBITE_API_KEY.substring(0, 8));
-    console.log("DEBUG - client_id value:", FINBITE_CLIENT_ID);
-
-    const response = await fetch(FINBITE_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: formData.toString(),
-    });
-
-    // Check content type before parsing
-    const contentType = response.headers.get("content-type") || "";
-    
-    if (contentType.includes("application/json")) {
-      const result = await response.json();
-      console.log("Finbite API response:", result);
-
-      if (!response.ok || result.status === false || result.error) {
-        console.error("Finbite API error:", result);
-        return new Response(
-          JSON.stringify({ error: "Failed to send message", details: result }),
-          { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+    // Try v2 API first
+    if (messageType === "template" && template_name) {
+      // Template message
+      const components: Array<Record<string, unknown>> = [];
+      if (template_variables && Object.keys(template_variables).length > 0) {
+        components.push({
+          type: "body",
+          parameters: Object.values(template_variables).map(v => ({ type: "text", text: v })),
+        });
       }
 
-      return new Response(
-        JSON.stringify({ success: true, result }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      result = await sendV2(FINBITE_API_KEY, FINBITE_WHATSAPP_CLIENT, phone.full, {
+        type: "template",
+        template: {
+          name: template_name,
+          language: { code: "en" },
+          ...(components.length > 0 ? { components } : {}),
+        },
+      });
+    } else if (messageType === "image" && mediaUrl) {
+      result = await sendV2(FINBITE_API_KEY, FINBITE_WHATSAPP_CLIENT, phone.full, {
+        type: "image",
+        image: { link: mediaUrl, caption: message || "" },
+      });
+    } else if (messageType === "document" && mediaUrl) {
+      result = await sendV2(FINBITE_API_KEY, FINBITE_WHATSAPP_CLIENT, phone.full, {
+        type: "document",
+        document: { link: mediaUrl, caption: message || "", filename: "document.pdf" },
+      });
     } else {
-      // API returned non-JSON (likely HTML error page)
-      const textBody = await response.text();
-      console.error("Finbite API returned non-JSON:", textBody.substring(0, 200));
-      return new Response(
-        JSON.stringify({ error: "WhatsApp service temporarily unavailable" }),
-        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      // Text message
+      result = await sendV2(FINBITE_API_KEY, FINBITE_WHATSAPP_CLIENT, phone.full, {
+        type: "text",
+        text: { body: message || "Hello from GrabYourCar!" },
+      });
+    }
+
+    // Fallback to v1 for text messages if v2 fails
+    if (!result.success && messageType === "text" && FINBITE_CLIENT_ID) {
+      console.log("v2 failed, attempting v1 fallback...");
+      result = await sendV1Fallback(
+        FINBITE_CLIENT_ID,
+        FINBITE_API_KEY,
+        FINBITE_WHATSAPP_CLIENT,
+        phone.short,
+        message || "Hello from GrabYourCar!"
       );
     }
+
+    if (result.success) {
+      return new Response(
+        JSON.stringify({ success: true, result: result.data }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ error: "Failed to send message", details: result.error }),
+      { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   } catch (error) {
     console.error("Send message error:", error);
     return new Response(
