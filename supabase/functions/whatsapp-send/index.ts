@@ -75,6 +75,9 @@ serve(async (req) => {
     }
 
     console.log("Sending WhatsApp message to:", normalizedPhone);
+    console.log("DEBUG - client_id length:", FINBITE_CLIENT_ID.length, "api_key length:", FINBITE_API_KEY.length, "wa_client length:", FINBITE_WHATSAPP_CLIENT.length);
+    console.log("DEBUG - api_key first 8 chars:", FINBITE_API_KEY.substring(0, 8));
+    console.log("DEBUG - client_id value:", FINBITE_CLIENT_ID);
 
     const response = await fetch(FINBITE_API_URL, {
       method: "POST",
