@@ -113,7 +113,7 @@ serve(async (req) => {
     const FINBITE_WHATSAPP_CLIENT = (Deno.env.get("FINBITE_WHATSAPP_CLIENT") || "").replace(/[^\x20-\x7E]/g, "").trim();
     const FINBITE_CLIENT_ID = (Deno.env.get("FINBITE_CLIENT_ID") || "").replace(/[^\x20-\x7E]/g, "").trim();
     
-    console.log("API Key length:", FINBITE_API_KEY.length, "Phone ID length:", FINBITE_WHATSAPP_CLIENT.length);
+    console.log("API Key length:", FINBITE_API_KEY.length, "starts:", FINBITE_API_KEY.substring(0, 8), "Phone ID:", FINBITE_WHATSAPP_CLIENT);
 
     if (!FINBITE_API_KEY || !FINBITE_WHATSAPP_CLIENT) {
       return new Response(
