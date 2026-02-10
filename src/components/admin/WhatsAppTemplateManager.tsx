@@ -14,7 +14,8 @@ import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   MessageSquare, Plus, Edit, Trash2, Eye, Send, Copy, CheckCircle, 
-  XCircle, Clock, Sparkles, Filter, Search, Download, Upload
+  XCircle, Clock, Sparkles, Filter, Search, Download, Upload, FileText,
+  Loader2, ClipboardCopy, Share2
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -65,11 +66,14 @@ export default function WhatsAppTemplateManager() {
   const [previewTemplate, setPreviewTemplate] = useState<WhatsAppTemplate | null>(null);
   const [testPhone, setTestPhone] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [isAIGenerating, setIsAIGenerating] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [isAIDialogOpen, setIsAIDialogOpen] = useState(false);
+  const [isFinbiteCopyOpen, setIsFinbiteCopyOpen] = useState(false);
+  const [finbiteCopyText, setFinbiteCopyText] = useState("");
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchTemplates();
-  }, []);
+  useEffect(() => { fetchTemplates(); }, []);
 
   const fetchTemplates = async () => {
     setIsLoading(true);
@@ -78,21 +82,10 @@ export default function WhatsAppTemplateManager() {
         .from("whatsapp_templates")
         .select("*")
         .order("category", { ascending: true });
-
       if (error) throw error;
-      // Map database records to local type
-      const mappedData = (data || []).map(item => ({
-        ...item,
-        example_data: item.example_data as Record<string, unknown> | null
-      }));
-      setTemplates(mappedData);
+      setTemplates((data || []).map(item => ({ ...item, example_data: item.example_data as Record<string, unknown> | null })));
     } catch (error) {
       console.error("Error fetching templates:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load templates",
-        variant: "destructive",
-      });
     } finally {
       setIsLoading(false);
     }
@@ -100,25 +93,18 @@ export default function WhatsAppTemplateManager() {
 
   const handleSave = async () => {
     if (!editingTemplate?.name || !editingTemplate?.content) {
-      toast({
-        title: "Validation Error",
-        description: "Name and content are required",
-        variant: "destructive",
-      });
+      toast({ title: "Validation Error", description: "Name and content are required", variant: "destructive" });
       return;
     }
-
     try {
-      // Extract variables from content
       const variableRegex = /\{[a-z_]+\}/g;
       const extractedVariables = editingTemplate.content.match(variableRegex) || [];
-
       const templateData = {
         name: editingTemplate.name,
         category: editingTemplate.category || "welcome",
         template_type: editingTemplate.template_type || "text",
         content: editingTemplate.content,
-        variables: Array.from(extractedVariables),
+        variables: Array.from(new Set(extractedVariables)),
         preview: editingTemplate.content.substring(0, 100) + "...",
         is_active: editingTemplate.is_active ?? true,
         is_approved: editingTemplate.is_approved ?? false,
@@ -127,156 +113,224 @@ export default function WhatsAppTemplateManager() {
         use_cases: editingTemplate.use_cases || [],
         example_data: (editingTemplate.example_data || {}) as Record<string, string>,
       };
-
       if (editingTemplate.id) {
-        const { error } = await supabase
-          .from("whatsapp_templates")
-          .update(templateData)
-          .eq("id", editingTemplate.id);
+        const { error } = await supabase.from("whatsapp_templates").update(templateData).eq("id", editingTemplate.id);
         if (error) throw error;
         toast({ title: "Template updated successfully" });
       } else {
-        const { error } = await supabase
-          .from("whatsapp_templates")
-          .insert([templateData]);
+        const { error } = await supabase.from("whatsapp_templates").insert([templateData]);
         if (error) throw error;
         toast({ title: "Template created successfully" });
       }
-
       setIsEditing(false);
       setEditingTemplate(null);
       fetchTemplates();
-    } catch (error) {
-      console.error("Error saving template:", error);
-      toast({
-        title: "Error",
-        description: "Failed to save template",
-        variant: "destructive",
-      });
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this template?")) return;
-
+    if (!confirm("Delete this template?")) return;
     try {
-      const { error } = await supabase
-        .from("whatsapp_templates")
-        .delete()
-        .eq("id", id);
-      if (error) throw error;
+      await supabase.from("whatsapp_templates").delete().eq("id", id);
       toast({ title: "Template deleted" });
       fetchTemplates();
-    } catch (error) {
-      console.error("Error deleting template:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete template",
-        variant: "destructive",
-      });
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     }
   };
 
   const handleToggleActive = async (id: string, isActive: boolean) => {
-    try {
-      const { error } = await supabase
-        .from("whatsapp_templates")
-        .update({ is_active: !isActive })
-        .eq("id", id);
-      if (error) throw error;
-      fetchTemplates();
-    } catch (error) {
-      console.error("Error toggling template:", error);
-    }
+    await supabase.from("whatsapp_templates").update({ is_active: !isActive }).eq("id", id);
+    fetchTemplates();
   };
 
   const sendTestMessage = async () => {
     if (!previewTemplate || !testPhone) {
-      toast({
-        title: "Enter phone number",
-        description: "Please enter a phone number to send test message",
-        variant: "destructive",
-      });
+      toast({ title: "Enter phone number", variant: "destructive" });
       return;
     }
-
     setIsSending(true);
     try {
-      // Replace variables with example data
       let message = previewTemplate.content;
       const exampleData = (previewTemplate.example_data || {}) as Record<string, string>;
-      
       previewTemplate.variables?.forEach((variable) => {
         const key = variable.replace(/[{}]/g, "");
         const value = exampleData[key] || `[${key}]`;
         message = message.replace(variable, String(value));
       });
-
       const { error } = await supabase.functions.invoke("whatsapp-send", {
-        body: {
-          phone: testPhone.replace(/\D/g, ""),
-          message,
-        },
+        body: { phone: testPhone.replace(/\D/g, ""), message },
       });
-
       if (error) throw error;
-
-      toast({
-        title: "Test Message Sent!",
-        description: `Message sent to ${testPhone}`,
-      });
-    } catch (error) {
-      console.error("Error sending test message:", error);
-      toast({
-        title: "Error",
-        description: "Failed to send test message",
-        variant: "destructive",
-      });
+      toast({ title: "Test message sent!", description: `Sent to ${testPhone}` });
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
       setIsSending(false);
     }
   };
 
-  const renderPreviewContent = (template: WhatsAppTemplate) => {
-    let content = template.content;
-    const exampleData = (template.example_data || {}) as Record<string, string>;
-    
-    template.variables?.forEach((variable) => {
-      const key = variable.replace(/[{}]/g, "");
-      const value = exampleData[key] || `[${key}]`;
-      content = content.replace(new RegExp(variable.replace(/[{}]/g, "\\{$&\\}").replace(/\{/g, "\\{").replace(/\}/g, "\\}"), "g"), `**${String(value)}**`);
-    });
-    
-    return content;
+  // ─── AI GENERATE TEMPLATES ────────────────────────
+  const handleAIGenerate = async () => {
+    if (!aiPrompt.trim()) {
+      toast({ title: "Enter a prompt", description: "Describe the template you want", variant: "destructive" });
+      return;
+    }
+    setIsAIGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("car-advisor", {
+        body: {
+          messages: [{
+            role: "user",
+            content: `You are a WhatsApp marketing template expert for GrabYourCar (an Indian car buying platform). Generate a WhatsApp message template based on this request: "${aiPrompt}"
+
+Requirements:
+- Use {customer_name} for personalization
+- Use relevant variables like {car_model}, {price}, {offer_amount}, {emi_amount}, {dealer_name}, {city} etc.
+- Include emojis for engagement
+- Keep under 1024 characters (WhatsApp limit)
+- Make it professional yet friendly
+- Include a clear call-to-action
+- Format for WhatsApp (no HTML)
+
+Return ONLY the template text, nothing else.`
+          }],
+        },
+      });
+
+      if (error) throw error;
+
+      const generatedContent = data?.response || data?.message || "";
+      setEditingTemplate(prev => ({
+        ...prev,
+        content: generatedContent,
+        name: prev?.name || aiPrompt.substring(0, 40),
+      }));
+      setIsAIDialogOpen(false);
+      if (!isEditing) {
+        setEditingTemplate({ content: generatedContent, name: aiPrompt.substring(0, 40) });
+        setIsEditing(true);
+      }
+      toast({ title: "✨ AI template generated!" });
+    } catch (error: any) {
+      toast({ title: "AI Error", description: error.message, variant: "destructive" });
+    } finally {
+      setIsAIGenerating(false);
+    }
+  };
+
+  // ─── EXPORT TEMPLATES ────────────────────────
+  const handleExport = () => {
+    const exportData = templates.map(t => ({
+      name: t.name,
+      category: t.category,
+      template_type: t.template_type,
+      content: t.content,
+      variables: t.variables,
+      language: t.language,
+      approval_status: t.approval_status,
+    }));
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `whatsapp-templates-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: "Templates exported!", description: `${templates.length} templates exported` });
+  };
+
+  // ─── IMPORT TEMPLATES ────────────────────────
+  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const imported = JSON.parse(text);
+      if (!Array.isArray(imported)) throw new Error("Invalid format");
+
+      const toInsert = imported.map((t: any) => ({
+        name: t.name || "Imported Template",
+        category: t.category || "welcome",
+        template_type: t.template_type || "text",
+        content: t.content || "",
+        variables: t.variables || [],
+        preview: (t.content || "").substring(0, 100) + "...",
+        language: t.language || "en",
+        is_active: true,
+        is_approved: false,
+        approval_status: "pending",
+      }));
+
+      const { error } = await supabase.from("whatsapp_templates").insert(toInsert);
+      if (error) throw error;
+
+      toast({ title: "Imported!", description: `${toInsert.length} templates imported` });
+      fetchTemplates();
+    } catch (error: any) {
+      toast({ title: "Import failed", description: error.message, variant: "destructive" });
+    }
+    event.target.value = '';
+  };
+
+  // ─── COPY FOR FINBITE SETUP ────────────────────────
+  const generateFinbiteCopyText = (template?: WhatsAppTemplate) => {
+    const templatesToExport = template ? [template] : templates;
+    const lines = templatesToExport.map((t, i) => {
+      const vars = (t.variables || []).map((v, idx) => `  {{${idx + 1}}} = ${v}`).join('\n');
+      return `━━━ Template ${i + 1} ━━━
+📝 Name: ${t.name}
+📂 Category: ${t.category}
+🌐 Language: ${t.language || 'en'}
+📋 Type: ${t.template_type || 'text'}
+
+📨 Message Body:
+${t.content}
+
+🔄 Variables:
+${vars || '  (No variables)'}
+`;
+    }).join('\n\n');
+
+    const header = `=== GRABYOURCAR WHATSAPP TEMPLATES ===
+Provider: Finbite
+Date: ${new Date().toLocaleDateString('en-IN')}
+Total Templates: ${templatesToExport.length}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Please set up the following templates on our WhatsApp Business Account:
+
+`;
+    return header + lines;
+  };
+
+  const openFinbiteCopy = (template?: WhatsAppTemplate) => {
+    setFinbiteCopyText(generateFinbiteCopyText(template));
+    setIsFinbiteCopyOpen(true);
+  };
+
+  const copyFinbiteText = () => {
+    navigator.clipboard.writeText(finbiteCopyText);
+    toast({ title: "📋 Copied!", description: "Share this text with Finbite support to set up templates" });
   };
 
   const filteredTemplates = templates.filter((t) => {
     const matchesCategory = selectedCategory === "all" || t.category === selectedCategory;
-    const matchesSearch = 
-      t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.content.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = t.name.toLowerCase().includes(searchQuery.toLowerCase()) || t.content.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
-  const getCategoryColor = (category: string) => {
-    return CATEGORIES.find((c) => c.value === category)?.color || "bg-gray-500";
-  };
-
-  const getCategoryLabel = (category: string) => {
-    return CATEGORIES.find((c) => c.value === category)?.label || category;
-  };
+  const getCategoryColor = (category: string) => CATEGORIES.find((c) => c.value === category)?.color || "bg-gray-500";
+  const getCategoryLabel = (category: string) => CATEGORIES.find((c) => c.value === category)?.label || category;
 
   const getStatusBadge = (template: WhatsAppTemplate) => {
-    if (template.is_approved && template.approval_status === "approved") {
-      return <Badge className="bg-green-500"><CheckCircle className="w-3 h-3 mr-1" /> Approved</Badge>;
-    }
-    if (template.approval_status === "rejected") {
-      return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" /> Rejected</Badge>;
-    }
+    if (template.is_approved && template.approval_status === "approved") return <Badge className="bg-green-500"><CheckCircle className="w-3 h-3 mr-1" /> Approved</Badge>;
+    if (template.approval_status === "rejected") return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" /> Rejected</Badge>;
     return <Badge variant="secondary"><Clock className="w-3 h-3 mr-1" /> Pending</Badge>;
   };
 
-  // Stats
   const stats = {
     total: templates.length,
     approved: templates.filter(t => t.is_approved).length,
@@ -293,65 +347,52 @@ export default function WhatsAppTemplateManager() {
             <MessageSquare className="h-6 w-6 text-green-500" />
             WhatsApp Marketing Templates
           </h2>
-          <p className="text-muted-foreground">Manage 15+ pre-approved message templates for marketing campaigns</p>
+          <p className="text-muted-foreground">Create, manage & share templates with Finbite for setup</p>
         </div>
-        <Button onClick={() => { setEditingTemplate({}); setIsEditing(true); }}>
-          <Plus className="h-4 w-4 mr-2" />
-          Create Template
-        </Button>
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={() => setIsAIDialogOpen(true)}>
+            <Sparkles className="h-4 w-4 mr-1" /> AI Generate
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => openFinbiteCopy()}>
+            <Share2 className="h-4 w-4 mr-1" /> Copy All for Finbite
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExport}>
+            <Download className="h-4 w-4 mr-1" /> Export
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <label className="cursor-pointer">
+              <Upload className="h-4 w-4 mr-1" /> Import
+              <input type="file" accept=".json" onChange={handleImport} className="hidden" />
+            </label>
+          </Button>
+          <Button onClick={() => { setEditingTemplate({}); setIsEditing(true); }}>
+            <Plus className="h-4 w-4 mr-1" /> Create
+          </Button>
+        </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-4">
-            <div className="text-3xl font-bold">{stats.total}</div>
-            <p className="text-sm text-muted-foreground">Total Templates</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="text-3xl font-bold text-green-500">{stats.approved}</div>
-            <p className="text-sm text-muted-foreground">Approved</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="text-3xl font-bold text-blue-500">{stats.active}</div>
-            <p className="text-sm text-muted-foreground">Active</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="text-3xl font-bold text-yellow-500">{stats.pending}</div>
-            <p className="text-sm text-muted-foreground">Pending Approval</p>
-          </CardContent>
-        </Card>
+        <Card><CardContent className="pt-4"><div className="text-3xl font-bold">{stats.total}</div><p className="text-sm text-muted-foreground">Total</p></CardContent></Card>
+        <Card><CardContent className="pt-4"><div className="text-3xl font-bold text-green-500">{stats.approved}</div><p className="text-sm text-muted-foreground">Approved</p></CardContent></Card>
+        <Card><CardContent className="pt-4"><div className="text-3xl font-bold text-blue-500">{stats.active}</div><p className="text-sm text-muted-foreground">Active</p></CardContent></Card>
+        <Card><CardContent className="pt-4"><div className="text-3xl font-bold text-yellow-500">{stats.pending}</div><p className="text-sm text-muted-foreground">Pending</p></CardContent></Card>
       </div>
 
       {/* Filters */}
       <div className="flex flex-col md:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search templates..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
+          <Input placeholder="Search templates..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
         </div>
         <Select value={selectedCategory} onValueChange={setSelectedCategory}>
           <SelectTrigger className="w-full md:w-[200px]">
             <Filter className="h-4 w-4 mr-2" />
-            <SelectValue placeholder="Filter by category" />
+            <SelectValue placeholder="Filter" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Categories</SelectItem>
-            {CATEGORIES.map((cat) => (
-              <SelectItem key={cat.value} value={cat.value}>
-                {cat.label}
-              </SelectItem>
-            ))}
+            {CATEGORIES.map((cat) => <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
@@ -370,66 +411,30 @@ export default function WhatsAppTemplateManager() {
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between">
                     <div>
-                      <Badge className={`${getCategoryColor(template.category)} text-white mb-2`}>
-                        {getCategoryLabel(template.category)}
-                      </Badge>
+                      <Badge className={`${getCategoryColor(template.category)} text-white mb-2`}>{getCategoryLabel(template.category)}</Badge>
                       <CardTitle className="text-lg">{template.name}</CardTitle>
                     </div>
                     {getStatusBadge(template)}
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
-                    {template.content.substring(0, 150)}...
-                  </p>
-                  
+                  <p className="text-sm text-muted-foreground line-clamp-3 mb-4">{template.content.substring(0, 150)}...</p>
                   {template.variables && template.variables.length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-4">
-                      {template.variables.slice(0, 4).map((v, i) => (
-                        <Badge key={i} variant="outline" className="text-xs">
-                          {v}
-                        </Badge>
-                      ))}
-                      {template.variables.length > 4 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{template.variables.length - 4} more
-                        </Badge>
-                      )}
+                      {template.variables.slice(0, 4).map((v, i) => <Badge key={i} variant="outline" className="text-xs">{v}</Badge>)}
+                      {template.variables.length > 4 && <Badge variant="outline" className="text-xs">+{template.variables.length - 4} more</Badge>}
                     </div>
                   )}
-
                   <div className="flex items-center justify-between pt-2 border-t">
                     <div className="flex items-center gap-2">
-                      <Switch
-                        checked={template.is_active}
-                        onCheckedChange={() => handleToggleActive(template.id, template.is_active)}
-                      />
-                      <span className="text-xs text-muted-foreground">
-                        {template.is_active ? "Active" : "Inactive"}
-                      </span>
+                      <Switch checked={template.is_active ?? false} onCheckedChange={() => handleToggleActive(template.id, template.is_active ?? false)} />
+                      <span className="text-xs text-muted-foreground">{template.is_active ? "Active" : "Off"}</span>
                     </div>
                     <div className="flex gap-1">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setPreviewTemplate(template)}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => { setEditingTemplate(template); setIsEditing(true); }}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleDelete(template.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setPreviewTemplate(template)}><Eye className="h-4 w-4" /></Button>
+                      <Button size="sm" variant="ghost" onClick={() => openFinbiteCopy(template)} title="Copy for Finbite"><Share2 className="h-4 w-4" /></Button>
+                      <Button size="sm" variant="ghost" onClick={() => { setEditingTemplate(template); setIsEditing(true); }}><Edit className="h-4 w-4" /></Button>
+                      <Button size="sm" variant="ghost" onClick={() => handleDelete(template.id)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   </div>
                 </CardContent>
@@ -457,34 +462,18 @@ export default function WhatsAppTemplateManager() {
                     <TableRow key={template.id}>
                       <TableCell>
                         <div className="font-medium">{template.name}</div>
-                        <div className="text-xs text-muted-foreground truncate max-w-[200px]">
-                          {template.content.substring(0, 50)}...
-                        </div>
+                        <div className="text-xs text-muted-foreground truncate max-w-[200px]">{template.content.substring(0, 50)}...</div>
                       </TableCell>
-                      <TableCell>
-                        <Badge className={`${getCategoryColor(template.category)} text-white`}>
-                          {getCategoryLabel(template.category)}
-                        </Badge>
-                      </TableCell>
+                      <TableCell><Badge className={`${getCategoryColor(template.category)} text-white`}>{getCategoryLabel(template.category)}</Badge></TableCell>
                       <TableCell>{getStatusBadge(template)}</TableCell>
                       <TableCell>{template.variables?.length || 0}</TableCell>
-                      <TableCell>
-                        <Switch
-                          checked={template.is_active}
-                          onCheckedChange={() => handleToggleActive(template.id, template.is_active)}
-                        />
-                      </TableCell>
+                      <TableCell><Switch checked={template.is_active ?? false} onCheckedChange={() => handleToggleActive(template.id, template.is_active ?? false)} /></TableCell>
                       <TableCell>
                         <div className="flex gap-1">
-                          <Button size="sm" variant="ghost" onClick={() => setPreviewTemplate(template)}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" variant="ghost" onClick={() => { setEditingTemplate(template); setIsEditing(true); }}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" variant="ghost" onClick={() => handleDelete(template.id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setPreviewTemplate(template)}><Eye className="h-4 w-4" /></Button>
+                          <Button size="sm" variant="ghost" onClick={() => openFinbiteCopy(template)}><Share2 className="h-4 w-4" /></Button>
+                          <Button size="sm" variant="ghost" onClick={() => { setEditingTemplate(template); setIsEditing(true); }}><Edit className="h-4 w-4" /></Button>
+                          <Button size="sm" variant="ghost" onClick={() => handleDelete(template.id)}><Trash2 className="h-4 w-4" /></Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -496,71 +485,124 @@ export default function WhatsAppTemplateManager() {
         </TabsContent>
       </Tabs>
 
-      {/* Edit/Create Dialog */}
+      {/* Empty State */}
+      {filteredTemplates.length === 0 && !isLoading && (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <MessageSquare className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-medium mb-2">No Templates Found</h3>
+            <p className="text-muted-foreground mb-4">Create templates manually or generate with AI</p>
+            <div className="flex gap-2 justify-center">
+              <Button onClick={() => { setEditingTemplate({}); setIsEditing(true); }}><Plus className="h-4 w-4 mr-2" />Create</Button>
+              <Button variant="outline" onClick={() => setIsAIDialogOpen(true)}><Sparkles className="h-4 w-4 mr-2" />AI Generate</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ─── AI GENERATE DIALOG ──────────────────── */}
+      <Dialog open={isAIDialogOpen} onOpenChange={setIsAIDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-purple-500" /> AI Template Generator</DialogTitle>
+            <DialogDescription>Describe the template you need and AI will create it for you</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>What kind of template do you need?</Label>
+              <Textarea
+                placeholder="e.g., Welcome message for new car inquiry leads with best offer and test drive booking CTA"
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                rows={4}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {["Welcome new lead", "Festival offer promotion", "Test drive reminder", "Price quote follow-up", "EMI offer for hot lead", "Re-engage cold lead"].map((suggestion) => (
+                <Button key={suggestion} variant="outline" size="sm" className="text-xs justify-start" onClick={() => setAiPrompt(suggestion)}>
+                  <Sparkles className="h-3 w-3 mr-1 shrink-0" />{suggestion}
+                </Button>
+              ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAIDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleAIGenerate} disabled={isAIGenerating}>
+              {isAIGenerating ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Generating...</> : <><Sparkles className="h-4 w-4 mr-2" />Generate Template</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── FINBITE COPY DIALOG ──────────────────── */}
+      <Dialog open={isFinbiteCopyOpen} onOpenChange={setIsFinbiteCopyOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Share2 className="h-5 w-5 text-green-500" /> Copy for Finbite Setup</DialogTitle>
+            <DialogDescription>Copy this formatted text and share with Finbite support to set up your templates</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Alert>
+              <AlertDescription className="text-sm">
+                📋 Copy the text below → Share it with Finbite support via WhatsApp/Email → They will set up these templates on your WhatsApp Business Account
+              </AlertDescription>
+            </Alert>
+            <Textarea
+              value={finbiteCopyText}
+              onChange={(e) => setFinbiteCopyText(e.target.value)}
+              rows={16}
+              className="font-mono text-xs"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsFinbiteCopyOpen(false)}>Close</Button>
+            <Button onClick={copyFinbiteText}>
+              <ClipboardCopy className="h-4 w-4 mr-2" /> Copy to Clipboard
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── EDIT/CREATE DIALOG ──────────────────── */}
       <Dialog open={isEditing} onOpenChange={setIsEditing}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              {editingTemplate?.id ? "Edit Template" : "Create New Template"}
-            </DialogTitle>
-            <DialogDescription>
-              Create marketing templates with dynamic variables like {"{customer_name}"}
-            </DialogDescription>
+            <DialogTitle>{editingTemplate?.id ? "Edit Template" : "Create New Template"}</DialogTitle>
+            <DialogDescription>Use {"{variable_name}"} for dynamic content</DialogDescription>
           </DialogHeader>
-
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Template Name</Label>
-                <Input
-                  value={editingTemplate?.name || ""}
-                  onChange={(e) => setEditingTemplate({ ...editingTemplate, name: e.target.value })}
-                  placeholder="e.g., Welcome Message"
-                />
+                <Input value={editingTemplate?.name || ""} onChange={(e) => setEditingTemplate({ ...editingTemplate, name: e.target.value })} placeholder="e.g., Welcome Message" />
               </div>
               <div className="space-y-2">
                 <Label>Category</Label>
-                <Select
-                  value={editingTemplate?.category || "welcome"}
-                  onValueChange={(value) => setEditingTemplate({ ...editingTemplate, category: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CATEGORIES.map((cat) => (
-                      <SelectItem key={cat.value} value={cat.value}>
-                        {cat.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+                <Select value={editingTemplate?.category || "welcome"} onValueChange={(value) => setEditingTemplate({ ...editingTemplate, category: value })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{CATEGORIES.map((cat) => <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             </div>
-
             <div className="space-y-2">
-              <Label>Message Content</Label>
+              <div className="flex items-center justify-between">
+                <Label>Message Content</Label>
+                <Button variant="ghost" size="sm" onClick={() => { setIsAIDialogOpen(true); }}>
+                  <Sparkles className="h-3 w-3 mr-1" /> AI Generate
+                </Button>
+              </div>
               <Textarea
                 value={editingTemplate?.content || ""}
                 onChange={(e) => setEditingTemplate({ ...editingTemplate, content: e.target.value })}
                 placeholder="Hi {customer_name}! Welcome to GrabYourCar..."
                 className="min-h-[200px] font-mono text-sm"
               />
-              <p className="text-xs text-muted-foreground">
-                Use {"{variable_name}"} for dynamic content. Variables will be auto-extracted.
-              </p>
             </div>
-
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Language</Label>
-                <Select
-                  value={editingTemplate?.language || "en"}
-                  onValueChange={(value) => setEditingTemplate({ ...editingTemplate, language: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                <Select value={editingTemplate?.language || "en"} onValueChange={(value) => setEditingTemplate({ ...editingTemplate, language: value })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="en">English</SelectItem>
                     <SelectItem value="hi">Hindi</SelectItem>
@@ -571,17 +613,8 @@ export default function WhatsAppTemplateManager() {
               </div>
               <div className="space-y-2">
                 <Label>Approval Status</Label>
-                <Select
-                  value={editingTemplate?.approval_status || "pending"}
-                  onValueChange={(value) => setEditingTemplate({ 
-                    ...editingTemplate, 
-                    approval_status: value,
-                    is_approved: value === "approved"
-                  })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                <Select value={editingTemplate?.approval_status || "pending"} onValueChange={(value) => setEditingTemplate({ ...editingTemplate, approval_status: value, is_approved: value === "approved" })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="approved">Approved</SelectItem>
@@ -590,126 +623,61 @@ export default function WhatsAppTemplateManager() {
                 </Select>
               </div>
             </div>
-
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={editingTemplate?.is_active ?? true}
-                  onCheckedChange={(checked) => setEditingTemplate({ ...editingTemplate, is_active: checked })}
-                />
-                <Label>Active</Label>
-              </div>
+            <div className="flex items-center gap-2">
+              <Switch checked={editingTemplate?.is_active ?? true} onCheckedChange={(checked) => setEditingTemplate({ ...editingTemplate, is_active: checked })} />
+              <Label>Active</Label>
             </div>
           </div>
-
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditing(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSave}>
-              {editingTemplate?.id ? "Update" : "Create"} Template
-            </Button>
+            <Button variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
+            <Button onClick={handleSave}>{editingTemplate?.id ? "Update" : "Create"} Template</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Preview Dialog */}
+      {/* ─── PREVIEW DIALOG ──────────────────── */}
       <Dialog open={!!previewTemplate} onOpenChange={() => setPreviewTemplate(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5 text-green-500" />
-              {previewTemplate?.name}
-            </DialogTitle>
-            <DialogDescription>
-              Preview how this template will appear to customers
-            </DialogDescription>
+            <DialogTitle className="flex items-center gap-2"><MessageSquare className="h-5 w-5 text-green-500" />{previewTemplate?.name}</DialogTitle>
           </DialogHeader>
-
           {previewTemplate && (
             <div className="space-y-4">
-              <div className="flex gap-2 mb-4">
-                <Badge className={`${getCategoryColor(previewTemplate.category)} text-white`}>
-                  {getCategoryLabel(previewTemplate.category)}
-                </Badge>
+              <div className="flex gap-2">
+                <Badge className={`${getCategoryColor(previewTemplate.category)} text-white`}>{getCategoryLabel(previewTemplate.category)}</Badge>
                 {getStatusBadge(previewTemplate)}
               </div>
-
-              {/* WhatsApp-style preview */}
               <div className="bg-[#e5ddd5] p-4 rounded-lg">
                 <div className="bg-white rounded-lg p-3 shadow-sm max-w-[85%] ml-auto">
-                  <p className="text-sm whitespace-pre-wrap">
-                    {renderPreviewContent(previewTemplate)}
-                  </p>
-                  <p className="text-xs text-gray-400 text-right mt-1">
-                    {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </p>
+                  <p className="text-sm whitespace-pre-wrap">{previewTemplate.content}</p>
+                  <p className="text-xs text-gray-400 text-right mt-1">{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                 </div>
               </div>
-
-              {/* Variables */}
               {previewTemplate.variables && previewTemplate.variables.length > 0 && (
                 <div>
-                  <Label className="text-sm font-medium">Variables Used:</Label>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {previewTemplate.variables.map((v, i) => (
-                      <Badge key={i} variant="outline">{v}</Badge>
-                    ))}
-                  </div>
+                  <Label className="text-sm font-medium">Variables:</Label>
+                  <div className="flex flex-wrap gap-1 mt-1">{previewTemplate.variables.map((v, i) => <Badge key={i} variant="outline">{v}</Badge>)}</div>
                 </div>
               )}
-
-              {/* Test Send */}
               <div className="border-t pt-4">
                 <Label className="text-sm font-medium">Send Test Message</Label>
                 <div className="flex gap-2 mt-2">
-                  <Input
-                    placeholder="Phone number (e.g., 9577200023)"
-                    value={testPhone}
-                    onChange={(e) => setTestPhone(e.target.value)}
-                  />
-                  <Button onClick={sendTestMessage} disabled={isSending}>
-                    <Send className="h-4 w-4 mr-2" />
-                    {isSending ? "Sending..." : "Send"}
-                  </Button>
+                  <Input placeholder="Phone (e.g., 9577200023)" value={testPhone} onChange={(e) => setTestPhone(e.target.value)} />
+                  <Button onClick={sendTestMessage} disabled={isSending}><Send className="h-4 w-4 mr-2" />{isSending ? "..." : "Send"}</Button>
                 </div>
               </div>
-
-              {/* Copy button */}
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => {
-                  navigator.clipboard.writeText(previewTemplate.content);
-                  toast({ title: "Copied to clipboard" });
-                }}
-              >
-                <Copy className="h-4 w-4 mr-2" />
-                Copy Template Text
-              </Button>
+              <div className="grid grid-cols-2 gap-2">
+                <Button variant="outline" onClick={() => { navigator.clipboard.writeText(previewTemplate.content); toast({ title: "Copied!" }); }}>
+                  <Copy className="h-4 w-4 mr-2" /> Copy Text
+                </Button>
+                <Button variant="outline" onClick={() => openFinbiteCopy(previewTemplate)}>
+                  <Share2 className="h-4 w-4 mr-2" /> Copy for Finbite
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
-
-      {/* Empty State */}
-      {filteredTemplates.length === 0 && !isLoading && (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <MessageSquare className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium mb-2">No Templates Found</h3>
-            <p className="text-muted-foreground mb-4">
-              {searchQuery || selectedCategory !== "all" 
-                ? "No templates match your search criteria" 
-                : "Get started by creating your first template"}
-            </p>
-            <Button onClick={() => { setEditingTemplate({}); setIsEditing(true); }}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Template
-            </Button>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
