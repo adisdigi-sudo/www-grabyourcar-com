@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -30,10 +31,15 @@ import {
   Phone,
   Mail,
   MessageCircle,
+  Send,
+  Loader2,
+  CheckCircle2,
+  FileDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { generateEMIPdf, EMIData, EMIPDFConfig, DiscountDetails } from "@/lib/generateEMIPdf";
 import { useEMIPDFSettings } from "@/hooks/useEMIPDFSettings";
+import { supabase } from "@/integrations/supabase/client";
 
 const DISCOUNT_TYPES = [
   { value: 'cash', label: 'Cash Discount' },
@@ -93,6 +99,61 @@ export const ManualQuoteGenerator = () => {
   // Notes
   const [additionalNotes, setAdditionalNotes] = useState("");
 
+  // DB-powered selectors
+  const [dbCars, setDbCars] = useState<any[]>([]);
+  const [dbColors, setDbColors] = useState<any[]>([]);
+  const [selectedCarId, setSelectedCarId] = useState("");
+  const [brochureUrl, setBrochureUrl] = useState("");
+
+  // Email sending state
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+
+  // Fetch cars from DB
+  useEffect(() => {
+    const fetchCars = async () => {
+      const { data } = await supabase
+        .from("cars")
+        .select("id, name, brand, slug, brochure_url, price_range")
+        .eq("is_discontinued", false)
+        .order("brand");
+      if (data) setDbCars(data);
+    };
+    fetchCars();
+  }, []);
+
+  // Fetch colors when car is selected
+  useEffect(() => {
+    if (!selectedCarId) {
+      setDbColors([]);
+      return;
+    }
+    const fetchColors = async () => {
+      const { data } = await supabase
+        .from("car_colors")
+        .select("id, name, hex_code")
+        .eq("car_id", selectedCarId)
+        .order("sort_order");
+      if (data) setDbColors(data);
+    };
+    fetchColors();
+    
+    // Set brochure URL
+    const car = dbCars.find(c => c.id === selectedCarId);
+    if (car) {
+      setBrochureUrl(car.brochure_url || "");
+      // Auto-fill brand and model
+      setBrand(car.brand);
+      setModel(car.name.replace(car.brand, "").trim() || car.name);
+    }
+  }, [selectedCarId, dbCars]);
+
+  // Filter cars by brand
+  const carsForBrand = useMemo(() => {
+    if (!brand) return dbCars;
+    return dbCars.filter(c => c.brand.toLowerCase().includes(brand.toLowerCase()));
+  }, [brand, dbCars]);
+
   // Calculate totals
   const subtotal = exShowroom + rto + insurance + tcs + fastag + registration + handling + accessories + extendedWarranty + otherCharges;
   const finalPrice = enableDiscount ? subtotal - discountAmount : subtotal;
@@ -114,20 +175,13 @@ export const ManualQuoteGenerator = () => {
     return `₹${price.toLocaleString('en-IN')}`;
   };
 
-  const handleGeneratePDF = async () => {
-    if (!brand || !model) {
-      toast.error("Please enter car brand and model");
-      return;
-    }
-
+  const getEMIData = (): EMIData => {
     const carName = `${brand} ${model}`;
-    
-    // Calculate EMI-related values
     const calculatedEMI = showEMI ? emi : 0;
     const totalPayment = showEMI ? calculatedEMI * tenure : 0;
     const totalInterest = showEMI ? totalPayment - loanAmount : 0;
     
-    const emiData: EMIData = {
+    return {
       carName,
       variantName: variant || "Standard",
       selectedColor: color || undefined,
@@ -157,9 +211,15 @@ export const ManualQuoteGenerator = () => {
         remarks: discountRemarks || undefined,
       } : undefined,
     };
+  };
 
+  const handleGeneratePDF = async () => {
+    if (!brand || !model) {
+      toast.error("Please enter car brand and model");
+      return;
+    }
     try {
-      await generateEMIPdf(emiData, pdfConfig || undefined);
+      await generateEMIPdf(getEMIData(), pdfConfig || undefined);
       toast.success("Quote PDF generated successfully!");
     } catch (error) {
       console.error("PDF generation error:", error);
@@ -212,6 +272,10 @@ export const ManualQuoteGenerator = () => {
       message += `• EMI: ${formatPrice(emi)}/month\n`;
       message += `• Rate: ${interestRate}% | Tenure: ${tenure} months\n`;
     }
+
+    if (brochureUrl) {
+      message += `\n📄 *Download Brochure:* ${brochureUrl}\n`;
+    }
     
     message += `\n━━━━━━━━━━━━━━━━━━━━\n`;
     message += `🏢 *${companyName}*\n`;
@@ -225,12 +289,77 @@ export const ManualQuoteGenerator = () => {
     window.open(whatsappUrl, '_blank');
   };
 
+  const handleSendEmail = async () => {
+    if (!customerEmail) {
+      toast.error("Please enter customer email address");
+      return;
+    }
+    if (!brand || !model) {
+      toast.error("Please enter car brand and model");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
+    setIsSendingEmail(true);
+    try {
+      const emiData = getEMIData();
+      const { data, error } = await supabase.functions.invoke("send-quote", {
+        body: {
+          clientName: customerName,
+          clientEmail: customerEmail,
+          clientMobile: customerPhone,
+          carName: `${brand} ${model}`,
+          variantName: variant || "Standard",
+          selectedColor: color || undefined,
+          selectedCity: city || undefined,
+          onRoadPrice: finalPrice,
+          emi: showEMI ? emi : 0,
+          downPayment: showEMI ? downPayment : 0,
+          loanAmount: showEMI ? loanAmount : 0,
+          interestRate: showEMI ? interestRate : 0,
+          tenure: showEMI ? tenure : 0,
+          totalPayment: showEMI ? emi * tenure : 0,
+          totalInterest: showEMI ? (emi * tenure) - loanAmount : 0,
+          brochureUrl: brochureUrl || undefined,
+          priceBreakup: {
+            exShowroom,
+            rto,
+            insurance,
+            tcs,
+            fastag,
+            registration,
+            handling,
+          },
+          discount: enableDiscount && discountAmount > 0 ? {
+            amount: discountAmount,
+            type: discountType,
+            label: DISCOUNT_TYPES.find(d => d.value === discountType)?.label,
+          } : undefined,
+        },
+      });
+
+      if (error) throw error;
+      
+      setEmailSent(true);
+      toast.success(`Quote sent to ${customerEmail}!`, {
+        description: brochureUrl ? "Email includes brochure download link" : undefined,
+      });
+    } catch (error: any) {
+      console.error("Email send error:", error);
+      toast.error("Failed to send quote email. Please try again.");
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
   const handleAutoCalculate = () => {
-    // Auto-calculate common values based on ex-showroom
     if (exShowroom > 0) {
-      const estimatedRto = Math.round(exShowroom * 0.08); // ~8% RTO
-      const estimatedInsurance = Math.round(exShowroom * 0.035); // ~3.5% Insurance
-      const estimatedTcs = exShowroom > 1000000 ? Math.round(exShowroom * 0.01) : 0; // 1% TCS for >10L
+      const estimatedRto = Math.round(exShowroom * 0.08);
+      const estimatedInsurance = Math.round(exShowroom * 0.035);
+      const estimatedTcs = exShowroom > 1000000 ? Math.round(exShowroom * 0.01) : 0;
       const estimatedHandling = 25000;
       const estimatedRegistration = 2500;
       
@@ -240,7 +369,6 @@ export const ManualQuoteGenerator = () => {
       setHandling(estimatedHandling);
       setRegistration(estimatedRegistration);
       
-      // Auto-calculate loan details
       const total = exShowroom + estimatedRto + estimatedInsurance + estimatedTcs + fastag + estimatedHandling + estimatedRegistration;
       setDownPayment(Math.round(total * 0.2));
       setLoanAmount(Math.round(total * 0.8));
@@ -255,6 +383,8 @@ export const ManualQuoteGenerator = () => {
     setVariant("");
     setColor("");
     setCity("");
+    setSelectedCarId("");
+    setBrochureUrl("");
     setCustomerName("");
     setCustomerPhone("");
     setCustomerEmail("");
@@ -277,6 +407,7 @@ export const ManualQuoteGenerator = () => {
     setDiscountAmount(0);
     setDiscountRemarks("");
     setAdditionalNotes("");
+    setEmailSent(false);
     toast.info("Form reset successfully");
   };
 
@@ -289,7 +420,7 @@ export const ManualQuoteGenerator = () => {
             Manual Quote Generator
           </h2>
           <p className="text-muted-foreground mt-1">
-            Create custom price quotes by entering all details manually
+            Create custom price quotes, select colors from catalog, and send via Email or WhatsApp
           </p>
         </div>
         <Button variant="outline" onClick={handleReset}>
@@ -300,15 +431,46 @@ export const ManualQuoteGenerator = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column - Input Forms */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Car Details */}
+          {/* Car Details - Enhanced with DB Selection */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Car className="h-5 w-5" />
                 Car Details
               </CardTitle>
+              <CardDescription>
+                Select from catalog to auto-fill colors & brochure, or enter manually
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Quick select from DB */}
+              {dbCars.length > 0 && (
+                <div className="bg-primary/5 rounded-lg p-4 border border-primary/20 space-y-3">
+                  <Label className="text-sm font-medium flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    Quick Select from Catalog
+                  </Label>
+                  <Select value={selectedCarId} onValueChange={setSelectedCarId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a car from catalog..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {dbCars.map(c => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.brand} {c.name} {c.price_range ? `(${c.price_range})` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {brochureUrl && (
+                    <div className="flex items-center gap-2 text-xs text-success">
+                      <FileDown className="h-3.5 w-3.5" />
+                      <span>Brochure available — will be auto-attached to email</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Brand *</Label>
@@ -346,11 +508,32 @@ export const ManualQuoteGenerator = () => {
                     <Palette className="h-3 w-3" />
                     Color
                   </Label>
-                  <Input 
-                    placeholder="e.g., Pearl White"
-                    value={color}
-                    onChange={(e) => setColor(e.target.value)}
-                  />
+                  {dbColors.length > 0 ? (
+                    <Select value={color} onValueChange={setColor}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select color" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {dbColors.map(c => (
+                          <SelectItem key={c.id} value={c.name}>
+                            <div className="flex items-center gap-2">
+                              <div 
+                                className="w-4 h-4 rounded-full border border-border" 
+                                style={{ backgroundColor: c.hex_code }}
+                              />
+                              {c.name}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input 
+                      placeholder="e.g., Pearl White"
+                      value={color}
+                      onChange={(e) => setColor(e.target.value)}
+                    />
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label className="flex items-center gap-1">
@@ -364,6 +547,25 @@ export const ManualQuoteGenerator = () => {
                   />
                 </div>
               </div>
+
+              {/* Color swatches */}
+              {dbColors.length > 0 && (
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {dbColors.map(c => (
+                    <button
+                      key={c.id}
+                      onClick={() => setColor(c.name)}
+                      className={`w-8 h-8 rounded-full border-2 transition-all ${
+                        color === c.name 
+                          ? "border-primary scale-110 ring-2 ring-primary/30" 
+                          : "border-border hover:scale-105"
+                      }`}
+                      style={{ backgroundColor: c.hex_code }}
+                      title={c.name}
+                    />
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -372,8 +574,11 @@ export const ManualQuoteGenerator = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <User className="h-5 w-5" />
-                Customer Details (Optional)
+                Customer Details
               </CardTitle>
+              <CardDescription>
+                Enter email to send quote directly to the customer
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-3 gap-4">
@@ -396,7 +601,7 @@ export const ManualQuoteGenerator = () => {
                   <Input 
                     placeholder="10-digit mobile"
                     value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
+                    onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
                   />
                 </div>
                 <div className="space-y-2">
@@ -405,6 +610,7 @@ export const ManualQuoteGenerator = () => {
                     Email
                   </Label>
                   <Input 
+                    type="email"
                     placeholder="email@example.com"
                     value={customerEmail}
                     onChange={(e) => setCustomerEmail(e.target.value)}
@@ -435,84 +641,39 @@ export const ManualQuoteGenerator = () => {
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label>Ex-Showroom Price *</Label>
-                  <Input 
-                    type="number"
-                    placeholder="0"
-                    value={exShowroom || ''}
-                    onChange={(e) => setExShowroom(Number(e.target.value))}
-                  />
+                  <Input type="number" placeholder="0" value={exShowroom || ''} onChange={(e) => setExShowroom(Number(e.target.value))} />
                 </div>
                 <div className="space-y-2">
                   <Label>RTO Charges</Label>
-                  <Input 
-                    type="number"
-                    placeholder="0"
-                    value={rto || ''}
-                    onChange={(e) => setRto(Number(e.target.value))}
-                  />
+                  <Input type="number" placeholder="0" value={rto || ''} onChange={(e) => setRto(Number(e.target.value))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Insurance (1 Year)</Label>
-                  <Input 
-                    type="number"
-                    placeholder="0"
-                    value={insurance || ''}
-                    onChange={(e) => setInsurance(Number(e.target.value))}
-                  />
+                  <Input type="number" placeholder="0" value={insurance || ''} onChange={(e) => setInsurance(Number(e.target.value))} />
                 </div>
                 <div className="space-y-2">
                   <Label>TCS (1%)</Label>
-                  <Input 
-                    type="number"
-                    placeholder="0"
-                    value={tcs || ''}
-                    onChange={(e) => setTcs(Number(e.target.value))}
-                  />
+                  <Input type="number" placeholder="0" value={tcs || ''} onChange={(e) => setTcs(Number(e.target.value))} />
                 </div>
                 <div className="space-y-2">
                   <Label>FASTag</Label>
-                  <Input 
-                    type="number"
-                    placeholder="500"
-                    value={fastag || ''}
-                    onChange={(e) => setFastag(Number(e.target.value))}
-                  />
+                  <Input type="number" placeholder="500" value={fastag || ''} onChange={(e) => setFastag(Number(e.target.value))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Registration</Label>
-                  <Input 
-                    type="number"
-                    placeholder="0"
-                    value={registration || ''}
-                    onChange={(e) => setRegistration(Number(e.target.value))}
-                  />
+                  <Input type="number" placeholder="0" value={registration || ''} onChange={(e) => setRegistration(Number(e.target.value))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Handling Charges</Label>
-                  <Input 
-                    type="number"
-                    placeholder="0"
-                    value={handling || ''}
-                    onChange={(e) => setHandling(Number(e.target.value))}
-                  />
+                  <Input type="number" placeholder="0" value={handling || ''} onChange={(e) => setHandling(Number(e.target.value))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Accessories</Label>
-                  <Input 
-                    type="number"
-                    placeholder="0"
-                    value={accessories || ''}
-                    onChange={(e) => setAccessories(Number(e.target.value))}
-                  />
+                  <Input type="number" placeholder="0" value={accessories || ''} onChange={(e) => setAccessories(Number(e.target.value))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Extended Warranty</Label>
-                  <Input 
-                    type="number"
-                    placeholder="0"
-                    value={extendedWarranty || ''}
-                    onChange={(e) => setExtendedWarranty(Number(e.target.value))}
-                  />
+                  <Input type="number" placeholder="0" value={extendedWarranty || ''} onChange={(e) => setExtendedWarranty(Number(e.target.value))} />
                 </div>
               </div>
               
@@ -521,20 +682,11 @@ export const ManualQuoteGenerator = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Other Charges Label</Label>
-                  <Input 
-                    placeholder="e.g., Coating, Accessories Kit"
-                    value={otherChargesLabel}
-                    onChange={(e) => setOtherChargesLabel(e.target.value)}
-                  />
+                  <Input placeholder="e.g., Coating, Accessories Kit" value={otherChargesLabel} onChange={(e) => setOtherChargesLabel(e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label>Other Charges Amount</Label>
-                  <Input 
-                    type="number"
-                    placeholder="0"
-                    value={otherCharges || ''}
-                    onChange={(e) => setOtherCharges(Number(e.target.value))}
-                  />
+                  <Input type="number" placeholder="0" value={otherCharges || ''} onChange={(e) => setOtherCharges(Number(e.target.value))} />
                 </div>
               </div>
             </CardContent>
@@ -550,11 +702,7 @@ export const ManualQuoteGenerator = () => {
                 </CardTitle>
                 <div className="flex items-center gap-2">
                   <Label htmlFor="show-emi">Include EMI in Quote</Label>
-                  <Switch 
-                    id="show-emi"
-                    checked={showEMI}
-                    onCheckedChange={setShowEMI}
-                  />
+                  <Switch id="show-emi" checked={showEMI} onCheckedChange={setShowEMI} />
                 </div>
               </div>
             </CardHeader>
@@ -563,40 +711,19 @@ export const ManualQuoteGenerator = () => {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="space-y-2">
                     <Label>Down Payment</Label>
-                    <Input 
-                      type="number"
-                      placeholder="0"
-                      value={downPayment || ''}
-                      onChange={(e) => setDownPayment(Number(e.target.value))}
-                    />
+                    <Input type="number" placeholder="0" value={downPayment || ''} onChange={(e) => setDownPayment(Number(e.target.value))} />
                   </div>
                   <div className="space-y-2">
                     <Label>Loan Amount</Label>
-                    <Input 
-                      type="number"
-                      placeholder="0"
-                      value={loanAmount || ''}
-                      onChange={(e) => setLoanAmount(Number(e.target.value))}
-                    />
+                    <Input type="number" placeholder="0" value={loanAmount || ''} onChange={(e) => setLoanAmount(Number(e.target.value))} />
                   </div>
                   <div className="space-y-2">
                     <Label>Interest Rate (%)</Label>
-                    <Input 
-                      type="number"
-                      step="0.1"
-                      placeholder="8.5"
-                      value={interestRate || ''}
-                      onChange={(e) => setInterestRate(Number(e.target.value))}
-                    />
+                    <Input type="number" step="0.1" placeholder="8.5" value={interestRate || ''} onChange={(e) => setInterestRate(Number(e.target.value))} />
                   </div>
                   <div className="space-y-2">
                     <Label>Tenure (Months)</Label>
-                    <Input 
-                      type="number"
-                      placeholder="60"
-                      value={tenure || ''}
-                      onChange={(e) => setTenure(Number(e.target.value))}
-                    />
+                    <Input type="number" placeholder="60" value={tenure || ''} onChange={(e) => setTenure(Number(e.target.value))} />
                   </div>
                 </div>
               </CardContent>
@@ -613,11 +740,7 @@ export const ManualQuoteGenerator = () => {
                 </CardTitle>
                 <div className="flex items-center gap-2">
                   <Label htmlFor="enable-discount">Enable Discount</Label>
-                  <Switch 
-                    id="enable-discount"
-                    checked={enableDiscount}
-                    onCheckedChange={setEnableDiscount}
-                  />
+                  <Switch id="enable-discount" checked={enableDiscount} onCheckedChange={setEnableDiscount} />
                 </div>
               </div>
             </CardHeader>
@@ -627,9 +750,7 @@ export const ManualQuoteGenerator = () => {
                   <div className="space-y-2">
                     <Label>Discount Type</Label>
                     <Select value={discountType} onValueChange={(v) => setDiscountType(v as DiscountDetails['type'])}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {DISCOUNT_TYPES.map(d => (
                           <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
@@ -639,22 +760,12 @@ export const ManualQuoteGenerator = () => {
                   </div>
                   <div className="space-y-2">
                     <Label>Discount Amount (₹)</Label>
-                    <Input 
-                      type="number"
-                      placeholder="0"
-                      value={discountAmount || ''}
-                      onChange={(e) => setDiscountAmount(Number(e.target.value))}
-                    />
+                    <Input type="number" placeholder="0" value={discountAmount || ''} onChange={(e) => setDiscountAmount(Number(e.target.value))} />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label>Discount Remarks</Label>
-                  <Textarea 
-                    placeholder="e.g., Valid till end of month, Subject to stock availability"
-                    value={discountRemarks}
-                    onChange={(e) => setDiscountRemarks(e.target.value)}
-                    rows={2}
-                  />
+                  <Textarea placeholder="e.g., Valid till end of month" value={discountRemarks} onChange={(e) => setDiscountRemarks(e.target.value)} rows={2} />
                 </div>
               </CardContent>
             )}
@@ -666,12 +777,7 @@ export const ManualQuoteGenerator = () => {
               <CardTitle>Additional Notes</CardTitle>
             </CardHeader>
             <CardContent>
-              <Textarea 
-                placeholder="Any additional terms, conditions, or notes for the customer..."
-                value={additionalNotes}
-                onChange={(e) => setAdditionalNotes(e.target.value)}
-                rows={3}
-              />
+              <Textarea placeholder="Any additional terms, conditions, or notes..." value={additionalNotes} onChange={(e) => setAdditionalNotes(e.target.value)} rows={3} />
             </CardContent>
           </Card>
         </div>
@@ -691,10 +797,21 @@ export const ManualQuoteGenerator = () => {
                 <div className="bg-muted/50 rounded-lg p-3">
                   <p className="font-semibold text-lg">{brand} {model}</p>
                   {variant && <p className="text-sm text-muted-foreground">{variant}</p>}
-                  <div className="flex gap-2 mt-2">
-                    {color && <Badge variant="secondary">{color}</Badge>}
+                  <div className="flex gap-2 mt-2 flex-wrap">
+                    {color && (
+                      <Badge variant="secondary" className="gap-1">
+                        <Palette className="h-3 w-3" />
+                        {color}
+                      </Badge>
+                    )}
                     {city && <Badge variant="outline">{city}</Badge>}
                   </div>
+                  {brochureUrl && (
+                    <div className="flex items-center gap-1.5 mt-2 text-xs text-success">
+                      <FileDown className="h-3 w-3" />
+                      Brochure attached
+                    </div>
+                  )}
                 </div>
               )}
               
@@ -787,33 +904,99 @@ export const ManualQuoteGenerator = () => {
                 </div>
               )}
               
-              {/* Action Buttons */}
-              <div className="space-y-2 pt-4">
-                <Button 
-                  className="w-full" 
-                  onClick={handleGeneratePDF}
-                  disabled={!brand || !model || exShowroom <= 0}
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download PDF Quote
-                </Button>
-                <Button 
-                  variant="whatsapp" 
-                  className="w-full"
-                  onClick={handleShareWhatsApp}
-                  disabled={!brand || !model || exShowroom <= 0}
-                >
-                  <MessageCircle className="h-4 w-4 mr-2" />
-                  Share via WhatsApp
-                </Button>
-              </div>
-              
-              {/* Customer Quick Send */}
-              {customerPhone && (
-                <p className="text-xs text-center text-muted-foreground">
-                  Will send to: +91 {customerPhone}
-                </p>
-              )}
+              <Separator />
+
+              {/* Action Buttons - Tabbed */}
+              <Tabs defaultValue="download" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="download" className="text-xs gap-1">
+                    <Download className="h-3 w-3" />
+                    PDF
+                  </TabsTrigger>
+                  <TabsTrigger value="whatsapp" className="text-xs gap-1">
+                    <MessageCircle className="h-3 w-3" />
+                    WhatsApp
+                  </TabsTrigger>
+                  <TabsTrigger value="email" className="text-xs gap-1">
+                    <Mail className="h-3 w-3" />
+                    Email
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="download" className="mt-3">
+                  <Button 
+                    className="w-full" 
+                    onClick={handleGeneratePDF}
+                    disabled={!brand || !model || exShowroom <= 0}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Download PDF Quote
+                  </Button>
+                </TabsContent>
+
+                <TabsContent value="whatsapp" className="mt-3 space-y-2">
+                  <Button 
+                    variant="whatsapp" 
+                    className="w-full"
+                    onClick={handleShareWhatsApp}
+                    disabled={!brand || !model || exShowroom <= 0}
+                  >
+                    <MessageCircle className="h-4 w-4 mr-2" />
+                    {customerPhone ? `Send to +91 ${customerPhone}` : "Share via WhatsApp"}
+                  </Button>
+                  {!customerPhone && (
+                    <p className="text-xs text-muted-foreground text-center">
+                      Add customer phone above to send directly
+                    </p>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="email" className="mt-3 space-y-2">
+                  {emailSent ? (
+                    <div className="text-center py-4 space-y-2">
+                      <CheckCircle2 className="h-8 w-8 text-success mx-auto" />
+                      <p className="text-sm font-medium">Quote sent to {customerEmail}!</p>
+                      {brochureUrl && (
+                        <p className="text-xs text-muted-foreground">📄 Brochure link included</p>
+                      )}
+                      <Button variant="outline" size="sm" onClick={() => setEmailSent(false)}>
+                        Send Again
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <Button
+                        className="w-full"
+                        onClick={handleSendEmail}
+                        disabled={!brand || !model || exShowroom <= 0 || !customerEmail || isSendingEmail}
+                      >
+                        {isSendingEmail ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Sending...
+                          </>
+                        ) : (
+                          <>
+                            <Send className="h-4 w-4 mr-2" />
+                            Send Quote via Email
+                          </>
+                        )}
+                      </Button>
+                      {!customerEmail && (
+                        <p className="text-xs text-muted-foreground text-center">
+                          Enter customer email above to enable
+                        </p>
+                      )}
+                      {brochureUrl && customerEmail && (
+                        <p className="text-xs text-success text-center flex items-center justify-center gap-1">
+                          <FileDown className="h-3 w-3" />
+                          Brochure download link will be included
+                        </p>
+                      )}
+                    </>
+                  )}
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
         </div>
