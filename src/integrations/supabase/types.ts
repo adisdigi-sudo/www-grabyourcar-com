@@ -1903,8 +1903,80 @@ export type Database = {
           },
         ]
       }
+      email_campaigns: {
+        Row: {
+          click_count: number | null
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          failed_count: number | null
+          html_content: string | null
+          id: string
+          name: string
+          open_count: number | null
+          scheduled_at: string | null
+          segment_filter: Json | null
+          sent_count: number | null
+          started_at: string | null
+          status: string
+          subject: string
+          template_id: string | null
+          total_recipients: number | null
+          updated_at: string
+        }
+        Insert: {
+          click_count?: number | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          failed_count?: number | null
+          html_content?: string | null
+          id?: string
+          name: string
+          open_count?: number | null
+          scheduled_at?: string | null
+          segment_filter?: Json | null
+          sent_count?: number | null
+          started_at?: string | null
+          status?: string
+          subject: string
+          template_id?: string | null
+          total_recipients?: number | null
+          updated_at?: string
+        }
+        Update: {
+          click_count?: number | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          failed_count?: number | null
+          html_content?: string | null
+          id?: string
+          name?: string
+          open_count?: number | null
+          scheduled_at?: string | null
+          segment_filter?: Json | null
+          sent_count?: number | null
+          started_at?: string | null
+          status?: string
+          subject?: string
+          template_id?: string | null
+          total_recipients?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_campaigns_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "email_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_logs: {
         Row: {
+          campaign_id: string | null
           clicked_at: string | null
           created_at: string
           error_message: string | null
@@ -1921,6 +1993,7 @@ export type Database = {
           template_id: string | null
         }
         Insert: {
+          campaign_id?: string | null
           clicked_at?: string | null
           created_at?: string
           error_message?: string | null
@@ -1937,6 +2010,7 @@ export type Database = {
           template_id?: string | null
         }
         Update: {
+          campaign_id?: string | null
           clicked_at?: string | null
           created_at?: string
           error_message?: string | null
@@ -1953,6 +2027,13 @@ export type Database = {
           template_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "email_logs_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "email_campaigns"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "email_logs_sequence_id_fkey"
             columns: ["sequence_id"]
@@ -2055,6 +2136,7 @@ export type Database = {
       }
       email_subscribers: {
         Row: {
+          company: string | null
           created_at: string
           email: string
           id: string
@@ -2064,10 +2146,12 @@ export type Database = {
           preferences: Json | null
           source: string | null
           subscribed: boolean | null
+          tags: string[] | null
           unsubscribed_at: string | null
           updated_at: string
         }
         Insert: {
+          company?: string | null
           created_at?: string
           email: string
           id?: string
@@ -2077,10 +2161,12 @@ export type Database = {
           preferences?: Json | null
           source?: string | null
           subscribed?: boolean | null
+          tags?: string[] | null
           unsubscribed_at?: string | null
           updated_at?: string
         }
         Update: {
+          company?: string | null
           created_at?: string
           email?: string
           id?: string
@@ -2090,6 +2176,7 @@ export type Database = {
           preferences?: Json | null
           source?: string | null
           subscribed?: boolean | null
+          tags?: string[] | null
           unsubscribed_at?: string | null
           updated_at?: string
         }

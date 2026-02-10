@@ -155,3 +155,12 @@ verify_jwt = false
 
 [functions.wa-automation-trigger]
 verify_jwt = false
+
+[functions.send-bulk-email]
+verify_jwt = false
+
+[functions.messaging-service]
+verify_jwt = false
+
+[functions.batch-sync-brochures]
+verify_jwt = false
