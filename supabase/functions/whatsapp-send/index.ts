@@ -6,7 +6,7 @@ const corsHeaders = {
 };
 
 // Finbite API endpoint (same as whatsapp-otp)
-const FINBITE_API_URL = "https://api.finbite.in/v1/whatsapp/send";
+const FINBITE_API_URL = "https://wbiztool.com/api/v1/send_msg/";
 
 interface SendMessageRequest {
   to: string;

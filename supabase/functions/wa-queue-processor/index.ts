@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const FINBITE_API_URL = "https://api.finbite.in/v1/whatsapp/send";
+const FINBITE_API_URL = "https://wbiztool.com/api/v1/send_msg/";
 
 interface MessageJob {
   id: string;
