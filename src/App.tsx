@@ -78,7 +78,9 @@ const App = () => (
                   <Route path="/brochures" element={<Brochures />} />
                   <Route path="/car-loans" element={<CarLoans />} />
                   <Route path="/car/:slug" element={<CarDetail />} />
+                  <Route path="/cars/:slug" element={<CarDetail />} />
                   <Route path="/car/:slug/on-road-price" element={<CarOnRoadPrice />} />
+                  <Route path="/cars/:slug/on-road-price" element={<CarOnRoadPrice />} />
                   <Route path="/compare" element={<CompareCars />} />
                   <Route path="/car-insurance" element={<CarInsurance />} />
                   <Route path="/corporate" element={<CorporateBuying />} />
