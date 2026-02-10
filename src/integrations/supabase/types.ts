@@ -4223,6 +4223,149 @@ export type Database = {
         }
         Relationships: []
       }
+      wa_event_triggers: {
+        Row: {
+          conditions: Json | null
+          cooldown_hours: number | null
+          created_at: string
+          delay_seconds: number
+          event_name: string
+          id: string
+          is_active: boolean
+          max_sends_per_lead: number | null
+          priority: number
+          template_id: string | null
+          updated_at: string
+          variable_mapping: Json | null
+        }
+        Insert: {
+          conditions?: Json | null
+          cooldown_hours?: number | null
+          created_at?: string
+          delay_seconds?: number
+          event_name: string
+          id?: string
+          is_active?: boolean
+          max_sends_per_lead?: number | null
+          priority?: number
+          template_id?: string | null
+          updated_at?: string
+          variable_mapping?: Json | null
+        }
+        Update: {
+          conditions?: Json | null
+          cooldown_hours?: number | null
+          created_at?: string
+          delay_seconds?: number
+          event_name?: string
+          id?: string
+          is_active?: boolean
+          max_sends_per_lead?: number | null
+          priority?: number
+          template_id?: string | null
+          updated_at?: string
+          variable_mapping?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_event_triggers_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "wa_template_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wa_message_logs: {
+        Row: {
+          campaign_id: string | null
+          created_at: string
+          customer_name: string | null
+          delivered_at: string | null
+          error_message: string | null
+          failed_at: string | null
+          id: string
+          lead_id: string | null
+          message_content: string | null
+          message_type: string
+          phone: string
+          provider: string
+          provider_message_id: string | null
+          read_at: string | null
+          replied_at: string | null
+          sent_at: string | null
+          status: string
+          template_id: string | null
+          template_name: string | null
+          trigger_event: string | null
+          updated_at: string
+          variables: Json | null
+        }
+        Insert: {
+          campaign_id?: string | null
+          created_at?: string
+          customer_name?: string | null
+          delivered_at?: string | null
+          error_message?: string | null
+          failed_at?: string | null
+          id?: string
+          lead_id?: string | null
+          message_content?: string | null
+          message_type?: string
+          phone: string
+          provider?: string
+          provider_message_id?: string | null
+          read_at?: string | null
+          replied_at?: string | null
+          sent_at?: string | null
+          status?: string
+          template_id?: string | null
+          template_name?: string | null
+          trigger_event?: string | null
+          updated_at?: string
+          variables?: Json | null
+        }
+        Update: {
+          campaign_id?: string | null
+          created_at?: string
+          customer_name?: string | null
+          delivered_at?: string | null
+          error_message?: string | null
+          failed_at?: string | null
+          id?: string
+          lead_id?: string | null
+          message_content?: string | null
+          message_type?: string
+          phone?: string
+          provider?: string
+          provider_message_id?: string | null
+          read_at?: string | null
+          replied_at?: string | null
+          sent_at?: string | null
+          status?: string
+          template_id?: string | null
+          template_name?: string | null
+          trigger_event?: string | null
+          updated_at?: string
+          variables?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_message_logs_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wa_message_logs_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "wa_template_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wa_message_queue: {
         Row: {
           attempts: number | null
@@ -4350,6 +4493,90 @@ export type Database = {
           phone?: string
           reason?: string | null
           source?: string | null
+        }
+        Relationships: []
+      }
+      wa_provider_config: {
+        Row: {
+          auth_type: string
+          base_url: string
+          config: Json | null
+          created_at: string
+          id: string
+          is_active: boolean
+          provider_name: string
+          updated_at: string
+        }
+        Insert: {
+          auth_type?: string
+          base_url?: string
+          config?: Json | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          provider_name?: string
+          updated_at?: string
+        }
+        Update: {
+          auth_type?: string
+          base_url?: string
+          config?: Json | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          provider_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      wa_template_catalog: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          language: string
+          provider: string
+          sample_body: string | null
+          template_id: string | null
+          template_name: string
+          trigger_conditions: Json | null
+          trigger_event: string | null
+          updated_at: string
+          variables: string[] | null
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          language?: string
+          provider?: string
+          sample_body?: string | null
+          template_id?: string | null
+          template_name: string
+          trigger_conditions?: Json | null
+          trigger_event?: string | null
+          updated_at?: string
+          variables?: string[] | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          language?: string
+          provider?: string
+          sample_body?: string | null
+          template_id?: string | null
+          template_name?: string
+          trigger_conditions?: Json | null
+          trigger_event?: string | null
+          updated_at?: string
+          variables?: string[] | null
         }
         Relationships: []
       }
