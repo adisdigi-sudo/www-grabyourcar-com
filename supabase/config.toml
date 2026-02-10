@@ -143,3 +143,6 @@ verify_jwt = false
 
 [functions.sync-all-brochures]
 verify_jwt = false
+
+[functions.broadcast-send]
+verify_jwt = false

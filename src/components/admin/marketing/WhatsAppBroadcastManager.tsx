@@ -164,36 +164,36 @@ export function WhatsAppBroadcastManager() {
   };
 
   const handleStartBroadcast = async (broadcast: Broadcast) => {
-    if (!confirm(`Send to ${broadcast.total_recipients} recipients?`)) return;
+    if (!confirm(`Send WhatsApp messages to ${broadcast.total_recipients} recipients via Finbite API? This will use your WhatsApp credits.`)) return;
 
     try {
-      // Update status to sending
-      await supabase
-        .from("whatsapp_broadcasts")
-        .update({ status: "sending", started_at: new Date().toISOString() })
-        .eq("id", broadcast.id);
-
-      toast({ title: "Broadcast started", description: "Messages are being sent" });
+      toast({ title: "Broadcast started", description: "Sending messages via WhatsApp API..." });
       fetchData();
 
-      // In a real implementation, this would trigger an edge function to send messages
-      // For now, we'll simulate completion after a delay
-      setTimeout(async () => {
-        await supabase
-          .from("whatsapp_broadcasts")
-          .update({ 
-            status: "completed", 
-            completed_at: new Date().toISOString(),
-            sent_count: broadcast.total_recipients,
-            delivered_count: Math.round(broadcast.total_recipients * 0.95),
-            read_count: Math.round(broadcast.total_recipients * 0.6),
-          })
-          .eq("id", broadcast.id);
-        fetchData();
-      }, 3000);
+      // Call the real broadcast-send edge function
+      const { data, error } = await supabase.functions.invoke("broadcast-send", {
+        body: { broadcastId: broadcast.id },
+      });
 
+      if (error) throw error;
+
+      if (data?.success) {
+        toast({ 
+          title: "Broadcast completed ✅", 
+          description: `${data.summary.sent} sent, ${data.summary.failed} failed out of ${data.summary.total}` 
+        });
+      } else {
+        toast({ 
+          title: "Broadcast issue", 
+          description: data?.error || "Some messages may have failed", 
+          variant: "destructive" 
+        });
+      }
+
+      fetchData();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
+      fetchData();
     }
   };
 
