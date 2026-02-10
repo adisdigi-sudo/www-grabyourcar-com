@@ -174,9 +174,9 @@ serve(async (req) => {
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const FINBITE_API_KEY = Deno.env.get("FINBITE_API_KEY");
-  const FINBITE_WHATSAPP_CLIENT = Deno.env.get("FINBITE_WHATSAPP_CLIENT");
-  const FINBITE_CLIENT_ID = Deno.env.get("FINBITE_CLIENT_ID");
+  const FINBITE_API_KEY = (Deno.env.get("FINBITE_API_KEY") || "").trim();
+  const FINBITE_WHATSAPP_CLIENT = (Deno.env.get("FINBITE_WHATSAPP_CLIENT") || "").trim();
+  const FINBITE_CLIENT_ID = (Deno.env.get("FINBITE_CLIENT_ID") || "").trim();
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     return new Response(JSON.stringify({ error: "Missing backend config" }), {
