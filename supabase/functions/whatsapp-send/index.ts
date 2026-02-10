@@ -44,17 +44,41 @@ async function sendV2(
 ): Promise<{ success: boolean; data?: unknown; error?: string }> {
   console.log("Sending via Finbite v2:", JSON.stringify(payload));
 
-  const response = await fetch(FINBITE_V2_URL, {
+  // Try multiple auth approaches
+  const headers1 = {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${apiKey}`,
+    "X-Phone-ID": phoneId,
+  };
+  
+  console.log("Attempt 1 - Bearer auth");
+  let response = await fetch(FINBITE_V2_URL, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`,
-      "X-Phone-ID": phoneId,
-    },
+    headers: headers1,
     body: JSON.stringify({ messaging_product: "whatsapp", to, ...payload }),
   });
 
-  const ct = response.headers.get("content-type") || "";
+  let ct = response.headers.get("content-type") || "";
+  if (ct.includes("application/json")) {
+    const result = await response.json();
+    if (response.ok && !result.error && !result.message?.includes("invalid")) {
+      console.log("Bearer auth worked:", JSON.stringify(result));
+      return { success: true, data: result };
+    }
+    console.log("Bearer failed:", JSON.stringify(result));
+  } else {
+    await response.text();
+  }
+
+  // Attempt 2: api_key in body
+  console.log("Attempt 2 - api_key in body");
+  response = await fetch(FINBITE_V2_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messaging_product: "whatsapp", to, api_key: apiKey, phone_number_id: phoneId, ...payload }),
+  });
+
+  ct = response.headers.get("content-type") || "";
   if (ct.includes("application/json")) {
     const result = await response.json();
     console.log("Finbite v2 response:", JSON.stringify(result));
