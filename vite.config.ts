@@ -22,6 +22,9 @@ export default defineConfig(({ mode }) => ({
       "react/jsx-dev-runtime",
       "@tanstack/react-query",
       "next-themes",
+      "react-leaflet",
+      "leaflet",
+      "framer-motion",
     ],
   },
   optimizeDeps: {
