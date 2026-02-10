@@ -1,11 +1,11 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { Helmet } from "react-helmet-async";
  import { motion } from "framer-motion";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { DealerCard } from "@/components/dealers/DealerCard";
 import { DealerFilters } from "@/components/dealers/DealerFilters";
-import { DealerMap } from "@/components/dealers/DealerMap";
+const DealerMap = lazy(() => import("@/components/dealers/DealerMap").then(m => ({ default: m.DealerMap })));
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -729,12 +729,14 @@ const DealerLocatorPage = () => {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Map */}
                 <div className="lg:col-span-2">
-                  <DealerMap
-                    dealers={filteredDealers}
-                    selectedDealer={selectedDealer}
-                    userLocation={userLocation}
-                    onDealerSelect={setSelectedDealer}
-                  />
+                  <Suspense fallback={<div className="h-[400px] lg:h-[600px] flex items-center justify-center bg-muted rounded-lg"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
+                    <DealerMap
+                      dealers={filteredDealers}
+                      selectedDealer={selectedDealer}
+                      userLocation={userLocation}
+                      onDealerSelect={setSelectedDealer}
+                    />
+                  </Suspense>
                 </div>
 
                 {/* Side List */}
