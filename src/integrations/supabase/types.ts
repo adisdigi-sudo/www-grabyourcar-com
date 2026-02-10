@@ -3131,6 +3131,42 @@ export type Database = {
         }
         Relationships: []
       }
+      messaging_providers: {
+        Row: {
+          config: Json | null
+          created_at: string | null
+          daily_limit: number | null
+          id: string
+          is_active: boolean | null
+          name: string
+          provider_type: string
+          rate_limit_per_second: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          config?: Json | null
+          created_at?: string | null
+          daily_limit?: number | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          provider_type?: string
+          rate_limit_per_second?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          config?: Json | null
+          created_at?: string | null
+          daily_limit?: number | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          provider_type?: string
+          rate_limit_per_second?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       navigation_menu: {
         Row: {
           created_at: string
@@ -3856,6 +3892,448 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           sort_order?: number | null
+        }
+        Relationships: []
+      }
+      wa_automation_log: {
+        Row: {
+          created_at: string | null
+          id: string
+          lead_id: string | null
+          message_id: string | null
+          phone: string
+          rule_id: string | null
+          status: string | null
+          suppression_reason: string | null
+          trigger_data: Json | null
+          trigger_event: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          lead_id?: string | null
+          message_id?: string | null
+          phone: string
+          rule_id?: string | null
+          status?: string | null
+          suppression_reason?: string | null
+          trigger_data?: Json | null
+          trigger_event: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          lead_id?: string | null
+          message_id?: string | null
+          phone?: string
+          rule_id?: string | null
+          status?: string | null
+          suppression_reason?: string | null
+          trigger_data?: Json | null
+          trigger_event?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_automation_log_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wa_automation_log_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "wa_message_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wa_automation_log_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "wa_automation_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wa_automation_rules: {
+        Row: {
+          cooldown_hours: number | null
+          created_at: string | null
+          created_by: string | null
+          delay_minutes: number | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          max_sends_per_lead: number | null
+          message_content: string | null
+          name: string
+          template_id: string | null
+          total_sent: number | null
+          total_suppressed: number | null
+          total_triggered: number | null
+          trigger_conditions: Json | null
+          trigger_event: string
+          updated_at: string | null
+        }
+        Insert: {
+          cooldown_hours?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          delay_minutes?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_sends_per_lead?: number | null
+          message_content?: string | null
+          name: string
+          template_id?: string | null
+          total_sent?: number | null
+          total_suppressed?: number | null
+          total_triggered?: number | null
+          trigger_conditions?: Json | null
+          trigger_event: string
+          updated_at?: string | null
+        }
+        Update: {
+          cooldown_hours?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          delay_minutes?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_sends_per_lead?: number | null
+          message_content?: string | null
+          name?: string
+          template_id?: string | null
+          total_sent?: number | null
+          total_suppressed?: number | null
+          total_triggered?: number | null
+          trigger_conditions?: Json | null
+          trigger_event?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_automation_rules_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wa_campaign_analytics: {
+        Row: {
+          campaign_id: string | null
+          created_at: string | null
+          date: string
+          delivered: number | null
+          failed: number | null
+          id: string
+          leads_generated: number | null
+          opted_out: number | null
+          read_count: number | null
+          replied: number | null
+          sent: number | null
+        }
+        Insert: {
+          campaign_id?: string | null
+          created_at?: string | null
+          date?: string
+          delivered?: number | null
+          failed?: number | null
+          id?: string
+          leads_generated?: number | null
+          opted_out?: number | null
+          read_count?: number | null
+          replied?: number | null
+          sent?: number | null
+        }
+        Update: {
+          campaign_id?: string | null
+          created_at?: string | null
+          date?: string
+          delivered?: number | null
+          failed?: number | null
+          id?: string
+          leads_generated?: number | null
+          opted_out?: number | null
+          read_count?: number | null
+          replied?: number | null
+          sent?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_campaign_analytics_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "wa_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wa_campaigns: {
+        Row: {
+          batch_delay_ms: number | null
+          batch_size: number | null
+          campaign_type: string
+          completed_at: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          estimated_recipients: number | null
+          id: string
+          media_type: string | null
+          media_url: string | null
+          message_content: string | null
+          name: string
+          paused_at: string | null
+          scheduled_at: string | null
+          segment_rules: Json | null
+          send_window_end: string | null
+          send_window_start: string | null
+          started_at: string | null
+          status: string
+          tags: string[] | null
+          template_id: string | null
+          timezone: string | null
+          total_delivered: number | null
+          total_failed: number | null
+          total_opted_out: number | null
+          total_queued: number | null
+          total_read: number | null
+          total_replied: number | null
+          total_sent: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          batch_delay_ms?: number | null
+          batch_size?: number | null
+          campaign_type?: string
+          completed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          estimated_recipients?: number | null
+          id?: string
+          media_type?: string | null
+          media_url?: string | null
+          message_content?: string | null
+          name: string
+          paused_at?: string | null
+          scheduled_at?: string | null
+          segment_rules?: Json | null
+          send_window_end?: string | null
+          send_window_start?: string | null
+          started_at?: string | null
+          status?: string
+          tags?: string[] | null
+          template_id?: string | null
+          timezone?: string | null
+          total_delivered?: number | null
+          total_failed?: number | null
+          total_opted_out?: number | null
+          total_queued?: number | null
+          total_read?: number | null
+          total_replied?: number | null
+          total_sent?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          batch_delay_ms?: number | null
+          batch_size?: number | null
+          campaign_type?: string
+          completed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          estimated_recipients?: number | null
+          id?: string
+          media_type?: string | null
+          media_url?: string | null
+          message_content?: string | null
+          name?: string
+          paused_at?: string | null
+          scheduled_at?: string | null
+          segment_rules?: Json | null
+          send_window_end?: string | null
+          send_window_start?: string | null
+          started_at?: string | null
+          status?: string
+          tags?: string[] | null
+          template_id?: string | null
+          timezone?: string | null
+          total_delivered?: number | null
+          total_failed?: number | null
+          total_opted_out?: number | null
+          total_queued?: number | null
+          total_read?: number | null
+          total_replied?: number | null
+          total_sent?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_campaigns_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wa_contact_segments: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          estimated_count: number | null
+          id: string
+          is_dynamic: boolean | null
+          name: string
+          rules: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          estimated_count?: number | null
+          id?: string
+          is_dynamic?: boolean | null
+          name: string
+          rules?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          estimated_count?: number | null
+          id?: string
+          is_dynamic?: boolean | null
+          name?: string
+          rules?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      wa_message_queue: {
+        Row: {
+          attempts: number | null
+          campaign_id: string | null
+          created_at: string | null
+          delivered_at: string | null
+          error_code: string | null
+          error_message: string | null
+          failed_at: string | null
+          id: string
+          lead_id: string | null
+          max_attempts: number | null
+          media_type: string | null
+          media_url: string | null
+          message_content: string
+          next_retry_at: string | null
+          phone: string
+          priority: number | null
+          provider_message_id: string | null
+          read_at: string | null
+          replied_at: string | null
+          sent_at: string | null
+          status: string
+          updated_at: string | null
+          variables_data: Json | null
+        }
+        Insert: {
+          attempts?: number | null
+          campaign_id?: string | null
+          created_at?: string | null
+          delivered_at?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          failed_at?: string | null
+          id?: string
+          lead_id?: string | null
+          max_attempts?: number | null
+          media_type?: string | null
+          media_url?: string | null
+          message_content: string
+          next_retry_at?: string | null
+          phone: string
+          priority?: number | null
+          provider_message_id?: string | null
+          read_at?: string | null
+          replied_at?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string | null
+          variables_data?: Json | null
+        }
+        Update: {
+          attempts?: number | null
+          campaign_id?: string | null
+          created_at?: string | null
+          delivered_at?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          failed_at?: string | null
+          id?: string
+          lead_id?: string | null
+          max_attempts?: number | null
+          media_type?: string | null
+          media_url?: string | null
+          message_content?: string
+          next_retry_at?: string | null
+          phone?: string
+          priority?: number | null
+          provider_message_id?: string | null
+          read_at?: string | null
+          replied_at?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string | null
+          variables_data?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_message_queue_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "wa_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wa_message_queue_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wa_opt_outs: {
+        Row: {
+          id: string
+          opted_out_at: string | null
+          phone: string
+          reason: string | null
+          source: string | null
+        }
+        Insert: {
+          id?: string
+          opted_out_at?: string | null
+          phone: string
+          reason?: string | null
+          source?: string | null
+        }
+        Update: {
+          id?: string
+          opted_out_at?: string | null
+          phone?: string
+          reason?: string | null
+          source?: string | null
         }
         Relationships: []
       }

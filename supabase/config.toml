@@ -146,3 +146,9 @@ verify_jwt = false
 
 [functions.broadcast-send]
 verify_jwt = false
+
+[functions.wa-queue-processor]
+verify_jwt = false
+
+[functions.wa-campaign-launcher]
+verify_jwt = false
