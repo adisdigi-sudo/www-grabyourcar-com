@@ -57,6 +57,8 @@ const OFFICIAL_OEM_DOMAINS = [
   'jeep-india.com',
   // Citroen
   'citroen.in',
+  'www.citroen.in',
+  'ds-prod.citroen.in',
   // VinFast
   'vinfastauto.in',
   'vinfast.com',
