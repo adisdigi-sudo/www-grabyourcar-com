@@ -113,6 +113,7 @@ const OFFICIAL_OEM_DOMAINS = [
   'www.mini.in',
   // Supercar brands
   'lamborghini.com',
+  'www.lamborghini.com',
   'ferrari.com',
   'cdn.ferrari.com',
   'ferrari-cdn.thron.com',
