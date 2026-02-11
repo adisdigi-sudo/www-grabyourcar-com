@@ -7,15 +7,15 @@ const mahindraCars: Car[] = [
     name: "Mahindra XUV700",
     brand: "Mahindra",
     bodyType: "Mid-Size SUV",
-    tagline: "The World of SUVs",
+    tagline: "Sophistication Made Exhilarating",
     image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/42355/xuv700-exterior-right-front-three-quarter-3.jpeg",
     gallery: [
       "https://imgd.aeplcdn.com/664x374/n/cw/ec/42355/xuv700-exterior-right-front-three-quarter-3.jpeg",
       "https://imgd.aeplcdn.com/664x374/n/cw/ec/42355/xuv700-exterior-rear-view.jpeg",
       "https://imgd.aeplcdn.com/664x374/n/cw/ec/42355/xuv700-interior-dashboard.jpeg"
     ],
-    price: "₹14.00 - 26.99 Lakh",
-    priceNumeric: 1400000,
+    price: "₹13.66 - 23.71 Lakh",
+    priceNumeric: 1366000,
     originalPrice: "₹14.50 Lakh",
     discount: "₹50,000",
     fuelTypes: ["Petrol", "Diesel"],
@@ -25,14 +25,15 @@ const mahindraCars: Car[] = [
     isLimited: false,
     isNew: false,
     isUpcoming: false,
-    overview: "The Mahindra XUV700 is a feature-packed SUV with ADAS safety, powerful engines, and available in 5 and 7-seater configurations.",
+    overview: "The XUV700 radiates refined luxury with sci-fi technology. 2.0L mStallion TGDi Petrol (147 kW, 380 Nm) and 2.2L mHawk Diesel (MX: 114 kW/360 Nm, AX: 136 kW/420-450 Nm). Ventilated front seats, 2nd row captain seats, dual 26.03 cm displays, Skyroof, smart flush door handles, arrow-head LED taillamps. AdrenoX connected car.",
     keyHighlights: [
-      "ADAS Level 1 Safety",
-      "Dual 10.25-inch Screens",
-      "AdrenoX Connected Car",
-      "200 bhp Turbo Petrol",
-      "185 bhp Diesel Engine",
-      "AWD with 4 Modes"
+      "Ventilated Front Seats",
+      "2nd Row Captain Seats",
+      "Dual 26.03 cm HD Displays",
+      "Smart Flush Door Handles",
+      "Skyroof",
+      "Arrow-head LED Taillamps",
+      "AdrenoX Connected Car"
     ],
     specifications: {
       engine: [
@@ -92,15 +93,15 @@ const mahindraCars: Car[] = [
     name: "Mahindra Thar",
     brand: "Mahindra",
     bodyType: "Compact SUV",
-    tagline: "Explore the Impossible",
+    tagline: "An Icon, Evolved",
     image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/40087/thar-exterior-right-front-three-quarter-75.jpeg",
     gallery: [
       "https://imgd.aeplcdn.com/664x374/n/cw/ec/40087/thar-exterior-right-front-three-quarter-75.jpeg",
       "https://imgd.aeplcdn.com/664x374/n/cw/ec/40087/thar-exterior-rear-view.jpeg",
       "https://imgd.aeplcdn.com/664x374/n/cw/ec/40087/thar-interior-dashboard.jpeg"
     ],
-    price: "₹11.35 - 17.60 Lakh",
-    priceNumeric: 1135000,
+    price: "₹9.99 - 17.19 Lakh",
+    priceNumeric: 999000,
     originalPrice: "₹12.00 Lakh",
     discount: "₹65,000",
     fuelTypes: ["Petrol", "Diesel"],
@@ -110,14 +111,15 @@ const mahindraCars: Car[] = [
     isLimited: false,
     isNew: false,
     isUpcoming: false,
-    overview: "The Mahindra Thar is an iconic off-roader with 4x4 capability, convertible top, and modern features wrapped in classic design.",
+    overview: "The legend returns with a modern refresh. 2.0L mStallion TGDi Petrol (112 kW, 300/320 Nm), 1.5L mHawk Diesel (87.2 kW, 300 Nm), 2.2L mHawk Diesel (97 kW, 300 Nm). 4x4 with Electronic BLD, 4x4 Crawl, Gen II Adventure Statistics. Washable interiors, body-coloured front grill, highest suspension travel. Iconic convertible design.",
     keyHighlights: [
-      "4x4 with Low Range",
-      "Convertible Soft Top",
-      "Waterproof Interiors",
-      "9-inch Touchscreen",
-      "Adventure Statistics",
-      "226mm Ground Clearance"
+      "Electronic BLD",
+      "4x4 Crawl Mode",
+      "Gen II Adventure Statistics",
+      "Washable Interiors",
+      "Highest Suspension Travel",
+      "3 Engine Options",
+      "Iconic Convertible Design"
     ],
     specifications: {
       engine: [
@@ -173,15 +175,15 @@ const mahindraCars: Car[] = [
     name: "Mahindra Thar ROXX",
     brand: "Mahindra",
     bodyType: "Compact SUV",
-    tagline: "Born to Roxx",
+    tagline: "Live the Rockstar Life",
     image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/172207/thar-roxx-exterior-right-front-three-quarter.jpeg",
     gallery: [
       "https://imgd.aeplcdn.com/664x374/n/cw/ec/172207/thar-roxx-exterior-right-front-three-quarter.jpeg",
       "https://imgd.aeplcdn.com/664x374/n/cw/ec/172207/thar-roxx-exterior-rear-view.jpeg",
       "https://imgd.aeplcdn.com/664x374/n/cw/ec/172207/thar-roxx-interior-dashboard.jpeg"
     ],
-    price: "₹12.99 - 22.49 Lakh",
-    priceNumeric: 1299000,
+    price: "₹12.39 - 22.25 Lakh",
+    priceNumeric: 1239000,
     originalPrice: "₹13.50 Lakh",
     discount: "₹51,000",
     fuelTypes: ["Petrol", "Diesel"],
@@ -191,14 +193,17 @@ const mahindraCars: Car[] = [
     isLimited: false,
     isNew: true,
     isUpcoming: false,
-    overview: "The Mahindra Thar ROXX is the 5-door version of the iconic Thar with more space, better features, and family-friendly practicality.",
+    overview: "THE SUV Thar ROXX. M_GLYDE Platform with Watt's Link Suspension and AHRS. 5-Star Bharat NCAP. Panoramic Skyroof, Harman Kardon 9-speaker, Twin 26.03 cm HD screens, 80+ Adrenox features. India's First Crawl Smart Assist and Intelliturn. 4XPLOR Terrain Modes. Level 2 ADAS. 2.0L mStallion TGDi Petrol (RWD) and 2.2L mHawk Diesel (RWD & 4x4). 35+ standard safety features.",
     keyHighlights: [
-      "5-Door 5-Seater",
-      "ADAS Level 2 Safety",
-      "10.25-inch Touchscreen",
-      "Panoramic Sunroof",
-      "4x4 with Terrain Modes",
-      "Ventilated Seats"
+      "5-Star Bharat NCAP",
+      "M_GLYDE Platform",
+      "Panoramic Skyroof",
+      "Harman Kardon 9-Speaker",
+      "Twin 26.03 cm HD Screens",
+      "Crawl Smart Assist",
+      "4XPLOR Terrain Modes",
+      "Level 2 ADAS",
+      "80+ Adrenox Features"
     ],
     specifications: {
       engine: [
@@ -254,15 +259,15 @@ const mahindraCars: Car[] = [
     name: "Mahindra XUV 3XO",
     brand: "Mahindra",
     bodyType: "Compact SUV",
-    tagline: "Smart SUV",
+    tagline: "3X the Oomph",
     image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/153603/xuv-3xo-exterior-right-front-three-quarter.jpeg",
     gallery: [
       "https://imgd.aeplcdn.com/664x374/n/cw/ec/153603/xuv-3xo-exterior-right-front-three-quarter.jpeg",
       "https://imgd.aeplcdn.com/664x374/n/cw/ec/153603/xuv-3xo-exterior-rear-view.jpeg",
       "https://imgd.aeplcdn.com/664x374/n/cw/ec/153603/xuv-3xo-interior-dashboard.jpeg"
     ],
-    price: "₹7.79 - 15.49 Lakh",
-    priceNumeric: 779000,
+    price: "₹7.37 - 14.55 Lakh",
+    priceNumeric: 737000,
     originalPrice: "₹8.30 Lakh",
     discount: "₹51,000",
     fuelTypes: ["Petrol", "Diesel"],
@@ -272,14 +277,16 @@ const mahindraCars: Car[] = [
     isLimited: false,
     isNew: true,
     isUpcoming: false,
-    overview: "The Mahindra XUV 3XO (formerly XUV300) is a compact SUV with segment-leading features, powerful engines, and 5-star safety.",
+    overview: "XUV 3XO – every drive is a statement. 1.2L Turbo Petrol (82 kW, 200 Nm), 1.2L TGDi (96 kW, 230 Nm), 1.5L Turbo Diesel (86 kW, 300 Nm). 5-Star Bharat NCAP. 80+ Adrenox features, largest-in-segment Skyroof (940x870 mm), Harman Kardon 7-speaker, 0-60 in 4.5s (TGDi). Twin 26.03 cm HD screens, EPB with Auto Hold, Dual Zone Climate Control.",
     keyHighlights: [
-      "10.25-inch Touchscreen",
-      "AdrenoX Connected Car",
-      "Panoramic Sunroof",
-      "6 Airbags as Standard",
-      "Wireless Charging",
-      "5-Star NCAP Safety"
+      "5-Star Bharat NCAP",
+      "80+ Adrenox Features",
+      "Largest-in-Segment Skyroof",
+      "Harman Kardon 7-Speaker",
+      "0-60 in 4.5s (TGDi)",
+      "Twin 26.03 cm HD Screens",
+      "EPB with Auto Hold",
+      "Dual Zone Climate Control"
     ],
     specifications: {
       engine: [
@@ -341,8 +348,8 @@ const mahindraCars: Car[] = [
       "https://imgd.aeplcdn.com/664x374/n/cw/ec/107745/scorpio-n-exterior-rear-view.jpeg",
       "https://imgd.aeplcdn.com/664x374/n/cw/ec/107745/scorpio-n-interior-dashboard.jpeg"
     ],
-    price: "₹13.85 - 24.54 Lakh",
-    priceNumeric: 1385000,
+    price: "₹13.49 - 24.34 Lakh",
+    priceNumeric: 1349000,
     originalPrice: "₹14.50 Lakh",
     discount: "₹65,000",
     fuelTypes: ["Petrol", "Diesel"],
@@ -352,14 +359,16 @@ const mahindraCars: Car[] = [
     isLimited: false,
     isNew: false,
     isUpcoming: false,
-    overview: "The Mahindra Scorpio N is a rugged full-size SUV with powerful engines, 4x4 capability, and modern features.",
+    overview: "The Big Daddy of SUVs. 2.0L mStallion TGDi Petrol (149.14 kW, 370/380 Nm) and 2.2L Gen II mHawk Diesel (128.6 kW, 370-400 Nm / 97 kW, 300 Nm). Level 2 ADAS, 4XPLOR terrain management, 20.3 cm infotainment, leatherette interiors, sunroof, ESP. Carbon Edition available.",
     keyHighlights: [
-      "4x4 with Low Range",
-      "8-inch Touchscreen",
-      "AdrenoX Connected Car",
-      "Sony 3D Sound",
-      "Dual-Zone Climate Control",
-      "175 bhp Diesel Engine"
+      "Level 2 ADAS",
+      "4XPLOR Terrain Management",
+      "20.3 cm Infotainment",
+      "Leatherette Interiors",
+      "Sunroof",
+      "ESP with Full Controls",
+      "6 Airbags",
+      "Carbon Edition"
     ],
     specifications: {
       engine: [
@@ -421,8 +430,8 @@ const mahindraCars: Car[] = [
       "https://imgd.aeplcdn.com/664x374/n/cw/ec/39329/bolero-exterior-right-front-three-quarter-9.jpeg",
       "https://imgd.aeplcdn.com/664x374/n/cw/ec/39329/bolero-exterior-rear-view.jpeg"
     ],
-    price: "₹9.79 - 10.84 Lakh",
-    priceNumeric: 979000,
+    price: "₹7.99 - 9.80 Lakh",
+    priceNumeric: 799000,
     originalPrice: "₹10.20 Lakh",
     discount: "₹41,000",
     fuelTypes: ["Diesel"],
@@ -495,8 +504,8 @@ const mahindraCars: Car[] = [
       "https://imgd.aeplcdn.com/664x374/n/cw/ec/89387/bolero-neo-exterior-right-front-three-quarter-3.jpeg",
       "https://imgd.aeplcdn.com/664x374/n/cw/ec/89387/bolero-neo-exterior-rear-view.jpeg"
     ],
-    price: "₹9.76 - 12.25 Lakh",
-    priceNumeric: 976000,
+    price: "₹8.69 - 10.49 Lakh",
+    priceNumeric: 869000,
     originalPrice: "₹10.30 Lakh",
     discount: "₹54,000",
     fuelTypes: ["Diesel"],
@@ -569,8 +578,8 @@ const mahindraCars: Car[] = [
       "https://imgd.aeplcdn.com/664x374/n/cw/ec/124681/xuv400-exterior-rear-view.jpeg",
       "https://imgd.aeplcdn.com/664x374/n/cw/ec/124681/xuv400-interior-dashboard.jpeg"
     ],
-    price: "₹15.49 - 19.19 Lakh",
-    priceNumeric: 1549000,
+    price: "₹17.49 Lakh",
+    priceNumeric: 1749000,
     originalPrice: "₹16.00 Lakh",
     discount: "₹51,000",
     fuelTypes: ["Electric"],
@@ -646,8 +655,8 @@ const mahindraCars: Car[] = [
       "https://imgd.aeplcdn.com/664x374/n/cw/ec/32689/marazzo-exterior-right-front-three-quarter-6.jpeg",
       "https://imgd.aeplcdn.com/664x374/n/cw/ec/32689/marazzo-exterior-rear-view.jpeg"
     ],
-    price: "₹13.99 - 18.74 Lakh",
-    priceNumeric: 1399000,
+    price: "₹14.06 - 16.38 Lakh",
+    priceNumeric: 1406000,
     originalPrice: "₹14.50 Lakh",
     discount: "₹51,000",
     fuelTypes: ["Diesel"],
