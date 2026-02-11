@@ -90,6 +90,7 @@ const OFFICIAL_OEM_DOMAINS = [
   'www.bmw.in',
   'mercedes-benz.co.in',
   'www.mercedes-benz.co.in',
+  'media.oneweb.mercedes-benz.com',
   'audi.in',
   'www.audi.in',
   'volvo.in',
