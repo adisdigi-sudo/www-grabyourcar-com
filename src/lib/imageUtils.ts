@@ -89,6 +89,7 @@ const OFFICIAL_OEM_DOMAINS = [
   // Luxury brands
   'bmw.in',
   'www.bmw.in',
+  'prod.cosy.bmw.cloud',
   'mercedes-benz.co.in',
   'www.mercedes-benz.co.in',
   'media.oneweb.mercedes-benz.com',
