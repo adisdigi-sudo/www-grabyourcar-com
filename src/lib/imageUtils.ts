@@ -45,6 +45,7 @@ const OFFICIAL_OEM_DOMAINS = [
   'volkswagen.co.in',
   'volkswagen.com',
   'www.volkswagen.co.in',
+  'assets.volkswagen.com',
   // Renault
   'renault.co.in',
   'renault.com',
