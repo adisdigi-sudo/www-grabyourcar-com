@@ -19,6 +19,7 @@ const OFFICIAL_OEM_DOMAINS = [
   'tatamotors.com',
   'cars.tatamotors.com',
   'ev.tatamotors.com',
+  's7ap1.scene7.com',
   // Mahindra
   'mahindra.com',
   'auto.mahindra.com',
