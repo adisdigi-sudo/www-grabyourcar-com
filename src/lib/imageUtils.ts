@@ -71,6 +71,7 @@ const OFFICIAL_OEM_DOMAINS = [
   'byd.com',
   // Force Motors
   'forcemotors.com',
+  'forcegurkha.co.in',
   // Isuzu
   'isuzu.in',
   // Luxury brands
