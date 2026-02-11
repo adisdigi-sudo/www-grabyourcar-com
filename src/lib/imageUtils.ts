@@ -114,6 +114,9 @@ const OFFICIAL_OEM_DOMAINS = [
   // Supercar brands
   'lamborghini.com',
   'ferrari.com',
+  'cdn.ferrari.com',
+  'ferrari-cdn.thron.com',
+  'ferrari.scene7.com',
   'rolls-roycemotorcars.com',
   'bentleymotors.com',
   'maserati.com',
