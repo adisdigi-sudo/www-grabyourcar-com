@@ -31,6 +31,8 @@ const OFFICIAL_OEM_DOMAINS = [
   'toyota.com',
   'toyotabharat.com',
   'www.toyotabharat.com',
+  'static.toyotabharat.com',
+  'static3.toyotabharat.com',
   // Honda
   'honda.com',
   'hondacarindia.com',
