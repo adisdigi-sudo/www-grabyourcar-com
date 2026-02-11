@@ -123,6 +123,10 @@ const OFFICIAL_OEM_DOMAINS = [
   'rolls-roycemotorcars.com',
   'bentleymotors.com',
   'maserati.com',
+  // Bugatti
+  'bugatti.com',
+  'www.bugatti.com',
+  'bugatti.imgix.net',
   // EV brands
   'lucidmotors.com',
   'polestar.com',
