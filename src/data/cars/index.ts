@@ -33,6 +33,7 @@ import nissanCars from "./nissan";
 import renaultCars from "./renault";
 import forceCars from "./force";
 import isuzuCars from "./isuzu";
+import lucidCars from "./lucid";
 import { Car } from "./types";
 
 // Combine all brand cars - luxury brands first for migration priority
@@ -68,6 +69,7 @@ export const allCars: Car[] = [
   ...renaultCars,
   ...forceCars,
   ...isuzuCars,
+  ...lucidCars,
 ];
 
 export default allCars;
