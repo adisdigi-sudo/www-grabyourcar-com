@@ -112,7 +112,7 @@ const Cars = () => {
   const [selectedBodyTypes, setSelectedBodyTypes] = useState<string[]>([]);
   const [selectedFuelTypes, setSelectedFuelTypes] = useState<string[]>([]);
   const [selectedTransmissions, setSelectedTransmissions] = useState<string[]>([]);
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 20000000]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000000000]);
   const [sortBy, setSortBy] = useState("relevance");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showOnlyNew, setShowOnlyNew] = useState(false);
@@ -246,7 +246,7 @@ const Cars = () => {
     selectedBodyTypes.length +
     selectedFuelTypes.length +
     selectedTransmissions.length +
-    (priceRange[0] > 0 || priceRange[1] < 20000000 ? 1 : 0) +
+    (priceRange[0] > 0 || priceRange[1] < 1000000000 ? 1 : 0) +
     (showOnlyNew ? 1 : 0) +
     (showOnlyUpcoming ? 1 : 0);
 
@@ -446,10 +446,10 @@ const Cars = () => {
                 <span className="font-medium">{formatPrice(priceRange[1])}</span>
               </div>
               <Slider
-                value={priceRange}
+                value={[priceRange[0], Math.min(priceRange[1], 100000000)]}
                 min={0}
-                max={20000000}
-                step={100000}
+                max={100000000}
+                step={500000}
                 onValueChange={(value) => setPriceRange(value as [number, number])}
                 className="w-full"
               />
@@ -460,7 +460,7 @@ const Cars = () => {
                     variant="outline"
                     size="sm"
                     className="text-xs h-8"
-                    onClick={() => setPriceRange([range.min, range.max === Infinity ? 20000000 : range.max])}
+                    onClick={() => setPriceRange([range.min, range.max === Infinity ? 1000000000 : range.max])}
                   >
                     {range.label}
                   </Button>
@@ -691,14 +691,14 @@ const Cars = () => {
                       </Button>
                     </Badge>
                   ))}
-                  {(priceRange[0] > 0 || priceRange[1] < 20000000) && (
+                  {(priceRange[0] > 0 || priceRange[1] < 1000000000) && (
                     <Badge variant="secondary" className="gap-1 pr-1">
                       {formatPrice(priceRange[0])} - {formatPrice(priceRange[1])}
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-4 w-4 hover:bg-destructive/20"
-                        onClick={() => setPriceRange([0, 20000000])}
+                        onClick={() => setPriceRange([0, 1000000000])}
                       >
                         <X className="h-3 w-3" />
                       </Button>
