@@ -8,6 +8,8 @@ const OFFICIAL_OEM_DOMAINS = [
   'supabase.co',
   // Maruti Suzuki
   'marutisuzuki.com',
+  'www.marutisuzuki.com',
+  'marutisuzuki.scene7.com',
   'nexaexperience.com',
   // Hyundai
   'hyundai.com',
