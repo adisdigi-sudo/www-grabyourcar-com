@@ -16,6 +16,7 @@ import ferrariCars from "./ferrari";
 import rollsRoyceCars from "./rollsroyce";
 import bentleyCars from "./bentley";
 import maseratiCars from "./maserati";
+import bugattiCars from "./bugatti";
 // Other brands
 import marutiCars from "./maruti";
 import hyundaiCars from "./hyundai";
@@ -53,6 +54,7 @@ export const allCars: Car[] = [
   ...rollsRoyceCars,
   ...bentleyCars,
   ...maseratiCars,
+  ...bugattiCars,
   ...marutiCars,
   ...hyundaiCars,
   ...tataCars,
