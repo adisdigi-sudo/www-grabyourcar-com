@@ -56,6 +56,7 @@ const OFFICIAL_OEM_DOMAINS = [
   // Renault
   'renault.co.in',
   'renault.com',
+  'cdn.group.renault.com',
   // Jeep
   'jeep-india.com',
   // Citroen
