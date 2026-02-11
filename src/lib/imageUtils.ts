@@ -76,6 +76,8 @@ const OFFICIAL_OEM_DOMAINS = [
   'www-asia.nissan-cdn.net',
   // BYD
   'byd.com',
+  'bydautoindia.com',
+  'byd-assets.s3.us-east-2.amazonaws.com',
   // Force Motors
   'forcemotors.com',
   'www.forcemotors.com',
