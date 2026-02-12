@@ -145,10 +145,12 @@ const hondaCars: Car[] = [
     },
     colors: [
       { name: "Platinum White Pearl", hex: "#F5F5F5" },
-      { name: "Lunar Silver Metallic", hex: "#A8A9AD" },
-      { name: "Modern Steel Metallic", hex: "#4A4A4A" },
-      { name: "Radiant Red Metallic", hex: "#B22222" },
-      { name: "Obsidian Blue Pearl", hex: "#2E5090" }
+      { name: "Radiant Red Metallic", hex: "#A3202A" },
+      { name: "Meteoroid Grey Metallic", hex: "#55585C" },
+      { name: "Lunar Silver Metallic", hex: "#C0C0C0" },
+      { name: "Golden Brown Metallic", hex: "#6B4F3A" },
+      { name: "Obsidian Blue Pearl", hex: "#1F3A5F" },
+      { name: "Crystal Black Pearl", hex: "#1A1A1A" }
     ],
     variants: [
       { name: "V MT", price: "₹8.00 Lakh (est.)", features: ["6 Airbags", "LED DRLs", "Power Windows"] },
