@@ -50,6 +50,7 @@ const OFFICIAL_OEM_DOMAINS = [
   'skoda-auto.co.in',
   'skoda-auto.com',
   'www.skoda-auto.co.in',
+  'cdn.skoda-auto.com',
   // Volkswagen
   'volkswagen.co.in',
   'volkswagen.com',
