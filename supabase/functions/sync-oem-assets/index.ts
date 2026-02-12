@@ -123,6 +123,15 @@ const OEM_CONFIGS: Record<string, {
       `https://audi-india-ar.s3.ap-south-1.amazonaws.com/images/${name.toLowerCase().replace(/\s+/g, '-')}/exterior.jpg`,
     ],
   },
+  "Volvo": {
+    brochurePattern: (name) => [
+      `https://www.volvo.in/content/dam/volvo/brochures/${name.toLowerCase().replace(/\s+/g, '-')}-brochure.pdf`,
+    ],
+    imagePattern: (name) => [
+      `https://www.volvo.in/content/dam/volvo/models/${name.toLowerCase().replace(/\s+/g, '-')}/gallery/exterior/${name.toLowerCase().replace(/\s+/g, '-')}-exterior-1.jpg`,
+      `https://volvocars.com/en/_/media/project/contentplatform/shared-assets/images/models/${name.toLowerCase().replace(/\s+/g, '-')}/exterior.jpg`,
+    ],
+  },
 };
 
 async function tryFetchAsset(urls: string[], contentType: string): Promise<{ success: boolean; url?: string; data?: Uint8Array }> {
