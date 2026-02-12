@@ -112,6 +112,17 @@ const OEM_CONFIGS: Record<string, {
       `https://ferrari-production-cdn.azureedge.net/images/${name.toLowerCase().replace(/\s+/g, '-')}/exterior.jpg`,
     ],
   },
+  "Audi": {
+    brochurePattern: (name) => [
+      `https://www.audi.in/content/dam/audi/brochures/${name.toLowerCase().replace(/\s+/g, '-')}-brochure.pdf`,
+      `https://emea-dam.audi.com/documents/${name.toLowerCase().replace(/\s+/g, '-')}-brochure.pdf`,
+    ],
+    imagePattern: (name) => [
+      `https://www.audi.in/content/dam/audi/models/${name.toLowerCase().replace(/\s+/g, '-')}/gallery/exterior/${name.toLowerCase().replace(/\s+/g, '-')}-exterior-1.jpg`,
+      `https://mediaservice.audi.com/audi/india/${name.toLowerCase().replace(/\s+/g, '-')}/exterior.jpg`,
+      `https://audi-india-ar.s3.ap-south-1.amazonaws.com/images/${name.toLowerCase().replace(/\s+/g, '-')}/exterior.jpg`,
+    ],
+  },
 };
 
 async function tryFetchAsset(urls: string[], contentType: string): Promise<{ success: boolean; url?: string; data?: Uint8Array }> {
