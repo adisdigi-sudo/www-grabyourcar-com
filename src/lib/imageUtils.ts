@@ -154,8 +154,8 @@ export const isAuthenticImage = (url: string | undefined | null): boolean => {
   if (!url) return false;
   if (url === '/placeholder.svg') return false;
   
-  // Allow local asset imports (for banners, logos, etc.)
-  if (url.startsWith('/src/assets') || url.startsWith('data:') || url.startsWith('/assets')) {
+  // Allow local asset imports and public folder assets (for banners, logos, car images, etc.)
+  if (url.startsWith('/src/assets') || url.startsWith('data:') || url.startsWith('/assets') || url.startsWith('/cars/')) {
     return true;
   }
   
