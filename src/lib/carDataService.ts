@@ -216,6 +216,7 @@ export const fetchCarsFromDatabase = async (options: FetchCarsOptions = {}): Pro
         'mgselect.co.in',
         'skoda-auto.co.in',
         'skoda-auto.com',
+        'cdn.skoda-auto.com',
         'volkswagen.co.in',
         'volkswagen.com',
         'assets.volkswagen.com',
