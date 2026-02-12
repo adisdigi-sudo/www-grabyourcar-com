@@ -189,6 +189,8 @@ export const fetchCarsFromDatabase = async (options: FetchCarsOptions = {}): Pro
       const officialOEMDomains = [
         'marutisuzuki.com',
         'nexaexperience.com',
+        'mahindraelectricsuv.com',
+        'static3.toyotabharat.com',
         'marutisuzuki.scene7.com',
         'hyundai.com',
         'hyundai.co.in',
