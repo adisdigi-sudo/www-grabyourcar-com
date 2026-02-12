@@ -520,8 +520,8 @@ export const PriceSummaryCard = ({
           </div>
         </div>
 
-        {/* Brochure Download */}
-        {brochureUrl && (
+        {/* Brochure Download - only show for internally hosted PDFs */}
+        {brochureUrl && brochureUrl.includes('supabase.co') && (
           <a 
             href={brochureUrl} 
             target="_blank" 
