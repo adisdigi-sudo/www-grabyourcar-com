@@ -85,6 +85,15 @@ const OEM_CONFIGS: Record<string, {
       `https://www.volkswagen.co.in/content/dam/vw/in/en/models/${name.toLowerCase()}/gallery/exterior/${name.toLowerCase()}-exterior-1.jpg`,
     ],
   },
+  "Mercedes-Benz": {
+    brochurePattern: (name) => [
+      `https://www.mercedes-benz.co.in/content/dam/mercedes-benz/in/en/data/find-a-car/${name.toLowerCase().replace(/\s+/g, '-')}/brochure/${name.toLowerCase().replace(/\s+/g, '-')}-brochure.pdf`,
+    ],
+    imagePattern: (name) => [
+      `https://www.mercedes-benz.co.in/content/dam/mercedes-benz/in/en/data/find-a-car/${name.toLowerCase().replace(/\s+/g, '-')}/gallery/exterior/${name.toLowerCase().replace(/\s+/g, '-')}-exterior-1.jpg`,
+      `https://media.oneweb.mercedes-benz.com/images/${name.toLowerCase().replace(/\s+/g, '-')}/exterior-1.jpg`,
+    ],
+  },
 };
 
 async function tryFetchAsset(urls: string[], contentType: string): Promise<{ success: boolean; url?: string; data?: Uint8Array }> {
