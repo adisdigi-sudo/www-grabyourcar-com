@@ -103,6 +103,15 @@ const OEM_CONFIGS: Record<string, {
       `https://bmwimg.bmwgroup.com/bmwimg/photo/marketing/${name.toLowerCase().replace(/\s+/g, '-')}/exterior.jpg`,
     ],
   },
+  "Ferrari": {
+    brochurePattern: (name) => [
+      `https://www.ferrari.com/en_IN/content/dam/ferrari/brochures/${name.toLowerCase().replace(/\s+/g, '-')}-brochure.pdf`,
+    ],
+    imagePattern: (name) => [
+      `https://www.ferrari.com/en_IN/content/dam/ferrari/models/${name.toLowerCase().replace(/\s+/g, '-')}/gallery/exterior/${name.toLowerCase().replace(/\s+/g, '-')}-exterior-1.jpg`,
+      `https://ferrari-production-cdn.azureedge.net/images/${name.toLowerCase().replace(/\s+/g, '-')}/exterior.jpg`,
+    ],
+  },
 };
 
 async function tryFetchAsset(urls: string[], contentType: string): Promise<{ success: boolean; url?: string; data?: Uint8Array }> {
