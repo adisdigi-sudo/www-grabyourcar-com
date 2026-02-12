@@ -213,6 +213,7 @@ export const fetchCarsFromDatabase = async (options: FetchCarsOptions = {}): Pro
         'mg.co.in',
         'mgmotor.co.in',
         'mgmotor.scene7.com',
+        'mgselect.co.in',
         'skoda-auto.co.in',
         'skoda-auto.com',
         'volkswagen.co.in',
