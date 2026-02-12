@@ -94,6 +94,15 @@ const OEM_CONFIGS: Record<string, {
       `https://media.oneweb.mercedes-benz.com/images/${name.toLowerCase().replace(/\s+/g, '-')}/exterior-1.jpg`,
     ],
   },
+  "BMW": {
+    brochurePattern: (name) => [
+      `https://www.bmwindia.com/content/dam/bmw/marketIN/bmw_in/all_models/${name.toLowerCase().replace(/\s+/g, '-')}/brochure/${name.toLowerCase().replace(/\s+/g, '-')}-brochure.pdf`,
+    ],
+    imagePattern: (name) => [
+      `https://www.bmwindia.com/content/dam/bmw/marketIN/bmw_in/all_models/${name.toLowerCase().replace(/\s+/g, '-')}/gallery/exterior/${name.toLowerCase().replace(/\s+/g, '-')}-exterior-1.jpg`,
+      `https://bmwimg.bmwgroup.com/bmwimg/photo/marketing/${name.toLowerCase().replace(/\s+/g, '-')}/exterior.jpg`,
+    ],
+  },
 };
 
 async function tryFetchAsset(urls: string[], contentType: string): Promise<{ success: boolean; url?: string; data?: Uint8Array }> {
