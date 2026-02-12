@@ -43,6 +43,8 @@ const OFFICIAL_OEM_DOMAINS = [
   'mgmotor.co.in',
   'www.mgmotor.co.in',
   'mgmotor.scene7.com',
+  'mgselect.co.in',
+  'www.mgselect.co.in',
   's7ap1.scene7.com',
   // Skoda
   'skoda-auto.co.in',
