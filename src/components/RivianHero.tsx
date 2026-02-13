@@ -235,10 +235,9 @@ export const RivianHero = () => {
                 <Link to={slide.cta_secondary_link || "/cars"}>
                   <Button
                     size="lg"
-                    variant="outline"
-                    className="rounded-full border-white/30 text-white hover:bg-white/10 px-8 py-6 text-base font-semibold backdrop-blur-sm"
+                    className="rounded-full bg-emerald-500 text-white hover:bg-emerald-600 px-8 py-6 text-base font-semibold shadow-2xl hover:shadow-emerald-500/20 transition-all"
                   >
-                    {slide.cta_secondary_label || "Explore"}
+                    {slide.cta_secondary_label || "Book Now"}
                     <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 </Link>
