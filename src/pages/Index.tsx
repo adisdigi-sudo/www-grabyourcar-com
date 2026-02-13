@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { Header } from "@/components/Header";
 import { PromoBanner } from "@/components/PromoBanner";
-import { HeroSection } from "@/components/HeroSection";
+import { RivianHero } from "@/components/RivianHero";
+import { UpcomingCarsShowcase } from "@/components/UpcomingCarsShowcase";
 import { CategoryGrid } from "@/components/CategoryGrid";
 import { CarListings } from "@/components/CarListings";
 import EMICalculator from "@/components/EMICalculator";
@@ -21,7 +22,7 @@ import {
   DynamicTestimonials,
   DynamicCTABanners,
 } from "@/components/DynamicHomepageContent";
-import { CarShowcaseScroll, UpcomingCarsStrip, OffersStrip } from "@/components/HomepageShowcase";
+import { OffersStrip } from "@/components/HomepageShowcase";
 
 const Index = () => {
   const [loanPrefill, setLoanPrefill] = useState<string>("");
@@ -65,14 +66,14 @@ const Index = () => {
       
       {/* Main Content */}
       <main>
-        {/* Hero Section with Search */}
-        <HeroSection />
+        {/* Rivian-style full-screen hero carousel */}
+        <RivianHero />
         
         {/* Offers scrolling strip */}
         <OffersStrip />
         
-        {/* Rivian-style car showcase with horizontal scroll */}
-        <CarShowcaseScroll />
+        {/* Full-screen upcoming car showcases */}
+        <UpcomingCarsShowcase />
         
         {/* Dynamic Hero Banners from Admin */}
         <DynamicHeroBanners />
@@ -85,9 +86,6 @@ const Index = () => {
         
         {/* Dynamic Featured Cars from Admin */}
         <DynamicFeaturedCars />
-        
-        {/* Upcoming Cars Showcase */}
-        <UpcomingCarsStrip />
         
         {/* Featured Car Listings */}
         <CarListings />
