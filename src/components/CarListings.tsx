@@ -71,16 +71,17 @@ const useFeaturedCars = () => {
       for (const car of cars) {
         const carImages = (allImages || []).filter(img => img.car_id === car.id);
         
-        // Prioritize OEM images over Supabase (due to scraping issues with duplicates)
-        const oemImages = carImages.filter(img => 
-          isValidImage(img.url) && !img.url?.includes('supabase.co')
+        // Prioritize internally hosted images (Supabase/local) over external OEM URLs
+        // External OEM URLs may fail due to hotlink protection
+        const internalImages = carImages.filter(img => 
+          isValidImage(img.url) && (img.url?.includes('supabase.co') || img.url?.startsWith('/cars/'))
         );
-        const supabaseImages = carImages.filter(img => 
-          img.url?.includes('supabase.co') && isValidImage(img.url)
+        const oemImages = carImages.filter(img => 
+          isValidImage(img.url) && !img.url?.includes('supabase.co') && !img.url?.startsWith('/cars/')
         );
         
-        // Use OEM images first, then Supabase as fallback
-        const authenticImages = oemImages.length > 0 ? oemImages : supabaseImages;
+        // Use internal images first (always reliable), OEM as fallback
+        const authenticImages = internalImages.length > 0 ? internalImages : oemImages;
         
         // Sort by is_primary, then sort_order
         const sortedImages = authenticImages.sort((a, b) => {

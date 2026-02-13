@@ -184,10 +184,10 @@ export const CarImageScrapingManager = () => {
         <div>
           <h2 className="text-2xl font-bold flex items-center gap-2">
             <ImageIcon className="h-6 w-6 text-primary" />
-            Image Scraping Manager
+            OEM Image Sync Manager
           </h2>
           <p className="text-muted-foreground">
-            Scrape real car images from CardekHo & CarWale via Firecrawl
+            Fetch authentic car images directly from official manufacturer websites
           </p>
         </div>
         <div className="flex gap-2">
@@ -206,7 +206,7 @@ export const CarImageScrapingManager = () => {
               disabled={stats.withoutImages === 0}
             >
               <Play className="h-4 w-4 mr-2" />
-              Scrape All ({Math.min(50, stats.withoutImages)})
+              Sync All ({Math.min(50, stats.withoutImages)})
             </Button>
           )}
         </div>
@@ -246,7 +246,7 @@ export const CarImageScrapingManager = () => {
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
-              Scraping in Progress...
+              Syncing from OEM Sources...
             </CardTitle>
             <CardDescription>
               Processing {batchProgress.current} of {batchProgress.total} cars
@@ -306,7 +306,7 @@ export const CarImageScrapingManager = () => {
             Cars Needing Images ({carsWithoutImages.length})
           </CardTitle>
           <CardDescription>
-            Click "Scrape" to fetch real images from CardekHo/CarWale
+            Click "Sync" to fetch authentic images from official OEM websites
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
@@ -348,7 +348,7 @@ export const CarImageScrapingManager = () => {
                           {scrapeSingle.isPending ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
                           ) : (
-                            <><Download className="h-4 w-4 mr-1" />Scrape</>
+                            <><Download className="h-4 w-4 mr-1" />Sync</>
                           )}
                         </Button>
                       </TableCell>
@@ -376,7 +376,7 @@ export const CarImageScrapingManager = () => {
             Cars With Images ({carsWithImages.length})
           </CardTitle>
           <CardDescription>
-            Cars with authentic scraped images from CardekHo/CarWale
+            Cars with authentic images synced from official manufacturer sources
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
