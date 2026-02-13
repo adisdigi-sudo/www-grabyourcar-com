@@ -273,7 +273,7 @@ export const EmailMarketingManagement = () => {
     <li>🎁 Complimentary accessories package</li>
   </ul>
   <div style="text-align: center; margin: 24px 0;">
-    <a href="https://grabyourcar.lovable.app/cars" style="background: #667eea; color: white; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: bold;">Explore Offers →</a>
+    <a href="https://grabyourcar.com/cars" style="background: #667eea; color: white; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: bold;">Explore Offers →</a>
   </div>
   <p>📞 Call us: <strong>+91-XXXXXXXXXX</strong></p>
 </div>

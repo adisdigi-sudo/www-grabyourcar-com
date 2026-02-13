@@ -131,10 +131,10 @@ const HSRP = () => {
           content="Book HSRP and FASTag online. Government authorized high security registration plates and toll stickers with quick installation. Avoid fines - book now!"
         />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://grabyourcar.lovable.app/hsrp" />
+        <meta property="og:url" content="https://grabyourcar.com/hsrp" />
         <meta property="og:title" content="HSRP & FASTag Online Booking | GrabYourCar" />
         <meta property="og:description" content="Book HSRP and FASTag online. Government authorized plates and toll stickers." />
-        <meta property="og:image" content="https://grabyourcar.lovable.app/og-image.png" />
+        <meta property="og:image" content="https://grabyourcar.com/og-image.png" />
         <meta name="twitter:card" content="summary_large_image" />
       </Helmet>
 

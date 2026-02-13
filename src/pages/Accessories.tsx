@@ -112,17 +112,17 @@ const Accessories = () => {
         />
         {/* Open Graph */}
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://grabyourcar.lovable.app/accessories" />
+        <meta property="og:url" content="https://grabyourcar.com/accessories" />
         <meta property="og:title" content="Car Accessories | HSRP Frames, Covers & More | GrabYourCar" />
         <meta property="og:description" content="Shop premium car accessories - HSRP frames, car covers, floor mats, and more." />
-        <meta property="og:image" content="https://grabyourcar.lovable.app/og-image.png" />
+        <meta property="og:image" content="https://grabyourcar.com/og-image.png" />
         <meta property="og:site_name" content="GrabYourCar" />
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:url" content="https://grabyourcar.lovable.app/accessories" />
+        <meta name="twitter:url" content="https://grabyourcar.com/accessories" />
         <meta name="twitter:title" content="Car Accessories | HSRP Frames, Covers & More" />
         <meta name="twitter:description" content="Shop premium car accessories with free delivery. Order online now!" />
-        <meta name="twitter:image" content="https://grabyourcar.lovable.app/og-image.png" />
+        <meta name="twitter:image" content="https://grabyourcar.com/og-image.png" />
       </Helmet>
 
       <Header />

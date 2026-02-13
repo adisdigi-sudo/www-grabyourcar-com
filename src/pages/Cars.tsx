@@ -483,24 +483,29 @@ const Cars = () => {
   return (
     <HelmetProvider>
       <Helmet>
-        <title>New Cars in India 2024 - All Brands & Models | GrabYourCar</title>
+        <title>New Cars Available Without Waiting Period | Ready Stock Cars | GrabYourCar</title>
         <meta
           name="description"
-          content="Explore 76+ new cars from 10+ brands in India. Filter by brand, body type, fuel type, transmission & price. Find your perfect car today!"
+          content="Browse 200+ new cars from 50+ brands available without waiting period in India. Compare prices, check on-road cost, filter by brand, body type, fuel & transmission. Ready stock delivery across Delhi, Mumbai, Bangalore & 10 more cities. Call +91 98559 24442."
         />
+        <meta name="keywords" content="new cars India 2025, cars without waiting period, ready stock cars, buy new car online, car price comparison, best car deals India, zero waiting cars, new car offers" />
+        <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
         {/* Open Graph */}
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://grabyourcar.lovable.app/cars" />
-        <meta property="og:title" content="New Cars in India 2024 - All Brands & Models | GrabYourCar" />
-        <meta property="og:description" content="Explore 76+ new cars from 10+ brands in India. Filter by brand, body type, fuel type, transmission & price." />
-        <meta property="og:image" content="https://grabyourcar.lovable.app/og-image.png" />
+        <meta property="og:url" content="https://grabyourcar.com/cars" />
+        <meta property="og:title" content="New Cars Available Without Waiting Period | Ready Stock | GrabYourCar" />
+        <meta property="og:description" content="Browse 200+ new cars from 50+ brands. Zero waiting period. Ready stock delivery. Best on-road prices across India." />
+        <meta property="og:image" content="https://grabyourcar.com/og-image.png" />
         <meta property="og:site_name" content="GrabYourCar" />
+        <meta property="og:locale" content="en_IN" />
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:url" content="https://grabyourcar.lovable.app/cars" />
+        <meta name="twitter:site" content="@Grabyourcar" />
+        <meta name="twitter:url" content="https://grabyourcar.com/cars" />
+        <link rel="canonical" href="https://grabyourcar.com/cars" />
         <meta name="twitter:title" content="New Cars in India 2024 - All Brands & Models" />
         <meta name="twitter:description" content="Explore 76+ new cars from 10+ brands in India. Find your perfect car today!" />
-        <meta name="twitter:image" content="https://grabyourcar.lovable.app/og-image.png" />
+        <meta name="twitter:image" content="https://grabyourcar.com/og-image.png" />
       </Helmet>
       
       <CarsListStructuredData cars={filteredCars} totalCount={allCars.length} />

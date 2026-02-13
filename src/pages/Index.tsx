@@ -14,6 +14,7 @@ import { FloatingCTA } from "@/components/FloatingCTA";
 import { CustomerStories } from "@/components/CustomerStories";
 import { DealerLocatorWidget } from "@/components/DealerLocatorWidget";
 import { CrossSellWidget } from "@/components/CrossSellWidget";
+import { HomepageSEOContent } from "@/components/HomepageSEOContent";
 import {
   DynamicHeroBanners,
   DynamicPromoBanners,
@@ -101,6 +102,9 @@ const Index = () => {
          
         {/* Trust Badges */}
         <TrustBadges />
+        
+        {/* Crawlable SEO Content — 1000+ words of keyword-rich text */}
+        <HomepageSEOContent />
       </main>
       
       {/* Footer */}

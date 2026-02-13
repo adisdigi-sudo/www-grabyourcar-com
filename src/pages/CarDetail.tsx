@@ -174,9 +174,10 @@ const CarDetail = () => {
       {/* SEO Structured Data */}
       <CarStructuredData car={car} selectedVariant={selectedVariant} />
       <Helmet>
-        <title>{car.name} Price, Specs, Features | Grabyourcar</title>
-        <meta name="description" content={`${car.brand} ${car.name} price starts at ${car.price}. Check out specifications, features, colors, mileage and more.${car.variants?.length ? ` ${car.variants.length} variants available.` : ''}`} />
-        <meta property="og:title" content={`${car.brand} ${car.name} - Price, Specs & Features`} />
+        <title>{car.brand} {car.name} Without Waiting Period | Ready Delivery in India | GrabYourCar</title>
+        <meta name="description" content={`Buy ${car.brand} ${car.name} at best on-road price starting ${car.price}. Zero waiting period, ready stock delivery across India. ${car.variants?.length ? `${car.variants.length} variants` : ''} available in ${car.fuelTypes?.join(', ')}. ${car.transmission?.join(' & ')} transmission. Free doorstep delivery. Call +91 98559 24442 for best deals.`} />
+        <meta name="keywords" content={`${car.name} price, ${car.brand} ${car.name} on-road price, ${car.name} without waiting period, ${car.name} ready delivery, ${car.name} ${car.fuelTypes?.[0] || ''}, ${car.name} ${car.transmission?.[0] || ''}, buy ${car.name} India, ${car.name} best deal`} />
+        <meta property="og:title" content={`${car.brand} ${car.name} Without Waiting Period | Ready Delivery | GrabYourCar`} />
         <meta property="og:description" content={car.overview || car.tagline} />
         {/* Use AI-generated branded OG image with car photo */}
         <meta property="og:image" content={`https://ynoiwioypxpurwdbjvyt.supabase.co/functions/v1/og-image?slug=${car.slug}`} />
@@ -184,14 +185,16 @@ const CarDetail = () => {
         <meta property="og:image:height" content="630" />
         <meta property="og:image:alt" content={`${car.brand} ${car.name} - Grabyourcar`} />
         <meta property="og:type" content="product" />
-        <meta property="og:url" content={`https://grabyourcar.lovable.app/cars/${car.slug}`} />
-        <meta property="og:site_name" content="Grabyourcar" />
+        <meta property="og:url" content={`https://grabyourcar.com/cars/${car.slug}`} />
+        <meta property="og:site_name" content="GrabYourCar" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={`${car.brand} ${car.name} - Price, Specs & Features`} />
+        <meta name="twitter:site" content="@Grabyourcar" />
+        <meta name="twitter:title" content={`${car.brand} ${car.name} Without Waiting Period | Ready Delivery in India | GrabYourCar`} />
         <meta name="twitter:description" content={car.overview || car.tagline} />
         <meta name="twitter:image" content={`https://ynoiwioypxpurwdbjvyt.supabase.co/functions/v1/og-image?slug=${car.slug}`} />
-        <meta name="twitter:image:alt" content={`${car.brand} ${car.name}`} />
-        <link rel="canonical" href={`https://grabyourcar.lovable.app/cars/${car.slug}`} />
+        <meta name="twitter:image:alt" content={`${car.brand} ${car.name} - GrabYourCar`} />
+        <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+        <link rel="canonical" href={`https://grabyourcar.com/cars/${car.slug}`} />
       </Helmet>
       <Header />
       
