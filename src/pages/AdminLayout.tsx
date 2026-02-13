@@ -60,6 +60,7 @@ import BannersManager from "@/components/admin/BannersManager";
 import TestimonialsManager from "@/components/admin/TestimonialsManager";
 import FAQManager from "@/components/admin/FAQManager";
 import ServicePricingManager from "@/components/admin/ServicePricingManager";
+import { HeroSlidesManagement } from "@/components/admin/HeroSlidesManagement";
 import PartnersManager from "@/components/admin/PartnersManager";
 
 import { Button } from "@/components/ui/button";
@@ -162,7 +163,12 @@ const AdminLayout = () => {
       case "cars-url-scraper":
         return <URLDataScraper />;
       case "website-homepage":
-        return <HomepageManagement />;
+        return (
+          <div className="space-y-6">
+            <HeroSlidesManagement />
+            <HomepageManagement />
+          </div>
+        );
       case "website-content":
         return <WebsiteContentManagement />;
       case "website-banners":

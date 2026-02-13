@@ -1,91 +1,136 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, ArrowRight, Zap, Calendar, IndianRupee } from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowRight, Calendar, IndianRupee, Battery, Gauge, Zap } from "lucide-react";
 import heroImg1 from "@/assets/hero-upcoming-1.jpg";
 import heroImg2 from "@/assets/hero-upcoming-2.jpg";
 import heroImg3 from "@/assets/hero-upcoming-3.jpg";
 
-interface SlideData {
-  image: string;
+// Map local fallback images
+const localImages: Record<string, string> = {
+  "/assets/hero-upcoming-1.jpg": heroImg1,
+  "/assets/hero-upcoming-2.jpg": heroImg2,
+  "/assets/hero-upcoming-3.jpg": heroImg3,
+};
+
+interface HeroSlide {
+  id: string;
   title: string;
-  subtitle: string;
-  description: string;
-  price: string;
-  launchDate: string;
-  link: string;
-  ctaLabel: string;
-  ctaSecondary: string;
+  subtitle: string | null;
+  description: string | null;
+  brand: string | null;
+  price_range: string | null;
+  launch_date: string | null;
+  image_url: string;
+  cta_label: string | null;
+  cta_link: string | null;
+  cta_secondary_label: string | null;
+  cta_secondary_link: string | null;
+  spec_1_label: string | null;
+  spec_1_value: string | null;
+  spec_2_label: string | null;
+  spec_2_value: string | null;
+  spec_3_label: string | null;
+  spec_3_value: string | null;
+  sort_order: number;
 }
 
-const slides: SlideData[] = [
+const fallbackSlides: HeroSlide[] = [
   {
-    image: heroImg1,
-    title: "Tata Sierra EV",
-    subtitle: "The Future of Adventure",
-    description: "500+ km range, Level 2 ADAS, 69 kWh battery. India's most anticipated electric SUV is almost here.",
-    price: "₹25 – 35 Lakh",
-    launchDate: "Q3 2026",
-    link: "/upcoming-cars",
-    ctaLabel: "Get Launch Alert",
-    ctaSecondary: "Explore More",
+    id: "1", title: "Tata Sierra EV", subtitle: "The Future of Adventure", brand: "Tata Motors",
+    description: "500+ km range, Level 2 ADAS, 69 kWh battery. India's most anticipated electric SUV.",
+    price_range: "₹25 – 35 Lakh", launch_date: "Q3 2026", image_url: heroImg1,
+    cta_label: "Get Launch Alert", cta_link: "/upcoming-cars", cta_secondary_label: "Explore More", cta_secondary_link: "/cars",
+    spec_1_label: "Battery", spec_1_value: "69 kWh", spec_2_label: "Range", spec_2_value: "500+ km", spec_3_label: "ADAS", spec_3_value: "Level 2", sort_order: 1,
   },
   {
-    image: heroImg2,
-    title: "Tesla Model 3",
-    subtitle: "Coming to India",
-    description: "The world's best-selling EV is finally arriving. Premium performance, autopilot, and zero emissions.",
-    price: "₹35 – 45 Lakh",
-    launchDate: "2026",
-    link: "/upcoming-cars",
-    ctaLabel: "Get Notified",
-    ctaSecondary: "View All EVs",
+    id: "2", title: "Tesla Model 3", subtitle: "Finally in India", brand: "Tesla",
+    description: "The world's best-selling EV arrives. Premium performance, autopilot, zero emissions.",
+    price_range: "₹35 – 45 Lakh", launch_date: "2026", image_url: heroImg2,
+    cta_label: "Get Notified", cta_link: "/upcoming-cars", cta_secondary_label: "View All EVs", cta_secondary_link: "/cars",
+    spec_1_label: "Battery", spec_1_value: "60 kWh", spec_2_label: "Range", spec_2_value: "513 km", spec_3_label: "0-100", spec_3_value: "6.1 sec", sort_order: 2,
   },
   {
-    image: heroImg3,
-    title: "Mahindra BE 6e",
-    subtitle: "Born Electric",
-    description: "800V architecture, 0-100 in 6.7s, 682 km range. Mahindra's bold electric statement.",
-    price: "₹18.90 – 26.90 Lakh",
-    launchDate: "Launching Now",
-    link: "/upcoming-cars",
-    ctaLabel: "Book Now",
-    ctaSecondary: "Compare EVs",
+    id: "3", title: "Mahindra BE 6e", subtitle: "Born Electric", brand: "Mahindra",
+    description: "800V architecture, 0-100 in 6.7s, 682 km range. India's boldest electric statement.",
+    price_range: "₹18.90 – 26.90 Lakh", launch_date: "Available Now", image_url: heroImg3,
+    cta_label: "Book Now", cta_link: "/upcoming-cars", cta_secondary_label: "Compare EVs", cta_secondary_link: "/cars",
+    spec_1_label: "Architecture", spec_1_value: "800V", spec_2_label: "Range", spec_2_value: "682 km", spec_3_label: "0-100", spec_3_value: "6.7 sec", sort_order: 3,
   },
 ];
+
+const specIcons: Record<string, React.ReactNode> = {
+  "Battery": <Battery className="h-5 w-5" />,
+  "Range": <Gauge className="h-5 w-5" />,
+  "ADAS": <Zap className="h-5 w-5" />,
+  "0-100": <Zap className="h-5 w-5" />,
+  "Architecture": <Zap className="h-5 w-5" />,
+  "Charging": <Battery className="h-5 w-5" />,
+  "Motor": <Gauge className="h-5 w-5" />,
+  "Platform": <Zap className="h-5 w-5" />,
+  "Segment": <Gauge className="h-5 w-5" />,
+  "Drive": <Zap className="h-5 w-5" />,
+  "Motors": <Gauge className="h-5 w-5" />,
+};
+
+const resolveImage = (url: string): string => {
+  return localImages[url] || url;
+};
 
 export const RivianHero = () => {
   const [current, setCurrent] = useState(0);
   const [direction, setDirection] = useState(0);
 
+  const { data: slides = fallbackSlides } = useQuery({
+    queryKey: ["hero-slides"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("hero_slides")
+        .select("*")
+        .eq("is_active", true)
+        .order("sort_order");
+      if (error || !data || data.length === 0) return fallbackSlides;
+      return data as HeroSlide[];
+    },
+    staleTime: 2 * 60 * 1000,
+  });
+
   const next = useCallback(() => {
     setDirection(1);
     setCurrent((prev) => (prev + 1) % slides.length);
-  }, []);
+  }, [slides.length]);
 
   const prev = useCallback(() => {
     setDirection(-1);
     setCurrent((prev) => (prev - 1 + slides.length) % slides.length);
-  }, []);
+  }, [slides.length]);
 
   useEffect(() => {
-    const timer = setInterval(next, 7000);
+    const timer = setInterval(next, 6000);
     return () => clearInterval(timer);
   }, [next]);
 
+  // Reset to 0 if slides change
+  useEffect(() => {
+    setCurrent(0);
+  }, [slides.length]);
+
   const slide = slides[current];
+  if (!slide) return null;
+
+  const specs = [
+    slide.spec_1_label && slide.spec_1_value ? { label: slide.spec_1_label, value: slide.spec_1_value } : null,
+    slide.spec_2_label && slide.spec_2_value ? { label: slide.spec_2_label, value: slide.spec_2_value } : null,
+    slide.spec_3_label && slide.spec_3_value ? { label: slide.spec_3_label, value: slide.spec_3_value } : null,
+  ].filter(Boolean) as { label: string; value: string }[];
 
   const imageVariants = {
-    enter: (dir: number) => ({ opacity: 0, scale: 1.1, x: dir > 0 ? 100 : -100 }),
-    center: { opacity: 1, scale: 1, x: 0, transition: { duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94] as const } },
-    exit: (dir: number) => ({ opacity: 0, scale: 1.05, x: dir > 0 ? -100 : 100, transition: { duration: 0.5 } }),
-  };
-
-  const textVariants = {
-    enter: { opacity: 0, y: 40 },
-    center: { opacity: 1, y: 0, transition: { duration: 0.6, delay: 0.3, ease: "easeOut" as const } },
-    exit: { opacity: 0, y: -20, transition: { duration: 0.3 } },
+    enter: (dir: number) => ({ opacity: 0, scale: 1.08, x: dir > 0 ? 60 : -60 }),
+    center: { opacity: 1, scale: 1, x: 0, transition: { duration: 0.9, ease: [0.25, 0.46, 0.45, 0.94] as const } },
+    exit: (dir: number) => ({ opacity: 0, scale: 1.03, x: dir > 0 ? -60 : 60, transition: { duration: 0.5 } }),
   };
 
   return (
@@ -102,70 +147,98 @@ export const RivianHero = () => {
           className="absolute inset-0"
         >
           <img
-            src={slide.image}
+            src={resolveImage(slide.image_url)}
             alt={slide.title}
             className="w-full h-full object-cover"
           />
-          {/* Gradient overlays */}
           <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20" />
         </motion.div>
       </AnimatePresence>
 
-      {/* Content — left-aligned like Rivian */}
-      <div className="relative z-10 h-full flex items-center">
+      {/* Content */}
+      <div className="relative z-10 h-full flex items-end pb-28 md:items-center md:pb-0">
         <div className="container mx-auto px-6 md:px-12 lg:px-20">
           <AnimatePresence mode="wait">
             <motion.div
               key={current}
-              variants={textVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              className="max-w-xl"
+              initial={{ opacity: 0, y: 50 }}
+              animate={{ opacity: 1, y: 0, transition: { duration: 0.6, delay: 0.25 } }}
+              exit={{ opacity: 0, y: -30, transition: { duration: 0.3 } }}
+              className="max-w-2xl"
             >
-              {/* Launch badge */}
-              <div className="flex items-center gap-3 mb-6">
-                <span className="inline-flex items-center gap-1.5 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-4 py-1.5 text-sm text-white/90 font-medium">
-                  <Calendar className="h-3.5 w-3.5" />
-                  {slide.launchDate}
-                </span>
-                <span className="inline-flex items-center gap-1.5 bg-emerald-500/20 backdrop-blur-md border border-emerald-400/30 rounded-full px-4 py-1.5 text-sm text-emerald-300 font-medium">
-                  <IndianRupee className="h-3.5 w-3.5" />
-                  {slide.price}
-                </span>
+              {/* Brand label */}
+              {slide.brand && (
+                <p className="text-white/40 text-xs tracking-[0.35em] uppercase font-medium mb-3">
+                  {slide.brand}
+                </p>
+              )}
+
+              {/* Badges */}
+              <div className="flex flex-wrap items-center gap-3 mb-5">
+                {slide.launch_date && (
+                  <span className="inline-flex items-center gap-1.5 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-4 py-1.5 text-sm text-white/90 font-medium">
+                    <Calendar className="h-3.5 w-3.5" />
+                    {slide.launch_date}
+                  </span>
+                )}
+                {slide.price_range && (
+                  <span className="inline-flex items-center gap-1.5 bg-emerald-500/20 backdrop-blur-md border border-emerald-400/30 rounded-full px-4 py-1.5 text-sm text-emerald-300 font-medium">
+                    <IndianRupee className="h-3.5 w-3.5" />
+                    {slide.price_range}
+                  </span>
+                )}
               </div>
 
               {/* Title */}
-              <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-[1.05] tracking-tight mb-2">
+              <h1 className="text-5xl md:text-6xl lg:text-8xl font-bold text-white leading-[1.02] tracking-tight mb-2">
                 {slide.title}
               </h1>
-              <p className="text-xl md:text-2xl text-white/70 font-light mb-4">
-                {slide.subtitle}
-              </p>
+              {slide.subtitle && (
+                <p className="text-xl md:text-2xl text-white/60 font-light mb-4">
+                  {slide.subtitle}
+                </p>
+              )}
 
               {/* Description */}
-              <p className="text-base md:text-lg text-white/60 leading-relaxed mb-8 max-w-md">
-                {slide.description}
-              </p>
+              {slide.description && (
+                <p className="text-base md:text-lg text-white/50 leading-relaxed mb-6 max-w-md">
+                  {slide.description}
+                </p>
+              )}
 
-              {/* CTAs — Rivian style: pill buttons */}
+              {/* Specs */}
+              {specs.length > 0 && (
+                <div className="flex gap-3 mb-8">
+                  {specs.map((spec) => (
+                    <div key={spec.label} className="bg-white/5 backdrop-blur-md rounded-xl px-4 py-3 border border-white/10 min-w-[100px]">
+                      <div className="text-emerald-400 mb-1">
+                        {specIcons[spec.label] || <Zap className="h-4 w-4" />}
+                      </div>
+                      <p className="text-white font-bold text-base">{spec.value}</p>
+                      <p className="text-white/40 text-[11px] uppercase tracking-wider">{spec.label}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* CTAs */}
               <div className="flex items-center gap-4">
-                <Link to={slide.link}>
+                <Link to={slide.cta_link || "/upcoming-cars"}>
                   <Button
                     size="lg"
                     className="rounded-full bg-white text-black hover:bg-white/90 px-8 py-6 text-base font-semibold shadow-2xl hover:shadow-white/20 transition-all"
                   >
-                    {slide.ctaLabel}
+                    {slide.cta_label || "Learn More"}
                   </Button>
                 </Link>
-                <Link to="/cars">
+                <Link to={slide.cta_secondary_link || "/cars"}>
                   <Button
                     size="lg"
                     variant="outline"
                     className="rounded-full border-white/30 text-white hover:bg-white/10 px-8 py-6 text-base font-semibold backdrop-blur-sm"
                   >
-                    {slide.ctaSecondary}
+                    {slide.cta_secondary_label || "Explore"}
                     <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 </Link>
@@ -191,18 +264,31 @@ export const RivianHero = () => {
         <ChevronRight className="h-5 w-5" />
       </button>
 
-      {/* Slide indicators — bottom center like Rivian */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
-        {slides.map((_, i) => (
+      {/* Slide indicators + car name thumbnails */}
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1">
+        {slides.map((s, i) => (
           <button
-            key={i}
+            key={s.id || i}
             onClick={() => { setDirection(i > current ? 1 : -1); setCurrent(i); }}
-            className={`h-1.5 rounded-full transition-all duration-500 ${
-              i === current ? "w-8 bg-white" : "w-3 bg-white/40 hover:bg-white/60"
+            className={`relative rounded-full transition-all duration-500 overflow-hidden ${
+              i === current
+                ? "w-24 h-8 bg-white/20 backdrop-blur-md border border-white/30"
+                : "w-3 h-3 bg-white/30 hover:bg-white/50"
             }`}
-            aria-label={`Go to slide ${i + 1}`}
-          />
+            aria-label={`Go to ${s.title}`}
+          >
+            {i === current && (
+              <span className="absolute inset-0 flex items-center justify-center text-[11px] text-white font-semibold tracking-wide truncate px-2">
+                {s.title}
+              </span>
+            )}
+          </button>
         ))}
+      </div>
+
+      {/* Slide counter */}
+      <div className="absolute top-24 right-6 md:right-12 z-20 text-white/30 text-sm font-mono">
+        {String(current + 1).padStart(2, "0")} / {String(slides.length).padStart(2, "0")}
       </div>
     </section>
   );

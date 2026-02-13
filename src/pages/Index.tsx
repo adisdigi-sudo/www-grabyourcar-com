@@ -3,7 +3,6 @@ import { Helmet } from "react-helmet-async";
 import { Header } from "@/components/Header";
 import { PromoBanner } from "@/components/PromoBanner";
 import { RivianHero } from "@/components/RivianHero";
-import { UpcomingCarsShowcase } from "@/components/UpcomingCarsShowcase";
 // CategoryGrid removed for Rivian-style clean layout
 import { CarListings } from "@/components/CarListings";
 import EMICalculator from "@/components/EMICalculator";
@@ -64,11 +63,8 @@ const Index = () => {
       
       {/* Main Content */}
       <main>
-        {/* Rivian-style full-screen hero carousel */}
+        {/* Single Rivian-style full-screen hero carousel — backend managed */}
         <RivianHero />
-        
-        {/* Full-screen upcoming car showcases */}
-        <UpcomingCarsShowcase />
         
         {/* Dynamic Hero Banners from Admin */}
         <DynamicHeroBanners />
