@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Car } from "@/data/cars/types";
 
-// NOTE: Static data fallback removed - using database only for accurate, real OEM/CarDekho data
+// NOTE: Static data fallback removed - using database only for accurate OEM data
 
 interface FetchCarsOptions {
   slug?: string;
@@ -425,7 +425,7 @@ export const getAllCars = async (): Promise<Car[]> => {
 };
 
 // NOTE: Migration function removed - database is now the single source of truth
-// All car data is scraped from OEM/CarDekho via Firecrawl and stored in database
+// All car data is sourced from official OEM websites and stored in database
 
 // Enhance car data with AI
 export const enhanceCarWithAI = async (

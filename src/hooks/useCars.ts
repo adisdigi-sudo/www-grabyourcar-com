@@ -142,7 +142,7 @@ export const useDatabaseStatus = () => {
 };
 
 // NOTE: Migration hook removed - database is now the single source of truth
-// All data comes from OEM/CarDekho via Firecrawl scraping
+// All data comes from official OEM sources
 
 // Hook to enhance car with AI
 export const useEnhanceCarAI = () => {

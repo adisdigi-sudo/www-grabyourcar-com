@@ -9,7 +9,9 @@ const REALTIME_TABLES = [
   'car_colors',
   'car_variants',
   'car_specifications',
-  'car_city_pricing',
+  'car_features',
+  'car_brochures',
+  'car_offers',
   'homepage_content',
   'rental_services',
   'rental_vehicles',
@@ -19,15 +21,21 @@ const REALTIME_TABLES = [
   'ai_blog_posts',
   'ai_news_cache',
   'hsrp_bookings',
+  'accessory_orders',
+  'accessory_wishlist',
+  'banners',
 ] as const;
 
 // Map tables to query keys that need invalidation
 const TABLE_QUERY_KEY_MAP: Record<string, string[]> = {
-  cars: ['cars', 'allCars', 'admin-cars', 'car'],
-  car_images: ['cars', 'car', 'car-images', 'admin-cars'],
-  car_colors: ['car-colors', 'car'],
-  car_variants: ['car-variants', 'car'],
+  cars: ['cars', 'allCars', 'admin-cars', 'car', 'admin-car-image-status'],
+  car_images: ['cars', 'car', 'car-images', 'admin-cars', 'admin-car-image-status'],
+  car_colors: ['car-colors', 'car', 'cars'],
+  car_variants: ['car-variants', 'car', 'cars'],
   car_specifications: ['car-specifications', 'car'],
+  car_features: ['car-features', 'car'],
+  car_brochures: ['car-brochures', 'car'],
+  car_offers: ['car-offers', 'car'],
   car_city_pricing: ['city-pricing', 'car'],
   homepage_content: ['homepageContent', 'homepage-content'],
   rental_services: ['rental-services'],
@@ -38,6 +46,9 @@ const TABLE_QUERY_KEY_MAP: Record<string, string[]> = {
   ai_blog_posts: ['ai-blog-posts'],
   ai_news_cache: ['ai-news-cache'],
   hsrp_bookings: ['hsrp-bookings'],
+  accessory_orders: ['accessory-orders', 'admin-accessory-orders'],
+  accessory_wishlist: ['accessory-wishlist'],
+  banners: ['banners', 'admin-banners'],
 };
 
 /**
@@ -67,12 +78,13 @@ export function useGlobalRealtimeSync() {
           }
         )
         .subscribe((status) => {
-          console.log(`[Realtime] ${table} subscription status:`, status);
+          if (status === 'SUBSCRIBED') {
+            console.log(`[Realtime] ${table} subscribed`);
+          }
         });
     });
 
     return () => {
-      console.log('[Realtime] Cleaning up subscriptions...');
       channels.forEach(channel => {
         supabase.removeChannel(channel);
       });
@@ -95,8 +107,6 @@ export function useRealtimeTable(
   useEffect(() => {
     if (!enabled) return;
 
-    console.log(`[Realtime] Subscribing to ${tableName}...`);
-    
     const channel = supabase
       .channel(`realtime-${tableName}-${Date.now()}`)
       .on(
