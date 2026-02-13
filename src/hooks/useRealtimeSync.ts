@@ -24,6 +24,7 @@ const REALTIME_TABLES = [
   'accessory_orders',
   'accessory_wishlist',
   'delivery_stories',
+  'google_reviews',
   'banners',
 ] as const;
 
@@ -51,6 +52,7 @@ const TABLE_QUERY_KEY_MAP: Record<string, string[]> = {
   accessory_wishlist: ['accessory-wishlist'],
   banners: ['banners', 'admin-banners'],
   delivery_stories: ['delivery-stories', 'delivery-stories-public'],
+  google_reviews: ['google-reviews-admin', 'google-reviews-public'],
 };
 
 /**

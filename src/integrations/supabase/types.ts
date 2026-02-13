@@ -2386,6 +2386,60 @@ export type Database = {
         }
         Relationships: []
       }
+      google_reviews: {
+        Row: {
+          author_name: string
+          author_photo: string | null
+          car_purchased: string | null
+          created_at: string
+          has_response: boolean | null
+          id: string
+          is_local_guide: boolean | null
+          is_visible: boolean | null
+          rating: number
+          relative_time: string | null
+          response_text: string | null
+          review_date: string | null
+          review_text: string
+          sort_order: number | null
+          updated_at: string
+        }
+        Insert: {
+          author_name: string
+          author_photo?: string | null
+          car_purchased?: string | null
+          created_at?: string
+          has_response?: boolean | null
+          id?: string
+          is_local_guide?: boolean | null
+          is_visible?: boolean | null
+          rating?: number
+          relative_time?: string | null
+          response_text?: string | null
+          review_date?: string | null
+          review_text: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Update: {
+          author_name?: string
+          author_photo?: string | null
+          car_purchased?: string | null
+          created_at?: string
+          has_response?: boolean | null
+          id?: string
+          is_local_guide?: boolean | null
+          is_visible?: boolean | null
+          rating?: number
+          relative_time?: string | null
+          response_text?: string | null
+          review_date?: string | null
+          review_text?: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       hero_slides: {
         Row: {
           brand: string | null

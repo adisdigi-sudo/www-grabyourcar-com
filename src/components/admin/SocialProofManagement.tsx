@@ -15,18 +15,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Save, Plus, Edit, Trash2, Star, Image, Car, MapPin, Upload, Video, X, Loader2 } from "lucide-react";
 
-interface GoogleReview {
+// ─── Types ───────────────────────────────────────────────────────────
+interface GoogleReviewDB {
   id: string;
-  name: string;
-  avatar?: string;
+  author_name: string;
+  author_photo: string | null;
   rating: number;
-  date: string;
-  comment: string;
-  carPurchased?: string;
-  isLocalGuide: boolean;
-  hasResponse: boolean;
-  responseText?: string;
-  isVisible: boolean;
+  review_text: string;
+  relative_time: string | null;
+  car_purchased: string | null;
+  is_local_guide: boolean;
+  has_response: boolean;
+  response_text: string | null;
+  is_visible: boolean;
+  sort_order: number;
+  review_date: string | null;
 }
 
 interface DeliveryStory {
@@ -58,6 +61,7 @@ interface ReviewSettings {
   responseRate: number;
 }
 
+// ─── Component ───────────────────────────────────────────────────────
 export const SocialProofManagement = () => {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("reviews");
@@ -65,10 +69,9 @@ export const SocialProofManagement = () => {
   const videoInputRef = useRef<HTMLInputElement>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [uploadingVideo, setUploadingVideo] = useState(false);
-  
-  // Google Reviews State
-  const [reviews, setReviews] = useState<GoogleReview[]>([]);
-  const [editingReview, setEditingReview] = useState<GoogleReview | null>(null);
+
+  // Review state
+  const [editingReview, setEditingReview] = useState<GoogleReviewDB | null>(null);
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [reviewSettings, setReviewSettings] = useState<ReviewSettings>({
     overallRating: 4.6,
@@ -77,25 +80,24 @@ export const SocialProofManagement = () => {
     showResponseRate: true,
     responseRate: 95,
   });
-  
-  // Delivery Stories State
+
+  // Story state
   const [editingStory, setEditingStory] = useState<DeliveryStory | null>(null);
   const [storyDialogOpen, setStoryDialogOpen] = useState(false);
 
-  // Fetch review settings from admin_settings
-  const { data: savedSettings, isLoading: loadingSettings } = useQuery({
-    queryKey: ["socialProofSettings"],
+  // ─── Queries ─────────────────────────────────────────────────────
+  const { data: reviews = [], isLoading: loadingReviews } = useQuery({
+    queryKey: ["google-reviews-admin"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("admin_settings")
+      const { data, error } = await (supabase as any)
+        .from("google_reviews")
         .select("*")
-        .in("setting_key", ["google_reviews", "review_settings"]);
+        .order("sort_order", { ascending: true });
       if (error) throw error;
-      return data;
+      return data as GoogleReviewDB[];
     },
   });
 
-  // Fetch delivery stories from dedicated table
   const { data: stories = [], isLoading: loadingStories } = useQuery({
     queryKey: ["delivery-stories"],
     queryFn: async () => {
@@ -108,57 +110,89 @@ export const SocialProofManagement = () => {
     },
   });
 
+  const { data: savedSettings } = useQuery({
+    queryKey: ["reviewSettings"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("admin_settings")
+        .select("*")
+        .eq("setting_key", "review_settings")
+        .maybeSingle();
+      if (error) throw error;
+      return data?.setting_value as unknown as ReviewSettings | null;
+    },
+  });
+
   useEffect(() => {
-    if (savedSettings) {
-      savedSettings.forEach((setting) => {
-        if (setting.setting_key === "google_reviews") {
-          setReviews(setting.setting_value as unknown as GoogleReview[]);
-        } else if (setting.setting_key === "review_settings") {
-          setReviewSettings(setting.setting_value as unknown as ReviewSettings);
-        }
-      });
-    }
+    if (savedSettings) setReviewSettings(savedSettings);
   }, [savedSettings]);
 
-  const saveMutation = useMutation({
-    mutationFn: async ({ key, value }: { key: string; value: unknown }) => {
+  // ─── Review Mutations ────────────────────────────────────────────
+  const saveReviewMutation = useMutation({
+    mutationFn: async (review: GoogleReviewDB) => {
+      const { id, ...data } = review;
+      const { data: existing } = await (supabase as any)
+        .from("google_reviews").select("id").eq("id", id).maybeSingle();
+      if (existing) {
+        const { error } = await (supabase as any).from("google_reviews").update(data).eq("id", id);
+        if (error) throw error;
+      } else {
+        const { error } = await (supabase as any).from("google_reviews").insert({ id, ...data });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["google-reviews-admin"] });
+      queryClient.invalidateQueries({ queryKey: ["google-reviews-public"] });
+      toast.success("Review saved");
+      setReviewDialogOpen(false);
+      setEditingReview(null);
+    },
+    onError: () => toast.error("Failed to save review"),
+  });
+
+  const deleteReviewMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await (supabase as any).from("google_reviews").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["google-reviews-admin"] });
+      queryClient.invalidateQueries({ queryKey: ["google-reviews-public"] });
+      toast.success("Review deleted");
+    },
+    onError: () => toast.error("Failed to delete review"),
+  });
+
+  const saveSettingsMutation = useMutation({
+    mutationFn: async () => {
       const { error } = await supabase
         .from("admin_settings")
-        .upsert([{ 
-          setting_key: key, 
-          setting_value: JSON.parse(JSON.stringify(value)),
-          updated_at: new Date().toISOString()
+        .upsert([{
+          setting_key: "review_settings",
+          setting_value: JSON.parse(JSON.stringify(reviewSettings)),
+          updated_at: new Date().toISOString(),
         }], { onConflict: "setting_key" });
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["socialProofSettings"] });
-      toast.success("Settings saved");
+      queryClient.invalidateQueries({ queryKey: ["reviewSettings"] });
+      toast.success("Review settings saved");
     },
     onError: () => toast.error("Failed to save settings"),
   });
 
-  // Story mutations using delivery_stories table
+  // ─── Story Mutations ─────────────────────────────────────────────
   const saveStoryMutation = useMutation({
     mutationFn: async (story: DeliveryStory) => {
-      const { id, ...storyData } = story;
-      // Check if exists
+      const { id, ...data } = story;
       const { data: existing } = await (supabase as any)
-        .from("delivery_stories")
-        .select("id")
-        .eq("id", id)
-        .maybeSingle();
-
+        .from("delivery_stories").select("id").eq("id", id).maybeSingle();
       if (existing) {
-        const { error } = await (supabase as any)
-          .from("delivery_stories")
-          .update(storyData)
-          .eq("id", id);
+        const { error } = await (supabase as any).from("delivery_stories").update(data).eq("id", id);
         if (error) throw error;
       } else {
-        const { error } = await (supabase as any)
-          .from("delivery_stories")
-          .insert({ id, ...storyData });
+        const { error } = await (supabase as any).from("delivery_stories").insert({ id, ...data });
         if (error) throw error;
       }
     },
@@ -173,10 +207,7 @@ export const SocialProofManagement = () => {
 
   const deleteStoryMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await (supabase as any)
-        .from("delivery_stories")
-        .delete()
-        .eq("id", id);
+      const { error } = await (supabase as any).from("delivery_stories").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -186,74 +217,50 @@ export const SocialProofManagement = () => {
     onError: () => toast.error("Failed to delete story"),
   });
 
-  // File upload handler
+  // ─── File Upload ──────────────────────────────────────────────────
   const handleFileUpload = async (file: File, type: "photo" | "video") => {
     const setter = type === "photo" ? setUploadingPhoto : setUploadingVideo;
     setter(true);
     try {
       const ext = file.name.split(".").pop();
       const path = `delivery-stories/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      
       const { error: uploadError } = await supabase.storage
         .from("car-assets")
         .upload(path, file, { contentType: file.type, upsert: true });
-      
       if (uploadError) throw uploadError;
-      
       const { data: urlData } = supabase.storage.from("car-assets").getPublicUrl(path);
-      
       if (editingStory) {
-        if (type === "photo") {
-          setEditingStory({ ...editingStory, image_url: urlData.publicUrl });
-        } else {
-          setEditingStory({ ...editingStory, video_url: urlData.publicUrl });
-        }
+        if (type === "photo") setEditingStory({ ...editingStory, image_url: urlData.publicUrl });
+        else setEditingStory({ ...editingStory, video_url: urlData.publicUrl });
       }
       toast.success(`${type === "photo" ? "Photo" : "Video"} uploaded`);
-    } catch (err) {
+    } catch {
       toast.error(`Failed to upload ${type}`);
     } finally {
       setter(false);
     }
   };
 
-  // Review handlers
+  // ─── Handlers ─────────────────────────────────────────────────────
   const handleAddReview = () => {
     setEditingReview({
       id: crypto.randomUUID(),
-      name: "",
+      author_name: "",
+      author_photo: null,
       rating: 5,
-      date: new Date().toISOString().split("T")[0],
-      comment: "",
-      isLocalGuide: false,
-      hasResponse: false,
-      isVisible: true,
+      review_text: "",
+      relative_time: "",
+      car_purchased: null,
+      is_local_guide: false,
+      has_response: false,
+      response_text: null,
+      is_visible: true,
+      sort_order: reviews.length,
+      review_date: new Date().toISOString().split("T")[0],
     });
     setReviewDialogOpen(true);
   };
 
-  const handleSaveReview = () => {
-    if (!editingReview) return;
-    const exists = reviews.find(r => r.id === editingReview.id);
-    if (exists) {
-      setReviews(reviews.map(r => r.id === editingReview.id ? editingReview : r));
-    } else {
-      setReviews([...reviews, editingReview]);
-    }
-    setReviewDialogOpen(false);
-    setEditingReview(null);
-  };
-
-  const handleDeleteReview = (id: string) => {
-    setReviews(reviews.filter(r => r.id !== id));
-  };
-
-  const handleSaveAllReviews = () => {
-    saveMutation.mutate({ key: "google_reviews", value: reviews });
-    saveMutation.mutate({ key: "review_settings", value: reviewSettings });
-  };
-
-  // Story handlers
   const handleAddStory = () => {
     setEditingStory({
       id: crypto.randomUUID(),
@@ -278,9 +285,7 @@ export const SocialProofManagement = () => {
     setStoryDialogOpen(true);
   };
 
-  const isLoading = loadingSettings || loadingStories;
-
-  if (isLoading) {
+  if (loadingReviews || loadingStories) {
     return <div className="p-8 text-center">Loading...</div>;
   }
 
@@ -288,7 +293,7 @@ export const SocialProofManagement = () => {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold">Social Proof Management</h2>
-        <p className="text-muted-foreground">Manage Google Reviews and Delivery Stories</p>
+        <p className="text-muted-foreground">Manage Google Reviews and Delivery Stories — all stored in database</p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -297,46 +302,40 @@ export const SocialProofManagement = () => {
           <TabsTrigger value="stories"><Image className="h-4 w-4 mr-2" />Delivery Stories</TabsTrigger>
         </TabsList>
 
-        {/* Google Reviews Tab */}
+        {/* ─── Google Reviews Tab ─────────────────────────────────── */}
         <TabsContent value="reviews" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>Review Settings</CardTitle>
               <CardDescription>Configure overall review display</CardDescription>
             </CardHeader>
-            <CardContent className="grid grid-cols-4 gap-4">
-              <div className="space-y-2">
-                <Label>Overall Rating</Label>
-                <Input 
-                  type="number" step="0.1" min="0" max="5"
-                  value={reviewSettings.overallRating}
-                  onChange={(e) => setReviewSettings({ ...reviewSettings, overallRating: parseFloat(e.target.value) })}
-                />
+            <CardContent>
+              <div className="grid grid-cols-4 gap-4">
+                <div className="space-y-2">
+                  <Label>Overall Rating</Label>
+                  <Input type="number" step="0.1" min="0" max="5" value={reviewSettings.overallRating}
+                    onChange={(e) => setReviewSettings({ ...reviewSettings, overallRating: parseFloat(e.target.value) })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Total Reviews</Label>
+                  <Input type="number" value={reviewSettings.totalReviews}
+                    onChange={(e) => setReviewSettings({ ...reviewSettings, totalReviews: parseInt(e.target.value) })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Response Rate %</Label>
+                  <Input type="number" value={reviewSettings.responseRate}
+                    onChange={(e) => setReviewSettings({ ...reviewSettings, responseRate: parseInt(e.target.value) })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Google Place ID</Label>
+                  <Input value={reviewSettings.googlePlaceId}
+                    onChange={(e) => setReviewSettings({ ...reviewSettings, googlePlaceId: e.target.value })}
+                    placeholder="For future API integration" />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label>Total Reviews</Label>
-                <Input 
-                  type="number"
-                  value={reviewSettings.totalReviews}
-                  onChange={(e) => setReviewSettings({ ...reviewSettings, totalReviews: parseInt(e.target.value) })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Response Rate %</Label>
-                <Input 
-                  type="number"
-                  value={reviewSettings.responseRate}
-                  onChange={(e) => setReviewSettings({ ...reviewSettings, responseRate: parseInt(e.target.value) })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Google Place ID</Label>
-                <Input 
-                  value={reviewSettings.googlePlaceId}
-                  onChange={(e) => setReviewSettings({ ...reviewSettings, googlePlaceId: e.target.value })}
-                  placeholder="For future API integration"
-                />
-              </div>
+              <Button className="mt-4" onClick={() => saveSettingsMutation.mutate()} disabled={saveSettingsMutation.isPending}>
+                <Save className="h-4 w-4 mr-2" />Save Settings
+              </Button>
             </CardContent>
           </Card>
 
@@ -345,14 +344,9 @@ export const SocialProofManagement = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Reviews ({reviews.length})</CardTitle>
-                  <CardDescription>Manage customer reviews</CardDescription>
+                  <CardDescription>Each review saves individually to the database</CardDescription>
                 </div>
-                <div className="flex gap-2">
-                  <Button onClick={handleAddReview}><Plus className="h-4 w-4 mr-2" />Add Review</Button>
-                  <Button onClick={handleSaveAllReviews} disabled={saveMutation.isPending}>
-                    <Save className="h-4 w-4 mr-2" />Save All
-                  </Button>
-                </div>
+                <Button onClick={handleAddReview}><Plus className="h-4 w-4 mr-2" />Add Review</Button>
               </div>
             </CardHeader>
             <CardContent>
@@ -362,7 +356,7 @@ export const SocialProofManagement = () => {
                     <TableHead>Customer</TableHead>
                     <TableHead>Rating</TableHead>
                     <TableHead>Comment</TableHead>
-                    <TableHead>Date</TableHead>
+                    <TableHead>Car</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -372,8 +366,8 @@ export const SocialProofManagement = () => {
                     <TableRow key={review.id}>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <span className="font-medium">{review.name}</span>
-                          {review.isLocalGuide && <Badge variant="secondary">Local Guide</Badge>}
+                          <span className="font-medium">{review.author_name}</span>
+                          {review.is_local_guide && <Badge variant="secondary">Local Guide</Badge>}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -383,11 +377,11 @@ export const SocialProofManagement = () => {
                           ))}
                         </div>
                       </TableCell>
-                      <TableCell className="max-w-[200px] truncate">{review.comment}</TableCell>
-                      <TableCell>{review.date}</TableCell>
+                      <TableCell className="max-w-[200px] truncate">{review.review_text}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{review.car_purchased || "—"}</TableCell>
                       <TableCell>
-                        <Badge variant={review.isVisible ? "default" : "secondary"}>
-                          {review.isVisible ? "Visible" : "Hidden"}
+                        <Badge variant={review.is_visible ? "default" : "secondary"}>
+                          {review.is_visible ? "Visible" : "Hidden"}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -396,27 +390,34 @@ export const SocialProofManagement = () => {
                             setEditingReview(review);
                             setReviewDialogOpen(true);
                           }}><Edit className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDeleteReview(review.id)}>
+                          <Button variant="ghost" size="icon" onClick={() => deleteReviewMutation.mutate(review.id)}>
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </div>
                       </TableCell>
                     </TableRow>
                   ))}
+                  {reviews.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        No reviews yet. Click "Add Review" to add your first Google review.
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* Delivery Stories Tab */}
+        {/* ─── Delivery Stories Tab ───────────────────────────────── */}
         <TabsContent value="stories" className="space-y-4">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Real Delivery Stories ({stories.length})</CardTitle>
-                  <CardDescription>Showcase authentic customer deliveries — stored in database</CardDescription>
+                  <CardDescription>Each story saves individually to the database</CardDescription>
                 </div>
                 <Button onClick={handleAddStory}><Plus className="h-4 w-4 mr-2" />Add Story</Button>
               </div>
@@ -454,11 +455,7 @@ export const SocialProofManagement = () => {
                           {story.car_brand} {story.car_model}
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />{story.location}
-                        </div>
-                      </TableCell>
+                      <TableCell><div className="flex items-center gap-1"><MapPin className="h-3 w-3" />{story.location}</div></TableCell>
                       <TableCell>{story.delivery_date}</TableCell>
                       <TableCell>
                         <Badge variant={story.is_featured ? "default" : "outline"}>
@@ -483,6 +480,13 @@ export const SocialProofManagement = () => {
                       </TableCell>
                     </TableRow>
                   ))}
+                  {stories.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                        No stories yet. Click "Add Story" to add your first delivery story.
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
@@ -490,18 +494,18 @@ export const SocialProofManagement = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Review Dialog */}
+      {/* ─── Review Dialog ─────────────────────────────────────────── */}
       <Dialog open={reviewDialogOpen} onOpenChange={setReviewDialogOpen}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingReview?.name ? "Edit Review" : "Add Review"}</DialogTitle>
+            <DialogTitle>{editingReview?.author_name ? "Edit Review" : "Add Review"}</DialogTitle>
           </DialogHeader>
           {editingReview && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Customer Name</Label>
-                  <Input value={editingReview.name} onChange={(e) => setEditingReview({ ...editingReview, name: e.target.value })} />
+                  <Input value={editingReview.author_name} onChange={(e) => setEditingReview({ ...editingReview, author_name: e.target.value })} />
                 </div>
                 <div className="space-y-2">
                   <Label>Rating</Label>
@@ -515,37 +519,41 @@ export const SocialProofManagement = () => {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Date</Label>
-                  <Input type="date" value={editingReview.date} onChange={(e) => setEditingReview({ ...editingReview, date: e.target.value })} />
+                  <Label>Review Date</Label>
+                  <Input type="date" value={editingReview.review_date || ""} onChange={(e) => setEditingReview({ ...editingReview, review_date: e.target.value })} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Car Purchased (optional)</Label>
-                  <Input value={editingReview.carPurchased || ""} onChange={(e) => setEditingReview({ ...editingReview, carPurchased: e.target.value })} />
+                  <Label>Relative Time (e.g. "2 weeks ago")</Label>
+                  <Input value={editingReview.relative_time || ""} onChange={(e) => setEditingReview({ ...editingReview, relative_time: e.target.value })} />
                 </div>
               </div>
               <div className="space-y-2">
+                <Label>Car Purchased (optional)</Label>
+                <Input value={editingReview.car_purchased || ""} onChange={(e) => setEditingReview({ ...editingReview, car_purchased: e.target.value })} />
+              </div>
+              <div className="space-y-2">
                 <Label>Review Comment</Label>
-                <Textarea value={editingReview.comment} onChange={(e) => setEditingReview({ ...editingReview, comment: e.target.value })} rows={3} />
+                <Textarea value={editingReview.review_text} onChange={(e) => setEditingReview({ ...editingReview, review_text: e.target.value })} rows={3} />
               </div>
               <div className="flex items-center gap-6">
                 <div className="flex items-center gap-2">
-                  <Switch checked={editingReview.isLocalGuide} onCheckedChange={(v) => setEditingReview({ ...editingReview, isLocalGuide: v })} />
+                  <Switch checked={editingReview.is_local_guide} onCheckedChange={(v) => setEditingReview({ ...editingReview, is_local_guide: v })} />
                   <Label>Local Guide</Label>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Switch checked={editingReview.isVisible} onCheckedChange={(v) => setEditingReview({ ...editingReview, isVisible: v })} />
+                  <Switch checked={editingReview.is_visible} onCheckedChange={(v) => setEditingReview({ ...editingReview, is_visible: v })} />
                   <Label>Visible</Label>
                 </div>
               </div>
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <Switch checked={editingReview.hasResponse} onCheckedChange={(v) => setEditingReview({ ...editingReview, hasResponse: v })} />
+                  <Switch checked={editingReview.has_response} onCheckedChange={(v) => setEditingReview({ ...editingReview, has_response: v })} />
                   <Label>Has Business Response</Label>
                 </div>
-                {editingReview.hasResponse && (
-                  <Textarea 
-                    value={editingReview.responseText || ""} 
-                    onChange={(e) => setEditingReview({ ...editingReview, responseText: e.target.value })}
+                {editingReview.has_response && (
+                  <Textarea
+                    value={editingReview.response_text || ""}
+                    onChange={(e) => setEditingReview({ ...editingReview, response_text: e.target.value })}
                     placeholder="Business response..."
                     rows={2}
                   />
@@ -555,12 +563,15 @@ export const SocialProofManagement = () => {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setReviewDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveReview}>Save</Button>
+            <Button onClick={() => editingReview && saveReviewMutation.mutate(editingReview)} disabled={saveReviewMutation.isPending}>
+              {saveReviewMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Save
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Story Dialog with File Upload */}
+      {/* ─── Story Dialog with File Upload ────────────────────────── */}
       <Dialog open={storyDialogOpen} onOpenChange={setStoryDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
@@ -592,42 +603,21 @@ export const SocialProofManagement = () => {
               {/* Photo Upload */}
               <div className="space-y-2">
                 <Label>Delivery Photo</Label>
-                <input
-                  ref={photoInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleFileUpload(file, "photo");
-                  }}
-                />
+                <input ref={photoInputRef} type="file" accept="image/*" className="hidden"
+                  onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "photo"); }} />
                 {editingStory.image_url ? (
                   <div className="relative inline-block">
                     <img src={editingStory.image_url} alt="Preview" className="w-full max-h-48 rounded-lg object-cover border" />
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      className="absolute top-2 right-2 h-7 w-7"
-                      onClick={() => setEditingStory({ ...editingStory, image_url: null })}
-                    >
+                    <Button variant="destructive" size="icon" className="absolute top-2 right-2 h-7 w-7"
+                      onClick={() => setEditingStory({ ...editingStory, image_url: null })}>
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
                 ) : (
-                  <Button
-                    variant="outline"
-                    className="w-full h-24 border-dashed flex flex-col gap-1"
-                    onClick={() => photoInputRef.current?.click()}
-                    disabled={uploadingPhoto}
-                  >
-                    {uploadingPhoto ? (
-                      <Loader2 className="h-6 w-6 animate-spin" />
-                    ) : (
-                      <>
-                        <Upload className="h-6 w-6 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">Click to upload photo</span>
-                      </>
+                  <Button variant="outline" className="w-full h-24 border-dashed flex flex-col gap-1"
+                    onClick={() => photoInputRef.current?.click()} disabled={uploadingPhoto}>
+                    {uploadingPhoto ? <Loader2 className="h-6 w-6 animate-spin" /> : (
+                      <><Upload className="h-6 w-6 text-muted-foreground" /><span className="text-sm text-muted-foreground">Click to upload photo</span></>
                     )}
                   </Button>
                 )}
@@ -636,42 +626,21 @@ export const SocialProofManagement = () => {
               {/* Video Upload */}
               <div className="space-y-2">
                 <Label>Delivery Video (optional)</Label>
-                <input
-                  ref={videoInputRef}
-                  type="file"
-                  accept="video/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleFileUpload(file, "video");
-                  }}
-                />
+                <input ref={videoInputRef} type="file" accept="video/*" className="hidden"
+                  onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "video"); }} />
                 {editingStory.video_url ? (
                   <div className="relative">
                     <video src={editingStory.video_url} controls className="w-full max-h-48 rounded-lg border" />
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      className="absolute top-2 right-2 h-7 w-7"
-                      onClick={() => setEditingStory({ ...editingStory, video_url: null })}
-                    >
+                    <Button variant="destructive" size="icon" className="absolute top-2 right-2 h-7 w-7"
+                      onClick={() => setEditingStory({ ...editingStory, video_url: null })}>
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
                 ) : (
-                  <Button
-                    variant="outline"
-                    className="w-full h-16 border-dashed flex gap-2"
-                    onClick={() => videoInputRef.current?.click()}
-                    disabled={uploadingVideo}
-                  >
-                    {uploadingVideo ? (
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                    ) : (
-                      <>
-                        <Video className="h-5 w-5 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">Upload video</span>
-                      </>
+                  <Button variant="outline" className="w-full h-16 border-dashed flex gap-2"
+                    onClick={() => videoInputRef.current?.click()} disabled={uploadingVideo}>
+                    {uploadingVideo ? <Loader2 className="h-5 w-5 animate-spin" /> : (
+                      <><Video className="h-5 w-5 text-muted-foreground" /><span className="text-sm text-muted-foreground">Upload video</span></>
                     )}
                   </Button>
                 )}
