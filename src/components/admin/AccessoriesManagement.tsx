@@ -263,7 +263,7 @@ export const AccessoriesManagement = () => {
           type: 'product_description',
           topic: `${productForm.name} car accessory`,
           tone: 'professional',
-          maxLength: 150,
+          
         }
       });
 
