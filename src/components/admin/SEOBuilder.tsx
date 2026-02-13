@@ -421,7 +421,7 @@ export const SEOBuilder = () => {
                   <Input
                     value={formData.canonical_url}
                     onChange={(e) => setFormData({ ...formData, canonical_url: e.target.value })}
-                    placeholder="https://grabyourcar.lovable.app/page"
+                    placeholder="https://grabyourcar.com/page"
                   />
                   <p className="text-xs text-muted-foreground">
                     Helps prevent duplicate content issues
@@ -457,7 +457,7 @@ export const SEOBuilder = () => {
                         {formData.title || 'Page Title'}
                       </div>
                       <div className="text-green-700 text-sm">
-                        {formData.canonical_url || 'https://grabyourcar.lovable.app'}
+                        {formData.canonical_url || 'https://grabyourcar.com'}
                       </div>
                       <div className="text-gray-600 text-sm mt-1">
                         {formData.description || 'No description set. Add a meta description to improve click-through rates.'}
@@ -473,7 +473,7 @@ export const SEOBuilder = () => {
                       )}
                       <div className="p-4">
                         <div className="text-xs text-muted-foreground uppercase">
-                          grabyourcar.lovable.app
+                          grabyourcar.com
                         </div>
                         <div className="font-semibold mt-1">
                           {formData.og_title || formData.title || 'Page Title'}

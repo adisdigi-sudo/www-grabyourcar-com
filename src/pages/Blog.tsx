@@ -53,17 +53,17 @@ const Blog = () => {
         />
         {/* Open Graph */}
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://grabyourcar.lovable.app/blog" />
+        <meta property="og:url" content="https://grabyourcar.com/blog" />
         <meta property="og:title" content="Car Blog | Reviews, Guides & Expert Tips | GrabYourCar" />
         <meta property="og:description" content="Read expert car reviews, buying guides, and tips from GrabYourCar." />
-        <meta property="og:image" content="https://grabyourcar.lovable.app/og-image.png" />
+        <meta property="og:image" content="https://grabyourcar.com/og-image.png" />
         <meta property="og:site_name" content="GrabYourCar" />
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:url" content="https://grabyourcar.lovable.app/blog" />
+        <meta name="twitter:url" content="https://grabyourcar.com/blog" />
         <meta name="twitter:title" content="Car Blog | Reviews, Guides & Expert Tips" />
         <meta name="twitter:description" content="Read expert car reviews, buying guides, and tips." />
-        <meta name="twitter:image" content="https://grabyourcar.lovable.app/og-image.png" />
+        <meta name="twitter:image" content="https://grabyourcar.com/og-image.png" />
       </Helmet>
 
       <div className="min-h-screen bg-background">
