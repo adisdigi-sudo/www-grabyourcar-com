@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -76,7 +76,7 @@ export const SEOBuilder = () => {
     },
   });
 
-  // Load page-specific SEO when page changes
+  // Load page-specific SEO when page changes or data loads
   const loadPageSEO = (pageKey: string) => {
     const setting = seoSettings?.find(s => s.setting_key === `seo_${pageKey}`);
     if (setting?.setting_value) {
@@ -92,7 +92,6 @@ export const SEOBuilder = () => {
         robots: value.robots || "index, follow",
       });
     } else {
-      // Set defaults based on page
       const page = defaultPages.find(p => p.key === pageKey);
       setFormData({
         title: `${page?.name || 'Page'} - Grabyourcar`,
@@ -101,11 +100,18 @@ export const SEOBuilder = () => {
         og_title: "",
         og_description: "",
         og_image: "/og-image.png",
-        canonical_url: `https://grabyourcar.lovable.app${page?.path || ''}`,
+        canonical_url: `https://grabyourcar.com${page?.path || ''}`,
         robots: "index, follow",
       });
     }
   };
+
+  // Auto-load SEO data when settings are fetched or page changes
+  useEffect(() => {
+    if (seoSettings) {
+      loadPageSEO(selectedPage);
+    }
+  }, [seoSettings, selectedPage]);
 
   // Save SEO mutation
   const saveSEOMutation = useMutation({
@@ -207,7 +213,6 @@ export const SEOBuilder = () => {
 
   const handlePageChange = (pageKey: string) => {
     setSelectedPage(pageKey);
-    loadPageSEO(pageKey);
   };
 
   const handleSave = () => {
