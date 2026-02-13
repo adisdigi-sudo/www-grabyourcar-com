@@ -23,7 +23,11 @@ const OFFICIAL_OEM_DOMAINS = [
   // Mahindra
   'mahindra.com',
   'auto.mahindra.com',
+  'mahindraelectricsuv.com',
+  'www.mahindraelectricsuv.com',
   'mahindrarise.com',
+  'mahindraelectricsuv.com',
+  'www.mahindraelectricsuv.com',
   // Kia
   'kia.com',
   'kia.in',
