@@ -233,8 +233,8 @@ export const CarDataManagement = () => {
                 Real-Time Data Sync
               </CardTitle>
               <CardDescription>
-                All car data is sourced from OEM websites and CarDekho via Firecrawl. 
-                Use the Image Sync Manager to fetch real images.
+                All car data is sourced directly from official manufacturer (OEM) websites. 
+                Use the OEM Image Sync Manager to fetch authentic images.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">

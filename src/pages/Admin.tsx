@@ -268,8 +268,8 @@ const Admin = () => {
                   Real-Time Data Sync
                 </CardTitle>
                 <CardDescription>
-                  All car data is sourced from OEM websites and CarDekho via Firecrawl. 
-                  Use the Image Sync Manager in the admin panel for real images.
+                  All car data is sourced directly from official manufacturer (OEM) websites. 
+                  Use the OEM Image Sync Manager in the admin panel for authentic images.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
