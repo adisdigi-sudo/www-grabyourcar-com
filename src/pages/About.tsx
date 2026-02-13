@@ -1,4 +1,4 @@
- import { Helmet } from "react-helmet-async";
+ import { GlobalSEO } from "@/components/seo/GlobalSEO";
  import { Header } from "@/components/Header";
  import { Footer } from "@/components/Footer";
  import { Card, CardContent } from "@/components/ui/card";
@@ -100,10 +100,12 @@
  const About = () => {
    return (
      <div className="min-h-screen bg-background">
-       <Helmet>
-         <title>About Us | Grabyourcar - India's Smarter Way to Buy New Cars</title>
-         <meta name="description" content="Learn about Grabyourcar's mission to revolutionize car buying in India. Meet our team and discover our story." />
-       </Helmet>
+       <GlobalSEO
+         pageKey="about"
+         title="About Us | Grabyourcar - India's Smarter Way to Buy New Cars"
+         description="Learn about Grabyourcar's mission to revolutionize car buying in India. Meet our team and discover our story."
+         path="/about"
+       />
        <Header />
        
        <main className="pt-20">

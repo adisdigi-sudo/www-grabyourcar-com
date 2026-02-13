@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Helmet } from "react-helmet-async";
+import { GlobalSEO } from "@/components/seo/GlobalSEO";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Input } from "@/components/ui/input";
@@ -97,26 +97,12 @@ const Brochures = () => {
 
   return (
     <>
-      <Helmet>
-        <title>Download Car Brochures | Specs, Features & Prices | GrabYourCar</title>
-        <meta
-          name="description"
-          content="Download official car brochures with complete specifications, features, colors, and pricing. Get all details before buying your new car."
-        />
-        {/* Open Graph */}
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://grabyourcar.com/brochures" />
-        <meta property="og:title" content="Download Car Brochures | Specs, Features & Prices | GrabYourCar" />
-        <meta property="og:description" content="Download official car brochures with complete specifications and pricing." />
-        <meta property="og:image" content="https://grabyourcar.com/og-image.png" />
-        <meta property="og:site_name" content="GrabYourCar" />
-        {/* Twitter Card */}
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:url" content="https://grabyourcar.com/brochures" />
-        <meta name="twitter:title" content="Download Car Brochures | Specs, Features & Prices" />
-        <meta name="twitter:description" content="Get all details before buying your new car." />
-        <meta name="twitter:image" content="https://grabyourcar.com/og-image.png" />
-      </Helmet>
+      <GlobalSEO
+        pageKey="brochures"
+        title="Download Car Brochures | Specs, Features & Prices | GrabYourCar"
+        description="Download official car brochures with complete specifications, features, colors, and pricing. Get all details before buying your new car."
+        path="/brochures"
+      />
 
       <div className="min-h-screen bg-background">
         <Header />

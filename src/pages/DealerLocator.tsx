@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from "react";
-import { Helmet } from "react-helmet-async";
+import { GlobalSEO } from "@/components/seo/GlobalSEO";
  import { motion } from "framer-motion";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -287,13 +287,12 @@ const DealerLocatorPage = () => {
 
   return (
     <>
-      <Helmet>
-        <title>Find Authorized Car Dealers Near You | GrabYourCar</title>
-        <meta
-          name="description"
-          content="Locate authorized car dealerships near you. Find Maruti, Hyundai, Tata, Kia, Toyota dealers with directions, contact info, and exclusive offers."
-        />
-      </Helmet>
+      <GlobalSEO
+        pageKey="dealers"
+        title="Find Authorized Car Dealers Near You | GrabYourCar"
+        description="Locate authorized car dealerships near you. Find Maruti, Hyundai, Tata, Kia, Toyota dealers with directions, contact info, and exclusive offers."
+        path="/dealers"
+      />
 
       <Header />
 

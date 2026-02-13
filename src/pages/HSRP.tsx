@@ -1,4 +1,4 @@
-import { Helmet } from "react-helmet-async";
+import { GlobalSEO } from "@/components/seo/GlobalSEO";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { ServiceBanner } from "@/components/ServiceBanner";
@@ -124,19 +124,12 @@ const HSRP = () => {
 
   return (
     <>
-      <Helmet>
-        <title>HSRP & FASTag Online Booking | GrabYourCar</title>
-        <meta
-          name="description"
-          content="Book HSRP and FASTag online. Government authorized high security registration plates and toll stickers with quick installation. Avoid fines - book now!"
-        />
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://grabyourcar.com/hsrp" />
-        <meta property="og:title" content="HSRP & FASTag Online Booking | GrabYourCar" />
-        <meta property="og:description" content="Book HSRP and FASTag online. Government authorized plates and toll stickers." />
-        <meta property="og:image" content="https://grabyourcar.com/og-image.png" />
-        <meta name="twitter:card" content="summary_large_image" />
-      </Helmet>
+      <GlobalSEO
+        pageKey="hsrp"
+        title="HSRP & FASTag Online Booking | GrabYourCar"
+        description="Book HSRP and FASTag online. Government authorized high security registration plates and toll stickers with quick installation. Avoid fines - book now!"
+        path="/hsrp"
+      />
 
       <div className="min-h-screen bg-background">
         <Header />

@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Helmet } from "react-helmet-async";
+import { GlobalSEO } from "@/components/seo/GlobalSEO";
 import { Shield, CheckCircle2, Car, Sparkles } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -19,26 +19,12 @@ import {
 const CarInsurance = () => {
   return (
     <>
-      <Helmet>
-        <title>Car Insurance | Compare & Save Up to 80% | GrabYourCar</title>
-        <meta
-          name="description"
-          content="Compare car insurance quotes from 20+ top insurers. Get instant policy, 98% claim settlement, and 10,000+ cashless garages. Save up to 80% on your premium."
-        />
-        {/* Open Graph */}
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://grabyourcar.com/car-insurance" />
-        <meta property="og:title" content="Car Insurance | Compare & Save Up to 80% | GrabYourCar" />
-        <meta property="og:description" content="Compare car insurance quotes from 20+ top insurers. Get instant policy and 98% claim settlement." />
-        <meta property="og:image" content="https://grabyourcar.com/og-image.png" />
-        <meta property="og:site_name" content="GrabYourCar" />
-        {/* Twitter Card */}
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:url" content="https://grabyourcar.com/car-insurance" />
-        <meta name="twitter:title" content="Car Insurance | Compare & Save Up to 80%" />
-        <meta name="twitter:description" content="Compare car insurance quotes from 20+ top insurers. Save up to 80% on your premium." />
-        <meta name="twitter:image" content="https://grabyourcar.com/og-image.png" />
-      </Helmet>
+      <GlobalSEO
+        pageKey="car_insurance"
+        title="Car Insurance | Compare & Save Up to 80% on Premium | GrabYourCar"
+        description="Compare car insurance quotes from 20+ top insurers including HDFC ERGO, ICICI Lombard, Bajaj Allianz. Get instant policy with 98% claim settlement. Save up to 80% on premium."
+        path="/car-insurance"
+      />
 
       <Header />
 
