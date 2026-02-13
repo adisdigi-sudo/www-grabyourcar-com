@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AdminImageUpload } from "./AdminImageUpload";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -232,8 +233,14 @@ export const HeroSlidesManagement = () => {
               <Textarea value={formData.description} onChange={(e) => f("description", e.target.value)} rows={2} placeholder="Short description..." />
             </div>
             <div className="col-span-2">
-              <Label>Image URL *</Label>
-              <Input value={formData.image_url} onChange={(e) => f("image_url", e.target.value)} placeholder="https://... or /assets/hero-upcoming-1.jpg" />
+              <AdminImageUpload
+                value={formData.image_url}
+                onChange={(url) => f("image_url", url)}
+                label="Hero Image *"
+                folder="hero-slides"
+                recommendedSize="1920×900"
+                placeholder="https://... or upload an image"
+              />
             </div>
             <div>
               <Label>Expected Price Range</Label>
