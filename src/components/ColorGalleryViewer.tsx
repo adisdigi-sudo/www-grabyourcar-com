@@ -42,9 +42,14 @@ export const ColorGalleryViewer = ({
   // Ensure we always have at least carImage as fallback
   const fallbackGallery = gallery.length > 0 ? gallery : (carImage ? [carImage] : []);
   
-  const colorImages = currentColor?.image 
-    ? [currentColor.image, ...fallbackGallery.slice(0, 3)] 
-    : fallbackGallery.length > 0 ? fallbackGallery : [PLACEHOLDER_IMAGE];
+  // Show color image first (if available), then ALL gallery images (deduplicated)
+  const colorImages = (() => {
+    if (currentColor?.image) {
+      const uniqueGallery = fallbackGallery.filter(img => img !== currentColor.image);
+      return [currentColor.image, ...uniqueGallery];
+    }
+    return fallbackGallery.length > 0 ? fallbackGallery : [PLACEHOLDER_IMAGE];
+  })();
 
   // Reset image index when color changes
   useEffect(() => {
@@ -62,7 +67,15 @@ export const ColorGalleryViewer = ({
 
   // Handle image error - use placeholder
   const handleImageError = (imageUrl: string) => {
-    setImageError(prev => ({ ...prev, [imageUrl]: true }));
+    setImageError(prev => {
+      const updated = { ...prev, [imageUrl]: true };
+      // Auto-skip to next working image
+      const nextIndex = colorImages.findIndex((img, i) => i > currentImageIndex && !updated[img]);
+      if (nextIndex !== -1) {
+        setCurrentImageIndex(nextIndex);
+      }
+      return updated;
+    });
   };
 
   const getImageSrc = (url: string) => {
