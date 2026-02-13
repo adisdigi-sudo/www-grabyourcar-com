@@ -58,7 +58,7 @@ interface CarStructuredDataProps {
 }
 
 export const CarStructuredData = ({ car, selectedVariant = 0 }: CarStructuredDataProps) => {
-  const baseUrl = "https://grabyourcar.lovable.app";
+  const baseUrl = "https://grabyourcar.com";
   const carUrl = `${baseUrl}/car/${car.slug}`;
   
   // Parse price from string if priceNumeric not available
