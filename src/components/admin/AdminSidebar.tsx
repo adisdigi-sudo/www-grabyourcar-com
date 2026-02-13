@@ -82,6 +82,7 @@ const navItems: NavItem[] = [
       { id: "cars-pricing", label: "Pricing & Breakup", icon: CreditCard },
       { id: "cars-migration", label: "Data Migration", icon: Database },
       { id: "cars-ai", label: "AI Enhancement", icon: Brain },
+      { id: "cars-url-scraper", label: "🌐 URL Scraper", icon: Globe, badge: "New" },
     ]
   },
   { 
