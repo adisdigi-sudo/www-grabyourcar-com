@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { invalidateCarQueries } from "@/lib/queryInvalidation";
 import { format } from "date-fns";
 import { Search, Plus, Eye, RefreshCw, Car, Image as ImageIcon, Trash2, Upload } from "lucide-react";
 

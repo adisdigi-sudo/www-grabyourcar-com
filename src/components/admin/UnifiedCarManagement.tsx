@@ -20,6 +20,7 @@ import {
   Settings, IndianRupee, Gauge, Shield, Ruler, Palette
 } from "lucide-react";
 import { stateRates, calculateStatePriceBreakup } from "@/data/statePricing";
+import { invalidateCarQueries } from "@/lib/queryInvalidation";
 
 interface CarData {
   id: string;
@@ -218,7 +219,7 @@ export const UnifiedCarManagement = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['unifiedCarManagement'] });
+      invalidateCarQueries(queryClient);
       toast.success('Car updated successfully');
     },
     onError: (error) => {
@@ -236,7 +237,7 @@ export const UnifiedCarManagement = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['unifiedCarManagement'] });
+      invalidateCarQueries(queryClient);
       toast.success('Image added');
       setNewImageUrl("");
     },
@@ -257,7 +258,7 @@ export const UnifiedCarManagement = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['unifiedCarManagement'] });
+      invalidateCarQueries(queryClient);
       toast.success('Brochure added');
       setNewBrochure({ title: "", url: "", variant_name: "" });
     },
@@ -285,7 +286,7 @@ export const UnifiedCarManagement = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['unifiedCarManagement'] });
+      invalidateCarQueries(queryClient);
       toast.success('Variant added');
       setNewVariant({ name: "", price: "", fuel_type: "", transmission: "", ex_showroom: "", on_road_price: "" });
     },
@@ -302,7 +303,7 @@ export const UnifiedCarManagement = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['unifiedCarManagement'] });
+      invalidateCarQueries(queryClient);
       toast.success('Image deleted');
     },
   });
@@ -313,7 +314,7 @@ export const UnifiedCarManagement = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['unifiedCarManagement'] });
+      invalidateCarQueries(queryClient);
       toast.success('Brochure deleted');
     },
   });
@@ -324,7 +325,7 @@ export const UnifiedCarManagement = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['unifiedCarManagement'] });
+      invalidateCarQueries(queryClient);
       toast.success('Variant deleted');
     },
   });
@@ -338,7 +339,7 @@ export const UnifiedCarManagement = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['unifiedCarManagement'] });
+      invalidateCarQueries(queryClient);
       toast.success('Specification added');
     },
     onError: () => {
@@ -352,7 +353,7 @@ export const UnifiedCarManagement = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['unifiedCarManagement'] });
+      invalidateCarQueries(queryClient);
       toast.success('Specification deleted');
     },
   });
@@ -367,7 +368,7 @@ export const UnifiedCarManagement = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['unifiedCarManagement'] });
+      invalidateCarQueries(queryClient);
       toast.success('Pricing updated');
     },
     onError: () => {
@@ -391,7 +392,7 @@ export const UnifiedCarManagement = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['unifiedCarManagement'] });
+      invalidateCarQueries(queryClient);
       toast.success('Color added');
       setNewColor({ name: "", hex_code: "#000000", image_url: "" });
     },
@@ -410,7 +411,7 @@ export const UnifiedCarManagement = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['unifiedCarManagement'] });
+      invalidateCarQueries(queryClient);
       toast.success('Color deleted');
     },
   });
@@ -425,7 +426,7 @@ export const UnifiedCarManagement = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['unifiedCarManagement'] });
+      invalidateCarQueries(queryClient);
       toast.success('Color updated');
       setEditingColorId(null);
       setEditingColorData(null);
@@ -477,7 +478,7 @@ export const UnifiedCarManagement = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['unifiedCarManagement'] });
+      invalidateCarQueries(queryClient);
       toast.success('Car added successfully');
       setIsAddCarOpen(false);
       setNewCarForm({
@@ -510,7 +511,7 @@ export const UnifiedCarManagement = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['unifiedCarManagement'] });
+      invalidateCarQueries(queryClient);
       toast.success('Car deleted');
     },
     onError: (error) => {
