@@ -4,7 +4,7 @@ import { Header } from "@/components/Header";
 import { PromoBanner } from "@/components/PromoBanner";
 import { RivianHero } from "@/components/RivianHero";
 import { UpcomingCarsShowcase } from "@/components/UpcomingCarsShowcase";
-import { CategoryGrid } from "@/components/CategoryGrid";
+// CategoryGrid removed for Rivian-style clean layout
 import { CarListings } from "@/components/CarListings";
 import EMICalculator from "@/components/EMICalculator";
 import { LeadForm } from "@/components/LeadForm";
@@ -22,7 +22,7 @@ import {
   DynamicTestimonials,
   DynamicCTABanners,
 } from "@/components/DynamicHomepageContent";
-import { OffersStrip } from "@/components/HomepageShowcase";
+// OffersStrip removed for Rivian-style clean layout
 
 const Index = () => {
   const [loanPrefill, setLoanPrefill] = useState<string>("");
@@ -57,9 +57,7 @@ const Index = () => {
       </Helmet>
       
       <div className="min-h-screen bg-background">
-      
-      {/* Promo Banner */}
-      <PromoBanner />
+      {/* Clean Rivian-style layout - no promo banner */}
       
       {/* Header */}
       <Header />
@@ -69,9 +67,6 @@ const Index = () => {
         {/* Rivian-style full-screen hero carousel */}
         <RivianHero />
         
-        {/* Offers scrolling strip */}
-        <OffersStrip />
-        
         {/* Full-screen upcoming car showcases */}
         <UpcomingCarsShowcase />
         
@@ -80,9 +75,6 @@ const Index = () => {
         
         {/* Dynamic Promo Banners from Admin */}
         <DynamicPromoBanners />
-        
-        {/* Service Categories */}
-        <CategoryGrid />
         
         {/* Dynamic Featured Cars from Admin */}
         <DynamicFeaturedCars />
