@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AdminImageUpload } from "./AdminImageUpload";
 import { useBanners } from "@/hooks/useCMSData";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -136,26 +137,21 @@ export function BannersManager() {
                   />
                 </div>
 
-                <div className="grid gap-2">
-                  <Label>Desktop Image URL *</Label>
-                  <Input
-                    value={editingBanner.image_url}
-                    onChange={(e) => setEditingBanner(prev => ({ ...prev, image_url: e.target.value }))}
-                    placeholder="https://..."
-                  />
-                  {editingBanner.image_url && (
-                    <img src={editingBanner.image_url} alt="Preview" className="h-24 object-cover rounded border" />
-                  )}
-                </div>
+                <AdminImageUpload
+                  value={editingBanner.image_url}
+                  onChange={(url) => setEditingBanner(prev => ({ ...prev, image_url: url }))}
+                  label="Desktop Image *"
+                  folder="banners"
+                  recommendedSize="1920×600"
+                />
 
-                <div className="grid gap-2">
-                  <Label>Mobile Image URL</Label>
-                  <Input
-                    value={editingBanner.mobile_image_url}
-                    onChange={(e) => setEditingBanner(prev => ({ ...prev, mobile_image_url: e.target.value }))}
-                    placeholder="Optimized image for mobile (optional)"
-                  />
-                </div>
+                <AdminImageUpload
+                  value={editingBanner.mobile_image_url}
+                  onChange={(url) => setEditingBanner(prev => ({ ...prev, mobile_image_url: url }))}
+                  label="Mobile Image (optional)"
+                  folder="banners/mobile"
+                  recommendedSize="768×400"
+                />
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">

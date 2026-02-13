@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AdminImageUpload } from "./AdminImageUpload";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -614,14 +615,13 @@ export const HomepageManagement = () => {
                     </Badge>
                   </div>
                   
-                  <div className="space-y-2">
-                    <Label>Image URL</Label>
-                    <Input
-                      value={formData.image_url}
-                      onChange={(e) => setFormData(prev => ({ ...prev, image_url: e.target.value }))}
-                      placeholder="https://..."
-                    />
-                  </div>
+                  <AdminImageUpload
+                    value={formData.image_url}
+                    onChange={(url) => setFormData(prev => ({ ...prev, image_url: url }))}
+                    label="Image"
+                    folder="homepage-content"
+                    recommendedSize={`${formData.image_width}×${formData.image_height}`}
+                  />
 
                   <div className="space-y-2">
                     <Label>Size Preset</Label>
