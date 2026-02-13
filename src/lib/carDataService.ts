@@ -182,6 +182,9 @@ export const fetchCarsFromDatabase = async (options: FetchCarsOptions = {}): Pro
       if (!url) return false;
       if (url === '/placeholder.svg') return false;
       
+      // Allow local asset paths (public folder)
+      if (url.startsWith('/cars/') || url.startsWith('/src/assets')) return true;
+      
       // Allow Supabase-hosted images
       if (url.includes('supabase.co')) return true;
       
@@ -290,17 +293,17 @@ export const fetchCarsFromDatabase = async (options: FetchCarsOptions = {}): Pro
         return (a.sort_order || 999) - (b.sort_order || 999);
       });
       
-      // Filter for authentic images (prioritize OEM domains over Supabase due to scraping issues)
-      // First try OEM images, then Supabase images as fallback
-      const oemImages = sortedImages.filter((img: any) => 
-        isAuthenticImage(img.url) && !img.url.includes('supabase.co')
+      // Prioritize internal images (local + Supabase) over external OEM URLs
+      // External OEM URLs may fail due to CDN hotlinking protection
+      const internalImages = sortedImages.filter((img: any) => 
+        isAuthenticImage(img.url) && (img.url?.includes('supabase.co') || img.url?.startsWith('/cars/'))
       );
-      const supabaseImages = sortedImages.filter((img: any) => 
-        img.url?.includes('supabase.co')
+      const oemImages = sortedImages.filter((img: any) => 
+        isAuthenticImage(img.url) && !img.url?.includes('supabase.co') && !img.url?.startsWith('/cars/')
       );
       
-      // Prioritize OEM images (they're unique and real), use Supabase as last resort
-      const authenticImages = oemImages.length > 0 ? oemImages : supabaseImages.filter((img: any) => isAuthenticImage(img.url));
+      // Internal first (reliable), then OEM as fallback
+      const authenticImages = internalImages.length > 0 ? [...internalImages, ...oemImages] : oemImages;
       
       // Get first authentic image - prioritize primary, then first by sort order
       const primaryImage = authenticImages[0]?.url || null;
