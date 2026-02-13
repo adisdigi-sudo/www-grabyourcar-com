@@ -216,7 +216,7 @@ export const ServiceCategoriesManager = () => {
           type: 'ad_copy',
           topic: editingCategory.title,
           tone: 'professional',
-          maxLength: 50,
+          
         }
       });
 

@@ -157,12 +157,12 @@ export const SEOBuilder = () => {
     try {
       const page = defaultPages.find(p => p.key === selectedPage);
       const prompt = type === 'all' 
-        ? `Generate SEO metadata for a car dealership website's ${page?.name} page. Return JSON with: title (max 60 chars), description (max 160 chars), keywords (comma-separated).`
+        ? `Generate comprehensive SEO metadata for a car dealership website's ${page?.name} page. Return JSON with: title (keyword-rich, no length limit), description (detailed and keyword-rich, no length limit), keywords (extensive comma-separated list of all relevant keywords).`
         : type === 'title'
-        ? `Generate an SEO-optimized title (max 60 chars) for a car dealership's ${page?.name} page.`
+        ? `Generate a comprehensive, keyword-rich SEO title for a car dealership's ${page?.name} page. Include all relevant keywords. No character limit.`
         : type === 'description'
-        ? `Generate an SEO-optimized meta description (max 160 chars) for a car dealership's ${page?.name} page.`
-        : `Generate SEO keywords (comma-separated) for a car dealership's ${page?.name} page.`;
+        ? `Generate a detailed, keyword-rich SEO meta description for a car dealership's ${page?.name} page. Include all relevant keywords, features, and value propositions. No character limit.`
+        : `Generate an extensive list of SEO keywords (comma-separated) for a car dealership's ${page?.name} page. Include long-tail keywords, location-based keywords, and all relevant variations.`;
 
       const { data, error } = await supabase.functions.invoke('ai-generate', {
         body: { 
@@ -304,11 +304,11 @@ export const SEOBuilder = () => {
               {/* Basic SEO */}
               <TabsContent value="basic" className="space-y-4">
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between">
                     <Label>Meta Title</Label>
                     <div className="flex items-center gap-2">
-                      <Badge variant={titleLength <= 60 ? "default" : "destructive"}>
-                        {titleLength}/60
+                      <Badge variant="outline">
+                        {titleLength} chars
                       </Badge>
                       <Button 
                         variant="ghost" 
@@ -323,17 +323,16 @@ export const SEOBuilder = () => {
                   <Input
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    placeholder="Page title for search engines"
-                    className={titleLength > 60 ? "border-destructive" : ""}
+                    placeholder="Page title for search engines — no character limit"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between">
                     <Label>Meta Description</Label>
                     <div className="flex items-center gap-2">
-                      <Badge variant={descLength <= 160 ? "default" : "destructive"}>
-                        {descLength}/160
+                      <Badge variant="outline">
+                        {descLength} chars
                       </Badge>
                       <Button 
                         variant="ghost" 
@@ -348,9 +347,8 @@ export const SEOBuilder = () => {
                   <Textarea
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Brief description for search results"
-                    rows={3}
-                    className={descLength > 160 ? "border-destructive" : ""}
+                    placeholder="Detailed description for search results — no character limit"
+                    rows={4}
                   />
                 </div>
 

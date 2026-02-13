@@ -56,14 +56,14 @@ const IMAGE_CATEGORIES = [
 ];
 
 const CONTENT_TYPES = [
-  { id: 'meta_title', label: 'Meta Title', maxLength: 60 },
-  { id: 'meta_description', label: 'Meta Description', maxLength: 160 },
-  { id: 'blog_post', label: 'Blog Post', maxLength: 5000 },
-  { id: 'product_description', label: 'Product Description', maxLength: 500 },
-  { id: 'email_copy', label: 'Email Copy', maxLength: 2000 },
-  { id: 'ad_copy', label: 'Ad Copy', maxLength: 150 },
-  { id: 'social_post', label: 'Social Post', maxLength: 280 },
-  { id: 'faq', label: 'FAQ Content', maxLength: 1000 },
+  { id: 'meta_title', label: 'Meta Title' },
+  { id: 'meta_description', label: 'Meta Description' },
+  { id: 'blog_post', label: 'Blog Post' },
+  { id: 'product_description', label: 'Product Description' },
+  { id: 'email_copy', label: 'Email Copy' },
+  { id: 'ad_copy', label: 'Ad Copy' },
+  { id: 'social_post', label: 'Social Post' },
+  { id: 'faq', label: 'FAQ Content' },
 ];
 
 const STORAGE_KEYS = {
@@ -484,7 +484,7 @@ export const AIContentHub = () => {
                     <SelectContent>
                       {CONTENT_TYPES.map((type) => (
                         <SelectItem key={type.id} value={type.id}>
-                          {type.label} ({type.maxLength} chars)
+                          {type.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
