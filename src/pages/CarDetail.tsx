@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useEventTracking } from "@/hooks/useEventTracking";
 import { useParams, Link } from "react-router-dom";
-import { Helmet } from "react-helmet-async";
+import { GlobalSEO } from "@/components/seo/GlobalSEO";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { FloatingCTA } from "@/components/FloatingCTA";
@@ -173,29 +173,15 @@ const CarDetail = () => {
     <div className="min-h-screen bg-background">
       {/* SEO Structured Data */}
       <CarStructuredData car={car} selectedVariant={selectedVariant} />
-      <Helmet>
-        <title>{car.brand} {car.name} Without Waiting Period | Ready Delivery in India | GrabYourCar</title>
-        <meta name="description" content={`Buy ${car.brand} ${car.name} at best on-road price starting ${car.price}. Zero waiting period, ready stock delivery across India. ${car.variants?.length ? `${car.variants.length} variants` : ''} available in ${car.fuelTypes?.join(', ')}. ${car.transmission?.join(' & ')} transmission. Free doorstep delivery. Call +91 98559 24442 for best deals.`} />
-        <meta name="keywords" content={`${car.name} price, ${car.brand} ${car.name} on-road price, ${car.name} without waiting period, ${car.name} ready delivery, ${car.name} ${car.fuelTypes?.[0] || ''}, ${car.name} ${car.transmission?.[0] || ''}, buy ${car.name} India, ${car.name} best deal`} />
-        <meta property="og:title" content={`${car.brand} ${car.name} Without Waiting Period | Ready Delivery | GrabYourCar`} />
-        <meta property="og:description" content={car.overview || car.tagline} />
-        {/* Use AI-generated branded OG image with car photo */}
-        <meta property="og:image" content={`https://ynoiwioypxpurwdbjvyt.supabase.co/functions/v1/og-image?slug=${car.slug}`} />
-        <meta property="og:image:width" content="1200" />
-        <meta property="og:image:height" content="630" />
-        <meta property="og:image:alt" content={`${car.brand} ${car.name} - Grabyourcar`} />
-        <meta property="og:type" content="product" />
-        <meta property="og:url" content={`https://grabyourcar.com/cars/${car.slug}`} />
-        <meta property="og:site_name" content="GrabYourCar" />
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:site" content="@Grabyourcar" />
-        <meta name="twitter:title" content={`${car.brand} ${car.name} Without Waiting Period | Ready Delivery in India | GrabYourCar`} />
-        <meta name="twitter:description" content={car.overview || car.tagline} />
-        <meta name="twitter:image" content={`https://ynoiwioypxpurwdbjvyt.supabase.co/functions/v1/og-image?slug=${car.slug}`} />
-        <meta name="twitter:image:alt" content={`${car.brand} ${car.name} - GrabYourCar`} />
-        <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
-        <link rel="canonical" href={`https://grabyourcar.com/cars/${car.slug}`} />
-      </Helmet>
+      <GlobalSEO
+        pageKey="car_detail"
+        title={`${car.brand} ${car.name} Without Waiting Period | Ready Delivery in India | GrabYourCar`}
+        description={`Buy ${car.brand} ${car.name} at best on-road price starting ${car.price}. Zero waiting period, ready stock delivery across India. ${car.variants?.length ? `${car.variants.length} variants` : ''} available in ${car.fuelTypes?.join(', ')}. ${car.transmission?.join(' & ')} transmission. Free doorstep delivery. Call +91 98559 24442 for best deals.`}
+        path={`/cars/${car.slug}`}
+        keywords={`${car.name} price, ${car.brand} ${car.name} on-road price, ${car.name} without waiting period, ${car.name} ready delivery, ${car.name} ${car.fuelTypes?.[0] || ''}, ${car.name} ${car.transmission?.[0] || ''}, buy ${car.name} India, ${car.name} best deal`}
+        image={`https://ynoiwioypxpurwdbjvyt.supabase.co/functions/v1/og-image?slug=${car.slug}`}
+        type="product"
+      />
       <Header />
       
       <main className="pt-20">

@@ -1,11 +1,8 @@
 import { Helmet } from "react-helmet-async";
+import { useSEOSettings } from "@/hooks/useSEOSettings";
 
 const BASE_URL = "https://grabyourcar.com";
 
-/**
- * GlobalSEO provides page-level SEO overrides with proper defaults.
- * Use on every page to set unique title, description, canonical, and OG tags.
- */
 interface GlobalSEOProps {
   title: string;
   description: string;
@@ -16,21 +13,36 @@ interface GlobalSEOProps {
   keywords?: string;
   breadcrumbs?: { name: string; url: string }[];
   faqItems?: { question: string; answer: string }[];
+  /** Page key matching admin SEO Builder (e.g. "home", "cars", "car_detail"). When set, backend SEO values override props. */
+  pageKey?: string;
 }
 
 export const GlobalSEO = ({
-  title,
-  description,
+  title: propTitle,
+  description: propDescription,
   path = "/",
   image = "/og-image.png",
   type = "website",
   noindex = false,
-  keywords,
+  keywords: propKeywords,
   breadcrumbs,
   faqItems,
+  pageKey,
 }: GlobalSEOProps) => {
-  const fullUrl = `${BASE_URL}${path}`;
-  const fullImage = image.startsWith("http") ? image : `${BASE_URL}${image}`;
+  // Fetch backend SEO overrides when pageKey is provided
+  const { data: backendSEO } = useSEOSettings(pageKey || "__none__");
+
+  // Backend values override component props
+  const title = (pageKey && backendSEO?.title) || propTitle;
+  const description = (pageKey && backendSEO?.description) || propDescription;
+  const keywords = (pageKey && backendSEO?.keywords) || propKeywords;
+  const ogTitle = (pageKey && backendSEO?.og_title) || title;
+  const ogDescription = (pageKey && backendSEO?.og_description) || description;
+  const ogImage = (pageKey && backendSEO?.og_image) || image;
+  const robots = (pageKey && backendSEO?.robots) || (noindex ? "noindex, nofollow" : "index, follow, max-image-preview:large, max-snippet:-1");
+  const canonicalUrl = (pageKey && backendSEO?.canonical_url) || `${BASE_URL}${path}`;
+
+  const fullImage = ogImage.startsWith("http") ? ogImage : `${BASE_URL}${ogImage}`;
 
   const breadcrumbSchema = breadcrumbs
     ? {
@@ -66,21 +78,14 @@ export const GlobalSEO = ({
       <title>{title}</title>
       <meta name="description" content={description} />
       {keywords && <meta name="keywords" content={keywords} />}
-      <meta
-        name="robots"
-        content={
-          noindex
-            ? "noindex, nofollow"
-            : "index, follow, max-image-preview:large, max-snippet:-1"
-        }
-      />
-      <link rel="canonical" href={fullUrl} />
+      <meta name="robots" content={robots} />
+      <link rel="canonical" href={canonicalUrl} />
 
       {/* Open Graph */}
       <meta property="og:type" content={type} />
-      <meta property="og:url" content={fullUrl} />
-      <meta property="og:title" content={title} />
-      <meta property="og:description" content={description} />
+      <meta property="og:url" content={canonicalUrl} />
+      <meta property="og:title" content={ogTitle} />
+      <meta property="og:description" content={ogDescription} />
       <meta property="og:image" content={fullImage} />
       <meta property="og:image:width" content="1200" />
       <meta property="og:image:height" content="630" />
@@ -90,9 +95,9 @@ export const GlobalSEO = ({
       {/* Twitter */}
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:site" content="@Grabyourcar" />
-      <meta name="twitter:url" content={fullUrl} />
-      <meta name="twitter:title" content={title} />
-      <meta name="twitter:description" content={description} />
+      <meta name="twitter:url" content={canonicalUrl} />
+      <meta name="twitter:title" content={ogTitle} />
+      <meta name="twitter:description" content={ogDescription} />
       <meta name="twitter:image" content={fullImage} />
 
       {/* Structured Data */}

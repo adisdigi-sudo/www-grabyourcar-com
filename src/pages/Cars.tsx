@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { HelmetProvider, Helmet } from "react-helmet-async";
+import { GlobalSEO } from "@/components/seo/GlobalSEO";
 import { CarsListStructuredData } from "@/components/seo/CarsListStructuredData";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -481,32 +481,14 @@ const Cars = () => {
   );
 
   return (
-    <HelmetProvider>
-      <Helmet>
-        <title>New Cars Available Without Waiting Period | Ready Stock Cars | GrabYourCar</title>
-        <meta
-          name="description"
-          content="Browse 200+ new cars from 50+ brands available without waiting period in India. Compare prices, check on-road cost, filter by brand, body type, fuel & transmission. Ready stock delivery across Delhi, Mumbai, Bangalore & 10 more cities. Call +91 98559 24442."
-        />
-        <meta name="keywords" content="new cars India 2025, cars without waiting period, ready stock cars, buy new car online, car price comparison, best car deals India, zero waiting cars, new car offers" />
-        <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
-        {/* Open Graph */}
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://grabyourcar.com/cars" />
-        <meta property="og:title" content="New Cars Available Without Waiting Period | Ready Stock | GrabYourCar" />
-        <meta property="og:description" content="Browse 200+ new cars from 50+ brands. Zero waiting period. Ready stock delivery. Best on-road prices across India." />
-        <meta property="og:image" content="https://grabyourcar.com/og-image.png" />
-        <meta property="og:site_name" content="GrabYourCar" />
-        <meta property="og:locale" content="en_IN" />
-        {/* Twitter Card */}
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:site" content="@Grabyourcar" />
-        <meta name="twitter:url" content="https://grabyourcar.com/cars" />
-        <link rel="canonical" href="https://grabyourcar.com/cars" />
-        <meta name="twitter:title" content="New Cars in India 2024 - All Brands & Models" />
-        <meta name="twitter:description" content="Explore 76+ new cars from 10+ brands in India. Find your perfect car today!" />
-        <meta name="twitter:image" content="https://grabyourcar.com/og-image.png" />
-      </Helmet>
+    <>
+      <GlobalSEO
+        pageKey="cars"
+        title="New Cars Available Without Waiting Period | Ready Stock Cars | GrabYourCar"
+        description="Browse 200+ new cars from 50+ brands available without waiting period in India. Compare prices, check on-road cost, filter by brand, body type, fuel & transmission. Ready stock delivery across Delhi, Mumbai, Bangalore & 10 more cities. Call +91 98559 24442."
+        path="/cars"
+        keywords="new cars India 2025, cars without waiting period, ready stock cars, buy new car online, car price comparison, best car deals India, zero waiting cars, new car offers"
+      />
       
       <CarsListStructuredData cars={filteredCars} totalCount={allCars.length} />
 
@@ -975,7 +957,7 @@ const Cars = () => {
 
         <Footer />
       </div>
-    </HelmetProvider>
+    </>
   );
 };
 

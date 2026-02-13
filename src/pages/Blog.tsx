@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Helmet } from "react-helmet-async";
+import { GlobalSEO } from "@/components/seo/GlobalSEO";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { blogPosts, BlogPost } from "@/data/blogData";
@@ -45,26 +45,12 @@ const Blog = () => {
 
   return (
     <>
-      <Helmet>
-        <title>Car Blog | Reviews, Guides & Expert Tips | GrabYourCar</title>
-        <meta
-          name="description"
-          content="Read expert car reviews, buying guides, and tips from GrabYourCar. Get insights on new car launches, comparisons, and automotive industry news."
-        />
-        {/* Open Graph */}
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://grabyourcar.com/blog" />
-        <meta property="og:title" content="Car Blog | Reviews, Guides & Expert Tips | GrabYourCar" />
-        <meta property="og:description" content="Read expert car reviews, buying guides, and tips from GrabYourCar." />
-        <meta property="og:image" content="https://grabyourcar.com/og-image.png" />
-        <meta property="og:site_name" content="GrabYourCar" />
-        {/* Twitter Card */}
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:url" content="https://grabyourcar.com/blog" />
-        <meta name="twitter:title" content="Car Blog | Reviews, Guides & Expert Tips" />
-        <meta name="twitter:description" content="Read expert car reviews, buying guides, and tips." />
-        <meta name="twitter:image" content="https://grabyourcar.com/og-image.png" />
-      </Helmet>
+      <GlobalSEO
+        pageKey="blog"
+        title="Car Blog | Reviews, Guides & Expert Tips | GrabYourCar"
+        description="Read expert car reviews, buying guides, and tips from GrabYourCar. Get insights on new car launches, comparisons, and automotive industry news."
+        path="/blog"
+      />
 
       <div className="min-h-screen bg-background">
 

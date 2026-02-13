@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Helmet } from "react-helmet-async";
+import { GlobalSEO } from "@/components/seo/GlobalSEO";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { ServiceBanner } from "@/components/ServiceBanner";
@@ -104,26 +104,12 @@ const Accessories = () => {
 
   return (
     <>
-      <Helmet>
-        <title>Car Accessories | HSRP Frames, Covers & More | GrabYourCar</title>
-        <meta
-          name="description"
-          content="Shop premium car accessories - HSRP frames, car covers, floor mats, and more. Free delivery, genuine products, and top quality. Order online now!"
-        />
-        {/* Open Graph */}
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://grabyourcar.com/accessories" />
-        <meta property="og:title" content="Car Accessories | HSRP Frames, Covers & More | GrabYourCar" />
-        <meta property="og:description" content="Shop premium car accessories - HSRP frames, car covers, floor mats, and more." />
-        <meta property="og:image" content="https://grabyourcar.com/og-image.png" />
-        <meta property="og:site_name" content="GrabYourCar" />
-        {/* Twitter Card */}
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:url" content="https://grabyourcar.com/accessories" />
-        <meta name="twitter:title" content="Car Accessories | HSRP Frames, Covers & More" />
-        <meta name="twitter:description" content="Shop premium car accessories with free delivery. Order online now!" />
-        <meta name="twitter:image" content="https://grabyourcar.com/og-image.png" />
-      </Helmet>
+      <GlobalSEO
+        pageKey="accessories"
+        title="Car Accessories | HSRP Frames, Covers & More | GrabYourCar"
+        description="Shop premium car accessories - HSRP frames, car covers, floor mats, and more. Free delivery, genuine products, and top quality. Order online now!"
+        path="/accessories"
+      />
 
       <Header />
 

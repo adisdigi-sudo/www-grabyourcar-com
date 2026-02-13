@@ -1,4 +1,4 @@
-import { Helmet } from "react-helmet-async";
+import { GlobalSEO } from "@/components/seo/GlobalSEO";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { ServiceBanner } from "@/components/ServiceBanner";
@@ -144,10 +144,12 @@ const SelfDriveRentals = () => {
 
   return (
     <>
-      <Helmet>
-        <title>Car Rentals in Delhi NCR | Self Drive & With Driver | GrabYourCar</title>
-        <meta name="description" content="Rent cars in Delhi NCR - Self Drive from ₹999/day, With Driver from ₹1499/day, Outstation from ₹12/km. Professional service, doorstep delivery." />
-      </Helmet>
+      <GlobalSEO
+        pageKey="self_drive"
+        title="Car Rentals in Delhi NCR | Self Drive & With Driver | GrabYourCar"
+        description="Rent cars in Delhi NCR - Self Drive from ₹999/day, With Driver from ₹1499/day, Outstation from ₹12/km. Professional service, doorstep delivery."
+        path="/self-drive"
+      />
 
       <div className="min-h-screen bg-background">
         <Header />
