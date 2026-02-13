@@ -223,6 +223,9 @@ export const CarImageSyncManager = () => {
     if (status === 'failed') {
       return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Failed</Badge>;
     }
+    if (status === 'no_source') {
+      return <Badge variant="outline" className="text-orange-600"><XCircle className="h-3 w-3 mr-1" />No Source</Badge>;
+    }
     return <Badge variant="outline">Unknown</Badge>;
   };
 
