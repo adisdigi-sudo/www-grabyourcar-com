@@ -365,7 +365,7 @@ export const generateCorporateBrochure = () => {
 
   // Footer
   doc.setFontSize(8);
-  doc.text("© 2024 Grabyourcar. All rights reserved.", pageWidth / 2, pageHeight - 20, { align: "center" });
+  doc.text("© 2025 Adis Makethemoney Services Pvt Ltd. All rights reserved.", pageWidth / 2, pageHeight - 20, { align: "center" });
   doc.text("This document is for informational purposes only. Prices and offers subject to change.", pageWidth / 2, pageHeight - 12, { align: "center" });
 
   // Save the PDF

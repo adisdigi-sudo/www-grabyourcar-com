@@ -44,7 +44,7 @@ export function InsuranceCTA() {
                 size="lg"
                 className="h-12 px-8 text-base"
               />
-              <a href="tel:+919577200023">
+              <a href="tel:+919855924442">
                 <Button
                   size="lg"
                   variant="outline"

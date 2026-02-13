@@ -140,16 +140,16 @@ export const Footer = () => {
                   <li className="flex items-start gap-3">
                     <Phone className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
                     <div>
-                      <a href="tel:+919577200023" className="text-sm text-background/70 hover:text-accent transition-colors">
-                        +91 95772 00023
+                     <a href="tel:+919855924442" className="text-sm text-background/70 hover:text-accent transition-colors">
+                        +91 98559 24442
                       </a>
                       <p className="text-xs text-background/50">Mon-Sat, 9am-7pm</p>
                     </div>
                   </li>
                   <li className="flex items-start gap-3">
                     <MessageCircle className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
-                    <a 
-                      href="https://wa.me/919577200023" 
+                     <a 
+                      href="https://wa.me/919855924442" 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="text-sm text-background/70 hover:text-accent transition-colors"
@@ -165,7 +165,7 @@ export const Footer = () => {
                   </li>
                   <li className="flex items-start gap-3">
                     <MapPin className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
-                    <p className="text-sm text-background/70">Mumbai, Maharashtra, India</p>
+                    <p className="text-sm text-background/70">MS 228, 2nd Floor, DT Mega Mall, Sector 28, Gurugram, Haryana – 122001</p>
                   </li>
                 </ul>
               </div>
@@ -179,7 +179,7 @@ export const Footer = () => {
         <div className="container mx-auto px-4 py-5">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-sm text-background/50">
-              © 2024 Grabyourcar. All rights reserved.
+              © 2025 Adis Makethemoney Services Pvt Ltd. All rights reserved. | Trading as Grabyourcar
             </p>
             
             {/* Legal Links */}

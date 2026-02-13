@@ -21,7 +21,7 @@
  import { motion, AnimatePresence } from "framer-motion";
  import { supabase } from "@/integrations/supabase/client";
  
- const WHATSAPP_NUMBER = "919577200023";
+ const WHATSAPP_NUMBER = "919855924442";
  
  // Comprehensive WhatsApp message templates for the lead engine
  export const leadEngineMessages = {
@@ -521,7 +521,7 @@
                  <span className="sm:hidden">Best Deal</span>
                </Button>
              </a>
-             <a href="tel:+919577200023">
+             <a href="tel:+919855924442">
                <Button variant="outline" size="sm" className="bg-white/10 border-white/30 text-white hover:bg-white/20">
                  <Phone className="h-4 w-4" />
                </Button>

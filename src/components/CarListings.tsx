@@ -274,7 +274,7 @@ export const CarListings = () => {
                   {/* WhatsApp & Call Row */}
                   <div className="flex gap-1.5 sm:gap-2 w-full">
                     <WhatsAppCardButton carName={car.name} className="h-7 sm:h-8" />
-                    <a href="tel:+919577200023" className="flex-1 min-w-0">
+                    <a href="tel:+919855924442" className="flex-1 min-w-0">
                       <Button variant="call" size="sm" className="w-full gap-1 text-[10px] sm:text-xs h-7 sm:h-8 font-semibold px-2">
                         <Phone className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
                         <span className="truncate">Call</span>

@@ -109,7 +109,7 @@ export const CorporateCTA = () => {
 
             <div className="space-y-4">
               <a 
-                href="tel:+919577200023" 
+                href="tel:+919855924442" 
                 className="flex items-center gap-3 text-slate-300 hover:text-white transition-colors"
               >
                 <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
@@ -117,7 +117,7 @@ export const CorporateCTA = () => {
                 </div>
                 <div>
                   <p className="text-xs text-slate-400">Call our corporate desk</p>
-                  <p className="font-semibold">+91 95772 00023</p>
+                  <p className="font-semibold">+91 98559 24442</p>
                 </div>
               </a>
               <a 

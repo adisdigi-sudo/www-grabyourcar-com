@@ -659,7 +659,7 @@ Please set up the following templates on our WhatsApp Business Account:
               <div className="border-t pt-4">
                 <Label className="text-sm font-medium">Send Test Message</Label>
                 <div className="flex gap-2 mt-2">
-                  <Input placeholder="Phone (e.g., 9577200023)" value={testPhone} onChange={(e) => setTestPhone(e.target.value)} />
+                  <Input placeholder="Phone (e.g., 9855924442)" value={testPhone} onChange={(e) => setTestPhone(e.target.value)} />
                   <Button onClick={sendTestMessage} disabled={isSending}><Send className="h-4 w-4 mr-2" />{isSending ? "..." : "Send"}</Button>
                 </div>
               </div>

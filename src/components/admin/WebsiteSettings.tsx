@@ -44,10 +44,10 @@ export const WebsiteSettings = () => {
   });
 
   const [contactSettings, setContactSettings] = useState({
-    phone: "+91 95772 00023",
-    whatsapp: "919577200023",
-    email: "info@grabyourcar.com",
-    address: "Delhi NCR, India",
+    phone: "+91 98559 24442",
+    whatsapp: "919855924442",
+    email: "hello@grabyourcar.com",
+    address: "MS 228, 2nd Floor, DT Mega Mall, Sector 28, Gurugram, Haryana – 122001",
   });
 
   const [socialSettings, setSocialSettings] = useState({
