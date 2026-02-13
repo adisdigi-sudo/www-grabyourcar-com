@@ -299,34 +299,46 @@ export const UnifiedCarManagement = () => {
   // Delete mutations
   const deleteImageMutation = useMutation({
     mutationFn: async (imageId: string) => {
-      const { error } = await supabase.from('car_images').delete().eq('id', imageId);
+      const { error, count } = await supabase.from('car_images').delete().eq('id', imageId).select();
       if (error) throw error;
     },
     onSuccess: () => {
       invalidateCarQueries(queryClient);
       toast.success('Image deleted');
     },
+    onError: (error) => {
+      toast.error('Failed to delete image: ' + error.message);
+      console.error('[Delete Image]', error);
+    },
   });
 
   const deleteBrochureMutation = useMutation({
     mutationFn: async (brochureId: string) => {
-      const { error } = await supabase.from('car_brochures').delete().eq('id', brochureId);
+      const { error } = await supabase.from('car_brochures').delete().eq('id', brochureId).select();
       if (error) throw error;
     },
     onSuccess: () => {
       invalidateCarQueries(queryClient);
       toast.success('Brochure deleted');
     },
+    onError: (error) => {
+      toast.error('Failed to delete brochure: ' + error.message);
+      console.error('[Delete Brochure]', error);
+    },
   });
 
   const deleteVariantMutation = useMutation({
     mutationFn: async (variantId: string) => {
-      const { error } = await supabase.from('car_variants').delete().eq('id', variantId);
+      const { error } = await supabase.from('car_variants').delete().eq('id', variantId).select();
       if (error) throw error;
     },
     onSuccess: () => {
       invalidateCarQueries(queryClient);
       toast.success('Variant deleted');
+    },
+    onError: (error) => {
+      toast.error('Failed to delete variant: ' + error.message);
+      console.error('[Delete Variant]', error);
     },
   });
 
