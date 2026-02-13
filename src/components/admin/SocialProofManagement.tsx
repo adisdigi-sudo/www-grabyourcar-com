@@ -8,14 +8,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Save, Plus, Edit, Trash2, Star, Image, Car, MapPin, Upload, Video, X, Loader2 } from "lucide-react";
+import { Save, Plus, Edit, Trash2, Star, Image, Video, X, Loader2 } from "lucide-react";
 
-// ─── Types ───────────────────────────────────────────────────────────
 interface GoogleReviewDB {
   id: string;
   author_name: string;
@@ -25,11 +22,8 @@ interface GoogleReviewDB {
   relative_time: string | null;
   car_purchased: string | null;
   is_local_guide: boolean;
-  has_response: boolean;
-  response_text: string | null;
   is_visible: boolean;
   sort_order: number;
-  review_date: string | null;
 }
 
 interface DeliveryStory {
@@ -42,12 +36,7 @@ interface DeliveryStory {
   video_url: string | null;
   testimonial: string | null;
   delivery_date: string | null;
-  savings: string | null;
-  highlight: string | null;
-  buyer_type: string | null;
-  wait_time: string | null;
   rating: number;
-  journey_steps: string[];
   is_featured: boolean;
   is_visible: boolean;
   sort_order: number;
@@ -56,19 +45,14 @@ interface DeliveryStory {
 interface ReviewSettings {
   overallRating: number;
   totalReviews: number;
-  googlePlaceId: string;
-  showResponseRate: boolean;
   responseRate: number;
 }
 
-// ─── Component ───────────────────────────────────────────────────────
 export const SocialProofManagement = () => {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("reviews");
   const photoInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const [uploadingVideo, setUploadingVideo] = useState(false);
 
   // Review state
   const [editingReview, setEditingReview] = useState<GoogleReviewDB | null>(null);
@@ -76,16 +60,16 @@ export const SocialProofManagement = () => {
   const [reviewSettings, setReviewSettings] = useState<ReviewSettings>({
     overallRating: 4.6,
     totalReviews: 127,
-    googlePlaceId: "",
-    showResponseRate: true,
     responseRate: 95,
   });
 
   // Story state
   const [editingStory, setEditingStory] = useState<DeliveryStory | null>(null);
   const [storyDialogOpen, setStoryDialogOpen] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
 
-  // ─── Queries ─────────────────────────────────────────────────────
+  // Queries
   const { data: reviews = [], isLoading: loadingReviews } = useQuery({
     queryKey: ["google-reviews-admin"],
     queryFn: async () => {
@@ -127,7 +111,7 @@ export const SocialProofManagement = () => {
     if (savedSettings) setReviewSettings(savedSettings);
   }, [savedSettings]);
 
-  // ─── Review Mutations ────────────────────────────────────────────
+  // Mutations
   const saveReviewMutation = useMutation({
     mutationFn: async (review: GoogleReviewDB) => {
       const { id, ...data } = review;
@@ -182,7 +166,6 @@ export const SocialProofManagement = () => {
     onError: () => toast.error("Failed to save settings"),
   });
 
-  // ─── Story Mutations ─────────────────────────────────────────────
   const saveStoryMutation = useMutation({
     mutationFn: async (story: DeliveryStory) => {
       const { id, ...data } = story;
@@ -217,8 +200,9 @@ export const SocialProofManagement = () => {
     onError: () => toast.error("Failed to delete story"),
   });
 
-  // ─── File Upload ──────────────────────────────────────────────────
+  // File upload handler
   const handleFileUpload = async (file: File, type: "photo" | "video") => {
+    if (!editingStory) return;
     const setter = type === "photo" ? setUploadingPhoto : setUploadingVideo;
     setter(true);
     try {
@@ -229,19 +213,20 @@ export const SocialProofManagement = () => {
         .upload(path, file, { contentType: file.type, upsert: true });
       if (uploadError) throw uploadError;
       const { data: urlData } = supabase.storage.from("car-assets").getPublicUrl(path);
-      if (editingStory) {
-        if (type === "photo") setEditingStory({ ...editingStory, image_url: urlData.publicUrl });
-        else setEditingStory({ ...editingStory, video_url: urlData.publicUrl });
+      if (type === "photo") {
+        setEditingStory({ ...editingStory, image_url: urlData.publicUrl });
+      } else {
+        setEditingStory({ ...editingStory, video_url: urlData.publicUrl });
       }
       toast.success(`${type === "photo" ? "Photo" : "Video"} uploaded`);
-    } catch {
+    } catch (err) {
       toast.error(`Failed to upload ${type}`);
     } finally {
       setter(false);
     }
   };
 
-  // ─── Handlers ─────────────────────────────────────────────────────
+  // Handlers
   const handleAddReview = () => {
     setEditingReview({
       id: crypto.randomUUID(),
@@ -252,11 +237,8 @@ export const SocialProofManagement = () => {
       relative_time: "",
       car_purchased: null,
       is_local_guide: false,
-      has_response: false,
-      response_text: null,
       is_visible: true,
       sort_order: reviews.length,
-      review_date: new Date().toISOString().split("T")[0],
     });
     setReviewDialogOpen(true);
   };
@@ -272,12 +254,7 @@ export const SocialProofManagement = () => {
       video_url: null,
       testimonial: "",
       delivery_date: new Date().toISOString().split("T")[0],
-      savings: null,
-      highlight: null,
-      buyer_type: null,
-      wait_time: null,
       rating: 5,
-      journey_steps: [],
       is_featured: false,
       is_visible: true,
       sort_order: stories.length,
@@ -291,9 +268,23 @@ export const SocialProofManagement = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">Social Proof Management</h2>
-        <p className="text-muted-foreground">Manage Google Reviews and Delivery Stories — all stored in database</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Social Proof Management</h2>
+          <p className="text-muted-foreground">Quick edit reviews and delivery stories</p>
+        </div>
+        <div className="flex gap-2">
+          {activeTab === "reviews" && (
+            <Button onClick={handleAddReview} className="gap-2">
+              <Plus className="h-4 w-4" />Add Review
+            </Button>
+          )}
+          {activeTab === "stories" && (
+            <Button onClick={handleAddStory} className="gap-2">
+              <Plus className="h-4 w-4" />Add Story
+            </Button>
+          )}
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -302,38 +293,35 @@ export const SocialProofManagement = () => {
           <TabsTrigger value="stories"><Image className="h-4 w-4 mr-2" />Delivery Stories</TabsTrigger>
         </TabsList>
 
-        {/* ─── Google Reviews Tab ─────────────────────────────────── */}
+        {/* Google Reviews Tab */}
         <TabsContent value="reviews" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>Review Settings</CardTitle>
-              <CardDescription>Configure overall review display</CardDescription>
+              <CardDescription>Overall ratings shown on site</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-4 gap-4">
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label>Overall Rating</Label>
-                  <Input type="number" step="0.1" min="0" max="5" value={reviewSettings.overallRating}
+                  <Label>Overall Rating (0-5)</Label>
+                  <Input type="number" step="0.1" min="0" max="5" 
+                    value={reviewSettings.overallRating}
                     onChange={(e) => setReviewSettings({ ...reviewSettings, overallRating: parseFloat(e.target.value) })} />
                 </div>
                 <div className="space-y-2">
                   <Label>Total Reviews</Label>
-                  <Input type="number" value={reviewSettings.totalReviews}
+                  <Input type="number" 
+                    value={reviewSettings.totalReviews}
                     onChange={(e) => setReviewSettings({ ...reviewSettings, totalReviews: parseInt(e.target.value) })} />
                 </div>
                 <div className="space-y-2">
                   <Label>Response Rate %</Label>
-                  <Input type="number" value={reviewSettings.responseRate}
+                  <Input type="number" min="0" max="100"
+                    value={reviewSettings.responseRate}
                     onChange={(e) => setReviewSettings({ ...reviewSettings, responseRate: parseInt(e.target.value) })} />
                 </div>
-                <div className="space-y-2">
-                  <Label>Google Place ID</Label>
-                  <Input value={reviewSettings.googlePlaceId}
-                    onChange={(e) => setReviewSettings({ ...reviewSettings, googlePlaceId: e.target.value })}
-                    placeholder="For future API integration" />
-                </div>
               </div>
-              <Button className="mt-4" onClick={() => saveSettingsMutation.mutate()} disabled={saveSettingsMutation.isPending}>
+              <Button onClick={() => saveSettingsMutation.mutate()} disabled={saveSettingsMutation.isPending} className="w-full">
                 <Save className="h-4 w-4 mr-2" />Save Settings
               </Button>
             </CardContent>
@@ -341,347 +329,288 @@ export const SocialProofManagement = () => {
 
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Reviews ({reviews.length})</CardTitle>
-                  <CardDescription>Each review saves individually to the database</CardDescription>
-                </div>
-                <Button onClick={handleAddReview}><Plus className="h-4 w-4 mr-2" />Add Review</Button>
-              </div>
+              <CardTitle>All Reviews ({reviews.length})</CardTitle>
+              <CardDescription>Click card to edit • Drag to reorder coming soon</CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Rating</TableHead>
-                    <TableHead>Comment</TableHead>
-                    <TableHead>Car</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              {reviews.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">No reviews. Click "Add Review" above to get started.</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[600px] overflow-y-auto">
                   {reviews.map((review) => (
-                    <TableRow key={review.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{review.author_name}</span>
-                          {review.is_local_guide && <Badge variant="secondary">Local Guide</Badge>}
+                    <div key={review.id} 
+                      className="p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition group"
+                      onClick={() => {
+                        setEditingReview(review);
+                        setReviewDialogOpen(true);
+                      }}>
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <p className="font-semibold text-sm">{review.author_name}</p>
+                          <div className="flex gap-1 mt-1">
+                            {Array.from({ length: review.rating }).map((_, i) => (
+                              <Star key={i} className="h-3 w-3 fill-accent text-accent" />
+                            ))}
+                          </div>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          {Array.from({ length: review.rating }).map((_, i) => (
-                            <Star key={i} className="h-4 w-4 fill-accent text-accent" />
-                          ))}
-                        </div>
-                      </TableCell>
-                      <TableCell className="max-w-[200px] truncate">{review.review_text}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{review.car_purchased || "—"}</TableCell>
-                      <TableCell>
-                        <Badge variant={review.is_visible ? "default" : "secondary"}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteReviewMutation.mutate(review.id);
+                          }}><Trash2 className="h-4 w-4" /></Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{review.review_text}</p>
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {review.is_local_guide && <Badge variant="secondary" className="text-[10px] py-0">Local Guide</Badge>}
+                        <Badge variant={review.is_visible ? "default" : "outline"} className="text-[10px] py-0">
                           {review.is_visible ? "Visible" : "Hidden"}
                         </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button variant="ghost" size="icon" onClick={() => {
-                            setEditingReview(review);
-                            setReviewDialogOpen(true);
-                          }}><Edit className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" onClick={() => deleteReviewMutation.mutate(review.id)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                      </div>
+                    </div>
                   ))}
-                  {reviews.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                        No reviews yet. Click "Add Review" to add your first Google review.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* ─── Delivery Stories Tab ───────────────────────────────── */}
+        {/* Delivery Stories Tab */}
         <TabsContent value="stories" className="space-y-4">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Real Delivery Stories ({stories.length})</CardTitle>
-                  <CardDescription>Each story saves individually to the database</CardDescription>
-                </div>
-                <Button onClick={handleAddStory}><Plus className="h-4 w-4 mr-2" />Add Story</Button>
-              </div>
+              <CardTitle>Real Delivery Stories ({stories.length})</CardTitle>
+              <CardDescription>Click card to edit • Add photos and videos easily</CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Preview</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Car</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Featured</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              {stories.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">No stories yet. Click "Add Story" above to get started.</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[600px] overflow-y-auto">
                   {stories.map((story) => (
-                    <TableRow key={story.id}>
-                      <TableCell>
-                        {story.image_url ? (
-                          <img src={story.image_url} alt="" className="w-12 h-12 rounded-lg object-cover" />
-                        ) : (
-                          <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center">
-                            <Image className="h-5 w-5 text-muted-foreground" />
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell className="font-medium">{story.customer_name}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Car className="h-4 w-4 text-muted-foreground" />
-                          {story.car_brand} {story.car_model}
+                    <div key={story.id}
+                      className="p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition group"
+                      onClick={() => {
+                        setEditingStory(story);
+                        setStoryDialogOpen(true);
+                      }}>
+                      {story.image_url && (
+                        <div className="mb-2 rounded overflow-hidden h-24 bg-muted">
+                          <img src={story.image_url} alt="story" className="w-full h-full object-cover" />
                         </div>
-                      </TableCell>
-                      <TableCell><div className="flex items-center gap-1"><MapPin className="h-3 w-3" />{story.location}</div></TableCell>
-                      <TableCell>{story.delivery_date}</TableCell>
-                      <TableCell>
-                        <Badge variant={story.is_featured ? "default" : "outline"}>
-                          {story.is_featured ? "Featured" : "Normal"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={story.is_visible ? "default" : "secondary"}>
+                      )}
+                      <p className="font-semibold text-sm">{story.customer_name}</p>
+                      <p className="text-xs text-muted-foreground">{story.car_brand} {story.car_model}</p>
+                      <p className="text-xs text-muted-foreground">{story.location}</p>
+                      <div className="flex gap-1 mt-2">
+                        {Array.from({ length: story.rating }).map((_, i) => (
+                          <Star key={i} className="h-3 w-3 fill-accent text-accent" />
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-1 flex-wrap mt-2">
+                        {story.image_url && <Badge variant="secondary" className="text-[10px] py-0">Photo</Badge>}
+                        {story.video_url && <Badge variant="secondary" className="text-[10px] py-0">Video</Badge>}
+                        {story.is_featured && <Badge className="text-[10px] py-0">Featured</Badge>}
+                        <Badge variant={story.is_visible ? "default" : "outline"} className="text-[10px] py-0">
                           {story.is_visible ? "Visible" : "Hidden"}
                         </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button variant="ghost" size="icon" onClick={() => {
-                            setEditingStory(story);
-                            setStoryDialogOpen(true);
-                          }}><Edit className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" onClick={() => deleteStoryMutation.mutate(story.id)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                      </div>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 absolute top-2 right-2 opacity-0 group-hover:opacity-100"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteStoryMutation.mutate(story.id);
+                        }}><Trash2 className="h-4 w-4" /></Button>
+                    </div>
                   ))}
-                  {stories.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                        No stories yet. Click "Add Story" to add your first delivery story.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
 
-      {/* ─── Review Dialog ─────────────────────────────────────────── */}
+      {/* Review Edit Dialog */}
       <Dialog open={reviewDialogOpen} onOpenChange={setReviewDialogOpen}>
-        <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{editingReview?.author_name ? "Edit Review" : "Add Review"}</DialogTitle>
+            <DialogTitle>Edit Google Review</DialogTitle>
           </DialogHeader>
           {editingReview && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Customer Name</Label>
-                  <Input value={editingReview.author_name} onChange={(e) => setEditingReview({ ...editingReview, author_name: e.target.value })} />
+                  <Input value={editingReview.author_name}
+                    onChange={(e) => setEditingReview({ ...editingReview, author_name: e.target.value })}
+                    placeholder="e.g., John Doe" />
                 </div>
                 <div className="space-y-2">
-                  <Label>Rating</Label>
-                  <Select value={String(editingReview.rating)} onValueChange={(v) => setEditingReview({ ...editingReview, rating: parseInt(v) })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {[5, 4, 3, 2, 1].map(r => <SelectItem key={r} value={String(r)}>{r} Stars</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <Label>Rating (1-5)</Label>
+                  <Input type="number" min="1" max="5" value={editingReview.rating}
+                    onChange={(e) => setEditingReview({ ...editingReview, rating: parseInt(e.target.value) })} />
                 </div>
               </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Review Date</Label>
-                  <Input type="date" value={editingReview.review_date || ""} onChange={(e) => setEditingReview({ ...editingReview, review_date: e.target.value })} />
+                  <Label>Car Purchased (Optional)</Label>
+                  <Input value={editingReview.car_purchased || ""}
+                    onChange={(e) => setEditingReview({ ...editingReview, car_purchased: e.target.value })}
+                    placeholder="e.g., Hyundai Creta" />
                 </div>
                 <div className="space-y-2">
-                  <Label>Relative Time (e.g. "2 weeks ago")</Label>
-                  <Input value={editingReview.relative_time || ""} onChange={(e) => setEditingReview({ ...editingReview, relative_time: e.target.value })} />
+                  <Label>Time Posted (Optional)</Label>
+                  <Input value={editingReview.relative_time || ""}
+                    onChange={(e) => setEditingReview({ ...editingReview, relative_time: e.target.value })}
+                    placeholder="e.g., 2 weeks ago" />
                 </div>
               </div>
+
               <div className="space-y-2">
-                <Label>Car Purchased (optional)</Label>
-                <Input value={editingReview.car_purchased || ""} onChange={(e) => setEditingReview({ ...editingReview, car_purchased: e.target.value })} />
+                <Label>Review Text</Label>
+                <Textarea value={editingReview.review_text}
+                  onChange={(e) => setEditingReview({ ...editingReview, review_text: e.target.value })}
+                  placeholder="Customer's feedback..."
+                  rows={4} />
               </div>
-              <div className="space-y-2">
-                <Label>Review Comment</Label>
-                <Textarea value={editingReview.review_text} onChange={(e) => setEditingReview({ ...editingReview, review_text: e.target.value })} rows={3} />
-              </div>
-              <div className="flex items-center gap-6">
+
+              <div className="flex gap-4">
                 <div className="flex items-center gap-2">
-                  <Switch checked={editingReview.is_local_guide} onCheckedChange={(v) => setEditingReview({ ...editingReview, is_local_guide: v })} />
+                  <Switch checked={editingReview.is_local_guide}
+                    onCheckedChange={(checked) => setEditingReview({ ...editingReview, is_local_guide: checked })} />
                   <Label>Local Guide</Label>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Switch checked={editingReview.is_visible} onCheckedChange={(v) => setEditingReview({ ...editingReview, is_visible: v })} />
-                  <Label>Visible</Label>
+                  <Switch checked={editingReview.is_visible}
+                    onCheckedChange={(checked) => setEditingReview({ ...editingReview, is_visible: checked })} />
+                  <Label>Visible on Site</Label>
                 </div>
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Switch checked={editingReview.has_response} onCheckedChange={(v) => setEditingReview({ ...editingReview, has_response: v })} />
-                  <Label>Has Business Response</Label>
-                </div>
-                {editingReview.has_response && (
-                  <Textarea
-                    value={editingReview.response_text || ""}
-                    onChange={(e) => setEditingReview({ ...editingReview, response_text: e.target.value })}
-                    placeholder="Business response..."
-                    rows={2}
-                  />
-                )}
               </div>
             </div>
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setReviewDialogOpen(false)}>Cancel</Button>
             <Button onClick={() => editingReview && saveReviewMutation.mutate(editingReview)} disabled={saveReviewMutation.isPending}>
-              {saveReviewMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Save
+              {saveReviewMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+              Save Review
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* ─── Story Dialog with File Upload ────────────────────────── */}
+      {/* Story Edit Dialog */}
       <Dialog open={storyDialogOpen} onOpenChange={setStoryDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{editingStory?.customer_name ? "Edit Story" : "Add Story"}</DialogTitle>
+            <DialogTitle>Edit Delivery Story</DialogTitle>
           </DialogHeader>
           {editingStory && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Customer Name</Label>
-                  <Input value={editingStory.customer_name} onChange={(e) => setEditingStory({ ...editingStory, customer_name: e.target.value })} />
+                  <Input value={editingStory.customer_name}
+                    onChange={(e) => setEditingStory({ ...editingStory, customer_name: e.target.value })}
+                    placeholder="John Doe" />
                 </div>
                 <div className="space-y-2">
                   <Label>Location</Label>
-                  <Input value={editingStory.location} onChange={(e) => setEditingStory({ ...editingStory, location: e.target.value })} />
+                  <Input value={editingStory.location}
+                    onChange={(e) => setEditingStory({ ...editingStory, location: e.target.value })}
+                    placeholder="Mumbai, India" />
                 </div>
               </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Car Brand</Label>
-                  <Input value={editingStory.car_brand} onChange={(e) => setEditingStory({ ...editingStory, car_brand: e.target.value })} />
+                  <Input value={editingStory.car_brand}
+                    onChange={(e) => setEditingStory({ ...editingStory, car_brand: e.target.value })}
+                    placeholder="Hyundai" />
                 </div>
                 <div className="space-y-2">
                   <Label>Car Model</Label>
-                  <Input value={editingStory.car_model} onChange={(e) => setEditingStory({ ...editingStory, car_model: e.target.value })} />
+                  <Input value={editingStory.car_model}
+                    onChange={(e) => setEditingStory({ ...editingStory, car_model: e.target.value })}
+                    placeholder="Creta" />
                 </div>
               </div>
 
-              {/* Photo Upload */}
               <div className="space-y-2">
-                <Label>Delivery Photo</Label>
-                <input ref={photoInputRef} type="file" accept="image/*" className="hidden"
-                  onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "photo"); }} />
-                {editingStory.image_url ? (
-                  <div className="relative inline-block">
-                    <img src={editingStory.image_url} alt="Preview" className="w-full max-h-48 rounded-lg object-cover border" />
-                    <Button variant="destructive" size="icon" className="absolute top-2 right-2 h-7 w-7"
-                      onClick={() => setEditingStory({ ...editingStory, image_url: null })}>
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  <Button variant="outline" className="w-full h-24 border-dashed flex flex-col gap-1"
-                    onClick={() => photoInputRef.current?.click()} disabled={uploadingPhoto}>
-                    {uploadingPhoto ? <Loader2 className="h-6 w-6 animate-spin" /> : (
-                      <><Upload className="h-6 w-6 text-muted-foreground" /><span className="text-sm text-muted-foreground">Click to upload photo</span></>
-                    )}
-                  </Button>
-                )}
-              </div>
-
-              {/* Video Upload */}
-              <div className="space-y-2">
-                <Label>Delivery Video (optional)</Label>
-                <input ref={videoInputRef} type="file" accept="video/*" className="hidden"
-                  onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file, "video"); }} />
-                {editingStory.video_url ? (
-                  <div className="relative">
-                    <video src={editingStory.video_url} controls className="w-full max-h-48 rounded-lg border" />
-                    <Button variant="destructive" size="icon" className="absolute top-2 right-2 h-7 w-7"
-                      onClick={() => setEditingStory({ ...editingStory, video_url: null })}>
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  <Button variant="outline" className="w-full h-16 border-dashed flex gap-2"
-                    onClick={() => videoInputRef.current?.click()} disabled={uploadingVideo}>
-                    {uploadingVideo ? <Loader2 className="h-5 w-5 animate-spin" /> : (
-                      <><Video className="h-5 w-5 text-muted-foreground" /><span className="text-sm text-muted-foreground">Upload video</span></>
-                    )}
-                  </Button>
-                )}
+                <Label>Testimonial</Label>
+                <Textarea value={editingStory.testimonial || ""}
+                  onChange={(e) => setEditingStory({ ...editingStory, testimonial: e.target.value })}
+                  placeholder="Customer's story..."
+                  rows={3} />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Rating (1-5)</Label>
+                  <Input type="number" min="1" max="5" value={editingStory.rating}
+                    onChange={(e) => setEditingStory({ ...editingStory, rating: parseInt(e.target.value) })} />
+                </div>
                 <div className="space-y-2">
                   <Label>Delivery Date</Label>
-                  <Input type="date" value={editingStory.delivery_date || ""} onChange={(e) => setEditingStory({ ...editingStory, delivery_date: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Savings (e.g. ₹50,000)</Label>
-                  <Input value={editingStory.savings || ""} onChange={(e) => setEditingStory({ ...editingStory, savings: e.target.value })} />
+                  <Input type="date" value={editingStory.delivery_date || ""}
+                    onChange={(e) => setEditingStory({ ...editingStory, delivery_date: e.target.value })} />
                 </div>
               </div>
+
+              {/* Photo/Video Upload */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Highlight Tag</Label>
-                  <Input value={editingStory.highlight || ""} onChange={(e) => setEditingStory({ ...editingStory, highlight: e.target.value })} placeholder="e.g. Priority Delivery" />
+                  <Label>Photo</Label>
+                  {editingStory.image_url && (
+                    <div className="relative mb-2">
+                      <img src={editingStory.image_url} alt="preview" className="w-full h-24 object-cover rounded" />
+                      <Button size="icon" variant="destructive" className="absolute top-1 right-1 h-6 w-6"
+                        onClick={() => setEditingStory({ ...editingStory, image_url: null })}>
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
+                  <input ref={photoInputRef} type="file" accept="image/*" className="hidden"
+                    onChange={(e) => e.target.files && handleFileUpload(e.target.files[0], "photo")} />
+                  <Button variant="outline" className="w-full" onClick={() => photoInputRef.current?.click()}
+                    disabled={uploadingPhoto}>
+                    {uploadingPhoto ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Image className="h-4 w-4 mr-2" />}
+                    {uploadingPhoto ? "Uploading..." : "Upload Photo"}
+                  </Button>
                 </div>
+
                 <div className="space-y-2">
-                  <Label>Buyer Type</Label>
-                  <Input value={editingStory.buyer_type || ""} onChange={(e) => setEditingStory({ ...editingStory, buyer_type: e.target.value })} placeholder="e.g. Family Upgrade" />
+                  <Label>Video</Label>
+                  {editingStory.video_url && (
+                    <div className="relative mb-2">
+                      <div className="bg-muted h-24 rounded flex items-center justify-center">
+                        <Video className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                      <Button size="icon" variant="destructive" className="absolute top-1 right-1 h-6 w-6"
+                        onClick={() => setEditingStory({ ...editingStory, video_url: null })}>
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
+                  <input ref={videoInputRef} type="file" accept="video/*" className="hidden"
+                    onChange={(e) => e.target.files && handleFileUpload(e.target.files[0], "video")} />
+                  <Button variant="outline" className="w-full" onClick={() => videoInputRef.current?.click()}
+                    disabled={uploadingVideo}>
+                    {uploadingVideo ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Video className="h-4 w-4 mr-2" />}
+                    {uploadingVideo ? "Uploading..." : "Upload Video"}
+                  </Button>
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label>Wait Time</Label>
-                <Input value={editingStory.wait_time || ""} onChange={(e) => setEditingStory({ ...editingStory, wait_time: e.target.value })} placeholder="e.g. 3 weeks" />
-              </div>
-              <div className="space-y-2">
-                <Label>Customer Testimonial</Label>
-                <Textarea value={editingStory.testimonial || ""} onChange={(e) => setEditingStory({ ...editingStory, testimonial: e.target.value })} rows={3} />
-              </div>
-              <div className="flex items-center gap-6">
+
+              <div className="flex gap-4">
                 <div className="flex items-center gap-2">
-                  <Switch checked={editingStory.is_featured} onCheckedChange={(v) => setEditingStory({ ...editingStory, is_featured: v })} />
-                  <Label>Featured</Label>
+                  <Switch checked={editingStory.is_featured}
+                    onCheckedChange={(checked) => setEditingStory({ ...editingStory, is_featured: checked })} />
+                  <Label>Featured Story</Label>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Switch checked={editingStory.is_visible} onCheckedChange={(v) => setEditingStory({ ...editingStory, is_visible: v })} />
-                  <Label>Visible</Label>
+                  <Switch checked={editingStory.is_visible}
+                    onCheckedChange={(checked) => setEditingStory({ ...editingStory, is_visible: checked })} />
+                  <Label>Visible on Site</Label>
                 </div>
               </div>
             </div>
@@ -689,8 +618,8 @@ export const SocialProofManagement = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setStoryDialogOpen(false)}>Cancel</Button>
             <Button onClick={() => editingStory && saveStoryMutation.mutate(editingStory)} disabled={saveStoryMutation.isPending}>
-              {saveStoryMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Save
+              {saveStoryMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+              Save Story
             </Button>
           </DialogFooter>
         </DialogContent>
