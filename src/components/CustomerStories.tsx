@@ -1,4 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -138,25 +140,61 @@ const trustStats = [
 export const CustomerStories = () => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
-  const activeStory = customerStories[activeIndex];
+
+  // Fetch stories from database
+  const { data: dbStories = [] } = useQuery({
+    queryKey: ["delivery-stories-public"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("delivery_stories")
+        .select("*")
+        .eq("is_visible", true)
+        .order("sort_order", { ascending: true });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Merge DB stories with hardcoded fallback
+  const allStories = useMemo(() => {
+    const mapped = dbStories.map((s: any, idx: number) => ({
+      id: s.id || idx + 100,
+      name: s.customer_name,
+      location: s.location,
+      car: `${s.car_brand} ${s.car_model}`,
+      image: s.image_url || delivery1,
+      videoUrl: s.video_url,
+      deliveryMonth: s.delivery_date ? new Date(s.delivery_date).toLocaleDateString("en-IN", { month: "long", year: "numeric" }) : "",
+      rating: s.rating || 5,
+      story: s.testimonial || "",
+      savings: s.savings || "",
+      highlight: s.highlight || "Happy Customer",
+      buyerType: s.buyer_type || "",
+      waitTime: s.wait_time || "",
+      journeySteps: s.journey_steps || [],
+    }));
+    return mapped.length > 0 ? mapped : customerStories;
+  }, [dbStories]);
+
+  const activeStory = allStories[activeIndex % allStories.length];
 
   // Auto-rotate stories
   useEffect(() => {
     if (!isAutoPlaying) return;
     const timer = setInterval(() => {
-      setActiveIndex((prev) => (prev + 1) % customerStories.length);
+      setActiveIndex((prev) => (prev + 1) % allStories.length);
     }, 6000);
     return () => clearInterval(timer);
-  }, [isAutoPlaying]);
+  }, [isAutoPlaying, allStories.length]);
 
   const nextStory = () => {
     setIsAutoPlaying(false);
-    setActiveIndex((prev) => (prev + 1) % customerStories.length);
+    setActiveIndex((prev) => (prev + 1) % allStories.length);
   };
 
   const prevStory = () => {
     setIsAutoPlaying(false);
-    setActiveIndex((prev) => (prev - 1 + customerStories.length) % customerStories.length);
+    setActiveIndex((prev) => (prev - 1 + allStories.length) % allStories.length);
   };
 
   return (
@@ -329,7 +367,7 @@ export const CustomerStories = () => {
           <div className="flex items-center justify-between mt-6 px-2">
             {/* Progress Dots */}
             <div className="flex gap-2">
-              {customerStories.map((_, index) => (
+              {allStories.map((_, index) => (
                 <button
                   key={index}
                   onClick={() => {
@@ -381,7 +419,7 @@ export const CustomerStories = () => {
 
         {/* Thumbnail Gallery */}
         <div className="mt-10 grid grid-cols-3 md:grid-cols-6 gap-3 md:gap-4 max-w-5xl mx-auto">
-          {customerStories.map((story, index) => (
+          {allStories.map((story, index) => (
             <motion.button
               key={story.id}
               whileHover={{ scale: 1.05 }}

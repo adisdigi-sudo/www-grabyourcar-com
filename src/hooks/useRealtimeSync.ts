@@ -23,6 +23,7 @@ const REALTIME_TABLES = [
   'hsrp_bookings',
   'accessory_orders',
   'accessory_wishlist',
+  'delivery_stories',
   'banners',
 ] as const;
 
@@ -49,6 +50,7 @@ const TABLE_QUERY_KEY_MAP: Record<string, string[]> = {
   accessory_orders: ['accessory-orders', 'admin-accessory-orders'],
   accessory_wishlist: ['accessory-wishlist'],
   banners: ['banners', 'admin-banners'],
+  delivery_stories: ['delivery-stories', 'delivery-stories-public'],
 };
 
 /**

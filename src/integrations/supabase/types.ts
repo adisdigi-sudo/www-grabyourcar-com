@@ -1739,6 +1739,75 @@ export type Database = {
         }
         Relationships: []
       }
+      delivery_stories: {
+        Row: {
+          buyer_type: string | null
+          car_brand: string
+          car_model: string
+          created_at: string
+          customer_name: string
+          delivery_date: string | null
+          highlight: string | null
+          id: string
+          image_url: string | null
+          is_featured: boolean | null
+          is_visible: boolean | null
+          journey_steps: string[] | null
+          location: string
+          rating: number | null
+          savings: string | null
+          sort_order: number | null
+          testimonial: string | null
+          updated_at: string
+          video_url: string | null
+          wait_time: string | null
+        }
+        Insert: {
+          buyer_type?: string | null
+          car_brand: string
+          car_model: string
+          created_at?: string
+          customer_name: string
+          delivery_date?: string | null
+          highlight?: string | null
+          id?: string
+          image_url?: string | null
+          is_featured?: boolean | null
+          is_visible?: boolean | null
+          journey_steps?: string[] | null
+          location: string
+          rating?: number | null
+          savings?: string | null
+          sort_order?: number | null
+          testimonial?: string | null
+          updated_at?: string
+          video_url?: string | null
+          wait_time?: string | null
+        }
+        Update: {
+          buyer_type?: string | null
+          car_brand?: string
+          car_model?: string
+          created_at?: string
+          customer_name?: string
+          delivery_date?: string | null
+          highlight?: string | null
+          id?: string
+          image_url?: string | null
+          is_featured?: boolean | null
+          is_visible?: boolean | null
+          journey_steps?: string[] | null
+          location?: string
+          rating?: number | null
+          savings?: string | null
+          sort_order?: number | null
+          testimonial?: string | null
+          updated_at?: string
+          video_url?: string | null
+          wait_time?: string | null
+        }
+        Relationships: []
+      }
       discount_presets: {
         Row: {
           applicable_to: string[] | null
