@@ -6,7 +6,7 @@ const corsHeaders = {
   "Content-Type": "application/xml",
 };
 
-const BASE_URL = "https://grabyourcar.lovable.app";
+const BASE_URL = "https://grabyourcar.com";
 
 // Static pages with their priorities and change frequencies
 const staticPages = [
@@ -14,16 +14,18 @@ const staticPages = [
   { path: "/cars", priority: "0.9", changefreq: "daily" },
   { path: "/car-insurance", priority: "0.8", changefreq: "weekly" },
   { path: "/car-loans", priority: "0.8", changefreq: "weekly" },
-  { path: "/corporate-buying", priority: "0.7", changefreq: "weekly" },
+  { path: "/corporate", priority: "0.7", changefreq: "weekly" },
   { path: "/accessories", priority: "0.7", changefreq: "weekly" },
   { path: "/hsrp", priority: "0.7", changefreq: "weekly" },
-  { path: "/self-drive-rentals", priority: "0.7", changefreq: "weekly" },
+  { path: "/self-drive", priority: "0.7", changefreq: "weekly" },
   { path: "/brochures", priority: "0.6", changefreq: "weekly" },
   { path: "/compare", priority: "0.6", changefreq: "weekly" },
   { path: "/car-finder", priority: "0.6", changefreq: "weekly" },
   { path: "/upcoming-cars", priority: "0.7", changefreq: "daily" },
   { path: "/auto-news", priority: "0.7", changefreq: "daily" },
   { path: "/blog", priority: "0.6", changefreq: "weekly" },
+  { path: "/about", priority: "0.5", changefreq: "monthly" },
+  { path: "/dealers", priority: "0.7", changefreq: "weekly" },
 ];
 
 Deno.serve(async (req) => {
@@ -48,6 +50,14 @@ Deno.serve(async (req) => {
       console.error("Error fetching cars:", error);
       throw error;
     }
+
+    // Fetch blog posts
+    const { data: blogs } = await supabase
+      .from("ai_blog_posts")
+      .select("slug, updated_at")
+      .eq("status", "published")
+      .order("updated_at", { ascending: false });
+
 
     const today = new Date().toISOString().split("T")[0];
 
@@ -106,9 +116,26 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Add blog post pages
+    if (blogs && blogs.length > 0) {
+      for (const blog of blogs) {
+        const lastmod = blog.updated_at
+          ? new Date(blog.updated_at).toISOString().split("T")[0]
+          : today;
+
+        xml += `  <url>
+    <loc>${BASE_URL}/blog/${blog.slug}</loc>
+    <lastmod>${lastmod}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+`;
+      }
+    }
+
     xml += `</urlset>`;
 
-    console.log(`Generated sitemap with ${staticPages.length} static pages and ${cars?.length || 0} car pages`);
+    console.log(`Generated sitemap with ${staticPages.length} static + ${cars?.length || 0} car + ${blogs?.length || 0} blog pages`);
 
     return new Response(xml, {
       headers: {

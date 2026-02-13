@@ -19,13 +19,13 @@ interface CarsListStructuredDataProps {
 }
 
 export const CarsListStructuredData = ({ cars, totalCount }: CarsListStructuredDataProps) => {
-  const baseUrl = "https://grabyourcar.lovable.app";
+  const baseUrl = "https://grabyourcar.com";
   
   // ItemList schema for the cars listing
   const itemListSchema = {
     "@context": "https://schema.org",
     "@type": "ItemList",
-    "name": "New Cars in India 2024",
+    "name": "New Cars in India 2025",
     "description": `Browse ${totalCount}+ new cars from top brands in India. Compare prices, specifications, and features.`,
     "url": `${baseUrl}/cars`,
     "numberOfItems": cars.length,
@@ -62,7 +62,7 @@ export const CarsListStructuredData = ({ cars, totalCount }: CarsListStructuredD
   const collectionPageSchema = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
-    "name": "New Cars in India 2024 - All Brands & Models",
+    "name": "New Cars in India 2025 - All Brands & Models",
     "description": `Explore ${totalCount}+ new cars from 10+ brands in India. Filter by brand, body type, fuel type, transmission & price.`,
     "url": `${baseUrl}/cars`,
     "mainEntity": {
@@ -92,7 +92,7 @@ export const CarsListStructuredData = ({ cars, totalCount }: CarsListStructuredD
   const webPageSchema = {
     "@context": "https://schema.org",
     "@type": "WebPage",
-    "name": "New Cars in India 2024",
+    "name": "New Cars in India 2025",
     "url": `${baseUrl}/cars`,
     "potentialAction": {
       "@type": "SearchAction",

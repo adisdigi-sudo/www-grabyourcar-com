@@ -1,8 +1,13 @@
+# GrabYourCar - robots.txt
+# https://grabyourcar.com
+
 User-agent: Googlebot
 Allow: /
+Crawl-delay: 1
 
 User-agent: Bingbot
 Allow: /
+Crawl-delay: 2
 
 User-agent: Twitterbot
 Allow: /
@@ -10,11 +15,36 @@ Allow: /
 User-agent: facebookexternalhit
 Allow: /
 
-User-agent: *
+User-agent: LinkedInBot
 Allow: /
 
-# Dynamic sitemap generated from database
+User-agent: WhatsApp
+Allow: /
+
+User-agent: Slurp
+Allow: /
+
+User-agent: DuckDuckBot
+Allow: /
+
+User-agent: *
+Allow: /
+Crawl-delay: 5
+
+# Block admin and auth pages
+Disallow: /admin
+Disallow: /admin-auth
+Disallow: /admin-reset-password
+Disallow: /auth
+
+# Block internal pages
+Disallow: /my-bookings
+Disallow: /my-orders
+Disallow: /favorites
+Disallow: /accessory-wishlist
+
+# Dynamic sitemap from database (primary)
 Sitemap: https://ynoiwioypxpurwdbjvyt.supabase.co/functions/v1/sitemap
 
 # Static sitemap fallback
-Sitemap: https://grabyourcar.lovable.app/sitemap.xml
+Sitemap: https://grabyourcar.com/sitemap.xml
