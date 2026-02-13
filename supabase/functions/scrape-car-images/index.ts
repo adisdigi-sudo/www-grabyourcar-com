@@ -13,61 +13,122 @@ interface ImageResult {
   source: string;
 }
 
-// Build search URLs for CardekHo and CarWale
-function buildSearchUrls(brand: string, model: string): Array<{name: string; url: string; patterns: string[]; referer: string}> {
-  // Normalize for URL construction
-  const brandSlug = brand.toLowerCase()
-    .replace(/\s+/g, '-')
-    .replace('maruti suzuki', 'maruti')
-    .replace('mercedes-benz', 'mercedes-benz')
-    .replace('force motors', 'force')
-    .replace('land rover', 'land-rover')
-    .replace('rolls royce', 'rolls-royce');
-  
-  // Clean model name - remove brand prefix if present
-  let modelClean = model.toLowerCase()
-    .replace(brand.toLowerCase(), '')
-    .trim()
-    .replace(/\s+/g, '-')
-    .replace(/^-+|-+$/g, '');
-  
-  // Handle edge cases
-  if (!modelClean || modelClean.length < 2) {
-    modelClean = model.toLowerCase().replace(/\s+/g, '-');
+// OEM website configurations - ONLY official manufacturer sources
+const OEM_SOURCES: Record<string, { baseUrl: string; patterns: string[]; referer: string }> = {
+  'Tata': {
+    baseUrl: 'https://cars.tatamotors.com',
+    patterns: ['tatamotors.com', 'tatamotorscdn.com', 'scene7.com'],
+    referer: 'https://cars.tatamotors.com/'
+  },
+  'Mahindra': {
+    baseUrl: 'https://auto.mahindra.com',
+    patterns: ['mahindra.com', 'mahindracdn.com'],
+    referer: 'https://auto.mahindra.com/'
+  },
+  'Kia': {
+    baseUrl: 'https://www.kia.com/in',
+    patterns: ['kia.com', 'kiacdn.com'],
+    referer: 'https://www.kia.com/in/'
+  },
+  'Hyundai': {
+    baseUrl: 'https://www.hyundai.com/in/en',
+    patterns: ['hyundai.com', 'hyundaicdn.com'],
+    referer: 'https://www.hyundai.com/in/en/'
+  },
+  'Toyota': {
+    baseUrl: 'https://www.toyotabharat.com',
+    patterns: ['toyotabharat.com', 'toyotacdn.com'],
+    referer: 'https://www.toyotabharat.com/'
+  },
+  'Honda': {
+    baseUrl: 'https://www.hondacarindia.com',
+    patterns: ['hondacarindia.com', 'hondacdn.com'],
+    referer: 'https://www.hondacarindia.com/'
+  },
+  'MG': {
+    baseUrl: 'https://www.mgmotor.co.in',
+    patterns: ['mgmotor.co.in', 'mgcdn.com'],
+    referer: 'https://www.mgmotor.co.in/'
+  },
+  'Skoda': {
+    baseUrl: 'https://www.skoda-auto.co.in',
+    patterns: ['skoda-auto.co.in', 'skodacdn.com'],
+    referer: 'https://www.skoda-auto.co.in/'
+  },
+  'Volkswagen': {
+    baseUrl: 'https://www.volkswagen.co.in',
+    patterns: ['volkswagen.co.in', 'vwcdn.com', 'scene7.com'],
+    referer: 'https://www.volkswagen.co.in/'
+  },
+  'BMW': {
+    baseUrl: 'https://www.bmw.in',
+    patterns: ['bmw.in', 'bmwcdn.com', 'scene7.com'],
+    referer: 'https://www.bmw.in/'
+  },
+  'Mercedes-Benz': {
+    baseUrl: 'https://www.mercedes-benz.co.in',
+    patterns: ['mercedes-benz.co.in', 'mercedescdn.com', 'scene7.com'],
+    referer: 'https://www.mercedes-benz.co.in/'
+  },
+  'Audi': {
+    baseUrl: 'https://www.audi.in',
+    patterns: ['audi.in', 'audicdn.com', 'scene7.com'],
+    referer: 'https://www.audi.in/'
+  },
+  'Volvo': {
+    baseUrl: 'https://www.volvocars.com/en-in',
+    patterns: ['volvocars.com', 'volvocdn.com'],
+    referer: 'https://www.volvocars.com/en-in/'
+  },
+  'BYD': {
+    baseUrl: 'https://www.byd.com/in',
+    patterns: ['byd.com', 'bydcdn.com'],
+    referer: 'https://www.byd.com/in/'
+  },
+  'Tesla': {
+    baseUrl: 'https://www.tesla.com',
+    patterns: ['tesla.com', 'teslacdn.com'],
+    referer: 'https://www.tesla.com/'
+  },
+  'Nissan': {
+    baseUrl: 'https://www.nissan.co.in',
+    patterns: ['nissan.co.in', 'nissancdn.com'],
+    referer: 'https://www.nissan.co.in/'
+  },
+  'Jeep': {
+    baseUrl: 'https://www.jeep-india.com',
+    patterns: ['jeep-india.com', 'jeepcdn.com'],
+    referer: 'https://www.jeep-india.com/'
+  },
+  'Renault': {
+    baseUrl: 'https://www.renault.co.in',
+    patterns: ['renault.co.in', 'renaultcdn.com'],
+    referer: 'https://www.renault.co.in/'
+  },
+};
+
+// Build OEM-only search URL
+function buildOemUrl(brand: string, model: string): { url: string; source: OEM } | null {
+  const oemConfig = OEM_SOURCES[brand];
+  if (!oemConfig) {
+    console.log(`⚠ No OEM configuration for ${brand}`);
+    return null;
   }
 
-  return [
-    {
-      name: 'cardekho',
-      url: `https://www.cardekho.com/${brandSlug}/${modelClean}/images`,
-      patterns: ['imgd.aeplcdn.com', 'stimg.cardekho.com', 'cdnimg.cardekho.com', 'img.gaadicdn.com'],
-      referer: 'https://www.cardekho.com/'
-    },
-    {
-      name: 'cardekho-alt',
-      url: `https://www.cardekho.com/${brandSlug}-${modelClean}/images`,
-      patterns: ['imgd.aeplcdn.com', 'stimg.cardekho.com', 'cdnimg.cardekho.com', 'img.gaadicdn.com'],
-      referer: 'https://www.cardekho.com/'
-    },
-    {
-      name: 'carwale',
-      url: `https://www.carwale.com/${brandSlug}-cars/${modelClean}/images`,
-      patterns: ['imgd.carwale.com', 'imgd1.carwale.com', 'media.carwale.com', 'img.gaadicdn.com'],
-      referer: 'https://www.carwale.com/'
-    },
-    {
-      name: 'carwale-alt',
-      url: `https://www.carwale.com/${brandSlug}-${modelClean}/images`,
-      patterns: ['imgd.carwale.com', 'imgd1.carwale.com', 'media.carwale.com', 'img.gaadicdn.com'],
-      referer: 'https://www.carwale.com/'
-    },
-    {
-      name: 'zigwheels',
-      url: `https://www.zigwheels.com/${brandSlug}-cars/${modelClean}/images`,
-      patterns: ['imgd.zigwheels.com', 'zigcdn.in', 'gaadicdn.com'],
-      referer: 'https://www.zigwheels.com/'
-    }
-  ];
+  const modelSlug = model.toLowerCase().replace(/\s+/g, '-');
+  const url = `${oemConfig.baseUrl}/${modelSlug}`;
+  
+  return { 
+    url,
+    source: { name: brand, ...oemConfig }
+  };
+}
+
+interface OEM {
+  name: string;
+  baseUrl: string;
+  patterns: string[];
+  referer: string;
 }
 
 // Extract high-quality image URLs from HTML content
@@ -77,38 +138,49 @@ function extractImagesFromHtml(html: string, patterns: string[]): string[] {
   // Match image URLs from various attributes
   const imgRegex = /(?:src|data-src|data-original|data-lazy-src)=["']([^"']+)["']/gi;
   const bgRegex = /background(?:-image)?:\s*url\(['"]?([^'")\s]+)['"]?\)/gi;
-  const jsonImgRegex = /"(?:image|url|src|original|large|medium)":\s*"([^"]+)"/gi;
+  const jsonImgRegex = /"(?:image|url|src|original|large|medium|picture)":\s*"([^"]+)"/gi;
+  const srcsetRegex = /srcset=["']([^"']+)["']/gi;
   
   let match;
   
   // Extract from img tags
   while ((match = imgRegex.exec(html)) !== null) {
     const url = match[1];
-    if (isValidCarImage(url, patterns)) {
-      images.push(upgradeToHighRes(normalizeImageUrl(url)));
+    if (isValidOemImage(url, patterns)) {
+      images.push(normalizeImageUrl(url));
+    }
+  }
+  
+  // Extract from srcset
+  while ((match = srcsetRegex.exec(html)) !== null) {
+    const urls = match[1].split(',').map(u => u.trim().split(' ')[0]);
+    for (const url of urls) {
+      if (isValidOemImage(url, patterns)) {
+        images.push(normalizeImageUrl(url));
+      }
     }
   }
   
   // Extract from background URLs
   while ((match = bgRegex.exec(html)) !== null) {
     const url = match[1];
-    if (isValidCarImage(url, patterns)) {
-      images.push(upgradeToHighRes(normalizeImageUrl(url)));
+    if (isValidOemImage(url, patterns)) {
+      images.push(normalizeImageUrl(url));
     }
   }
   
   // Extract from JSON data
   while ((match = jsonImgRegex.exec(html)) !== null) {
     const url = match[1];
-    if (isValidCarImage(url, patterns)) {
-      images.push(upgradeToHighRes(normalizeImageUrl(url)));
+    if (isValidOemImage(url, patterns)) {
+      images.push(normalizeImageUrl(url));
     }
   }
   
   // Deduplicate and filter
   const uniqueImages = [...new Set(images)];
   return uniqueImages.filter(url => {
-    // Ensure it's a high-res image
+    // Ensure it's a car image, not thumbnail/icon
     return !url.includes('thumb') && 
            !url.includes('_s.') && 
            !url.includes('_m.') &&
@@ -118,19 +190,20 @@ function extractImagesFromHtml(html: string, patterns: string[]): string[] {
            !url.includes('/200x') &&
            !url.includes('logo') &&
            !url.includes('icon') &&
-           !url.includes('badge');
+           !url.includes('badge') &&
+           !url.includes('social');
   });
 }
 
-// Validate if URL is a real car image from trusted sources
-function isValidCarImage(url: string, patterns: string[]): boolean {
-  if (!url) return false;
+// Validate if URL is from official OEM source
+function isValidOemImage(url: string, patterns: string[]): boolean {
+  if (!url || typeof url !== 'string') return false;
   
   // Must be an image
-  if (!url.match(/\.(jpg|jpeg|png|webp)(\?|$|#)/i)) return false;
+  if (!url.match(/\.(jpg|jpeg|png|webp|gif)(\?|$|#)/i)) return false;
   
-  // Must match at least one trusted pattern
-  return patterns.some(p => url.includes(p));
+  // Must match at least one OEM domain pattern
+  return patterns.some(p => url.toLowerCase().includes(p.toLowerCase()));
 }
 
 // Normalize URL (fix protocol, clean up)
@@ -150,114 +223,85 @@ function normalizeImageUrl(url: string): string {
   return normalized;
 }
 
-// Upgrade CardekHo/CarWale images to highest resolution
-function upgradeToHighRes(url: string): string {
-  let upgraded = url;
-  
-  // CardekHo: Replace size in path (630x420 -> 930x620 or larger)
-  upgraded = upgraded.replace(/\/\d+x\d+\//g, '/930x620/');
-  
-  // CarWale: Replace size parameters
-  upgraded = upgraded.replace(/w=\d+/g, 'w=1200');
-  upgraded = upgraded.replace(/h=\d+/g, 'h=900');
-  
-  // Remove quality degradation params
-  upgraded = upgraded.replace(/q=\d+/g, 'q=90');
-  
-  return upgraded;
-}
-
-// Scrape images from multiple sources
-async function scrapeCarImagesMultiSource(
+// Scrape images from OEM website only
+async function scrapeOemImages(
   brand: string,
   model: string,
   firecrawlKey: string
 ): Promise<ImageResult[]> {
-  const sources = buildSearchUrls(brand, model);
+  const oemUrl = buildOemUrl(brand, model);
+  if (!oemUrl) {
+    console.log(`⚠ OEM source not available for ${brand}`);
+    return [];
+  }
+
   const allImages: ImageResult[] = [];
   
-  for (const source of sources) {
-    if (allImages.length >= 10) break;
+  try {
+    console.log(`🔍 Scraping OEM: ${brand} from ${oemUrl.url}`);
     
-    try {
-      console.log(`Trying ${source.name}: ${source.url}`);
-      
-      const response = await fetch(`${FIRECRAWL_API_URL}/scrape`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${firecrawlKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          url: source.url,
-          formats: ['html', 'links'],
-          onlyMainContent: false,
-          waitFor: 3000,
-        }),
-      });
+    const response = await fetch(`${FIRECRAWL_API_URL}/scrape`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${firecrawlKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        url: oemUrl.url,
+        formats: ['html', 'links'],
+        onlyMainContent: false,
+        waitFor: 3000,
+      }),
+    });
 
-      if (!response.ok) {
-        console.log(`${source.name} failed: ${response.status}`);
-        continue;
-      }
-
-      const data = await response.json();
-      
-      // Method 1: Extract from HTML
-      const html = data.data?.html || '';
-      const htmlImages = extractImagesFromHtml(html, source.patterns);
-      console.log(`${source.name} HTML: Found ${htmlImages.length} images`);
-      
-      for (const url of htmlImages.slice(0, 8)) {
-        if (!allImages.find(i => i.url === url)) {
-          allImages.push({ url, source: source.name });
-        }
-      }
-      
-      // Method 2: Extract from links array
-      const links = data.data?.links || [];
-      const linkImages = links.filter((link: string) => isValidCarImage(link, source.patterns));
-      console.log(`${source.name} links: Found ${linkImages.length} images`);
-      
-      for (const url of linkImages.slice(0, 6)) {
-        if (!allImages.find(i => i.url === url)) {
-          allImages.push({ url: normalizeImageUrl(url), source: source.name });
-        }
-      }
-      
-      // If we got images, skip to next brand alternative sources
-      if (allImages.length >= 6) {
-        console.log(`Got ${allImages.length} images, moving on`);
-        break;
-      }
-      
-    } catch (e) {
-      console.error(`${source.name} error:`, e);
+    if (!response.ok) {
+      console.log(`⚠ OEM scrape failed: ${response.status}`);
+      return [];
     }
+
+    const data = await response.json();
+    
+    // Extract from HTML
+    const html = data.data?.html || '';
+    const htmlImages = extractImagesFromHtml(html, oemUrl.source.patterns);
+    console.log(`✓ Found ${htmlImages.length} images from HTML`);
+    
+    for (const url of htmlImages.slice(0, 10)) {
+      if (!allImages.find(i => i.url === url)) {
+        allImages.push({ url, source: brand });
+      }
+    }
+    
+    // Extract from links array
+    const links = data.data?.links || [];
+    const linkImages = links.filter((link: string) => isValidOemImage(link, oemUrl.source.patterns));
+    console.log(`✓ Found ${linkImages.length} images from links`);
+    
+    for (const url of linkImages.slice(0, 5)) {
+      if (!allImages.find(i => i.url === url)) {
+        allImages.push({ url: normalizeImageUrl(url), source: brand });
+      }
+    }
+    
+  } catch (e) {
+    console.error(`✗ OEM scrape error for ${brand}:`, e);
   }
 
   return allImages.slice(0, 10);
 }
 
-// Download image with proper headers to bypass hotlink protection
+// Download image with proper headers
 async function downloadImage(imageUrl: string, referer: string): Promise<{ data: Uint8Array; contentType: string } | null> {
   const headers: Record<string, string> = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-    // Request JPEG/WebP/PNG, NOT AVIF (Supabase doesn't support AVIF)
     'Accept': 'image/webp,image/png,image/jpeg,image/*;q=0.8',
-    'Accept-Language': 'en-US,en;q=0.9,hi;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.9',
     'Referer': referer,
     'Origin': new URL(referer).origin,
-    'Sec-Fetch-Dest': 'image',
-    'Sec-Fetch-Mode': 'no-cors',
-    'Sec-Fetch-Site': 'cross-site',
-    'Sec-Ch-Ua': '"Not A(Brand";v="99", "Google Chrome";v="121", "Chromium";v="121"',
-    'Sec-Ch-Ua-Mobile': '?0',
-    'Sec-Ch-Ua-Platform': '"Windows"',
   };
 
   try {
-    console.log(`  Downloading: ${imageUrl.substring(0, 70)}...`);
+    console.log(`  ⬇️ Downloading: ${imageUrl.substring(0, 70)}...`);
     const response = await fetch(imageUrl, { headers });
     
     if (!response.ok) {
@@ -267,9 +311,8 @@ async function downloadImage(imageUrl: string, referer: string): Promise<{ data:
     
     const contentType = response.headers.get('content-type') || '';
     
-    // Skip AVIF - Supabase storage doesn't support it
-    if (contentType.includes('avif')) {
-      console.log(`  ✗ AVIF not supported, skipping`);
+    if (contentType.includes('avif') || contentType.includes('heic')) {
+      console.log(`  ✗ Unsupported format: ${contentType}`);
       return null;
     }
     
@@ -281,13 +324,13 @@ async function downloadImage(imageUrl: string, referer: string): Promise<{ data:
     const buffer = await response.arrayBuffer();
     const data = new Uint8Array(buffer);
     
-    // Skip tiny images (likely placeholders or icons) - 5KB minimum
+    // Skip tiny images (likely placeholders)
     if (data.length < 5000) {
       console.log(`  ✗ Too small: ${data.length} bytes`);
       return null;
     }
     
-    console.log(`  ✓ Downloaded: ${Math.round(data.length/1024)}KB (${contentType})`);
+    console.log(`  ✓ Downloaded: ${Math.round(data.length/1024)}KB`);
     return { data, contentType };
   } catch (e) {
     console.error(`  ✗ Download error:`, e);
@@ -372,10 +415,10 @@ serve(async (req) => {
       for (const car of carsToProcess) {
         console.log(`\n=== Processing: ${car.brand} ${car.name} ===`);
         
-        const scrapedImages = await scrapeCarImagesMultiSource(car.brand, car.name, firecrawlKey);
+        const scrapedImages = await scrapeOemImages(car.brand, car.name, firecrawlKey);
         
         if (scrapedImages.length === 0) {
-          console.log('No images found from any source');
+          console.log('❌ No images found from official OEM website');
           results.failed.push(`${car.brand} ${car.name}`);
           continue;
         }
@@ -385,10 +428,9 @@ serve(async (req) => {
         for (let i = 0; i < scrapedImages.length; i++) {
           const { url: imgUrl, source } = scrapedImages[i];
           
-          // Get appropriate referer based on source
-          const referer = source.includes('cardekho') ? 'https://www.cardekho.com/' :
-                          source.includes('carwale') ? 'https://www.carwale.com/' :
-                          'https://www.zigwheels.com/';
+          // Use OEM referer from config
+          const oemConfig = OEM_SOURCES[source];
+          const referer = oemConfig?.referer || 'https://example.com/';
           
           const downloaded = await downloadImage(imgUrl, referer);
           
@@ -501,11 +543,11 @@ serve(async (req) => {
           .in('id', fakeImages.map(i => i.id));
       }
 
-      const scrapedImages = await scrapeCarImagesMultiSource(car.brand, car.name, firecrawlKey);
+       const scrapedImages = await scrapeOemImages(car.brand, car.name, firecrawlKey);
       
       if (scrapedImages.length === 0) {
         return new Response(
-          JSON.stringify({ success: false, error: 'No images found from CardekHo, CarWale, or ZigWheels. The car model may not be listed yet.' }),
+          JSON.stringify({ success: false, error: 'No images found from official manufacturer (OEM) website. Please ensure the model is listed on the manufacturer\'s official site.' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -515,9 +557,9 @@ serve(async (req) => {
       for (let i = 0; i < scrapedImages.length; i++) {
         const { url: imgUrl, source } = scrapedImages[i];
         
-        const referer = source.includes('cardekho') ? 'https://www.cardekho.com/' :
-                        source.includes('carwale') ? 'https://www.carwale.com/' :
-                        'https://www.zigwheels.com/';
+        // Use OEM referer from config
+        const oemConfig = OEM_SOURCES[source];
+        const referer = oemConfig?.referer || 'https://example.com/';
         
         const downloaded = await downloadImage(imgUrl, referer);
         
