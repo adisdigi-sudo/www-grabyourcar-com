@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { stateRates, calculateStatePriceBreakup } from "@/data/statePricing";
 import { invalidateCarQueries } from "@/lib/queryInvalidation";
+import { CarImageUploader } from "./CarImageUploader";
 
 interface CarData {
   id: string;
@@ -975,46 +976,13 @@ export const UnifiedCarManagement = () => {
 
               {/* Images Tab */}
               <TabsContent value="images" className="space-y-4">
-                <div className="grid grid-cols-3 gap-4">
-                  {selectedCar.images.map((image) => (
-                    <div key={image.id} className="relative group">
-                      <div className="aspect-video rounded-lg overflow-hidden bg-muted">
-                        <img src={image.url} alt={image.alt_text || ""} className="h-full w-full object-cover" />
-                      </div>
-                      {image.is_primary && <Badge className="absolute top-2 left-2">Primary</Badge>}
-                      <Button
-                        variant="destructive"
-                        size="icon"
-                        className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => deleteImageMutation.mutate(image.id)}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-
-                {selectedCar.images.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <ImageIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No images yet</p>
-                  </div>
-                )}
-
-                <div className="border-t pt-4">
-                  <Label>Add Image URL</Label>
-                  <div className="flex gap-2 mt-2">
-                    <Input
-                      value={newImageUrl}
-                      onChange={(e) => setNewImageUrl(e.target.value)}
-                      placeholder="https://example.com/image.jpg"
-                    />
-                    <Button onClick={handleAddImage} disabled={!newImageUrl || addImageMutation.isPending}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add
-                    </Button>
-                  </div>
-                </div>
+                <CarImageUploader
+                  carId={selectedCar.id}
+                  carName={selectedCar.name}
+                  carBrand={selectedCar.brand}
+                  images={selectedCar.images}
+                  onImagesChanged={() => refetch()}
+                />
               </TabsContent>
 
               {/* Colors Tab */}

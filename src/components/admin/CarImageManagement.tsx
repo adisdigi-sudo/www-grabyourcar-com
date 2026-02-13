@@ -1,18 +1,15 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { invalidateCarQueries } from "@/lib/queryInvalidation";
-import { format } from "date-fns";
-import { Search, Plus, Eye, RefreshCw, Car, Image as ImageIcon, Trash2, Upload } from "lucide-react";
+import { Search, Eye, RefreshCw, Image as ImageIcon } from "lucide-react";
+import { CarImageUploader } from "./CarImageUploader";
 
 interface CarImage {
   id: string;
@@ -35,7 +32,6 @@ export const CarImageManagement = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCar, setSelectedCar] = useState<CarWithImages | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
-  const [newImageUrl, setNewImageUrl] = useState("");
 
   // Fetch cars with images
   const { data: cars, isLoading, refetch } = useQuery({
@@ -230,46 +226,13 @@ export const CarImageManagement = () => {
           </DialogHeader>
           
           {selectedCar && (
-            <div className="space-y-4">
-              {selectedCar.images.length > 0 ? (
-                <div className="grid grid-cols-3 gap-4">
-                  {selectedCar.images.map((image) => (
-                    <div key={image.id} className="relative group">
-                      <div className="aspect-video rounded-lg overflow-hidden bg-muted">
-                        <img 
-                          src={image.url} 
-                          alt={image.alt_text || selectedCar.name}
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
-                      {image.is_primary && (
-                        <Badge className="absolute top-2 left-2 bg-primary">Primary</Badge>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <ImageIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No images for this car</p>
-                </div>
-              )}
-
-              <div className="border-t pt-4">
-                <Label>Add New Image URL</Label>
-                <div className="flex gap-2 mt-2">
-                  <Input
-                    value={newImageUrl}
-                    onChange={(e) => setNewImageUrl(e.target.value)}
-                    placeholder="https://..."
-                  />
-                  <Button disabled={!newImageUrl}>
-                    <Upload className="h-4 w-4 mr-2" />
-                    Add
-                  </Button>
-                </div>
-              </div>
-            </div>
+            <CarImageUploader
+              carId={selectedCar.id}
+              carName={selectedCar.name}
+              carBrand={selectedCar.brand}
+              images={selectedCar.images}
+              onImagesChanged={() => refetch()}
+            />
           )}
         </DialogContent>
       </Dialog>
