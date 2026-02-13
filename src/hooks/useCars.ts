@@ -34,24 +34,28 @@ export const useCars = (options?: {
     refetchOnWindowFocus: true,
   });
 
-  // Real-time subscription for cars table
+  // Real-time subscription for cars and related tables
   useEffect(() => {
     if (!useDatabase) return;
 
-    const channel = supabase
-      .channel('cars-realtime')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'cars' },
-        () => {
-          console.log('[Cars] Real-time update received');
-          queryClient.invalidateQueries({ queryKey: ['cars'] });
-        }
-      )
-      .subscribe();
+    const tables = ['cars', 'car_images', 'car_colors', 'car_variants', 'car_specifications', 'car_features', 'car_brochures', 'car_offers'];
+    const channels = tables.map(table =>
+      supabase
+        .channel(`cars-list-${table}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table },
+          () => {
+            console.log(`[Cars] Real-time update from ${table}`);
+            queryClient.invalidateQueries({ queryKey: ['cars'] });
+            queryClient.invalidateQueries({ queryKey: ['allCars'] });
+          }
+        )
+        .subscribe()
+    );
 
     return () => {
-      supabase.removeChannel(channel);
+      channels.forEach(ch => supabase.removeChannel(ch));
     };
   }, [useDatabase, queryClient]);
 
@@ -70,27 +74,31 @@ export const useCarBySlug = (slug: string | undefined, useDatabase = true) => {
       return fetchCarBySlug(slug);
     },
     enabled: !!slug,
-    staleTime: 1000 * 30,
+    staleTime: 1000 * 10, // 10 seconds for faster updates
     refetchOnWindowFocus: true,
   });
 
-  // Real-time subscription
+  // Real-time subscription for car and all related tables
   useEffect(() => {
     if (!slug || !useDatabase) return;
 
-    const channel = supabase
-      .channel(`car-${slug}-realtime`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'cars' },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['car', slug] });
-        }
-      )
-      .subscribe();
+    const tables = ['cars', 'car_images', 'car_colors', 'car_variants', 'car_specifications', 'car_features', 'car_brochures', 'car_offers'];
+    const channels = tables.map(table =>
+      supabase
+        .channel(`car-${slug}-${table}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table },
+          () => {
+            console.log(`[Car ${slug}] Real-time update from ${table}`);
+            queryClient.invalidateQueries({ queryKey: ['car', slug] });
+          }
+        )
+        .subscribe()
+    );
 
     return () => {
-      supabase.removeChannel(channel);
+      channels.forEach(ch => supabase.removeChannel(ch));
     };
   }, [slug, useDatabase, queryClient]);
 
