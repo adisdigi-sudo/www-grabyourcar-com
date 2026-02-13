@@ -2317,6 +2317,81 @@ export type Database = {
         }
         Relationships: []
       }
+      hero_slides: {
+        Row: {
+          brand: string | null
+          created_at: string
+          cta_label: string | null
+          cta_link: string | null
+          cta_secondary_label: string | null
+          cta_secondary_link: string | null
+          description: string | null
+          id: string
+          image_url: string
+          is_active: boolean | null
+          launch_date: string | null
+          price_range: string | null
+          sort_order: number | null
+          spec_1_label: string | null
+          spec_1_value: string | null
+          spec_2_label: string | null
+          spec_2_value: string | null
+          spec_3_label: string | null
+          spec_3_value: string | null
+          subtitle: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          brand?: string | null
+          created_at?: string
+          cta_label?: string | null
+          cta_link?: string | null
+          cta_secondary_label?: string | null
+          cta_secondary_link?: string | null
+          description?: string | null
+          id?: string
+          image_url: string
+          is_active?: boolean | null
+          launch_date?: string | null
+          price_range?: string | null
+          sort_order?: number | null
+          spec_1_label?: string | null
+          spec_1_value?: string | null
+          spec_2_label?: string | null
+          spec_2_value?: string | null
+          spec_3_label?: string | null
+          spec_3_value?: string | null
+          subtitle?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          brand?: string | null
+          created_at?: string
+          cta_label?: string | null
+          cta_link?: string | null
+          cta_secondary_label?: string | null
+          cta_secondary_link?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string
+          is_active?: boolean | null
+          launch_date?: string | null
+          price_range?: string | null
+          sort_order?: number | null
+          spec_1_label?: string | null
+          spec_1_value?: string | null
+          spec_2_label?: string | null
+          spec_2_value?: string | null
+          spec_3_label?: string | null
+          spec_3_value?: string | null
+          subtitle?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       homepage_banners: {
         Row: {
           created_at: string
