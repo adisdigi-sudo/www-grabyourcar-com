@@ -204,7 +204,7 @@ const FeaturesSpecs = () => {
                               </Button>
                             </Link>
                             <WhatsAppCardButton carName={car.name} className="h-9" />
-                            <a href="tel:+919577200023">
+                            <a href="tel:+919855924442">
                               <Button variant="call" size="sm" className="gap-1.5 h-9">
                                 <Phone className="h-4 w-4" />
                                 Call

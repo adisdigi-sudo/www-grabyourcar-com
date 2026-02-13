@@ -26,14 +26,7 @@ export const HeroSection = () => {
       {/* Content */}
       <div className="container mx-auto px-4 relative z-10 pt-20 pb-16">
         <div className="max-w-5xl mx-auto text-center">
-          {/* Logo Watermark for Brand Authority */}
-          <div className="flex justify-center mb-6">
-            <img 
-              src={logoImage} 
-              alt="GrabYourCar" 
-              className="h-14 md:h-16 lg:h-20 w-auto brightness-0 invert opacity-90 drop-shadow-2xl"
-            />
-          </div>
+          {/* Brand Authority Badge */}
 
           {/* Trust Badge - More Premium */}
           <Badge variant="trust" className="mb-6 py-2.5 px-5 text-sm border-2 border-success/30 backdrop-blur-sm">
@@ -80,7 +73,7 @@ export const HeroSection = () => {
            {/* CTA Button */}
            <div className="mt-8 flex justify-center">
              <a 
-               href="https://wa.me/919577200023?text=Hi%20Grabyourcar!%20I%27m%20interested%20in%20buying%20a%20new%20car%20and%20would%20like%20to%20speak%20with%20an%20expert." 
+               href="https://wa.me/919855924442?text=Hi%20Grabyourcar!%20I%27m%20interested%20in%20buying%20a%20new%20car%20and%20would%20like%20to%20speak%20with%20an%20expert." 
                target="_blank" 
                rel="noopener noreferrer"
              >

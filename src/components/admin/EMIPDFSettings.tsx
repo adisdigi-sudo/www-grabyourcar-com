@@ -79,10 +79,10 @@ interface EMIPDFConfig {
 const defaultConfig: EMIPDFConfig = {
   companyName: "GRABYOURCAR",
   tagline: "India's Smarter Way to Buy New Cars",
-  phone: "+91 95772 00023",
+  phone: "+91 98559 24442",
   email: "hello@grabyourcar.com",
   website: "www.grabyourcar.com",
-  address: "Mumbai, Maharashtra, India",
+  address: "MS 228, 2nd Floor, DT Mega Mall, Sector 28, Gurugram, Haryana – 122001",
   founder: "Anshdeep Singh",
   founderTitle: "Founder & CEO",
   primaryColor: "#22c55e",

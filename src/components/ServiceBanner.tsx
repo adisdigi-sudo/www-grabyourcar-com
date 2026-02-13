@@ -114,7 +114,7 @@ export const ServiceBanner = ({
             )}
             {showContactButtons && (
               <>
-                <a href="https://wa.me/919577200023" target="_blank" rel="noopener noreferrer">
+                <a href="https://wa.me/919855924442" target="_blank" rel="noopener noreferrer">
                   <Button
                     size="sm"
                     variant={variant === "accent" ? "default" : "secondary"}
@@ -124,7 +124,7 @@ export const ServiceBanner = ({
                     <span className="hidden sm:inline">WhatsApp</span>
                   </Button>
                 </a>
-                <a href="tel:+919577200023">
+                <a href="tel:+919855924442">
                   <Button
                     size="sm"
                     variant="outline"

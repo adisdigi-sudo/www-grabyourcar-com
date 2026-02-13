@@ -511,7 +511,7 @@ export const PriceSummaryCard = ({
               size="sm"
               className="w-full justify-center"
             />
-            <a href="tel:+919577200023" className="block">
+            <a href="tel:+919855924442" className="block">
               <Button variant="call" size="sm" className="w-full">
                 <Phone className="h-4 w-4 mr-1.5" />
                 Call Expert

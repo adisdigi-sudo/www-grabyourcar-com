@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { leadEngineMessages, getWhatsAppUrl as getLeadEngineUrl } from "@/components/WhatsAppLeadEngine";
 
-const WHATSAPP_NUMBER = "919577200023";
+const WHATSAPP_NUMBER = "919855924442";
 
 interface WhatsAppCTAProps extends Omit<ButtonProps, "variant"> {
   /** Pre-filled message for WhatsApp chat */

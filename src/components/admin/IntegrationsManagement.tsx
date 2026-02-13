@@ -55,7 +55,7 @@ export const IntegrationsManagement = () => {
     model: "gemini-2.5-flash",
     maxTokens: 1024,
     temperature: 0.7,
-    fallbackMessage: "I'm sorry, I couldn't understand that. Would you like to speak with our expert? Call +91 95772 00023",
+    fallbackMessage: "I'm sorry, I couldn't understand that. Would you like to speak with our expert? Call +91 98559 24442",
     businessHours: "Mon-Sat, 9AM-7PM IST",
     autoRespond: true,
   });

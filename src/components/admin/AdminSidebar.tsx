@@ -417,7 +417,7 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
           )}>
             {!collapsed && (
               <p className="text-xs text-muted-foreground text-center">
-                © 2024 Grabyourcar
+                © 2025 Grabyourcar
               </p>
             )}
             {collapsed && (

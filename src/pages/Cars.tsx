@@ -845,7 +845,7 @@ const Cars = () => {
                           {/* WhatsApp & Call Row */}
                           <div className="flex gap-2 w-full">
                             <WhatsAppCardButton carName={car.name} className="flex-1 h-9" />
-                            <a href="tel:+919577200023" className="flex-1">
+                            <a href="tel:+919855924442" className="flex-1">
                               <Button variant="call" size="sm" className="w-full gap-1.5 h-9">
                                 <Phone className="h-4 w-4" />
                                 Call
@@ -917,7 +917,7 @@ const Cars = () => {
                               </Button>
                             </Link>
                             <WhatsAppCardButton carName={car.name} className="flex-1 min-w-[120px] h-9" />
-                            <a href="tel:+919577200023" className="flex-1 min-w-[100px]">
+                            <a href="tel:+919855924442" className="flex-1 min-w-[100px]">
                               <Button variant="call" size="sm" className="w-full gap-1.5 h-9">
                                 <Phone className="h-4 w-4" />
                                 Call
