@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,11 +9,11 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Save, Plus, Edit, Trash2, Star, Image, MessageSquare, Car, MapPin, Calendar } from "lucide-react";
+import { Save, Plus, Edit, Trash2, Star, Image, Car, MapPin, Upload, Video, X, Loader2 } from "lucide-react";
 
 interface GoogleReview {
   id: string;
@@ -31,16 +31,23 @@ interface GoogleReview {
 
 interface DeliveryStory {
   id: string;
-  customerName: string;
+  customer_name: string;
   location: string;
-  carName: string;
-  carBrand: string;
-  imageUrl: string;
-  testimonial: string;
-  deliveryDate: string;
-  timeline: { step: string; date: string }[];
-  isFeatured: boolean;
-  isVisible: boolean;
+  car_model: string;
+  car_brand: string;
+  image_url: string | null;
+  video_url: string | null;
+  testimonial: string | null;
+  delivery_date: string | null;
+  savings: string | null;
+  highlight: string | null;
+  buyer_type: string | null;
+  wait_time: string | null;
+  rating: number;
+  journey_steps: string[];
+  is_featured: boolean;
+  is_visible: boolean;
+  sort_order: number;
 }
 
 interface ReviewSettings {
@@ -54,6 +61,10 @@ interface ReviewSettings {
 export const SocialProofManagement = () => {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("reviews");
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
   
   // Google Reviews State
   const [reviews, setReviews] = useState<GoogleReview[]>([]);
@@ -68,20 +79,32 @@ export const SocialProofManagement = () => {
   });
   
   // Delivery Stories State
-  const [stories, setStories] = useState<DeliveryStory[]>([]);
   const [editingStory, setEditingStory] = useState<DeliveryStory | null>(null);
   const [storyDialogOpen, setStoryDialogOpen] = useState(false);
 
-  // Fetch settings
-  const { data: savedSettings, isLoading } = useQuery({
+  // Fetch review settings from admin_settings
+  const { data: savedSettings, isLoading: loadingSettings } = useQuery({
     queryKey: ["socialProofSettings"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("admin_settings")
         .select("*")
-        .in("setting_key", ["google_reviews", "delivery_stories", "review_settings"]);
+        .in("setting_key", ["google_reviews", "review_settings"]);
       if (error) throw error;
       return data;
+    },
+  });
+
+  // Fetch delivery stories from dedicated table
+  const { data: stories = [], isLoading: loadingStories } = useQuery({
+    queryKey: ["delivery-stories"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("delivery_stories")
+        .select("*")
+        .order("sort_order", { ascending: true });
+      if (error) throw error;
+      return data as DeliveryStory[];
     },
   });
 
@@ -90,8 +113,6 @@ export const SocialProofManagement = () => {
       savedSettings.forEach((setting) => {
         if (setting.setting_key === "google_reviews") {
           setReviews(setting.setting_value as unknown as GoogleReview[]);
-        } else if (setting.setting_key === "delivery_stories") {
-          setStories(setting.setting_value as unknown as DeliveryStory[]);
         } else if (setting.setting_key === "review_settings") {
           setReviewSettings(setting.setting_value as unknown as ReviewSettings);
         }
@@ -114,10 +135,87 @@ export const SocialProofManagement = () => {
       queryClient.invalidateQueries({ queryKey: ["socialProofSettings"] });
       toast.success("Settings saved");
     },
-    onError: () => {
-      toast.error("Failed to save settings");
-    },
+    onError: () => toast.error("Failed to save settings"),
   });
+
+  // Story mutations using delivery_stories table
+  const saveStoryMutation = useMutation({
+    mutationFn: async (story: DeliveryStory) => {
+      const { id, ...storyData } = story;
+      // Check if exists
+      const { data: existing } = await (supabase as any)
+        .from("delivery_stories")
+        .select("id")
+        .eq("id", id)
+        .maybeSingle();
+
+      if (existing) {
+        const { error } = await (supabase as any)
+          .from("delivery_stories")
+          .update(storyData)
+          .eq("id", id);
+        if (error) throw error;
+      } else {
+        const { error } = await (supabase as any)
+          .from("delivery_stories")
+          .insert({ id, ...storyData });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["delivery-stories"] });
+      toast.success("Story saved");
+      setStoryDialogOpen(false);
+      setEditingStory(null);
+    },
+    onError: () => toast.error("Failed to save story"),
+  });
+
+  const deleteStoryMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await (supabase as any)
+        .from("delivery_stories")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["delivery-stories"] });
+      toast.success("Story deleted");
+    },
+    onError: () => toast.error("Failed to delete story"),
+  });
+
+  // File upload handler
+  const handleFileUpload = async (file: File, type: "photo" | "video") => {
+    const setter = type === "photo" ? setUploadingPhoto : setUploadingVideo;
+    setter(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `delivery-stories/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from("car-assets")
+        .upload(path, file, { contentType: file.type, upsert: true });
+      
+      if (uploadError) throw uploadError;
+      
+      const { data: urlData } = supabase.storage.from("car-assets").getPublicUrl(path);
+      
+      if (editingStory) {
+        if (type === "photo") {
+          setEditingStory({ ...editingStory, image_url: urlData.publicUrl });
+        } else {
+          setEditingStory({ ...editingStory, video_url: urlData.publicUrl });
+        }
+      }
+      toast.success(`${type === "photo" ? "Photo" : "Video"} uploaded`);
+    } catch (err) {
+      toast.error(`Failed to upload ${type}`);
+    } finally {
+      setter(false);
+    }
+  };
 
   // Review handlers
   const handleAddReview = () => {
@@ -159,39 +257,28 @@ export const SocialProofManagement = () => {
   const handleAddStory = () => {
     setEditingStory({
       id: crypto.randomUUID(),
-      customerName: "",
+      customer_name: "",
       location: "",
-      carName: "",
-      carBrand: "",
-      imageUrl: "",
+      car_model: "",
+      car_brand: "",
+      image_url: null,
+      video_url: null,
       testimonial: "",
-      deliveryDate: new Date().toISOString().split("T")[0],
-      timeline: [],
-      isFeatured: false,
-      isVisible: true,
+      delivery_date: new Date().toISOString().split("T")[0],
+      savings: null,
+      highlight: null,
+      buyer_type: null,
+      wait_time: null,
+      rating: 5,
+      journey_steps: [],
+      is_featured: false,
+      is_visible: true,
+      sort_order: stories.length,
     });
     setStoryDialogOpen(true);
   };
 
-  const handleSaveStory = () => {
-    if (!editingStory) return;
-    const exists = stories.find(s => s.id === editingStory.id);
-    if (exists) {
-      setStories(stories.map(s => s.id === editingStory.id ? editingStory : s));
-    } else {
-      setStories([...stories, editingStory]);
-    }
-    setStoryDialogOpen(false);
-    setEditingStory(null);
-  };
-
-  const handleDeleteStory = (id: string) => {
-    setStories(stories.filter(s => s.id !== id));
-  };
-
-  const handleSaveAllStories = () => {
-    saveMutation.mutate({ key: "delivery_stories", value: stories });
-  };
+  const isLoading = loadingSettings || loadingStories;
 
   if (isLoading) {
     return <div className="p-8 text-center">Loading...</div>;
@@ -221,10 +308,7 @@ export const SocialProofManagement = () => {
               <div className="space-y-2">
                 <Label>Overall Rating</Label>
                 <Input 
-                  type="number" 
-                  step="0.1" 
-                  min="0" 
-                  max="5"
+                  type="number" step="0.1" min="0" max="5"
                   value={reviewSettings.overallRating}
                   onChange={(e) => setReviewSettings({ ...reviewSettings, overallRating: parseFloat(e.target.value) })}
                 />
@@ -295,7 +379,7 @@ export const SocialProofManagement = () => {
                       <TableCell>
                         <div className="flex items-center gap-1">
                           {Array.from({ length: review.rating }).map((_, i) => (
-                            <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                            <Star key={i} className="h-4 w-4 fill-accent text-accent" />
                           ))}
                         </div>
                       </TableCell>
@@ -332,24 +416,20 @@ export const SocialProofManagement = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Real Delivery Stories ({stories.length})</CardTitle>
-                  <CardDescription>Showcase authentic customer deliveries</CardDescription>
+                  <CardDescription>Showcase authentic customer deliveries — stored in database</CardDescription>
                 </div>
-                <div className="flex gap-2">
-                  <Button onClick={handleAddStory}><Plus className="h-4 w-4 mr-2" />Add Story</Button>
-                  <Button onClick={handleSaveAllStories} disabled={saveMutation.isPending}>
-                    <Save className="h-4 w-4 mr-2" />Save All
-                  </Button>
-                </div>
+                <Button onClick={handleAddStory}><Plus className="h-4 w-4 mr-2" />Add Story</Button>
               </div>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Preview</TableHead>
                     <TableHead>Customer</TableHead>
                     <TableHead>Car</TableHead>
                     <TableHead>Location</TableHead>
-                    <TableHead>Delivery Date</TableHead>
+                    <TableHead>Date</TableHead>
                     <TableHead>Featured</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Actions</TableHead>
@@ -358,11 +438,20 @@ export const SocialProofManagement = () => {
                 <TableBody>
                   {stories.map((story) => (
                     <TableRow key={story.id}>
-                      <TableCell className="font-medium">{story.customerName}</TableCell>
+                      <TableCell>
+                        {story.image_url ? (
+                          <img src={story.image_url} alt="" className="w-12 h-12 rounded-lg object-cover" />
+                        ) : (
+                          <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center">
+                            <Image className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="font-medium">{story.customer_name}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Car className="h-4 w-4 text-muted-foreground" />
-                          {story.carBrand} {story.carName}
+                          {story.car_brand} {story.car_model}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -370,15 +459,15 @@ export const SocialProofManagement = () => {
                           <MapPin className="h-3 w-3" />{story.location}
                         </div>
                       </TableCell>
-                      <TableCell>{story.deliveryDate}</TableCell>
+                      <TableCell>{story.delivery_date}</TableCell>
                       <TableCell>
-                        <Badge variant={story.isFeatured ? "default" : "outline"}>
-                          {story.isFeatured ? "Featured" : "Normal"}
+                        <Badge variant={story.is_featured ? "default" : "outline"}>
+                          {story.is_featured ? "Featured" : "Normal"}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={story.isVisible ? "default" : "secondary"}>
-                          {story.isVisible ? "Visible" : "Hidden"}
+                        <Badge variant={story.is_visible ? "default" : "secondary"}>
+                          {story.is_visible ? "Visible" : "Hidden"}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -387,7 +476,7 @@ export const SocialProofManagement = () => {
                             setEditingStory(story);
                             setStoryDialogOpen(true);
                           }}><Edit className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDeleteStory(story.id)}>
+                          <Button variant="ghost" size="icon" onClick={() => deleteStoryMutation.mutate(story.id)}>
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </div>
@@ -471,18 +560,18 @@ export const SocialProofManagement = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Story Dialog */}
+      {/* Story Dialog with File Upload */}
       <Dialog open={storyDialogOpen} onOpenChange={setStoryDialogOpen}>
-        <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingStory?.customerName ? "Edit Story" : "Add Story"}</DialogTitle>
+            <DialogTitle>{editingStory?.customer_name ? "Edit Story" : "Add Story"}</DialogTitle>
           </DialogHeader>
           {editingStory && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Customer Name</Label>
-                  <Input value={editingStory.customerName} onChange={(e) => setEditingStory({ ...editingStory, customerName: e.target.value })} />
+                  <Input value={editingStory.customer_name} onChange={(e) => setEditingStory({ ...editingStory, customer_name: e.target.value })} />
                 </div>
                 <div className="space-y-2">
                   <Label>Location</Label>
@@ -492,34 +581,137 @@ export const SocialProofManagement = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Car Brand</Label>
-                  <Input value={editingStory.carBrand} onChange={(e) => setEditingStory({ ...editingStory, carBrand: e.target.value })} />
+                  <Input value={editingStory.car_brand} onChange={(e) => setEditingStory({ ...editingStory, car_brand: e.target.value })} />
                 </div>
                 <div className="space-y-2">
                   <Label>Car Model</Label>
-                  <Input value={editingStory.carName} onChange={(e) => setEditingStory({ ...editingStory, carName: e.target.value })} />
+                  <Input value={editingStory.car_model} onChange={(e) => setEditingStory({ ...editingStory, car_model: e.target.value })} />
+                </div>
+              </div>
+
+              {/* Photo Upload */}
+              <div className="space-y-2">
+                <Label>Delivery Photo</Label>
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileUpload(file, "photo");
+                  }}
+                />
+                {editingStory.image_url ? (
+                  <div className="relative inline-block">
+                    <img src={editingStory.image_url} alt="Preview" className="w-full max-h-48 rounded-lg object-cover border" />
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-2 right-2 h-7 w-7"
+                      onClick={() => setEditingStory({ ...editingStory, image_url: null })}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    className="w-full h-24 border-dashed flex flex-col gap-1"
+                    onClick={() => photoInputRef.current?.click()}
+                    disabled={uploadingPhoto}
+                  >
+                    {uploadingPhoto ? (
+                      <Loader2 className="h-6 w-6 animate-spin" />
+                    ) : (
+                      <>
+                        <Upload className="h-6 w-6 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">Click to upload photo</span>
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+
+              {/* Video Upload */}
+              <div className="space-y-2">
+                <Label>Delivery Video (optional)</Label>
+                <input
+                  ref={videoInputRef}
+                  type="file"
+                  accept="video/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileUpload(file, "video");
+                  }}
+                />
+                {editingStory.video_url ? (
+                  <div className="relative">
+                    <video src={editingStory.video_url} controls className="w-full max-h-48 rounded-lg border" />
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-2 right-2 h-7 w-7"
+                      onClick={() => setEditingStory({ ...editingStory, video_url: null })}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    className="w-full h-16 border-dashed flex gap-2"
+                    onClick={() => videoInputRef.current?.click()}
+                    disabled={uploadingVideo}
+                  >
+                    {uploadingVideo ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <>
+                        <Video className="h-5 w-5 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">Upload video</span>
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Delivery Date</Label>
+                  <Input type="date" value={editingStory.delivery_date || ""} onChange={(e) => setEditingStory({ ...editingStory, delivery_date: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Savings (e.g. ₹50,000)</Label>
+                  <Input value={editingStory.savings || ""} onChange={(e) => setEditingStory({ ...editingStory, savings: e.target.value })} />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Image URL</Label>
-                  <Input value={editingStory.imageUrl} onChange={(e) => setEditingStory({ ...editingStory, imageUrl: e.target.value })} />
+                  <Label>Highlight Tag</Label>
+                  <Input value={editingStory.highlight || ""} onChange={(e) => setEditingStory({ ...editingStory, highlight: e.target.value })} placeholder="e.g. Priority Delivery" />
                 </div>
                 <div className="space-y-2">
-                  <Label>Delivery Date</Label>
-                  <Input type="date" value={editingStory.deliveryDate} onChange={(e) => setEditingStory({ ...editingStory, deliveryDate: e.target.value })} />
+                  <Label>Buyer Type</Label>
+                  <Input value={editingStory.buyer_type || ""} onChange={(e) => setEditingStory({ ...editingStory, buyer_type: e.target.value })} placeholder="e.g. Family Upgrade" />
                 </div>
               </div>
               <div className="space-y-2">
+                <Label>Wait Time</Label>
+                <Input value={editingStory.wait_time || ""} onChange={(e) => setEditingStory({ ...editingStory, wait_time: e.target.value })} placeholder="e.g. 3 weeks" />
+              </div>
+              <div className="space-y-2">
                 <Label>Customer Testimonial</Label>
-                <Textarea value={editingStory.testimonial} onChange={(e) => setEditingStory({ ...editingStory, testimonial: e.target.value })} rows={3} />
+                <Textarea value={editingStory.testimonial || ""} onChange={(e) => setEditingStory({ ...editingStory, testimonial: e.target.value })} rows={3} />
               </div>
               <div className="flex items-center gap-6">
                 <div className="flex items-center gap-2">
-                  <Switch checked={editingStory.isFeatured} onCheckedChange={(v) => setEditingStory({ ...editingStory, isFeatured: v })} />
+                  <Switch checked={editingStory.is_featured} onCheckedChange={(v) => setEditingStory({ ...editingStory, is_featured: v })} />
                   <Label>Featured</Label>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Switch checked={editingStory.isVisible} onCheckedChange={(v) => setEditingStory({ ...editingStory, isVisible: v })} />
+                  <Switch checked={editingStory.is_visible} onCheckedChange={(v) => setEditingStory({ ...editingStory, is_visible: v })} />
                   <Label>Visible</Label>
                 </div>
               </div>
@@ -527,7 +719,10 @@ export const SocialProofManagement = () => {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setStoryDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveStory}>Save</Button>
+            <Button onClick={() => editingStory && saveStoryMutation.mutate(editingStory)} disabled={saveStoryMutation.isPending}>
+              {saveStoryMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Save
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
