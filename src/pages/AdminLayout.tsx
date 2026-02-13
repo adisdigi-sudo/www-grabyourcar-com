@@ -54,6 +54,7 @@ import DriverBookingsManagement from "@/components/admin/DriverBookingsManagemen
 import APIPartnersManagement from "@/components/admin/APIPartnersManagement";
 import BrandsManagement from "@/components/admin/BrandsManagement";
 import QuickTextImporter from "@/components/admin/QuickTextImporter";
+import URLDataScraper from "@/components/admin/URLDataScraper";
 import SiteSettingsManager from "@/components/admin/SiteSettingsManager";
 import BannersManager from "@/components/admin/BannersManager";
 import TestimonialsManager from "@/components/admin/TestimonialsManager";
@@ -158,6 +159,8 @@ const AdminLayout = () => {
         return <VehicleAttributesManager />;
       case "cars-ai":
         return <AIContentManagement />;
+      case "cars-url-scraper":
+        return <URLDataScraper />;
       case "website-homepage":
         return <HomepageManagement />;
       case "website-content":

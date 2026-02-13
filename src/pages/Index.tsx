@@ -21,6 +21,7 @@ import {
   DynamicTestimonials,
   DynamicCTABanners,
 } from "@/components/DynamicHomepageContent";
+import { CarShowcaseScroll, UpcomingCarsStrip, OffersStrip } from "@/components/HomepageShowcase";
 
 const Index = () => {
   const [loanPrefill, setLoanPrefill] = useState<string>("");
@@ -67,6 +68,12 @@ const Index = () => {
         {/* Hero Section with Search */}
         <HeroSection />
         
+        {/* Offers scrolling strip */}
+        <OffersStrip />
+        
+        {/* Rivian-style car showcase with horizontal scroll */}
+        <CarShowcaseScroll />
+        
         {/* Dynamic Hero Banners from Admin */}
         <DynamicHeroBanners />
         
@@ -78,6 +85,9 @@ const Index = () => {
         
         {/* Dynamic Featured Cars from Admin */}
         <DynamicFeaturedCars />
+        
+        {/* Upcoming Cars Showcase */}
+        <UpcomingCarsStrip />
         
         {/* Featured Car Listings */}
         <CarListings />
