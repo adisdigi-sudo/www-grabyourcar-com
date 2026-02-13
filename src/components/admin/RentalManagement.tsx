@@ -177,6 +177,11 @@ export const RentalManagement = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminRentals'] });
+      queryClient.invalidateQueries({ queryKey: ['rental-services'] });
+      queryClient.invalidateQueries({ queryKey: ['rental-vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-rental-vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['driver-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-driver-bookings'] });
       toast.success('Booking updated successfully');
       setIsEditBookingOpen(false);
     },
@@ -198,6 +203,11 @@ export const RentalManagement = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminRentals'] });
+      queryClient.invalidateQueries({ queryKey: ['rental-services'] });
+      queryClient.invalidateQueries({ queryKey: ['rental-vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-rental-vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['driver-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-driver-bookings'] });
       toast.success('Booking deleted');
       setIsDeleteDialogOpen(false);
       setBookingToDelete(null);

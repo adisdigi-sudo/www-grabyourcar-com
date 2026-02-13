@@ -157,6 +157,9 @@ export const AccessoriesManagement = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminAccessoryOrders'] });
+      queryClient.invalidateQueries({ queryKey: ['accessory-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-accessory-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['accessory-wishlist'] });
       toast.success('Order updated successfully');
       setIsEditingDiscount(false);
     },
