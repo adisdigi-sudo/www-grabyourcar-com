@@ -36,6 +36,7 @@ import {
   Mail,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { AdminGlobalSearch } from "./AdminGlobalSearch";
 
 interface AdminSidebarProps {
   activeTab: string;
@@ -392,6 +393,14 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
               </Button>
             )}
           </div>
+
+          {/* Navigation */}
+          {/* Global Search */}
+          {!collapsed && (
+            <div className="px-3 py-2 border-b">
+              <AdminGlobalSearch onNavigate={handleNavClick} />
+            </div>
+          )}
 
           {/* Navigation */}
           <ScrollArea className="flex-1 px-2 py-3">
