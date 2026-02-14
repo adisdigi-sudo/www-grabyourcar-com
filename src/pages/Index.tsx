@@ -15,6 +15,8 @@ import { CustomerStories } from "@/components/CustomerStories";
 import { DealerLocatorWidget } from "@/components/DealerLocatorWidget";
 import { CrossSellWidget } from "@/components/CrossSellWidget";
 import { HomepageSEOContent } from "@/components/HomepageSEOContent";
+import { EntryLeadCaptureModal } from "@/components/EntryLeadCaptureModal";
+import { ExitIntentPopup } from "@/components/ExitIntentPopup";
 import {
   DynamicHeroBanners,
   DynamicPromoBanners,
@@ -113,6 +115,10 @@ const Index = () => {
       
       {/* Floating WhatsApp & Call Buttons */}
       <FloatingCTA />
+      
+      {/* Lead Capture Modals */}
+      <EntryLeadCaptureModal />
+      <ExitIntentPopup />
       </div>
     </>
   );

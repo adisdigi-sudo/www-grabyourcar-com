@@ -57,6 +57,7 @@ import { calculateStatePriceBreakup } from "@/data/statePricing";
 import { toast } from "sonner";
 import { WhatsAppQuickActions, WhatsAppConversionCard } from "@/components/WhatsAppLeadEngine";
 import { Skeleton } from "@/components/ui/skeleton";
+import { BrochureLeadGate } from "@/components/BrochureLeadGate";
 
 const CompareButton = ({ carId }: { carId: number }) => {
   const { addToCompare, removeFromCompare, isInCompare, canAddMore } = useCompare();
@@ -347,26 +348,20 @@ const CarDetail = () => {
                   <CompareButton carId={car.id} />
                   <ShareButtons title={`Check out ${car.name} on Grabyourcar`} />
                   {car.brochureUrl && (
-                    <Button 
-                      variant="outline" 
-                      size="lg" 
-                      className="font-semibold hover:scale-105 transition-transform"
-                      onClick={() => {
-                        // Force download instead of opening in new tab
-                        const link = document.createElement('a');
-                        link.href = car.brochureUrl!;
-                        link.download = `${car.slug}-brochure.pdf`;
-                        link.target = '_blank';
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                        toast.success("Downloading brochure...");
-                        trackBrochureDownload(car.slug, car.name);
-                      }}
+                    <BrochureLeadGate
+                      brochureUrl={car.brochureUrl}
+                      carName={`${car.brand} ${car.name}`}
+                      carSlug={car.slug}
                     >
-                      <FileText className="h-5 w-5 mr-2" />
-                      Brochure
-                    </Button>
+                      <Button 
+                        variant="outline" 
+                        size="lg" 
+                        className="font-semibold hover:scale-105 transition-transform"
+                      >
+                        <FileText className="h-5 w-5 mr-2" />
+                        Brochure
+                      </Button>
+                    </BrochureLeadGate>
                   )}
                   <WhatsAppSalesCTA 
                     carName={`${car.brand} ${car.name}`} 
