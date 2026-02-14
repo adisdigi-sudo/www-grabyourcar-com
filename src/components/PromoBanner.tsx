@@ -3,12 +3,10 @@ import { motion } from "framer-motion";
 // Sleek F1-style supercar SVG
 const SuperCar = ({ color, index }: { color: string; index: number }) => (
   <svg
-    width="120"
-    height="36"
     viewBox="0 0 120 36"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
-    className="drop-shadow-lg"
+    className="drop-shadow-lg w-24 h-7 md:w-28 md:h-8 lg:w-32 lg:h-9 flex-shrink-0"
   >
     <defs>
       <linearGradient id={`carGrad${index}`} x1="0%" y1="0%" x2="100%" y2="0%">
@@ -84,7 +82,7 @@ const carColors = [
 
 export const PromoBanner = () => {
   return (
-    <div className="relative h-10 md:h-12 lg:h-14 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 overflow-hidden shadow-lg">
+    <div className="relative h-12 md:h-14 lg:h-16 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 overflow-hidden shadow-lg flex items-center justify-center">
       {/* Racing track lines */}
       <div className="absolute inset-0 pointer-events-none">
         {/* Top track line */}
@@ -108,7 +106,7 @@ export const PromoBanner = () => {
 
       {/* Racing supercars - Wave 1 */}
       <motion.div
-        className="absolute top-1/2 -translate-y-1/2 flex items-center gap-10"
+        className="absolute top-1/2 -translate-y-1/2 left-0 right-0 flex items-center justify-center gap-4 md:gap-6 lg:gap-8"
         initial={{ x: "100vw" }}
         animate={{ x: "-1200px" }}
         transition={{
@@ -124,7 +122,7 @@ export const PromoBanner = () => {
 
       {/* Racing supercars - Wave 2 (staggered) */}
       <motion.div
-        className="absolute top-1/2 -translate-y-1/2 flex items-center gap-10"
+        className="absolute top-1/2 -translate-y-1/2 left-0 right-0 flex items-center justify-center gap-4 md:gap-6 lg:gap-8"
         initial={{ x: "100vw" }}
         animate={{ x: "-1200px" }}
         transition={{
