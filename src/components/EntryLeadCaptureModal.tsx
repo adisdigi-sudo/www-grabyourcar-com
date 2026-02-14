@@ -115,7 +115,7 @@ export const EntryLeadCaptureModal = () => {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleDismiss(); }}>
-      <DialogContent className="sm:max-w-lg p-0 overflow-hidden border-0 bg-transparent shadow-none [&>button]:hidden">
+      <DialogContent className="sm:max-w-lg p-0 overflow-hidden border-0 bg-transparent shadow-none [&>button]:hidden max-h-[90vh] overflow-y-auto mx-3 md:mx-auto">
         <motion.div
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -139,27 +139,27 @@ export const EntryLeadCaptureModal = () => {
           ) : (
             <>
               {/* Header Banner */}
-              <div className="relative bg-gradient-to-r from-primary to-primary/80 px-6 py-5 text-primary-foreground">
+              <div className="relative bg-gradient-to-r from-primary to-primary/80 px-4 py-4 md:px-6 md:py-5 text-primary-foreground">
                 <button
                   onClick={handleDismiss}
-                  className="absolute top-3 right-3 p-1.5 rounded-full bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors"
+                  className="absolute top-2 right-2 md:top-3 md:right-3 p-1.5 rounded-full bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors"
                 >
                   <X className="h-4 w-4" />
                 </button>
-                <Badge className="bg-primary-foreground/20 text-primary-foreground mb-3 border-0">
+                <Badge className="bg-primary-foreground/20 text-primary-foreground mb-2 md:mb-3 border-0 text-[10px] md:text-xs">
                   <Gift className="h-3 w-3 mr-1" />
                   Limited Time
                 </Badge>
-                <h2 className="text-xl md:text-2xl font-heading font-bold leading-tight">
+                <h2 className="text-lg md:text-2xl font-heading font-bold leading-tight pr-6">
                   Skip Waiting Period — Unlock Best Deals
                 </h2>
-                <p className="text-sm text-primary-foreground/80 mt-1">
+                <p className="text-xs md:text-sm text-primary-foreground/80 mt-1">
                   Get ready stock car offers from 500+ dealers instantly
                 </p>
               </div>
 
               {/* Form */}
-              <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              <form onSubmit={handleSubmit} className="p-4 md:p-6 space-y-3 md:space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="entry-name" className="text-sm font-medium">Name *</Label>

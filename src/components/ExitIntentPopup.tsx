@@ -106,7 +106,7 @@ export const ExitIntentPopup = () => {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleDismiss(); }}>
-      <DialogContent className="sm:max-w-sm p-0 overflow-hidden border-0 bg-transparent shadow-none [&>button]:hidden">
+      <DialogContent className="sm:max-w-sm p-0 overflow-hidden border-0 bg-transparent shadow-none [&>button]:hidden max-h-[90vh] overflow-y-auto mx-3 md:mx-auto">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}

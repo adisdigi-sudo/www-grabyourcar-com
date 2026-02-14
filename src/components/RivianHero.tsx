@@ -134,7 +134,7 @@ export const RivianHero = () => {
   };
 
   return (
-    <section className="relative h-screen w-full overflow-hidden bg-black">
+    <section className="relative h-[85vh] md:h-screen w-full overflow-hidden bg-black">
       {/* Full-bleed background image */}
       <AnimatePresence initial={false} custom={direction} mode="wait">
         <motion.div
@@ -157,8 +157,8 @@ export const RivianHero = () => {
       </AnimatePresence>
 
       {/* Content */}
-      <div className="relative z-10 h-full flex items-end pb-28 md:items-center md:pb-0">
-        <div className="container mx-auto px-6 md:px-12 lg:px-20">
+      <div className="relative z-10 h-full flex items-end pb-20 md:items-center md:pb-0">
+        <div className="container mx-auto px-4 md:px-12 lg:px-20">
           <AnimatePresence mode="wait">
             <motion.div
               key={current}
@@ -169,65 +169,65 @@ export const RivianHero = () => {
             >
               {/* Brand label */}
               {slide.brand && (
-                <p className="text-white/40 text-xs tracking-[0.35em] uppercase font-medium mb-3">
+                <p className="text-white/40 text-[10px] md:text-xs tracking-[0.35em] uppercase font-medium mb-2 md:mb-3">
                   {slide.brand}
                 </p>
               )}
 
               {/* Badges */}
-              <div className="flex flex-wrap items-center gap-3 mb-5">
+              <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-3 md:mb-5">
                 {slide.launch_date && (
-                  <span className="inline-flex items-center gap-1.5 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-4 py-1.5 text-sm text-white/90 font-medium">
-                    <Calendar className="h-3.5 w-3.5" />
+                  <span className="inline-flex items-center gap-1.5 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-3 py-1 md:px-4 md:py-1.5 text-xs md:text-sm text-white/90 font-medium">
+                    <Calendar className="h-3 w-3 md:h-3.5 md:w-3.5" />
                     {slide.launch_date}
                   </span>
                 )}
                 {slide.price_range && (
-                  <span className="inline-flex items-center gap-1.5 bg-emerald-500/20 backdrop-blur-md border border-emerald-400/30 rounded-full px-4 py-1.5 text-sm text-emerald-300 font-medium">
-                    <IndianRupee className="h-3.5 w-3.5" />
+                  <span className="inline-flex items-center gap-1.5 bg-emerald-500/20 backdrop-blur-md border border-emerald-400/30 rounded-full px-3 py-1 md:px-4 md:py-1.5 text-xs md:text-sm text-emerald-300 font-medium">
+                    <IndianRupee className="h-3 w-3 md:h-3.5 md:w-3.5" />
                     {slide.price_range}
                   </span>
                 )}
               </div>
 
               {/* Title */}
-              <h1 className="text-5xl md:text-6xl lg:text-8xl font-bold text-white leading-[1.02] tracking-tight mb-2">
+              <h1 className="text-3xl md:text-5xl lg:text-7xl font-bold text-white leading-[1.05] tracking-tight mb-1 md:mb-2">
                 {slide.title}
               </h1>
               {slide.subtitle && (
-                <p className="text-xl md:text-2xl text-white/60 font-light mb-4">
+                <p className="text-base md:text-xl lg:text-2xl text-white/60 font-light mb-2 md:mb-4">
                   {slide.subtitle}
                 </p>
               )}
 
               {/* Description */}
               {slide.description && (
-                <p className="text-base md:text-lg text-white/50 leading-relaxed mb-6 max-w-md">
+                <p className="text-sm md:text-base lg:text-lg text-white/50 leading-relaxed mb-4 md:mb-6 max-w-md line-clamp-2 md:line-clamp-none">
                   {slide.description}
                 </p>
               )}
 
               {/* Specs */}
               {specs.length > 0 && (
-                <div className="flex gap-3 mb-8">
+                <div className="flex gap-2 md:gap-3 mb-5 md:mb-8 overflow-x-auto pb-1 -mx-1 px-1">
                   {specs.map((spec) => (
-                    <div key={spec.label} className="bg-white/5 backdrop-blur-md rounded-xl px-4 py-3 border border-white/10 min-w-[100px]">
-                      <div className="text-emerald-400 mb-1">
-                        {specIcons[spec.label] || <Zap className="h-4 w-4" />}
+                    <div key={spec.label} className="bg-white/5 backdrop-blur-md rounded-lg md:rounded-xl px-3 py-2 md:px-4 md:py-3 border border-white/10 min-w-[80px] md:min-w-[100px] flex-shrink-0">
+                      <div className="text-emerald-400 mb-0.5 md:mb-1">
+                        {specIcons[spec.label] || <Zap className="h-3.5 w-3.5 md:h-5 md:w-5" />}
                       </div>
-                      <p className="text-white font-bold text-base">{spec.value}</p>
-                      <p className="text-white/40 text-[11px] uppercase tracking-wider">{spec.label}</p>
+                      <p className="text-white font-bold text-sm md:text-base">{spec.value}</p>
+                      <p className="text-white/40 text-[9px] md:text-[11px] uppercase tracking-wider">{spec.label}</p>
                     </div>
                   ))}
                 </div>
               )}
 
               {/* CTAs */}
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 md:gap-4">
                 <Link to={slide.cta_link || "/upcoming-cars"}>
                   <Button
                     size="lg"
-                    className="rounded-full bg-white text-black hover:bg-white/90 px-8 py-6 text-base font-semibold shadow-2xl hover:shadow-white/20 transition-all"
+                    className="rounded-full bg-white text-black hover:bg-white/90 px-5 py-5 md:px-8 md:py-6 text-sm md:text-base font-semibold shadow-2xl hover:shadow-white/20 transition-all"
                   >
                     {slide.cta_label || "Learn More"}
                   </Button>
@@ -235,10 +235,10 @@ export const RivianHero = () => {
                 <Link to={slide.cta_secondary_link || "/cars"}>
                   <Button
                     size="lg"
-                    className="rounded-full bg-emerald-500 text-white hover:bg-emerald-600 px-8 py-6 text-base font-semibold shadow-2xl hover:shadow-emerald-500/20 transition-all"
+                    className="rounded-full bg-emerald-500 text-white hover:bg-emerald-600 px-5 py-5 md:px-8 md:py-6 text-sm md:text-base font-semibold shadow-2xl hover:shadow-emerald-500/20 transition-all"
                   >
                     {slide.cta_secondary_label || "Book Now"}
-                    <ArrowRight className="h-4 w-4 ml-2" />
+                    <ArrowRight className="h-4 w-4 ml-1 md:ml-2" />
                   </Button>
                 </Link>
               </div>
@@ -250,34 +250,34 @@ export const RivianHero = () => {
       {/* Navigation arrows */}
       <button
         onClick={prev}
-        className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all"
+        className="absolute left-3 md:left-8 top-1/2 -translate-y-1/2 z-20 w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all"
         aria-label="Previous slide"
       >
-        <ChevronLeft className="h-5 w-5" />
+        <ChevronLeft className="h-4 w-4 md:h-5 md:w-5" />
       </button>
       <button
         onClick={next}
-        className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all"
+        className="absolute right-3 md:right-8 top-1/2 -translate-y-1/2 z-20 w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all"
         aria-label="Next slide"
       >
-        <ChevronRight className="h-5 w-5" />
+        <ChevronRight className="h-4 w-4 md:h-5 md:w-5" />
       </button>
 
-      {/* Slide indicators + car name thumbnails */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1">
+      {/* Slide indicators */}
+      <div className="absolute bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1">
         {slides.map((s, i) => (
           <button
             key={s.id || i}
             onClick={() => { setDirection(i > current ? 1 : -1); setCurrent(i); }}
             className={`relative rounded-full transition-all duration-500 overflow-hidden ${
               i === current
-                ? "w-24 h-8 bg-white/20 backdrop-blur-md border border-white/30"
-                : "w-3 h-3 bg-white/30 hover:bg-white/50"
+                ? "w-16 md:w-24 h-7 md:h-8 bg-white/20 backdrop-blur-md border border-white/30"
+                : "w-2.5 h-2.5 md:w-3 md:h-3 bg-white/30 hover:bg-white/50"
             }`}
             aria-label={`Go to ${s.title}`}
           >
             {i === current && (
-              <span className="absolute inset-0 flex items-center justify-center text-[11px] text-white font-semibold tracking-wide truncate px-2">
+              <span className="absolute inset-0 flex items-center justify-center text-[9px] md:text-[11px] text-white font-semibold tracking-wide truncate px-1.5 md:px-2">
                 {s.title}
               </span>
             )}
@@ -286,7 +286,7 @@ export const RivianHero = () => {
       </div>
 
       {/* Slide counter */}
-      <div className="absolute top-24 right-6 md:right-12 z-20 text-white/30 text-sm font-mono">
+      <div className="absolute top-20 md:top-24 right-4 md:right-12 z-20 text-white/30 text-xs md:text-sm font-mono">
         {String(current + 1).padStart(2, "0")} / {String(slides.length).padStart(2, "0")}
       </div>
     </section>
