@@ -6,8 +6,8 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null; data?: { user: User | null } }>;
+  signInWithPhone: (phone: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -19,7 +19,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
@@ -28,7 +27,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     );
 
-    // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -38,26 +36,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-      },
-    });
-    
-    return { error: error as Error | null };
+  const signInWithPhone = async (phone: string) => {
+    const cleanPhone = phone.replace(/\D/g, "");
+    const email = `91${cleanPhone}@grabyourcar.app`;
+    const password = `wa_${cleanPhone}_gyc2024`;
+
+    // Try sign in first
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+
+    if (!signInError) {
+      return { error: null };
+    }
+
+    // If user doesn't exist, sign up
+    if (signInError.message.includes("Invalid login credentials")) {
+      const { error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: window.location.origin,
+          data: { phone: `91${cleanPhone}`, auth_method: "whatsapp_otp" },
+        },
+      });
+
+      if (signUpError) {
+        return { error: signUpError as Error };
+      }
+
+      // Auto sign-in after signup
+      const { error: autoSignInError } = await supabase.auth.signInWithPassword({ email, password });
+      return { error: autoSignInError as Error | null };
+    }
+
+    return { error: signInError as Error };
   };
 
   const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     return { error: error as Error | null, data: data ? { user: data.user } : undefined };
   };
 
@@ -66,7 +81,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, signIn, signInWithPhone, signOut }}>
       {children}
     </AuthContext.Provider>
   );
