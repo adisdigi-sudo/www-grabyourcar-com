@@ -44,6 +44,7 @@ import { calculateStatePriceBreakup, stateRates } from "@/data/statePricing";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEMIPDFSettings } from "@/hooks/useEMIPDFSettings";
 import { EMICustomizerModal } from "@/components/EMICustomizerModal";
+import { BrochureLeadGate } from "@/components/BrochureLeadGate";
 
 // Standard accessories that can be added
 const standardAccessories = [
@@ -520,18 +521,15 @@ export const PriceSummaryCard = ({
           </div>
         </div>
 
-        {/* Brochure Download - only show for internally hosted PDFs */}
+        {/* Brochure Download - gated with lead capture */}
         {brochureUrl && brochureUrl.includes('supabase.co') && (
-          <a 
-            href={brochureUrl} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 p-3 bg-secondary/50 rounded-lg hover:bg-secondary transition-colors group"
-          >
-            <FileText className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
-            <span className="text-sm font-medium">Download Brochure</span>
-            <Download className="h-4 w-4 text-muted-foreground" />
-          </a>
+          <BrochureLeadGate brochureUrl={brochureUrl} carName={`${carBrand} ${carName}`}>
+            <div className="flex items-center justify-center gap-2 p-3 bg-secondary/50 rounded-lg hover:bg-secondary transition-colors group cursor-pointer">
+              <FileText className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
+              <span className="text-sm font-medium">Download Brochure</span>
+              <Download className="h-4 w-4 text-muted-foreground" />
+            </div>
+          </BrochureLeadGate>
         )}
 
         {/* Trust Indicators */}

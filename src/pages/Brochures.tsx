@@ -12,6 +12,7 @@ import { useCars } from "@/hooks/useCars";
 import { useAllCarsForBrochures, CarWithBrochure } from "@/hooks/useBrochures";
 import { CarPagination } from "@/components/CarPagination";
 import { WhatsAppCardButton } from "@/components/WhatsAppCTA";
+import { BrochureLeadGate } from "@/components/BrochureLeadGate";
 
 const ITEMS_PER_PAGE = 12;
 
@@ -235,16 +236,32 @@ const Brochures = () => {
                                 Call
                               </Button>
                             </a>
-                            <Button
-                              variant={hasBrochure(car) ? "default" : "secondary"}
-                              size="sm"
-                              className="gap-1 h-8"
-                              onClick={() => handleDownload(car)}
-                              disabled={!hasBrochure(car)}
-                            >
-                              <Download className="h-3.5 w-3.5" />
-                              {hasBrochure(car) ? "Brochure" : "N/A"}
-                            </Button>
+                            {hasBrochure(car) ? (
+                              <BrochureLeadGate
+                                brochureUrl={car.brochures?.[0]?.url || car.brochureUrl || ""}
+                                carName={`${car.brand} ${car.name}`}
+                                carSlug={car.slug}
+                              >
+                                <Button
+                                  variant="default"
+                                  size="sm"
+                                  className="gap-1 h-8"
+                                >
+                                  <Download className="h-3.5 w-3.5" />
+                                  Brochure
+                                </Button>
+                              </BrochureLeadGate>
+                            ) : (
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                className="gap-1 h-8"
+                                disabled
+                              >
+                                <Download className="h-3.5 w-3.5" />
+                                N/A
+                              </Button>
+                            )}
                           </div>
                         </div>
                       </div>
