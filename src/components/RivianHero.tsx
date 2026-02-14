@@ -134,7 +134,7 @@ export const RivianHero = () => {
   };
 
   return (
-    <section className="relative h-[85vh] md:h-screen w-full overflow-hidden bg-black">
+    <section className="relative h-[75vh] md:h-[85vh] lg:h-screen w-full overflow-hidden bg-black">
       {/* Full-bleed background image */}
       <AnimatePresence initial={false} custom={direction} mode="wait">
         <motion.div
@@ -149,7 +149,7 @@ export const RivianHero = () => {
           <img
             src={resolveImage(slide.image_url)}
             alt={slide.title}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover object-bottom md:object-center"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20" />
