@@ -4975,6 +4975,33 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_otps: {
+        Row: {
+          attempts: number
+          created_at: string
+          expires_at: string
+          id: string
+          otp_code: string
+          phone: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          expires_at: string
+          id?: string
+          otp_code: string
+          phone: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          expires_at?: string
+          id?: string
+          otp_code?: string
+          phone?: string
+        }
+        Relationships: []
+      }
       whatsapp_templates: {
         Row: {
           approval_status: string | null

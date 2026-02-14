@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,25 +9,8 @@ const corsHeaders = {
 const FINBITE_V2_URL = "https://app.finbite.in/api/v2/whatsapp-business/messages";
 const PHONE_NUMBER_ID = "1015140975005622";
 
-// In-memory OTP store (for demo; in production use database)
-const otpStore = new Map<string, { otp: string; expires: number; attempts: number }>();
-
 function generateOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
-}
-
-function cleanExpiredOTPs() {
-  const now = Date.now();
-  for (const [key, value] of otpStore.entries()) {
-    if (value.expires < now) otpStore.delete(key);
-  }
-}
-
-interface OTPRequest {
-  action: "send" | "verify";
-  phone: string;
-  otp?: string;
-  name?: string;
 }
 
 serve(async (req) => {
@@ -36,16 +20,25 @@ serve(async (req) => {
 
   try {
     const FINBITE_BEARER_TOKEN = Deno.env.get("FINBITE_BEARER_TOKEN");
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!FINBITE_BEARER_TOKEN) {
-      console.error("Missing FINBITE_BEARER_TOKEN");
       return new Response(
         JSON.stringify({ error: "WhatsApp OTP not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const { action, phone, otp, name }: OTPRequest = await req.json();
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+      return new Response(
+        JSON.stringify({ error: "Database not configured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const { action, phone, otp }: { action: "send" | "verify"; phone: string; otp?: string } = await req.json();
 
     // Normalize phone
     const cleanPhone = phone?.replace(/\D/g, "").replace(/^0+/, "");
@@ -62,22 +55,45 @@ serve(async (req) => {
     }
 
     const phoneKey = `91${normalizedPhone}`;
-    cleanExpiredOTPs();
 
     if (action === "send") {
-      // Rate limiting
-      const existing = otpStore.get(phoneKey);
-      if (existing && existing.expires > Date.now() + 4 * 60 * 1000) {
+      // Rate limiting: check if OTP was sent in last 60s
+      const { data: recent } = await supabase
+        .from("whatsapp_otps")
+        .select("created_at")
+        .eq("phone", phoneKey)
+        .gte("created_at", new Date(Date.now() - 60 * 1000).toISOString())
+        .limit(1);
+
+      if (recent && recent.length > 0) {
         return new Response(
           JSON.stringify({ error: "OTP already sent. Please wait before requesting again.", cooldown: true }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      const newOtp = generateOTP();
-      otpStore.set(phoneKey, { otp: newOtp, expires: Date.now() + 5 * 60 * 1000, attempts: 0 });
+      // Delete old OTPs for this phone
+      await supabase.from("whatsapp_otps").delete().eq("phone", phoneKey);
 
-      // Send OTP via Finbite v2 WhatsApp Business API
+      const newOtp = generateOTP();
+      const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+
+      // Store OTP in database
+      const { error: insertError } = await supabase.from("whatsapp_otps").insert({
+        phone: phoneKey,
+        otp_code: newOtp,
+        expires_at: expiresAt,
+      });
+
+      if (insertError) {
+        console.error("Failed to store OTP:", insertError);
+        return new Response(
+          JSON.stringify({ error: "Failed to generate OTP" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Send OTP via Finbite v2
       const requestBody = {
         to: phoneKey,
         phoneNoId: PHONE_NUMBER_ID,
@@ -85,16 +101,10 @@ serve(async (req) => {
         name: "otp",
         language: "en",
         bodyParams: [newOtp],
-        buttons: [
-          {
-            type: "button",
-            sub_type: "url",
-            text: newOtp,
-          },
-        ],
+        buttons: [{ type: "button", sub_type: "url", text: newOtp }],
       };
 
-      console.log("Sending OTP via Finbite v2:", { phone: phoneKey, otp: newOtp });
+      console.log("Sending OTP via Finbite v2:", { phone: phoneKey });
 
       const response = await fetch(FINBITE_V2_URL, {
         method: "POST",
@@ -111,6 +121,7 @@ serve(async (req) => {
         console.log("Finbite v2 response:", result);
         if (!response.ok || result.status === false || result.error) {
           console.error("Finbite v2 error:", result);
+          await supabase.from("whatsapp_otps").delete().eq("phone", phoneKey);
           return new Response(
             JSON.stringify({ error: "Failed to send OTP. Please try again." }),
             { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -118,9 +129,10 @@ serve(async (req) => {
         }
       } else {
         const textBody = await response.text();
-        console.error("Finbite v2 non-JSON response:", textBody.substring(0, 200));
+        console.error("Finbite v2 non-JSON:", textBody.substring(0, 200));
+        await supabase.from("whatsapp_otps").delete().eq("phone", phoneKey);
         return new Response(
-          JSON.stringify({ error: "WhatsApp service temporarily unavailable. Please try again." }),
+          JSON.stringify({ error: "WhatsApp service temporarily unavailable." }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -138,16 +150,21 @@ serve(async (req) => {
         );
       }
 
-      const stored = otpStore.get(phoneKey);
-      if (!stored) {
+      const { data: stored, error: fetchError } = await supabase
+        .from("whatsapp_otps")
+        .select("*")
+        .eq("phone", phoneKey)
+        .single();
+
+      if (fetchError || !stored) {
         return new Response(
           JSON.stringify({ error: "OTP expired or not found. Please request a new one.", expired: true }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      if (stored.expires < Date.now()) {
-        otpStore.delete(phoneKey);
+      if (new Date(stored.expires_at) < new Date()) {
+        await supabase.from("whatsapp_otps").delete().eq("id", stored.id);
         return new Response(
           JSON.stringify({ error: "OTP has expired. Please request a new one.", expired: true }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -155,24 +172,24 @@ serve(async (req) => {
       }
 
       if (stored.attempts >= 3) {
-        otpStore.delete(phoneKey);
+        await supabase.from("whatsapp_otps").delete().eq("id", stored.id);
         return new Response(
           JSON.stringify({ error: "Too many failed attempts. Please request a new OTP.", maxAttempts: true }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      if (stored.otp !== otp.trim()) {
-        stored.attempts += 1;
-        otpStore.set(phoneKey, stored);
+      if (stored.otp_code !== otp.trim()) {
+        await supabase.from("whatsapp_otps").update({ attempts: stored.attempts + 1 }).eq("id", stored.id);
         return new Response(
-          JSON.stringify({ error: "Invalid OTP. Please try again.", attemptsLeft: 3 - stored.attempts }),
+          JSON.stringify({ error: "Invalid OTP. Please try again.", attemptsLeft: 3 - (stored.attempts + 1) }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      otpStore.delete(phoneKey);
-      console.log("OTP verified successfully:", { phone: phoneKey });
+      // Verified — delete OTP
+      await supabase.from("whatsapp_otps").delete().eq("id", stored.id);
+      console.log("OTP verified:", { phone: phoneKey });
 
       return new Response(
         JSON.stringify({ success: true, verified: true, message: "Phone number verified!" }),
