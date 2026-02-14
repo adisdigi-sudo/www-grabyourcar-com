@@ -84,7 +84,7 @@ const carColors = [
 
 export const PromoBanner = () => {
   return (
-    <div className="relative h-12 md:h-14 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 overflow-hidden shadow-lg">
+    <div className="relative h-10 md:h-12 lg:h-14 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 overflow-hidden shadow-lg">
       {/* Racing track lines */}
       <div className="absolute inset-0 pointer-events-none">
         {/* Top track line */}

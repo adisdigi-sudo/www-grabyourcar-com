@@ -496,13 +496,13 @@ const Cars = () => {
         <Header />
 
         {/* Hero Section */}
-        <section className="bg-gradient-to-br from-primary/10 via-background to-accent/10 py-8 md:py-12 border-b">
+        <section className="bg-gradient-to-br from-primary/10 via-background to-accent/10 py-5 md:py-8 lg:py-12 border-b">
           <div className="container mx-auto px-4">
             <div className="max-w-3xl mx-auto text-center">
-              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
+              <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold mb-2 md:mb-4">
                 Explore <span className="text-primary">{allCars.length}+</span> New Cars
               </h1>
-              <p className="text-muted-foreground text-lg mb-6">
+              <p className="text-muted-foreground text-sm md:text-lg mb-4 md:mb-6">
                 Find your dream car from {availableBrands.length} brands with detailed specifications, prices & reviews
               </p>
               
