@@ -64,30 +64,19 @@ async function sendViaFinbiteV2(
   let body: Record<string, unknown>;
 
   if (payload.type === "template") {
-    // Template message via Finbite v2
-    const components: Array<Record<string, unknown>> = [];
-    if (payload.variables && Object.keys(payload.variables).length > 0) {
-      components.push({
-        type: "body",
-        parameters: Object.values(payload.variables).map(v => ({ type: "text", text: v })),
-      });
-    }
-
+    // Template message via Finbite v2 — exact body format per API docs
     body = {
-      messaging_product: "whatsapp",
       to: fullPhone,
+      phoneNoId: phoneId,
       type: "template",
-      template: {
-        name: payload.template_name,
-        language: { code: "en" },
-        ...(components.length > 0 ? { components } : {}),
-      },
+      name: payload.template_name,
+      language: "en_US",
     };
   } else {
     // Text message via Finbite v2
     body = {
-      messaging_product: "whatsapp",
       to: fullPhone,
+      phoneNoId: phoneId,
       type: "text",
       text: { body: payload.message },
     };

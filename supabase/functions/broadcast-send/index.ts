@@ -32,21 +32,16 @@ async function sendViaV2(
   let body: Record<string, unknown>;
 
   if (templateName) {
-    const components: Array<Record<string, unknown>> = [];
-    if (variables && Object.keys(variables).length > 0) {
-      components.push({
-        type: "body",
-        parameters: Object.values(variables).map(v => ({ type: "text", text: v })),
-      });
-    }
+    // Exact Finbite v2 body format for templates
     body = {
-      messaging_product: "whatsapp",
       to,
+      phoneNoId: phoneId,
       type: "template",
-      template: { name: templateName, language: { code: "en" }, ...(components.length > 0 ? { components } : {}) },
+      name: templateName,
+      language: "en_US",
     };
   } else {
-    body = { messaging_product: "whatsapp", to, type: "text", text: { body: message } };
+    body = { to, phoneNoId: phoneId, type: "text", text: { body: message } };
   }
 
   const resp = await fetch(FINBITE_V2_URL, {
