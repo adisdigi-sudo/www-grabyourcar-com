@@ -8,6 +8,7 @@ import { ShoppingCart, Plus, Minus, Trash2, ShoppingBag, CreditCard, Loader2 } f
 import { useCart } from "@/hooks/useCart";
 import { useRazorpay } from "@/hooks/useRazorpay";
 import { useAuth } from "@/hooks/useAuth";
+import { triggerWhatsApp } from "@/lib/whatsappTrigger";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
@@ -142,6 +143,12 @@ export const CartSheet = () => {
           city: shippingDetails.city,
         },
         onSuccess: () => {
+          triggerWhatsApp({
+            event: "accessory_order_placed",
+            phone: shippingDetails.phone,
+            name: shippingDetails.name,
+            data: { items: String(items.length), amount: String(totalPrice) },
+          });
           clearCart();
           setIsCheckoutOpen(false);
           setShippingDetails({

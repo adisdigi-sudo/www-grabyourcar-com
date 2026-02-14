@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
+import { triggerWhatsApp } from "@/lib/whatsappTrigger";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -275,6 +276,12 @@ export function HSRPUnifiedBookingForm() {
             })
             .eq("id", booking.id);
 
+          triggerWhatsApp({
+            event: "hsrp_order_placed",
+            phone: formData.mobile,
+            name: formData.ownerName,
+            data: { tracking_id: trackingId, service: formData.serviceType, vehicle: formData.registrationNumber },
+          });
           toast.success("Booking confirmed! Tracking ID: " + trackingId);
           setStep(5); // Success step
         },

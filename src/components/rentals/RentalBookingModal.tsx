@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { CalendarIcon, Clock, MapPin, Phone, MessageCircle, CheckCircle2, Fuel, Settings2, CreditCard, Loader2 } from "lucide-react";
 import { format, differenceInDays, addDays } from "date-fns";
 import { toast } from "sonner";
+import { triggerWhatsApp } from "@/lib/whatsappTrigger";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useRazorpay } from "@/hooks/useRazorpay";
@@ -158,6 +159,12 @@ export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalP
           pickupLocation,
         },
         onSuccess: (paymentData) => {
+          triggerWhatsApp({
+            event: "booking_confirmed",
+            phone: customerPhone,
+            name: customerName,
+            data: { car_model: car.name, rental_days: String(rentalDays) },
+          });
           toast.success("Booking confirmed! Check My Bookings for details.");
           onClose();
           navigate("/my-bookings");

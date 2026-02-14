@@ -42,7 +42,7 @@ async function sendV2(
   to: string,
   payload: Record<string, unknown>
 ): Promise<{ success: boolean; data?: unknown; error?: string }> {
-  const requestBody = { messaging_product: "whatsapp", to, phone_number_id: phoneId, ...payload };
+  const requestBody = { to, phoneNoId: phoneId, ...payload };
   console.log("Finbite v2 body:", JSON.stringify(requestBody));
 
   const response = await fetch(FINBITE_V2_URL, {
@@ -143,22 +143,11 @@ serve(async (req) => {
 
     // Try v2 API first
     if (messageType === "template" && template_name) {
-      // Template message
-      const components: Array<Record<string, unknown>> = [];
-      if (template_variables && Object.keys(template_variables).length > 0) {
-        components.push({
-          type: "body",
-          parameters: Object.values(template_variables).map(v => ({ type: "text", text: v })),
-        });
-      }
-
+      // Template message — exact Finbite v2 body format
       result = await sendV2(FINBITE_API_KEY, FINBITE_WHATSAPP_CLIENT, phone.full, {
         type: "template",
-        template: {
-          name: template_name,
-          language: { code: "en" },
-          ...(components.length > 0 ? { components } : {}),
-        },
+        name: template_name,
+        language: "en_US",
       });
     } else if (messageType === "image" && mediaUrl) {
       result = await sendV2(FINBITE_API_KEY, FINBITE_WHATSAPP_CLIENT, phone.full, {

@@ -90,6 +90,30 @@ serve(async (req) => {
 
     console.log("Lead saved:", lead.id);
 
+    // Fire WhatsApp automation trigger (non-blocking)
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
+    const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+    if (SUPABASE_URL && SERVICE_ROLE_KEY) {
+      fetch(`${SUPABASE_URL}/functions/v1/wa-automation-trigger`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${SERVICE_ROLE_KEY}`,
+        },
+        body: JSON.stringify({
+          event: "lead_created",
+          leadId: lead.id,
+          phone: phone,
+          name: name,
+          data: {
+            car_model: body.carInterest?.trim() || "",
+            city: body.city?.trim() || "",
+            source: "website",
+          },
+        }),
+      }).catch(err => console.error("WA trigger error:", err));
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true, 
