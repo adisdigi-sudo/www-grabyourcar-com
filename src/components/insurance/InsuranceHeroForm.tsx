@@ -130,21 +130,21 @@ export function InsuranceHeroForm() {
             transition={{ duration: 0.4 }}
             className="space-y-4"
           >
-            <div className="flex items-center bg-card rounded-2xl shadow-2xl border border-border/50 p-2 pl-6 gap-2">
+            <div className="flex items-center rounded-2xl border-2 border-border p-2 pl-5 gap-2 bg-background">
               <div className="flex items-center gap-3 flex-1">
                 <Car className="h-5 w-5 text-primary shrink-0" />
                 <Input
-                  placeholder="Enter your car number (e.g. DL01AB1234)"
+                  placeholder="Enter car number (e.g. DL01AB1234)"
                   value={vehicleNumber}
                   onChange={(e) => setVehicleNumber(e.target.value.toUpperCase())}
-                  className="border-0 shadow-none focus-visible:ring-0 text-base md:text-lg h-14 bg-transparent uppercase placeholder:normal-case placeholder:text-muted-foreground/60 font-medium"
+                  className="border-0 shadow-none focus-visible:ring-0 text-sm md:text-base h-12 bg-transparent uppercase placeholder:normal-case placeholder:text-muted-foreground/60 font-medium"
                   onKeyDown={(e) => e.key === "Enter" && handleVehicleSubmit()}
                 />
               </div>
               <Button
                 onClick={handleVehicleSubmit}
                 size="lg"
-                className="rounded-xl h-12 px-8 text-base font-semibold shrink-0 gap-2 shadow-lg"
+                className="rounded-xl h-10 px-6 text-sm font-semibold shrink-0 gap-2"
               >
                 Check Prices
                 <ArrowRight className="h-4 w-4" />
