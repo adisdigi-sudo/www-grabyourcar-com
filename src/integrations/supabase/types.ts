@@ -2929,6 +2929,105 @@ export type Database = {
         }
         Relationships: []
       }
+      insurance_addons: {
+        Row: {
+          created_at: string
+          description: string | null
+          icon_name: string | null
+          id: string
+          is_active: boolean | null
+          sort_order: number | null
+          tag: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          icon_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          sort_order?: number | null
+          tag?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          icon_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          sort_order?: number | null
+          tag?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      insurance_content: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean | null
+          section_data: Json
+          section_key: string
+          section_title: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          section_data?: Json
+          section_key: string
+          section_title?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          section_data?: Json
+          section_key?: string
+          section_title?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      insurance_faqs: {
+        Row: {
+          answer: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          question: string
+          sort_order: number | null
+          updated_at: string
+        }
+        Insert: {
+          answer: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          question: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Update: {
+          answer?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          question?: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       insurance_leads: {
         Row: {
           assigned_to: string | null
@@ -3058,6 +3157,99 @@ export type Database = {
           name?: string
           sort_order?: number | null
           website_url?: string | null
+        }
+        Relationships: []
+      }
+      insurance_plans: {
+        Row: {
+          cashless_garages: string | null
+          claim_settlement_ratio: string | null
+          created_at: string
+          features: string[] | null
+          id: string
+          idv: string | null
+          insurer_name: string
+          is_active: boolean | null
+          is_popular: boolean | null
+          logo_url: string | null
+          plan_type: string
+          premium_display: string
+          premium_value: number
+          rating: number | null
+          sort_order: number | null
+          updated_at: string
+        }
+        Insert: {
+          cashless_garages?: string | null
+          claim_settlement_ratio?: string | null
+          created_at?: string
+          features?: string[] | null
+          id?: string
+          idv?: string | null
+          insurer_name: string
+          is_active?: boolean | null
+          is_popular?: boolean | null
+          logo_url?: string | null
+          plan_type?: string
+          premium_display: string
+          premium_value?: number
+          rating?: number | null
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Update: {
+          cashless_garages?: string | null
+          claim_settlement_ratio?: string | null
+          created_at?: string
+          features?: string[] | null
+          id?: string
+          idv?: string | null
+          insurer_name?: string
+          is_active?: boolean | null
+          is_popular?: boolean | null
+          logo_url?: string | null
+          plan_type?: string
+          premium_display?: string
+          premium_value?: number
+          rating?: number | null
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      insurance_scraped_data: {
+        Row: {
+          content_type: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          scraped_at: string
+          scraped_content: Json
+          source_name: string | null
+          source_url: string
+        }
+        Insert: {
+          content_type?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          scraped_at?: string
+          scraped_content?: Json
+          source_name?: string | null
+          source_url: string
+        }
+        Update: {
+          content_type?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          scraped_at?: string
+          scraped_content?: Json
+          source_name?: string | null
+          source_url?: string
         }
         Relationships: []
       }

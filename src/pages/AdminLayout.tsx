@@ -62,6 +62,7 @@ import FAQManager from "@/components/admin/FAQManager";
 import ServicePricingManager from "@/components/admin/ServicePricingManager";
 import { HeroSlidesManagement } from "@/components/admin/HeroSlidesManagement";
 import PartnersManager from "@/components/admin/PartnersManager";
+import { InsuranceManagement } from "@/components/admin/InsuranceManagement";
 
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
@@ -195,6 +196,7 @@ const AdminLayout = () => {
       case "services-api-partners":
         return <APIPartnersManagement />;
       case "services-insurance":
+        return <InsuranceManagement />;
       case "services-loans":
         return <WebsiteSettings />;
       case "services-emi-pdf":
