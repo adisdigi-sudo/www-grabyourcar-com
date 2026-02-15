@@ -109,7 +109,7 @@ export const CarListings = () => {
   const { isInCompare, addToCompare, removeFromCompare, canAddMore } = useCompare();
   const { data: featuredCars, isLoading, error } = useFeaturedCars();
 
-  const handleCompareToggle = (carId: number) => {
+  const handleCompareToggle = (carId: string | number) => {
     if (isInCompare(carId)) {
       removeFromCompare(carId);
     } else {

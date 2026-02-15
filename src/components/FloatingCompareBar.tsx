@@ -76,7 +76,7 @@ export const FloatingCompareBar = () => {
           </div>
 
           {/* Compare Button */}
-          <Link to="/compare" state={{ preselectedCars: selectedCars.map(c => c.id) }}>
+          <Link to="/compare" state={{ preselectedCars: selectedCars.map(c => String(c.id)) }}>
             <Button
               variant="cta"
               size="lg"

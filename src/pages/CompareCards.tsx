@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useLocation } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { cars, Car } from "@/data/carsData";
+import { useCars } from "@/hooks/useCars";
+import { Car } from "@/data/cars/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -21,51 +22,52 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { X, Plus, Car as CarIcon, Fuel, Gauge, Shield, Maximize, Zap } from "lucide-react";
+import { X, Plus, Car as CarIcon, Fuel, Gauge, Shield, Maximize, Zap, Loader2 } from "lucide-react";
 
 const CompareCars = () => {
   const location = useLocation();
-  const preselectedCarIds = (location.state as { preselectedCars?: number[] })?.preselectedCars;
+  const preselectedCarIds = (location.state as { preselectedCars?: (string | number)[] })?.preselectedCars;
   
-  const [selectedCars, setSelectedCars] = useState<(Car | null)[]>(() => {
+  // Fetch cars from database
+  const { data: allDbCars = [], isLoading } = useCars({ useDatabase: true });
+
+  const [selectedCarIds, setSelectedCarIds] = useState<(string | null)[]>(() => {
     if (preselectedCarIds && preselectedCarIds.length > 0) {
-      const preselected = preselectedCarIds.slice(0, 3).map(id => 
-        cars.find(c => c.id === id) || null
-      );
-      // Fill remaining slots with null
-      while (preselected.length < 3) {
-        preselected.push(null);
-      }
-      return preselected;
+      const ids = preselectedCarIds.slice(0, 3).map(id => String(id));
+      while (ids.length < 3) ids.push(null);
+      return ids;
     }
     return [null, null, null];
   });
 
+  // Resolve selected cars from DB data
+  const selectedCars: (Car | null)[] = selectedCarIds.map(id => 
+    id ? allDbCars.find(c => String(c.id) === id) || null : null
+  );
+
   const handleSelectCar = (index: number, carId: string) => {
-    const car = cars.find((c) => c.id.toString() === carId) || null;
-    const newSelectedCars = [...selectedCars];
-    newSelectedCars[index] = car;
-    setSelectedCars(newSelectedCars);
+    const newIds = [...selectedCarIds];
+    newIds[index] = carId;
+    setSelectedCarIds(newIds);
   };
 
   const handleRemoveCar = (index: number) => {
-    const newSelectedCars = [...selectedCars];
-    newSelectedCars[index] = null;
-    setSelectedCars(newSelectedCars);
+    const newIds = [...selectedCarIds];
+    newIds[index] = null;
+    setSelectedCarIds(newIds);
   };
 
   const getAvailableCars = (currentIndex: number) => {
-    const selectedIds = selectedCars
+    const selectedIds = selectedCarIds
       .filter((_, idx) => idx !== currentIndex)
-      .filter(Boolean)
-      .map((car) => car!.id);
-    return cars.filter((car) => !selectedIds.includes(car.id));
+      .filter(Boolean) as string[];
+    return allDbCars.filter(car => !selectedIds.includes(String(car.id)));
   };
 
   const activeCars = selectedCars.filter(Boolean) as Car[];
 
   const getSpecValue = (car: Car, category: keyof Car["specifications"], label: string) => {
-    const spec = car.specifications[category].find((s) => s.label === label);
+    const spec = car.specifications[category]?.find((s) => s.label === label);
     return spec?.value || "-";
   };
 
@@ -93,55 +95,64 @@ const CompareCars = () => {
       {/* Car Selection */}
       <section className="py-8 border-b border-border">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {selectedCars.map((car, index) => (
-              <Card key={index} className="relative overflow-hidden">
-                <CardContent className="p-4">
-                  {car ? (
-                    <div className="space-y-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <img
-                            src={car.image}
-                            alt={car.name}
-                            className="w-full h-32 object-cover rounded-lg mb-3"
-                          />
-                          <h3 className="font-heading font-semibold text-lg">{car.name}</h3>
-                          <p className="text-primary font-bold">{car.price}</p>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <span className="ml-2 text-muted-foreground">Loading cars...</span>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {selectedCars.map((car, index) => (
+                <Card key={index} className="relative overflow-hidden">
+                  <CardContent className="p-4">
+                    {car ? (
+                      <div className="space-y-4">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            {car.image && (
+                              <img
+                                src={car.image}
+                                alt={car.name}
+                                className="w-full h-32 object-cover rounded-lg mb-3"
+                              />
+                            )}
+                            <h3 className="font-heading font-semibold text-lg">{car.name}</h3>
+                            <p className="text-primary font-bold">{car.price}</p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute top-2 right-2"
+                            onClick={() => handleRemoveCar(index)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="absolute top-2 right-2"
-                          onClick={() => handleRemoveCar(index)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center py-8 space-y-4">
-                      <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
-                        <Plus className="h-8 w-8 text-muted-foreground" />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-8 space-y-4">
+                        <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+                          <Plus className="h-8 w-8 text-muted-foreground" />
+                        </div>
+                        <Select onValueChange={(value) => handleSelectCar(index, value)}>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select a car" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {getAvailableCars(index).map((c) => (
+                              <SelectItem key={String(c.id)} value={String(c.id)}>
+                                {c.brand} {c.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
-                      <Select onValueChange={(value) => handleSelectCar(index, value)}>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select a car" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {getAvailableCars(index).map((c) => (
-                            <SelectItem key={c.id} value={c.id.toString()}>
-                              {c.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -163,7 +174,7 @@ const CompareCars = () => {
                     <TableRow>
                       <TableHead className="w-[200px]">Feature</TableHead>
                       {activeCars.map((car) => (
-                        <TableHead key={car.id} className="text-center">
+                        <TableHead key={String(car.id)} className="text-center">
                           {car.name}
                         </TableHead>
                       ))}
@@ -173,7 +184,7 @@ const CompareCars = () => {
                     <TableRow>
                       <TableCell className="font-medium">Price Range</TableCell>
                       {activeCars.map((car) => (
-                        <TableCell key={car.id} className="text-center font-semibold text-primary">
+                        <TableCell key={String(car.id)} className="text-center font-semibold text-primary">
                           {car.price}
                         </TableCell>
                       ))}
@@ -181,15 +192,15 @@ const CompareCars = () => {
                     <TableRow>
                       <TableCell className="font-medium">Discount</TableCell>
                       {activeCars.map((car) => (
-                        <TableCell key={car.id} className="text-center">
-                          <Badge variant="destructive">{car.discount}</Badge>
+                        <TableCell key={String(car.id)} className="text-center">
+                          {car.discount ? <Badge variant="destructive">{car.discount}</Badge> : "-"}
                         </TableCell>
                       ))}
                     </TableRow>
                     <TableRow>
                       <TableCell className="font-medium">Availability</TableCell>
                       {activeCars.map((car) => (
-                        <TableCell key={car.id} className="text-center">
+                        <TableCell key={String(car.id)} className="text-center">
                           <Badge variant={car.isLimited ? "secondary" : "default"}>
                             {car.availability}
                           </Badge>
@@ -199,16 +210,16 @@ const CompareCars = () => {
                     <TableRow>
                       <TableCell className="font-medium">Fuel Types</TableCell>
                       {activeCars.map((car) => (
-                        <TableCell key={car.id} className="text-center">
-                          {car.fuelTypes.join(", ")}
+                        <TableCell key={String(car.id)} className="text-center">
+                          {car.fuelTypes?.join(", ") || "-"}
                         </TableCell>
                       ))}
                     </TableRow>
                     <TableRow>
                       <TableCell className="font-medium">Transmission</TableCell>
                       {activeCars.map((car) => (
-                        <TableCell key={car.id} className="text-center">
-                          {car.transmission.join(", ")}
+                        <TableCell key={String(car.id)} className="text-center">
+                          {car.transmission?.join(", ") || "-"}
                         </TableCell>
                       ))}
                     </TableRow>
@@ -231,7 +242,7 @@ const CompareCars = () => {
                     <TableRow>
                       <TableHead className="w-[200px]">Specification</TableHead>
                       {activeCars.map((car) => (
-                        <TableHead key={car.id} className="text-center">
+                        <TableHead key={String(car.id)} className="text-center">
                           {car.name}
                         </TableHead>
                       ))}
@@ -243,7 +254,7 @@ const CompareCars = () => {
                         <TableRow key={label}>
                           <TableCell className="font-medium">{label}</TableCell>
                           {activeCars.map((car) => (
-                            <TableCell key={car.id} className="text-center">
+                            <TableCell key={String(car.id)} className="text-center">
                               {getSpecValue(car, "engine", label)}
                             </TableCell>
                           ))}
@@ -269,7 +280,7 @@ const CompareCars = () => {
                     <TableRow>
                       <TableHead className="w-[200px]">Dimension</TableHead>
                       {activeCars.map((car) => (
-                        <TableHead key={car.id} className="text-center">
+                        <TableHead key={String(car.id)} className="text-center">
                           {car.name}
                         </TableHead>
                       ))}
@@ -281,7 +292,7 @@ const CompareCars = () => {
                         <TableRow key={label}>
                           <TableCell className="font-medium">{label}</TableCell>
                           {activeCars.map((car) => (
-                            <TableCell key={car.id} className="text-center">
+                            <TableCell key={String(car.id)} className="text-center">
                               {getSpecValue(car, "dimensions", label)}
                             </TableCell>
                           ))}
@@ -307,7 +318,7 @@ const CompareCars = () => {
                     <TableRow>
                       <TableHead className="w-[200px]">Metric</TableHead>
                       {activeCars.map((car) => (
-                        <TableHead key={car.id} className="text-center">
+                        <TableHead key={String(car.id)} className="text-center">
                           {car.name}
                         </TableHead>
                       ))}
@@ -318,7 +329,7 @@ const CompareCars = () => {
                       <TableRow key={label}>
                         <TableCell className="font-medium">{label}</TableCell>
                         {activeCars.map((car) => (
-                          <TableCell key={car.id} className="text-center">
+                          <TableCell key={String(car.id)} className="text-center">
                             {getSpecValue(car, "performance", label)}
                           </TableCell>
                         ))}
@@ -343,7 +354,7 @@ const CompareCars = () => {
                     <TableRow>
                       <TableHead className="w-[200px]">Feature</TableHead>
                       {activeCars.map((car) => (
-                        <TableHead key={car.id} className="text-center">
+                        <TableHead key={String(car.id)} className="text-center">
                           {car.name}
                         </TableHead>
                       ))}
@@ -355,7 +366,7 @@ const CompareCars = () => {
                         <TableRow key={label}>
                           <TableCell className="font-medium">{label}</TableCell>
                           {activeCars.map((car) => (
-                            <TableCell key={car.id} className="text-center">
+                            <TableCell key={String(car.id)} className="text-center">
                               {getSpecValue(car, "features", label)}
                             </TableCell>
                           ))}
@@ -367,7 +378,7 @@ const CompareCars = () => {
               </CardContent>
             </Card>
 
-            {/* Safety */}
+            {/* Offers */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -381,7 +392,7 @@ const CompareCars = () => {
                     <TableRow>
                       <TableHead className="w-[200px]">Offer Type</TableHead>
                       {activeCars.map((car) => (
-                        <TableHead key={car.id} className="text-center">
+                        <TableHead key={String(car.id)} className="text-center">
                           {car.name}
                         </TableHead>
                       ))}
@@ -392,9 +403,9 @@ const CompareCars = () => {
                       <TableRow key={type}>
                         <TableCell className="font-medium capitalize">{type}</TableCell>
                         {activeCars.map((car) => {
-                          const offer = car.offers.find((o) => o.type === type);
+                          const offer = car.offers?.find((o) => o.type === type);
                           return (
-                            <TableCell key={car.id} className="text-center">
+                            <TableCell key={String(car.id)} className="text-center">
                               {offer ? (
                                 <div>
                                   <p className="font-semibold text-primary">{offer.discount}</p>
@@ -417,7 +428,7 @@ const CompareCars = () => {
       )}
 
       {/* Empty State */}
-      {activeCars.length < 2 && (
+      {activeCars.length < 2 && !isLoading && (
         <section className="py-20">
           <div className="container mx-auto px-4 text-center">
             <div className="max-w-md mx-auto">

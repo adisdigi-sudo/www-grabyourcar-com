@@ -1,12 +1,12 @@
 import { createContext, useContext, useState, ReactNode } from "react";
 import { Car } from "@/data/cars/types";
-import { allCars } from "@/data/cars";
+import { useCars } from "@/hooks/useCars";
 
 interface CompareContextType {
   selectedCars: Car[];
-  addToCompare: (carId: number) => void;
-  removeFromCompare: (carId: number) => void;
-  isInCompare: (carId: number) => boolean;
+  addToCompare: (carId: string | number) => void;
+  removeFromCompare: (carId: string | number) => void;
+  isInCompare: (carId: string | number) => boolean;
   clearCompare: () => void;
   canAddMore: boolean;
 }
@@ -14,23 +14,32 @@ interface CompareContextType {
 const CompareContext = createContext<CompareContextType | undefined>(undefined);
 
 export const CompareProvider = ({ children }: { children: ReactNode }) => {
-  const [selectedCarIds, setSelectedCarIds] = useState<number[]>([]);
+  const [selectedCarIds, setSelectedCarIds] = useState<string[]>([]);
+  const { data: dbCars = [] } = useCars({ useDatabase: true });
+
+  // Normalize ID to string for consistent comparison
+  const normalizeId = (id: string | number): string => String(id);
 
   const selectedCars = selectedCarIds
-    .map(id => allCars.find(car => car.id === id))
+    .map(id => dbCars.find(car => String(car.id) === id))
     .filter(Boolean) as Car[];
 
-  const addToCompare = (carId: number) => {
-    if (selectedCarIds.length < 3 && !selectedCarIds.includes(carId)) {
-      setSelectedCarIds(prev => [...prev, carId]);
+  const addToCompare = (carId: string | number) => {
+    const id = normalizeId(carId);
+    if (selectedCarIds.length < 3 && !selectedCarIds.includes(id)) {
+      setSelectedCarIds(prev => [...prev, id]);
     }
   };
 
-  const removeFromCompare = (carId: number) => {
-    setSelectedCarIds(prev => prev.filter(id => id !== carId));
+  const removeFromCompare = (carId: string | number) => {
+    const id = normalizeId(carId);
+    setSelectedCarIds(prev => prev.filter(existingId => existingId !== id));
   };
 
-  const isInCompare = (carId: number) => selectedCarIds.includes(carId);
+  const isInCompare = (carId: string | number) => {
+    const id = normalizeId(carId);
+    return selectedCarIds.includes(id);
+  };
 
   const clearCompare = () => setSelectedCarIds([]);
 
