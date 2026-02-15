@@ -18,7 +18,8 @@ import {
   Calculator,
   Phone,
   Info,
-  IndianRupee
+  Building2,
+  User
 } from "lucide-react";
 import {
   Select,
@@ -39,6 +40,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRoadTaxRules, calculateOnRoadPrice, useAvailableStates } from "@/hooks/useRoadTaxEngine";
 import { calculateStatePriceBreakup, stateRates } from "@/data/statePricing";
 import { useCarColors } from "@/hooks/useCarColors";
 import { useCarBySlug } from "@/hooks/useCars";
@@ -49,21 +51,60 @@ import { Skeleton } from "@/components/ui/skeleton";
 const CarOnRoadPrice = () => {
   const { slug } = useParams<{ slug: string }>();
   const { data: car, isLoading, error } = useCarBySlug(slug);
-  
   const { data: dbColors } = useCarColors(slug);
+  const { data: taxRules, isLoading: taxLoading } = useRoadTaxRules();
+  const dbStates = useAvailableStates();
   
   const [selectedVariant, setSelectedVariant] = useState(0);
   const [selectedColor, setSelectedColor] = useState(0);
   const [selectedState, setSelectedState] = useState("DL");
+  const [selectedOwnership, setSelectedOwnership] = useState("individual");
   const [showFullBreakup, setShowFullBreakup] = useState(false);
   const [showEMIModal, setShowEMIModal] = useState(false);
 
   const displayColors = useMemo(() => {
-    if (dbColors && dbColors.length > 0) {
-      return dbColors;
-    }
+    if (dbColors && dbColors.length > 0) return dbColors;
     return car?.colors || [];
   }, [dbColors, car?.colors]);
+
+  // Use DB states if available, fallback to hardcoded
+  const availableStates = useMemo(() => {
+    if (dbStates && dbStates.length > 0) return dbStates;
+    return stateRates.map(s => ({ code: s.code, name: s.name }));
+  }, [dbStates]);
+
+  // Use DB engine if rules available, fallback to hardcoded
+  const currentVariant = car?.variants?.[selectedVariant];
+  const exShowroomPrice = currentVariant?.priceNumeric || (parseFloat(car?.price?.match(/[\d.]+/)?.[0] || "0") * 100000);
+  const fuelType = currentVariant?.fuelType || car?.fuelTypes?.[0] || "petrol";
+
+  const breakup = useMemo(() => {
+    if (taxRules && taxRules.length > 0) {
+      return calculateOnRoadPrice(taxRules, exShowroomPrice, selectedState, fuelType, selectedOwnership);
+    }
+    const fallback = calculateStatePriceBreakup(exShowroomPrice, selectedState, fuelType);
+    return {
+      ...fallback,
+      additionalCess: 0,
+      luxurySurcharge: 0,
+      ownershipType: selectedOwnership,
+      fuelType,
+      matchedRule: null,
+    };
+  }, [taxRules, exShowroomPrice, selectedState, fuelType, selectedOwnership]);
+
+  const finalOnRoadPrice = breakup.onRoadPrice;
+
+  // EMI Calculations
+  const loanAmount = finalOnRoadPrice * 0.8;
+  const interestRate = 8.5;
+  const tenureMonths = 60;
+  const monthlyRate = interestRate / 12 / 100;
+  const emi = Math.round(
+    (loanAmount * monthlyRate * Math.pow(1 + monthlyRate, tenureMonths)) /
+    (Math.pow(1 + monthlyRate, tenureMonths) - 1)
+  );
+  const downPayment = finalOnRoadPrice * 0.2;
 
   if (isLoading) {
     return (
@@ -88,40 +129,18 @@ const CarOnRoadPrice = () => {
         <div className="container mx-auto px-4 py-24 text-center">
           <h1 className="text-3xl font-bold mb-4">Car Not Found</h1>
           <p className="text-muted-foreground mb-8">The car you're looking for doesn't exist.</p>
-          <Link to="/cars">
-            <Button>Browse Cars</Button>
-          </Link>
+          <Link to="/cars"><Button>Browse Cars</Button></Link>
         </div>
         <Footer />
       </div>
     );
   }
 
-  const currentVariant = car.variants[selectedVariant];
-  const exShowroomPrice = currentVariant?.priceNumeric || (parseFloat(car.price.match(/[\d.]+/)?.[0] || "0") * 100000);
-  const breakup = calculateStatePriceBreakup(exShowroomPrice, selectedState);
-  const finalOnRoadPrice = breakup.onRoadPrice;
-
   const formatPrice = (price: number) => {
-    if (price >= 10000000) {
-      return `₹${(price / 10000000).toFixed(2)} Cr`;
-    }
-    if (price >= 100000) {
-      return `₹${(price / 100000).toFixed(2)} L`;
-    }
+    if (price >= 10000000) return `₹${(price / 10000000).toFixed(2)} Cr`;
+    if (price >= 100000) return `₹${(price / 100000).toFixed(2)} L`;
     return `₹${price.toLocaleString('en-IN')}`;
   };
-
-  // EMI Calculations
-  const loanAmount = finalOnRoadPrice * 0.8;
-  const interestRate = 8.5;
-  const tenureMonths = 60;
-  const monthlyRate = interestRate / 12 / 100;
-  const emi = Math.round(
-    (loanAmount * monthlyRate * Math.pow(1 + monthlyRate, tenureMonths)) /
-    (Math.pow(1 + monthlyRate, tenureMonths) - 1)
-  );
-  const downPayment = finalOnRoadPrice * 0.2;
 
   return (
     <div className="min-h-screen bg-background">
@@ -185,9 +204,10 @@ const CarOnRoadPrice = () => {
                           {formatPrice(finalOnRoadPrice)}
                         </span>
                         <span className="text-sm opacity-70">
-                          in {stateRates.find(s => s.code === selectedState)?.name}
+                          in {availableStates.find(s => s.code === selectedState)?.name}
                         </span>
                       </motion.div>
+                      {taxLoading && <span className="text-xs opacity-60">Loading latest rates...</span>}
                     </div>
                     <Badge className="bg-white/20 text-white border-0 backdrop-blur-sm">
                       <Sparkles className="h-3 w-3 mr-1" />
@@ -197,8 +217,8 @@ const CarOnRoadPrice = () => {
                 </div>
 
                 <CardContent className="p-5 md:p-6 space-y-5">
-                  {/* Selectors */}
-                  <div className="grid grid-cols-2 gap-4">
+                  {/* Selectors - 3 column grid */}
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     <div>
                       <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
                         Select Variant
@@ -228,18 +248,34 @@ const CarOnRoadPrice = () => {
                     <div>
                       <label className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1">
                         <MapPin className="h-3 w-3" />
-                        Select City/State
+                        State
                       </label>
                       <Select value={selectedState} onValueChange={setSelectedState}>
                         <SelectTrigger className="h-12">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {stateRates.map((state) => (
+                          {availableStates.map((state) => (
                             <SelectItem key={state.code} value={state.code}>
                               {state.name}
                             </SelectItem>
                           ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="col-span-2 md:col-span-1">
+                      <label className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1">
+                        {selectedOwnership === "corporate" ? <Building2 className="h-3 w-3" /> : <User className="h-3 w-3" />}
+                        Ownership
+                      </label>
+                      <Select value={selectedOwnership} onValueChange={setSelectedOwnership}>
+                        <SelectTrigger className="h-12">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="individual">Individual</SelectItem>
+                          <SelectItem value="corporate">Corporate</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -271,9 +307,7 @@ const CarOnRoadPrice = () => {
                                   )}
                                 </button>
                               </TooltipTrigger>
-                              <TooltipContent>
-                                <p>{color.name}</p>
-                              </TooltipContent>
+                              <TooltipContent><p>{color.name}</p></TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
                         ))}
@@ -315,7 +349,7 @@ const CarOnRoadPrice = () => {
                             >
                               <div className="flex justify-between text-sm">
                                 <span className="text-muted-foreground">Road Tax ({breakup.roadTaxPercent}%)</span>
-                                <span>{formatPrice(breakup.rto)}</span>
+                                <span>{formatPrice(breakup.roadTax)}</span>
                               </div>
                               <div className="flex justify-between text-sm">
                                 <span className="text-muted-foreground">Insurance (1 Year)</span>
@@ -326,12 +360,8 @@ const CarOnRoadPrice = () => {
                                   TCS (1%)
                                   <TooltipProvider>
                                     <Tooltip>
-                                      <TooltipTrigger>
-                                        <Info className="h-3 w-3" />
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p>Tax Collected at Source — 1% of ex-showroom</p>
-                                      </TooltipContent>
+                                      <TooltipTrigger><Info className="h-3 w-3" /></TooltipTrigger>
+                                      <TooltipContent><p>Tax Collected at Source — 1% of ex-showroom</p></TooltipContent>
                                     </Tooltip>
                                   </TooltipProvider>
                                 </span>
@@ -346,6 +376,10 @@ const CarOnRoadPrice = () => {
                                 <span>{formatPrice(breakup.registration)}</span>
                               </div>
                               <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">HSRP</span>
+                                <span>{formatPrice(breakup.hsrp)}</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
                                 <span className="text-muted-foreground">Temp. Registration</span>
                                 <span>{formatPrice(breakup.tempRegistration)}</span>
                               </div>
@@ -357,6 +391,18 @@ const CarOnRoadPrice = () => {
                                 <div className="flex justify-between text-sm">
                                   <span className="text-muted-foreground">Green Tax</span>
                                   <span>{formatPrice(breakup.greenTax)}</span>
+                                </div>
+                              )}
+                              {breakup.additionalCess > 0 && (
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-muted-foreground">Additional Cess</span>
+                                  <span>{formatPrice(breakup.additionalCess)}</span>
+                                </div>
+                              )}
+                              {breakup.luxurySurcharge > 0 && (
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-muted-foreground">Luxury Surcharge</span>
+                                  <span>{formatPrice(breakup.luxurySurcharge)}</span>
                                 </div>
                               )}
                             </motion.div>
@@ -378,6 +424,24 @@ const CarOnRoadPrice = () => {
                       </div>
                     </div>
                   </Collapsible>
+
+                  {/* Fuel & Ownership Info Badge */}
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="outline" className="text-xs">
+                      Fuel: {fuelType.charAt(0).toUpperCase() + fuelType.slice(1)}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      {selectedOwnership === "corporate" ? "Corporate" : "Individual"} Registration
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      {availableStates.find(s => s.code === selectedState)?.name}
+                    </Badge>
+                    {taxRules && taxRules.length > 0 && (
+                      <Badge variant="secondary" className="text-xs bg-success/10 text-success border-success/20">
+                        ✓ Live Tax Data
+                      </Badge>
+                    )}
+                  </div>
 
                   {/* EMI Calculator Section */}
                   <div className="bg-gradient-to-br from-primary/5 via-success/5 to-accent/5 rounded-xl p-5 border border-primary/20">
@@ -475,7 +539,7 @@ const CarOnRoadPrice = () => {
         variantName={currentVariant?.name || ""}
         onRoadPrice={{
           exShowroom: breakup.exShowroom,
-          rto: breakup.rto,
+          rto: breakup.roadTax,
           insurance: breakup.insurance,
           tcs: breakup.tcs,
           fastag: breakup.fastag,
@@ -484,7 +548,7 @@ const CarOnRoadPrice = () => {
           onRoadPrice: breakup.onRoadPrice
         }}
         selectedColor={displayColors[selectedColor]?.name}
-        selectedCity={stateRates.find(s => s.code === selectedState)?.name}
+        selectedCity={availableStates.find(s => s.code === selectedState)?.name}
       />
     </div>
   );

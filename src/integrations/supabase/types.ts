@@ -3742,6 +3742,143 @@ export type Database = {
         }
         Relationships: []
       }
+      road_tax_rule_history: {
+        Row: {
+          action: string
+          changed_at: string
+          changed_by: string | null
+          id: string
+          new_data: Json | null
+          old_data: Json | null
+          rule_id: string
+        }
+        Insert: {
+          action: string
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          rule_id: string
+        }
+        Update: {
+          action?: string
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          rule_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "road_tax_rule_history_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "road_tax_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      road_tax_rules: {
+        Row: {
+          additional_cess: number
+          city: string | null
+          created_at: string
+          created_by: string | null
+          effective_from: string
+          effective_till: string | null
+          ev_exemption: boolean
+          fastag_fee: number
+          flat_charge: number
+          fuel_type: string
+          green_tax: number
+          handling_charges: number
+          hsrp_fee: number
+          hypothecation_fee: number
+          id: string
+          insurance_percentage: number
+          is_active: boolean
+          luxury_surcharge: number
+          notes: string | null
+          ownership_type: string
+          price_max: number | null
+          price_min: number
+          priority: number
+          registration_fee: number
+          state_code: string
+          state_name: string
+          tax_percentage: number
+          temp_reg_fee: number
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          additional_cess?: number
+          city?: string | null
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          effective_till?: string | null
+          ev_exemption?: boolean
+          fastag_fee?: number
+          flat_charge?: number
+          fuel_type?: string
+          green_tax?: number
+          handling_charges?: number
+          hsrp_fee?: number
+          hypothecation_fee?: number
+          id?: string
+          insurance_percentage?: number
+          is_active?: boolean
+          luxury_surcharge?: number
+          notes?: string | null
+          ownership_type?: string
+          price_max?: number | null
+          price_min?: number
+          priority?: number
+          registration_fee?: number
+          state_code: string
+          state_name: string
+          tax_percentage?: number
+          temp_reg_fee?: number
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          additional_cess?: number
+          city?: string | null
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          effective_till?: string | null
+          ev_exemption?: boolean
+          fastag_fee?: number
+          flat_charge?: number
+          fuel_type?: string
+          green_tax?: number
+          handling_charges?: number
+          hsrp_fee?: number
+          hypothecation_fee?: number
+          id?: string
+          insurance_percentage?: number
+          is_active?: boolean
+          luxury_surcharge?: number
+          notes?: string | null
+          ownership_type?: string
+          price_max?: number | null
+          price_min?: number
+          priority?: number
+          registration_fee?: number
+          state_code?: string
+          state_name?: string
+          tax_percentage?: number
+          temp_reg_fee?: number
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
       scheduled_reports: {
         Row: {
           created_at: string
