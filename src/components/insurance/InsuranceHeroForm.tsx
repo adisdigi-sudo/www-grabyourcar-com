@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Car, Shield, CheckCircle2, Loader2, Zap, Sparkles, Gift, Star } from "lucide-react";
+import { ArrowRight, Car, Shield, CheckCircle2, Loader2, Zap, Sparkles, Gift, Star, Bike } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -39,7 +39,12 @@ const scrollingOffers = [
   { icon: Zap, text: "Instant Digital Policy in 2 Min" },
 ];
 
-export function InsuranceHeroForm() {
+interface InsuranceHeroFormProps {
+  policyType?: string;
+  vehicleLabel?: string;
+}
+
+export function InsuranceHeroForm({ policyType = "comprehensive", vehicleLabel = "vehicle" }: InsuranceHeroFormProps) {
   const [step, setStep] = useState<FlowStep>("vehicle");
   const [vehicleNumber, setVehicleNumber] = useState("");
   const [phone, setPhone] = useState("");
@@ -48,7 +53,7 @@ export function InsuranceHeroForm() {
 
   const handleVehicleSubmit = () => {
     if (!vehicleNumber || vehicleNumber.length < 4) {
-      toast.error("Please enter a valid vehicle number");
+      toast.error(`Please enter a valid ${vehicleLabel} number`);
       return;
     }
     setStep("phone");
@@ -64,8 +69,8 @@ export function InsuranceHeroForm() {
       await supabase.from("insurance_leads").insert({
         phone,
         vehicle_number: vehicleNumber,
-        source: "insurance_hero_form",
-        policy_type: "comprehensive",
+        source: `insurance_hero_${policyType}`,
+        policy_type: policyType,
       });
     } catch { /* Don't block flow */ }
     setIsLoading(false);
@@ -104,7 +109,7 @@ export function InsuranceHeroForm() {
                     <Car className="h-5 w-5 text-primary" />
                   </div>
                   <Input
-                    placeholder="Enter vehicle number (e.g. DL01AB1234)"
+                    placeholder={`Enter ${vehicleLabel} number (e.g. DL01AB1234)`}
                     value={vehicleNumber}
                     onChange={(e) => setVehicleNumber(e.target.value.toUpperCase())}
                     className="border-0 shadow-none focus-visible:ring-0 text-base md:text-lg h-14 bg-transparent uppercase placeholder:normal-case placeholder:text-muted-foreground/50 font-bold tracking-wide"
