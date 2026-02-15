@@ -1050,6 +1050,114 @@ export type Database = {
           },
         ]
       }
+      car_loan_leads: {
+        Row: {
+          age: number | null
+          assigned_to: string | null
+          buying_timeline: string | null
+          city: string | null
+          created_at: string
+          credit_check_provider: string | null
+          credit_check_response: Json | null
+          credit_score: number | null
+          down_payment: number | null
+          eligibility_status: string | null
+          employment_type: string | null
+          existing_emi: number | null
+          id: string
+          lead_priority: string | null
+          lead_score: number | null
+          loan_amount_requested: number | null
+          max_emi_capacity: number | null
+          max_loan_eligible: number | null
+          monthly_income: number | null
+          name: string | null
+          notes: string | null
+          otp_verified_at: string | null
+          pan_number: string | null
+          phone: string
+          preferred_car: string | null
+          source: string | null
+          status: string | null
+          tenure_months: number | null
+          updated_at: string
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          whatsapp_alert_sent: boolean | null
+        }
+        Insert: {
+          age?: number | null
+          assigned_to?: string | null
+          buying_timeline?: string | null
+          city?: string | null
+          created_at?: string
+          credit_check_provider?: string | null
+          credit_check_response?: Json | null
+          credit_score?: number | null
+          down_payment?: number | null
+          eligibility_status?: string | null
+          employment_type?: string | null
+          existing_emi?: number | null
+          id?: string
+          lead_priority?: string | null
+          lead_score?: number | null
+          loan_amount_requested?: number | null
+          max_emi_capacity?: number | null
+          max_loan_eligible?: number | null
+          monthly_income?: number | null
+          name?: string | null
+          notes?: string | null
+          otp_verified_at?: string | null
+          pan_number?: string | null
+          phone: string
+          preferred_car?: string | null
+          source?: string | null
+          status?: string | null
+          tenure_months?: number | null
+          updated_at?: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          whatsapp_alert_sent?: boolean | null
+        }
+        Update: {
+          age?: number | null
+          assigned_to?: string | null
+          buying_timeline?: string | null
+          city?: string | null
+          created_at?: string
+          credit_check_provider?: string | null
+          credit_check_response?: Json | null
+          credit_score?: number | null
+          down_payment?: number | null
+          eligibility_status?: string | null
+          employment_type?: string | null
+          existing_emi?: number | null
+          id?: string
+          lead_priority?: string | null
+          lead_score?: number | null
+          loan_amount_requested?: number | null
+          max_emi_capacity?: number | null
+          max_loan_eligible?: number | null
+          monthly_income?: number | null
+          name?: string | null
+          notes?: string | null
+          otp_verified_at?: string | null
+          pan_number?: string | null
+          phone?: string
+          preferred_car?: string | null
+          source?: string | null
+          status?: string | null
+          tenure_months?: number | null
+          updated_at?: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          whatsapp_alert_sent?: boolean | null
+        }
+        Relationships: []
+      }
       car_offers: {
         Row: {
           car_id: string
@@ -3608,6 +3716,93 @@ export type Database = {
           utm_campaign?: string | null
           utm_medium?: string | null
           utm_source?: string | null
+        }
+        Relationships: []
+      }
+      loan_page_settings: {
+        Row: {
+          created_at: string
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          setting_key: string
+          setting_value?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      loan_partners: {
+        Row: {
+          apply_url: string | null
+          created_at: string
+          features: string[] | null
+          highlight: string | null
+          id: string
+          interest_rate_max: number
+          interest_rate_min: number
+          is_active: boolean | null
+          logo_url: string | null
+          max_amount: number | null
+          max_tenure_years: number | null
+          name: string
+          partner_type: string | null
+          processing_fee: string | null
+          rating: number | null
+          sort_order: number | null
+          updated_at: string
+        }
+        Insert: {
+          apply_url?: string | null
+          created_at?: string
+          features?: string[] | null
+          highlight?: string | null
+          id?: string
+          interest_rate_max?: number
+          interest_rate_min?: number
+          is_active?: boolean | null
+          logo_url?: string | null
+          max_amount?: number | null
+          max_tenure_years?: number | null
+          name: string
+          partner_type?: string | null
+          processing_fee?: string | null
+          rating?: number | null
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Update: {
+          apply_url?: string | null
+          created_at?: string
+          features?: string[] | null
+          highlight?: string | null
+          id?: string
+          interest_rate_max?: number
+          interest_rate_min?: number
+          is_active?: boolean | null
+          logo_url?: string | null
+          max_amount?: number | null
+          max_tenure_years?: number | null
+          name?: string
+          partner_type?: string | null
+          processing_fee?: string | null
+          rating?: number | null
+          sort_order?: number | null
+          updated_at?: string
         }
         Relationships: []
       }
