@@ -1,15 +1,16 @@
 import { motion } from "framer-motion";
-import { Car, Phone, MessageCircle, Shield } from "lucide-react";
+import { Car, Phone, MessageCircle, Shield, ArrowRight, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WhatsAppCTA, whatsappMessages } from "@/components/WhatsAppCTA";
 
 export function InsuranceCTA() {
   return (
-    <section className="py-16 md:py-24 bg-gradient-to-br from-primary via-primary to-primary/90 text-primary-foreground relative overflow-hidden">
-      {/* Background decorations */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-white/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-white/10 rounded-full blur-3xl" />
+    <section className="py-20 md:py-28 bg-primary text-primary-foreground relative overflow-hidden">
+      {/* Rich background */}
+      <div className="absolute inset-0">
+        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primary-foreground/5 rounded-full blur-[120px]" />
+        <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-primary-foreground/8 rounded-full blur-[100px]" />
+        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, hsl(var(--primary-foreground)) 1px, transparent 0)', backgroundSize: '40px 40px' }} />
       </div>
 
       <div className="container mx-auto px-4 relative z-10">
@@ -19,52 +20,39 @@ export function InsuranceCTA() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mx-auto mb-6">
-              <Shield className="h-8 w-8" />
+            <div className="w-20 h-20 rounded-3xl bg-primary-foreground/10 flex items-center justify-center mx-auto mb-8">
+              <Shield className="h-10 w-10" />
             </div>
-            <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4">
-              Ready to Protect Your Car?
+            <h2 className="text-3xl md:text-5xl font-heading font-bold mb-5 leading-tight">
+              Ready to protect your car?
             </h2>
-            <p className="text-lg md:text-xl text-primary-foreground/80 mb-8">
+            <p className="text-lg md:text-xl text-primary-foreground/70 mb-10 max-w-2xl mx-auto">
               Get the best car insurance quotes in just 2 minutes. Compare, choose, and buy online with instant policy issuance.
             </p>
 
+            {/* Trust pills */}
+            <div className="flex flex-wrap justify-center gap-3 mb-10">
+              {["98% Claim Settlement", "20+ Insurers", "2 Min Instant Policy", "Zero Paperwork"].map((item) => (
+                <div key={item} className="flex items-center gap-1.5 bg-primary-foreground/10 rounded-full px-4 py-2 text-sm">
+                  <CheckCircle2 className="h-4 w-4 text-chart-4" />
+                  <span className="font-medium">{item}</span>
+                </div>
+              ))}
+            </div>
+
             <div className="flex flex-wrap justify-center gap-4">
-              <Button
-                size="lg"
-                variant="secondary"
-                className="gap-2 text-base h-12 px-8"
-              >
+              <Button size="lg" variant="secondary" className="gap-2 text-base h-14 px-10 rounded-2xl font-bold shadow-xl">
                 <Car className="h-5 w-5" />
                 Get Free Quote
+                <ArrowRight className="h-5 w-5" />
               </Button>
-              <WhatsAppCTA
-                message={whatsappMessages.insurance}
-                label="Get Insurance Quote"
-                size="lg"
-                className="h-12 px-8 text-base"
-              />
+              <WhatsAppCTA message={whatsappMessages.insurance} label="Get Insurance Quote" size="lg" className="h-14 px-10 text-base rounded-2xl font-bold" />
               <a href="tel:+919855924442">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="gap-2 text-base h-12 px-8 bg-transparent border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground hover:text-primary"
-                >
+                <Button size="lg" variant="outline" className="gap-2 text-base h-14 px-10 rounded-2xl font-bold bg-transparent border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground hover:text-primary">
                   <Phone className="h-5 w-5" />
                   Talk to Expert
                 </Button>
               </a>
-            </div>
-
-            <div className="mt-8 flex flex-wrap justify-center gap-6 text-sm">
-              <div className="flex items-center gap-2">
-                <MessageCircle className="h-4 w-4" />
-                <span>24/7 Customer Support</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Shield className="h-4 w-4" />
-                <span>98% Claim Settlement</span>
-              </div>
             </div>
           </motion.div>
         </div>
