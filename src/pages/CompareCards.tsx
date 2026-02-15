@@ -96,138 +96,198 @@ const CompareCars = () => {
       const doc = new jsPDF({ orientation: "landscape" });
       const pageW = doc.internal.pageSize.getWidth();
       const pageH = doc.internal.pageSize.getHeight();
-      const margin = 16;
+      const margin = 14;
       let y = 0;
 
-      // Brand colors
-      const brandGreen: [number, number, number] = [16, 185, 129]; // emerald-500
+      // Brand palette
+      const brandGreen: [number, number, number] = [16, 185, 129];
+      const darkGreen: [number, number, number] = [5, 150, 105];
       const darkGray: [number, number, number] = [31, 41, 55];
       const medGray: [number, number, number] = [107, 114, 128];
-      const lightBg: [number, number, number] = [243, 244, 246];
+      const lightBg: [number, number, number] = [249, 250, 251];
+      const greenTint: [number, number, number] = [236, 253, 245];
       const white: [number, number, number] = [255, 255, 255];
 
-      // ── Header bar ──
+      // ── Premium Header ──
+      // Top accent stripe
       doc.setFillColor(...brandGreen);
-      doc.rect(0, 0, pageW, 32, "F");
+      doc.rect(0, 0, pageW, 4, "F");
 
-      // Logo
+      // White header area for logo (no background clash)
+      doc.setFillColor(...white);
+      doc.rect(0, 4, pageW, 28, "F");
+
+      // Logo on white background
       const logoBase64 = await getLogoBase64();
       if (logoBase64) {
-        doc.addImage(logoBase64, "PNG", margin, 5, 50, 22);
+        doc.addImage(logoBase64, "PNG", margin, 7, 44, 20);
       } else {
-        doc.setTextColor(...white);
-        doc.setFontSize(16);
+        doc.setTextColor(...brandGreen);
+        doc.setFontSize(18);
         doc.setFont("helvetica", "bold");
-        doc.text("Grabyourcar", margin, 20);
+        doc.text("GRABYOURCAR", margin, 22);
       }
 
-      // Header right text
-      doc.setTextColor(...white);
-      doc.setFontSize(9);
-      doc.setFont("helvetica", "normal");
-      doc.text("Car Comparison Report", pageW - margin, 14, { align: "right" });
-      doc.setFontSize(7);
-      doc.text(`Generated on ${new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}`, pageW - margin, 21, { align: "right" });
-      doc.text("www.grabyourcar.com | +91 98559 24442", pageW - margin, 27, { align: "right" });
-
-      y = 40;
-
-      // ── Car names row with accent background ──
-      const colW = (pageW - margin * 2) / (activeCars.length + 1);
-      doc.setFillColor(240, 253, 244); // green-50
-      doc.roundedRect(margin, y, pageW - margin * 2, 16, 3, 3, "F");
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "bold");
+      // Header right: Report title & date
       doc.setTextColor(...darkGray);
-      doc.text("Specification", margin + 4, y + 10);
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text("Car Comparison Report", pageW - margin, 16, { align: "right" });
+      doc.setFontSize(7.5);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...medGray);
+      doc.text(`Generated: ${new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}`, pageW - margin, 23, { align: "right" });
+      doc.text("www.grabyourcar.com | +91 98559 24442", pageW - margin, 28, { align: "right" });
+
+      // Separator line below header
+      doc.setDrawColor(...brandGreen);
+      doc.setLineWidth(0.8);
+      doc.line(margin, 33, pageW - margin, 33);
+
+      y = 39;
+
+      // ── Car Names Header Row ──
+      const colW = (pageW - margin * 2) / (activeCars.length + 1);
+
+      // Green gradient-like row for car names
+      doc.setFillColor(...greenTint);
+      doc.roundedRect(margin, y, pageW - margin * 2, 18, 3, 3, "F");
+      doc.setDrawColor(...brandGreen);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(margin, y, pageW - margin * 2, 18, 3, 3, "S");
+
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...medGray);
+      doc.text("SPECIFICATION", margin + 6, y + 11);
+
       activeCars.forEach((car, i) => {
-        doc.setTextColor(...brandGreen);
-        doc.text(`${car.brand} ${car.name}`, margin + colW * (i + 1) + 4, y + 10);
+        const x = margin + colW * (i + 1) + 6;
+        doc.setTextColor(...darkGreen);
+        doc.setFontSize(10);
+        doc.text(car.brand?.toUpperCase() || "", x, y + 8);
+        doc.setTextColor(...darkGray);
+        doc.setFontSize(9);
+        doc.text(car.name || "", x, y + 14);
       });
-      y += 22;
+      y += 24;
 
       // ── Helpers ──
       let rowAlt = false;
 
       const drawTableRow = (label: string, values: string[], isBold = false) => {
-        if (y > pageH - 28) {
+        if (y > pageH - 30) {
           addFooter(doc, pageW, pageH, margin);
           doc.addPage();
-          y = 16;
+          addPageHeader(doc, pageW, margin);
+          y = 18;
         }
         if (rowAlt) {
           doc.setFillColor(...lightBg);
-          doc.rect(margin, y - 4, pageW - margin * 2, 9, "F");
+          doc.rect(margin, y - 4.5, pageW - margin * 2, 10, "F");
         }
         rowAlt = !rowAlt;
+
+        // Label
         doc.setFont("helvetica", isBold ? "bold" : "normal");
-        doc.setFontSize(8.5);
+        doc.setFontSize(8);
         doc.setTextColor(...darkGray);
-        doc.text(label, margin + 4, y + 2, { maxWidth: colW - 8 });
+        doc.text(label, margin + 6, y + 2, { maxWidth: colW - 10 });
+
+        // Values
         values.forEach((val, i) => {
-          doc.setTextColor(isBold ? brandGreen[0] : medGray[0], isBold ? brandGreen[1] : medGray[1], isBold ? brandGreen[2] : medGray[2]);
-          doc.text(val || "—", margin + colW * (i + 1) + 4, y + 2, { maxWidth: colW - 8 });
+          doc.setFont("helvetica", isBold ? "bold" : "normal");
+          doc.setTextColor(isBold ? darkGreen[0] : medGray[0], isBold ? darkGreen[1] : medGray[1], isBold ? darkGreen[2] : medGray[2]);
+          doc.text(val || "—", margin + colW * (i + 1) + 6, y + 2, { maxWidth: colW - 10 });
         });
-        y += 9;
+        y += 10;
       };
 
-      const drawSectionHeader = (title: string) => {
-        if (y > pageH - 40) {
+      const drawSectionHeader = (title: string, icon: string) => {
+        if (y > pageH - 42) {
           addFooter(doc, pageW, pageH, margin);
           doc.addPage();
-          y = 16;
+          addPageHeader(doc, pageW, margin);
+          y = 18;
         }
-        y += 4;
+        y += 5;
+
+        // Section pill with green bg
+        const sectionW = pageW - margin * 2;
         doc.setFillColor(...brandGreen);
-        doc.roundedRect(margin, y - 5, pageW - margin * 2, 12, 2, 2, "F");
+        doc.roundedRect(margin, y - 5, sectionW, 13, 2, 2, "F");
+
         doc.setTextColor(...white);
-        doc.setFontSize(10);
+        doc.setFontSize(9.5);
         doc.setFont("helvetica", "bold");
-        doc.text(title, margin + 6, y + 3);
-        y += 14;
+        doc.text(`${icon}  ${title}`, margin + 8, y + 3.5);
+
+        // Right-side decorative dash
+        doc.setDrawColor(255, 255, 255);
+        doc.setLineWidth(0.3);
+        doc.line(pageW - margin - 50, y + 1, pageW - margin - 8, y + 1);
+
+        y += 16;
         rowAlt = false;
       };
 
-      const addFooter = (d: jsPDF, pw: number, ph: number, m: number) => {
-        d.setDrawColor(...brandGreen);
-        d.setLineWidth(0.5);
-        d.line(m, ph - 14, pw - m, ph - 14);
+      const addPageHeader = (d: jsPDF, pw: number, m: number) => {
+        d.setFillColor(...brandGreen);
+        d.rect(0, 0, pw, 4, "F");
+        d.setFillColor(...white);
+        d.rect(0, 4, pw, 10, "F");
         d.setFontSize(7);
         d.setTextColor(...medGray);
         d.setFont("helvetica", "normal");
-        d.text("Grabyourcar — India's Smarter Way to Buy New Cars", m, ph - 8);
-        d.text("hello@grabyourcar.com | www.grabyourcar.com", pw - m, ph - 8, { align: "right" });
+        d.text("Grabyourcar — Car Comparison Report", m, 11);
+        d.text("www.grabyourcar.com", pw - m, 11, { align: "right" });
+        d.setDrawColor(...brandGreen);
+        d.setLineWidth(0.3);
+        d.line(m, 14, pw - m, 14);
+      };
+
+      const addFooter = (d: jsPDF, pw: number, ph: number, m: number) => {
+        // Footer accent bar
+        d.setFillColor(...brandGreen);
+        d.rect(0, ph - 12, pw, 12, "F");
+        d.setFontSize(7);
+        d.setTextColor(...white);
+        d.setFont("helvetica", "bold");
+        d.text("GRABYOURCAR", m + 4, ph - 4.5);
+        d.setFont("helvetica", "normal");
+        d.text("India's Smarter Way to Buy New Cars", m + 60, ph - 4.5);
+        d.text("hello@grabyourcar.com  |  www.grabyourcar.com  |  +91 98559 24442", pw - m - 4, ph - 4.5, { align: "right" });
       };
 
       // ── Sections ──
-      drawSectionHeader("💰  Price & Availability");
+      drawSectionHeader("PRICE & AVAILABILITY", "₹");
       drawTableRow("Price Range", activeCars.map(c => c.price || "—"), true);
       drawTableRow("Discount", activeCars.map(c => c.discount || "—"));
       drawTableRow("Availability", activeCars.map(c => c.availability || "—"));
       drawTableRow("Fuel Types", activeCars.map(c => c.fuelTypes?.join(", ") || "—"));
       drawTableRow("Transmission", activeCars.map(c => c.transmission?.join(", ") || "—"));
 
-      drawSectionHeader("⚙️  Engine Specifications");
+      drawSectionHeader("ENGINE SPECIFICATIONS", "⚙");
       ["Engine Type", "Displacement", "Max Power", "Max Torque", "Fuel Tank Capacity"].forEach(label => {
         drawTableRow(label, activeCars.map(c => getSpecValue(c, "engine", label)));
       });
 
-      drawSectionHeader("📐  Dimensions");
+      drawSectionHeader("DIMENSIONS", "📐");
       ["Length", "Width", "Height", "Wheelbase", "Ground Clearance", "Boot Space"].forEach(label => {
         drawTableRow(label, activeCars.map(c => getSpecValue(c, "dimensions", label)));
       });
 
-      drawSectionHeader("🏎️  Performance");
+      drawSectionHeader("PERFORMANCE", "🏎");
       ["Mileage (Petrol)", "Mileage (Diesel)", "Top Speed", "0-100 kmph"].forEach(label => {
         drawTableRow(label, activeCars.map(c => getSpecValue(c, "performance", label)));
       });
 
-      drawSectionHeader("✨  Features");
+      drawSectionHeader("KEY FEATURES", "✦");
       ["Airbags", "Infotainment", "Sunroof", "Connectivity", "Sound System", "Cruise Control"].forEach(label => {
         drawTableRow(label, activeCars.map(c => getSpecValue(c, "features", label)));
       });
 
-      drawSectionHeader("🎁  Offers & Discounts");
+      drawSectionHeader("OFFERS & DISCOUNTS", "🎁");
       ["cashback", "exchange", "accessory", "finance"].forEach(type => {
         const vals = activeCars.map(c => {
           const offer = c.offers?.find(o => o.type === type);
@@ -243,11 +303,11 @@ const CompareCars = () => {
         addFooter(doc, pageW, pageH, margin);
         doc.saveGraphicsState();
         // @ts-ignore
-        doc.setGState(new doc.GState({ opacity: 0.04 }));
+        doc.setGState(new doc.GState({ opacity: 0.03 }));
         doc.setTextColor(...brandGreen);
-        doc.setFontSize(60);
+        doc.setFontSize(55);
         doc.setFont("helvetica", "bold");
-        doc.text("GRABYOURCAR", pageW / 2, pageH / 2, { align: "center", angle: 35 });
+        doc.text("GRABYOURCAR", pageW / 2, pageH / 2, { align: "center", angle: 30 });
         doc.restoreGraphicsState();
       }
 
