@@ -314,35 +314,29 @@ const CarOnRoadPrice = () => {
                               className="space-y-2 pl-3 border-l-2 border-primary/30 ml-1 mt-3"
                             >
                               <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">RTO Charges</span>
+                                <span className="text-muted-foreground">Road Tax ({breakup.roadTaxPercent}%)</span>
                                 <span>{formatPrice(breakup.rto)}</span>
-                              </div>
-                              <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Road Tax</span>
-                                <span>{formatPrice(breakup.roadTax)}</span>
                               </div>
                               <div className="flex justify-between text-sm">
                                 <span className="text-muted-foreground">Insurance (1 Year)</span>
                                 <span>{formatPrice(breakup.insurance)}</span>
                               </div>
-                              {breakup.tcs > 0 && (
-                                <div className="flex justify-between text-sm">
-                                  <span className="text-muted-foreground flex items-center gap-1">
-                                    TCS (1%)
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger>
-                                          <Info className="h-3 w-3" />
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <p>Tax Collected at Source for vehicles above ₹10L</p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  </span>
-                                  <span>{formatPrice(breakup.tcs)}</span>
-                                </div>
-                              )}
+                              <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground flex items-center gap-1">
+                                  TCS (1%)
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger>
+                                        <Info className="h-3 w-3" />
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Tax Collected at Source — 1% of ex-showroom</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                </span>
+                                <span>{formatPrice(breakup.tcs)}</span>
+                              </div>
                               <div className="flex justify-between text-sm">
                                 <span className="text-muted-foreground">FASTag</span>
                                 <span>{formatPrice(breakup.fastag)}</span>
