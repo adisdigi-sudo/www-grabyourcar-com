@@ -1,12 +1,10 @@
 import { motion } from "framer-motion";
-import { HelpCircle } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Badge } from "@/components/ui/badge";
 
 const faqs = [
   {
@@ -41,20 +39,23 @@ const faqs = [
 
 export function InsuranceFAQ() {
   return (
-    <section className="py-12 md:py-20 bg-muted/30">
-      <div className="container mx-auto px-4">
-        <div className="text-center max-w-2xl mx-auto mb-12">
-          <Badge className="mb-4" variant="secondary">
-            <HelpCircle className="h-3 w-3 mr-1" />
-            FAQs
-          </Badge>
-          <h2 className="text-2xl md:text-3xl font-heading font-bold mb-4">
-            Frequently Asked Questions
+    <section className="py-20 md:py-28 relative overflow-hidden">
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_40%_at_50%_0%,hsl(var(--muted)/0.5),transparent)]" />
+
+      <div className="container mx-auto px-4 relative z-10">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-center max-w-2xl mx-auto mb-14"
+        >
+          <h2 className="text-3xl md:text-5xl font-heading font-bold mb-4">
+            Frequently asked <span className="text-primary">questions</span>
           </h2>
-          <p className="text-muted-foreground">
+          <p className="text-lg text-muted-foreground">
             Everything you need to know about car insurance
           </p>
-        </div>
+        </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -62,17 +63,17 @@ export function InsuranceFAQ() {
           viewport={{ once: true }}
           className="max-w-3xl mx-auto"
         >
-          <Accordion type="single" collapsible className="space-y-3">
+          <Accordion type="single" collapsible className="space-y-4">
             {faqs.map((faq, index) => (
               <AccordionItem
                 key={index}
                 value={`item-${index}`}
-                className="bg-card border rounded-xl px-6 data-[state=open]:shadow-md transition-shadow"
+                className="bg-card border border-border/60 rounded-2xl px-7 data-[state=open]:shadow-[0_10px_40px_-10px_hsl(var(--primary)/0.08)] data-[state=open]:border-primary/20 transition-all duration-300"
               >
-                <AccordionTrigger className="text-left hover:no-underline py-5">
-                  <span className="font-medium pr-4">{faq.question}</span>
+                <AccordionTrigger className="text-left hover:no-underline py-6">
+                  <span className="font-semibold text-base pr-4">{faq.question}</span>
                 </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground pb-5">
+                <AccordionContent className="text-muted-foreground pb-6 leading-relaxed text-[15px]">
                   {faq.answer}
                 </AccordionContent>
               </AccordionItem>

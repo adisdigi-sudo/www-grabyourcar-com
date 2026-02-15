@@ -5,8 +5,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Shield, Building2, Star, TrendingUp, CheckCircle2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Shield, Building2, Star, TrendingUp, CheckCircle2, ArrowRight } from "lucide-react";
 
 import hdfcErgoLogo from "@/assets/insurers/hdfc-ergo.png";
 import iciciLombardLogo from "@/assets/insurers/icici-lombard.png";
@@ -51,7 +50,6 @@ const insurancePartners: InsurancePartner[] = [
   { name: "Iffco Tokio", logo: iffcoTokioLogo, id: "iffco-tokio", claimSettlementRatio: 94.5, networkGarages: 4100, rating: 4.0, highlight: "Rural network strength" },
 ];
 
-// Top 7 partners for the card section
 const topPartners = insurancePartners.slice(0, 7);
 
 function InsurerTooltipContent({ partner }: { partner: InsurancePartner }) {
@@ -85,92 +83,87 @@ function InsurerTooltipContent({ partner }: { partner: InsurancePartner }) {
 
 export function InsurancePartnerLogos() {
   const scrollToComparison = () => {
-    const comparisonSection = document.getElementById("insurance-comparison");
-    if (comparisonSection) {
-      comparisonSection.scrollIntoView({ behavior: "smooth" });
-    }
+    const el = document.getElementById("insurance-comparison");
+    el?.scrollIntoView({ behavior: "smooth" });
   };
 
   return (
     <TooltipProvider delayDuration={200}>
-      {/* Premium Insurance Partner Cards */}
-      <section className="relative py-16 bg-gradient-to-b from-background via-muted/20 to-background overflow-hidden">
-        {/* Subtle background pattern */}
-        <div className="absolute inset-0 opacity-[0.02]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, hsl(var(--foreground)) 1px, transparent 0)', backgroundSize: '40px 40px' }} />
+      <section className="relative py-20 md:py-28 bg-background overflow-hidden">
+        {/* Acko-style clean background */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-10%,hsl(var(--primary)/0.06),transparent)]" />
 
         <div className="container mx-auto px-4 relative z-10">
-          {/* Section heading */}
+          {/* Section heading — Acko-style bold & clean */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-center mb-12"
+            className="text-center mb-16"
           >
-            <div className="inline-flex items-center gap-2 bg-primary/5 rounded-full px-4 py-1.5 mb-4 border border-primary/10">
-              <Shield className="h-4 w-4 text-primary" />
-              <span className="text-xs font-semibold text-primary tracking-wide uppercase">IRDAI Licensed Partners</span>
-            </div>
-            <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground mb-3">
-              Compare <span className="text-primary">20+ Top Insurers</span>
+            <h2 className="text-3xl md:text-5xl font-heading font-bold text-foreground mb-4 leading-tight">
+              Compare plans from <span className="text-primary">20+ top insurers</span>
             </h2>
-            <p className="text-muted-foreground max-w-xl mx-auto">
-              Choose from India's most trusted insurance providers with the highest claim settlement ratios
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              India's most trusted insurance providers with the highest claim settlement ratios — all in one place
             </p>
           </motion.div>
 
-          {/* Insurance Company Cards Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-12">
+          {/* Insurance Company Cards Grid — Acko-style large clean cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-5 mb-16">
             {topPartners.map((partner, index) => (
               <Tooltip key={partner.id}>
                 <TooltipTrigger asChild>
                   <motion.div
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 25 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    transition={{ delay: index * 0.05 }}
-                    whileHover={{ y: -6, scale: 1.03 }}
+                    transition={{ delay: index * 0.06, duration: 0.5 }}
+                    whileHover={{ y: -8 }}
                     onClick={scrollToComparison}
-                    className="relative group cursor-pointer bg-card rounded-2xl border border-border/60 p-5 flex flex-col items-center text-center hover:border-primary/40 hover:shadow-[0_8px_30px_hsl(var(--primary)/0.12)] transition-all duration-300"
+                    className="relative group cursor-pointer"
                   >
-                    {/* Tag badge */}
-                    {partner.tag && (
-                      <div className="absolute -top-2.5 right-3">
-                        <Badge className="text-[9px] px-2 py-0 font-bold shadow-sm">{partner.tag}</Badge>
-                      </div>
-                    )}
+                    <div className="bg-card rounded-3xl border border-border/70 p-6 flex flex-col items-center text-center hover:border-primary/50 hover:shadow-[0_20px_60px_-15px_hsl(var(--primary)/0.15)] transition-all duration-500 h-full">
+                      {/* Tag */}
+                      {partner.tag && (
+                        <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                          <span className="text-[10px] font-bold bg-primary text-primary-foreground px-3 py-1 rounded-full shadow-md whitespace-nowrap">{partner.tag}</span>
+                        </div>
+                      )}
 
-                    {/* Logo */}
-                    <div className="w-16 h-16 mb-3 flex items-center justify-center rounded-xl bg-muted/50 group-hover:bg-primary/5 transition-colors p-2">
-                      <img
-                        src={partner.logo}
-                        alt={`${partner.name} logo`}
-                        className="max-h-full max-w-full object-contain group-hover:scale-110 transition-transform duration-300"
-                      />
-                    </div>
-
-                    {/* Name */}
-                    <h3 className="text-xs font-bold text-foreground mb-1.5 leading-tight">{partner.name}</h3>
-
-                    {/* Rating */}
-                    <div className="flex items-center gap-1 mb-2">
-                      {[...Array(5)].map((_, i) => (
-                        <Star
-                          key={i}
-                          className={`h-2.5 w-2.5 ${i < Math.floor(partner.rating) ? 'fill-chart-4 text-chart-4' : 'text-muted-foreground/30'}`}
+                      {/* Logo */}
+                      <div className="w-20 h-20 mb-4 flex items-center justify-center rounded-2xl bg-muted/40 group-hover:bg-primary/5 transition-colors duration-300 p-3">
+                        <img
+                          src={partner.logo}
+                          alt={`${partner.name} logo`}
+                          className="max-h-full max-w-full object-contain group-hover:scale-110 transition-transform duration-500"
                         />
-                      ))}
-                      <span className="text-[10px] text-muted-foreground ml-0.5">{partner.rating}</span>
-                    </div>
+                      </div>
 
-                    {/* Claim ratio */}
-                    <div className="flex items-center gap-1 text-[10px]">
-                      <CheckCircle2 className="h-3 w-3 text-chart-2" />
-                      <span className="font-semibold text-chart-2">{partner.claimSettlementRatio}%</span>
-                      <span className="text-muted-foreground">Claims</span>
-                    </div>
+                      {/* Name */}
+                      <h3 className="text-sm font-bold text-foreground mb-2 leading-tight">{partner.name}</h3>
 
-                    {/* Hover glow */}
-                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                      {/* Rating */}
+                      <div className="flex items-center gap-0.5 mb-2">
+                        {[...Array(5)].map((_, i) => (
+                          <Star
+                            key={i}
+                            className={`h-3 w-3 ${i < Math.floor(partner.rating) ? 'fill-chart-4 text-chart-4' : 'text-muted-foreground/20'}`}
+                          />
+                        ))}
+                      </div>
+
+                      {/* Claim ratio badge */}
+                      <div className="flex items-center gap-1.5 bg-chart-2/10 rounded-full px-3 py-1.5">
+                        <CheckCircle2 className="h-3 w-3 text-chart-2" />
+                        <span className="text-[11px] font-bold text-chart-2">{partner.claimSettlementRatio}%</span>
+                      </div>
+
+                      {/* Arrow button — Acko style */}
+                      <div className="mt-4 w-9 h-9 rounded-full border-2 border-border/60 group-hover:border-primary group-hover:bg-primary flex items-center justify-center transition-all duration-300">
+                        <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary-foreground transition-colors" />
+                      </div>
+                    </div>
                   </motion.div>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="bg-popover border border-border shadow-xl" sideOffset={8}>
@@ -182,22 +175,22 @@ export function InsurancePartnerLogos() {
 
           {/* Scrolling banner of ALL logos */}
           <div className="relative">
-            <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
-            <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
+            <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
+            <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
 
-            <div className="overflow-hidden py-4">
-              <div className="flex animate-scroll-left gap-10 items-center">
+            <div className="overflow-hidden py-6 border-y border-border/40">
+              <div className="flex animate-scroll-left gap-12 items-center">
                 {[...insurancePartners, ...insurancePartners].map((partner, index) => (
                   <Tooltip key={`scroll-${partner.name}-${index}`}>
                     <TooltipTrigger asChild>
                       <motion.button
                         onClick={scrollToComparison}
-                        whileHover={{ scale: 1.12 }}
+                        whileHover={{ scale: 1.15 }}
                         whileTap={{ scale: 0.96 }}
-                        className="flex-shrink-0 h-14 w-36 flex items-center justify-center grayscale hover:grayscale-0 opacity-50 hover:opacity-100 transition-all duration-300 cursor-pointer rounded-xl hover:bg-muted/50 hover:shadow-md p-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        className="flex-shrink-0 h-14 w-36 flex items-center justify-center grayscale hover:grayscale-0 opacity-40 hover:opacity-100 transition-all duration-500 cursor-pointer rounded-xl hover:bg-muted/50 p-2.5 focus:outline-none"
                         aria-label={`${partner.name} - ${partner.claimSettlementRatio}% claim settlement`}
                       >
-                        <img src={partner.logo} alt={`${partner.name}`} className="max-h-full max-w-full object-contain" />
+                        <img src={partner.logo} alt={partner.name} className="max-h-full max-w-full object-contain" />
                       </motion.button>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="bg-popover border border-border shadow-lg" sideOffset={8}>
