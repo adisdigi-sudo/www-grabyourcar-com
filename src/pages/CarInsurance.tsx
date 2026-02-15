@@ -131,8 +131,8 @@ const CarInsurance = () => {
               <InsuranceHeroForm />
             </motion.div>
 
-            {/* Acko-Style Product Cards Below */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 max-w-4xl mx-auto">
+            {/* Product Cards — responsive grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5 max-w-4xl mx-auto">
               {heroProducts.map((product, index) => (
                 <motion.div
                   key={product.title}
@@ -142,7 +142,7 @@ const CarInsurance = () => {
                   className="group cursor-pointer"
                   onClick={() => setActiveProduct(product)}
                 >
-                  <div className="bg-card rounded-2xl border border-border/60 p-6 h-full flex flex-col hover:border-primary/40 hover:shadow-[0_16px_50px_-15px_hsl(var(--primary)/0.12)] transition-all duration-500">
+                  <div className="bg-card rounded-2xl border border-border/60 p-5 md:p-6 h-full flex flex-col hover:border-primary/40 hover:shadow-[0_16px_50px_-15px_hsl(var(--primary)/0.12)] transition-all duration-500 min-h-[180px]">
                     <div className="w-12 h-12 rounded-2xl bg-primary/8 flex items-center justify-center mb-4">
                       <product.icon className="h-6 w-6 text-primary" />
                     </div>
@@ -170,7 +170,7 @@ const CarInsurance = () => {
 
             {/* Product Card Multi-Step Dialog */}
             <Dialog open={!!activeProduct} onOpenChange={(open) => !open && setActiveProduct(null)}>
-              <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto p-4 md:p-6 w-[95vw] sm:w-full rounded-2xl">
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2 text-xl font-heading">
                     {activeProduct && <activeProduct.icon className="h-5 w-5 text-primary" />}
@@ -182,6 +182,7 @@ const CarInsurance = () => {
                     key={activeProduct?.policyType}
                     policyType={activeProduct?.policyType || "comprehensive"}
                     vehicleLabel={activeProduct?.vehicleLabel || "vehicle"}
+                    compact
                   />
                 </div>
               </DialogContent>
