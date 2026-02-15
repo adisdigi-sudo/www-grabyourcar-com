@@ -19,6 +19,7 @@ import {
   InsuranceCTA,
 } from "@/components/insurance";
 import { InsuranceContentSection } from "@/components/insurance/InsuranceContentSection";
+import { InsuranceOfferBanners } from "@/components/insurance/InsuranceOfferBanners";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -185,6 +186,9 @@ const CarInsurance = () => {
 
         {/* Partner Company Cards — Premium showcase */}
         <InsurancePartnerLogos />
+
+        {/* Exclusive Offer Banners with Lead Gen */}
+        <InsuranceOfferBanners />
 
         {/* Stats Section */}
         <InsuranceStats />
