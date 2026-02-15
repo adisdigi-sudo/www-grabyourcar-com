@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { GlobalSEO } from "@/components/seo/GlobalSEO";
 import { Sparkles, Shield, Star, CheckCircle2, Award, TrendingUp, Zap, Wallet, Gift, Car, ArrowRight } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { CrossSellWidget } from "@/components/CrossSellWidget";
@@ -43,29 +45,32 @@ const heroProducts = [
     highlight: "Renew your car insurance",
     highlightSuffix: " with zero commission",
     badge: "Starting at just ₹2,094*",
-    span: "col-span-1",
+    policyType: "car_renewal",
+    vehicleLabel: "car",
+    icon: Car,
   },
   {
-    title: "Insuring a brand new car?",
+    title: "Brand New Car Insurance",
     highlight: "Save up to ₹36,000",
     highlightSuffix: " by insuring your brand new car with us",
-    span: "col-span-1",
+    badge: "New car? Best rates here",
+    policyType: "new_car",
+    vehicleLabel: "car",
+    icon: Gift,
   },
   {
     title: "Bike Insurance",
     highlight: "",
     highlightSuffix: "Insure your bike or scooter in just 1 minute",
-    span: "col-span-1",
+    badge: "Starting at ₹714*",
+    policyType: "bike",
+    vehicleLabel: "bike",
+    icon: Sparkles,
   },
 ];
 
-const heroOffers = [
-  { icon: Car, text: "Free Self-Drive Car (1 Day/Year)" },
-  { icon: Sparkles, text: "3 Car Wash Coupons" },
-  { icon: Gift, text: "Free Perfumes + 6 Months Shipping" },
-];
-
 const CarInsurance = () => {
+  const [activeProduct, setActiveProduct] = useState<typeof heroProducts[0] | null>(null);
   const { data: expertiseData } = useQuery({
     queryKey: ["insurance-hero-expertise"],
     queryFn: async () => {
@@ -135,9 +140,12 @@ const CarInsurance = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.25 + index * 0.1 }}
                   className="group cursor-pointer"
-                  onClick={() => window.open(PB_PARTNERS_URL, "_blank", "noopener,noreferrer")}
+                  onClick={() => setActiveProduct(product)}
                 >
                   <div className="bg-card rounded-2xl border border-border/60 p-6 h-full flex flex-col hover:border-primary/40 hover:shadow-[0_16px_50px_-15px_hsl(var(--primary)/0.12)] transition-all duration-500">
+                    <div className="w-12 h-12 rounded-2xl bg-primary/8 flex items-center justify-center mb-4">
+                      <product.icon className="h-6 w-6 text-primary" />
+                    </div>
                     <h3 className="text-lg font-heading font-bold text-foreground mb-2">{product.title}</h3>
                     <p className="text-sm text-muted-foreground mb-3">
                       {product.highlight && <span className="text-primary font-semibold">{product.highlight}</span>}
@@ -149,7 +157,8 @@ const CarInsurance = () => {
                         <span className="text-xs font-bold text-foreground">{product.badge}</span>
                       </div>
                     )}
-                    <div className="mt-auto pt-3">
+                    <div className="mt-auto pt-3 flex items-center justify-between">
+                      <span className="text-sm font-bold text-primary">Check Prices →</span>
                       <div className="w-9 h-9 rounded-full border-2 border-border/60 group-hover:border-primary group-hover:bg-primary flex items-center justify-center transition-all duration-300">
                         <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary-foreground transition-colors" />
                       </div>
@@ -158,6 +167,25 @@ const CarInsurance = () => {
                 </motion.div>
               ))}
             </div>
+
+            {/* Product Card Multi-Step Dialog */}
+            <Dialog open={!!activeProduct} onOpenChange={(open) => !open && setActiveProduct(null)}>
+              <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2 text-xl font-heading">
+                    {activeProduct && <activeProduct.icon className="h-5 w-5 text-primary" />}
+                    {activeProduct?.title}
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="mt-2">
+                  <InsuranceHeroForm
+                    key={activeProduct?.policyType}
+                    policyType={activeProduct?.policyType || "comprehensive"}
+                    vehicleLabel={activeProduct?.vehicleLabel || "vehicle"}
+                  />
+                </div>
+              </DialogContent>
+            </Dialog>
 
             {/* Regulatory footer */}
             <div className="mt-8 text-center">
