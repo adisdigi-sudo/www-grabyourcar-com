@@ -11,7 +11,11 @@ import {
   InsuranceStats,
   InsuranceProcess,
   InsuranceCoverageCards,
+  InsuranceSmartNudge,
   InsuranceComparison,
+  InsuranceClaimsAssistance,
+  InsuranceTrustArchitecture,
+  InsuranceServiceExpansion,
   InsuranceFAQ,
   InsuranceCTA,
 } from "@/components/insurance";
@@ -115,6 +119,9 @@ const CarInsurance = () => {
         {/* Stats Section */}
         <InsuranceStats />
 
+        {/* Smart Behavioral Nudges */}
+        <InsuranceSmartNudge />
+
         {/* Process Steps */}
         <InsuranceProcess />
 
@@ -123,6 +130,15 @@ const CarInsurance = () => {
 
         {/* Provider Comparison */}
         <InsuranceComparison />
+
+        {/* Claims Assistance — Differentiator */}
+        <InsuranceClaimsAssistance />
+
+        {/* Add-On Protection Suite */}
+        <InsuranceServiceExpansion />
+
+        {/* Trust Architecture */}
+        <InsuranceTrustArchitecture />
 
         {/* FAQ Section */}
         <InsuranceFAQ />
