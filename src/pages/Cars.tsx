@@ -98,7 +98,7 @@ const Cars = () => {
     { label: "₹15-20 Lakh", min: 1500000, max: 2000000 },
   ];
   
-  const handleCompareToggle = (carId: number) => {
+  const handleCompareToggle = (carId: string | number) => {
     if (isInCompare(carId)) {
       removeFromCompare(carId);
     } else {

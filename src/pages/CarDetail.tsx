@@ -59,7 +59,7 @@ import { WhatsAppQuickActions, WhatsAppConversionCard } from "@/components/Whats
 import { Skeleton } from "@/components/ui/skeleton";
 import { BrochureLeadGate } from "@/components/BrochureLeadGate";
 
-const CompareButton = ({ carId }: { carId: number }) => {
+const CompareButton = ({ carId }: { carId: string | number }) => {
   const { addToCompare, removeFromCompare, isInCompare, canAddMore } = useCompare();
   const inCompare = isInCompare(carId);
 
