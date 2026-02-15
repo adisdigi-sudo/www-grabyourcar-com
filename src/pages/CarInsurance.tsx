@@ -35,6 +35,28 @@ const defaultExpertise = [
   { icon: "Wallet", title: "Save Up To 85%", description: "Lowest premiums guaranteed with exclusive online discounts and no-claim bonuses", stat: "85%", stat_label: "Savings" },
 ];
 
+const heroProducts = [
+  {
+    title: "Car Insurance",
+    highlight: "Renew your car insurance",
+    highlightSuffix: " with zero commission",
+    badge: "Starting at just ₹2,094*",
+    span: "col-span-1",
+  },
+  {
+    title: "Insuring a brand new car?",
+    highlight: "Save up to ₹36,000",
+    highlightSuffix: " by insuring your brand new car with us",
+    span: "col-span-1",
+  },
+  {
+    title: "Bike Insurance",
+    highlight: "",
+    highlightSuffix: "Insure your bike or scooter in just 1 minute",
+    span: "col-span-1",
+  },
+];
+
 const heroOffers = [
   { icon: Car, text: "Free Self-Drive Car (1 Day/Year)" },
   { icon: Sparkles, text: "3 Car Wash Coupons" },
@@ -68,140 +90,202 @@ const CarInsurance = () => {
 
       <Header />
 
-      <main className="min-h-screen">
-        {/* ===== HERO ===== */}
-        <section className="relative overflow-hidden bg-primary">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary to-primary" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,hsl(var(--primary-glow)/0.3),transparent_60%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,hsl(var(--primary)/0.8),transparent_50%)]" />
-          <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, hsl(var(--primary-foreground)) 1px, transparent 0)', backgroundSize: '32px 32px' }} />
+      <main className="min-h-screen bg-background">
+        {/* ===== HERO — Acko-Style Clean White Layout ===== */}
+        <section className="relative bg-background pt-6 pb-16 md:pt-10 md:pb-24">
+          <div className="container mx-auto px-4">
+            {/* Top tagline */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-8"
+            >
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-heading font-bold text-foreground leading-tight">
+                Your trusted <span className="text-primary">insurer</span> by your side
+              </h1>
+            </motion.div>
 
-          {/* Hero Offer Marquee Strip at Top */}
-          <div className="relative z-20 bg-primary-foreground/8 border-b border-primary-foreground/10 overflow-hidden">
-            <div className="flex animate-scroll-left items-center gap-12 py-2.5 whitespace-nowrap">
-              {[...heroOffers, ...heroOffers, ...heroOffers, ...heroOffers].map((offer, i) => (
-                <div key={i} className="flex items-center gap-2 text-primary-foreground/80 shrink-0">
-                  <offer.icon className="h-4 w-4 text-chart-4" />
-                  <span className="text-xs font-semibold">{offer.text}</span>
-                  <span className="text-primary-foreground/30 ml-4">|</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="container mx-auto px-4 relative z-10 py-10 md:py-16 lg:py-20">
-            <div className="grid lg:grid-cols-2 gap-8 lg:gap-14 items-start">
-              {/* Left content */}
-              <div className="max-w-xl">
-                {/* Authorised Partner Badge */}
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5 }}
-                  className="inline-flex items-center gap-2.5 bg-primary-foreground/10 backdrop-blur-md rounded-full px-4 py-2 mb-6 border border-primary-foreground/20"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <Shield className="h-4 w-4 text-primary-foreground" />
-                    <span className="text-xs font-bold text-primary-foreground tracking-wide uppercase">Authorised Channel Partner</span>
+            {/* Scrolling partner badges */}
+            <div className="relative mb-10 overflow-hidden">
+              <div className="flex animate-scroll-left items-center gap-10 py-2 whitespace-nowrap">
+                {[...heroOffers, ...heroOffers, ...heroOffers, ...heroOffers].map((offer, i) => (
+                  <div key={i} className="flex items-center gap-2 text-muted-foreground shrink-0">
+                    <offer.icon className="h-4 w-4 text-primary" />
+                    <span className="text-xs font-semibold">{offer.text}</span>
                   </div>
-                  <div className="w-px h-4 bg-primary-foreground/30" />
-                  <span className="text-xs font-bold text-chart-4">PolicyBazaar</span>
-                </motion.div>
-
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.1 }}
-                >
-                  <h1 className="text-4xl md:text-5xl lg:text-6xl font-heading font-bold text-primary-foreground mb-3 leading-[1.1] tracking-tight">
-                    Car Insurance
-                  </h1>
-                  <p className="text-xl md:text-2xl text-primary-foreground/90 font-medium mb-2">
-                    Car insurance price starting at just <span className="text-chart-4 font-bold">₹2,094</span>*
-                  </p>
-                  <p className="text-base md:text-lg text-primary-foreground/70 mb-6 flex items-center gap-2">
-                    Buy or Renew Car Insurance Online in 2 Minutes
-                    <Sparkles className="h-5 w-5 text-chart-4" />
-                  </p>
-                </motion.div>
-
-                {/* Offer highlight pills in hero */}
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.25, duration: 0.5 }}
-                  className="flex flex-wrap gap-2 mb-6"
-                >
-                  {heroOffers.map((offer, i) => (
-                    <div key={i} className="flex items-center gap-1.5 bg-chart-4/10 border border-chart-4/20 rounded-full px-3 py-1.5">
-                      <offer.icon className="h-3.5 w-3.5 text-chart-4" />
-                      <span className="text-[11px] font-bold text-primary-foreground/90">{offer.text}</span>
-                    </div>
-                  ))}
-                </motion.div>
-
-                {/* Hero Form */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.3 }}
-                >
-                  <InsuranceHeroForm />
-                </motion.div>
-
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.8 }}
-                  className="mt-4 flex items-center gap-4 text-xs text-primary-foreground/40"
-                >
-                  <span>IRDAI Licensed</span>
-                  <span>•</span>
-                  <span>*T&Cs Apply</span>
-                </motion.div>
+                ))}
               </div>
+            </div>
 
-              {/* Right side — 4 Expertise Columns */}
+            {/* Acko-Style Card Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+              {/* Card 1 — Large: Main Insurance CTA with Form */}
               <motion.div
-                initial={{ opacity: 0, y: 30 }}
+                initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3, duration: 0.6 }}
-                className="grid grid-cols-2 gap-4"
+                transition={{ duration: 0.5 }}
+                className="lg:col-span-1 lg:row-span-2"
               >
-                {expertise.map((item: any, index: number) => {
-                  const IconComp = iconMap[item.icon] || Shield;
-                  return (
-                    <motion.div
-                      key={item.title}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.4 + index * 0.12, duration: 0.5 }}
-                      whileHover={{ y: -4, scale: 1.02 }}
-                      className="group relative bg-primary-foreground/8 backdrop-blur-xl rounded-2xl p-5 border border-primary-foreground/10 hover:bg-primary-foreground/14 hover:border-primary-foreground/25 transition-all duration-300 overflow-hidden"
-                    >
-                      <div className="absolute top-0 right-0 w-20 h-20 bg-primary-foreground/5 rounded-full blur-2xl group-hover:bg-chart-4/10 transition-colors" />
-                      <div className="w-11 h-11 rounded-xl bg-primary-foreground/10 group-hover:bg-chart-4/20 flex items-center justify-center mb-4 transition-colors relative z-10">
-                        <IconComp className="h-5 w-5 text-chart-4" />
-                      </div>
-                      <div className="mb-2 relative z-10">
-                        <span className="text-2xl md:text-3xl font-heading font-bold text-primary-foreground leading-none">{item.stat}</span>
-                        <span className="text-[10px] text-primary-foreground/40 ml-1.5 uppercase tracking-wider">{item.stat_label}</span>
-                      </div>
-                      <h3 className="text-sm font-bold text-primary-foreground mb-1.5 leading-tight relative z-10">{item.title}</h3>
-                      <p className="text-[11px] leading-relaxed text-primary-foreground/50 relative z-10">{item.description}</p>
-                      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-chart-4/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </motion.div>
-                  );
-                })}
+                <div className="bg-card rounded-3xl border border-border/60 p-7 h-full flex flex-col hover:shadow-[0_20px_60px_-15px_hsl(var(--primary)/0.1)] transition-all duration-500 group">
+                  <div className="inline-flex items-center gap-1.5 bg-primary/10 rounded-full px-3 py-1 mb-4 w-fit">
+                    <Shield className="h-3.5 w-3.5 text-primary" />
+                    <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Authorised Partner</span>
+                  </div>
+
+                  <h2 className="text-xl md:text-2xl font-heading font-bold text-foreground mb-2">
+                    Protect your car with our comprehensive insurance
+                  </h2>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Not mixed with any hidden charges or jargons
+                  </p>
+
+                  <div className="flex items-center gap-2 bg-primary/8 rounded-xl px-3 py-2 w-fit mb-6">
+                    <CheckCircle2 className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-bold text-foreground">Coverage from ₹2,094 to ₹1,50,000</span>
+                  </div>
+
+                  <div className="mt-auto">
+                    <InsuranceHeroForm />
+                  </div>
+
+                  {/* Acko-style arrow */}
+                  <div className="mt-5 w-10 h-10 rounded-full border-2 border-border/60 group-hover:border-primary group-hover:bg-primary flex items-center justify-center transition-all duration-300">
+                    <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary-foreground transition-colors" />
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Card 2 — Car Insurance */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+                className="group cursor-pointer"
+              >
+                <div className="bg-card rounded-3xl border border-border/60 p-7 h-full flex flex-col hover:shadow-[0_20px_60px_-15px_hsl(var(--primary)/0.1)] transition-all duration-500">
+                  <h3 className="text-xl font-heading font-bold text-foreground mb-2">Car insurance</h3>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    <span className="text-primary font-semibold">Renew your car insurance</span> with zero commission
+                  </p>
+
+                  <div className="flex items-center gap-2 bg-primary/8 rounded-xl px-3 py-2 w-fit mb-4">
+                    <CheckCircle2 className="h-4 w-4 text-primary" />
+                    <span className="text-xs font-bold text-foreground">Starting at just ₹2094*</span>
+                  </div>
+
+                  <div className="mt-auto flex items-end justify-between">
+                    <div className="w-10 h-10 rounded-full border-2 border-border/60 group-hover:border-primary group-hover:bg-primary flex items-center justify-center transition-all duration-300">
+                      <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary-foreground transition-colors" />
+                    </div>
+                    <div className="w-28 h-20 flex items-end justify-end opacity-60 group-hover:opacity-100 transition-opacity">
+                      <Car className="h-16 w-16 text-primary/30" />
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Card 3 — Brand New Car */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className="group cursor-pointer"
+              >
+                <div className="bg-card rounded-3xl border border-border/60 p-7 h-full flex flex-col hover:shadow-[0_20px_60px_-15px_hsl(var(--primary)/0.1)] transition-all duration-500">
+                  <h3 className="text-xl font-heading font-bold text-foreground mb-2">Insuring a brand new car?</h3>
+                  <p className="text-sm text-muted-foreground">
+                    <span className="text-primary font-semibold">Save up to ₹36,000</span> by insuring your brand new car with us
+                  </p>
+
+                  <div className="mt-auto flex items-end justify-between pt-4">
+                    <div className="w-10 h-10 rounded-full border-2 border-border/60 group-hover:border-primary group-hover:bg-primary flex items-center justify-center transition-all duration-300">
+                      <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary-foreground transition-colors" />
+                    </div>
+                    <div className="w-28 h-20 flex items-end justify-end opacity-60 group-hover:opacity-100 transition-opacity">
+                      <Gift className="h-16 w-16 text-primary/30" />
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Card 4 — Bike Insurance */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+                className="group cursor-pointer"
+              >
+                <div className="bg-card rounded-3xl border border-border/60 p-7 h-full flex flex-col hover:shadow-[0_20px_60px_-15px_hsl(var(--primary)/0.1)] transition-all duration-500">
+                  <h3 className="text-xl font-heading font-bold text-foreground mb-2">Free Self-Drive Car</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Get <span className="text-primary font-semibold">1 day free self-drive</span> car rental every year with your policy
+                  </p>
+
+                  <div className="mt-auto flex items-end justify-between pt-4">
+                    <div className="w-10 h-10 rounded-full border-2 border-border/60 group-hover:border-primary group-hover:bg-primary flex items-center justify-center transition-all duration-300">
+                      <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary-foreground transition-colors" />
+                    </div>
+                    <div className="w-28 h-20 flex items-end justify-end opacity-60 group-hover:opacity-100 transition-opacity">
+                      <Sparkles className="h-16 w-16 text-primary/30" />
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Card 5 — 3 Car Wash Coupons */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.4 }}
+                className="group cursor-pointer"
+              >
+                <div className="bg-card rounded-3xl border border-border/60 p-7 h-full flex flex-col hover:shadow-[0_20px_60px_-15px_hsl(var(--primary)/0.1)] transition-all duration-500">
+                  <h3 className="text-xl font-heading font-bold text-foreground mb-2">3 Free Car Washes</h3>
+                  <p className="text-sm text-muted-foreground">
+                    <span className="text-primary font-semibold">3 premium car wash coupons</span> valid at 500+ partner centres
+                  </p>
+
+                  <div className="mt-auto flex items-end justify-between pt-4">
+                    <div className="w-10 h-10 rounded-full border-2 border-border/60 group-hover:border-primary group-hover:bg-primary flex items-center justify-center transition-all duration-300">
+                      <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary-foreground transition-colors" />
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Card 6 — Free Perfumes */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.5 }}
+                className="lg:col-span-2 group cursor-pointer"
+              >
+                <div className="bg-card rounded-3xl border border-border/60 p-7 h-full flex flex-col hover:shadow-[0_20px_60px_-15px_hsl(var(--primary)/0.1)] transition-all duration-500">
+                  <h3 className="text-xl font-heading font-bold text-foreground mb-2">Free Perfumes + Shipping</h3>
+                  <p className="text-sm text-muted-foreground">
+                    <span className="text-primary font-semibold">Premium car perfumes</span> with 6 months of free shipping on all accessory orders
+                  </p>
+
+                  <div className="flex items-center gap-2 bg-primary/8 rounded-xl px-3 py-2 w-fit mt-3">
+                    <CheckCircle2 className="h-4 w-4 text-primary" />
+                    <span className="text-xs font-bold text-foreground">6 months free shipping included</span>
+                  </div>
+
+                  <div className="mt-auto flex items-end justify-between pt-4">
+                    <div className="w-10 h-10 rounded-full border-2 border-border/60 group-hover:border-primary group-hover:bg-primary flex items-center justify-center transition-all duration-300">
+                      <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary-foreground transition-colors" />
+                    </div>
+                  </div>
+                </div>
               </motion.div>
             </div>
-          </div>
 
-          {/* Bottom wave */}
-          <div className="absolute bottom-0 left-0 right-0">
-            <svg viewBox="0 0 1440 60" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full">
-              <path d="M0 60L48 52C96 44 192 28 288 22C384 16 480 20 576 26C672 32 768 40 864 42C960 44 1056 40 1152 34C1248 28 1344 20 1392 16L1440 12V60H0Z" fill="hsl(var(--background))" />
-            </svg>
+            {/* Regulatory footer */}
+            <div className="mt-6 text-center">
+              <p className="text-xs text-muted-foreground">
+                UID: GYC001 | ARN: L0110 | T&C apply
+              </p>
+            </div>
           </div>
         </section>
 
