@@ -10,3 +10,4 @@ export { InsuranceTrustArchitecture } from "./InsuranceTrustArchitecture";
 export { InsuranceServiceExpansion } from "./InsuranceServiceExpansion";
 export { InsuranceFAQ } from "./InsuranceFAQ";
 export { InsuranceCTA } from "./InsuranceCTA";
+export { InsuranceContentSection } from "./InsuranceContentSection";
