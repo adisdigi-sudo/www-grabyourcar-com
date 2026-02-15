@@ -25,7 +25,7 @@ const CarLoan = () => {
         pageKey="car_loan"
         title="Car Loan Online | Instant Approval from 8.45% | GrabYourCar"
         description="Apply for car loan online. Compare rates from 15+ banks, get instant eligibility check, and same-day approval. Starting 8.45% p.a. with zero processing fee."
-        path="/car-loan"
+        path="/car-loans"
       />
 
       <div className="min-h-screen bg-background">
