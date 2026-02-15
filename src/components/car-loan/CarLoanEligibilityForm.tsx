@@ -34,7 +34,7 @@ import { z } from "zod";
 const phoneSchema = z.string().regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit mobile number");
 const panSchema = z.string().regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, "Enter a valid PAN number (e.g., ABCDE1234F)");
 
-type Step = "phone" | "otp" | "pan" | "details" | "result";
+type Step = "phone" | "pan" | "details" | "result";
 
 interface Props {
   onEligibilityResult: (result: { eligible: boolean; maxLoan: number; maxEMI: number; creditScore?: number } | null) => void;
@@ -65,7 +65,6 @@ export const CarLoanEligibilityForm = ({ onEligibilityResult }: Props) => {
 
   const steps = [
     { key: "phone", label: "Mobile", icon: Phone },
-    { key: "otp", label: "Verify", icon: Shield },
     { key: "pan", label: "PAN", icon: CreditCard },
     { key: "details", label: "Details", icon: Briefcase },
     { key: "result", label: "Result", icon: CheckCircle2 },
@@ -76,16 +75,12 @@ export const CarLoanEligibilityForm = ({ onEligibilityResult }: Props) => {
   const handlePhoneSubmit = () => {
     try {
       phoneSchema.parse(phone);
-      setStep("otp");
+      setStep("pan");
     } catch (e) {
       if (e instanceof z.ZodError) toast.error(e.errors[0].message);
     }
   };
 
-  const handleOTPVerified = () => {
-    setStep("pan");
-    toast.success("Phone verified! Let's check your eligibility.");
-  };
 
   const handlePANSubmit = () => {
     try {
@@ -265,7 +260,7 @@ export const CarLoanEligibilityForm = ({ onEligibilityResult }: Props) => {
                         </div>
                       </div>
                       <Button onClick={handlePhoneSubmit} className="w-full h-12 text-base font-bold" disabled={phone.length !== 10}>
-                        Send OTP <ArrowRight className="w-4 h-4 ml-2" />
+                        Continue <ArrowRight className="w-4 h-4 ml-2" />
                       </Button>
                       <p className="text-center text-xs text-muted-foreground flex items-center justify-center gap-1">
                         <Lock className="w-3 h-3" /> Your data is encrypted & secure
@@ -274,16 +269,6 @@ export const CarLoanEligibilityForm = ({ onEligibilityResult }: Props) => {
                   </motion.div>
                 )}
 
-                {/* Step 2: OTP Verification */}
-                {step === "otp" && (
-                  <motion.div key="otp" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.3 }}>
-                    <WhatsAppOTPVerification
-                      phone={`+91${phone}`}
-                      onVerified={handleOTPVerified}
-                      onCancel={() => setStep("phone")}
-                    />
-                  </motion.div>
-                )}
 
                 {/* Step 3: PAN */}
                 {step === "pan" && (
@@ -309,7 +294,7 @@ export const CarLoanEligibilityForm = ({ onEligibilityResult }: Props) => {
                         />
                       </div>
                       <div className="flex gap-3">
-                        <Button variant="outline" onClick={() => setStep("otp")} className="h-12">
+                        <Button variant="outline" onClick={() => setStep("phone")} className="h-12">
                           <ArrowLeft className="w-4 h-4" />
                         </Button>
                         <Button onClick={handlePANSubmit} className="flex-1 h-12 text-base font-bold" disabled={pan.length !== 10}>
