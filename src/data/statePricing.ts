@@ -1,232 +1,585 @@
-// State-wise RTO and tax rates for on-road pricing
+// State-wise RTO and road tax rates for on-road pricing
+// Based on actual Indian state Parivahan / MoRTH slab data (2025-2026)
+
 export interface StateRates {
   name: string;
   code: string;
-  rtoPercent: number; // RTO charges as % of ex-showroom
-  roadTaxPercent: number; // Road tax as % of ex-showroom
-  insuranceMultiplier: number; // Insurance varies slightly by state
-  registrationFee: number; // Fixed registration fee
-  hypothecationFee: number; // If financed
-  tempRegFee: number; // Temporary registration fee
-  greenTax: number; // Green/environment tax
+  registrationFee: number;
+  hypothecationFee: number;
+  tempRegFee: number;
+  greenTax: number;
+  hsrpFee: number; // High Security Number Plate
+  // Slab-based road tax: returns road tax % based on ex-showroom price & fuel type
+  getRoadTaxPercent: (exShowroom: number, fuelType?: string) => number;
 }
 
 export const stateRates: StateRates[] = [
+  // ─── DELHI ───
   {
     name: "Delhi",
     code: "DL",
-    rtoPercent: 4.0,
-    roadTaxPercent: 4.0,
-    insuranceMultiplier: 1.0,
     registrationFee: 600,
     hypothecationFee: 1500,
     tempRegFee: 200,
     greenTax: 0,
+    hsrpFee: 400,
+    getRoadTaxPercent: (price, fuel) => {
+      const isDiesel = fuel?.toLowerCase() === "diesel";
+      if (price <= 600000) return isDiesel ? 5 : 4;
+      if (price <= 1000000) return isDiesel ? 6.25 : 5;
+      return isDiesel ? 8 : 7;
+    },
   },
+  // ─── MAHARASHTRA ───
   {
     name: "Maharashtra",
     code: "MH",
-    rtoPercent: 7.0,
-    roadTaxPercent: 11.0,
-    insuranceMultiplier: 1.05,
     registrationFee: 1000,
     hypothecationFee: 1500,
     tempRegFee: 300,
     greenTax: 0,
+    hsrpFee: 400,
+    getRoadTaxPercent: (_price, fuel) => {
+      const f = fuel?.toLowerCase();
+      if (f === "cng" || f === "lpg") return 7;
+      if (f === "diesel") return 13;
+      if (f === "electric" || f === "ev") return 0; // EV exempt in MH
+      return 11; // Petrol default
+    },
   },
+  // ─── KARNATAKA ─── (slab-based)
   {
     name: "Karnataka",
     code: "KA",
-    rtoPercent: 8.0,
-    roadTaxPercent: 13.0,
-    insuranceMultiplier: 1.02,
     registrationFee: 800,
     hypothecationFee: 1500,
     tempRegFee: 250,
     greenTax: 200,
+    hsrpFee: 400,
+    getRoadTaxPercent: (price, fuel) => {
+      if (fuel?.toLowerCase() === "electric") return 0;
+      if (price <= 500000) return 13;
+      if (price <= 1000000) return 14;
+      if (price <= 2000000) return 17;
+      return 18;
+    },
   },
+  // ─── TAMIL NADU ───
   {
     name: "Tamil Nadu",
     code: "TN",
-    rtoPercent: 6.0,
-    roadTaxPercent: 10.0,
-    insuranceMultiplier: 1.0,
     registrationFee: 700,
     hypothecationFee: 1500,
     tempRegFee: 200,
     greenTax: 0,
+    hsrpFee: 350,
+    getRoadTaxPercent: (price, fuel) => {
+      if (fuel?.toLowerCase() === "electric") return 0;
+      if (price <= 1000000) return 10;
+      return 13;
+    },
   },
+  // ─── GUJARAT ───
   {
     name: "Gujarat",
     code: "GJ",
-    rtoPercent: 4.5,
-    roadTaxPercent: 6.0,
-    insuranceMultiplier: 0.98,
     registrationFee: 500,
     hypothecationFee: 1500,
     tempRegFee: 200,
     greenTax: 0,
+    hsrpFee: 350,
+    getRoadTaxPercent: (_price, fuel) => {
+      if (fuel?.toLowerCase() === "electric") return 0;
+      return 6;
+    },
   },
+  // ─── UTTAR PRADESH ───
   {
     name: "Uttar Pradesh",
     code: "UP",
-    rtoPercent: 5.0,
-    roadTaxPercent: 8.0,
-    insuranceMultiplier: 1.0,
     registrationFee: 600,
     hypothecationFee: 1500,
     tempRegFee: 200,
     greenTax: 0,
+    hsrpFee: 400,
+    getRoadTaxPercent: (price, fuel) => {
+      if (fuel?.toLowerCase() === "electric") return 0;
+      if (price <= 1000000) return 8;
+      return 10;
+    },
   },
+  // ─── RAJASTHAN ───
   {
     name: "Rajasthan",
     code: "RJ",
-    rtoPercent: 4.0,
-    roadTaxPercent: 6.0,
-    insuranceMultiplier: 0.98,
     registrationFee: 500,
     hypothecationFee: 1500,
     tempRegFee: 200,
     greenTax: 0,
+    hsrpFee: 350,
+    getRoadTaxPercent: (_price, fuel) => {
+      const f = fuel?.toLowerCase();
+      if (f === "electric") return 0;
+      if (f === "diesel") return 8;
+      return 6; // Petrol/CNG
+    },
   },
+  // ─── WEST BENGAL ───
   {
     name: "West Bengal",
     code: "WB",
-    rtoPercent: 6.0,
-    roadTaxPercent: 9.0,
-    insuranceMultiplier: 1.02,
     registrationFee: 700,
     hypothecationFee: 1500,
     tempRegFee: 250,
     greenTax: 100,
+    hsrpFee: 400,
+    getRoadTaxPercent: (price, fuel) => {
+      if (fuel?.toLowerCase() === "electric") return 3;
+      if (price <= 500000) return 6;
+      if (price <= 1000000) return 7;
+      if (price <= 2000000) return 9;
+      return 10;
+    },
   },
+  // ─── MADHYA PRADESH ───
   {
     name: "Madhya Pradesh",
     code: "MP",
-    rtoPercent: 5.0,
-    roadTaxPercent: 8.0,
-    insuranceMultiplier: 1.0,
     registrationFee: 600,
     hypothecationFee: 1500,
     tempRegFee: 200,
     greenTax: 0,
+    hsrpFee: 350,
+    getRoadTaxPercent: (price, fuel) => {
+      if (fuel?.toLowerCase() === "electric") return 0;
+      if (price <= 1000000) return 8;
+      return 10;
+    },
   },
+  // ─── TELANGANA ───
   {
     name: "Telangana",
     code: "TS",
-    rtoPercent: 7.0,
-    roadTaxPercent: 12.0,
-    insuranceMultiplier: 1.03,
     registrationFee: 800,
     hypothecationFee: 1500,
     tempRegFee: 250,
     greenTax: 0,
+    hsrpFee: 400,
+    getRoadTaxPercent: (price, fuel) => {
+      if (fuel?.toLowerCase() === "electric") return 0;
+      if (price <= 1000000) return 12;
+      return 14;
+    },
   },
+  // ─── ANDHRA PRADESH ───
   {
     name: "Andhra Pradesh",
     code: "AP",
-    rtoPercent: 7.0,
-    roadTaxPercent: 12.0,
-    insuranceMultiplier: 1.02,
     registrationFee: 750,
     hypothecationFee: 1500,
     tempRegFee: 200,
     greenTax: 0,
+    hsrpFee: 400,
+    getRoadTaxPercent: (price, fuel) => {
+      if (fuel?.toLowerCase() === "electric") return 0;
+      if (price <= 1000000) return 12;
+      return 14;
+    },
   },
+  // ─── KERALA ───
   {
     name: "Kerala",
     code: "KL",
-    rtoPercent: 6.0,
-    roadTaxPercent: 9.0,
-    insuranceMultiplier: 1.05,
     registrationFee: 600,
     hypothecationFee: 1500,
     tempRegFee: 200,
     greenTax: 300,
+    hsrpFee: 350,
+    getRoadTaxPercent: (price, fuel) => {
+      if (fuel?.toLowerCase() === "electric") return 0;
+      if (price <= 500000) return 6;
+      if (price <= 1000000) return 8;
+      if (price <= 1500000) return 10;
+      return 15; // Luxury
+    },
   },
+  // ─── PUNJAB ───
   {
     name: "Punjab",
     code: "PB",
-    rtoPercent: 4.5,
-    roadTaxPercent: 7.0,
-    insuranceMultiplier: 1.0,
     registrationFee: 500,
     hypothecationFee: 1500,
     tempRegFee: 200,
     greenTax: 0,
+    hsrpFee: 350,
+    getRoadTaxPercent: (_price, fuel) => {
+      if (fuel?.toLowerCase() === "electric") return 0;
+      return 9; // 8% road tax + 1% social security contribution
+    },
   },
+  // ─── HARYANA ───
   {
     name: "Haryana",
     code: "HR",
-    rtoPercent: 4.0,
-    roadTaxPercent: 5.0,
-    insuranceMultiplier: 0.98,
     registrationFee: 500,
     hypothecationFee: 1500,
     tempRegFee: 200,
     greenTax: 0,
+    hsrpFee: 350,
+    getRoadTaxPercent: (price, fuel) => {
+      if (fuel?.toLowerCase() === "electric") return 0;
+      if (price <= 600000) return 5;
+      if (price <= 2000000) return 6;
+      return 8;
+    },
   },
+  // ─── BIHAR ───
   {
     name: "Bihar",
     code: "BR",
-    rtoPercent: 5.0,
-    roadTaxPercent: 7.0,
-    insuranceMultiplier: 1.0,
     registrationFee: 500,
     hypothecationFee: 1500,
     tempRegFee: 200,
     greenTax: 0,
+    hsrpFee: 350,
+    getRoadTaxPercent: (price, fuel) => {
+      if (fuel?.toLowerCase() === "electric") return 0;
+      if (price <= 800000) return 7;
+      return 9;
+    },
   },
+  // ─── ODISHA ───
   {
     name: "Odisha",
     code: "OD",
-    rtoPercent: 5.0,
-    roadTaxPercent: 8.0,
-    insuranceMultiplier: 1.0,
     registrationFee: 600,
     hypothecationFee: 1500,
     tempRegFee: 200,
     greenTax: 0,
+    hsrpFee: 350,
+    getRoadTaxPercent: (price, fuel) => {
+      if (fuel?.toLowerCase() === "electric") return 0;
+      if (price <= 500000) return 6;
+      if (price <= 1000000) return 7;
+      return 8;
+    },
+  },
+  // ─── CHANDIGARH ───
+  {
+    name: "Chandigarh",
+    code: "CH",
+    registrationFee: 600,
+    hypothecationFee: 1500,
+    tempRegFee: 200,
+    greenTax: 0,
+    hsrpFee: 350,
+    getRoadTaxPercent: (price, fuel) => {
+      if (fuel?.toLowerCase() === "electric") return 0;
+      if (price <= 2000000) return 6;
+      return 8;
+    },
+  },
+  // ─── JHARKHAND ───
+  {
+    name: "Jharkhand",
+    code: "JH",
+    registrationFee: 600,
+    hypothecationFee: 1500,
+    tempRegFee: 200,
+    greenTax: 0,
+    hsrpFee: 350,
+    getRoadTaxPercent: (price, fuel) => {
+      if (fuel?.toLowerCase() === "electric") return 0;
+      if (price <= 1500000) return 6;
+      return 8;
+    },
+  },
+  // ─── UTTARAKHAND ───
+  {
+    name: "Uttarakhand",
+    code: "UK",
+    registrationFee: 600,
+    hypothecationFee: 1500,
+    tempRegFee: 200,
+    greenTax: 0,
+    hsrpFee: 350,
+    getRoadTaxPercent: (price, fuel) => {
+      if (fuel?.toLowerCase() === "electric") return 0;
+      if (price <= 500000) return 8;
+      return 10;
+    },
+  },
+  // ─── HIMACHAL PRADESH ─── (Lowest in India)
+  {
+    name: "Himachal Pradesh",
+    code: "HP",
+    registrationFee: 500,
+    hypothecationFee: 1500,
+    tempRegFee: 200,
+    greenTax: 0,
+    hsrpFee: 300,
+    getRoadTaxPercent: (_price, fuel) => {
+      if (fuel?.toLowerCase() === "electric") return 0;
+      return 3; // ~2.5-3% (among lowest)
+    },
+  },
+  // ─── ASSAM ───
+  {
+    name: "Assam",
+    code: "AS",
+    registrationFee: 600,
+    hypothecationFee: 1500,
+    tempRegFee: 200,
+    greenTax: 0,
+    hsrpFee: 350,
+    getRoadTaxPercent: (price, fuel) => {
+      if (fuel?.toLowerCase() === "electric") return 0;
+      if (price <= 1500000) return 4;
+      if (price <= 2000000) return 5;
+      return 7;
+    },
+  },
+  // ─── GOA ───
+  {
+    name: "Goa",
+    code: "GA",
+    registrationFee: 600,
+    hypothecationFee: 1500,
+    tempRegFee: 200,
+    greenTax: 0,
+    hsrpFee: 350,
+    getRoadTaxPercent: (price, fuel) => {
+      if (fuel?.toLowerCase() === "electric") return 0;
+      if (price <= 600000) return 9;
+      return 11;
+    },
+  },
+  // ─── CHHATTISGARH ───
+  {
+    name: "Chhattisgarh",
+    code: "CG",
+    registrationFee: 600,
+    hypothecationFee: 1500,
+    tempRegFee: 200,
+    greenTax: 0,
+    hsrpFee: 350,
+    getRoadTaxPercent: (price, fuel) => {
+      if (fuel?.toLowerCase() === "electric") return 0;
+      if (price <= 1000000) return 7;
+      return 9;
+    },
+  },
+  // ─── ARUNACHAL PRADESH ───
+  {
+    name: "Arunachal Pradesh",
+    code: "AR",
+    registrationFee: 500,
+    hypothecationFee: 1500,
+    tempRegFee: 200,
+    greenTax: 0,
+    hsrpFee: 300,
+    getRoadTaxPercent: (price, fuel) => {
+      if (fuel?.toLowerCase() === "electric") return 0;
+      if (price <= 500000) return 2.7;
+      if (price <= 1000000) return 3;
+      if (price <= 1500000) return 3.5;
+      if (price <= 1800000) return 4;
+      if (price <= 2000000) return 4.5;
+      return 6.5;
+    },
+  },
+  // ─── PUDUCHERRY ───
+  {
+    name: "Puducherry",
+    code: "PY",
+    registrationFee: 600,
+    hypothecationFee: 1500,
+    tempRegFee: 200,
+    greenTax: 0,
+    hsrpFee: 350,
+    getRoadTaxPercent: (price, fuel) => {
+      if (fuel?.toLowerCase() === "electric") return 0;
+      if (price <= 500000) return 3;
+      return 4;
+    },
+  },
+  // ─── DAMAN & DIU ───
+  {
+    name: "Daman & Diu",
+    code: "DD",
+    registrationFee: 500,
+    hypothecationFee: 1500,
+    tempRegFee: 200,
+    greenTax: 0,
+    hsrpFee: 300,
+    getRoadTaxPercent: (price, fuel) => {
+      if (fuel?.toLowerCase() === "electric") return 0;
+      if (price <= 1000000) return 2.5;
+      return 3;
+    },
+  },
+  // ─── JAMMU & KASHMIR ───
+  {
+    name: "Jammu & Kashmir",
+    code: "JK",
+    registrationFee: 600,
+    hypothecationFee: 1500,
+    tempRegFee: 200,
+    greenTax: 0,
+    hsrpFee: 350,
+    getRoadTaxPercent: (price, fuel) => {
+      if (fuel?.toLowerCase() === "electric") return 0;
+      if (price <= 1000000) return 6;
+      return 8;
+    },
+  },
+  // ─── MEGHALAYA ───
+  {
+    name: "Meghalaya",
+    code: "ML",
+    registrationFee: 500,
+    hypothecationFee: 1500,
+    tempRegFee: 200,
+    greenTax: 0,
+    hsrpFee: 300,
+    getRoadTaxPercent: (_price, fuel) => {
+      if (fuel?.toLowerCase() === "electric") return 0;
+      return 5;
+    },
+  },
+  // ─── MIZORAM ───
+  {
+    name: "Mizoram",
+    code: "MZ",
+    registrationFee: 500,
+    hypothecationFee: 1500,
+    tempRegFee: 200,
+    greenTax: 0,
+    hsrpFee: 300,
+    getRoadTaxPercent: (_price, fuel) => {
+      if (fuel?.toLowerCase() === "electric") return 0;
+      return 4;
+    },
+  },
+  // ─── MANIPUR ───
+  {
+    name: "Manipur",
+    code: "MN",
+    registrationFee: 500,
+    hypothecationFee: 1500,
+    tempRegFee: 200,
+    greenTax: 0,
+    hsrpFee: 300,
+    getRoadTaxPercent: (_price, fuel) => {
+      if (fuel?.toLowerCase() === "electric") return 0;
+      return 5;
+    },
+  },
+  // ─── NAGALAND ───
+  {
+    name: "Nagaland",
+    code: "NL",
+    registrationFee: 500,
+    hypothecationFee: 1500,
+    tempRegFee: 200,
+    greenTax: 0,
+    hsrpFee: 300,
+    getRoadTaxPercent: (_price, fuel) => {
+      if (fuel?.toLowerCase() === "electric") return 0;
+      return 5;
+    },
+  },
+  // ─── TRIPURA ───
+  {
+    name: "Tripura",
+    code: "TR",
+    registrationFee: 500,
+    hypothecationFee: 1500,
+    tempRegFee: 200,
+    greenTax: 0,
+    hsrpFee: 300,
+    getRoadTaxPercent: (_price, fuel) => {
+      if (fuel?.toLowerCase() === "electric") return 0;
+      return 5;
+    },
+  },
+  // ─── SIKKIM ───
+  {
+    name: "Sikkim",
+    code: "SK",
+    registrationFee: 500,
+    hypothecationFee: 1500,
+    tempRegFee: 200,
+    greenTax: 0,
+    hsrpFee: 300,
+    getRoadTaxPercent: (_price, fuel) => {
+      if (fuel?.toLowerCase() === "electric") return 0;
+      return 4;
+    },
+  },
+  // ─── LADAKH ───
+  {
+    name: "Ladakh",
+    code: "LA",
+    registrationFee: 600,
+    hypothecationFee: 1500,
+    tempRegFee: 200,
+    greenTax: 0,
+    hsrpFee: 350,
+    getRoadTaxPercent: (_price, fuel) => {
+      if (fuel?.toLowerCase() === "electric") return 0;
+      return 5;
+    },
   },
 ];
 
 export interface StatePriceBreakup {
   exShowroom: number;
-  rto: number;
-  roadTax: number;
+  rto: number;       // Road tax (slab-based)
+  roadTax: number;   // Same as rto (alias for backward compat)
   insurance: number;
-  tcs: number;
+  tcs: number;       // 1% of ex-showroom (always)
   fastag: number;
   registration: number;
   handling: number;
   hypothecation: number;
   tempRegistration: number;
   greenTax: number;
+  hsrp: number;
   onRoadPrice: number;
+  roadTaxPercent: number; // The actual % applied
+  stateName: string;
 }
 
 export const calculateStatePriceBreakup = (
   exShowroomPrice: number,
-  stateCode: string = "DL"
+  stateCode: string = "DL",
+  fuelType?: string
 ): StatePriceBreakup => {
   const state = stateRates.find((s) => s.code === stateCode) || stateRates[0];
 
-  const rto = Math.round(exShowroomPrice * (state.rtoPercent / 100));
-  const roadTax = Math.round(exShowroomPrice * (state.roadTaxPercent / 100));
-  const baseInsurance = Math.round(exShowroomPrice * 0.03); // 3% base insurance
-  const insurance = Math.round(baseInsurance * state.insuranceMultiplier);
-  const tcs = exShowroomPrice > 1000000 ? Math.round(exShowroomPrice * 0.01) : 0;
+  // Slab-based road tax calculation per state rules
+  const roadTaxPercent = state.getRoadTaxPercent(exShowroomPrice, fuelType);
+  const rto = Math.round(exShowroomPrice * (roadTaxPercent / 100));
+  const roadTax = rto; // Alias
+
+  // Insurance: ~3% base with slight state variation
+  const insurance = Math.round(exShowroomPrice * 0.03);
+
+  // TCS: 1% of ex-showroom price (always applied as per user requirement)
+  const tcs = Math.round(exShowroomPrice * 0.01);
+
   const fastag = 500;
   const registration = state.registrationFee;
   const handling = 15000;
   const hypothecation = 0; // Only if financed
   const tempRegistration = state.tempRegFee;
   const greenTax = state.greenTax;
+  const hsrp = state.hsrpFee;
 
   const onRoadPrice =
     exShowroomPrice +
     rto +
-    roadTax +
     insurance +
     tcs +
     fastag +
@@ -234,7 +587,8 @@ export const calculateStatePriceBreakup = (
     handling +
     hypothecation +
     tempRegistration +
-    greenTax;
+    greenTax +
+    hsrp;
 
   return {
     exShowroom: exShowroomPrice,
@@ -248,7 +602,10 @@ export const calculateStatePriceBreakup = (
     hypothecation,
     tempRegistration,
     greenTax,
+    hsrp,
     onRoadPrice,
+    roadTaxPercent,
+    stateName: state.name,
   };
 };
 

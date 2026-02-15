@@ -44,12 +44,12 @@ export const PriceBreakup = ({ variantName, carName, exShowroomPrice, onStateCha
 
   const priceItems = [
     { label: "Ex-Showroom Price", value: breakup.exShowroom, icon: Car, description: "Base price of the vehicle" },
-    { label: "RTO Charges", value: breakup.rto, icon: FileText, description: "Registration transfer charges" },
-    { label: "Road Tax", value: breakup.roadTax, icon: FileText, description: `State road tax (${selectedStateName})` },
-    { label: "Insurance (1 Year)", value: breakup.insurance, icon: Shield, description: "Comprehensive insurance" },
-    ...(breakup.tcs > 0 ? [{ label: "TCS (1%)", value: breakup.tcs, icon: CreditCard, description: "Tax Collected at Source" }] : []),
+    { label: `Road Tax (${breakup.roadTaxPercent}%)`, value: breakup.rto, icon: FileText, description: `State road tax — ${selectedStateName}` },
+    { label: "Insurance (1 Year)", value: breakup.insurance, icon: Shield, description: "Comprehensive insurance (~3%)" },
+    { label: "TCS (1%)", value: breakup.tcs, icon: CreditCard, description: "Tax Collected at Source — 1% of ex-showroom" },
     { label: "FASTag", value: breakup.fastag, icon: Tag, description: "Mandatory FASTag" },
-    { label: "Registration Fee", value: breakup.registration, icon: FileText, description: "Number plate charges" },
+    { label: "Registration Fee", value: breakup.registration, icon: FileText, description: "Number plate & registration" },
+    { label: "HSRP", value: breakup.hsrp, icon: FileText, description: "High Security Registration Plate" },
     { label: "Temp Registration", value: breakup.tempRegistration, icon: FileText, description: "Temporary registration" },
     ...(breakup.greenTax > 0 ? [{ label: "Green Tax", value: breakup.greenTax, icon: Leaf, description: "Environment cess" }] : []),
     { label: "Handling & Logistics", value: breakup.handling, icon: Truck, description: "Dealer handling charges" },

@@ -281,31 +281,29 @@ export const CarPricingConfigurator = ({ car, colors: dbColors }: CarPricingConf
                       className="space-y-1.5 pl-2 border-l-2 border-primary/20 ml-1 mt-2"
                     >
                       <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">RTO Charges</span>
+                        <span className="text-muted-foreground">Road Tax ({breakup.roadTaxPercent}%)</span>
                         <span>{formatPrice(breakup.rto)}</span>
                       </div>
                       <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">Insurance (1 Year)</span>
                         <span>{formatPrice(breakup.insurance)}</span>
                       </div>
-                      {breakup.tcs > 0 && (
-                        <div className="flex justify-between text-xs">
-                          <span className="text-muted-foreground flex items-center gap-1">
-                            TCS (1%)
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger>
-                                  <Info className="h-3 w-3" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Tax Collected at Source for vehicles above ₹10L</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </span>
-                          <span>{formatPrice(breakup.tcs)}</span>
-                        </div>
-                      )}
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground flex items-center gap-1">
+                          TCS (1%)
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <Info className="h-3 w-3" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Tax Collected at Source — 1% of ex-showroom</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </span>
+                        <span>{formatPrice(breakup.tcs)}</span>
+                      </div>
                       <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">FASTag</span>
                         <span>{formatPrice(breakup.fastag)}</span>
