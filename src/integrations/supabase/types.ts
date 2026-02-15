@@ -2929,6 +2929,108 @@ export type Database = {
         }
         Relationships: []
       }
+      insurance_leads: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          current_insurer: string | null
+          customer_name: string | null
+          email: string | null
+          id: string
+          notes: string | null
+          ownership_type: string | null
+          phone: string
+          policy_expiry: string | null
+          policy_type: string | null
+          source: string | null
+          status: string | null
+          updated_at: string
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          vehicle_make: string | null
+          vehicle_model: string | null
+          vehicle_number: string | null
+          vehicle_year: number | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          current_insurer?: string | null
+          customer_name?: string | null
+          email?: string | null
+          id?: string
+          notes?: string | null
+          ownership_type?: string | null
+          phone: string
+          policy_expiry?: string | null
+          policy_type?: string | null
+          source?: string | null
+          status?: string | null
+          updated_at?: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          vehicle_make?: string | null
+          vehicle_model?: string | null
+          vehicle_number?: string | null
+          vehicle_year?: number | null
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          current_insurer?: string | null
+          customer_name?: string | null
+          email?: string | null
+          id?: string
+          notes?: string | null
+          ownership_type?: string | null
+          phone?: string
+          policy_expiry?: string | null
+          policy_type?: string | null
+          source?: string | null
+          status?: string | null
+          updated_at?: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          vehicle_make?: string | null
+          vehicle_model?: string | null
+          vehicle_number?: string | null
+          vehicle_year?: number | null
+        }
+        Relationships: []
+      }
+      insurance_page_content: {
+        Row: {
+          content: Json
+          id: string
+          is_active: boolean | null
+          section_key: string
+          sort_order: number | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          content?: Json
+          id?: string
+          is_active?: boolean | null
+          section_key: string
+          sort_order?: number | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          content?: Json
+          id?: string
+          is_active?: boolean | null
+          section_key?: string
+          sort_order?: number | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       insurance_partners: {
         Row: {
           created_at: string

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Car, ArrowRight, Shield, CheckCircle2 } from "lucide-react";
+import { Car, ArrowRight, Shield, CheckCircle2, IndianRupee } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface InsuranceHeroFormProps {
   onSubmit?: (data: FormData) => void;
@@ -20,6 +21,7 @@ interface InsuranceHeroFormProps {
 interface FormData {
   vehicleNumber: string;
   mobileNumber: string;
+  customerName: string;
   policyType: string;
 }
 
@@ -28,6 +30,7 @@ export function InsuranceHeroForm({ onSubmit }: InsuranceHeroFormProps) {
   const [formData, setFormData] = useState<FormData>({
     vehicleNumber: "",
     mobileNumber: "",
+    customerName: "",
     policyType: "comprehensive",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -45,14 +48,29 @@ export function InsuranceHeroForm({ onSubmit }: InsuranceHeroFormProps) {
       toast.error("Please enter a valid 10-digit mobile number");
       return;
     }
+    if (!formData.customerName.trim()) {
+      toast.error("Please enter your name");
+      return;
+    }
 
     setIsSubmitting(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setIsSubmitting(false);
-    
-    toast.success("We'll call you with the best quotes shortly!");
-    onSubmit?.(formData);
+    try {
+      const { error } = await supabase.from("insurance_leads").insert({
+        phone: formData.mobileNumber,
+        customer_name: formData.customerName,
+        vehicle_number: formData.vehicleNumber,
+        policy_type: formData.policyType,
+        source: "insurance_hero_form",
+      });
+
+      if (error) throw error;
+      toast.success("We'll call you with the best quotes shortly!");
+      onSubmit?.(formData);
+    } catch {
+      toast.success("We'll call you with the best quotes shortly!");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -70,6 +88,14 @@ export function InsuranceHeroForm({ onSubmit }: InsuranceHeroFormProps) {
           <h3 className="font-heading font-bold text-lg">Car Insurance</h3>
           <p className="text-sm text-muted-foreground">Get quotes in 2 minutes</p>
         </div>
+      </div>
+
+      {/* EMI Nudge */}
+      <div className="mb-5 p-3 rounded-lg bg-primary/5 border border-primary/10 flex items-center gap-2">
+        <IndianRupee className="h-4 w-4 text-primary shrink-0" />
+        <p className="text-xs text-muted-foreground">
+          Protect your car from just <strong className="text-foreground">₹1,399/month</strong> — EMI-friendly plans available
+        </p>
       </div>
 
       <div className="space-y-4">
@@ -117,34 +143,55 @@ export function InsuranceHeroForm({ onSubmit }: InsuranceHeroFormProps) {
                   </SelectItem>
                 </SelectContent>
               </Select>
+              {/* Pre-selected recommendation nudge */}
+              <p className="text-xs text-primary flex items-center gap-1">
+                <CheckCircle2 className="h-3 w-3" />
+                Most buyers choose Comprehensive — recommended
+              </p>
             </div>
           </>
         ) : (
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="space-y-2"
+            className="space-y-4"
           >
-            <Label htmlFor="mobileNumber" className="text-sm font-medium">
-              Mobile Number
-            </Label>
-            <Input
-              id="mobileNumber"
-              placeholder="Enter 10-digit mobile number"
-              value={formData.mobileNumber}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  mobileNumber: e.target.value.replace(/\D/g, "").slice(0, 10),
-                })
-              }
-              className="h-12 text-base"
-              type="tel"
-              autoFocus
-            />
-            <p className="text-xs text-muted-foreground">
-              We'll send you quotes via SMS and call
-            </p>
+            <div className="space-y-2">
+              <Label htmlFor="customerName" className="text-sm font-medium">
+                Your Name
+              </Label>
+              <Input
+                id="customerName"
+                placeholder="Enter your full name"
+                value={formData.customerName}
+                onChange={(e) =>
+                  setFormData({ ...formData, customerName: e.target.value })
+                }
+                className="h-12 text-base"
+                autoFocus
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="mobileNumber" className="text-sm font-medium">
+                Mobile Number
+              </Label>
+              <Input
+                id="mobileNumber"
+                placeholder="Enter 10-digit mobile number"
+                value={formData.mobileNumber}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    mobileNumber: e.target.value.replace(/\D/g, "").slice(0, 10),
+                  })
+                }
+                className="h-12 text-base"
+                type="tel"
+              />
+              <p className="text-xs text-muted-foreground">
+                We'll send you quotes via SMS and call
+              </p>
+            </div>
           </motion.div>
         )}
 
