@@ -147,9 +147,10 @@ export const calculateOnRoadPrice = (
   const greenTax = matchedRule?.green_tax ?? 0;
   const additionalCess = matchedRule?.additional_cess ?? 0;
   const luxurySurcharge = matchedRule?.luxury_surcharge ?? 0;
+  const flatCharge = matchedRule?.flat_charge ?? 0;
 
-  // Calculate
-  const roadTax = Math.round(exShowroomPrice * (taxPercent / 100));
+  // Calculate road tax: percentage-based + flat charge (some states like Puducherry use flat charges)
+  const roadTax = Math.round(exShowroomPrice * (taxPercent / 100)) + flatCharge;
   const insurance = Math.round(exShowroomPrice * (insurancePercent / 100));
   const tcs = Math.round(exShowroomPrice * 0.01); // Always 1%
 

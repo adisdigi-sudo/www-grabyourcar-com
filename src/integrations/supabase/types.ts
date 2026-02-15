@@ -3750,7 +3750,7 @@ export type Database = {
           id: string
           new_data: Json | null
           old_data: Json | null
-          rule_id: string
+          rule_id: string | null
         }
         Insert: {
           action: string
@@ -3759,7 +3759,7 @@ export type Database = {
           id?: string
           new_data?: Json | null
           old_data?: Json | null
-          rule_id: string
+          rule_id?: string | null
         }
         Update: {
           action?: string
@@ -3768,7 +3768,7 @@ export type Database = {
           id?: string
           new_data?: Json | null
           old_data?: Json | null
-          rule_id?: string
+          rule_id?: string | null
         }
         Relationships: [
           {
