@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { captureInsuranceLead } from "@/lib/insuranceLeadCapture";
 import { WhatsAppOTPVerification } from "@/components/WhatsAppOTPVerification";
 import { useQuery } from "@tanstack/react-query";
 
@@ -130,11 +131,13 @@ export function InsuranceHeroForm({ policyType = "comprehensive", vehicleLabel =
     }
     setIsLoading(true);
     try {
-      await supabase.from("insurance_leads").insert({
+      await captureInsuranceLead({
         phone,
-        vehicle_number: isNewVehicle ? `NEW-${selectedBrand}-${selectedModel}` : vehicleNumber,
+        vehicleNumber: isNewVehicle ? `NEW-${selectedBrand}-${selectedModel}` : vehicleNumber,
+        vehicleMake: selectedBrand || undefined,
+        vehicleModel: selectedModel || undefined,
+        policyType,
         source: `insurance_hero_${policyType}`,
-        policy_type: policyType,
       });
     } catch { /* Don't block flow */ }
     setIsLoading(false);

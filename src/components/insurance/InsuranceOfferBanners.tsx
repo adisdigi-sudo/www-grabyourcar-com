@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { captureInsuranceLead } from "@/lib/insuranceLeadCapture";
 
 interface Offer {
   id: string;
@@ -60,11 +61,11 @@ export function InsuranceOfferBanners() {
 
     setIsSubmitting(true);
     try {
-      await supabase.from("insurance_leads").insert({
+      await captureInsuranceLead({
         phone,
-        customer_name: name,
+        customerName: name,
+        policyType: "comprehensive",
         source: `offer_grab_${selectedOffer?.id}`,
-        policy_type: "comprehensive",
         notes: `Grabbed offer: ${selectedOffer?.title}`,
       });
       setSubmitted(true);

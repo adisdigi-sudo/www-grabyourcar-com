@@ -2,7 +2,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Shield, FileText, HelpCircle, Package, Globe, Users, BarChart3,
   LayoutDashboard, UserCheck, ShieldCheck, RefreshCw, ListChecks,
-  DollarSign, TrendingUp
+  DollarSign, TrendingUp, FolderOpen, Briefcase
 } from "lucide-react";
 import { InsurancePlansAdmin } from "./insurance/InsurancePlansAdmin";
 import { InsuranceContentAdmin } from "./insurance/InsuranceContentAdmin";
@@ -17,6 +17,8 @@ import { InsuranceRenewalsEngine } from "./insurance/InsuranceRenewalsEngine";
 import { InsuranceTasksManager } from "./insurance/InsuranceTasksManager";
 import { InsuranceCommissionsTracker } from "./insurance/InsuranceCommissionsTracker";
 import { InsuranceAnalyticsDashboard } from "./insurance/InsuranceAnalyticsDashboard";
+import { InsuranceDocumentVault } from "./insurance/InsuranceDocumentVault";
+import { InsuranceAdvisorsManager } from "./insurance/InsuranceAdvisorsManager";
 
 export function InsuranceManagement() {
   return (
@@ -27,7 +29,7 @@ export function InsuranceManagement() {
           Insurance Command Center
         </h1>
         <p className="text-muted-foreground mt-1">
-          Complete CRM, policy management, renewals, commissions & analytics
+          Complete CRM, policy management, renewals, commissions, documents & analytics
         </p>
       </div>
 
@@ -50,6 +52,12 @@ export function InsuranceManagement() {
           </TabsTrigger>
           <TabsTrigger value="commissions" className="gap-1.5 text-xs">
             <DollarSign className="h-3.5 w-3.5" /> Commissions
+          </TabsTrigger>
+          <TabsTrigger value="documents" className="gap-1.5 text-xs">
+            <FolderOpen className="h-3.5 w-3.5" /> Documents
+          </TabsTrigger>
+          <TabsTrigger value="advisors" className="gap-1.5 text-xs">
+            <Briefcase className="h-3.5 w-3.5" /> Advisors
           </TabsTrigger>
           <TabsTrigger value="analytics" className="gap-1.5 text-xs">
             <TrendingUp className="h-3.5 w-3.5" /> Analytics
@@ -80,6 +88,8 @@ export function InsuranceManagement() {
         <TabsContent value="renewals"><InsuranceRenewalsEngine /></TabsContent>
         <TabsContent value="tasks"><InsuranceTasksManager /></TabsContent>
         <TabsContent value="commissions"><InsuranceCommissionsTracker /></TabsContent>
+        <TabsContent value="documents"><InsuranceDocumentVault /></TabsContent>
+        <TabsContent value="advisors"><InsuranceAdvisorsManager /></TabsContent>
         <TabsContent value="analytics"><InsuranceAnalyticsDashboard /></TabsContent>
         <TabsContent value="plans"><InsurancePlansAdmin /></TabsContent>
         <TabsContent value="content"><InsuranceContentAdmin /></TabsContent>

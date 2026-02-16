@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { captureInsuranceLead } from "@/lib/insuranceLeadCapture";
 
 interface InsuranceGrabCTAProps {
   variant?: "inline" | "banner" | "compact";
@@ -26,11 +27,11 @@ export function InsuranceGrabCTA({ variant = "inline", source = "insurance_page"
 
     setIsSubmitting(true);
     try {
-      await supabase.from("insurance_leads").insert({
+      await captureInsuranceLead({
         phone,
-        customer_name: name,
+        customerName: name,
+        policyType: "comprehensive",
         source,
-        policy_type: "comprehensive",
         notes: `Grab CTA - ${source}`,
       });
       setSubmitted(true);
