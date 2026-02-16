@@ -5,7 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const EXTRACTION_PROMPT = `You are an expert Indian car insurance policy data extractor. Analyze this document and extract the following fields as JSON:
+const EXTRACTION_PROMPT = `You are an expert Indian car insurance policy data extractor. Analyze this document carefully and extract the following fields as JSON:
 
 {
   "customer_name": "Full name of the insured",
@@ -36,16 +36,18 @@ If a field is not found in the document, set it to null and confidence to 0.
 
 Return ONLY valid JSON with two top-level keys: "extracted" and "confidence".`;
 
-// Safe base64 encode for large ArrayBuffers (avoids stack overflow)
+// Safe base64 encode for large ArrayBuffers (avoids stack overflow with spread operator)
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
-  const chunks: string[] = [];
+  let binary = "";
   const chunkSize = 8192;
   for (let i = 0; i < bytes.length; i += chunkSize) {
-    const chunk = bytes.subarray(i, i + chunkSize);
-    chunks.push(String.fromCharCode(...chunk));
+    const end = Math.min(i + chunkSize, bytes.length);
+    for (let j = i; j < end; j++) {
+      binary += String.fromCharCode(bytes[j]);
+    }
   }
-  return btoa(chunks.join(""));
+  return btoa(binary);
 }
 
 serve(async (req) => {
@@ -60,32 +62,6 @@ serve(async (req) => {
       });
     }
 
-    // Build image URL for the AI model
-    let imageUrl: string;
-
-    if (file_base64) {
-      imageUrl = `data:${mime_type};base64,${file_base64}`;
-    } else if (file_url) {
-      // For PDFs, we need to convert to base64 since Gemini needs inline data
-      // For images, we can pass the URL directly
-      const isPdf = mime_type === "application/pdf" || file_url.endsWith(".pdf");
-      
-      if (isPdf) {
-        // Fetch and convert to base64 safely
-        const resp = await fetch(file_url);
-        if (!resp.ok) throw new Error(`Failed to fetch file: ${resp.status}`);
-        const buffer = await resp.arrayBuffer();
-        const b64 = arrayBufferToBase64(buffer);
-        imageUrl = `data:application/pdf;base64,${b64}`;
-      } else {
-        // For images, pass URL directly - Gemini can handle URLs
-        imageUrl = file_url;
-      }
-    } else {
-      throw new Error("No file data provided");
-    }
-
-    // Use Lovable AI (Gemini) for extraction
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       return new Response(JSON.stringify({ error: "AI key not configured" }), {
@@ -93,7 +69,28 @@ serve(async (req) => {
       });
     }
 
-    console.log("Sending to AI for extraction, mime:", mime_type);
+    // Determine if PDF or image
+    const isPdf = mime_type === "application/pdf" || (file_url && file_url.endsWith(".pdf"));
+    let b64Data: string;
+
+    if (file_base64) {
+      b64Data = file_base64;
+    } else if (file_url) {
+      // Fetch the file and convert to base64
+      console.log("Fetching file from URL:", file_url.substring(0, 80));
+      const resp = await fetch(file_url);
+      if (!resp.ok) throw new Error(`Failed to fetch file: ${resp.status}`);
+      const buffer = await resp.arrayBuffer();
+      b64Data = arrayBufferToBase64(buffer);
+      console.log("File fetched, base64 length:", b64Data.length);
+    } else {
+      throw new Error("No file data provided");
+    }
+
+    const actualMime = isPdf ? "application/pdf" : mime_type;
+    const dataUrl = `data:${actualMime};base64,${b64Data}`;
+
+    console.log("Sending to AI for extraction, mime:", actualMime, "data length:", dataUrl.length);
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -110,20 +107,33 @@ serve(async (req) => {
               { type: "text", text: EXTRACTION_PROMPT },
               {
                 type: "image_url",
-                image_url: { url: imageUrl },
+                image_url: { url: dataUrl },
               },
             ],
           },
         ],
         temperature: 0.1,
-        max_tokens: 3000,
+        max_tokens: 4000,
       }),
     });
 
     if (!aiResponse.ok) {
-      const err = await aiResponse.text();
-      console.error("AI extraction failed:", err);
-      return new Response(JSON.stringify({ error: "AI extraction failed", details: err }), {
+      const errText = await aiResponse.text();
+      console.error("AI extraction failed:", aiResponse.status, errText);
+
+      // Handle rate limits and payment errors
+      if (aiResponse.status === 429) {
+        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }), {
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (aiResponse.status === 402) {
+        return new Response(JSON.stringify({ error: "AI credits exhausted. Please add credits." }), {
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      return new Response(JSON.stringify({ error: "AI extraction failed", details: errText }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -132,10 +142,17 @@ serve(async (req) => {
     const content = aiResult.choices?.[0]?.message?.content || "";
     console.log("AI response received, length:", content.length);
 
+    if (!content) {
+      return new Response(JSON.stringify({ error: "AI returned empty response" }), {
+        status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Parse JSON from response (handle markdown code blocks)
-    const cleanContent = content.replace(/```json\s*/g, "").replace(/```\s*/g, "");
+    const cleanContent = content.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
     const jsonMatch = cleanContent.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
+      console.error("Could not parse JSON from:", content.substring(0, 500));
       return new Response(JSON.stringify({ error: "Could not parse extraction result", raw: content }), {
         status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
