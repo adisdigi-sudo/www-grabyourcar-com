@@ -40,6 +40,10 @@ import { InsuranceFAQsAdmin } from "./insurance/InsuranceFAQsAdmin";
 import { InsuranceAddonsAdmin } from "./insurance/InsuranceAddonsAdmin";
 import { InsuranceScraperAdmin } from "./insurance/InsuranceScraperAdmin";
 import { InsuranceLeadsAdmin } from "./insurance/InsuranceLeadsAdmin";
+import { InsuranceProspectPool } from "./insurance/InsuranceProspectPool";
+import { InsuranceDataHealth } from "./insurance/InsuranceDataHealth";
+import { InsuranceAddLeadForm } from "./insurance/InsuranceAddLeadForm";
+import { InsuranceAddPolicyForm } from "./insurance/InsuranceAddPolicyForm";
 
 type Vertical = "overview" | "insurance" | "car-sales" | "loans" | "accessories" | "hsrp" | "rentals" | "fleet";
 
@@ -251,6 +255,7 @@ function InsuranceVerticalWorkspace() {
 
   const tabs = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { id: "prospects", label: "Prospect Pool", icon: BarChart3 },
     { id: "clients", label: "Clients", icon: UserCheck },
     { id: "policies", label: "Policies", icon: ShieldCheck },
     { id: "renewals", label: "Renewals", icon: RefreshCw },
@@ -269,6 +274,9 @@ function InsuranceVerticalWorkspace() {
     { id: "vehdocs", label: "Vehicle Docs", icon: Car },
     { id: "agents", label: "Manage Agents", icon: Users },
     { id: "clientsearch", label: "Search", icon: Search },
+    { id: "addlead", label: "Add Lead", icon: Phone },
+    { id: "addpolicy", label: "Add Policy", icon: FileText },
+    { id: "datahealth", label: "Data Health", icon: BarChart3 },
     { id: "plans", label: "Plans", icon: FileText },
     { id: "content", label: "Content", icon: Globe },
     { id: "faqs", label: "FAQs", icon: HelpCircle },
@@ -280,6 +288,7 @@ function InsuranceVerticalWorkspace() {
   const renderContent = () => {
     switch (activeTab) {
       case "dashboard": return <InsuranceCRMDashboard />;
+      case "prospects": return <InsuranceProspectPool />;
       case "clients": return <InsuranceClientsManager />;
       case "policies": return <InsurancePoliciesManager />;
       case "renewals": return <InsuranceRenewalsEngine />;
@@ -298,6 +307,9 @@ function InsuranceVerticalWorkspace() {
       case "vehdocs": return <InsuranceVehicleDocValidity />;
       case "agents": return <InsuranceManageAgents />;
       case "clientsearch": return <InsuranceClientSearch />;
+      case "addlead": return <InsuranceAddLeadForm />;
+      case "addpolicy": return <InsuranceAddPolicyForm />;
+      case "datahealth": return <InsuranceDataHealth />;
       case "plans": return <InsurancePlansAdmin />;
       case "content": return <InsuranceContentAdmin />;
       case "faqs": return <InsuranceFAQsAdmin />;

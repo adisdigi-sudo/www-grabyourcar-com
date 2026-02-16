@@ -83,6 +83,7 @@ export function InsuranceReportsModule() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [agentFilter, setAgentFilter] = useState("all");
   const [daysRange, setDaysRange] = useState("30");
+  const [insurerFilter, setInsurerFilter] = useState("all");
   const pageSize = 15;
 
   const { data: policies = [] } = useQuery({
@@ -112,7 +113,7 @@ export function InsuranceReportsModule() {
     return m;
   }, [clients]);
 
-  const now = new Date();
+  const now = useMemo(() => new Date(), []);
 
   // Filter logic per report type
   const filteredPolicies = useMemo(() => {
@@ -151,6 +152,7 @@ export function InsuranceReportsModule() {
     // Global filters
     if (statusFilter !== "all") list = list.filter((p) => p.status === statusFilter);
     if (typeFilter !== "all") list = list.filter((p) => p.policy_type === typeFilter);
+    if (insurerFilter !== "all") list = list.filter((p) => p.insurer === insurerFilter);
 
     // Search
     if (search.trim()) {
@@ -168,7 +170,7 @@ export function InsuranceReportsModule() {
     }
 
     return list;
-  }, [policies, activeReport, search, statusFilter, typeFilter, daysRange, clientMap]);
+  }, [policies, activeReport, search, statusFilter, typeFilter, insurerFilter, daysRange, clientMap, now]);
 
   const totalPages = Math.max(1, Math.ceil(filteredPolicies.length / pageSize));
   const paged = filteredPolicies.slice((page - 1) * pageSize, page * pageSize);
@@ -178,6 +180,7 @@ export function InsuranceReportsModule() {
 
   const policyTypes = [...new Set(policies.map((p) => p.policy_type).filter(Boolean))];
   const statuses = [...new Set(policies.map((p) => p.status).filter(Boolean))];
+  const insurers = [...new Set(policies.map((p) => p.insurer).filter(Boolean))];
 
   const getCellValue = (p: Policy, key: string) => {
     const client = p.client_id ? clientMap[p.client_id] : null;
@@ -262,7 +265,7 @@ export function InsuranceReportsModule() {
           <p className="text-xs text-muted-foreground">{activeTab.desc}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Select value={activeReport} onValueChange={(v) => { setActiveReport(v); setPage(1); setSearch(""); }}>
+          <Select value={activeReport} onValueChange={(v) => { setActiveReport(v); setPage(1); setSearch(""); setStatusFilter("all"); setTypeFilter("all"); setInsurerFilter("all"); }}>
             <SelectTrigger className="w-[220px] text-xs">
               <SelectValue />
             </SelectTrigger>
@@ -284,7 +287,7 @@ export function InsuranceReportsModule() {
       )}
 
       {/* Report Tabs */}
-      <Tabs value={activeReport} onValueChange={(v) => { setActiveReport(v); setPage(1); setSearch(""); }}>
+      <Tabs value={activeReport} onValueChange={(v) => { setActiveReport(v); setPage(1); setSearch(""); setStatusFilter("all"); setTypeFilter("all"); setInsurerFilter("all"); }}>
         <TabsList className="flex flex-wrap gap-1 h-auto p-1 bg-muted/50">
           {REPORT_TABS.map((t) => (
             <TabsTrigger key={t.key} value={t.key} className="text-xs gap-1">
@@ -332,9 +335,16 @@ export function InsuranceReportsModule() {
                     </SelectContent>
                   </Select>
                 )}
-                {(statusFilter !== "all" || typeFilter !== "all") && (
-                  <Button variant="ghost" size="sm" className="text-xs" onClick={() => { setStatusFilter("all"); setTypeFilter("all"); }}>
-                    <X className="h-3 w-3 mr-1" /> Clear
+                <Select value={insurerFilter} onValueChange={setInsurerFilter}>
+                  <SelectTrigger className="w-[180px] text-xs"><SelectValue placeholder="Insurer" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all" className="text-xs">All Insurers</SelectItem>
+                    {insurers.map((ins) => <SelectItem key={ins} value={ins!} className="text-xs">{ins}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                {(statusFilter !== "all" || typeFilter !== "all" || insurerFilter !== "all") && (
+                  <Button variant="ghost" size="sm" className="text-xs" onClick={() => { setStatusFilter("all"); setTypeFilter("all"); setInsurerFilter("all"); }}>
+                    <X className="h-3 w-3 mr-1" /> Clear All
                   </Button>
                 )}
               </CardContent>
