@@ -1805,6 +1805,53 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_journey_triggers: {
+        Row: {
+          converted_at: string | null
+          created_at: string | null
+          customer_id: string
+          id: string
+          metadata: Json | null
+          recommendation: string
+          sent_at: string | null
+          status: string | null
+          trigger_event: string
+          trigger_type: string
+        }
+        Insert: {
+          converted_at?: string | null
+          created_at?: string | null
+          customer_id: string
+          id?: string
+          metadata?: Json | null
+          recommendation: string
+          sent_at?: string | null
+          status?: string | null
+          trigger_event: string
+          trigger_type: string
+        }
+        Update: {
+          converted_at?: string | null
+          created_at?: string | null
+          customer_id?: string
+          id?: string
+          metadata?: Json | null
+          recommendation?: string
+          sent_at?: string | null
+          status?: string | null
+          trigger_event?: string
+          trigger_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_journey_triggers_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "unified_customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_stories: {
         Row: {
           car_brand: string | null
@@ -5355,6 +5402,140 @@ export type Database = {
           sort_order?: number | null
           testimonial_text?: string
           video_url?: string | null
+        }
+        Relationships: []
+      }
+      unified_activity_timeline: {
+        Row: {
+          activity_type: string
+          created_at: string | null
+          customer_id: string
+          description: string | null
+          id: string
+          metadata: Json | null
+          source_id: string | null
+          source_table: string | null
+          title: string
+          vertical: string
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string | null
+          customer_id: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          source_id?: string | null
+          source_table?: string | null
+          title: string
+          vertical: string
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string | null
+          customer_id?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          source_id?: string | null
+          source_table?: string | null
+          title?: string
+          vertical?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unified_activity_timeline_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "unified_customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      unified_customers: {
+        Row: {
+          assigned_advisor: string | null
+          auth_user_id: string | null
+          city: string | null
+          created_at: string | null
+          customer_name: string | null
+          email: string | null
+          engagement_score: number | null
+          first_source: string | null
+          has_accessory_order: boolean | null
+          has_booking: boolean | null
+          has_car_inquiry: boolean | null
+          has_insurance: boolean | null
+          has_loan_inquiry: boolean | null
+          id: string
+          last_activity_at: string | null
+          last_activity_type: string | null
+          latest_source: string | null
+          lifetime_value: number | null
+          notes: string | null
+          otp_verified: boolean | null
+          otp_verified_at: string | null
+          phone: string
+          state: string | null
+          tags: string[] | null
+          total_interactions: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_advisor?: string | null
+          auth_user_id?: string | null
+          city?: string | null
+          created_at?: string | null
+          customer_name?: string | null
+          email?: string | null
+          engagement_score?: number | null
+          first_source?: string | null
+          has_accessory_order?: boolean | null
+          has_booking?: boolean | null
+          has_car_inquiry?: boolean | null
+          has_insurance?: boolean | null
+          has_loan_inquiry?: boolean | null
+          id?: string
+          last_activity_at?: string | null
+          last_activity_type?: string | null
+          latest_source?: string | null
+          lifetime_value?: number | null
+          notes?: string | null
+          otp_verified?: boolean | null
+          otp_verified_at?: string | null
+          phone: string
+          state?: string | null
+          tags?: string[] | null
+          total_interactions?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_advisor?: string | null
+          auth_user_id?: string | null
+          city?: string | null
+          created_at?: string | null
+          customer_name?: string | null
+          email?: string | null
+          engagement_score?: number | null
+          first_source?: string | null
+          has_accessory_order?: boolean | null
+          has_booking?: boolean | null
+          has_car_inquiry?: boolean | null
+          has_insurance?: boolean | null
+          has_loan_inquiry?: boolean | null
+          id?: string
+          last_activity_at?: string | null
+          last_activity_type?: string | null
+          latest_source?: string | null
+          lifetime_value?: number | null
+          notes?: string | null
+          otp_verified?: boolean | null
+          otp_verified_at?: string | null
+          phone?: string
+          state?: string | null
+          tags?: string[] | null
+          total_interactions?: number | null
+          updated_at?: string | null
         }
         Relationships: []
       }
