@@ -3,7 +3,7 @@ import {
   Shield, FileText, HelpCircle, Package, Globe, Users, BarChart3,
   LayoutDashboard, UserCheck, ShieldCheck, RefreshCw, ListChecks,
   DollarSign, TrendingUp, FolderOpen, Briefcase, Sparkles, FileSpreadsheet, Zap,
-  MessageSquare, GitBranch, Settings, Car
+  MessageSquare, GitBranch, Settings, Car, Search
 } from "lucide-react";
 import { InsurancePlansAdmin } from "./insurance/InsurancePlansAdmin";
 import { InsuranceContentAdmin } from "./insurance/InsuranceContentAdmin";
@@ -28,6 +28,8 @@ import { InsuranceTemplatesManager } from "./insurance/InsuranceTemplatesManager
 import { InsuranceStatusPipeline } from "./insurance/InsuranceStatusPipeline";
 import { InsuranceReportsModule } from "./insurance/InsuranceReportsModule";
 import { InsuranceVehicleDocValidity } from "./insurance/InsuranceVehicleDocValidity";
+import { InsuranceManageAgents } from "./insurance/InsuranceManageAgents";
+import { InsuranceClientSearch } from "./insurance/InsuranceClientSearch";
 
 export function InsuranceManagement() {
   return (
@@ -107,6 +109,12 @@ export function InsuranceManagement() {
           <TabsTrigger value="pipeline" className="gap-1.5 text-xs">
             <GitBranch className="h-3.5 w-3.5" /> Pipeline
           </TabsTrigger>
+          <TabsTrigger value="manageagents" className="gap-1.5 text-xs">
+            <Users className="h-3.5 w-3.5" /> Manage Agents
+          </TabsTrigger>
+          <TabsTrigger value="clientsearch" className="gap-1.5 text-xs">
+            <Search className="h-3.5 w-3.5" /> Client Search
+          </TabsTrigger>
           <TabsTrigger value="scraper" className="gap-1.5 text-xs">
             <BarChart3 className="h-3.5 w-3.5" /> Scraper
           </TabsTrigger>
@@ -136,6 +144,8 @@ export function InsuranceManagement() {
         <TabsContent value="reports"><InsuranceReportsModule /></TabsContent>
         <TabsContent value="vehdocs"><InsuranceVehicleDocValidity /></TabsContent>
         <TabsContent value="pipeline"><InsuranceStatusPipeline /></TabsContent>
+        <TabsContent value="manageagents"><InsuranceManageAgents /></TabsContent>
+        <TabsContent value="clientsearch"><InsuranceClientSearch /></TabsContent>
         <TabsContent value="scraper"><InsuranceScraperAdmin /></TabsContent>
         <TabsContent value="leads"><InsuranceLeadsAdmin /></TabsContent>
       </Tabs>
