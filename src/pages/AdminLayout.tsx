@@ -63,6 +63,7 @@ import ServicePricingManager from "@/components/admin/ServicePricingManager";
 import { HeroSlidesManagement } from "@/components/admin/HeroSlidesManagement";
 import PartnersManager from "@/components/admin/PartnersManager";
 import { InsuranceManagement } from "@/components/admin/InsuranceManagement";
+import { UnifiedMasterCRM } from "@/components/admin/UnifiedMasterCRM";
 
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
@@ -129,6 +130,8 @@ const AdminLayout = () => {
     switch (activeTab) {
       case "dashboard":
         return <AdminDashboard />;
+      case "unified-crm":
+        return <UnifiedMasterCRM />;
       case "leads-all":
       case "leads-hot":
       case "leads-whatsapp":

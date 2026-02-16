@@ -53,6 +53,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "unified-crm", label: "🧠 Master CRM", icon: Users, badge: "New" },
   { 
     id: "leads", 
     label: "Lead Management", 
