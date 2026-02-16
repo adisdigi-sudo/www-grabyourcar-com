@@ -13,6 +13,7 @@ import { Loader2, Car, Phone, Shield, Bot } from "lucide-react";
 import { z } from "zod";
 import { AnimatePresence, motion } from "framer-motion";
 import { WhatsAppOTPVerification } from "@/components/WhatsAppOTPVerification";
+import { supabase } from "@/integrations/supabase/client";
 
 const phoneSchema = z.string().regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit mobile number");
 
@@ -48,6 +49,13 @@ const Auth = () => {
     if (error) {
       toast.error(error.message || "Login failed. Please try again.");
     } else {
+      // Sync to unified CRM
+      try {
+        await supabase.functions.invoke("welcome-sync", {
+          body: { phone: `91${phone}`, source: "auth_page" },
+        });
+      } catch { /* best effort */ }
+      localStorage.setItem("gyc_otp_verified", "true");
       toast.success("Welcome to Grabyourcar! 🚗");
       navigate("/");
     }
