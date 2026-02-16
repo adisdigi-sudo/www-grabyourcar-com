@@ -3,329 +3,391 @@ import jsPDF from "jspdf";
 export const generateCorporateBrochure = () => {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
 
-  const W = doc.internal.pageSize.getWidth();   // 210
-  const H = doc.internal.pageSize.getHeight();   // 297
-  const M = 18; // margin
-  const CW = W - M * 2; // content width
+  const W = doc.internal.pageSize.getWidth();
+  const H = doc.internal.pageSize.getHeight();
+  const M = 16;
+  const CW = W - M * 2;
 
-  // Brand palette
+  // Premium brand palette
   const green: [number, number, number] = [34, 197, 94];
+  const greenDark: [number, number, number] = [22, 163, 74];
+  const greenLight: [number, number, number] = [220, 252, 231];
   const dark: [number, number, number] = [15, 23, 42];
+  const darkMid: [number, number, number] = [30, 41, 59];
   const slate: [number, number, number] = [100, 116, 139];
   const lightBg: [number, number, number] = [248, 250, 252];
   const white: [number, number, number] = [255, 255, 255];
-  const greenDark: [number, number, number] = [22, 163, 74];
-
-  const line = (y: number, color = slate) => {
-    doc.setDrawColor(...color);
-    doc.setLineWidth(0.3);
-    doc.line(M, y, W - M, y);
-  };
-
-  const pageFooter = (page: number, total: number) => {
-    doc.setFillColor(...dark);
-    doc.rect(0, H - 14, W, 14, "F");
-    doc.setTextColor(...white);
-    doc.setFontSize(7);
-    doc.setFont("helvetica", "normal");
-    doc.text("© 2025 Adis Makethemoney Services Pvt Ltd  |  www.grabyourcar.com  |  +91 98559 24442", W / 2, H - 6, { align: "center" });
-    doc.setFontSize(6);
-    doc.text(`Page ${page} of ${total}`, W - M, H - 6, { align: "right" });
-  };
-
-  const sectionTitle = (text: string, y: number) => {
-    doc.setFillColor(...green);
-    doc.rect(M, y, 4, 10, "F");
-    doc.setTextColor(...dark);
-    doc.setFontSize(18);
-    doc.setFont("helvetica", "bold");
-    doc.text(text, M + 8, y + 8);
-    return y + 16;
-  };
+  const gold: [number, number, number] = [234, 179, 8];
 
   const TOTAL_PAGES = 7;
 
-  // ============================================================
-  // PAGE 1 — COVER
-  // ============================================================
-  // Full dark cover
+  // ── Helpers ──────────────────────────────────────────────
+
+  const pageFooter = (page: number) => {
+    doc.setFillColor(...dark);
+    doc.rect(0, H - 14, W, 14, "F");
+    doc.setTextColor(180, 190, 200);
+    doc.setFontSize(6.5);
+    doc.setFont("helvetica", "normal");
+    doc.text(
+      "Adis Makethemoney Services Pvt Ltd  |  www.grabyourcar.com  |  +91 98559 24442",
+      W / 2,
+      H - 6,
+      { align: "center" }
+    );
+    doc.setTextColor(120, 130, 140);
+    doc.setFontSize(6);
+    doc.text(`Page ${page} of ${TOTAL_PAGES}`, W - M, H - 6, { align: "right" });
+  };
+
+  const topBar = () => {
+    doc.setFillColor(...green);
+    doc.rect(0, 0, W, 4, "F");
+  };
+
+  const sectionTitle = (text: string, y: number, subtitle?: string) => {
+    doc.setFillColor(...green);
+    doc.roundedRect(M, y, 5, 12, 1, 1, "F");
+    doc.setTextColor(...dark);
+    doc.setFontSize(17);
+    doc.setFont("helvetica", "bold");
+    doc.text(text, M + 9, y + 9);
+    if (subtitle) {
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...slate);
+      doc.text(subtitle, M + 9, y + 15);
+      return y + 22;
+    }
+    return y + 18;
+  };
+
+  const divider = (y: number) => {
+    doc.setDrawColor(230, 230, 230);
+    doc.setLineWidth(0.2);
+    doc.line(M, y, W - M, y);
+  };
+
+  // ════════════════════════════════════════════════════════════
+  // PAGE 1 — PREMIUM COVER
+  // ════════════════════════════════════════════════════════════
   doc.setFillColor(...dark);
   doc.rect(0, 0, W, H, "F");
 
-  // Green accent bar top
+  // Top green gradient bar
   doc.setFillColor(...green);
-  doc.rect(0, 0, W, 6, "F");
+  doc.rect(0, 0, W, 7, "F");
+  doc.setFillColor(...greenDark);
+  doc.rect(0, 5, W, 3, "F");
 
-  // Logo area
+  // Side accent
+  doc.setFillColor(...green);
+  doc.rect(0, 40, 5, 180, "F");
+
+  // Brand name
   doc.setTextColor(...white);
-  doc.setFontSize(36);
+  doc.setFontSize(40);
   doc.setFont("helvetica", "bold");
-  doc.text("GRABYOURCAR", W / 2, 55, { align: "center" });
+  doc.text("GRABYOURCAR", W / 2, 58, { align: "center" });
 
-  // Green accent line under logo
+  // Accent line
   doc.setFillColor(...green);
-  doc.rect(W / 2 - 35, 62, 70, 2.5, "F");
+  doc.roundedRect(W / 2 - 40, 65, 80, 3, 1.5, 1.5, "F");
 
-  // Subtitle
-  doc.setFontSize(13);
+  // Tagline
+  doc.setFontSize(12);
   doc.setFont("helvetica", "normal");
-  doc.setTextColor(200, 210, 220);
-  doc.text("Your Trusted Automotive Partner", W / 2, 74, { align: "center" });
+  doc.setTextColor(180, 200, 210);
+  doc.text("Your Trusted Automotive Partner", W / 2, 78, { align: "center" });
 
   // Main title
   doc.setTextColor(...white);
-  doc.setFontSize(28);
+  doc.setFontSize(32);
   doc.setFont("helvetica", "bold");
-  doc.text("Corporate Fleet", W / 2, 110, { align: "center" });
-  doc.text("Solutions", W / 2, 122, { align: "center" });
+  doc.text("Corporate Fleet", W / 2, 112, { align: "center" });
+  doc.text("Solutions", W / 2, 126, { align: "center" });
 
-  // Green badge
+  // Year badge
   doc.setFillColor(...green);
-  doc.roundedRect(W / 2 - 40, 132, 80, 12, 6, 6, "F");
+  doc.roundedRect(W / 2 - 42, 136, 84, 13, 6, 6, "F");
   doc.setTextColor(...white);
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
-  doc.text("ENTERPRISE EDITION 2025", W / 2, 140, { align: "center" });
+  doc.text("ENTERPRISE EDITION 2025-26", W / 2, 144.5, { align: "center" });
 
-  // Feature highlights in 2 columns
+  // Feature grid (2 columns, clean layout)
   const coverFeatures = [
-    "✓ Volume Discounts up to 15%",
-    "✓ Dedicated Account Manager",
-    "✓ Priority Vehicle Allocation",
-    "✓ Pan-India Dealer Network",
-    "✓ Flexible Corporate Financing",
-    "✓ End-to-End Documentation",
+    "Volume Discounts up to 15%",
+    "Dedicated Account Manager",
+    "Priority Vehicle Allocation",
+    "Pan-India Dealer Network",
+    "Flexible Corporate Financing",
+    "End-to-End Documentation",
   ];
 
-  doc.setFontSize(11);
+  doc.setFontSize(10.5);
   doc.setFont("helvetica", "normal");
-  doc.setTextColor(200, 210, 220);
   coverFeatures.forEach((f, i) => {
-    const x = i < 3 ? M + 20 : W / 2 + 10;
-    const y = 168 + (i % 3) * 14;
-    doc.text(f, x, y);
+    const col = i < 3 ? 0 : 1;
+    const row = i % 3;
+    const x = M + 22 + col * (CW / 2);
+    const fy = 172 + row * 16;
+
+    // Green check circle
+    doc.setFillColor(...green);
+    doc.circle(x - 4, fy - 2, 2.5, "F");
+    doc.setTextColor(...white);
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "bold");
+    doc.text("✓", x - 4, fy - 0.5, { align: "center" });
+
+    doc.setTextColor(200, 215, 225);
+    doc.setFontSize(10.5);
+    doc.setFont("helvetica", "normal");
+    doc.text(f, x + 3, fy);
   });
 
-  // Bottom contact bar
-  doc.setFillColor(...green);
-  doc.rect(0, H - 40, W, 26, "F");
-  doc.setTextColor(...white);
+  // Trusted by badge
+  doc.setFillColor(...darkMid);
+  doc.roundedRect(M + 15, 225, CW - 30, 16, 3, 3, "F");
+  doc.setTextColor(...gold);
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.text("+91 98559 24442", M + 15, H - 25);
-  doc.text("corporate@grabyourcar.com", W / 2, H - 25, { align: "center" });
-  doc.text("grabyourcar.com/corporate", W - M - 15, H - 25, { align: "right" });
+  doc.text("Trusted by 50+ Corporate Organizations Across India", W / 2, 235, { align: "center" });
 
-  pageFooter(1, TOTAL_PAGES);
-
-  // ============================================================
-  // PAGE 2 — ABOUT & TRUST
-  // ============================================================
-  doc.addPage();
+  // Bottom contact strip
   doc.setFillColor(...green);
-  doc.rect(0, 0, W, 4, "F");
-
-  let y = sectionTitle("About Grabyourcar", 18);
-
+  doc.rect(0, H - 38, W, 24, "F");
+  doc.setTextColor(...white);
   doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.text("Call: +91 98559 24442", M + 10, H - 24);
+  doc.text("Email: corporate@grabyourcar.com", W / 2, H - 24, { align: "center" });
+  doc.text("Web: grabyourcar.com", W - M - 10, H - 24, { align: "right" });
+
+  pageFooter(1);
+
+  // ════════════════════════════════════════════════════════════
+  // PAGE 2 — ABOUT & WHY CHOOSE US
+  // ════════════════════════════════════════════════════════════
+  doc.addPage();
+  topBar();
+
+  let y = sectionTitle("About Grabyourcar", 16, "India's Premier Corporate Automotive Partner");
+
+  doc.setFontSize(9.5);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...slate);
-  const aboutText = "Grabyourcar is a leading automotive marketplace proudly serving corporate groups, educational institutions, healthcare organizations, and enterprises across India. We specialize in seamless bulk vehicle procurement with dedicated relationship management, priority allocation, and competitive pricing that saves your organization time and money.";
+  const aboutText =
+    "Grabyourcar is a leading automotive marketplace serving corporate groups, educational institutions, healthcare organisations, and enterprises across India. We specialise in seamless bulk vehicle procurement with dedicated relationship management, priority allocation, and competitive pricing that saves your organisation time and money.";
   const aboutLines = doc.splitTextToSize(aboutText, CW);
   doc.text(aboutLines, M, y);
-  y += aboutLines.length * 5 + 10;
+  y += aboutLines.length * 5 + 8;
 
-  // Trust stats in boxes
+  // Trust stats
   const stats = [
     { number: "50+", label: "Corporate Clients" },
-    { number: "1000+", label: "Vehicles Delivered" },
+    { number: "1,000+", label: "Vehicles Delivered" },
     { number: "100+", label: "Cities Covered" },
-    { number: "15%", label: "Max Discount" },
+    { number: "15%", label: "Maximum Discount" },
   ];
 
-  const statW = (CW - 15) / 4;
+  const statW = (CW - 12) / 4;
   stats.forEach((s, i) => {
-    const x = M + i * (statW + 5);
+    const x = M + i * (statW + 4);
     doc.setFillColor(...dark);
-    doc.roundedRect(x, y, statW, 30, 3, 3, "F");
+    doc.roundedRect(x, y, statW, 28, 3, 3, "F");
     doc.setTextColor(...green);
     doc.setFontSize(20);
     doc.setFont("helvetica", "bold");
-    doc.text(s.number, x + statW / 2, y + 14, { align: "center" });
-    doc.setTextColor(...white);
+    doc.text(s.number, x + statW / 2, y + 13, { align: "center" });
+    doc.setTextColor(200, 210, 220);
     doc.setFontSize(7);
     doc.setFont("helvetica", "normal");
-    doc.text(s.label, x + statW / 2, y + 22, { align: "center" });
+    doc.text(s.label, x + statW / 2, y + 21, { align: "center" });
   });
 
-  y += 42;
+  y += 36;
 
-  // Trusted by section
-  y = sectionTitle("Trusted by Leading Organizations", y);
-  doc.setFillColor(...lightBg);
-  doc.roundedRect(M, y, CW, 28, 3, 3, "F");
-  const clients = [
-    "Gaur Group", "Orange Group", "Dewan Public School",
-    "Virmani Hospital", "Flight n Fares", "Banshidhar Group",
-    "More 50+ Organizations..."
-  ];
-  doc.setFontSize(9);
+  // Trusted organisations
+  doc.setFillColor(...greenLight);
+  doc.roundedRect(M, y, CW, 22, 3, 3, "F");
+  doc.setFillColor(...green);
+  doc.roundedRect(M, y, CW, 7, 3, 3, "F");
+  doc.rect(M, y + 4, CW, 3, "F");
+  doc.setTextColor(...white);
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "bold");
+  doc.text("TRUSTED BY LEADING ORGANISATIONS", W / 2, y + 5, { align: "center" });
+
+  const clients = ["Gaur Group", "Orange Group", "Dewan Public School", "Virmani Hospital", "Flight n Fares", "Banshidhar Group", "& 50+ More"];
+  doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...dark);
-  doc.text(clients.join("   •   "), W / 2, y + 11, { align: "center", maxWidth: CW - 10 });
-  doc.setFontSize(8);
-  doc.setTextColor(...green);
-  doc.setFont("helvetica", "bold");
-  doc.text("And many more trusted partners across India", W / 2, y + 21, { align: "center" });
+  doc.text(clients.join("   |   "), W / 2, y + 15, { align: "center", maxWidth: CW - 8 });
 
-  y += 38;
+  y += 30;
 
-  // Why Choose Us highlights
-  y = sectionTitle("Why Choose Grabyourcar?", y);
+  // Why Choose Us
+  y = sectionTitle("Why Corporates Choose Grabyourcar", y);
 
   const benefits = [
-    { title: "Priority Vehicle Allocation", desc: "Skip the queue with dedicated inventory access for corporate orders. First preference on new launches." },
+    { title: "Priority Vehicle Allocation", desc: "Skip the queue with dedicated inventory access for corporate orders. First preference on new launches and limited editions." },
     { title: "Competitive Corporate Pricing", desc: "Exclusive bulk discounts up to 15% on fleet purchases. Special rates unavailable to retail customers." },
-    { title: "Dedicated Account Manager", desc: "Personal relationship manager for seamless coordination. Single point of contact for all requirements." },
-    { title: "Fast Delivery Timelines", desc: "Expedited processing and delivery. Reduce procurement cycle by 30-45 days vs traditional channels." },
-    { title: "Pan-India Network", desc: "Seamless delivery and service support across 100+ cities. Multi-location fleet deployments." },
-    { title: "Complete Documentation", desc: "End-to-end paperwork — registration, compliance, GST invoicing, and corporate billing support." },
+    { title: "Dedicated Account Manager", desc: "Personal relationship manager for seamless coordination. A single point of contact for all your requirements." },
+    { title: "Fast Delivery Timelines", desc: "Expedited processing and delivery. Reduce your procurement cycle by 30-45 days versus traditional channels." },
+    { title: "Pan-India Network", desc: "Seamless delivery and service support across 100+ cities. Multi-location fleet deployments handled end to end." },
+    { title: "Complete Documentation", desc: "End-to-end paperwork — registration, compliance, GST invoicing, insurance coordination, and corporate billing." },
   ];
 
+  const bColW = CW / 2 - 3;
   benefits.forEach((b, i) => {
     const bx = i % 2 === 0 ? M : M + CW / 2 + 3;
-    const by = y + Math.floor(i / 2) * 28;
-    const bw = CW / 2 - 3;
+    const by = y + Math.floor(i / 2) * 26;
 
-    doc.setFillColor(i % 2 === 0 ? 240 : 245, i % 2 === 0 ? 253 : 250, i % 2 === 0 ? 244 : 252);
-    doc.roundedRect(bx, by, bw, 24, 2, 2, "F");
+    doc.setFillColor(i % 2 === 0 ? 240 : 245, 253, i % 2 === 0 ? 244 : 250);
+    doc.roundedRect(bx, by, bColW, 22, 2, 2, "F");
+
+    // Number badge
+    doc.setFillColor(...green);
+    doc.circle(bx + 8, by + 7, 4, "F");
+    doc.setTextColor(...white);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.text(`${i + 1}`, bx + 8, by + 9, { align: "center" });
+
+    doc.setFontSize(8.5);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...dark);
+    doc.text(b.title, bx + 15, by + 8);
+
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...slate);
+    doc.setFontSize(6.5);
+    const dl = doc.splitTextToSize(b.desc, bColW - 17);
+    doc.text(dl, bx + 15, by + 14);
+  });
+
+  pageFooter(2);
+
+  // ════════════════════════════════════════════════════════════
+  // PAGE 3 — INDUSTRIES & PROCESS
+  // ════════════════════════════════════════════════════════════
+  doc.addPage();
+  topBar();
+
+  y = sectionTitle("Industries We Serve", 16, "Tailored solutions for every sector");
+
+  const industries = [
+    { name: "Real Estate & Construction", desc: "Fleet vehicles for site teams, executives, and client tours. Bulk SUVs, sedans, and utility vehicles." },
+    { name: "Healthcare & Pharmaceuticals", desc: "Reliable transportation for medical staff, ambulance fleet, and hospital administration." },
+    { name: "Education & Institutions", desc: "School and college fleet management, staff transportation, and administrative vehicles." },
+    { name: "IT & Technology", desc: "Employee transportation, executive cars, and campus shuttle fleet management." },
+    { name: "Hospitality & Tourism", desc: "Guest transfers, tour fleet, and luxury vehicle procurement for premium hospitality." },
+    { name: "Manufacturing & Logistics", desc: "Utility vehicles, goods transport, and employee commute fleet solutions." },
+    { name: "Travel & Aviation", desc: "Airport transfers, executive travel fleet, and tour operator vehicle procurement." },
+    { name: "Government & Public Sector", desc: "Official vehicles, protocol cars, and large-scale government fleet procurement." },
+  ];
+
+  const indW = (CW - 6) / 2;
+  industries.forEach((ind, i) => {
+    const ix = i % 2 === 0 ? M : M + indW + 6;
+    const iy = y + Math.floor(i / 2) * 28;
+
+    doc.setFillColor(...lightBg);
+    doc.roundedRect(ix, iy, indW, 24, 2, 2, "F");
+    doc.setFillColor(...green);
+    doc.roundedRect(ix, iy, 3, 24, 1, 1, "F");
 
     doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...dark);
-    doc.text(`${i + 1}. ${b.title}`, bx + 4, by + 8);
+    doc.text(ind.name, ix + 7, iy + 8);
 
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...slate);
-    doc.setFontSize(7.5);
-    const descLines = doc.splitTextToSize(b.desc, bw - 8);
-    doc.text(descLines, bx + 4, by + 14);
+    doc.setFontSize(7);
+    const il = doc.splitTextToSize(ind.desc, indW - 12);
+    doc.text(il, ix + 7, iy + 14);
   });
 
-  pageFooter(2, TOTAL_PAGES);
+  y += Math.ceil(industries.length / 2) * 28 + 6;
 
-  // ============================================================
-  // PAGE 3 — INDUSTRIES WE SERVE
-  // ============================================================
-  doc.addPage();
-  doc.setFillColor(...green);
-  doc.rect(0, 0, W, 4, "F");
+  divider(y);
+  y += 6;
 
-  y = sectionTitle("Industries We Serve", 18);
+  // 4-Step Process
+  y = sectionTitle("Your Procurement Journey", y, "From enquiry to delivery in as little as 2 weeks");
 
-  const industries = [
-    { name: "Real Estate & Construction", desc: "Fleet vehicles for site teams, executives, and client tours. Bulk SUVs, sedans, and utility vehicles.", icon: "🏗️" },
-    { name: "Healthcare & Pharma", desc: "Reliable transportation for medical staff, ambulance fleet, and hospital administration.", icon: "🏥" },
-    { name: "Education & Institutions", desc: "School and college fleet management, staff transportation, and administrative vehicles.", icon: "🎓" },
-    { name: "IT & Technology", desc: "Employee transportation, executive cars, and campus shuttle fleet management.", icon: "💻" },
-    { name: "Hospitality & Tourism", desc: "Guest transfers, tour fleet, and luxury vehicle procurement for premium hospitality.", icon: "🏨" },
-    { name: "Manufacturing & Logistics", desc: "Utility vehicles, goods transport, and employee commute fleet solutions.", icon: "🏭" },
-    { name: "Travel & Aviation", desc: "Airport transfers, executive travel fleet, and tour operator vehicle procurement.", icon: "✈️" },
-    { name: "Government & PSUs", desc: "Official vehicles, protocol cars, and large-scale government fleet procurement.", icon: "🏛️" },
-  ];
-
-  const indW = (CW - 8) / 2;
-  industries.forEach((ind, i) => {
-    const ix = i % 2 === 0 ? M : M + indW + 8;
-    const iy = y + Math.floor(i / 2) * 32;
-
-    doc.setFillColor(...lightBg);
-    doc.roundedRect(ix, iy, indW, 28, 2, 2, "F");
-
-    // Green left accent
-    doc.setFillColor(...green);
-    doc.rect(ix, iy + 3, 2, 22, "F");
-
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...dark);
-    doc.text(`${ind.icon}  ${ind.name}`, ix + 6, iy + 10);
-
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(...slate);
-    doc.setFontSize(7.5);
-    const iLines = doc.splitTextToSize(ind.desc, indW - 12);
-    doc.text(iLines, ix + 6, iy + 17);
-  });
-
-  y += Math.ceil(industries.length / 2) * 32 + 8;
-
-  // Process section
-  y = sectionTitle("Our 4-Step Process", y);
-
-  const processSteps = [
-    { step: "01", title: "Initial Consultation", desc: "Understand your fleet needs, budget, and timeline requirements." },
-    { step: "02", title: "Custom Proposal", desc: "Tailored pricing, model recommendations, and financing options." },
-    { step: "03", title: "Order & Procurement", desc: "Priority allocation, paperwork handling, and order processing." },
-    { step: "04", title: "Delivery & Support", desc: "Coordinated multi-location delivery with ongoing relationship support." },
+  const steps = [
+    { num: "01", title: "Consultation", desc: "Understand fleet needs, budget, and timeline." },
+    { num: "02", title: "Custom Proposal", desc: "Tailored pricing, models, and financing options." },
+    { num: "03", title: "Order Processing", desc: "Priority allocation, paperwork, and coordination." },
+    { num: "04", title: "Fleet Delivery", desc: "Multi-location delivery with ongoing support." },
   ];
 
   const stepW = (CW - 9) / 4;
-  processSteps.forEach((ps, i) => {
+  steps.forEach((s, i) => {
     const sx = M + i * (stepW + 3);
 
     doc.setFillColor(...dark);
-    doc.roundedRect(sx, y, stepW, 44, 2, 2, "F");
+    doc.roundedRect(sx, y, stepW, 42, 3, 3, "F");
 
-    // Step number circle
+    // Number circle
     doc.setFillColor(...green);
-    doc.circle(sx + stepW / 2, y + 10, 7, "F");
+    doc.circle(sx + stepW / 2, y + 11, 8, "F");
     doc.setTextColor(...white);
-    doc.setFontSize(10);
+    doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
-    doc.text(ps.step, sx + stepW / 2, y + 13, { align: "center" });
+    doc.text(s.num, sx + stepW / 2, y + 14, { align: "center" });
+
+    // Arrow between steps
+    if (i < steps.length - 1) {
+      doc.setFillColor(...green);
+      doc.triangle(sx + stepW + 1, y + 9, sx + stepW + 1, y + 13, sx + stepW + 3.5, y + 11, "F");
+    }
 
     doc.setTextColor(...white);
-    doc.setFontSize(8);
-    doc.text(ps.title, sx + stepW / 2, y + 24, { align: "center" });
+    doc.setFontSize(8.5);
+    doc.setFont("helvetica", "bold");
+    doc.text(s.title, sx + stepW / 2, y + 26, { align: "center" });
 
-    doc.setTextColor(180, 190, 200);
+    doc.setTextColor(180, 195, 210);
     doc.setFontSize(6.5);
     doc.setFont("helvetica", "normal");
-    const pLines = doc.splitTextToSize(ps.desc, stepW - 6);
-    doc.text(pLines, sx + stepW / 2, y + 31, { align: "center", maxWidth: stepW - 6 });
+    const pl = doc.splitTextToSize(s.desc, stepW - 6);
+    doc.text(pl, sx + stepW / 2, y + 33, { align: "center", maxWidth: stepW - 6 });
   });
 
-  pageFooter(3, TOTAL_PAGES);
+  pageFooter(3);
 
-  // ============================================================
-  // PAGE 4 — FLEET PACKAGES & PRICING
-  // ============================================================
+  // ════════════════════════════════════════════════════════════
+  // PAGE 4 — FLEET PACKAGES & COMPARISON
+  // ════════════════════════════════════════════════════════════
   doc.addPage();
-  doc.setFillColor(...green);
-  doc.rect(0, 0, W, 4, "F");
+  topBar();
 
-  y = sectionTitle("Fleet Packages & Pricing", 18);
+  y = sectionTitle("Fleet Packages & Pricing", 16, "Flexible plans designed for every organisation size");
 
-  doc.setFontSize(8);
+  doc.setFontSize(7);
   doc.setFont("helvetica", "italic");
   doc.setTextColor(...slate);
-  doc.text("*Prices are indicative and subject to model, variant, and market conditions. Contact us for customized quotes.", M, y);
-  y += 10;
+  doc.text("*Prices are indicative and subject to model, variant, and market conditions. Contact us for a customised quote.", M, y);
+  y += 8;
 
   const packages = [
     {
       name: "STARTER FLEET",
-      range: "5-10 Vehicles",
+      range: "5 - 10 Vehicles",
       discount: "Up to 5% Off",
-      color: dark,
+      headerColor: dark,
       features: ["Dedicated coordinator", "Standard delivery timeline", "Basic documentation support", "Single-brand ordering"],
     },
     {
       name: "GROWTH FLEET",
-      range: "11-25 Vehicles",
+      range: "11 - 25 Vehicles",
       discount: "Up to 10% Off",
-      color: greenDark,
+      headerColor: greenDark,
       features: ["Dedicated account manager", "Priority delivery", "Complete documentation", "Insurance coordination", "Multi-brand ordering"],
       popular: true,
     },
@@ -333,122 +395,134 @@ export const generateCorporateBrochure = () => {
       name: "ENTERPRISE FLEET",
       range: "25+ Vehicles",
       discount: "Up to 15% Off",
-      color: dark,
+      headerColor: dark,
       features: ["Senior relationship manager", "Fastest delivery guarantee", "End-to-end support", "Custom financing solutions", "Fleet insurance package", "Pan-India coordination"],
     },
   ];
 
-  const pkgW = (CW - 12) / 3;
+  const pkgW = (CW - 10) / 3;
+  const pkgH = 100;
   packages.forEach((pkg, i) => {
-    const px = M + i * (pkgW + 6);
-    const pkgH = 95;
+    const px = M + i * (pkgW + 5);
 
     // Card background
     doc.setFillColor(...lightBg);
     doc.roundedRect(px, y, pkgW, pkgH, 3, 3, "F");
 
-    // Popular badge
+    // Border for popular
     if (pkg.popular) {
+      doc.setDrawColor(...green);
+      doc.setLineWidth(0.8);
+      doc.roundedRect(px, y, pkgW, pkgH, 3, 3, "S");
+      // Badge
       doc.setFillColor(...green);
-      doc.roundedRect(px + pkgW / 2 - 18, y - 4, 36, 8, 4, 4, "F");
+      doc.roundedRect(px + pkgW / 2 - 16, y - 4, 32, 8, 4, 4, "F");
       doc.setTextColor(...white);
-      doc.setFontSize(6);
+      doc.setFontSize(5.5);
       doc.setFont("helvetica", "bold");
       doc.text("MOST POPULAR", px + pkgW / 2, y, { align: "center" });
     }
 
     // Header
-    doc.setFillColor(...pkg.color);
-    doc.roundedRect(px, y, pkgW, 20, 3, 3, "F");
-    doc.rect(px, y + 10, pkgW, 10, "F"); // square bottom corners
-
+    doc.setFillColor(...pkg.headerColor);
+    doc.roundedRect(px + 1, y + 1, pkgW - 2, 22, 2, 2, "F");
     doc.setTextColor(...white);
     doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
-    doc.text(pkg.name, px + pkgW / 2, y + 9, { align: "center" });
+    doc.text(pkg.name, px + pkgW / 2, y + 10, { align: "center" });
     doc.setFontSize(7);
     doc.setFont("helvetica", "normal");
-    doc.text(pkg.range, px + pkgW / 2, y + 16, { align: "center" });
+    doc.text(pkg.range, px + pkgW / 2, y + 18, { align: "center" });
 
     // Discount
     doc.setTextColor(...green);
-    doc.setFontSize(14);
+    doc.setFontSize(15);
     doc.setFont("helvetica", "bold");
-    doc.text(pkg.discount, px + pkgW / 2, y + 32, { align: "center" });
+    doc.text(pkg.discount, px + pkgW / 2, y + 34, { align: "center" });
+
+    // Divider
+    doc.setDrawColor(220, 220, 220);
+    doc.setLineWidth(0.2);
+    doc.line(px + 5, y + 38, px + pkgW - 5, y + 38);
 
     // Features
     doc.setFontSize(7);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...slate);
     pkg.features.forEach((f, fi) => {
-      doc.text(`✓  ${f}`, px + 5, y + 42 + fi * 8);
+      doc.setTextColor(...green);
+      doc.setFont("helvetica", "bold");
+      doc.text("✓", px + 5, y + 46 + fi * 8);
+      doc.setTextColor(...dark);
+      doc.setFont("helvetica", "normal");
+      doc.text(f, px + 10, y + 46 + fi * 8);
     });
   });
 
-  y += 108;
+  y += pkgH + 10;
 
-  // Comparison table vs traditional
+  // Comparison table
   y = sectionTitle("Grabyourcar vs Traditional Dealerships", y);
 
   const compHeaders = ["Feature", "Grabyourcar", "Traditional"];
   const compRows = [
-    ["Corporate Discount", "Up to 15%", "2-3%"],
+    ["Corporate Discount", "Up to 15%", "2 - 3%"],
     ["Account Manager", "Dedicated", "Not Available"],
     ["Delivery Timeline", "30-45 Days Faster", "Standard"],
-    ["Multi-Brand Access", "All Brands", "Single Brand"],
-    ["Documentation", "End-to-End", "Limited"],
-    ["Post-Sale Support", "Priority", "Standard"],
+    ["Multi-Brand Access", "All Major Brands", "Single Brand Only"],
+    ["Documentation", "End-to-End Support", "Limited"],
+    ["Post-Sale Support", "Priority Service", "Standard"],
   ];
 
   // Header row
   doc.setFillColor(...dark);
-  doc.rect(M, y, CW, 9, "F");
+  doc.roundedRect(M, y, CW, 9, 2, 2, "F");
+  doc.rect(M, y + 5, CW, 4, "F");
   doc.setTextColor(...white);
-  doc.setFontSize(8);
+  doc.setFontSize(7.5);
   doc.setFont("helvetica", "bold");
   doc.text(compHeaders[0], M + 5, y + 6);
-  doc.text(compHeaders[1], M + 70, y + 6);
+  doc.text(compHeaders[1], M + 68, y + 6);
   doc.text(compHeaders[2], M + 130, y + 6);
   y += 9;
 
   compRows.forEach((row, i) => {
+    const rowY = y + i * 8;
     if (i % 2 === 0) {
       doc.setFillColor(...lightBg);
-      doc.rect(M, y, CW, 9, "F");
+      doc.rect(M, rowY, CW, 8, "F");
     }
-    doc.setFontSize(7.5);
+    doc.setFontSize(7);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...dark);
-    doc.text(row[0], M + 5, y + 6);
+    doc.text(row[0], M + 5, rowY + 5.5);
     doc.setTextColor(...green);
     doc.setFont("helvetica", "bold");
-    doc.text(row[1], M + 70, y + 6);
+    doc.text(row[1], M + 68, rowY + 5.5);
     doc.setTextColor(...slate);
     doc.setFont("helvetica", "normal");
-    doc.text(row[2], M + 130, y + 6);
-    y += 9;
+    doc.text(row[2], M + 130, rowY + 5.5);
   });
 
-  pageFooter(4, TOTAL_PAGES);
+  pageFooter(4);
 
-  // ============================================================
+  // ════════════════════════════════════════════════════════════
   // PAGE 5 — POPULAR FLEET MODELS
-  // ============================================================
+  // ════════════════════════════════════════════════════════════
   doc.addPage();
-  doc.setFillColor(...green);
-  doc.rect(0, 0, W, 4, "F");
+  topBar();
 
-  y = sectionTitle("Popular Corporate Fleet Models", 18);
+  y = sectionTitle("Popular Corporate Fleet Models", 16, "Best-selling vehicles across all segments");
 
   const segments = [
-    { segment: "Hatchback", models: ["Maruti Swift", "Hyundai i20", "Tata Altroz", "Maruti Baleno"], range: "₹6 - 10 Lakh" },
-    { segment: "Sedan", models: ["Maruti Ciaz", "Honda City", "Hyundai Verna", "Skoda Slavia"], range: "₹10 - 18 Lakh" },
-    { segment: "Compact SUV", models: ["Maruti Brezza", "Hyundai Venue", "Tata Nexon", "Kia Sonet"], range: "₹8 - 15 Lakh" },
-    { segment: "Mid SUV", models: ["Hyundai Creta", "Kia Seltos", "MG Hector", "VW Taigun"], range: "₹12 - 22 Lakh" },
-    { segment: "Premium SUV", models: ["Toyota Fortuner", "MG Gloster", "Mahindra XUV700", "Jeep Meridian"], range: "₹18 - 50 Lakh" },
-    { segment: "MUV / MPV", models: ["Maruti Ertiga", "Toyota Innova", "Kia Carens", "Maruti XL6"], range: "₹10 - 25 Lakh" },
-    { segment: "Electric", models: ["Tata Nexon EV", "MG ZS EV", "Hyundai Ioniq 5", "BYD Atto 3"], range: "₹15 - 45 Lakh" },
-    { segment: "Luxury", models: ["Mercedes C-Class", "BMW 3 Series", "Audi A4", "Volvo XC40"], range: "₹45 - 80 Lakh" },
+    { segment: "Hatchback", models: ["Maruti Swift", "Hyundai i20", "Tata Altroz", "Maruti Baleno"], range: "Rs 6 - 10 Lakh" },
+    { segment: "Sedan", models: ["Maruti Ciaz", "Honda City", "Hyundai Verna", "Skoda Slavia"], range: "Rs 10 - 18 Lakh" },
+    { segment: "Compact SUV", models: ["Maruti Brezza", "Hyundai Venue", "Tata Nexon", "Kia Sonet"], range: "Rs 8 - 15 Lakh" },
+    { segment: "Mid-Size SUV", models: ["Hyundai Creta", "Kia Seltos", "MG Hector", "VW Taigun"], range: "Rs 12 - 22 Lakh" },
+    { segment: "Premium SUV", models: ["Toyota Fortuner", "MG Gloster", "Mahindra XUV700", "Jeep Meridian"], range: "Rs 18 - 50 Lakh" },
+    { segment: "MUV / MPV", models: ["Maruti Ertiga", "Toyota Innova", "Kia Carens", "Maruti XL6"], range: "Rs 10 - 25 Lakh" },
+    { segment: "Electric Vehicles", models: ["Tata Nexon EV", "MG ZS EV", "Hyundai Ioniq 5", "BYD Atto 3"], range: "Rs 15 - 45 Lakh" },
+    { segment: "Luxury", models: ["Mercedes C-Class", "BMW 3 Series", "Audi A4", "Volvo XC40"], range: "Rs 45 - 80 Lakh" },
   ];
 
   // Table header
@@ -456,133 +530,136 @@ export const generateCorporateBrochure = () => {
   doc.roundedRect(M, y, CW, 10, 2, 2, "F");
   doc.rect(M, y + 5, CW, 5, "F");
   doc.setTextColor(...white);
-  doc.setFontSize(8);
+  doc.setFontSize(7.5);
   doc.setFont("helvetica", "bold");
   doc.text("Segment", M + 5, y + 7);
-  doc.text("Popular Models", M + 45, y + 7);
-  doc.text("Price Range*", W - M - 5, y + 7, { align: "right" });
+  doc.text("Popular Models", M + 42, y + 7);
+  doc.text("Price Range (Ex-Showroom)*", W - M - 5, y + 7, { align: "right" });
   y += 10;
 
   segments.forEach((seg, i) => {
-    const rowH = 14;
+    const rowH = 12;
+    const rowY = y + i * rowH;
     if (i % 2 === 0) {
       doc.setFillColor(...lightBg);
-      doc.rect(M, y, CW, rowH, "F");
+      doc.rect(M, rowY, CW, rowH, "F");
     }
-
     doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...dark);
-    doc.text(seg.segment, M + 5, y + 6);
+    doc.text(seg.segment, M + 5, rowY + 5);
 
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...slate);
     doc.setFontSize(7);
-    doc.text(seg.models.join(", "), M + 45, y + 6);
+    doc.text(seg.models.join(", "), M + 42, rowY + 5);
 
     doc.setTextColor(...green);
-    doc.setFontSize(8);
+    doc.setFontSize(7.5);
     doc.setFont("helvetica", "bold");
-    doc.text(seg.range, W - M - 5, y + 6, { align: "right" });
+    doc.text(seg.range, W - M - 5, rowY + 5, { align: "right" });
 
-    // Sub note
-    doc.setFontSize(6);
+    doc.setFontSize(5.5);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(160, 170, 180);
-    doc.text(`${seg.models.length}+ options available`, M + 45, y + 11);
-
-    y += rowH;
+    doc.text(`${seg.models.length}+ options available`, M + 42, rowY + 9.5);
   });
 
-  y += 8;
-  doc.setFontSize(7);
+  y += segments.length * 12 + 6;
+
+  doc.setFontSize(6.5);
   doc.setTextColor(...slate);
   doc.setFont("helvetica", "italic");
   doc.text("*Ex-showroom prices. On-road prices vary by city. GST additional as applicable.", M, y);
+  y += 10;
 
-  y += 15;
-
-  // EV Fleet highlight box
-  doc.setFillColor(22, 163, 74);
-  doc.roundedRect(M, y, CW, 30, 3, 3, "F");
-  doc.setTextColor(...white);
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "bold");
-  doc.text("⚡ Go Green with Corporate EV Fleet", W / 2, y + 12, { align: "center" });
-  doc.setFontSize(8);
-  doc.setFont("helvetica", "normal");
-  doc.text("Special incentives and subsidies available for corporate electric vehicle fleet adoption.", W / 2, y + 21, { align: "center" });
-  doc.text("Tax benefits under Section 80EEB  •  Lower total cost of ownership  •  ESG compliance", W / 2, y + 27, { align: "center" });
-
-  pageFooter(5, TOTAL_PAGES);
-
-  // ============================================================
-  // PAGE 6 — CASE STUDIES & TESTIMONIALS
-  // ============================================================
-  doc.addPage();
+  // EV highlight
+  doc.setFillColor(...greenDark);
+  doc.roundedRect(M, y, CW, 32, 4, 4, "F");
+  // Inner accent
   doc.setFillColor(...green);
-  doc.rect(0, 0, W, 4, "F");
+  doc.roundedRect(M + 3, y + 3, CW - 6, 26, 3, 3, "F");
+  doc.setFillColor(22, 163, 74, 0.8);
+  doc.roundedRect(M + 3, y + 3, CW - 6, 26, 3, 3, "F");
 
-  y = sectionTitle("Success Stories", 18);
+  doc.setTextColor(...white);
+  doc.setFontSize(13);
+  doc.setFont("helvetica", "bold");
+  doc.text("Go Green with a Corporate EV Fleet", W / 2, y + 13, { align: "center" });
+  doc.setFontSize(7.5);
+  doc.setFont("helvetica", "normal");
+  doc.text("Special incentives and subsidies available for corporate electric vehicle fleet adoption.", W / 2, y + 20, { align: "center" });
+  doc.text("Tax benefits under Section 80EEB  |  Lower total cost of ownership  |  ESG compliance", W / 2, y + 26, { align: "center" });
+
+  pageFooter(5);
+
+  // ════════════════════════════════════════════════════════════
+  // PAGE 6 — SUCCESS STORIES & TESTIMONIALS
+  // ════════════════════════════════════════════════════════════
+  doc.addPage();
+  topBar();
+
+  y = sectionTitle("Success Stories", 16, "Real results for real organisations");
 
   const cases = [
     {
       company: "Gaur Group — Real Estate",
       fleet: "25 SUVs for site management",
       result: "Delivered in 30 days with 12% discount",
-      quote: "Grabyourcar transformed our fleet procurement. What used to take months was done in weeks.",
+      quote: "Grabyourcar transformed our fleet procurement. What used to take months was completed in weeks with significant cost savings.",
     },
     {
       company: "Dewan Public School — Education",
       fleet: "15 vehicles for staff transportation",
       result: "Complete documentation handled, 8% savings",
-      quote: "The dedicated account manager made the entire process hassle-free for our institution.",
+      quote: "The dedicated account manager made the entire process hassle-free for our institution. Highly recommended for schools and colleges.",
     },
     {
       company: "Virmani Hospital — Healthcare",
       fleet: "10 sedans + 5 SUVs for medical staff",
-      result: "Priority allocation during chip shortage",
-      quote: "Even during supply constraints, Grabyourcar ensured our medical team had reliable transportation.",
+      result: "Priority allocation during supply shortage",
+      quote: "Even during supply constraints, Grabyourcar ensured our medical team had reliable transportation without delays.",
     },
   ];
 
-  cases.forEach((cs, i) => {
-    doc.setFillColor(i % 2 === 0 ? 240 : 248, 253, i % 2 === 0 ? 244 : 252);
-    doc.roundedRect(M, y, CW, 38, 3, 3, "F");
+  cases.forEach((cs) => {
+    doc.setFillColor(...lightBg);
+    doc.roundedRect(M, y, CW, 36, 3, 3, "F");
 
-    // Green left bar
+    // Green left accent
     doc.setFillColor(...green);
-    doc.rect(M, y + 3, 3, 32, "F");
+    doc.roundedRect(M, y, 4, 36, 2, 2, "F");
 
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...dark);
-    doc.text(cs.company, M + 8, y + 9);
+    doc.text(cs.company, M + 9, y + 8);
 
-    doc.setFontSize(8);
+    doc.setFontSize(7.5);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...slate);
-    doc.text(`Fleet: ${cs.fleet}`, M + 8, y + 16);
+    doc.text(`Fleet: ${cs.fleet}`, M + 9, y + 14);
     doc.setTextColor(...green);
     doc.setFont("helvetica", "bold");
-    doc.text(`Result: ${cs.result}`, M + 8, y + 23);
+    doc.text(`Result: ${cs.result}`, M + 9, y + 20);
 
     doc.setFont("helvetica", "italic");
     doc.setTextColor(...slate);
-    doc.setFontSize(7.5);
-    doc.text(`"${cs.quote}"`, M + 8, y + 31);
+    doc.setFontSize(7);
+    const ql = doc.splitTextToSize(`"${cs.quote}"`, CW - 16);
+    doc.text(ql, M + 9, y + 27);
 
-    y += 44;
+    y += 42;
   });
 
-  y += 5;
+  y += 2;
 
   // Testimonials
   y = sectionTitle("Client Testimonials", y);
 
   const testimonials = [
-    { name: "Rajesh Gaur", role: "Director, Gaur Group", text: "Best corporate car buying experience. Their team is professional, responsive, and delivers on promises." },
-    { name: "Dr. Virmani", role: "CEO, Virmani Hospital", text: "We've been procuring through Grabyourcar for 3 years now. Consistently excellent service and pricing." },
+    { name: "Rajesh Gaur", role: "Director, Gaur Group", text: "Best corporate car buying experience. Their team is professional, responsive, and delivers on every promise." },
+    { name: "Dr. Virmani", role: "CEO, Virmani Hospital", text: "We have been procuring through Grabyourcar for 3 years now. Consistently excellent service and pricing." },
     { name: "Ankit Sharma", role: "COO, Flight n Fares", text: "The volume discounts and priority delivery have saved us significant time and money on our travel fleet." },
   ];
 
@@ -590,106 +667,123 @@ export const generateCorporateBrochure = () => {
   testimonials.forEach((t, i) => {
     const tx = M + i * (testW + 4);
     doc.setFillColor(...dark);
-    doc.roundedRect(tx, y, testW, 42, 2, 2, "F");
+    doc.roundedRect(tx, y, testW, 44, 3, 3, "F");
 
     // Stars
-    doc.setTextColor(250, 204, 21);
-    doc.setFontSize(8);
-    doc.text("★★★★★", tx + testW / 2, y + 8, { align: "center" });
+    doc.setTextColor(...gold);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    const stars = Array(5).fill("*").join(" ");
+    doc.text(stars, tx + testW / 2, y + 9, { align: "center" });
 
-    doc.setTextColor(200, 210, 220);
-    doc.setFontSize(7);
+    doc.setTextColor(200, 215, 225);
+    doc.setFontSize(6.5);
     doc.setFont("helvetica", "italic");
     const tLines = doc.splitTextToSize(`"${t.text}"`, testW - 8);
-    doc.text(tLines, tx + 4, y + 15);
+    doc.text(tLines, tx + 4, y + 16);
+
+    // Divider
+    doc.setDrawColor(60, 70, 85);
+    doc.setLineWidth(0.2);
+    doc.line(tx + 5, y + 33, tx + testW - 5, y + 33);
 
     doc.setTextColor(...green);
     doc.setFontSize(7);
     doc.setFont("helvetica", "bold");
-    doc.text(t.name, tx + testW / 2, y + 34, { align: "center" });
+    doc.text(t.name, tx + testW / 2, y + 37, { align: "center" });
     doc.setTextColor(160, 170, 180);
     doc.setFontSize(6);
     doc.setFont("helvetica", "normal");
-    doc.text(t.role, tx + testW / 2, y + 39, { align: "center" });
+    doc.text(t.role, tx + testW / 2, y + 41, { align: "center" });
   });
 
-  pageFooter(6, TOTAL_PAGES);
+  pageFooter(6);
 
-  // ============================================================
-  // PAGE 7 — FAQ + CONTACT CTA
-  // ============================================================
+  // ════════════════════════════════════════════════════════════
+  // PAGE 7 — FAQs & CONTACT CTA
+  // ════════════════════════════════════════════════════════════
   doc.addPage();
-  doc.setFillColor(...green);
-  doc.rect(0, 0, W, 4, "F");
+  topBar();
 
-  y = sectionTitle("Frequently Asked Questions", 18);
+  y = sectionTitle("Frequently Asked Questions", 16);
 
   const faqs = [
-    { q: "What is the minimum order for corporate pricing?", a: "We offer corporate pricing starting from 5 vehicles. Higher volumes unlock deeper discounts up to 15%." },
-    { q: "Do you support multi-brand orders?", a: "Yes! Unlike dealerships, we facilitate procurement across all major brands — Maruti, Hyundai, Tata, Toyota, Honda, Kia, MG, and more." },
-    { q: "How fast can you deliver?", a: "Our priority allocation reduces delivery timelines by 30-45 days compared to traditional channels. Enterprise orders get fastest delivery guarantee." },
+    { q: "What is the minimum order for corporate pricing?", a: "We offer corporate pricing starting from 5 vehicles. Higher volumes unlock deeper discounts of up to 15%." },
+    { q: "Do you support multi-brand orders?", a: "Yes. Unlike dealerships, we facilitate procurement across all major brands — Maruti, Hyundai, Tata, Toyota, Honda, Kia, MG, and more." },
+    { q: "How fast can you deliver?", a: "Our priority allocation reduces delivery timelines by 30-45 days compared to traditional channels. Enterprise orders receive the fastest delivery guarantee." },
     { q: "What documentation do you handle?", a: "We manage everything — registration, insurance coordination, GST invoicing, corporate billing, and compliance documentation." },
     { q: "Do you offer financing options?", a: "Yes, we partner with leading banks and NBFCs to offer competitive corporate fleet financing with flexible EMI options." },
-    { q: "Can you deliver across India?", a: "Absolutely. We coordinate seamless delivery across 100+ cities with our pan-India dealer network." },
+    { q: "Can you deliver across India?", a: "Absolutely. We coordinate seamless delivery across 100+ cities through our pan-India dealer network." },
   ];
 
   faqs.forEach((faq, i) => {
-    if (i % 2 === 0) {
-      doc.setFillColor(...lightBg);
-    } else {
-      doc.setFillColor(...white);
-    }
-    doc.roundedRect(M, y, CW, 18, 1, 1, "F");
+    const faqBg: [number, number, number] = i % 2 === 0 ? lightBg : white;
+    doc.setFillColor(...faqBg);
+    doc.roundedRect(M, y, CW, 17, 2, 2, "F");
+
+    // Q indicator
+    doc.setFillColor(...green);
+    doc.roundedRect(M + 3, y + 2, 8, 5, 1, 1, "F");
+    doc.setTextColor(...white);
+    doc.setFontSize(5);
+    doc.setFont("helvetica", "bold");
+    doc.text("Q", M + 7, y + 5.5, { align: "center" });
 
     doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...dark);
-    doc.text(`Q: ${faq.q}`, M + 4, y + 6);
+    doc.text(faq.q, M + 14, y + 6);
 
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...slate);
     doc.setFontSize(7);
-    const aLines = doc.splitTextToSize(`A: ${faq.a}`, CW - 10);
-    doc.text(aLines, M + 4, y + 12);
+    const al = doc.splitTextToSize(faq.a, CW - 18);
+    doc.text(al, M + 14, y + 12);
 
-    y += 20;
+    y += 19;
   });
 
-  y += 8;
+  y += 6;
 
   // Big CTA
   doc.setFillColor(...dark);
-  doc.roundedRect(M, y, CW, 55, 4, 4, "F");
+  doc.roundedRect(M, y, CW, 58, 5, 5, "F");
+
+  // Inner green border
+  doc.setDrawColor(...green);
+  doc.setLineWidth(0.6);
+  doc.roundedRect(M + 3, y + 3, CW - 6, 52, 4, 4, "S");
 
   doc.setTextColor(...white);
-  doc.setFontSize(18);
+  doc.setFontSize(20);
   doc.setFont("helvetica", "bold");
-  doc.text("Ready to Transform Your", W / 2, y + 16, { align: "center" });
-  doc.text("Fleet Procurement?", W / 2, y + 26, { align: "center" });
+  doc.text("Ready to Transform Your", W / 2, y + 18, { align: "center" });
+  doc.text("Fleet Procurement?", W / 2, y + 28, { align: "center" });
 
+  // CTA button
   doc.setFillColor(...green);
-  doc.roundedRect(W / 2 - 38, y + 32, 76, 12, 6, 6, "F");
+  doc.roundedRect(W / 2 - 40, y + 34, 80, 14, 7, 7, "F");
   doc.setTextColor(...white);
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
-  doc.text("GET A FREE QUOTE TODAY", W / 2, y + 40, { align: "center" });
+  doc.text("GET A FREE QUOTE TODAY", W / 2, y + 43, { align: "center" });
 
-  // Contact row
-  y += 62;
+  y += 66;
+
+  // Contact row (no emojis — plain text labels)
   doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...dark);
-  doc.text("📞  +91 98559 24442", M, y);
-  doc.text("📧  corporate@grabyourcar.com", W / 2 - 15, y);
-  doc.text("🌐  grabyourcar.com", W - M - 30, y);
+  doc.text("Call: +91 98559 24442", M, y);
+  doc.text("Email: corporate@grabyourcar.com", W / 2 - 10, y);
 
-  y += 8;
-  doc.setFontSize(8);
-  doc.setFont("helvetica", "normal");
+  y += 7;
   doc.setTextColor(...green);
-  doc.text("💬  WhatsApp us for instant response", M, y);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.text("WhatsApp us for an instant response  |  grabyourcar.com/corporate", M, y);
 
-  pageFooter(7, TOTAL_PAGES);
+  pageFooter(7);
 
   // Save
   doc.save("Grabyourcar-Corporate-Fleet-Solutions-2025.pdf");
