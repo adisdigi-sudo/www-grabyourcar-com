@@ -63,6 +63,7 @@ import ServicePricingManager from "@/components/admin/ServicePricingManager";
 import { HeroSlidesManagement } from "@/components/admin/HeroSlidesManagement";
 import PartnersManager from "@/components/admin/PartnersManager";
 import { InsuranceManagement } from "@/components/admin/InsuranceManagement";
+import { InsuranceImportExport } from "@/components/admin/insurance/InsuranceImportExport";
 import { UnifiedMasterCRM } from "@/components/admin/UnifiedMasterCRM";
 import { JourneyAutomationPanel } from "@/components/admin/JourneyAutomationPanel";
 import { RevenueIntelligenceDashboard } from "@/components/admin/RevenueIntelligenceDashboard";
@@ -218,6 +219,8 @@ const AdminLayout = () => {
         return <APIPartnersManagement />;
       case "services-insurance":
         return <InsuranceManagement />;
+      case "services-insurance-import":
+        return <InsuranceImportExport />;
       case "services-loans":
         return <WebsiteSettings />;
       case "services-emi-pdf":
