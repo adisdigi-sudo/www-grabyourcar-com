@@ -104,8 +104,7 @@ const AdminLayout = () => {
 
   // Redirect if not authenticated
   if (!isLoading && !user) {
-    const isAdminSubdomain = window.location.hostname.startsWith("admin.");
-    navigate(isAdminSubdomain ? '/admin-auth' : '/auth');
+    navigate('/admin-auth');
     return null;
   }
 
