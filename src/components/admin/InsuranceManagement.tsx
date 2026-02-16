@@ -2,7 +2,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Shield, FileText, HelpCircle, Package, Globe, Users, BarChart3,
   LayoutDashboard, UserCheck, ShieldCheck, RefreshCw, ListChecks,
-  DollarSign, TrendingUp, FolderOpen, Briefcase
+  DollarSign, TrendingUp, FolderOpen, Briefcase, Sparkles, FileSpreadsheet, Zap
 } from "lucide-react";
 import { InsurancePlansAdmin } from "./insurance/InsurancePlansAdmin";
 import { InsuranceContentAdmin } from "./insurance/InsuranceContentAdmin";
@@ -19,6 +19,9 @@ import { InsuranceCommissionsTracker } from "./insurance/InsuranceCommissionsTra
 import { InsuranceAnalyticsDashboard } from "./insurance/InsuranceAnalyticsDashboard";
 import { InsuranceDocumentVault } from "./insurance/InsuranceDocumentVault";
 import { InsuranceAdvisorsManager } from "./insurance/InsuranceAdvisorsManager";
+import { InsuranceSmartExtractor } from "./insurance/InsuranceSmartExtractor";
+import { InsuranceImportExport } from "./insurance/InsuranceImportExport";
+import { InsuranceCrossSellEngine } from "./insurance/InsuranceCrossSellEngine";
 
 export function InsuranceManagement() {
   return (
@@ -47,6 +50,12 @@ export function InsuranceManagement() {
           <TabsTrigger value="renewals" className="gap-1.5 text-xs">
             <RefreshCw className="h-3.5 w-3.5" /> Renewals
           </TabsTrigger>
+          <TabsTrigger value="extractor" className="gap-1.5 text-xs">
+            <Sparkles className="h-3.5 w-3.5" /> AI Extractor
+          </TabsTrigger>
+          <TabsTrigger value="crosssell" className="gap-1.5 text-xs">
+            <Zap className="h-3.5 w-3.5" /> Cross-Sell
+          </TabsTrigger>
           <TabsTrigger value="tasks" className="gap-1.5 text-xs">
             <ListChecks className="h-3.5 w-3.5" /> Tasks
           </TabsTrigger>
@@ -55,6 +64,9 @@ export function InsuranceManagement() {
           </TabsTrigger>
           <TabsTrigger value="documents" className="gap-1.5 text-xs">
             <FolderOpen className="h-3.5 w-3.5" /> Documents
+          </TabsTrigger>
+          <TabsTrigger value="importexport" className="gap-1.5 text-xs">
+            <FileSpreadsheet className="h-3.5 w-3.5" /> Import/Export
           </TabsTrigger>
           <TabsTrigger value="advisors" className="gap-1.5 text-xs">
             <Briefcase className="h-3.5 w-3.5" /> Advisors
@@ -86,9 +98,12 @@ export function InsuranceManagement() {
         <TabsContent value="clients"><InsuranceClientsManager /></TabsContent>
         <TabsContent value="policies"><InsurancePoliciesManager /></TabsContent>
         <TabsContent value="renewals"><InsuranceRenewalsEngine /></TabsContent>
+        <TabsContent value="extractor"><InsuranceSmartExtractor /></TabsContent>
+        <TabsContent value="crosssell"><InsuranceCrossSellEngine /></TabsContent>
         <TabsContent value="tasks"><InsuranceTasksManager /></TabsContent>
         <TabsContent value="commissions"><InsuranceCommissionsTracker /></TabsContent>
         <TabsContent value="documents"><InsuranceDocumentVault /></TabsContent>
+        <TabsContent value="importexport"><InsuranceImportExport /></TabsContent>
         <TabsContent value="advisors"><InsuranceAdvisorsManager /></TabsContent>
         <TabsContent value="analytics"><InsuranceAnalyticsDashboard /></TabsContent>
         <TabsContent value="plans"><InsurancePlansAdmin /></TabsContent>
