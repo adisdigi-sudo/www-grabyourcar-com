@@ -67,6 +67,9 @@ import { UnifiedMasterCRM } from "@/components/admin/UnifiedMasterCRM";
 import { JourneyAutomationPanel } from "@/components/admin/JourneyAutomationPanel";
 import { RevenueIntelligenceDashboard } from "@/components/admin/RevenueIntelligenceDashboard";
 import { LeadScoringDashboard } from "@/components/admin/LeadScoringDashboard";
+import { ClientManagement } from "@/components/admin/ClientManagement";
+import { LeadImportManager } from "@/components/admin/LeadImportManager";
+import { DataExportEngine } from "@/components/admin/DataExportEngine";
 
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
@@ -141,6 +144,12 @@ const AdminLayout = () => {
         return <RevenueIntelligenceDashboard />;
       case "lead-scoring":
         return <LeadScoringDashboard />;
+      case "client-management":
+        return <ClientManagement />;
+      case "lead-import":
+        return <LeadImportManager />;
+      case "data-export":
+        return <DataExportEngine />;
       case "leads-all":
       case "leads-hot":
       case "leads-whatsapp":
