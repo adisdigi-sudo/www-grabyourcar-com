@@ -2,7 +2,8 @@ import { useState } from "react";
 import {
   Shield, LayoutDashboard, Users, FileSpreadsheet,
   UserPlus, FilePlus, Search, Menu, RefreshCw,
-  GitBranch, MessageSquare, ClipboardList, FileUp
+  GitBranch, MessageSquare, ClipboardList, FileUp,
+  Database, BarChart3
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,8 @@ import { InsuranceRenewalsEngine } from "./insurance/InsuranceRenewalsEngine";
 import { InsuranceStatusPipeline } from "./insurance/InsuranceStatusPipeline";
 import { InsuranceTemplatesManager } from "./insurance/InsuranceTemplatesManager";
 import { InsuranceSmartExtractor } from "./insurance/InsuranceSmartExtractor";
+import { InsuranceProspectPool } from "./insurance/InsuranceProspectPool";
+import { InsuranceDataHealth } from "./insurance/InsuranceDataHealth";
 
 type NavItem = { id: string; label: string; icon: any };
 type NavGroup = { group: string; items: NavItem[] };
@@ -27,6 +30,7 @@ const NAV_GROUPS: NavGroup[] = [
     group: "Main",
     items: [
       { id: "dashboard", label: "Policy Dashboard", icon: LayoutDashboard },
+      { id: "prospects", label: "Prospect Pool", icon: Database },
       { id: "clients", label: "Clients", icon: Users },
       { id: "pipeline", label: "Sales Pipeline", icon: GitBranch },
       { id: "renewals", label: "Renewal Engine", icon: RefreshCw },
@@ -46,12 +50,14 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { id: "templates", label: "Message Templates", icon: MessageSquare },
       { id: "importexport", label: "Import / Export", icon: FileSpreadsheet },
+      { id: "datahealth", label: "Data Health", icon: BarChart3 },
     ],
   },
 ];
 
 const COMPONENTS: Record<string, React.FC> = {
   dashboard: InsuranceCRMDashboard,
+  prospects: InsuranceProspectPool,
   clients: InsuranceClientsManager,
   pipeline: InsuranceStatusPipeline,
   renewals: InsuranceRenewalsEngine,
@@ -61,6 +67,7 @@ const COMPONENTS: Record<string, React.FC> = {
   clientsearch: InsuranceClientSearch,
   templates: InsuranceTemplatesManager,
   importexport: InsuranceImportExport,
+  datahealth: InsuranceDataHealth,
 };
 
 function SidebarNav({ active, onSelect }: { active: string; onSelect: (id: string) => void }) {
