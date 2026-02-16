@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, subDays, startOfMonth, endOfMonth } from "date-fns";
@@ -16,6 +16,7 @@ import {
   ScheduledReportsManager,
   type DateRange
 } from "./dashboard";
+import { CRMCommandWidget } from "./CRMCommandWidget";
 
 interface DashboardStats {
   totalLeads: number;
@@ -380,8 +381,13 @@ export const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <DashboardStatsCards stats={stats} isLoading={statsLoading} />
+      {/* CRM Intelligence Widget */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <DashboardStatsCards stats={stats} isLoading={statsLoading} />
+        </div>
+        <CRMCommandWidget />
+      </div>
 
       {/* Charts Row 1 */}
       <div className="grid gap-6 lg:grid-cols-3">
