@@ -26,6 +26,7 @@ import { InsuranceCrossSellEngine } from "./insurance/InsuranceCrossSellEngine";
 import { InsuranceAutomationPanel } from "./insurance/InsuranceAutomationPanel";
 import { InsuranceTemplatesManager } from "./insurance/InsuranceTemplatesManager";
 import { InsuranceStatusPipeline } from "./insurance/InsuranceStatusPipeline";
+import { InsuranceReportsModule } from "./insurance/InsuranceReportsModule";
 
 export function InsuranceManagement() {
   return (
@@ -96,6 +97,9 @@ export function InsuranceManagement() {
           <TabsTrigger value="templates" className="gap-1.5 text-xs">
             <MessageSquare className="h-3.5 w-3.5" /> Templates
           </TabsTrigger>
+          <TabsTrigger value="reports" className="gap-1.5 text-xs">
+            <FileSpreadsheet className="h-3.5 w-3.5" /> Reports
+          </TabsTrigger>
           <TabsTrigger value="pipeline" className="gap-1.5 text-xs">
             <GitBranch className="h-3.5 w-3.5" /> Pipeline
           </TabsTrigger>
@@ -125,6 +129,7 @@ export function InsuranceManagement() {
         <TabsContent value="addons"><InsuranceAddonsAdmin /></TabsContent>
         <TabsContent value="automation"><InsuranceAutomationPanel /></TabsContent>
         <TabsContent value="templates"><InsuranceTemplatesManager /></TabsContent>
+        <TabsContent value="reports"><InsuranceReportsModule /></TabsContent>
         <TabsContent value="pipeline"><InsuranceStatusPipeline /></TabsContent>
         <TabsContent value="scraper"><InsuranceScraperAdmin /></TabsContent>
         <TabsContent value="leads"><InsuranceLeadsAdmin /></TabsContent>
