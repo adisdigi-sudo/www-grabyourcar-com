@@ -71,7 +71,7 @@ export function InsuranceAddPolicyForm({ onSuccess }: { onSuccess?: () => void }
     }
     setSaving(true);
     try {
-      await supabase.from("insurance_policies").insert({
+      const { error: policyErr } = await supabase.from("insurance_policies").insert({
         client_id: clientId,
         policy_number: form.policy_number,
         policy_type: form.policy_type,
@@ -80,10 +80,11 @@ export function InsuranceAddPolicyForm({ onSuccess }: { onSuccess?: () => void }
         idv: form.idv ? Number(form.idv) : null,
         start_date: form.start_date || null,
         expiry_date: form.expiry_date || null,
-        ncb_percentage: form.ncb_percentage ? Number(form.ncb_percentage) : null,
-        add_ons: form.add_ons ? form.add_ons.split(",").map(s => s.trim()).filter(Boolean) : [],
+        ncb_discount: form.ncb_percentage ? Number(form.ncb_percentage) : null,
+        addons: form.add_ons ? form.add_ons.split(",").map(s => s.trim()).filter(Boolean) : [],
         status: form.status,
       });
+      if (policyErr) throw policyErr;
 
       await supabase.from("insurance_activity_log").insert({
         client_id: clientId,

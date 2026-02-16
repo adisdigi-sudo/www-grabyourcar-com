@@ -1,10 +1,15 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useState } from "react";
 import {
   Shield, FileText, HelpCircle, Package, Globe, Users, BarChart3,
   LayoutDashboard, UserCheck, ShieldCheck, RefreshCw, ListChecks,
   DollarSign, TrendingUp, FolderOpen, Briefcase, Sparkles, FileSpreadsheet, Zap,
-  MessageSquare, GitBranch, Settings, Car, Search, UserPlus, FilePlus
+  MessageSquare, GitBranch, Settings, Car, Search, UserPlus, FilePlus,
+  ChevronRight, Menu
 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { InsurancePlansAdmin } from "./insurance/InsurancePlansAdmin";
 import { InsuranceContentAdmin } from "./insurance/InsuranceContentAdmin";
 import { InsuranceFAQsAdmin } from "./insurance/InsuranceFAQsAdmin";
@@ -33,132 +38,193 @@ import { InsuranceClientSearch } from "./insurance/InsuranceClientSearch";
 import { InsuranceAddLeadForm } from "./insurance/InsuranceAddLeadForm";
 import { InsuranceAddPolicyForm } from "./insurance/InsuranceAddPolicyForm";
 
-export function InsuranceManagement() {
+type NavItem = { id: string; label: string; icon: any };
+type NavGroup = { group: string; items: NavItem[] };
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    group: "Overview",
+    items: [
+      { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { id: "analytics", label: "Analytics", icon: TrendingUp },
+      { id: "reports", label: "Reports", icon: FileSpreadsheet },
+    ],
+  },
+  {
+    group: "Quick Actions",
+    items: [
+      { id: "addlead", label: "Add Lead", icon: UserPlus },
+      { id: "addpolicy", label: "Add Policy", icon: FilePlus },
+      { id: "extractor", label: "AI Extractor", icon: Sparkles },
+      { id: "clientsearch", label: "Client Search", icon: Search },
+    ],
+  },
+  {
+    group: "CRM",
+    items: [
+      { id: "clients", label: "Clients", icon: UserCheck },
+      { id: "policies", label: "Policies", icon: ShieldCheck },
+      { id: "pipeline", label: "Pipeline", icon: GitBranch },
+      { id: "tasks", label: "Tasks", icon: ListChecks },
+    ],
+  },
+  {
+    group: "Revenue Engine",
+    items: [
+      { id: "renewals", label: "Renewals", icon: RefreshCw },
+      { id: "crosssell", label: "Cross-Sell", icon: Zap },
+      { id: "commissions", label: "Commissions", icon: DollarSign },
+    ],
+  },
+  {
+    group: "Data & Docs",
+    items: [
+      { id: "importexport", label: "Import / Export", icon: FileSpreadsheet },
+      { id: "documents", label: "Documents", icon: FolderOpen },
+      { id: "vehdocs", label: "Vehicle Docs", icon: Car },
+    ],
+  },
+  {
+    group: "Team",
+    items: [
+      { id: "advisors", label: "Advisors", icon: Briefcase },
+      { id: "manageagents", label: "Agents", icon: Users },
+    ],
+  },
+  {
+    group: "Settings & Content",
+    items: [
+      { id: "automation", label: "Automation", icon: Settings },
+      { id: "templates", label: "Templates", icon: MessageSquare },
+      { id: "plans", label: "Plans", icon: FileText },
+      { id: "content", label: "Content", icon: Globe },
+      { id: "faqs", label: "FAQs", icon: HelpCircle },
+      { id: "addons", label: "Add-ons", icon: Package },
+      { id: "scraper", label: "Scraper", icon: BarChart3 },
+      { id: "leads", label: "Legacy Leads", icon: Users },
+    ],
+  },
+];
+
+const COMPONENTS: Record<string, React.FC> = {
+  dashboard: InsuranceCRMDashboard,
+  addlead: InsuranceAddLeadForm,
+  addpolicy: InsuranceAddPolicyForm,
+  clients: InsuranceClientsManager,
+  policies: InsurancePoliciesManager,
+  renewals: InsuranceRenewalsEngine,
+  extractor: InsuranceSmartExtractor,
+  crosssell: InsuranceCrossSellEngine,
+  tasks: InsuranceTasksManager,
+  commissions: InsuranceCommissionsTracker,
+  documents: InsuranceDocumentVault,
+  importexport: InsuranceImportExport,
+  advisors: InsuranceAdvisorsManager,
+  analytics: InsuranceAnalyticsDashboard,
+  plans: InsurancePlansAdmin,
+  content: InsuranceContentAdmin,
+  faqs: InsuranceFAQsAdmin,
+  addons: InsuranceAddonsAdmin,
+  automation: InsuranceAutomationPanel,
+  templates: InsuranceTemplatesManager,
+  reports: InsuranceReportsModule,
+  vehdocs: InsuranceVehicleDocValidity,
+  pipeline: InsuranceStatusPipeline,
+  manageagents: InsuranceManageAgents,
+  clientsearch: InsuranceClientSearch,
+  scraper: InsuranceScraperAdmin,
+  leads: InsuranceLeadsAdmin,
+};
+
+function SidebarNav({ active, onSelect }: { active: string; onSelect: (id: string) => void }) {
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Shield className="h-6 w-6 text-primary" />
-          Insurance Command Center
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Complete CRM, policy management, renewals, commissions, documents & analytics
-        </p>
+    <ScrollArea className="h-full">
+      <div className="py-3 px-2 space-y-4">
+        {NAV_GROUPS.map((g) => (
+          <div key={g.group}>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold px-3 mb-1.5">
+              {g.group}
+            </p>
+            <div className="space-y-0.5">
+              {g.items.map((item) => {
+                const Icon = item.icon;
+                const isActive = active === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => onSelect(item.id)}
+                    className={cn(
+                      "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all",
+                      isActive
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                    )}
+                  >
+                    <Icon className="h-4 w-4 flex-shrink-0" />
+                    <span className="truncate">{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
+    </ScrollArea>
+  );
+}
 
-      <Tabs defaultValue="dashboard" className="space-y-4">
-        <TabsList className="flex flex-wrap gap-1 h-auto p-1 bg-muted/50">
-          <TabsTrigger value="dashboard" className="gap-1.5 text-xs">
-            <LayoutDashboard className="h-3.5 w-3.5" /> Dashboard
-          </TabsTrigger>
-          <TabsTrigger value="addlead" className="gap-1.5 text-xs">
-            <UserPlus className="h-3.5 w-3.5" /> Add Lead
-          </TabsTrigger>
-          <TabsTrigger value="addpolicy" className="gap-1.5 text-xs">
-            <FilePlus className="h-3.5 w-3.5" /> Add Policy
-          </TabsTrigger>
-          <TabsTrigger value="clients" className="gap-1.5 text-xs">
-            <UserCheck className="h-3.5 w-3.5" /> Clients
-          </TabsTrigger>
-          <TabsTrigger value="policies" className="gap-1.5 text-xs">
-            <ShieldCheck className="h-3.5 w-3.5" /> Policies
-          </TabsTrigger>
-          <TabsTrigger value="renewals" className="gap-1.5 text-xs">
-            <RefreshCw className="h-3.5 w-3.5" /> Renewals
-          </TabsTrigger>
-          <TabsTrigger value="extractor" className="gap-1.5 text-xs">
-            <Sparkles className="h-3.5 w-3.5" /> AI Extractor
-          </TabsTrigger>
-          <TabsTrigger value="crosssell" className="gap-1.5 text-xs">
-            <Zap className="h-3.5 w-3.5" /> Cross-Sell
-          </TabsTrigger>
-          <TabsTrigger value="tasks" className="gap-1.5 text-xs">
-            <ListChecks className="h-3.5 w-3.5" /> Tasks
-          </TabsTrigger>
-          <TabsTrigger value="commissions" className="gap-1.5 text-xs">
-            <DollarSign className="h-3.5 w-3.5" /> Commissions
-          </TabsTrigger>
-          <TabsTrigger value="documents" className="gap-1.5 text-xs">
-            <FolderOpen className="h-3.5 w-3.5" /> Documents
-          </TabsTrigger>
-          <TabsTrigger value="importexport" className="gap-1.5 text-xs">
-            <FileSpreadsheet className="h-3.5 w-3.5" /> Import/Export
-          </TabsTrigger>
-          <TabsTrigger value="advisors" className="gap-1.5 text-xs">
-            <Briefcase className="h-3.5 w-3.5" /> Advisors
-          </TabsTrigger>
-          <TabsTrigger value="analytics" className="gap-1.5 text-xs">
-            <TrendingUp className="h-3.5 w-3.5" /> Analytics
-          </TabsTrigger>
-          <TabsTrigger value="plans" className="gap-1.5 text-xs">
-            <FileText className="h-3.5 w-3.5" /> Plans
-          </TabsTrigger>
-          <TabsTrigger value="content" className="gap-1.5 text-xs">
-            <Globe className="h-3.5 w-3.5" /> Content
-          </TabsTrigger>
-          <TabsTrigger value="faqs" className="gap-1.5 text-xs">
-            <HelpCircle className="h-3.5 w-3.5" /> FAQs
-          </TabsTrigger>
-          <TabsTrigger value="addons" className="gap-1.5 text-xs">
-            <Package className="h-3.5 w-3.5" /> Add-ons
-          </TabsTrigger>
-          <TabsTrigger value="automation" className="gap-1.5 text-xs">
-            <Settings className="h-3.5 w-3.5" /> Automation
-          </TabsTrigger>
-          <TabsTrigger value="templates" className="gap-1.5 text-xs">
-            <MessageSquare className="h-3.5 w-3.5" /> Templates
-          </TabsTrigger>
-          <TabsTrigger value="reports" className="gap-1.5 text-xs">
-            <FileSpreadsheet className="h-3.5 w-3.5" /> Reports
-          </TabsTrigger>
-          <TabsTrigger value="vehdocs" className="gap-1.5 text-xs">
-            <Car className="h-3.5 w-3.5" /> Vehicle Docs
-          </TabsTrigger>
-          <TabsTrigger value="pipeline" className="gap-1.5 text-xs">
-            <GitBranch className="h-3.5 w-3.5" /> Pipeline
-          </TabsTrigger>
-          <TabsTrigger value="manageagents" className="gap-1.5 text-xs">
-            <Users className="h-3.5 w-3.5" /> Manage Agents
-          </TabsTrigger>
-          <TabsTrigger value="clientsearch" className="gap-1.5 text-xs">
-            <Search className="h-3.5 w-3.5" /> Client Search
-          </TabsTrigger>
-          <TabsTrigger value="scraper" className="gap-1.5 text-xs">
-            <BarChart3 className="h-3.5 w-3.5" /> Scraper
-          </TabsTrigger>
-          <TabsTrigger value="leads" className="gap-1.5 text-xs">
-            <Users className="h-3.5 w-3.5" /> Legacy Leads
-          </TabsTrigger>
-        </TabsList>
+export function InsuranceManagement() {
+  const [active, setActive] = useState("dashboard");
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-        <TabsContent value="dashboard"><InsuranceCRMDashboard /></TabsContent>
-        <TabsContent value="addlead"><InsuranceAddLeadForm /></TabsContent>
-        <TabsContent value="addpolicy"><InsuranceAddPolicyForm /></TabsContent>
-        <TabsContent value="clients"><InsuranceClientsManager /></TabsContent>
-        <TabsContent value="policies"><InsurancePoliciesManager /></TabsContent>
-        <TabsContent value="renewals"><InsuranceRenewalsEngine /></TabsContent>
-        <TabsContent value="extractor"><InsuranceSmartExtractor /></TabsContent>
-        <TabsContent value="crosssell"><InsuranceCrossSellEngine /></TabsContent>
-        <TabsContent value="tasks"><InsuranceTasksManager /></TabsContent>
-        <TabsContent value="commissions"><InsuranceCommissionsTracker /></TabsContent>
-        <TabsContent value="documents"><InsuranceDocumentVault /></TabsContent>
-        <TabsContent value="importexport"><InsuranceImportExport /></TabsContent>
-        <TabsContent value="advisors"><InsuranceAdvisorsManager /></TabsContent>
-        <TabsContent value="analytics"><InsuranceAnalyticsDashboard /></TabsContent>
-        <TabsContent value="plans"><InsurancePlansAdmin /></TabsContent>
-        <TabsContent value="content"><InsuranceContentAdmin /></TabsContent>
-        <TabsContent value="faqs"><InsuranceFAQsAdmin /></TabsContent>
-        <TabsContent value="addons"><InsuranceAddonsAdmin /></TabsContent>
-        <TabsContent value="automation"><InsuranceAutomationPanel /></TabsContent>
-        <TabsContent value="templates"><InsuranceTemplatesManager /></TabsContent>
-        <TabsContent value="reports"><InsuranceReportsModule /></TabsContent>
-        <TabsContent value="vehdocs"><InsuranceVehicleDocValidity /></TabsContent>
-        <TabsContent value="pipeline"><InsuranceStatusPipeline /></TabsContent>
-        <TabsContent value="manageagents"><InsuranceManageAgents /></TabsContent>
-        <TabsContent value="clientsearch"><InsuranceClientSearch /></TabsContent>
-        <TabsContent value="scraper"><InsuranceScraperAdmin /></TabsContent>
-        <TabsContent value="leads"><InsuranceLeadsAdmin /></TabsContent>
-      </Tabs>
+  const ActiveComponent = COMPONENTS[active] || InsuranceCRMDashboard;
+  const activeLabel = NAV_GROUPS.flatMap(g => g.items).find(i => i.id === active)?.label || "Dashboard";
+
+  const handleSelect = (id: string) => {
+    setActive(id);
+    setMobileOpen(false);
+  };
+
+  return (
+    <div className="flex h-[calc(100vh-80px)] overflow-hidden -mx-4 -mt-2 sm:-mx-6">
+      {/* Desktop Sidebar */}
+      <aside className="hidden lg:flex w-56 xl:w-60 border-r bg-card/50 flex-col flex-shrink-0">
+        <div className="px-4 py-3 border-b">
+          <h1 className="text-sm font-bold flex items-center gap-2">
+            <Shield className="h-4 w-4 text-primary" />
+            Insurance OS
+          </h1>
+        </div>
+        <SidebarNav active={active} onSelect={handleSelect} />
+      </aside>
+
+      {/* Mobile Header + Sheet */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <div className="lg:hidden flex items-center gap-2 px-4 py-2 border-b bg-card/50">
+          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Menu className="h-4 w-4" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-60 p-0">
+              <div className="px-4 py-3 border-b">
+                <h1 className="text-sm font-bold flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-primary" />
+                  Insurance OS
+                </h1>
+              </div>
+              <SidebarNav active={active} onSelect={handleSelect} />
+            </SheetContent>
+          </Sheet>
+          <span className="text-sm font-semibold">{activeLabel}</span>
+        </div>
+
+        {/* Main Content */}
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6">
+          <ActiveComponent />
+        </main>
+      </div>
     </div>
   );
 }

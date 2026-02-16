@@ -369,18 +369,26 @@ function ImportWizard() {
     try {
       for (const row of parsedRows) {
         try {
-          // Try to extract phone - look in phone field or scan all values for 10-digit numbers
+          // Try to extract phone - look in phone field first
           let phone = (row.phone || "").replace(/\D/g, "");
           if (phone.length > 10) phone = phone.slice(-10);
           
-          // If no phone found in mapped field, scan non-ID fields for phone-like patterns
+          // If no phone found in mapped field, scan non-ID/financial fields for phone-like patterns
           if (!phone || phone.length < 10) {
-            const skipFields = new Set(["external_lead_id", "policy_number", "idv", "premium_amount", "net_premium", "gst_amount", "addon_premium", "ncb_discount", "vehicle_year", "pincode", "commission", "tp_premium"]);
+            const skipFields = new Set([
+              "external_lead_id", "policy_number", "idv", "premium_amount", "net_premium",
+              "gst_amount", "addon_premium", "ncb_discount", "vehicle_year", "pincode",
+              "commission", "tp_premium", "chassis_number", "engine_number", "customer_name",
+              "insurer", "vehicle_number", "vehicle_model", "vehicle_make", "policy_type",
+              "notes", "email", "status", "payment_mode", "lead_source", "city", "state",
+              "gender", "date_of_birth", "start_date", "expiry_date",
+            ]);
             for (const [key, val] of Object.entries(row)) {
               if (key.startsWith("__raw_") || skipFields.has(key)) continue;
-              const digits = String(val).replace(/\D/g, "");
-              if (digits.length >= 10 && digits.length <= 12) {
-                phone = digits.slice(-10);
+              const strVal = String(val).replace(/\D/g, "");
+              // Only match pure 10-digit numbers (not IDs that happen to be 10 digits)
+              if (strVal.length === 10 && /^[6-9]\d{9}$/.test(strVal)) {
+                phone = strVal;
                 break;
               }
             }
@@ -530,7 +538,8 @@ function ImportWizard() {
               added++;
             }
           }
-        } catch {
+        } catch (rowErr: any) {
+          console.error("Import row error:", rowErr?.message || rowErr, "Row data:", JSON.stringify(row).slice(0, 200));
           errors++;
         }
       }
