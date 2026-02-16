@@ -3,7 +3,7 @@ import {
   Shield, FileText, HelpCircle, Package, Globe, Users, BarChart3,
   LayoutDashboard, UserCheck, ShieldCheck, RefreshCw, ListChecks,
   DollarSign, TrendingUp, FolderOpen, Briefcase, Sparkles, FileSpreadsheet, Zap,
-  MessageSquare, GitBranch, Settings
+  MessageSquare, GitBranch, Settings, Car
 } from "lucide-react";
 import { InsurancePlansAdmin } from "./insurance/InsurancePlansAdmin";
 import { InsuranceContentAdmin } from "./insurance/InsuranceContentAdmin";
@@ -27,6 +27,7 @@ import { InsuranceAutomationPanel } from "./insurance/InsuranceAutomationPanel";
 import { InsuranceTemplatesManager } from "./insurance/InsuranceTemplatesManager";
 import { InsuranceStatusPipeline } from "./insurance/InsuranceStatusPipeline";
 import { InsuranceReportsModule } from "./insurance/InsuranceReportsModule";
+import { InsuranceVehicleDocValidity } from "./insurance/InsuranceVehicleDocValidity";
 
 export function InsuranceManagement() {
   return (
@@ -100,6 +101,9 @@ export function InsuranceManagement() {
           <TabsTrigger value="reports" className="gap-1.5 text-xs">
             <FileSpreadsheet className="h-3.5 w-3.5" /> Reports
           </TabsTrigger>
+          <TabsTrigger value="vehdocs" className="gap-1.5 text-xs">
+            <Car className="h-3.5 w-3.5" /> Vehicle Docs
+          </TabsTrigger>
           <TabsTrigger value="pipeline" className="gap-1.5 text-xs">
             <GitBranch className="h-3.5 w-3.5" /> Pipeline
           </TabsTrigger>
@@ -130,6 +134,7 @@ export function InsuranceManagement() {
         <TabsContent value="automation"><InsuranceAutomationPanel /></TabsContent>
         <TabsContent value="templates"><InsuranceTemplatesManager /></TabsContent>
         <TabsContent value="reports"><InsuranceReportsModule /></TabsContent>
+        <TabsContent value="vehdocs"><InsuranceVehicleDocValidity /></TabsContent>
         <TabsContent value="pipeline"><InsuranceStatusPipeline /></TabsContent>
         <TabsContent value="scraper"><InsuranceScraperAdmin /></TabsContent>
         <TabsContent value="leads"><InsuranceLeadsAdmin /></TabsContent>
