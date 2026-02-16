@@ -26,6 +26,8 @@ export function InsuranceRenewalsEngine() {
   const [selectedPolicy, setSelectedPolicy] = useState<any>(null);
   const [bulkSendingWA, setBulkSendingWA] = useState(false);
   const [bulkSendingEmail, setBulkSendingEmail] = useState(false);
+  const [previewPolicy, setPreviewPolicy] = useState<any>(null);
+  const [sendingPreview, setSendingPreview] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: policies, isLoading } = useQuery({
@@ -129,18 +131,92 @@ export function InsuranceRenewalsEngine() {
     }
   };
 
-  const sendRenewalNudge = async (p: any) => {
+  const buildPreviewMessage = (p: any) => {
+    const client = p.insurance_clients;
+    const customerName = client?.customer_name || "Valued Customer";
+    const vehicleModel = client?.vehicle_model || client?.vehicle_make || "your vehicle";
+    const vehicleNumber = client?.vehicle_number || "";
+    const vehicleNumberLine = vehicleNumber ? `(${vehicleNumber}) ` : "";
+    const expiryDate = p.expiry_date ? format(new Date(p.expiry_date), "dd MMM yyyy") : "soon";
+    const daysRemaining = p.daysLeft !== null && p.daysLeft !== undefined ? (p.daysLeft <= 0 ? 0 : p.daysLeft) : 0;
+    const insurer = p.insurer || client?.current_insurer || "";
+    const policyNumber = p.policy_number || client?.current_policy_number || "";
+    const premium = p.premium_amount || client?.current_premium || "";
+
+    let policyDetails = "";
+    if (insurer || policyNumber || premium) {
+      policyDetails = "📋 *Your Policy Details:*\n";
+      if (policyNumber) policyDetails += `📄 Policy: ${policyNumber}\n`;
+      if (insurer) policyDetails += `🏢 Insurer: ${insurer}\n`;
+      if (premium) policyDetails += `💰 Premium: ₹${Number(premium).toLocaleString("en-IN")}\n`;
+      if (vehicleNumber) policyDetails += `🚗 Vehicle: ${vehicleNumber}\n`;
+    }
+
+    return `🚗 *Grabyourcar Policy Renewal Reminder*
+━━━━━━━━━━━━━━━━━━━━━
+
+Hello *${customerName}*,
+
+We hope you are enjoying a smooth and safe drive!
+
+This is a friendly reminder from *Grabyourcar Insurance Desk* that your *${vehicleModel}* ${vehicleNumberLine}insurance policy is set to expire on *${expiryDate}* — just *${daysRemaining} days* to go.
+
+Renewing your policy before the expiry helps you:
+
+✅ Avoid inspection hassles
+✅ Maintain your No Claim Bonus
+✅ Stay financially protected
+✅ Ensure uninterrupted coverage
+
+Our team has already prepared renewal assistance for you to make the process quick and seamless.
+
+👉 Simply *reply to this message* or click below to get your renewal quote instantly.
+
+🔗 Renew Now: https://grabyourcar.lovable.app/insurance
+
+${policyDetails}
+If you need any help, feel free to contact your dedicated advisor.
+
+📞 +91 98559 24442
+🌐 www.grabyourcar.com
+
+Thank you for trusting *Grabyourcar* — we look forward to protecting your journeys ahead.
+
+Drive safe! 🚘`.replace(/\n{3,}/g, "\n\n");
+  };
+
+  const showRenewalPreview = (p: any) => {
     const client = p.insurance_clients;
     if (!client?.phone || client.phone.startsWith("IB_")) { toast.error("No phone number"); return; }
+    setPreviewPolicy(p);
+  };
+
+  const confirmSendRenewal = async () => {
+    if (!previewPolicy) return;
+    setSendingPreview(true);
+    const client = previewPolicy.insurance_clients;
     try {
       const { data, error } = await supabase.functions.invoke("insurance-renewal-engine", {
-        body: { action: "send_single", client_id: client.id, policy_id: p.id },
+        body: { action: "send_single", client_id: client.id, policy_id: previewPolicy.id },
       });
       if (error) throw error;
       toast.success(`✅ Premium renewal reminder sent to ${client.customer_name || client.phone}`);
+      setPreviewPolicy(null);
     } catch (e: any) {
       toast.error(e.message || "Failed to send");
+    } finally {
+      setSendingPreview(false);
     }
+  };
+
+  const sendDirectWhatsApp = (p: any) => {
+    const client = p.insurance_clients;
+    if (!client?.phone || client.phone.startsWith("IB_")) { toast.error("No phone number"); return; }
+    const message = buildPreviewMessage(p);
+    const phone = client.phone.replace(/\D/g, "");
+    const fullPhone = phone.startsWith("91") ? phone : `91${phone}`;
+    window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`, "_blank");
+    toast.success(`WhatsApp opened for ${client.customer_name || client.phone}`);
   };
 
   const sendRenewalEmail = (p: any) => {
@@ -346,7 +422,7 @@ export function InsuranceRenewalsEngine() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
                           {phone && (
-                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); sendRenewalNudge(p); }} className="cursor-pointer gap-2">
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); showRenewalPreview(p); }} className="cursor-pointer gap-2">
                               <MessageSquare className="h-3.5 w-3.5 text-emerald-600" />
                               <div>
                                 <p className="text-xs font-medium">WhatsApp Reminder</p>
@@ -386,7 +462,48 @@ export function InsuranceRenewalsEngine() {
             <DialogHeader>
               <DialogTitle className="text-base">Renewal Details</DialogTitle>
             </DialogHeader>
-            <RenewalDetailView policy={selectedPolicy} onShare={() => sharePolicy(selectedPolicy)} onNudge={() => sendRenewalNudge(selectedPolicy)} onEmail={() => sendRenewalEmail(selectedPolicy)} />
+            <RenewalDetailView policy={selectedPolicy} onShare={() => sharePolicy(selectedPolicy)} onNudge={() => showRenewalPreview(selectedPolicy)} onEmail={() => sendRenewalEmail(selectedPolicy)} />
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* WhatsApp Message Preview Dialog */}
+      {previewPolicy && (
+        <Dialog open onOpenChange={() => setPreviewPolicy(null)}>
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-base">
+                <MessageSquare className="h-5 w-5 text-emerald-600" />
+                WhatsApp Renewal Reminder Preview
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="bg-[#DCF8C6] rounded-xl p-4 text-sm whitespace-pre-wrap font-sans leading-relaxed shadow-sm border border-emerald-200 max-h-[50vh] overflow-y-auto">
+                {buildPreviewMessage(previewPolicy)}
+              </div>
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 text-xs text-muted-foreground">
+                <Bell className="h-3.5 w-3.5 shrink-0" />
+                <span>This message will be sent to <strong>{previewPolicy.insurance_clients?.phone}</strong> via WhatsApp</span>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  className="flex-1 gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+                  onClick={confirmSendRenewal}
+                  disabled={sendingPreview}
+                >
+                  {sendingPreview ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  {sendingPreview ? "Sending..." : "Send via API"}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex-1 gap-2"
+                  onClick={() => sendDirectWhatsApp(previewPolicy)}
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  Open WhatsApp
+                </Button>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       )}
