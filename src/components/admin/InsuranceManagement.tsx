@@ -3,7 +3,7 @@ import {
   Shield, FileText, HelpCircle, Package, Globe, Users, BarChart3,
   LayoutDashboard, UserCheck, ShieldCheck, RefreshCw, ListChecks,
   DollarSign, TrendingUp, FolderOpen, Briefcase, Sparkles, FileSpreadsheet, Zap,
-  MessageSquare, GitBranch, Settings, Car, Search
+  MessageSquare, GitBranch, Settings, Car, Search, UserPlus, FilePlus
 } from "lucide-react";
 import { InsurancePlansAdmin } from "./insurance/InsurancePlansAdmin";
 import { InsuranceContentAdmin } from "./insurance/InsuranceContentAdmin";
@@ -30,6 +30,8 @@ import { InsuranceReportsModule } from "./insurance/InsuranceReportsModule";
 import { InsuranceVehicleDocValidity } from "./insurance/InsuranceVehicleDocValidity";
 import { InsuranceManageAgents } from "./insurance/InsuranceManageAgents";
 import { InsuranceClientSearch } from "./insurance/InsuranceClientSearch";
+import { InsuranceAddLeadForm } from "./insurance/InsuranceAddLeadForm";
+import { InsuranceAddPolicyForm } from "./insurance/InsuranceAddPolicyForm";
 
 export function InsuranceManagement() {
   return (
@@ -48,6 +50,12 @@ export function InsuranceManagement() {
         <TabsList className="flex flex-wrap gap-1 h-auto p-1 bg-muted/50">
           <TabsTrigger value="dashboard" className="gap-1.5 text-xs">
             <LayoutDashboard className="h-3.5 w-3.5" /> Dashboard
+          </TabsTrigger>
+          <TabsTrigger value="addlead" className="gap-1.5 text-xs">
+            <UserPlus className="h-3.5 w-3.5" /> Add Lead
+          </TabsTrigger>
+          <TabsTrigger value="addpolicy" className="gap-1.5 text-xs">
+            <FilePlus className="h-3.5 w-3.5" /> Add Policy
           </TabsTrigger>
           <TabsTrigger value="clients" className="gap-1.5 text-xs">
             <UserCheck className="h-3.5 w-3.5" /> Clients
@@ -124,6 +132,8 @@ export function InsuranceManagement() {
         </TabsList>
 
         <TabsContent value="dashboard"><InsuranceCRMDashboard /></TabsContent>
+        <TabsContent value="addlead"><InsuranceAddLeadForm /></TabsContent>
+        <TabsContent value="addpolicy"><InsuranceAddPolicyForm /></TabsContent>
         <TabsContent value="clients"><InsuranceClientsManager /></TabsContent>
         <TabsContent value="policies"><InsurancePoliciesManager /></TabsContent>
         <TabsContent value="renewals"><InsuranceRenewalsEngine /></TabsContent>
