@@ -13,7 +13,7 @@ import {
   Users, FileText, AlertTriangle, Clock, Search,
   Download, ChevronLeft, ChevronRight, Phone, Mail,
   Share2, Bell, CalendarDays, ArrowRight, Copy, ExternalLink,
-  Shield, Car, TrendingUp, CheckCircle2
+  Shield, Car, TrendingUp, CheckCircle2, MessageSquare, PhoneCall
 } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -367,6 +367,20 @@ export function InsuranceCRMDashboard() {
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-0.5">
+                              {r.phone && (
+                                <a href={`tel:${r.phone}`}>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" title="Call">
+                                    <PhoneCall className="h-3.5 w-3.5 text-green-600" />
+                                  </Button>
+                                </a>
+                              )}
+                              {r.phone && (
+                                <a href={`https://wa.me/91${r.phone}`} target="_blank" rel="noopener noreferrer">
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" title="WhatsApp">
+                                    <MessageSquare className="h-3.5 w-3.5 text-green-600" />
+                                  </Button>
+                                </a>
+                              )}
                               <Button variant="ghost" size="icon" className="h-7 w-7" title="Share"
                                 onClick={() => sharePolicy(r)}>
                                 <Share2 className="h-3.5 w-3.5" />

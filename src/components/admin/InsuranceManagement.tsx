@@ -1,7 +1,8 @@
 import { useState } from "react";
 import {
   Shield, LayoutDashboard, Users, FileSpreadsheet,
-  UserPlus, FilePlus, Search, Menu
+  UserPlus, FilePlus, Search, Menu, RefreshCw,
+  GitBranch, MessageSquare, ClipboardList, FileUp
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,10 @@ import { InsuranceImportExport } from "./insurance/InsuranceImportExport";
 import { InsuranceAddLeadForm } from "./insurance/InsuranceAddLeadForm";
 import { InsuranceAddPolicyForm } from "./insurance/InsuranceAddPolicyForm";
 import { InsuranceClientSearch } from "./insurance/InsuranceClientSearch";
+import { InsuranceRenewalsEngine } from "./insurance/InsuranceRenewalsEngine";
+import { InsuranceStatusPipeline } from "./insurance/InsuranceStatusPipeline";
+import { InsuranceTemplatesManager } from "./insurance/InsuranceTemplatesManager";
+import { InsuranceSmartExtractor } from "./insurance/InsuranceSmartExtractor";
 
 type NavItem = { id: string; label: string; icon: any };
 type NavGroup = { group: string; items: NavItem[] };
@@ -23,6 +28,8 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { id: "dashboard", label: "Policy Dashboard", icon: LayoutDashboard },
       { id: "clients", label: "Clients", icon: Users },
+      { id: "pipeline", label: "Sales Pipeline", icon: GitBranch },
+      { id: "renewals", label: "Renewal Engine", icon: RefreshCw },
     ],
   },
   {
@@ -30,12 +37,14 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { id: "addlead", label: "Add Lead", icon: UserPlus },
       { id: "addpolicy", label: "Add Policy", icon: FilePlus },
+      { id: "extract", label: "Extract Policy", icon: FileUp },
       { id: "clientsearch", label: "Search", icon: Search },
     ],
   },
   {
-    group: "Data",
+    group: "Tools",
     items: [
+      { id: "templates", label: "Message Templates", icon: MessageSquare },
       { id: "importexport", label: "Import / Export", icon: FileSpreadsheet },
     ],
   },
@@ -44,9 +53,13 @@ const NAV_GROUPS: NavGroup[] = [
 const COMPONENTS: Record<string, React.FC> = {
   dashboard: InsuranceCRMDashboard,
   clients: InsuranceClientsManager,
+  pipeline: InsuranceStatusPipeline,
+  renewals: InsuranceRenewalsEngine,
   addlead: InsuranceAddLeadForm,
   addpolicy: InsuranceAddPolicyForm,
+  extract: InsuranceSmartExtractor,
   clientsearch: InsuranceClientSearch,
+  templates: InsuranceTemplatesManager,
   importexport: InsuranceImportExport,
 };
 
@@ -102,12 +115,13 @@ export function InsuranceManagement() {
   return (
     <div className="flex h-[calc(100vh-80px)] overflow-hidden -mx-4 -mt-2 sm:-mx-6">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex w-52 border-r bg-card/50 flex-col flex-shrink-0">
+      <aside className="hidden lg:flex w-56 border-r bg-card/50 flex-col flex-shrink-0">
         <div className="px-4 py-3 border-b">
           <h1 className="text-sm font-bold flex items-center gap-2">
             <Shield className="h-4 w-4 text-primary" />
             Insurance OS
           </h1>
+          <p className="text-[10px] text-muted-foreground mt-0.5">Operations Engine</p>
         </div>
         <SidebarNav active={active} onSelect={handleSelect} />
       </aside>
