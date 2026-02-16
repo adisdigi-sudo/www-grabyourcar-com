@@ -42,7 +42,7 @@ export const CorporateBrochureDownload = () => {
           </Button>
 
           <p className="text-xs text-muted-foreground mt-4">
-            PDF • 4 Pages • Fleet Solutions & Pricing
+            PDF • 7 Pages • Complete Corporate Fleet Solutions
           </p>
         </div>
       </div>
