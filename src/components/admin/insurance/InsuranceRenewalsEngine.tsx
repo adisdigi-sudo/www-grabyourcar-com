@@ -10,8 +10,12 @@ import { triggerWhatsApp } from "@/lib/whatsappTrigger";
 import {
   RefreshCw, AlertTriangle, Clock, CheckCircle2, XCircle,
   Bell, Calendar, Phone, Loader2, Zap, MessageSquare,
-  Share2, Mail, Search, TrendingUp, Star, PhoneCall
+  Share2, Mail, Search, TrendingUp, Star, PhoneCall,
+  Megaphone, Send
 } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator
+} from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format, differenceInDays } from "date-fns";
 
@@ -20,6 +24,8 @@ export function InsuranceRenewalsEngine() {
   const [runningEngine, setRunningEngine] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedPolicy, setSelectedPolicy] = useState<any>(null);
+  const [bulkSendingWA, setBulkSendingWA] = useState(false);
+  const [bulkSendingEmail, setBulkSendingEmail] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: policies, isLoading } = useQuery({
@@ -123,23 +129,68 @@ export function InsuranceRenewalsEngine() {
     }
   };
 
-  const sendRenewalNudge = (p: any) => {
+  const sendRenewalNudge = async (p: any) => {
     const client = p.insurance_clients;
-    if (!client?.phone) { toast.error("No phone number"); return; }
-    triggerWhatsApp({
-      event: p.daysLeft <= 0 ? "insurance_renewal_lapsed" : "insurance_renewal_manual",
-      phone: client.phone,
-      name: client.customer_name || "Customer",
-      data: {
-        days_left: String(Math.abs(p.daysLeft || 0)),
-        expiry_date: p.expiry_date || "",
-        insurer: p.insurer || "",
-        premium: String(p.premium_amount || ""),
-        vehicle: client.vehicle_number || "",
-        policy_number: p.policy_number || "",
-      },
+    if (!client?.phone || client.phone.startsWith("IB_")) { toast.error("No phone number"); return; }
+    try {
+      const { data, error } = await supabase.functions.invoke("insurance-renewal-engine", {
+        body: { action: "send_single", client_id: client.id, policy_id: p.id },
+      });
+      if (error) throw error;
+      toast.success(`✅ Premium renewal reminder sent to ${client.customer_name || client.phone}`);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to send");
+    }
+  };
+
+  const sendRenewalEmail = (p: any) => {
+    const client = p.insurance_clients;
+    if (!client?.email) { toast.error("No email address"); return; }
+    const subject = encodeURIComponent(`🚗 Renew Your Motor Insurance — ${client.customer_name || "Customer"}`);
+    const body = encodeURIComponent(
+      `Dear ${client.customer_name || "Valued Customer"},\n\nThis is a friendly reminder from Grabyourcar Insurance Desk.\n\nYour ${p.insurer || "motor insurance"} policy${p.policy_number ? ` (${p.policy_number})` : ""} for vehicle ${client.vehicle_number || ""} is${p.expiry_date ? ` set to expire on ${format(new Date(p.expiry_date), "dd MMM yyyy")}` : " due for renewal"}.\n\nRenewing on time helps you:\n✅ Avoid inspection hassles\n✅ Maintain No Claim Bonus\n✅ Stay financially protected\n\nReply to this email or call us at +91 98559 24442 for the best renewal quote.\n\nBest regards,\nGrabyourcar Insurance\nwww.grabyourcar.com`
+    );
+    window.open(`mailto:${client.email}?subject=${subject}&body=${body}`, "_blank");
+    toast.success(`📧 Email opened for ${client.customer_name || client.email}`);
+  };
+
+  const bulkSendWhatsApp = async () => {
+    const eligible = filtered.filter(p => {
+      const phone = p.insurance_clients?.phone;
+      return phone && !phone.startsWith("IB_");
     });
-    toast.success(`Nudge sent to ${client.customer_name || client.phone}`);
+    if (eligible.length === 0) { toast.error("No clients with valid phone numbers"); return; }
+    setBulkSendingWA(true);
+    let sent = 0;
+    const toastId = toast.loading(`Sending WhatsApp reminders... 0/${eligible.length}`);
+    for (const p of eligible) {
+      try {
+        const { error } = await supabase.functions.invoke("insurance-renewal-engine", {
+          body: { action: "send_single", client_id: p.insurance_clients.id, policy_id: p.id },
+        });
+        if (!error) sent++;
+        toast.loading(`Sending WhatsApp reminders... ${sent}/${eligible.length}`, { id: toastId });
+      } catch { /* continue */ }
+      await new Promise(r => setTimeout(r, 500));
+    }
+    toast.success(`✅ Sent ${sent}/${eligible.length} WhatsApp renewal reminders!`, { id: toastId });
+    setBulkSendingWA(false);
+  };
+
+  const bulkSendEmail = async () => {
+    const eligible = filtered.filter(p => p.insurance_clients?.email);
+    if (eligible.length === 0) { toast.error("No clients with email addresses"); return; }
+    setBulkSendingEmail(true);
+    let sent = 0;
+    const toastId = toast.loading(`Opening emails... 0/${eligible.length}`);
+    for (const p of eligible) {
+      sendRenewalEmail(p);
+      sent++;
+      toast.loading(`Opening emails... ${sent}/${eligible.length}`, { id: toastId });
+      await new Promise(r => setTimeout(r, 200));
+    }
+    toast.success(`✅ Opened ${sent} email drafts!`, { id: toastId });
+    setBulkSendingEmail(false);
   };
 
   const sharePolicy = (p: any) => {
@@ -158,19 +209,48 @@ export function InsuranceRenewalsEngine() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <RefreshCw className="h-5 w-5 text-primary" /> Renewal Conversion Engine
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {enriched.length} active policies • ₹{(summary.totalPremium / 100000).toFixed(1)}L total premium
-          </p>
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <RefreshCw className="h-5 w-5 text-primary" /> Renewal Conversion Engine
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              {enriched.length} active policies • ₹{(summary.totalPremium / 100000).toFixed(1)}L total premium
+            </p>
+          </div>
+          <Button onClick={runRenewalEngine} disabled={runningEngine} className="gap-1.5">
+            {runningEngine ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+            {runningEngine ? "Running..." : "Run Auto-Reminders"}
+          </Button>
         </div>
-        <Button onClick={runRenewalEngine} disabled={runningEngine} className="gap-1.5">
-          {runningEngine ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
-          {runningEngine ? "Running..." : "Run Auto-Reminders"}
-        </Button>
+
+        {/* Bulk Actions Bar */}
+        <div className="flex flex-wrap gap-2 p-3 rounded-xl bg-muted/40 border">
+          <div className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground mr-auto">
+            <Megaphone className="h-4 w-4" />
+            <span>Bulk Remind ({filtered.length} shown)</span>
+          </div>
+          <Button
+            size="sm"
+            onClick={bulkSendWhatsApp}
+            disabled={bulkSendingWA || filtered.length === 0}
+            className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+          >
+            {bulkSendingWA ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MessageSquare className="h-3.5 w-3.5" />}
+            {bulkSendingWA ? "Sending..." : "WhatsApp All"}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={bulkSendEmail}
+            disabled={bulkSendingEmail || filtered.length === 0}
+            className="gap-1.5"
+          >
+            {bulkSendingEmail ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
+            {bulkSendingEmail ? "Opening..." : "Email All"}
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -242,7 +322,7 @@ export function InsuranceRenewalsEngine() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0">
                       <div className="text-right hidden sm:block">
                         <Badge className={`${style.bg} ${style.text} border-0 text-[10px]`}>
                           {p.daysLeft !== null ? (p.daysLeft <= 0 ? `Expired ${Math.abs(p.daysLeft)}d` : `${p.daysLeft}d left`) : "—"}
@@ -252,20 +332,44 @@ export function InsuranceRenewalsEngine() {
                         </p>
                       </div>
                       {phone && (
-                        <>
-                          <a href={`tel:${phone}`}>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" title="Call">
-                              <PhoneCall className="h-3.5 w-3.5 text-green-600" />
-                            </Button>
-                          </a>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" title="WhatsApp" onClick={(e) => { e.stopPropagation(); sendRenewalNudge(p); }}>
-                            <MessageSquare className="h-3.5 w-3.5 text-green-600" />
+                        <a href={`tel:${phone}`}>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" title="Call">
+                            <PhoneCall className="h-3.5 w-3.5 text-green-600" />
                           </Button>
-                        </>
+                        </a>
                       )}
-                      <Button variant="ghost" size="icon" className="h-7 w-7" title="Share" onClick={(e) => { e.stopPropagation(); sharePolicy(p); }}>
-                        <Share2 className="h-3.5 w-3.5" />
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm" className="h-7 gap-1 text-xs px-2" onClick={e => e.stopPropagation()}>
+                            <Send className="h-3 w-3" /> Remind
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          {phone && (
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); sendRenewalNudge(p); }} className="cursor-pointer gap-2">
+                              <MessageSquare className="h-3.5 w-3.5 text-emerald-600" />
+                              <div>
+                                <p className="text-xs font-medium">WhatsApp Reminder</p>
+                                <p className="text-[10px] text-muted-foreground">Premium branded message</p>
+                              </div>
+                            </DropdownMenuItem>
+                          )}
+                          {client?.email && (
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); sendRenewalEmail(p); }} className="cursor-pointer gap-2">
+                              <Mail className="h-3.5 w-3.5 text-blue-600" />
+                              <div>
+                                <p className="text-xs font-medium">Email Reminder</p>
+                                <p className="text-[10px] text-muted-foreground">Professional renewal email</p>
+                              </div>
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); sharePolicy(p); }} className="cursor-pointer gap-2">
+                            <Share2 className="h-3.5 w-3.5" />
+                            <p className="text-xs font-medium">Copy Details</p>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                 );
@@ -282,7 +386,7 @@ export function InsuranceRenewalsEngine() {
             <DialogHeader>
               <DialogTitle className="text-base">Renewal Details</DialogTitle>
             </DialogHeader>
-            <RenewalDetailView policy={selectedPolicy} onShare={() => sharePolicy(selectedPolicy)} onNudge={() => sendRenewalNudge(selectedPolicy)} />
+            <RenewalDetailView policy={selectedPolicy} onShare={() => sharePolicy(selectedPolicy)} onNudge={() => sendRenewalNudge(selectedPolicy)} onEmail={() => sendRenewalEmail(selectedPolicy)} />
           </DialogContent>
         </Dialog>
       )}
@@ -290,7 +394,7 @@ export function InsuranceRenewalsEngine() {
   );
 }
 
-function RenewalDetailView({ policy, onShare, onNudge }: { policy: any; onShare: () => void; onNudge: () => void }) {
+function RenewalDetailView({ policy, onShare, onNudge, onEmail }: { policy: any; onShare: () => void; onNudge: () => void; onEmail: () => void }) {
   const client = policy.insurance_clients;
   const phone = (!client?.phone || client.phone.startsWith("IB_")) ? null : client.phone;
   const reminderSchedule = [
@@ -363,17 +467,15 @@ function RenewalDetailView({ policy, onShare, onNudge }: { policy: any; onShare:
                 <PhoneCall className="h-3.5 w-3.5" /> Call
               </Button>
             </a>
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={onNudge}>
-              <MessageSquare className="h-3.5 w-3.5 text-green-600" /> Send WhatsApp
+            <Button size="sm" className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={onNudge}>
+              <MessageSquare className="h-3.5 w-3.5" /> Send WhatsApp Reminder
             </Button>
           </>
         )}
         {client?.email && (
-          <a href={`mailto:${client.email}`}>
-            <Button size="sm" variant="outline" className="gap-1.5">
-              <Mail className="h-3.5 w-3.5" /> Email
-            </Button>
-          </a>
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={onEmail}>
+            <Mail className="h-3.5 w-3.5" /> Email Reminder
+          </Button>
         )}
         <Button size="sm" variant="outline" className="gap-1.5" onClick={onShare}>
           <Share2 className="h-3.5 w-3.5" /> Share
