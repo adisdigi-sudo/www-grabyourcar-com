@@ -284,7 +284,7 @@ export function InsuranceAutomationPanel() {
             {scanningRenewals ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <RotateCw className="h-4 w-4 mr-1" />}
             Scan & Send Renewals
           </Button>
-          <Button size="sm" onClick={() => setIsCreating(true)}>
+          <Button size="sm" onClick={() => setIsCreating(true)} className="bg-success text-success-foreground hover:bg-success/90">
             <Plus className="h-4 w-4 mr-1" /> New Trigger
           </Button>
         </div>

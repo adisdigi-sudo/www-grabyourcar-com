@@ -173,3 +173,6 @@ verify_jwt = false
 
 [functions.lead-import]
 verify_jwt = false
+
+[functions.extract-policy-data]
+verify_jwt = false

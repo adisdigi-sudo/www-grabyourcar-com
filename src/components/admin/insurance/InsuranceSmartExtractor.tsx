@@ -258,7 +258,7 @@ export function InsuranceSmartExtractor() {
                   <Button
                     onClick={handleExtract}
                     disabled={extracting}
-                    className="gap-1.5"
+                    className="gap-1.5 bg-success text-success-foreground hover:bg-success/90"
                   >
                     {extracting ? (
                       <><Loader2 className="h-4 w-4 animate-spin" /> Extracting...</>
@@ -292,7 +292,7 @@ export function InsuranceSmartExtractor() {
                   Verify and correct any fields before saving. Low-confidence fields are highlighted.
                 </CardDescription>
               </div>
-              <Button onClick={handleSave} disabled={saving} className="gap-1.5">
+              <Button onClick={handleSave} disabled={saving} className="gap-1.5 bg-success text-success-foreground hover:bg-success/90">
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 Save to CRM
               </Button>
