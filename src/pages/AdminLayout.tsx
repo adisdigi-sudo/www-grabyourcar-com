@@ -65,6 +65,7 @@ import PartnersManager from "@/components/admin/PartnersManager";
 import { InsuranceManagement } from "@/components/admin/InsuranceManagement";
 import { UnifiedMasterCRM } from "@/components/admin/UnifiedMasterCRM";
 import { JourneyAutomationPanel } from "@/components/admin/JourneyAutomationPanel";
+import { RevenueIntelligenceDashboard } from "@/components/admin/RevenueIntelligenceDashboard";
 
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
@@ -135,6 +136,8 @@ const AdminLayout = () => {
         return <UnifiedMasterCRM />;
       case "journey-automation":
         return <JourneyAutomationPanel />;
+      case "revenue-intelligence":
+        return <RevenueIntelligenceDashboard />;
       case "leads-all":
       case "leads-hot":
       case "leads-whatsapp":
