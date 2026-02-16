@@ -200,7 +200,7 @@ function OverviewDashboard({ stats, onSelectVertical }: { stats: any; onSelectVe
                 ))}
               </div>
               {v.ready && (
-                <Button size="sm" className="w-full gap-1.5">
+                <Button size="sm" className="w-full gap-1.5 bg-success text-success-foreground hover:bg-success/90">
                   Open Workspace <ArrowRight className="h-3.5 w-3.5" />
                 </Button>
               )}
@@ -308,7 +308,7 @@ function InsuranceVerticalWorkspace() {
                 variant={activeTab === tab.id ? "default" : "ghost"}
                 size="sm"
                 onClick={() => setActiveTab(tab.id)}
-                className="gap-1.5 text-xs h-8 shrink-0"
+                className={`gap-1.5 text-xs h-8 shrink-0 ${activeTab === tab.id ? "bg-success text-success-foreground hover:bg-success/90" : ""}`}
               >
                 <Icon className="h-3.5 w-3.5" />
                 {tab.label}

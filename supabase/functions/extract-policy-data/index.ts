@@ -2,13 +2,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
-
-/**
- * Smart Policy Data Extraction using Gemini Vision
- * Extracts structured data from policy PDF/image uploads
- */
 
 const EXTRACTION_PROMPT = `You are an expert Indian car insurance policy data extractor. Analyze this document and extract the following fields as JSON:
 
@@ -41,6 +36,18 @@ If a field is not found in the document, set it to null and confidence to 0.
 
 Return ONLY valid JSON with two top-level keys: "extracted" and "confidence".`;
 
+// Safe base64 encode for large ArrayBuffers (avoids stack overflow)
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  const chunks: string[] = [];
+  const chunkSize = 8192;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize);
+    chunks.push(String.fromCharCode(...chunk));
+  }
+  return btoa(chunks.join(""));
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -53,15 +60,29 @@ serve(async (req) => {
       });
     }
 
-    // Get image data
-    let imageData = file_base64;
-    let imageMime = mime_type;
+    // Build image URL for the AI model
+    let imageUrl: string;
 
-    if (file_url && !file_base64) {
-      const resp = await fetch(file_url);
-      const buffer = await resp.arrayBuffer();
-      imageData = btoa(String.fromCharCode(...new Uint8Array(buffer)));
-      imageMime = resp.headers.get("content-type") || mime_type;
+    if (file_base64) {
+      imageUrl = `data:${mime_type};base64,${file_base64}`;
+    } else if (file_url) {
+      // For PDFs, we need to convert to base64 since Gemini needs inline data
+      // For images, we can pass the URL directly
+      const isPdf = mime_type === "application/pdf" || file_url.endsWith(".pdf");
+      
+      if (isPdf) {
+        // Fetch and convert to base64 safely
+        const resp = await fetch(file_url);
+        if (!resp.ok) throw new Error(`Failed to fetch file: ${resp.status}`);
+        const buffer = await resp.arrayBuffer();
+        const b64 = arrayBufferToBase64(buffer);
+        imageUrl = `data:application/pdf;base64,${b64}`;
+      } else {
+        // For images, pass URL directly - Gemini can handle URLs
+        imageUrl = file_url;
+      }
+    } else {
+      throw new Error("No file data provided");
     }
 
     // Use Lovable AI (Gemini) for extraction
@@ -71,6 +92,8 @@ serve(async (req) => {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    console.log("Sending to AI for extraction, mime:", mime_type);
 
     const aiResponse = await fetch("https://ai.lovable.dev/api/generate", {
       method: "POST",
@@ -87,15 +110,13 @@ serve(async (req) => {
               { type: "text", text: EXTRACTION_PROMPT },
               {
                 type: "image_url",
-                image_url: {
-                  url: file_url || `data:${imageMime};base64,${imageData}`,
-                },
+                image_url: { url: imageUrl },
               },
             ],
           },
         ],
         temperature: 0.1,
-        max_tokens: 2000,
+        max_tokens: 3000,
       }),
     });
 
@@ -109,9 +130,11 @@ serve(async (req) => {
 
     const aiResult = await aiResponse.json();
     const content = aiResult.choices?.[0]?.message?.content || "";
+    console.log("AI response received, length:", content.length);
 
-    // Parse JSON from response
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    // Parse JSON from response (handle markdown code blocks)
+    const cleanContent = content.replace(/```json\s*/g, "").replace(/```\s*/g, "");
+    const jsonMatch = cleanContent.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       return new Response(JSON.stringify({ error: "Could not parse extraction result", raw: content }), {
         status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" },
