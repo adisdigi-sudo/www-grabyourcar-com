@@ -5,20 +5,115 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { useState, useMemo } from "react";
-import { triggerWhatsApp } from "@/lib/whatsappTrigger";
+import { useState, useMemo, useRef } from "react";
 import {
   RefreshCw, AlertTriangle, Clock, CheckCircle2, XCircle,
   Bell, Calendar, Phone, Loader2, Zap, MessageSquare,
   Share2, Mail, Search, TrendingUp, Star, PhoneCall,
-  Megaphone, Send
+  Megaphone, Send, Upload, FileText
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { format, differenceInDays } from "date-fns";
 
+// === TEMPLATES ===
+function buildRenewalNotice(p: any): string {
+  const c = p.insurance_clients;
+  const customerName = c?.customer_name || "Valued Customer";
+  const vehicleModel = c?.vehicle_model || c?.vehicle_make || "your vehicle";
+  const vehicleNumber = c?.vehicle_number || "";
+  const vehicleNumberLine = vehicleNumber ? ` (${vehicleNumber})` : "";
+  const expiryDate = p.expiry_date ? format(new Date(p.expiry_date), "dd MMM yyyy") : "soon";
+  const daysRemaining = p.daysLeft != null ? (p.daysLeft <= 0 ? 0 : p.daysLeft) : 0;
+  const policyNumber = p.policy_number || "";
+  const insurer = p.insurer || c?.current_insurer || "";
+  const premium = p.premium_amount || c?.current_premium || "";
+
+  let policySection = "";
+  if (policyNumber || insurer || premium || vehicleNumber) {
+    policySection = "\n📋 *Your Policy Details:*\n";
+    if (policyNumber) policySection += `📄 Policy: ${policyNumber}\n`;
+    if (insurer) policySection += `🏢 Insurer: ${insurer}\n`;
+    if (premium) policySection += `💰 Premium: ₹${Number(premium).toLocaleString("en-IN")}\n`;
+    if (vehicleNumber) policySection += `🚗 Vehicle: ${vehicleNumber}\n`;
+  }
+
+  return `🚗 *Grabyourcar Policy Renewal Reminder*
+━━━━━━━━━━━━━━━━━━━━━
+
+Hello *${customerName}*,
+
+We hope you are enjoying a smooth and safe drive!
+
+This is a friendly reminder from *Grabyourcar Insurance Desk* that your *${vehicleModel}*${vehicleNumberLine} insurance policy is set to expire on *${expiryDate}* — just *${daysRemaining} days* to go.
+
+Renewing your policy before the expiry helps you:
+
+✅ Avoid inspection hassles
+✅ Maintain your No Claim Bonus
+✅ Stay financially protected
+✅ Ensure uninterrupted coverage
+
+Our team has already prepared renewal assistance for you to make the process quick and seamless.
+
+👉 Simply *reply to this message* or click below to get your renewal quote instantly.
+
+🔗 Renew Now: https://grabyourcar.lovable.app/insurance
+${policySection}
+If you need any help, feel free to contact your dedicated advisor.
+
+📞 +91 98559 24442
+🌐 www.grabyourcar.com
+
+Thank you for trusting *Grabyourcar* — we look forward to protecting your journeys ahead.
+
+Drive safe! 🚘`.replace(/\n{3,}/g, "\n\n");
+}
+
+function buildRenewalQuote(p: any): string {
+  const c = p.insurance_clients;
+  const customerName = c?.customer_name || "Valued Customer";
+  const vehicleModel = c?.vehicle_model || c?.vehicle_make || "your vehicle";
+  const vehicleNumber = c?.vehicle_number || "";
+  const expiryDate = p.expiry_date ? format(new Date(p.expiry_date), "dd MMM yyyy") : "soon";
+  const policyNumber = p.policy_number || "";
+  const insurer = p.insurer || c?.current_insurer || "";
+  const premium = p.premium_amount || c?.current_premium || "";
+
+  return `🚗 *Grabyourcar — Renewal Quote*
+━━━━━━━━━━━━━━━━━━━━━
+
+Dear *${customerName}*,
+
+Your renewal quote for *${vehicleModel}*${vehicleNumber ? ` (${vehicleNumber})` : ""} is ready!
+
+📋 *Quote Details:*
+${policyNumber ? `📄 Policy: ${policyNumber}\n` : ""}${insurer ? `🏢 Current Insurer: ${insurer}\n` : ""}${premium ? `💰 Renewal Premium: ₹${Number(premium).toLocaleString("en-IN")}\n` : ""}📅 Current Expiry: ${expiryDate}
+
+🎁 *Renewal Benefits:*
+✅ NCB (No Claim Bonus) Protection
+✅ Roadside Assistance Included
+✅ Zero Depreciation Option
+✅ Instant Policy Issuance
+✅ Hassle-free Claim Settlement
+
+💡 *Why renew with Grabyourcar?*
+• Best rates from 15+ insurers
+• Dedicated advisor support
+• Instant digital policy copy
+• Free claim assistance
+
+👉 *Reply YES* to confirm your renewal or call us now.
+
+📞 +91 98559 24442
+🌐 www.grabyourcar.com
+
+— *Grabyourcar Insurance Desk* 🚘`.replace(/\n{3,}/g, "\n\n");
+}
+
+// === MAIN COMPONENT ===
 export function InsuranceRenewalsEngine() {
   const [windowFilter, setWindowFilter] = useState("all");
   const [runningEngine, setRunningEngine] = useState(false);
@@ -28,6 +123,9 @@ export function InsuranceRenewalsEngine() {
   const [bulkSendingEmail, setBulkSendingEmail] = useState(false);
   const [previewPolicy, setPreviewPolicy] = useState<any>(null);
   const [sendingPreview, setSendingPreview] = useState(false);
+  const [templateType, setTemplateType] = useState<"notice" | "quote">("notice");
+  const [bulkUploading, setBulkUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
   const { data: policies, isLoading } = useQuery({
@@ -35,7 +133,7 @@ export function InsuranceRenewalsEngine() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("insurance_policies")
-        .select("*, insurance_clients(customer_name, phone, email, vehicle_number, city)")
+        .select("*, insurance_clients(id, customer_name, phone, email, vehicle_number, vehicle_model, vehicle_make, city, current_insurer, current_policy_number, current_premium)")
         .eq("status", "active")
         .order("expiry_date", { ascending: true });
       if (error) throw error;
@@ -57,7 +155,6 @@ export function InsuranceRenewalsEngine() {
       else if (daysLeft <= 30) urgency = "warning";
       else if (daysLeft <= 60) urgency = "upcoming";
 
-      // Priority scoring
       const premium = Number(p.premium_amount || 0);
       let priorityScore = 0;
       if (premium >= 50000) priorityScore += 3;
@@ -131,63 +228,14 @@ export function InsuranceRenewalsEngine() {
     }
   };
 
-  const buildPreviewMessage = (p: any) => {
-    const client = p.insurance_clients;
-    const customerName = client?.customer_name || "Valued Customer";
-    const vehicleModel = client?.vehicle_model || client?.vehicle_make || "your vehicle";
-    const vehicleNumber = client?.vehicle_number || "";
-    const vehicleNumberLine = vehicleNumber ? `(${vehicleNumber}) ` : "";
-    const expiryDate = p.expiry_date ? format(new Date(p.expiry_date), "dd MMM yyyy") : "soon";
-    const daysRemaining = p.daysLeft !== null && p.daysLeft !== undefined ? (p.daysLeft <= 0 ? 0 : p.daysLeft) : 0;
-    const insurer = p.insurer || client?.current_insurer || "";
-    const policyNumber = p.policy_number || client?.current_policy_number || "";
-    const premium = p.premium_amount || client?.current_premium || "";
-
-    let policyDetails = "";
-    if (insurer || policyNumber || premium) {
-      policyDetails = "📋 *Your Policy Details:*\n";
-      if (policyNumber) policyDetails += `📄 Policy: ${policyNumber}\n`;
-      if (insurer) policyDetails += `🏢 Insurer: ${insurer}\n`;
-      if (premium) policyDetails += `💰 Premium: ₹${Number(premium).toLocaleString("en-IN")}\n`;
-      if (vehicleNumber) policyDetails += `🚗 Vehicle: ${vehicleNumber}\n`;
-    }
-
-    return `🚗 *Grabyourcar Policy Renewal Reminder*
-━━━━━━━━━━━━━━━━━━━━━
-
-Hello *${customerName}*,
-
-We hope you are enjoying a smooth and safe drive!
-
-This is a friendly reminder from *Grabyourcar Insurance Desk* that your *${vehicleModel}* ${vehicleNumberLine}insurance policy is set to expire on *${expiryDate}* — just *${daysRemaining} days* to go.
-
-Renewing your policy before the expiry helps you:
-
-✅ Avoid inspection hassles
-✅ Maintain your No Claim Bonus
-✅ Stay financially protected
-✅ Ensure uninterrupted coverage
-
-Our team has already prepared renewal assistance for you to make the process quick and seamless.
-
-👉 Simply *reply to this message* or click below to get your renewal quote instantly.
-
-🔗 Renew Now: https://grabyourcar.lovable.app/insurance
-
-${policyDetails}
-If you need any help, feel free to contact your dedicated advisor.
-
-📞 +91 98559 24442
-🌐 www.grabyourcar.com
-
-Thank you for trusting *Grabyourcar* — we look forward to protecting your journeys ahead.
-
-Drive safe! 🚘`.replace(/\n{3,}/g, "\n\n");
+  const getPreviewMessage = (p: any, type: "notice" | "quote") => {
+    return type === "notice" ? buildRenewalNotice(p) : buildRenewalQuote(p);
   };
 
-  const showRenewalPreview = (p: any) => {
+  const showRenewalPreview = (p: any, type: "notice" | "quote" = "notice") => {
     const client = p.insurance_clients;
-    if (!client?.phone || client.phone.startsWith("IB_")) { toast.error("No phone number"); return; }
+    if (!client?.phone || client.phone.startsWith("IB_")) { toast.error("No valid phone number"); return; }
+    setTemplateType(type);
     setPreviewPolicy(p);
   };
 
@@ -200,7 +248,7 @@ Drive safe! 🚘`.replace(/\n{3,}/g, "\n\n");
         body: { action: "send_single", client_id: client.id, policy_id: previewPolicy.id },
       });
       if (error) throw error;
-      toast.success(`✅ Premium renewal reminder sent to ${client.customer_name || client.phone}`);
+      toast.success(`✅ Renewal reminder sent to ${client.customer_name || client.phone}`);
       setPreviewPolicy(null);
     } catch (e: any) {
       toast.error(e.message || "Failed to send");
@@ -209,10 +257,10 @@ Drive safe! 🚘`.replace(/\n{3,}/g, "\n\n");
     }
   };
 
-  const sendDirectWhatsApp = (p: any) => {
+  const sendDirectWhatsApp = (p: any, type: "notice" | "quote" = "notice") => {
     const client = p.insurance_clients;
     if (!client?.phone || client.phone.startsWith("IB_")) { toast.error("No phone number"); return; }
-    const message = buildPreviewMessage(p);
+    const message = getPreviewMessage(p, type);
     const phone = client.phone.replace(/\D/g, "");
     const fullPhone = phone.startsWith("91") ? phone : `91${phone}`;
     window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`, "_blank");
@@ -245,7 +293,7 @@ Drive safe! 🚘`.replace(/\n{3,}/g, "\n\n");
           body: { action: "send_single", client_id: p.insurance_clients.id, policy_id: p.id },
         });
         if (!error) sent++;
-        toast.loading(`Sending WhatsApp reminders... ${sent}/${eligible.length}`, { id: toastId });
+        toast.loading(`Sending... ${sent}/${eligible.length}`, { id: toastId });
       } catch { /* continue */ }
       await new Promise(r => setTimeout(r, 500));
     }
@@ -267,6 +315,59 @@ Drive safe! 🚘`.replace(/\n{3,}/g, "\n\n");
     }
     toast.success(`✅ Opened ${sent} email drafts!`, { id: toastId });
     setBulkSendingEmail(false);
+  };
+
+  const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBulkUploading(true);
+    try {
+      const text = await file.text();
+      const lines = text.split("\n").filter(l => l.trim());
+      if (lines.length < 2) { toast.error("CSV must have a header row and at least one data row"); return; }
+      const headers = lines[0].split(",").map(h => h.trim().toLowerCase());
+      const phoneIdx = headers.findIndex(h => h.includes("phone") || h.includes("mobile"));
+      const nameIdx = headers.findIndex(h => h.includes("name") || h.includes("customer"));
+      const expiryIdx = headers.findIndex(h => h.includes("expiry") || h.includes("renewal") || h.includes("date"));
+
+      if (phoneIdx === -1) { toast.error("CSV must have a phone/mobile column"); return; }
+
+      let sent = 0;
+      const toastId = toast.loading(`Processing CSV... 0/${lines.length - 1}`);
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(",").map(c => c.trim());
+        const phone = cols[phoneIdx]?.replace(/\D/g, "");
+        if (!phone || phone.length < 10) continue;
+        const fullPhone = phone.startsWith("91") ? phone : `91${phone}`;
+        const name = nameIdx >= 0 ? cols[nameIdx] : "Valued Customer";
+        const expiry = expiryIdx >= 0 ? cols[expiryIdx] : "";
+
+        const message = `🚗 *Grabyourcar Policy Renewal Reminder*\n━━━━━━━━━━━━━━━━━━━━━\n\nHello *${name}*,\n\nThis is a friendly reminder from *Grabyourcar Insurance Desk* that your motor insurance policy is${expiry ? ` set to expire on *${expiry}*` : " due for renewal"}.\n\nRenewing your policy before the expiry helps you:\n\n✅ Avoid inspection hassles\n✅ Maintain your No Claim Bonus\n✅ Stay financially protected\n✅ Ensure uninterrupted coverage\n\n👉 Simply *reply to this message* or click below to renew.\n\n🔗 https://grabyourcar.lovable.app/insurance\n\n📞 +91 98559 24442\n🌐 www.grabyourcar.com\n\nDrive safe! 🚘`;
+
+        try {
+          await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-send`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+              },
+              body: JSON.stringify({ to: fullPhone, message }),
+            }
+          );
+          sent++;
+        } catch { /* continue */ }
+        toast.loading(`Processing... ${sent}/${lines.length - 1}`, { id: toastId });
+        await new Promise(r => setTimeout(r, 500));
+      }
+      toast.success(`✅ Bulk upload complete! Sent ${sent} reminders.`, { id: toastId });
+    } catch (err: any) {
+      toast.error(err.message || "Upload failed");
+    } finally {
+      setBulkUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
 
   const sharePolicy = (p: any) => {
@@ -295,15 +396,15 @@ Drive safe! 🚘`.replace(/\n{3,}/g, "\n\n");
               {enriched.length} active policies • ₹{(summary.totalPremium / 100000).toFixed(1)}L total premium
             </p>
           </div>
-          <Button onClick={runRenewalEngine} disabled={runningEngine} className="gap-1.5">
+          <Button onClick={runRenewalEngine} disabled={runningEngine} className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white">
             {runningEngine ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
             {runningEngine ? "Running..." : "Run Auto-Reminders"}
           </Button>
         </div>
 
         {/* Bulk Actions Bar */}
-        <div className="flex flex-wrap gap-2 p-3 rounded-xl bg-muted/40 border">
-          <div className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground mr-auto">
+        <div className="flex flex-wrap gap-2 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800">
+          <div className="flex items-center gap-1.5 text-sm font-medium text-emerald-800 dark:text-emerald-300 mr-auto">
             <Megaphone className="h-4 w-4" />
             <span>Bulk Remind ({filtered.length} shown)</span>
           </div>
@@ -318,14 +419,24 @@ Drive safe! 🚘`.replace(/\n{3,}/g, "\n\n");
           </Button>
           <Button
             size="sm"
-            variant="outline"
             onClick={bulkSendEmail}
             disabled={bulkSendingEmail || filtered.length === 0}
-            className="gap-1.5"
+            className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
           >
             {bulkSendingEmail ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
             {bulkSendingEmail ? "Opening..." : "Email All"}
           </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={bulkUploading}
+            className="gap-1.5 border-emerald-300 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/30"
+          >
+            {bulkUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+            {bulkUploading ? "Uploading..." : "Bulk Upload CSV"}
+          </Button>
+          <input ref={fileInputRef} type="file" accept=".csv" onChange={handleBulkUpload} className="hidden" />
         </div>
       </div>
 
@@ -337,12 +448,12 @@ Drive safe! 🚘`.replace(/\n{3,}/g, "\n\n");
           { label: "≤ 15 Days", count: summary.urgent, color: "text-orange-600 dark:text-orange-400", bg: "bg-orange-50 dark:bg-orange-950/20", filter: "15" },
           { label: "≤ 30 Days", count: summary.warning, color: "text-yellow-600 dark:text-yellow-400", bg: "bg-yellow-50 dark:bg-yellow-950/20", filter: "30" },
           { label: "≤ 60 Days", count: summary.upcoming, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-950/20", filter: "60" },
-          { label: "High Value", count: summary.highValue, color: "text-primary", bg: "bg-primary/10", filter: "high_value" },
+          { label: "High Value", count: summary.highValue, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-950/20", filter: "high_value" },
           { label: "All Active", count: enriched.length, color: "text-foreground", bg: "bg-muted/50", filter: "all" },
         ].map(s => (
           <Card
             key={s.label}
-            className={`cursor-pointer hover:shadow-md transition-all ${windowFilter === s.filter ? "ring-2 ring-primary" : ""}`}
+            className={`cursor-pointer hover:shadow-md transition-all ${windowFilter === s.filter ? "ring-2 ring-emerald-500" : ""}`}
             onClick={() => setWindowFilter(windowFilter === s.filter ? "all" : s.filter)}
           >
             <CardContent className="pt-3 pb-3 text-center">
@@ -410,36 +521,45 @@ Drive safe! 🚘`.replace(/\n{3,}/g, "\n\n");
                       {phone && (
                         <a href={`tel:${phone}`}>
                           <Button variant="ghost" size="icon" className="h-7 w-7" title="Call">
-                            <PhoneCall className="h-3.5 w-3.5 text-green-600" />
+                            <PhoneCall className="h-3.5 w-3.5 text-emerald-600" />
                           </Button>
                         </a>
                       )}
+                      {/* GREEN Remind button with Renewal Notice / Quote options */}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm" className="h-7 gap-1 text-xs px-2" onClick={e => e.stopPropagation()}>
+                          <Button size="sm" className="h-7 gap-1 text-xs px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={e => e.stopPropagation()}>
                             <Send className="h-3 w-3" /> Remind
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuContent align="end" className="w-56">
+                          <div className="px-2 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400">📲 WhatsApp</div>
                           {phone && (
-                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); showRenewalPreview(p); }} className="cursor-pointer gap-2">
-                              <MessageSquare className="h-3.5 w-3.5 text-emerald-600" />
-                              <div>
-                                <p className="text-xs font-medium">WhatsApp Reminder</p>
-                                <p className="text-[10px] text-muted-foreground">Premium branded message</p>
-                              </div>
-                            </DropdownMenuItem>
+                            <>
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); showRenewalPreview(p, "notice"); }} className="cursor-pointer gap-2">
+                                <Bell className="h-3.5 w-3.5 text-emerald-600" />
+                                <div>
+                                  <p className="text-xs font-medium">Renewal Notice</p>
+                                  <p className="text-[10px] text-muted-foreground">Urgency reminder with countdown</p>
+                                </div>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); showRenewalPreview(p, "quote"); }} className="cursor-pointer gap-2">
+                                <FileText className="h-3.5 w-3.5 text-emerald-600" />
+                                <div>
+                                  <p className="text-xs font-medium">Renewal Quote</p>
+                                  <p className="text-[10px] text-muted-foreground">Premium details with benefits</p>
+                                </div>
+                              </DropdownMenuItem>
+                            </>
                           )}
+                          <DropdownMenuSeparator />
+                          <div className="px-2 py-1.5 text-xs font-semibold text-blue-700 dark:text-blue-400">📧 Other</div>
                           {client?.email && (
                             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); sendRenewalEmail(p); }} className="cursor-pointer gap-2">
                               <Mail className="h-3.5 w-3.5 text-blue-600" />
-                              <div>
-                                <p className="text-xs font-medium">Email Reminder</p>
-                                <p className="text-[10px] text-muted-foreground">Professional renewal email</p>
-                              </div>
+                              <p className="text-xs font-medium">Email Reminder</p>
                             </DropdownMenuItem>
                           )}
-                          <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={(e) => { e.stopPropagation(); sharePolicy(p); }} className="cursor-pointer gap-2">
                             <Share2 className="h-3.5 w-3.5" />
                             <p className="text-xs font-medium">Copy Details</p>
@@ -462,7 +582,13 @@ Drive safe! 🚘`.replace(/\n{3,}/g, "\n\n");
             <DialogHeader>
               <DialogTitle className="text-base">Renewal Details</DialogTitle>
             </DialogHeader>
-            <RenewalDetailView policy={selectedPolicy} onShare={() => sharePolicy(selectedPolicy)} onNudge={() => showRenewalPreview(selectedPolicy)} onEmail={() => sendRenewalEmail(selectedPolicy)} />
+            <RenewalDetailView
+              policy={selectedPolicy}
+              onShare={() => sharePolicy(selectedPolicy)}
+              onNotice={() => showRenewalPreview(selectedPolicy, "notice")}
+              onQuote={() => showRenewalPreview(selectedPolicy, "quote")}
+              onEmail={() => sendRenewalEmail(selectedPolicy)}
+            />
           </DialogContent>
         </Dialog>
       )}
@@ -474,17 +600,44 @@ Drive safe! 🚘`.replace(/\n{3,}/g, "\n\n");
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-base">
                 <MessageSquare className="h-5 w-5 text-emerald-600" />
-                WhatsApp Renewal Reminder Preview
+                {templateType === "notice" ? "Renewal Notice Preview" : "Renewal Quote Preview"}
               </DialogTitle>
+              <DialogDescription className="text-xs">
+                Preview your message before sending to {previewPolicy.insurance_clients?.customer_name || "the customer"}
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
-              <div className="bg-[#DCF8C6] rounded-xl p-4 text-sm whitespace-pre-wrap font-sans leading-relaxed shadow-sm border border-emerald-200 max-h-[50vh] overflow-y-auto">
-                {buildPreviewMessage(previewPolicy)}
+              {/* Template Toggle */}
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant={templateType === "notice" ? "default" : "outline"}
+                  className={templateType === "notice" ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "border-emerald-300 text-emerald-700 hover:bg-emerald-50"}
+                  onClick={() => setTemplateType("notice")}
+                >
+                  <Bell className="h-3.5 w-3.5 mr-1.5" /> Renewal Notice
+                </Button>
+                <Button
+                  size="sm"
+                  variant={templateType === "quote" ? "default" : "outline"}
+                  className={templateType === "quote" ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "border-emerald-300 text-emerald-700 hover:bg-emerald-50"}
+                  onClick={() => setTemplateType("quote")}
+                >
+                  <FileText className="h-3.5 w-3.5 mr-1.5" /> Renewal Quote
+                </Button>
               </div>
-              <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 text-xs text-muted-foreground">
-                <Bell className="h-3.5 w-3.5 shrink-0" />
-                <span>This message will be sent to <strong>{previewPolicy.insurance_clients?.phone}</strong> via WhatsApp</span>
+
+              {/* Message Preview */}
+              <div className="bg-[#DCF8C6] rounded-xl p-4 text-sm whitespace-pre-wrap font-sans leading-relaxed shadow-sm border border-emerald-200 max-h-[45vh] overflow-y-auto">
+                {getPreviewMessage(previewPolicy, templateType)}
               </div>
+
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 text-xs text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                <Phone className="h-3.5 w-3.5 shrink-0" />
+                <span>Sending to <strong>{previewPolicy.insurance_clients?.phone}</strong></span>
+              </div>
+
+              {/* Action Buttons */}
               <div className="flex gap-2">
                 <Button
                   className="flex-1 gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
@@ -495,9 +648,8 @@ Drive safe! 🚘`.replace(/\n{3,}/g, "\n\n");
                   {sendingPreview ? "Sending..." : "Send via API"}
                 </Button>
                 <Button
-                  variant="outline"
-                  className="flex-1 gap-2"
-                  onClick={() => sendDirectWhatsApp(previewPolicy)}
+                  className="flex-1 gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+                  onClick={() => sendDirectWhatsApp(previewPolicy, templateType)}
                 >
                   <MessageSquare className="h-4 w-4" />
                   Open WhatsApp
@@ -511,11 +663,15 @@ Drive safe! 🚘`.replace(/\n{3,}/g, "\n\n");
   );
 }
 
-function RenewalDetailView({ policy, onShare, onNudge, onEmail }: { policy: any; onShare: () => void; onNudge: () => void; onEmail: () => void }) {
+// === DETAIL VIEW ===
+function RenewalDetailView({
+  policy, onShare, onNotice, onQuote, onEmail
+}: {
+  policy: any; onShare: () => void; onNotice: () => void; onQuote: () => void; onEmail: () => void;
+}) {
   const client = policy.insurance_clients;
   const phone = (!client?.phone || client.phone.startsWith("IB_")) ? null : client.phone;
   const reminderSchedule = [
-    { days: 60, label: "60-day awareness" },
     { days: 45, label: "45-day reminder" },
     { days: 30, label: "30-day reminder" },
     { days: 15, label: "15-day urgency" },
@@ -526,12 +682,12 @@ function RenewalDetailView({ policy, onShare, onNudge, onEmail }: { policy: any;
   return (
     <div className="space-y-4">
       {/* Customer */}
-      <Card className="border-primary/20 bg-primary/5">
+      <Card className="border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/20">
         <CardContent className="p-3">
           <h3 className="font-semibold">{client?.customer_name || "—"}</h3>
           <div className="flex flex-wrap gap-3 mt-1 text-sm text-muted-foreground">
-            {phone && <a href={`tel:${phone}`} className="text-primary hover:underline flex items-center gap-1"><Phone className="h-3 w-3" /> {phone}</a>}
-            {client?.email && <a href={`mailto:${client.email}`} className="text-primary hover:underline flex items-center gap-1"><Mail className="h-3 w-3" /> {client.email}</a>}
+            {phone && <a href={`tel:${phone}`} className="text-emerald-600 hover:underline flex items-center gap-1"><Phone className="h-3 w-3" /> {phone}</a>}
+            {client?.email && <a href={`mailto:${client.email}`} className="text-emerald-600 hover:underline flex items-center gap-1"><Mail className="h-3 w-3" /> {client.email}</a>}
           </div>
         </CardContent>
       </Card>
@@ -553,20 +709,20 @@ function RenewalDetailView({ policy, onShare, onNudge, onEmail }: { policy: any;
         ))}
       </div>
 
-      {/* Renewal Reminder Timeline */}
+      {/* Reminder Schedule */}
       <div>
         <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
-          <Bell className="h-4 w-4 text-primary" /> Auto-Reminder Schedule
+          <Bell className="h-4 w-4 text-emerald-600" /> Auto-Reminder Schedule
         </h4>
         <div className="space-y-1">
           {reminderSchedule.map(r => {
             const triggered = policy.daysLeft !== null && policy.daysLeft <= r.days;
             return (
               <div key={r.days} className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs ${
-                triggered ? "bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400" : "bg-muted/30 text-muted-foreground"
+                triggered ? "bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400" : "bg-muted/30 text-muted-foreground"
               }`}>
                 <span className="font-medium">{r.label}</span>
-                <Badge variant={triggered ? "default" : "secondary"} className="text-[10px] h-5">
+                <Badge variant={triggered ? "default" : "secondary"} className={`text-[10px] h-5 ${triggered ? "bg-emerald-600" : ""}`}>
                   {triggered ? "✓ Triggered" : "Scheduled"}
                 </Badge>
               </div>
@@ -575,26 +731,29 @@ function RenewalDetailView({ policy, onShare, onNudge, onEmail }: { policy: any;
         </div>
       </div>
 
-      {/* Actions */}
+      {/* Actions - ALL GREEN */}
       <div className="flex flex-wrap gap-2 pt-2 border-t">
         {phone && (
           <>
             <a href={`tel:${phone}`}>
-              <Button size="sm" className="gap-1.5 bg-green-600 hover:bg-green-700 text-white">
+              <Button size="sm" className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white">
                 <PhoneCall className="h-3.5 w-3.5" /> Call
               </Button>
             </a>
-            <Button size="sm" className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={onNudge}>
-              <MessageSquare className="h-3.5 w-3.5" /> Send WhatsApp Reminder
+            <Button size="sm" className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={onNotice}>
+              <Bell className="h-3.5 w-3.5" /> Renewal Notice
+            </Button>
+            <Button size="sm" className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={onQuote}>
+              <FileText className="h-3.5 w-3.5" /> Renewal Quote
             </Button>
           </>
         )}
         {client?.email && (
-          <Button size="sm" variant="outline" className="gap-1.5" onClick={onEmail}>
-            <Mail className="h-3.5 w-3.5" /> Email Reminder
+          <Button size="sm" className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={onEmail}>
+            <Mail className="h-3.5 w-3.5" /> Email
           </Button>
         )}
-        <Button size="sm" variant="outline" className="gap-1.5" onClick={onShare}>
+        <Button size="sm" variant="outline" className="gap-1.5 border-emerald-300 text-emerald-700 hover:bg-emerald-50" onClick={onShare}>
           <Share2 className="h-3.5 w-3.5" /> Share
         </Button>
       </div>
