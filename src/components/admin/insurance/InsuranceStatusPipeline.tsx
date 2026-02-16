@@ -14,8 +14,12 @@ import {
   Clock, AlertTriangle, Share2, PhoneCall, Star, Trophy,
   XCircle, ThumbsUp, ThumbsDown, Zap, TrendingUp,
   UserPlus, Target, Eye, ChevronRight, BarChart3,
-  FileText, Plus, Send, ShieldCheck, Loader2, Save, Upload
+  FileText, Plus, Send, ShieldCheck, Loader2, Save, Upload,
+  Bell, Users, Megaphone
 } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator
+} from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -77,6 +81,7 @@ export function InsuranceStatusPipeline() {
   });
   const [savingPolicy, setSavingPolicy] = useState(false);
   const [dialogTab, setDialogTab] = useState("journey");
+  const [bulkSending, setBulkSending] = useState(false);
 
   useEffect(() => { fetchClients(); }, []);
 
@@ -260,6 +265,46 @@ export function InsuranceStatusPipeline() {
     } as any);
   };
 
+
+  const sendBulkRenewalReminders = async () => {
+    const eligibleClients = filteredClients.filter(c => getWhatsAppPhone(c));
+    if (eligibleClients.length === 0) {
+      toast.error("No clients with valid phone numbers in current view");
+      return;
+    }
+    setBulkSending(true);
+    let sent = 0;
+    const toastId = toast.loading(`Sending renewal reminders... 0/${eligibleClients.length}`);
+
+    for (const client of eligibleClients) {
+      const fullPhone = getWhatsAppPhone(client)!;
+      const expiryInfo = client.current_premium
+        ? `\n💰 Last Premium: ₹${client.current_premium.toLocaleString("en-IN")}`
+        : "";
+      const message = `🔔 *Insurance Renewal Reminder*\n━━━━━━━━━━━━━━━━\n\nDear *${client.customer_name || "Sir/Madam"}*,\n\nYour motor insurance for ${client.vehicle_number ? `vehicle *${client.vehicle_number}*` : "your vehicle"} is due for renewal.${expiryInfo}\n${client.current_insurer ? `🏢 Current Insurer: ${client.current_insurer}` : ""}\n\n⚡ *Why renew with Grabyourcar?*\n✅ Best quotes from 20+ insurers\n✅ Instant policy issuance\n✅ Dedicated claims support\n✅ Up to 70% discount on premium\n\n📞 Reply *RENEW* or call us to get your best quote today!\n\n— *Grabyourcar Insurance* 🚗`;
+
+      try {
+        await supabase.functions.invoke("whatsapp-send", {
+          body: { to: fullPhone, message },
+        });
+        await supabase.from("insurance_activity_log").insert({
+          client_id: client.id, activity_type: "whatsapp_sent",
+          title: "Bulk renewal reminder sent",
+          description: `Auto renewal reminder sent to ${client.phone}`,
+        } as any);
+        sent++;
+        toast.loading(`Sending renewal reminders... ${sent}/${eligibleClients.length}`, { id: toastId });
+      } catch {
+        // Continue sending to others
+      }
+      // Small delay to avoid rate limiting
+      await new Promise(r => setTimeout(r, 300));
+    }
+
+    toast.success(`✅ Sent ${sent}/${eligibleClients.length} renewal reminders!`, { id: toastId });
+    setBulkSending(false);
+  };
+
   const addNote = async () => {
     if (!selectedClient || !note.trim()) return;
     await supabase.from("insurance_activity_log").insert({
@@ -301,6 +346,14 @@ export function InsuranceStatusPipeline() {
           </h2>
           <p className="text-sm text-muted-foreground">Track & convert insurance leads through the journey</p>
         </div>
+        <Button
+          onClick={sendBulkRenewalReminders}
+          disabled={bulkSending || filteredClients.length === 0}
+          className="gap-2 bg-amber-600 hover:bg-amber-700 text-white shadow-md"
+        >
+          {bulkSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Megaphone className="h-4 w-4" />}
+          {bulkSending ? "Sending..." : `Bulk Reminder (${filteredClients.filter(c => getWhatsAppPhone(c)).length})`}
+        </Button>
         <div className="flex gap-3 flex-wrap">
           {[
             { label: "Total", value: totalLeads, icon: Target, color: "text-primary", bg: "bg-primary/10" },
@@ -431,16 +484,44 @@ export function InsuranceStatusPipeline() {
                                 <PhoneCall className="h-4 w-4 text-green-600" />
                               </Button>
                             </a>
-                            <a href={`https://wa.me/91${phone}`} target="_blank" rel="noopener noreferrer">
+                             <a href={`https://wa.me/91${phone}`} target="_blank" rel="noopener noreferrer">
                               <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-green-50 dark:hover:bg-green-950/30" title="WhatsApp">
                                 <MessageSquare className="h-4 w-4 text-green-600" />
                               </Button>
                             </a>
                           </>
                         )}
-                        <Button size="icon" variant="ghost" className="h-8 w-8" title="Share" onClick={() => shareClientDetails(client)}>
-                          <Share2 className="h-4 w-4" />
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button size="icon" variant="ghost" className="h-8 w-8" title="Share Options">
+                              <Share2 className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-52">
+                            <DropdownMenuItem onClick={() => requestPolicyViaWhatsApp(client)} className="cursor-pointer gap-2">
+                              <Upload className="h-3.5 w-3.5 text-green-600" />
+                              <div>
+                                <p className="text-xs font-medium">Policy Share</p>
+                                <p className="text-[10px] text-muted-foreground">Request policy docs via WA</p>
+                              </div>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => sendRenewalReminderWhatsApp(client)} className="cursor-pointer gap-2">
+                              <Bell className="h-3.5 w-3.5 text-amber-600" />
+                              <div>
+                                <p className="text-xs font-medium">Renewal Reminder</p>
+                                <p className="text-[10px] text-muted-foreground">Send renewal nudge via WA</p>
+                              </div>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => shareClientDetails(client)} className="cursor-pointer gap-2">
+                              <Share2 className="h-3.5 w-3.5" />
+                              <div>
+                                <p className="text-xs font-medium">Share Details</p>
+                                <p className="text-[10px] text-muted-foreground">Copy lead info to clipboard</p>
+                              </div>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
                   </CardContent>
