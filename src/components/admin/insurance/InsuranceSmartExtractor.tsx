@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import {
   Upload, Sparkles, Loader2, CheckCircle2, AlertTriangle, Save, Eye, FileText,
   UserPlus, Calendar, Bell, Filter, Search, Phone, Mail, Car, Shield,
-  Download, RefreshCw, Clock
+  Download, RefreshCw, Clock, XCircle, RotateCcw
 } from "lucide-react";
 
 interface ExtractedData {
@@ -85,6 +85,23 @@ const FIELD_LABELS: Record<string, string> = {
   claim_history: "Claim History",
 };
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const ALLOWED_TYPES = ["application/pdf", "image/jpeg", "image/jpg", "image/png", "image/webp"];
+
+/** Safe chunked base64 encoding to avoid stack overflow on large files */
+function fileToBase64(arrayBuffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(arrayBuffer);
+  let binary = "";
+  const chunkSize = 8192;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const end = Math.min(i + chunkSize, bytes.length);
+    for (let j = i; j < end; j++) {
+      binary += String.fromCharCode(bytes[j]);
+    }
+  }
+  return btoa(binary);
+}
+
 export function InsuranceSmartExtractor() {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -95,6 +112,7 @@ export function InsuranceSmartExtractor() {
   const [editData, setEditData] = useState<ExtractedData>({});
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState("extract");
+  const [extractError, setExtractError] = useState<string | null>(null);
 
   // Saved policies list with filtering
   const [policies, setPolicies] = useState<SavedPolicy[]>([]);
@@ -105,10 +123,24 @@ export function InsuranceSmartExtractor() {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
+
+    // Validate file type
+    if (!ALLOWED_TYPES.includes(f.type)) {
+      toast.error("Unsupported file type. Please upload PDF, JPG, PNG, or WEBP.");
+      return;
+    }
+    // Validate file size
+    if (f.size > MAX_FILE_SIZE) {
+      toast.error("File too large. Maximum size is 10MB.");
+      return;
+    }
+
     setFile(f);
     setExtracted(null);
     setConfidence({});
     setSavedSuccess(false);
+    setExtractError(null);
+
     if (f.type.startsWith("image/")) {
       const reader = new FileReader();
       reader.onload = (ev) => setPreview(ev.target?.result as string);
@@ -118,40 +150,54 @@ export function InsuranceSmartExtractor() {
     }
   };
 
+  const handleReset = () => {
+    setFile(null);
+    setPreview(null);
+    setExtracted(null);
+    setConfidence({});
+    setEditData({});
+    setSavedSuccess(false);
+    setExtractError(null);
+  };
+
   const handleExtract = async () => {
     if (!file) return;
     setExtracting(true);
     setSavedSuccess(false);
+    setExtractError(null);
 
     try {
-      // Convert file to base64 directly (avoid storage upload issues)
       const arrayBuffer = await file.arrayBuffer();
-      const bytes = new Uint8Array(arrayBuffer);
-      let binary = "";
-      const chunkSize = 8192;
-      for (let i = 0; i < bytes.length; i += chunkSize) {
-        const end = Math.min(i + chunkSize, bytes.length);
-        for (let j = i; j < end; j++) {
-          binary += String.fromCharCode(bytes[j]);
-        }
-      }
-      const base64 = btoa(binary);
+      const base64 = fileToBase64(arrayBuffer);
 
-      // Call extraction edge function with base64 directly
       const { data, error } = await supabase.functions.invoke("extract-policy-data", {
         body: { file_base64: base64, mime_type: file.type },
       });
 
-      if (error) throw new Error(error.message || "Extraction failed");
-      if (!data?.success) throw new Error(data?.error || "Extraction failed");
+      // Handle edge function errors properly
+      if (error) {
+        const errMsg = typeof error === "object" && error.message ? error.message : String(error);
+        throw new Error(errMsg);
+      }
+      if (!data) throw new Error("No response from extraction service");
+      if (data.error) throw new Error(data.error);
+      if (!data.success) throw new Error("Extraction returned unsuccessful result");
 
       setExtracted(data.extracted);
       setConfidence(data.confidence || {});
       setEditData(data.extracted);
-      toast.success("✅ Policy data extracted successfully! Review & save below.");
+      toast.success("✅ Policy data extracted! Review & save below.");
     } catch (e: any) {
       console.error("Extraction error:", e);
-      toast.error(e.message || "Failed to extract data. Try a clearer image/PDF.");
+      const msg = e.message || "Failed to extract data";
+      setExtractError(msg);
+      if (msg.includes("Rate limit")) {
+        toast.error("Rate limited — please wait a moment and retry.");
+      } else if (msg.includes("credits")) {
+        toast.error("AI credits exhausted. Contact admin.");
+      } else {
+        toast.error("Extraction failed. Try a clearer image or PDF.");
+      }
     } finally {
       setExtracting(false);
     }
@@ -180,25 +226,37 @@ export function InsuranceSmartExtractor() {
             vehicle_number: editData.vehicle_number || undefined,
             vehicle_make: editData.vehicle_make || undefined,
             vehicle_model: editData.vehicle_model || undefined,
+            vehicle_year: editData.vehicle_year ? parseInt(String(editData.vehicle_year)) : undefined,
+            engine_number: editData.engine_number || undefined,
+            chassis_number: editData.chassis_number || undefined,
             current_insurer: editData.insurer || undefined,
             current_policy_type: editData.policy_type || undefined,
+            current_policy_number: editData.policy_number || undefined,
+            ncb_percentage: editData.ncb_percentage ? Number(editData.ncb_percentage) : undefined,
           }).eq("id", clientId);
         } else {
-          const { data: newClient } = await supabase.from("insurance_clients").insert({
+          const { data: newClient, error: insertErr } = await supabase.from("insurance_clients").insert({
             phone,
             customer_name: editData.customer_name || null,
             email: editData.email || null,
             vehicle_number: editData.vehicle_number || null,
             vehicle_make: editData.vehicle_make || null,
             vehicle_model: editData.vehicle_model || null,
+            vehicle_year: editData.vehicle_year ? parseInt(String(editData.vehicle_year)) : null,
+            engine_number: editData.engine_number || null,
+            chassis_number: editData.chassis_number || null,
             current_insurer: editData.insurer || null,
             current_policy_type: editData.policy_type || null,
+            current_policy_number: editData.policy_number || null,
+            ncb_percentage: editData.ncb_percentage ? Number(editData.ncb_percentage) : null,
             lead_source: "ai_extractor",
           }).select("id").single();
+          if (insertErr) throw new Error(`Failed to create client: ${insertErr.message}`);
           clientId = newClient?.id || null;
         }
       } else {
-        const { data: newClient } = await supabase.from("insurance_clients").insert({
+        // No valid phone — create with placeholder
+        const { data: newClient, error: insertErr } = await supabase.from("insurance_clients").insert({
           phone: `unknown_${Date.now()}`,
           customer_name: editData.customer_name || "Unknown",
           vehicle_number: editData.vehicle_number || null,
@@ -207,13 +265,14 @@ export function InsuranceSmartExtractor() {
           current_insurer: editData.insurer || null,
           lead_source: "ai_extractor",
         }).select("id").single();
+        if (insertErr) throw new Error(`Failed to create client: ${insertErr.message}`);
         clientId = newClient?.id || null;
       }
 
       if (!clientId) throw new Error("Failed to create/find client");
 
-      // Create policy record
-      await supabase.from("insurance_policies").insert({
+      // Create policy record — using correct DB column names
+      const { error: policyErr } = await supabase.from("insurance_policies").insert({
         client_id: clientId,
         policy_number: editData.policy_number || null,
         policy_type: editData.policy_type || "comprehensive",
@@ -221,11 +280,12 @@ export function InsuranceSmartExtractor() {
         premium_amount: editData.premium_amount ? Number(editData.premium_amount) : null,
         idv: editData.idv ? Number(editData.idv) : null,
         start_date: editData.start_date || null,
-        expiry_date: editData.expiry_date || new Date().toISOString().split("T")[0],
-        ncb_percentage: editData.ncb_percentage ? Number(editData.ncb_percentage) : null,
-        add_ons: editData.add_ons || [],
+        expiry_date: editData.expiry_date || null,
+        ncb_discount: editData.ncb_percentage ? Number(editData.ncb_percentage) : null,
+        addons: editData.add_ons || [],
         status: "active",
       });
+      if (policyErr) throw new Error(`Failed to save policy: ${policyErr.message}`);
 
       // Log activity
       await supabase.from("insurance_activity_log").insert({
@@ -236,7 +296,7 @@ export function InsuranceSmartExtractor() {
         metadata: { ...editData, extraction_confidence: confidence } as any,
       });
 
-      // Also insert into legacy insurance_leads for backward compatibility
+      // Legacy insurance_leads insert (best-effort)
       if (phone && phone.length >= 10) {
         try {
           await supabase.from("insurance_leads").insert({
@@ -250,29 +310,29 @@ export function InsuranceSmartExtractor() {
             source: "ai_extractor",
             notes: `Policy: ${editData.policy_number || "N/A"} | Insurer: ${editData.insurer || "N/A"} | Expiry: ${editData.expiry_date || "N/A"}`,
           });
-        } catch { /* legacy table insert is best-effort */ }
+        } catch { /* best-effort */ }
       }
 
       setSavedSuccess(true);
       toast.success("✅ Lead created + Policy saved + Activity logged!");
-      loadPolicies(); // Refresh the list
+      loadPolicies();
     } catch (e: any) {
-      toast.error(e.message || "Failed to save");
+      console.error("Save error:", e);
+      toast.error(e.message || "Failed to save. Check console for details.");
     } finally {
       setSaving(false);
     }
   };
 
-  const loadPolicies = async () => {
+  const loadPolicies = useCallback(async () => {
     setLoadingPolicies(true);
     try {
       let query = supabase
         .from("insurance_policies")
         .select("*, insurance_clients(customer_name, phone, vehicle_number, vehicle_make, vehicle_model)")
         .order("created_at", { ascending: false })
-        .limit(100);
+        .limit(200);
 
-      // Apply expiry filter
       const today = new Date().toISOString().split("T")[0];
       if (filterExpiry === "7days") {
         const d = new Date(); d.setDate(d.getDate() + 7);
@@ -303,15 +363,16 @@ export function InsuranceSmartExtractor() {
       }
       setPolicies(filtered as SavedPolicy[]);
     } catch (e: any) {
+      console.error("Load policies error:", e);
       toast.error("Failed to load policies");
     } finally {
       setLoadingPolicies(false);
     }
-  };
+  }, [filterExpiry, filterSearch]);
 
   useEffect(() => {
     if (activeSubTab === "database") loadPolicies();
-  }, [activeSubTab, filterExpiry]);
+  }, [activeSubTab, filterExpiry, loadPolicies]);
 
   const getConfidenceBadge = (key: string) => {
     const c = confidence[key];
@@ -373,8 +434,11 @@ export function InsuranceSmartExtractor() {
                 <div className="flex-1">
                   <div className="border-2 border-dashed border-muted-foreground/20 rounded-xl p-6 text-center hover:border-primary/40 transition-colors">
                     <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground mb-3">
+                    <p className="text-sm text-muted-foreground mb-1">
                       Drop policy PDF or image here
+                    </p>
+                    <p className="text-[10px] text-muted-foreground mb-3">
+                      Supported: PDF, JPG, PNG, WEBP (max 10MB)
                     </p>
                     <Input
                       type="file"
@@ -384,29 +448,53 @@ export function InsuranceSmartExtractor() {
                     />
                   </div>
                   {file && (
-                    <div className="mt-3 flex items-center justify-between">
+                    <div className="mt-3 flex items-center justify-between flex-wrap gap-2">
                       <div className="flex items-center gap-2">
                         <FileText className="h-4 w-4 text-primary" />
-                        <span className="text-sm font-medium">{file.name}</span>
+                        <span className="text-sm font-medium truncate max-w-[200px]">{file.name}</span>
                         <span className="text-xs text-muted-foreground">({(file.size / 1024).toFixed(0)} KB)</span>
                       </div>
-                      <Button
-                        onClick={handleExtract}
-                        disabled={extracting}
-                        className="gap-1.5 bg-green-600 text-white hover:bg-green-700"
-                      >
-                        {extracting ? (
-                          <><Loader2 className="h-4 w-4 animate-spin" /> Extracting...</>
-                        ) : (
-                          <><Sparkles className="h-4 w-4" /> Extract Data</>
-                        )}
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleReset}
+                          className="gap-1 h-9"
+                        >
+                          <RotateCcw className="h-3.5 w-3.5" /> Reset
+                        </Button>
+                        <Button
+                          onClick={handleExtract}
+                          disabled={extracting}
+                          className="gap-1.5 bg-green-600 text-white hover:bg-green-700 h-9"
+                        >
+                          {extracting ? (
+                            <><Loader2 className="h-4 w-4 animate-spin" /> Extracting...</>
+                          ) : (
+                            <><Sparkles className="h-4 w-4" /> Extract Data</>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Error display */}
+                  {extractError && (
+                    <div className="mt-3 p-3 bg-destructive/10 border border-destructive/20 rounded-lg flex items-start gap-2">
+                      <XCircle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium text-destructive">Extraction Failed</p>
+                        <p className="text-xs text-muted-foreground mt-1">{extractError}</p>
+                        <Button variant="outline" size="sm" className="mt-2 h-7 text-xs" onClick={handleExtract}>
+                          <RotateCcw className="h-3 w-3 mr-1" /> Retry
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </div>
                 {preview && (
                   <div className="w-48 flex-shrink-0">
-                    <img src={preview} alt="Preview" className="rounded-lg border shadow-sm max-h-48 object-contain" />
+                    <img src={preview} alt="Policy preview" className="rounded-lg border shadow-sm max-h-48 object-contain w-full" />
                   </div>
                 )}
               </div>
@@ -425,40 +513,45 @@ export function InsuranceSmartExtractor() {
                     </CardTitle>
                     <CardDescription>
                       {savedSuccess
-                        ? "Lead created, policy stored, and activity logged. Upload another document."
+                        ? "Lead created, policy stored, and activity logged."
                         : "Verify fields below. Low-confidence fields are highlighted. Click Save to create lead + policy."}
                     </CardDescription>
                   </div>
-                  {!savedSuccess && (
-                    <Button onClick={handleSaveAsLead} disabled={saving} className="gap-1.5 bg-green-600 text-white hover:bg-green-700">
-                      {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                      Save Lead + Policy
-                    </Button>
-                  )}
+                  <div className="flex gap-2">
+                    {savedSuccess && (
+                      <Button variant="outline" size="sm" onClick={handleReset} className="gap-1">
+                        <Upload className="h-3.5 w-3.5" /> Upload Another
+                      </Button>
+                    )}
+                    {!savedSuccess && (
+                      <Button onClick={handleSaveAsLead} disabled={saving} className="gap-1.5 bg-green-600 text-white hover:bg-green-700">
+                        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                        Save Lead + Policy
+                      </Button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Quick summary cards */}
-                {extracted && (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
-                    <div className="bg-muted/50 rounded-lg p-2.5">
-                      <p className="text-[10px] text-muted-foreground uppercase">Customer</p>
-                      <p className="text-sm font-semibold truncate">{editData.customer_name || "—"}</p>
-                    </div>
-                    <div className="bg-muted/50 rounded-lg p-2.5">
-                      <p className="text-[10px] text-muted-foreground uppercase">Vehicle</p>
-                      <p className="text-sm font-semibold truncate">{editData.vehicle_number || "—"}</p>
-                    </div>
-                    <div className="bg-muted/50 rounded-lg p-2.5">
-                      <p className="text-[10px] text-muted-foreground uppercase">Insurer</p>
-                      <p className="text-sm font-semibold truncate">{editData.insurer || "—"}</p>
-                    </div>
-                    <div className="bg-muted/50 rounded-lg p-2.5">
-                      <p className="text-[10px] text-muted-foreground uppercase">Expiry</p>
-                      <p className="text-sm font-semibold">{editData.expiry_date || "—"}</p>
-                      {editData.expiry_date && <div className="mt-0.5">{getExpiryBadge(editData.expiry_date)}</div>}
-                    </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
+                  <div className="bg-muted/50 rounded-lg p-2.5">
+                    <p className="text-[10px] text-muted-foreground uppercase">Customer</p>
+                    <p className="text-sm font-semibold truncate">{editData.customer_name || "—"}</p>
                   </div>
-                )}
+                  <div className="bg-muted/50 rounded-lg p-2.5">
+                    <p className="text-[10px] text-muted-foreground uppercase">Vehicle</p>
+                    <p className="text-sm font-semibold truncate">{editData.vehicle_number || "—"}</p>
+                  </div>
+                  <div className="bg-muted/50 rounded-lg p-2.5">
+                    <p className="text-[10px] text-muted-foreground uppercase">Insurer</p>
+                    <p className="text-sm font-semibold truncate">{editData.insurer || "—"}</p>
+                  </div>
+                  <div className="bg-muted/50 rounded-lg p-2.5">
+                    <p className="text-[10px] text-muted-foreground uppercase">Expiry</p>
+                    <p className="text-sm font-semibold">{editData.expiry_date || "—"}</p>
+                    {editData.expiry_date && <div className="mt-0.5">{getExpiryBadge(editData.expiry_date)}</div>}
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -646,14 +739,14 @@ export function InsuranceSmartExtractor() {
 function RenewalReminders() {
   const [reminders, setReminders] = useState<SavedPolicy[]>([]);
   const [loading, setLoading] = useState(true);
-  const [window, setWindow] = useState("30");
+  const [reminderWindow, setReminderWindow] = useState("30");
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const today = new Date().toISOString().split("T")[0];
       const futureDate = new Date();
-      futureDate.setDate(futureDate.getDate() + parseInt(window));
+      futureDate.setDate(futureDate.getDate() + parseInt(reminderWindow));
 
       const { data, error } = await supabase
         .from("insurance_policies")
@@ -664,14 +757,15 @@ function RenewalReminders() {
 
       if (error) throw error;
       setReminders((data || []) as SavedPolicy[]);
-    } catch {
+    } catch (e: any) {
+      console.error("Load reminders error:", e);
       toast.error("Failed to load reminders");
     } finally {
       setLoading(false);
     }
-  };
+  }, [reminderWindow]);
 
-  useEffect(() => { load(); }, [window]);
+  useEffect(() => { load(); }, [load]);
 
   const getDaysLeft = (d: string) => Math.ceil((new Date(d).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
 
@@ -687,7 +781,7 @@ function RenewalReminders() {
             <CardDescription>Policies expiring soon — call these customers for renewal</CardDescription>
           </div>
           <div className="flex gap-2">
-            <Select value={window} onValueChange={setWindow}>
+            <Select value={reminderWindow} onValueChange={setReminderWindow}>
               <SelectTrigger className="w-[140px] h-9 text-sm">
                 <Clock className="h-3.5 w-3.5 mr-1" />
                 <SelectValue />
@@ -734,7 +828,7 @@ function RenewalReminders() {
         ) : reminders.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-green-400" />
-            <p className="text-sm">No renewals due in the next {window} days 🎉</p>
+            <p className="text-sm">No renewals due in the next {reminderWindow} days 🎉</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
