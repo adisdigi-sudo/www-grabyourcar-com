@@ -2,7 +2,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Shield, FileText, HelpCircle, Package, Globe, Users, BarChart3,
   LayoutDashboard, UserCheck, ShieldCheck, RefreshCw, ListChecks,
-  DollarSign, TrendingUp, FolderOpen, Briefcase, Sparkles, FileSpreadsheet, Zap
+  DollarSign, TrendingUp, FolderOpen, Briefcase, Sparkles, FileSpreadsheet, Zap,
+  MessageSquare, GitBranch, Settings
 } from "lucide-react";
 import { InsurancePlansAdmin } from "./insurance/InsurancePlansAdmin";
 import { InsuranceContentAdmin } from "./insurance/InsuranceContentAdmin";
@@ -22,6 +23,9 @@ import { InsuranceAdvisorsManager } from "./insurance/InsuranceAdvisorsManager";
 import { InsuranceSmartExtractor } from "./insurance/InsuranceSmartExtractor";
 import { InsuranceImportExport } from "./insurance/InsuranceImportExport";
 import { InsuranceCrossSellEngine } from "./insurance/InsuranceCrossSellEngine";
+import { InsuranceAutomationPanel } from "./insurance/InsuranceAutomationPanel";
+import { InsuranceTemplatesManager } from "./insurance/InsuranceTemplatesManager";
+import { InsuranceStatusPipeline } from "./insurance/InsuranceStatusPipeline";
 
 export function InsuranceManagement() {
   return (
@@ -86,6 +90,15 @@ export function InsuranceManagement() {
           <TabsTrigger value="addons" className="gap-1.5 text-xs">
             <Package className="h-3.5 w-3.5" /> Add-ons
           </TabsTrigger>
+          <TabsTrigger value="automation" className="gap-1.5 text-xs">
+            <Settings className="h-3.5 w-3.5" /> Automation
+          </TabsTrigger>
+          <TabsTrigger value="templates" className="gap-1.5 text-xs">
+            <MessageSquare className="h-3.5 w-3.5" /> Templates
+          </TabsTrigger>
+          <TabsTrigger value="pipeline" className="gap-1.5 text-xs">
+            <GitBranch className="h-3.5 w-3.5" /> Pipeline
+          </TabsTrigger>
           <TabsTrigger value="scraper" className="gap-1.5 text-xs">
             <BarChart3 className="h-3.5 w-3.5" /> Scraper
           </TabsTrigger>
@@ -110,6 +123,9 @@ export function InsuranceManagement() {
         <TabsContent value="content"><InsuranceContentAdmin /></TabsContent>
         <TabsContent value="faqs"><InsuranceFAQsAdmin /></TabsContent>
         <TabsContent value="addons"><InsuranceAddonsAdmin /></TabsContent>
+        <TabsContent value="automation"><InsuranceAutomationPanel /></TabsContent>
+        <TabsContent value="templates"><InsuranceTemplatesManager /></TabsContent>
+        <TabsContent value="pipeline"><InsuranceStatusPipeline /></TabsContent>
         <TabsContent value="scraper"><InsuranceScraperAdmin /></TabsContent>
         <TabsContent value="leads"><InsuranceLeadsAdmin /></TabsContent>
       </Tabs>
