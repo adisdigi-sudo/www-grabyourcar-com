@@ -12,6 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { JourneyAnalyticsDashboard } from "./JourneyAnalyticsDashboard";
+import { JourneyTemplateEditor } from "./JourneyTemplateEditor";
 import {
   Zap, Loader2, RefreshCw, Play, Pause, Send, Clock, CheckCircle2,
   AlertTriangle, ArrowRight, MessageSquare, Users, Car, Shield,
@@ -180,6 +182,14 @@ export function JourneyAutomationPanel() {
         </div>
       </div>
 
+      <Tabs defaultValue="triggers" className="space-y-4">
+        <TabsList className="h-9">
+          <TabsTrigger value="triggers" className="text-xs gap-1"><Zap className="h-3.5 w-3.5" /> Triggers</TabsTrigger>
+          <TabsTrigger value="analytics" className="text-xs gap-1"><BarChart3 className="h-3.5 w-3.5" /> Analytics</TabsTrigger>
+          <TabsTrigger value="templates" className="text-xs gap-1"><MessageSquare className="h-3.5 w-3.5" /> Templates</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="triggers">
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
@@ -387,6 +397,16 @@ export function JourneyAutomationPanel() {
           </DialogContent>
         </Dialog>
       )}
+        </TabsContent>
+
+        <TabsContent value="analytics">
+          <JourneyAnalyticsDashboard />
+        </TabsContent>
+
+        <TabsContent value="templates">
+          <JourneyTemplateEditor />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
