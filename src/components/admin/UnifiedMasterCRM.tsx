@@ -332,7 +332,7 @@ function InsuranceVerticalWorkspace() {
               </div>
               <div>
                 <h2 className="font-bold text-lg">Car Insurance Vertical</h2>
-                <p className="text-xs text-muted-foreground">Motor insurance CRM with 25+ modules — Calling, Sales, Operations teams</p>
+                <p className="text-xs text-muted-foreground">Motor Insurance OS — Prospect Pool, Policy Book, Renewals, CRM & 25+ modules</p>
               </div>
             </div>
             <Badge className="bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300 border-0">
