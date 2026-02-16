@@ -4287,6 +4287,36 @@ export type Database = {
         }
         Relationships: []
       }
+      insurance_renewal_settings: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          setting_key: string
+          setting_value?: Json
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       insurance_renewal_tracking: {
         Row: {
           advisor_alert_sent_at: string | null
@@ -4307,6 +4337,8 @@ export type Database = {
           reminder_15_sent_at: string | null
           reminder_30_sent: boolean | null
           reminder_30_sent_at: string | null
+          reminder_45_sent: boolean | null
+          reminder_45_sent_at: string | null
           reminder_60_sent: boolean | null
           reminder_60_sent_at: string | null
           reminder_7_sent: boolean | null
@@ -4337,6 +4369,8 @@ export type Database = {
           reminder_15_sent_at?: string | null
           reminder_30_sent?: boolean | null
           reminder_30_sent_at?: string | null
+          reminder_45_sent?: boolean | null
+          reminder_45_sent_at?: string | null
           reminder_60_sent?: boolean | null
           reminder_60_sent_at?: string | null
           reminder_7_sent?: boolean | null
@@ -4367,6 +4401,8 @@ export type Database = {
           reminder_15_sent_at?: string | null
           reminder_30_sent?: boolean | null
           reminder_30_sent_at?: string | null
+          reminder_45_sent?: boolean | null
+          reminder_45_sent_at?: string | null
           reminder_60_sent?: boolean | null
           reminder_60_sent_at?: string | null
           reminder_7_sent?: boolean | null

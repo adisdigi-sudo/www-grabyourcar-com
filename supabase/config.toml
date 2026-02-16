@@ -175,4 +175,6 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.extract-policy-data]
+
+[functions.insurance-renewal-engine]
 verify_jwt = false
