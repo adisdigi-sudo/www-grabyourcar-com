@@ -299,7 +299,9 @@ export const CorporateProcessTimeline = () => {
             className="text-center mt-12"
           >
             <a
-              href="#corporate-form"
+              href="https://wa.me/919855924442?text=Hi%2C%20I%27m%20interested%20in%20corporate%20fleet%20solutions.%20Please%20share%20more%20details."
+              target="_blank"
+              rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-xl font-semibold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-colors"
             >
               Start Your Journey
