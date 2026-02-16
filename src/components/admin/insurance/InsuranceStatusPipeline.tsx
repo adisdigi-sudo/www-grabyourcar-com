@@ -82,6 +82,9 @@ export function InsuranceStatusPipeline() {
   const [savingPolicy, setSavingPolicy] = useState(false);
   const [dialogTab, setDialogTab] = useState("journey");
   const [bulkSending, setBulkSending] = useState(false);
+  const [renewalPreviewClient, setRenewalPreviewClient] = useState<Client | null>(null);
+  const [renewalPreviewMsg, setRenewalPreviewMsg] = useState("");
+  const [sendingRenewal, setSendingRenewal] = useState(false);
 
   useEffect(() => { fetchClients(); }, []);
 
@@ -247,24 +250,53 @@ export function InsuranceStatusPipeline() {
     } as any);
   };
 
-  const sendRenewalReminderWhatsApp = (client: Client) => {
-    const fullPhone = getWhatsAppPhone(client);
-    if (!fullPhone) { toast.error("No phone number available"); return; }
-    const expiryInfo = client.current_premium
-      ? `\n💰 Last Premium: ₹${client.current_premium.toLocaleString("en-IN")}`
-      : "";
-    const message = encodeURIComponent(
-      `🔔 *Insurance Renewal Reminder*\n━━━━━━━━━━━━━━━━\n\nDear *${client.customer_name || "Sir/Madam"}*,\n\nYour motor insurance for ${client.vehicle_number ? `vehicle *${client.vehicle_number}*` : "your vehicle"} is due for renewal.${expiryInfo}\n${client.current_insurer ? `🏢 Current Insurer: ${client.current_insurer}` : ""}\n\n⚡ *Why renew with Grabyourcar?*\n✅ Best quotes from 20+ insurers\n✅ Instant policy issuance\n✅ Dedicated claims support\n✅ Up to 70% discount on premium\n\n📞 Reply *RENEW* or call us to get your best quote today!\n\n— *Grabyourcar Insurance* 🚗`
-    );
-    window.open(`https://wa.me/${fullPhone}?text=${message}`, "_blank");
-    toast.success("📱 Renewal reminder sent via WhatsApp!");
-    supabase.from("insurance_activity_log").insert({
-      client_id: client.id, activity_type: "whatsapp_sent",
-      title: "Renewal reminder sent via WhatsApp",
-      description: `Renewal reminder sent to ${client.phone}`,
-    } as any);
+  const openRenewalPreview = (client: Client) => {
+    const vehicleModel = client.vehicle_model || client.vehicle_make || "your vehicle";
+    const vehicleNumber = client.vehicle_number || "";
+    const vehicleNumberLine = vehicleNumber ? `(${vehicleNumber}) ` : "";
+    const customerName = client.customer_name || "Valued Customer";
+    const insurer = client.current_insurer || "";
+    const premium = client.current_premium ? `₹${client.current_premium.toLocaleString("en-IN")}` : "";
+
+    let policyDetails = "";
+    if (insurer || premium || vehicleNumber) {
+      policyDetails = "📋 *Your Policy Details:*\n";
+      if (insurer) policyDetails += `🏢 Insurer: ${insurer}\n`;
+      if (premium) policyDetails += `💰 Premium: ${premium}\n`;
+      if (vehicleNumber) policyDetails += `🚗 Vehicle: ${vehicleNumber}\n`;
+    }
+
+    const preview = `🚗 *Grabyourcar Policy Renewal Reminder*\n━━━━━━━━━━━━━━━━━━━━━\n\nHello *${customerName}*,\n\nWe hope you are enjoying a smooth and safe drive!\n\nThis is a friendly reminder from *Grabyourcar Insurance Desk* that your *${vehicleModel}* ${vehicleNumberLine}insurance policy is due for renewal.\n\nRenewing your policy before the expiry helps you:\n\n✅ Avoid inspection hassles\n✅ Maintain your No Claim Bonus\n✅ Stay financially protected\n✅ Ensure uninterrupted coverage\n\nOur team has already prepared renewal assistance for you to make the process quick and seamless.\n\n👉 Simply *reply to this message* or click below to get your renewal quote instantly.\n\n🔗 Renew Now: https://grabyourcar.lovable.app/insurance\n\n${policyDetails}\nIf you need any help, feel free to contact your dedicated advisor.\n\n📞 +91 98559 24442\n🌐 www.grabyourcar.com\n\nThank you for trusting *Grabyourcar* — we look forward to protecting your journeys ahead.\n\nDrive safe! 🚘`;
+
+    setRenewalPreviewMsg(preview);
+    setRenewalPreviewClient(client);
   };
 
+  const sendRenewalViaEngine = async (client: Client) => {
+    setSendingRenewal(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("insurance-renewal-engine", {
+        body: { action: "send_single", client_id: client.id },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        toast.success("✅ Premium renewal reminder sent!", {
+          description: `Sent to ${client.customer_name || client.phone}`,
+        });
+      } else {
+        toast.error("Failed to send", { description: data?.error || "Unknown error" });
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Failed to send renewal reminder");
+    } finally {
+      setSendingRenewal(false);
+      setRenewalPreviewClient(null);
+    }
+  };
+
+  const sendRenewalReminderWhatsApp = (client: Client) => {
+    openRenewalPreview(client);
+  };
 
   const sendBulkRenewalReminders = async () => {
     const eligibleClients = filteredClients.filter(c => getWhatsAppPhone(c));
@@ -274,34 +306,22 @@ export function InsuranceStatusPipeline() {
     }
     setBulkSending(true);
     let sent = 0;
-    const toastId = toast.loading(`Sending renewal reminders... 0/${eligibleClients.length}`);
+    const toastId = toast.loading(`Sending premium renewal reminders... 0/${eligibleClients.length}`);
 
     for (const client of eligibleClients) {
-      const fullPhone = getWhatsAppPhone(client)!;
-      const expiryInfo = client.current_premium
-        ? `\n💰 Last Premium: ₹${client.current_premium.toLocaleString("en-IN")}`
-        : "";
-      const message = `🔔 *Insurance Renewal Reminder*\n━━━━━━━━━━━━━━━━\n\nDear *${client.customer_name || "Sir/Madam"}*,\n\nYour motor insurance for ${client.vehicle_number ? `vehicle *${client.vehicle_number}*` : "your vehicle"} is due for renewal.${expiryInfo}\n${client.current_insurer ? `🏢 Current Insurer: ${client.current_insurer}` : ""}\n\n⚡ *Why renew with Grabyourcar?*\n✅ Best quotes from 20+ insurers\n✅ Instant policy issuance\n✅ Dedicated claims support\n✅ Up to 70% discount on premium\n\n📞 Reply *RENEW* or call us to get your best quote today!\n\n— *Grabyourcar Insurance* 🚗`;
-
       try {
-        await supabase.functions.invoke("whatsapp-send", {
-          body: { to: fullPhone, message },
+        const { data, error } = await supabase.functions.invoke("insurance-renewal-engine", {
+          body: { action: "send_single", client_id: client.id },
         });
-        await supabase.from("insurance_activity_log").insert({
-          client_id: client.id, activity_type: "whatsapp_sent",
-          title: "Bulk renewal reminder sent",
-          description: `Auto renewal reminder sent to ${client.phone}`,
-        } as any);
-        sent++;
-        toast.loading(`Sending renewal reminders... ${sent}/${eligibleClients.length}`, { id: toastId });
+        if (!error && data?.success) sent++;
+        toast.loading(`Sending premium renewal reminders... ${sent}/${eligibleClients.length}`, { id: toastId });
       } catch {
         // Continue sending to others
       }
-      // Small delay to avoid rate limiting
-      await new Promise(r => setTimeout(r, 300));
+      await new Promise(r => setTimeout(r, 500));
     }
 
-    toast.success(`✅ Sent ${sent}/${eligibleClients.length} renewal reminders!`, { id: toastId });
+    toast.success(`✅ Sent ${sent}/${eligibleClients.length} premium renewal reminders!`, { id: toastId });
     setBulkSending(false);
   };
 
@@ -817,6 +837,76 @@ export function InsuranceStatusPipeline() {
                   </div>
                 </TabsContent>
               </Tabs>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Premium Renewal Preview Dialog ── */}
+      <Dialog open={!!renewalPreviewClient} onOpenChange={() => setRenewalPreviewClient(null)}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-amber-500 flex items-center justify-center">
+                <Bell className="h-4 w-4 text-white" />
+              </div>
+              <div>
+                <span>Renewal Reminder Preview</span>
+                <p className="text-xs text-muted-foreground font-normal mt-0.5">
+                  {renewalPreviewClient?.customer_name} • {renewalPreviewClient?.phone}
+                </p>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+          {renewalPreviewClient && (
+            <div className="space-y-4">
+              {/* WhatsApp-style preview */}
+              <div className="bg-emerald-50 dark:bg-emerald-950/30 rounded-2xl p-4 border border-emerald-200 dark:border-emerald-800 shadow-inner">
+                <div className="flex items-center gap-2 mb-3 pb-2 border-b border-emerald-200 dark:border-emerald-800">
+                  <div className="h-6 w-6 rounded-full bg-emerald-500 flex items-center justify-center">
+                    <MessageSquare className="h-3 w-3 text-white" />
+                  </div>
+                  <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">WhatsApp Preview</span>
+                </div>
+                <pre className="text-sm whitespace-pre-wrap font-sans leading-relaxed text-foreground">
+                  {renewalPreviewMsg}
+                </pre>
+              </div>
+
+              {/* Client details summary */}
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="bg-muted/50 rounded-lg p-2">
+                  <p className="text-muted-foreground">Vehicle</p>
+                  <p className="font-semibold">{renewalPreviewClient.vehicle_number || renewalPreviewClient.vehicle_model || "—"}</p>
+                </div>
+                <div className="bg-muted/50 rounded-lg p-2">
+                  <p className="text-muted-foreground">Insurer</p>
+                  <p className="font-semibold">{renewalPreviewClient.current_insurer || "—"}</p>
+                </div>
+                <div className="bg-muted/50 rounded-lg p-2">
+                  <p className="text-muted-foreground">Premium</p>
+                  <p className="font-semibold">{renewalPreviewClient.current_premium ? `₹${renewalPreviewClient.current_premium.toLocaleString("en-IN")}` : "—"}</p>
+                </div>
+                <div className="bg-muted/50 rounded-lg p-2">
+                  <p className="text-muted-foreground">Source</p>
+                  <p className="font-semibold">{renewalPreviewClient.lead_source || "—"}</p>
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex gap-2 pt-2">
+                <Button
+                  className="flex-1 gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg"
+                  onClick={() => sendRenewalViaEngine(renewalPreviewClient)}
+                  disabled={sendingRenewal}
+                >
+                  {sendingRenewal ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  {sendingRenewal ? "Sending..." : "Send via WhatsApp"}
+                </Button>
+                <Button variant="outline" onClick={() => setRenewalPreviewClient(null)}>
+                  Cancel
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>
