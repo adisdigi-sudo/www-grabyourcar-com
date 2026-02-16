@@ -729,44 +729,132 @@ function SharePolicyDialog({
   const [whatsappNumber, setWhatsappNumber] = useState(policy.phone || "");
   const [emailAddress, setEmailAddress] = useState(policy.email || "");
 
+  const daysLeft = policy.renewal_date
+    ? differenceInDays(new Date(policy.renewal_date), new Date())
+    : null;
+
+  const buildRenewalNotice = () => {
+    return `🚗 *Grabyourcar — Renewal Notice*
+━━━━━━━━━━━━━━━━━━━━━
+
+Dear *${policy.customer_name || "Valued Customer"}*,
+
+This is a formal notice from *Grabyourcar Insurance Desk* regarding your motor insurance renewal.
+
+📋 *Policy Details:*
+📄 Policy No: ${policy.policy_number || "N/A"}
+🏢 Insurer: ${policy.insurer || "N/A"}
+🚗 Vehicle: ${policy.vehicle_number || "N/A"}
+💰 Premium: ₹${policy.premium?.toLocaleString("en-IN") || "N/A"}
+📅 Renewal Date: ${policy.renewal_date ? format(new Date(policy.renewal_date), "dd MMM yyyy") : "N/A"}
+${daysLeft !== null ? `⏳ Days Remaining: *${daysLeft <= 0 ? "EXPIRED" : daysLeft + " days"}*` : ""}
+
+⚠️ *Important:*
+Renewing on time ensures:
+✅ No inspection required
+✅ No Claim Bonus preserved
+✅ Continuous coverage protection
+
+Please contact us to process your renewal immediately.
+
+📞 +91 98559 24442
+🌐 www.grabyourcar.com
+
+— *Grabyourcar Insurance* 🛡️`;
+  };
+
+  const buildRenewalQuote = () => {
+    return `🚗 *Grabyourcar — Renewal Quote*
+━━━━━━━━━━━━━━━━━━━━━
+
+Dear *${policy.customer_name || "Valued Customer"}*,
+
+Thank you for choosing Grabyourcar for your motor insurance needs! Here's your personalized renewal quote:
+
+📋 *Current Policy:*
+📄 Policy: ${policy.policy_number || "N/A"}
+🏢 Insurer: ${policy.insurer || "N/A"}
+🚗 Vehicle: ${policy.vehicle_number || "N/A"}
+📅 Expiry: ${policy.renewal_date ? format(new Date(policy.renewal_date), "dd MMM yyyy") : "N/A"}
+
+💰 *Renewal Premium: ₹${policy.premium?.toLocaleString("en-IN") || "N/A"}*
+
+🎁 *Benefits of Renewing with Grabyourcar:*
+✅ Best market rates guaranteed
+✅ Hassle-free claim settlement
+✅ 24/7 roadside assistance
+✅ No Claim Bonus protection
+✅ Dedicated insurance advisor
+
+👉 *Reply "RENEW" to confirm* or call us for custom quotes from multiple insurers.
+
+📞 +91 98559 24442
+🌐 www.grabyourcar.com
+
+— *Grabyourcar Insurance* 🛡️`;
+  };
+
+  const sendTemplateViaWhatsApp = (template: string) => {
+    const phone = whatsappNumber.replace(/\D/g, "");
+    if (!phone) { toast.error("Enter a valid phone number"); return; }
+    const fullPhone = phone.startsWith("91") ? phone : `91${phone}`;
+    window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(template)}`, "_blank");
+    toast.success("WhatsApp opened!");
+  };
+
   return (
     <Dialog open onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
-            <Share2 className="h-5 w-5 text-primary" />
+            <Share2 className="h-5 w-5 text-emerald-600" />
             Share Policy — {policy.customer_name}
           </DialogTitle>
         </DialogHeader>
 
         {/* Policy Preview Card */}
-        <div className="p-3 rounded-xl bg-muted/50 border text-xs space-y-1.5">
+        <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 text-xs space-y-1.5">
           <div className="grid grid-cols-2 gap-x-4 gap-y-1">
             <div><span className="text-muted-foreground">Policy:</span> <span className="font-medium">{policy.policy_number || "N/A"}</span></div>
             <div><span className="text-muted-foreground">Insurer:</span> <span className="font-medium">{policy.insurer || "N/A"}</span></div>
             <div><span className="text-muted-foreground">Vehicle:</span> <span className="font-mono font-medium">{policy.vehicle_number || "N/A"}</span></div>
-            <div><span className="text-muted-foreground">Premium:</span> <span className="font-semibold">₹{policy.premium?.toLocaleString("en-IN") || "N/A"}</span></div>
+            <div><span className="text-muted-foreground">Premium:</span> <span className="font-semibold text-emerald-700 dark:text-emerald-400">₹{policy.premium?.toLocaleString("en-IN") || "N/A"}</span></div>
             <div><span className="text-muted-foreground">Renewal:</span> <span className="font-medium">{policy.renewal_date ? format(new Date(policy.renewal_date), "dd MMM yyyy") : "N/A"}</span></div>
             <div><span className="text-muted-foreground">Agent:</span> <span className="font-medium">{policy.agent_name || "N/A"}</span></div>
           </div>
         </div>
 
-        {/* Share Options */}
-        <div className="space-y-4">
-          {/* 1. Download */}
+        <div className="space-y-3">
+          {/* Renewal Notice & Quote via WhatsApp */}
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              className="gap-1.5 h-10 bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
+              onClick={() => sendTemplateViaWhatsApp(buildRenewalNotice())}
+            >
+              <Bell className="h-3.5 w-3.5" /> Renewal Notice
+            </Button>
+            <Button
+              className="gap-1.5 h-10 bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
+              onClick={() => sendTemplateViaWhatsApp(buildRenewalQuote())}
+            >
+              <FileText className="h-3.5 w-3.5" /> Renewal Quote
+            </Button>
+          </div>
+
+          {/* Download */}
           <Button
             variant="outline"
-            className="w-full gap-2 h-10 justify-start"
+            className="w-full gap-2 h-10 justify-start border-emerald-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
             onClick={() => { onDownload(policy); onClose(); }}
           >
-            <Download className="h-4 w-4 text-primary" />
+            <Download className="h-4 w-4 text-emerald-600" />
             <span className="font-medium">Download Policy Copy</span>
           </Button>
 
-          {/* 2. WhatsApp */}
+          {/* WhatsApp */}
           <div className="space-y-2">
             <Label className="text-xs font-medium flex items-center gap-1.5">
-              <MessageSquare className="h-3.5 w-3.5 text-chart-2" /> Send via WhatsApp
+              <MessageSquare className="h-3.5 w-3.5 text-emerald-600" /> Send via WhatsApp
             </Label>
             <div className="flex gap-2">
               <Input
@@ -777,7 +865,7 @@ function SharePolicyDialog({
               />
               <Button
                 size="sm"
-                className="gap-1.5 h-9 bg-chart-2 hover:bg-chart-2/90 text-white shrink-0"
+                className="gap-1.5 h-9 bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
                 disabled={!whatsappNumber.replace(/\D/g, "")}
                 onClick={() => { onWhatsApp(policy, whatsappNumber); onClose(); }}
               >
@@ -786,10 +874,10 @@ function SharePolicyDialog({
             </div>
           </div>
 
-          {/* 3. Email */}
+          {/* Email */}
           <div className="space-y-2">
             <Label className="text-xs font-medium flex items-center gap-1.5">
-              <Mail className="h-3.5 w-3.5 text-primary" /> Send via Email
+              <Mail className="h-3.5 w-3.5 text-emerald-600" /> Send via Email
             </Label>
             <div className="flex gap-2">
               <Input
@@ -801,8 +889,7 @@ function SharePolicyDialog({
               />
               <Button
                 size="sm"
-                variant="outline"
-                className="gap-1.5 h-9 shrink-0"
+                className="gap-1.5 h-9 bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
                 disabled={!emailAddress.includes("@")}
                 onClick={() => { onEmail(policy, emailAddress); onClose(); }}
               >
@@ -811,10 +898,10 @@ function SharePolicyDialog({
             </div>
           </div>
 
-          {/* Copy to clipboard */}
+          {/* Copy */}
           <Button
             variant="ghost"
-            className="w-full gap-2 h-9 text-xs text-muted-foreground"
+            className="w-full gap-2 h-9 text-xs text-muted-foreground hover:text-emerald-700"
             onClick={() => {
               const text = `Policy: ${policy.policy_number}\nCustomer: ${policy.customer_name}\nInsurer: ${policy.insurer}\nVehicle: ${policy.vehicle_number}\nPremium: ₹${policy.premium?.toLocaleString("en-IN") || "N/A"}\nRenewal: ${policy.renewal_date ? format(new Date(policy.renewal_date), "dd MMM yyyy") : "N/A"}\nAgent: ${policy.agent_name}`;
               navigator.clipboard.writeText(text);
