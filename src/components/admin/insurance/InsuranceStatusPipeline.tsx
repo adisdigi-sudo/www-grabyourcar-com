@@ -13,7 +13,8 @@ import {
   Mail, Search, ArrowRight, Play, CheckCircle2, Flame,
   Clock, AlertTriangle, Share2, PhoneCall, Star, Trophy,
   XCircle, ThumbsUp, ThumbsDown, Zap, TrendingUp,
-  UserPlus, Target, Eye, ChevronRight, BarChart3
+  UserPlus, Target, Eye, ChevronRight, BarChart3,
+  FileText, Plus, Send, ShieldCheck, Loader2, Save, Upload
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -68,6 +69,14 @@ export function InsuranceStatusPipeline() {
   const [editEmail, setEditEmail] = useState("");
   const [viewMode, setViewMode] = useState<"cards" | "kanban">("cards");
   const [converting, setConverting] = useState(false);
+  const [showAddPolicy, setShowAddPolicy] = useState(false);
+  const [clientPolicies, setClientPolicies] = useState<any[]>([]);
+  const [policyForm, setPolicyForm] = useState({
+    policy_number: "", policy_type: "comprehensive", insurer: "",
+    premium_amount: "", start_date: "", expiry_date: "", status: "active",
+  });
+  const [savingPolicy, setSavingPolicy] = useState(false);
+  const [dialogTab, setDialogTab] = useState("journey");
 
   useEffect(() => { fetchClients(); }, []);
 
@@ -166,6 +175,67 @@ export function InsuranceStatusPipeline() {
     } finally {
       setConverting(false);
     }
+  };
+
+  const fetchClientPolicies = async (clientId: string) => {
+    const { data } = await supabase
+      .from("insurance_policies")
+      .select("id, policy_number, insurer, premium_amount, expiry_date, status, policy_type, start_date")
+      .eq("client_id", clientId)
+      .order("created_at", { ascending: false });
+    setClientPolicies(data || []);
+  };
+
+  const savePolicy = async () => {
+    if (!selectedClient) return;
+    if (!policyForm.policy_number) { toast.error("Policy number required"); return; }
+    setSavingPolicy(true);
+    try {
+      const { error } = await supabase.from("insurance_policies").insert({
+        client_id: selectedClient.id,
+        policy_number: policyForm.policy_number,
+        policy_type: policyForm.policy_type,
+        insurer: policyForm.insurer || null,
+        premium_amount: policyForm.premium_amount ? Number(policyForm.premium_amount) : null,
+        start_date: policyForm.start_date || null,
+        expiry_date: policyForm.expiry_date || null,
+        status: policyForm.status,
+      });
+      if (error) throw error;
+      await supabase.from("insurance_activity_log").insert({
+        client_id: selectedClient.id,
+        activity_type: "policy_uploaded",
+        title: "Policy added from pipeline",
+        description: `${policyForm.insurer || "Unknown"} policy ${policyForm.policy_number} added`,
+      } as any);
+      toast.success("✅ Policy added!");
+      setPolicyForm({ policy_number: "", policy_type: "comprehensive", insurer: "", premium_amount: "", start_date: "", expiry_date: "", status: "active" });
+      setShowAddPolicy(false);
+      fetchClientPolicies(selectedClient.id);
+      fetchClients();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to save");
+    } finally {
+      setSavingPolicy(false);
+    }
+  };
+
+  const requestPolicyViaWhatsApp = (client: Client) => {
+    const phone = client.phone?.startsWith("IB_") ? "" : client.phone;
+    if (!phone) { toast.error("No phone number available"); return; }
+    const cleanPhone = phone.replace(/\D/g, "");
+    const fullPhone = cleanPhone.startsWith("91") ? cleanPhone : `91${cleanPhone}`;
+    const message = encodeURIComponent(
+      `🙏 Namaste ${client.customer_name || "Sir/Madam"},\n\nThis is *Grabyourcar Insurance* team.\n\nWe need your current motor insurance policy document for ${client.vehicle_number ? `vehicle *${client.vehicle_number}*` : "your vehicle"} to prepare the best renewal quote.\n\n📎 Please share:\n1️⃣ Current Policy PDF/Photo\n2️⃣ RC Copy (if available)\n\nYou can simply *reply to this message* with the documents.\n\nThank you! 🚗\n— *Grabyourcar Insurance*`
+    );
+    window.open(`https://wa.me/${fullPhone}?text=${message}`, "_blank");
+    toast.success("📱 WhatsApp opened to request documents!");
+    supabase.from("insurance_activity_log").insert({
+      client_id: client.id,
+      activity_type: "whatsapp_sent",
+      title: "Policy document requested via WhatsApp",
+      description: `Document request sent to ${phone}`,
+    } as any);
   };
 
   const addNote = async () => {
@@ -360,8 +430,8 @@ export function InsuranceStatusPipeline() {
       </AnimatePresence>
 
       {/* ── Client Detail + Pipeline Dialog ── */}
-      <Dialog open={!!selectedClient} onOpenChange={() => setSelectedClient(null)}>
-        <DialogContent className="max-w-xl max-h-[92vh] overflow-y-auto">
+      <Dialog open={!!selectedClient} onOpenChange={() => { setSelectedClient(null); setShowAddPolicy(false); setDialogTab("journey"); }}>
+        <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <div className={`h-8 w-8 rounded-lg ${PIPELINE_STAGES.find(s => s.value === selectedClient?.lead_status)?.color || "bg-primary"} flex items-center justify-center`}>
@@ -376,7 +446,7 @@ export function InsuranceStatusPipeline() {
             </DialogTitle>
           </DialogHeader>
           {selectedClient && (
-            <div className="space-y-5">
+            <div className="space-y-4">
               {/* Contact Info */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
@@ -397,7 +467,7 @@ export function InsuranceStatusPipeline() {
                 </div>
               </div>
 
-              {/* Communication Hub */}
+              {/* Communication Hub + WhatsApp Doc Request */}
               <div className="flex flex-wrap gap-2 py-2 border-y">
                 {editPhone && (
                   <>
@@ -423,99 +493,222 @@ export function InsuranceStatusPipeline() {
                 <Button size="sm" variant="outline" className="gap-1.5" onClick={() => shareClientDetails(selectedClient)}>
                   <Share2 className="h-3.5 w-3.5" /> Share
                 </Button>
+                <Button size="sm" className="gap-1.5 bg-primary/90 hover:bg-primary text-primary-foreground ml-auto" onClick={() => requestPolicyViaWhatsApp(selectedClient)}>
+                  <Upload className="h-3.5 w-3.5" /> Request Policy Doc
+                </Button>
               </div>
 
-              {/* ── Lead Journey Pipeline ── */}
-              <div>
-                <Label className="text-sm font-semibold mb-3 block flex items-center gap-2">
-                  <GitBranch className="h-4 w-4 text-primary" /> Lead Journey
-                </Label>
-                <div className="space-y-1.5">
-                  {PIPELINE_STAGES.map((stage, idx) => {
-                    const currentIdx = currentStageIndex(selectedClient.lead_status);
-                    const isActive = stage.value === selectedClient.lead_status;
-                    const isPast = idx < currentIdx && stage.value !== "not_interested" && stage.value !== "lost";
-                    const isNegative = stage.value === "not_interested" || stage.value === "lost";
-                    const StageIcon = stage.icon;
+              {/* Tabs: Journey / Policies / Notes */}
+              <Tabs value={dialogTab} onValueChange={(v) => { setDialogTab(v); if (v === "policies") fetchClientPolicies(selectedClient.id); }}>
+                <TabsList className="w-full bg-muted/50">
+                  <TabsTrigger value="journey" className="flex-1 gap-1.5 text-xs">
+                    <GitBranch className="h-3.5 w-3.5" /> Journey
+                  </TabsTrigger>
+                  <TabsTrigger value="policies" className="flex-1 gap-1.5 text-xs">
+                    <ShieldCheck className="h-3.5 w-3.5" /> Policies
+                    {clientPolicies.length > 0 && <Badge variant="secondary" className="h-4 text-[10px] px-1">{clientPolicies.length}</Badge>}
+                  </TabsTrigger>
+                  <TabsTrigger value="notes" className="flex-1 gap-1.5 text-xs">
+                    <FileText className="h-3.5 w-3.5" /> Notes
+                  </TabsTrigger>
+                </TabsList>
 
-                    return (
-                      <button
-                        key={stage.value}
-                        onClick={() => updateStatus(selectedClient.id, stage.value)}
-                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs transition-all group ${
-                          isActive
-                            ? `${stage.lightBg} border-2 ${stage.border} font-semibold shadow-sm`
-                            : isPast
-                              ? "bg-emerald-50/50 dark:bg-emerald-950/10 border border-emerald-200/50 dark:border-emerald-800/30"
-                              : isNegative
-                                ? "hover:bg-muted/40 text-muted-foreground border border-transparent"
+                {/* Journey Tab */}
+                <TabsContent value="journey" className="mt-3 space-y-4">
+                  <div className="space-y-1.5">
+                    {PIPELINE_STAGES.map((stage, idx) => {
+                      const currentIdx = currentStageIndex(selectedClient.lead_status);
+                      const isActive = stage.value === selectedClient.lead_status;
+                      const isPast = idx < currentIdx && stage.value !== "not_interested" && stage.value !== "lost";
+                      const StageIcon = stage.icon;
+                      return (
+                        <button
+                          key={stage.value}
+                          onClick={() => updateStatus(selectedClient.id, stage.value)}
+                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs transition-all group ${
+                            isActive
+                              ? `${stage.lightBg} border-2 ${stage.border} font-semibold shadow-sm`
+                              : isPast
+                                ? "bg-emerald-50/50 dark:bg-emerald-950/10 border border-emerald-200/50 dark:border-emerald-800/30"
                                 : "hover:bg-muted/40 text-muted-foreground border border-transparent"
-                        }`}
-                      >
-                        <div className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 transition-all ${
-                          isPast ? "bg-emerald-500 text-white" :
-                          isActive ? `${stage.color} text-white shadow-sm` :
-                          "bg-muted/60 border group-hover:border-primary/20"
-                        }`}>
-                          {isPast ? <CheckCircle2 className="h-3.5 w-3.5" /> :
-                           isActive ? <StageIcon className="h-3.5 w-3.5" /> :
-                           <StageIcon className="h-3.5 w-3.5 text-muted-foreground" />}
-                        </div>
-                        <span className={`flex-1 text-left ${isActive ? stage.textColor : ""}`}>
-                          {stage.emoji} {stage.label}
-                        </span>
-                        {isActive && (
-                          <div className="flex items-center gap-1">
-                            <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full">Current</span>
-                            <ChevronRight className="h-3 w-3 text-primary" />
+                          }`}
+                        >
+                          <div className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 transition-all ${
+                            isPast ? "bg-emerald-500 text-white" :
+                            isActive ? `${stage.color} text-white shadow-sm` :
+                            "bg-muted/60 border group-hover:border-primary/20"
+                          }`}>
+                            {isPast ? <CheckCircle2 className="h-3.5 w-3.5" /> :
+                             <StageIcon className="h-3.5 w-3.5" />}
                           </div>
-                        )}
-                        {isPast && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+                          <span className={`flex-1 text-left ${isActive ? stage.textColor : ""}`}>
+                            {stage.emoji} {stage.label}
+                          </span>
+                          {isActive && (
+                            <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full">Current</span>
+                          )}
+                          {isPast && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />}
+                        </button>
+                      );
+                    })}
+                  </div>
 
-              {/* Next Best Action */}
-              <Card className={`border-2 ${
-                selectedClient.lead_status === "hot_prospect"
-                  ? "border-red-300 dark:border-red-800 bg-red-50/50 dark:bg-red-950/20"
-                  : selectedClient.lead_status === "converted"
-                    ? "border-emerald-300 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20"
-                    : "border-primary/20 bg-primary/5"
-              }`}>
-                <CardContent className="p-3">
-                  <div className="flex items-start gap-2.5">
-                    {selectedClient.lead_status === "hot_prospect" ? (
-                      <Flame className="h-5 w-5 text-red-500 mt-0.5 shrink-0 animate-pulse" />
-                    ) : selectedClient.lead_status === "converted" ? (
-                      <Trophy className="h-5 w-5 text-emerald-500 mt-0.5 shrink-0" />
-                    ) : (
-                      <Zap className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                    )}
-                    <div>
-                      <p className="text-xs font-semibold mb-0.5">
-                        {selectedClient.lead_status === "hot_prospect" ? "🔥 URGENT ACTION" :
-                         selectedClient.lead_status === "converted" ? "🏆 WON — Next Steps" :
-                         "⚡ Next Best Action"}
-                      </p>
-                      <p className="text-xs text-muted-foreground leading-relaxed">
-                        {NEXT_ACTIONS[selectedClient.lead_status || "new"]}
-                      </p>
+                  {/* Next Best Action */}
+                  <Card className={`border-2 ${
+                    selectedClient.lead_status === "hot_prospect"
+                      ? "border-red-300 dark:border-red-800 bg-red-50/50 dark:bg-red-950/20"
+                      : selectedClient.lead_status === "converted"
+                        ? "border-emerald-300 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20"
+                        : "border-primary/20 bg-primary/5"
+                  }`}>
+                    <CardContent className="p-3">
+                      <div className="flex items-start gap-2.5">
+                        {selectedClient.lead_status === "hot_prospect" ? (
+                          <Flame className="h-5 w-5 text-red-500 mt-0.5 shrink-0 animate-pulse" />
+                        ) : selectedClient.lead_status === "converted" ? (
+                          <Trophy className="h-5 w-5 text-emerald-500 mt-0.5 shrink-0" />
+                        ) : (
+                          <Zap className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                        )}
+                        <div>
+                          <p className="text-xs font-semibold mb-0.5">
+                            {selectedClient.lead_status === "hot_prospect" ? "🔥 URGENT ACTION" :
+                             selectedClient.lead_status === "converted" ? "🏆 WON — Next Steps" :
+                             "⚡ Next Best Action"}
+                          </p>
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            {NEXT_ACTIONS[selectedClient.lead_status || "new"]}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* Policies Tab */}
+                <TabsContent value="policies" className="mt-3 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold flex items-center gap-1.5">
+                      <ShieldCheck className="h-4 w-4 text-primary" /> Policies ({clientPolicies.length})
+                    </p>
+                    <Button size="sm" onClick={() => setShowAddPolicy(!showAddPolicy)} className="gap-1.5">
+                      <Plus className="h-3.5 w-3.5" /> Add Policy
+                    </Button>
+                  </div>
+
+                  {/* Add Policy Form */}
+                  {showAddPolicy && (
+                    <Card className="border-2 border-primary/20 bg-primary/5">
+                      <CardContent className="p-3 space-y-3">
+                        <p className="text-xs font-semibold flex items-center gap-1.5">
+                          <ShieldCheck className="h-3.5 w-3.5 text-primary" /> New Policy for {selectedClient.customer_name}
+                        </p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <Label className="text-[10px]">Policy Number *</Label>
+                            <Input value={policyForm.policy_number} onChange={e => setPolicyForm(p => ({ ...p, policy_number: e.target.value }))} placeholder="POL-123456" className="h-8 text-xs" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-[10px]">Insurer</Label>
+                            <Input value={policyForm.insurer} onChange={e => setPolicyForm(p => ({ ...p, insurer: e.target.value }))} placeholder="ICICI Lombard" className="h-8 text-xs" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-[10px]">Premium (₹)</Label>
+                            <Input type="number" value={policyForm.premium_amount} onChange={e => setPolicyForm(p => ({ ...p, premium_amount: e.target.value }))} placeholder="12000" className="h-8 text-xs" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-[10px]">Policy Type</Label>
+                            <Select value={policyForm.policy_type} onValueChange={v => setPolicyForm(p => ({ ...p, policy_type: v }))}>
+                              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="comprehensive">Comprehensive</SelectItem>
+                                <SelectItem value="third_party">Third Party</SelectItem>
+                                <SelectItem value="own_damage">Own Damage</SelectItem>
+                                <SelectItem value="bundled">Bundled</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-[10px]">Start Date</Label>
+                            <Input type="date" value={policyForm.start_date} onChange={e => setPolicyForm(p => ({ ...p, start_date: e.target.value }))} className="h-8 text-xs" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-[10px]">Expiry Date</Label>
+                            <Input type="date" value={policyForm.expiry_date} onChange={e => setPolicyForm(p => ({ ...p, expiry_date: e.target.value }))} className="h-8 text-xs" />
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={savePolicy} disabled={savingPolicy} className="gap-1.5">
+                            {savingPolicy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                            Save Policy
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => setShowAddPolicy(false)}>Cancel</Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Existing Policies */}
+                  {clientPolicies.length === 0 ? (
+                    <div className="text-center py-6">
+                      <ShieldCheck className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">No policies yet</p>
+                      <p className="text-xs text-muted-foreground mt-1">Add a policy or request documents via WhatsApp</p>
+                      <Button size="sm" variant="outline" className="mt-3 gap-1.5" onClick={() => requestPolicyViaWhatsApp(selectedClient)}>
+                        <Upload className="h-3.5 w-3.5" /> Request Policy via WhatsApp
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {clientPolicies.map(p => (
+                        <Card key={p.id} className="border hover:shadow-sm transition-all">
+                          <CardContent className="p-3">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="font-mono text-sm font-semibold">{p.policy_number || "—"}</p>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
+                                  <span className="flex items-center gap-1"><Shield className="h-3 w-3" /> {p.insurer || "—"}</span>
+                                  {p.premium_amount && <span>₹{Number(p.premium_amount).toLocaleString("en-IN")}</span>}
+                                  {p.expiry_date && <span>Exp: {new Date(p.expiry_date).toLocaleDateString("en-IN")}</span>}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <Badge variant={p.status === "active" ? "default" : "secondary"} className="text-[10px]">{p.status}</Badge>
+                                {/* Share policy via WhatsApp */}
+                                {displayPhone(selectedClient.phone) && (
+                                  <Button size="icon" variant="ghost" className="h-7 w-7" title="Send policy via WhatsApp"
+                                    onClick={() => {
+                                      const phone = selectedClient.phone.replace(/\D/g, "");
+                                      const fullPhone = phone.startsWith("91") ? phone : `91${phone}`;
+                                      const msg = encodeURIComponent(
+                                        `📋 *Policy Details*\n━━━━━━━━━━━━━━━━\n📄 Policy: ${p.policy_number}\n🏢 Insurer: ${p.insurer || "N/A"}\n💰 Premium: ₹${p.premium_amount ? Number(p.premium_amount).toLocaleString("en-IN") : "N/A"}\n📅 Expiry: ${p.expiry_date ? new Date(p.expiry_date).toLocaleDateString("en-IN") : "N/A"}\n🚗 Vehicle: ${selectedClient.vehicle_number || "N/A"}\n\n— *Grabyourcar Insurance*`
+                                      );
+                                      window.open(`https://wa.me/${fullPhone}?text=${msg}`, "_blank");
+                                      toast.success("Sharing policy via WhatsApp!");
+                                    }}>
+                                    <Send className="h-3.5 w-3.5 text-green-600" />
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
+
+                {/* Notes Tab */}
+                <TabsContent value="notes" className="mt-3 space-y-3">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium">Add Note</Label>
+                    <div className="flex gap-2">
+                      <Textarea placeholder="Type a note about this lead..." value={note} onChange={e => setNote(e.target.value)} rows={2} className="flex-1 text-sm" />
+                      <Button size="sm" onClick={addNote} disabled={!note.trim()} className="self-end">Save</Button>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-
-              {/* Add Note */}
-              <div className="space-y-2">
-                <Label className="text-xs font-medium">Add Note</Label>
-                <div className="flex gap-2">
-                  <Textarea placeholder="Type a note about this lead..." value={note} onChange={e => setNote(e.target.value)} rows={2} className="flex-1 text-sm" />
-                  <Button size="sm" onClick={addNote} disabled={!note.trim()} className="self-end">Save</Button>
-                </div>
-              </div>
+                </TabsContent>
+              </Tabs>
             </div>
           )}
         </DialogContent>
