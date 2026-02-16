@@ -3511,6 +3511,7 @@ export type Database = {
       insurance_clients: {
         Row: {
           advisor_name: string | null
+          anniversary_date: string | null
           assigned_advisor_id: string | null
           chassis_number: string | null
           city: string | null
@@ -3523,6 +3524,7 @@ export type Database = {
           date_of_birth: string | null
           email: string | null
           engine_number: string | null
+          fitness_expiry: string | null
           gender: string | null
           id: string
           is_active: boolean | null
@@ -3530,6 +3532,7 @@ export type Database = {
           last_contacted_at: string | null
           lead_source: string | null
           lead_status: string | null
+          national_permit_expiry: string | null
           ncb_percentage: number | null
           notes: string | null
           original_lead_id: string | null
@@ -3538,7 +3541,12 @@ export type Database = {
           policy_expiry_date: string | null
           policy_start_date: string | null
           priority: string | null
+          puc_expiry: string | null
+          rc_expiry: string | null
+          relationship: string | null
+          rto_tax_expiry: string | null
           state: string | null
+          state_permit_expiry: string | null
           tags: string[] | null
           updated_at: string
           utm_campaign: string | null
@@ -3555,6 +3563,7 @@ export type Database = {
         }
         Insert: {
           advisor_name?: string | null
+          anniversary_date?: string | null
           assigned_advisor_id?: string | null
           chassis_number?: string | null
           city?: string | null
@@ -3567,6 +3576,7 @@ export type Database = {
           date_of_birth?: string | null
           email?: string | null
           engine_number?: string | null
+          fitness_expiry?: string | null
           gender?: string | null
           id?: string
           is_active?: boolean | null
@@ -3574,6 +3584,7 @@ export type Database = {
           last_contacted_at?: string | null
           lead_source?: string | null
           lead_status?: string | null
+          national_permit_expiry?: string | null
           ncb_percentage?: number | null
           notes?: string | null
           original_lead_id?: string | null
@@ -3582,7 +3593,12 @@ export type Database = {
           policy_expiry_date?: string | null
           policy_start_date?: string | null
           priority?: string | null
+          puc_expiry?: string | null
+          rc_expiry?: string | null
+          relationship?: string | null
+          rto_tax_expiry?: string | null
           state?: string | null
+          state_permit_expiry?: string | null
           tags?: string[] | null
           updated_at?: string
           utm_campaign?: string | null
@@ -3599,6 +3615,7 @@ export type Database = {
         }
         Update: {
           advisor_name?: string | null
+          anniversary_date?: string | null
           assigned_advisor_id?: string | null
           chassis_number?: string | null
           city?: string | null
@@ -3611,6 +3628,7 @@ export type Database = {
           date_of_birth?: string | null
           email?: string | null
           engine_number?: string | null
+          fitness_expiry?: string | null
           gender?: string | null
           id?: string
           is_active?: boolean | null
@@ -3618,6 +3636,7 @@ export type Database = {
           last_contacted_at?: string | null
           lead_source?: string | null
           lead_status?: string | null
+          national_permit_expiry?: string | null
           ncb_percentage?: number | null
           notes?: string | null
           original_lead_id?: string | null
@@ -3626,7 +3645,12 @@ export type Database = {
           policy_expiry_date?: string | null
           policy_start_date?: string | null
           priority?: string | null
+          puc_expiry?: string | null
+          rc_expiry?: string | null
+          relationship?: string | null
+          rto_tax_expiry?: string | null
           state?: string | null
+          state_permit_expiry?: string | null
           tags?: string[] | null
           updated_at?: string
           utm_campaign?: string | null
