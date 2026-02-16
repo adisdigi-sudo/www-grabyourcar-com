@@ -31,6 +31,7 @@ import {
   Globe,
   ChevronLeft,
   Sparkles,
+  BarChart3,
   FileSignature,
   Rocket,
   Mail,
@@ -55,6 +56,7 @@ const navItems: NavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "unified-crm", label: "🧠 Master CRM", icon: Users, badge: "New" },
   { id: "journey-automation", label: "⚡ Journey Automation", icon: Sparkles, badge: "New" },
+  { id: "revenue-intelligence", label: "📊 Revenue Intelligence", icon: BarChart3, badge: "New" },
   { 
     id: "leads", 
     label: "Lead Management", 
