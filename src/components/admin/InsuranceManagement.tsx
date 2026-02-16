@@ -1,12 +1,22 @@
-import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, FileText, HelpCircle, Package, Globe, Users, BarChart3 } from "lucide-react";
+import {
+  Shield, FileText, HelpCircle, Package, Globe, Users, BarChart3,
+  LayoutDashboard, UserCheck, ShieldCheck, RefreshCw, ListChecks,
+  DollarSign, TrendingUp
+} from "lucide-react";
 import { InsurancePlansAdmin } from "./insurance/InsurancePlansAdmin";
 import { InsuranceContentAdmin } from "./insurance/InsuranceContentAdmin";
 import { InsuranceFAQsAdmin } from "./insurance/InsuranceFAQsAdmin";
 import { InsuranceAddonsAdmin } from "./insurance/InsuranceAddonsAdmin";
 import { InsuranceScraperAdmin } from "./insurance/InsuranceScraperAdmin";
 import { InsuranceLeadsAdmin } from "./insurance/InsuranceLeadsAdmin";
+import { InsuranceCRMDashboard } from "./insurance/InsuranceCRMDashboard";
+import { InsuranceClientsManager } from "./insurance/InsuranceClientsManager";
+import { InsurancePoliciesManager } from "./insurance/InsurancePoliciesManager";
+import { InsuranceRenewalsEngine } from "./insurance/InsuranceRenewalsEngine";
+import { InsuranceTasksManager } from "./insurance/InsuranceTasksManager";
+import { InsuranceCommissionsTracker } from "./insurance/InsuranceCommissionsTracker";
+import { InsuranceAnalyticsDashboard } from "./insurance/InsuranceAnalyticsDashboard";
 
 export function InsuranceManagement() {
   return (
@@ -14,41 +24,63 @@ export function InsuranceManagement() {
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Shield className="h-6 w-6 text-primary" />
-          Insurance Management
+          Insurance Command Center
         </h1>
         <p className="text-muted-foreground mt-1">
-          Manage all insurance page content, plans, FAQs, add-ons, scraper, and leads
+          Complete CRM, policy management, renewals, commissions & analytics
         </p>
       </div>
 
-      <Tabs defaultValue="plans" className="space-y-4">
-        <TabsList className="grid grid-cols-3 lg:grid-cols-6 gap-1 h-auto p-1">
+      <Tabs defaultValue="dashboard" className="space-y-4">
+        <TabsList className="flex flex-wrap gap-1 h-auto p-1 bg-muted/50">
+          <TabsTrigger value="dashboard" className="gap-1.5 text-xs">
+            <LayoutDashboard className="h-3.5 w-3.5" /> Dashboard
+          </TabsTrigger>
+          <TabsTrigger value="clients" className="gap-1.5 text-xs">
+            <UserCheck className="h-3.5 w-3.5" /> Clients
+          </TabsTrigger>
+          <TabsTrigger value="policies" className="gap-1.5 text-xs">
+            <ShieldCheck className="h-3.5 w-3.5" /> Policies
+          </TabsTrigger>
+          <TabsTrigger value="renewals" className="gap-1.5 text-xs">
+            <RefreshCw className="h-3.5 w-3.5" /> Renewals
+          </TabsTrigger>
+          <TabsTrigger value="tasks" className="gap-1.5 text-xs">
+            <ListChecks className="h-3.5 w-3.5" /> Tasks
+          </TabsTrigger>
+          <TabsTrigger value="commissions" className="gap-1.5 text-xs">
+            <DollarSign className="h-3.5 w-3.5" /> Commissions
+          </TabsTrigger>
+          <TabsTrigger value="analytics" className="gap-1.5 text-xs">
+            <TrendingUp className="h-3.5 w-3.5" /> Analytics
+          </TabsTrigger>
           <TabsTrigger value="plans" className="gap-1.5 text-xs">
-            <FileText className="h-3.5 w-3.5" />
-            Plans
+            <FileText className="h-3.5 w-3.5" /> Plans
           </TabsTrigger>
           <TabsTrigger value="content" className="gap-1.5 text-xs">
-            <Globe className="h-3.5 w-3.5" />
-            Content
+            <Globe className="h-3.5 w-3.5" /> Content
           </TabsTrigger>
           <TabsTrigger value="faqs" className="gap-1.5 text-xs">
-            <HelpCircle className="h-3.5 w-3.5" />
-            FAQs
+            <HelpCircle className="h-3.5 w-3.5" /> FAQs
           </TabsTrigger>
           <TabsTrigger value="addons" className="gap-1.5 text-xs">
-            <Package className="h-3.5 w-3.5" />
-            Add-ons
+            <Package className="h-3.5 w-3.5" /> Add-ons
           </TabsTrigger>
           <TabsTrigger value="scraper" className="gap-1.5 text-xs">
-            <BarChart3 className="h-3.5 w-3.5" />
-            Scraper
+            <BarChart3 className="h-3.5 w-3.5" /> Scraper
           </TabsTrigger>
           <TabsTrigger value="leads" className="gap-1.5 text-xs">
-            <Users className="h-3.5 w-3.5" />
-            Leads
+            <Users className="h-3.5 w-3.5" /> Legacy Leads
           </TabsTrigger>
         </TabsList>
 
+        <TabsContent value="dashboard"><InsuranceCRMDashboard /></TabsContent>
+        <TabsContent value="clients"><InsuranceClientsManager /></TabsContent>
+        <TabsContent value="policies"><InsurancePoliciesManager /></TabsContent>
+        <TabsContent value="renewals"><InsuranceRenewalsEngine /></TabsContent>
+        <TabsContent value="tasks"><InsuranceTasksManager /></TabsContent>
+        <TabsContent value="commissions"><InsuranceCommissionsTracker /></TabsContent>
+        <TabsContent value="analytics"><InsuranceAnalyticsDashboard /></TabsContent>
         <TabsContent value="plans"><InsurancePlansAdmin /></TabsContent>
         <TabsContent value="content"><InsuranceContentAdmin /></TabsContent>
         <TabsContent value="faqs"><InsuranceFAQsAdmin /></TabsContent>

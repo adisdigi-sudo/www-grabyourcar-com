@@ -3037,6 +3037,57 @@ export type Database = {
         }
         Relationships: []
       }
+      insurance_activity_log: {
+        Row: {
+          activity_type: string
+          client_id: string
+          created_at: string
+          description: string | null
+          id: string
+          metadata: Json | null
+          performed_by: string | null
+          policy_id: string | null
+          title: string
+        }
+        Insert: {
+          activity_type: string
+          client_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          performed_by?: string | null
+          policy_id?: string | null
+          title: string
+        }
+        Update: {
+          activity_type?: string
+          client_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          performed_by?: string | null
+          policy_id?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insurance_activity_log_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "insurance_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insurance_activity_log_policy_id_fkey"
+            columns: ["policy_id"]
+            isOneToOne: false
+            referencedRelation: "insurance_policies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       insurance_addons: {
         Row: {
           created_at: string
@@ -3073,6 +3124,351 @@ export type Database = {
         }
         Relationships: []
       }
+      insurance_advisors: {
+        Row: {
+          cities: string[] | null
+          conversion_rate: number | null
+          created_at: string
+          email: string | null
+          id: string
+          is_active: boolean | null
+          max_daily_leads: number | null
+          name: string
+          phone: string | null
+          renewal_rate: number | null
+          specialization: string[] | null
+          total_commission_earned: number | null
+          total_leads_assigned: number | null
+          total_policies_sold: number | null
+          total_premium_collected: number | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          cities?: string[] | null
+          conversion_rate?: number | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_daily_leads?: number | null
+          name: string
+          phone?: string | null
+          renewal_rate?: number | null
+          specialization?: string[] | null
+          total_commission_earned?: number | null
+          total_leads_assigned?: number | null
+          total_policies_sold?: number | null
+          total_premium_collected?: number | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          cities?: string[] | null
+          conversion_rate?: number | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_daily_leads?: number | null
+          name?: string
+          phone?: string | null
+          renewal_rate?: number | null
+          specialization?: string[] | null
+          total_commission_earned?: number | null
+          total_leads_assigned?: number | null
+          total_policies_sold?: number | null
+          total_premium_collected?: number | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      insurance_claims: {
+        Row: {
+          approved_amount: number | null
+          claim_amount: number | null
+          claim_number: string | null
+          claim_type: string | null
+          client_id: string
+          created_at: string
+          documents: string[] | null
+          garage_contact: string | null
+          garage_name: string | null
+          id: string
+          incident_date: string | null
+          incident_description: string | null
+          notes: string | null
+          policy_id: string | null
+          settlement_date: string | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          approved_amount?: number | null
+          claim_amount?: number | null
+          claim_number?: string | null
+          claim_type?: string | null
+          client_id: string
+          created_at?: string
+          documents?: string[] | null
+          garage_contact?: string | null
+          garage_name?: string | null
+          id?: string
+          incident_date?: string | null
+          incident_description?: string | null
+          notes?: string | null
+          policy_id?: string | null
+          settlement_date?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          approved_amount?: number | null
+          claim_amount?: number | null
+          claim_number?: string | null
+          claim_type?: string | null
+          client_id?: string
+          created_at?: string
+          documents?: string[] | null
+          garage_contact?: string | null
+          garage_name?: string | null
+          id?: string
+          incident_date?: string | null
+          incident_description?: string | null
+          notes?: string | null
+          policy_id?: string | null
+          settlement_date?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insurance_claims_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "insurance_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insurance_claims_policy_id_fkey"
+            columns: ["policy_id"]
+            isOneToOne: false
+            referencedRelation: "insurance_policies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      insurance_clients: {
+        Row: {
+          advisor_name: string | null
+          assigned_advisor_id: string | null
+          chassis_number: string | null
+          city: string | null
+          created_at: string
+          current_insurer: string | null
+          current_policy_number: string | null
+          current_policy_type: string | null
+          current_premium: number | null
+          customer_name: string | null
+          date_of_birth: string | null
+          email: string | null
+          engine_number: string | null
+          gender: string | null
+          id: string
+          is_active: boolean | null
+          is_otp_verified: boolean | null
+          last_contacted_at: string | null
+          lead_source: string | null
+          lead_status: string | null
+          ncb_percentage: number | null
+          notes: string | null
+          original_lead_id: string | null
+          phone: string
+          pincode: string | null
+          policy_expiry_date: string | null
+          policy_start_date: string | null
+          priority: string | null
+          state: string | null
+          tags: string[] | null
+          updated_at: string
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          vehicle_fuel_type: string | null
+          vehicle_make: string | null
+          vehicle_model: string | null
+          vehicle_number: string | null
+          vehicle_registration_date: string | null
+          vehicle_variant: string | null
+          vehicle_year: number | null
+          whatsapp_opted_in: boolean | null
+        }
+        Insert: {
+          advisor_name?: string | null
+          assigned_advisor_id?: string | null
+          chassis_number?: string | null
+          city?: string | null
+          created_at?: string
+          current_insurer?: string | null
+          current_policy_number?: string | null
+          current_policy_type?: string | null
+          current_premium?: number | null
+          customer_name?: string | null
+          date_of_birth?: string | null
+          email?: string | null
+          engine_number?: string | null
+          gender?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_otp_verified?: boolean | null
+          last_contacted_at?: string | null
+          lead_source?: string | null
+          lead_status?: string | null
+          ncb_percentage?: number | null
+          notes?: string | null
+          original_lead_id?: string | null
+          phone: string
+          pincode?: string | null
+          policy_expiry_date?: string | null
+          policy_start_date?: string | null
+          priority?: string | null
+          state?: string | null
+          tags?: string[] | null
+          updated_at?: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          vehicle_fuel_type?: string | null
+          vehicle_make?: string | null
+          vehicle_model?: string | null
+          vehicle_number?: string | null
+          vehicle_registration_date?: string | null
+          vehicle_variant?: string | null
+          vehicle_year?: number | null
+          whatsapp_opted_in?: boolean | null
+        }
+        Update: {
+          advisor_name?: string | null
+          assigned_advisor_id?: string | null
+          chassis_number?: string | null
+          city?: string | null
+          created_at?: string
+          current_insurer?: string | null
+          current_policy_number?: string | null
+          current_policy_type?: string | null
+          current_premium?: number | null
+          customer_name?: string | null
+          date_of_birth?: string | null
+          email?: string | null
+          engine_number?: string | null
+          gender?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_otp_verified?: boolean | null
+          last_contacted_at?: string | null
+          lead_source?: string | null
+          lead_status?: string | null
+          ncb_percentage?: number | null
+          notes?: string | null
+          original_lead_id?: string | null
+          phone?: string
+          pincode?: string | null
+          policy_expiry_date?: string | null
+          policy_start_date?: string | null
+          priority?: string | null
+          state?: string | null
+          tags?: string[] | null
+          updated_at?: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          vehicle_fuel_type?: string | null
+          vehicle_make?: string | null
+          vehicle_model?: string | null
+          vehicle_number?: string | null
+          vehicle_registration_date?: string | null
+          vehicle_variant?: string | null
+          vehicle_year?: number | null
+          whatsapp_opted_in?: boolean | null
+        }
+        Relationships: []
+      }
+      insurance_commissions: {
+        Row: {
+          advisor_id: string | null
+          advisor_name: string | null
+          bonus_amount: number | null
+          client_id: string
+          commission_amount: number | null
+          commission_percentage: number | null
+          commission_type: string | null
+          created_at: string
+          id: string
+          insurer: string | null
+          paid_date: string | null
+          payment_reference: string | null
+          policy_id: string
+          premium_amount: number | null
+          status: string | null
+          total_earned: number | null
+          updated_at: string
+        }
+        Insert: {
+          advisor_id?: string | null
+          advisor_name?: string | null
+          bonus_amount?: number | null
+          client_id: string
+          commission_amount?: number | null
+          commission_percentage?: number | null
+          commission_type?: string | null
+          created_at?: string
+          id?: string
+          insurer?: string | null
+          paid_date?: string | null
+          payment_reference?: string | null
+          policy_id: string
+          premium_amount?: number | null
+          status?: string | null
+          total_earned?: number | null
+          updated_at?: string
+        }
+        Update: {
+          advisor_id?: string | null
+          advisor_name?: string | null
+          bonus_amount?: number | null
+          client_id?: string
+          commission_amount?: number | null
+          commission_percentage?: number | null
+          commission_type?: string | null
+          created_at?: string
+          id?: string
+          insurer?: string | null
+          paid_date?: string | null
+          payment_reference?: string | null
+          policy_id?: string
+          premium_amount?: number | null
+          status?: string | null
+          total_earned?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insurance_commissions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "insurance_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insurance_commissions_policy_id_fkey"
+            columns: ["policy_id"]
+            isOneToOne: false
+            referencedRelation: "insurance_policies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       insurance_content: {
         Row: {
           created_at: string
@@ -3105,6 +3501,60 @@ export type Database = {
           updated_by?: string | null
         }
         Relationships: []
+      }
+      insurance_documents: {
+        Row: {
+          client_id: string
+          created_at: string
+          document_name: string
+          document_type: string
+          file_size: string | null
+          file_url: string
+          id: string
+          notes: string | null
+          policy_id: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          document_name: string
+          document_type: string
+          file_size?: string | null
+          file_url: string
+          id?: string
+          notes?: string | null
+          policy_id?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          document_name?: string
+          document_type?: string
+          file_size?: string | null
+          file_url?: string
+          id?: string
+          notes?: string | null
+          policy_id?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insurance_documents_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "insurance_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insurance_documents_policy_id_fkey"
+            columns: ["policy_id"]
+            isOneToOne: false
+            referencedRelation: "insurance_policies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       insurance_faqs: {
         Row: {
@@ -3325,6 +3775,213 @@ export type Database = {
         }
         Relationships: []
       }
+      insurance_policies: {
+        Row: {
+          addon_premium: number | null
+          addons: string[] | null
+          client_id: string
+          created_at: string
+          expiry_date: string
+          gst_amount: number | null
+          id: string
+          idv: number | null
+          insurer: string
+          is_renewal: boolean | null
+          issued_date: string | null
+          ncb_discount: number | null
+          net_premium: number | null
+          payment_mode: string | null
+          payment_reference: string | null
+          plan_name: string | null
+          policy_document_url: string | null
+          policy_number: string | null
+          policy_type: string
+          premium_amount: number | null
+          previous_policy_id: string | null
+          renewal_status: string | null
+          start_date: string
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          addon_premium?: number | null
+          addons?: string[] | null
+          client_id: string
+          created_at?: string
+          expiry_date: string
+          gst_amount?: number | null
+          id?: string
+          idv?: number | null
+          insurer: string
+          is_renewal?: boolean | null
+          issued_date?: string | null
+          ncb_discount?: number | null
+          net_premium?: number | null
+          payment_mode?: string | null
+          payment_reference?: string | null
+          plan_name?: string | null
+          policy_document_url?: string | null
+          policy_number?: string | null
+          policy_type: string
+          premium_amount?: number | null
+          previous_policy_id?: string | null
+          renewal_status?: string | null
+          start_date: string
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          addon_premium?: number | null
+          addons?: string[] | null
+          client_id?: string
+          created_at?: string
+          expiry_date?: string
+          gst_amount?: number | null
+          id?: string
+          idv?: number | null
+          insurer?: string
+          is_renewal?: boolean | null
+          issued_date?: string | null
+          ncb_discount?: number | null
+          net_premium?: number | null
+          payment_mode?: string | null
+          payment_reference?: string | null
+          plan_name?: string | null
+          policy_document_url?: string | null
+          policy_number?: string | null
+          policy_type?: string
+          premium_amount?: number | null
+          previous_policy_id?: string | null
+          renewal_status?: string | null
+          start_date?: string
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insurance_policies_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "insurance_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insurance_policies_previous_policy_id_fkey"
+            columns: ["previous_policy_id"]
+            isOneToOne: false
+            referencedRelation: "insurance_policies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      insurance_renewal_tracking: {
+        Row: {
+          advisor_alert_sent_at: string | null
+          advisor_alerted: boolean | null
+          client_id: string
+          created_at: string
+          days_until_expiry: number | null
+          expiry_date: string
+          id: string
+          last_recovery_at: string | null
+          lost_reason: string | null
+          outcome: string | null
+          policy_id: string
+          recovery_attempts: number | null
+          reminder_1_sent: boolean | null
+          reminder_1_sent_at: string | null
+          reminder_15_sent: boolean | null
+          reminder_15_sent_at: string | null
+          reminder_30_sent: boolean | null
+          reminder_30_sent_at: string | null
+          reminder_60_sent: boolean | null
+          reminder_60_sent_at: string | null
+          reminder_7_sent: boolean | null
+          reminder_7_sent_at: string | null
+          renewed_policy_id: string | null
+          requote_generated: boolean | null
+          requote_insurer: string | null
+          requote_premium: number | null
+          requote_sent_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          advisor_alert_sent_at?: string | null
+          advisor_alerted?: boolean | null
+          client_id: string
+          created_at?: string
+          days_until_expiry?: number | null
+          expiry_date: string
+          id?: string
+          last_recovery_at?: string | null
+          lost_reason?: string | null
+          outcome?: string | null
+          policy_id: string
+          recovery_attempts?: number | null
+          reminder_1_sent?: boolean | null
+          reminder_1_sent_at?: string | null
+          reminder_15_sent?: boolean | null
+          reminder_15_sent_at?: string | null
+          reminder_30_sent?: boolean | null
+          reminder_30_sent_at?: string | null
+          reminder_60_sent?: boolean | null
+          reminder_60_sent_at?: string | null
+          reminder_7_sent?: boolean | null
+          reminder_7_sent_at?: string | null
+          renewed_policy_id?: string | null
+          requote_generated?: boolean | null
+          requote_insurer?: string | null
+          requote_premium?: number | null
+          requote_sent_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          advisor_alert_sent_at?: string | null
+          advisor_alerted?: boolean | null
+          client_id?: string
+          created_at?: string
+          days_until_expiry?: number | null
+          expiry_date?: string
+          id?: string
+          last_recovery_at?: string | null
+          lost_reason?: string | null
+          outcome?: string | null
+          policy_id?: string
+          recovery_attempts?: number | null
+          reminder_1_sent?: boolean | null
+          reminder_1_sent_at?: string | null
+          reminder_15_sent?: boolean | null
+          reminder_15_sent_at?: string | null
+          reminder_30_sent?: boolean | null
+          reminder_30_sent_at?: string | null
+          reminder_60_sent?: boolean | null
+          reminder_60_sent_at?: string | null
+          reminder_7_sent?: boolean | null
+          reminder_7_sent_at?: string | null
+          renewed_policy_id?: string | null
+          requote_generated?: boolean | null
+          requote_insurer?: string | null
+          requote_premium?: number | null
+          requote_sent_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insurance_renewal_tracking_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "insurance_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insurance_renewal_tracking_policy_id_fkey"
+            columns: ["policy_id"]
+            isOneToOne: false
+            referencedRelation: "insurance_policies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       insurance_scraped_data: {
         Row: {
           content_type: string | null
@@ -3360,6 +4017,78 @@ export type Database = {
           source_url?: string
         }
         Relationships: []
+      }
+      insurance_tasks: {
+        Row: {
+          assigned_name: string | null
+          assigned_to: string | null
+          client_id: string | null
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          is_automated: boolean | null
+          policy_id: string | null
+          priority: string | null
+          status: string | null
+          task_type: string
+          title: string
+          trigger_event: string | null
+          updated_at: string
+        }
+        Insert: {
+          assigned_name?: string | null
+          assigned_to?: string | null
+          client_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          is_automated?: boolean | null
+          policy_id?: string | null
+          priority?: string | null
+          status?: string | null
+          task_type: string
+          title: string
+          trigger_event?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assigned_name?: string | null
+          assigned_to?: string | null
+          client_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          is_automated?: boolean | null
+          policy_id?: string | null
+          priority?: string | null
+          status?: string | null
+          task_type?: string
+          title?: string
+          trigger_event?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insurance_tasks_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "insurance_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insurance_tasks_policy_id_fkey"
+            columns: ["policy_id"]
+            isOneToOne: false
+            referencedRelation: "insurance_policies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       journey_automations: {
         Row: {
