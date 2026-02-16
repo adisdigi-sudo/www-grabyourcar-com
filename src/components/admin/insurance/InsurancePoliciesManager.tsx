@@ -45,12 +45,11 @@ const ALL_COLUMNS = [
 ];
 
 const INSURANCE_TYPES = [
-  { value: "all", label: "All Insurance" },
-  { value: "motor", label: "Motor Insurance" },
-  { value: "health", label: "Health Insurance" },
-  { value: "life", label: "Life Insurance" },
-  { value: "wc", label: "Wc Insurance" },
-  { value: "other", label: "Other Insurance" },
+  { value: "all", label: "All Motor Insurance" },
+  { value: "comprehensive", label: "Comprehensive" },
+  { value: "third_party", label: "Third Party" },
+  { value: "own_damage", label: "Own Damage" },
+  { value: "standalone_od", label: "Standalone OD" },
 ];
 
 export function InsurancePoliciesManager() {

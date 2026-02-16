@@ -28,7 +28,7 @@ const IMPORT_TYPES: { id: ImportType; label: string; icon: any; desc: string }[]
 ];
 
 const CLIENT_TYPES = ["Individual", "Corporate"];
-const POLICY_TYPES = ["Comprehensive", "Third Party", "Own Damage", "Health", "Life", "Fire", "Marine"];
+const POLICY_TYPES = ["Comprehensive", "Third Party", "Own Damage", "Standalone OD", "Bundled"];
 
 // ─── Sample CSV Templates ───
 const CLIENT_TEMPLATE_HEADERS = "customer_name,phone,email,city,state,vehicle_number,chassis_number,engine_number,vehicle_make,vehicle_model,vehicle_year,vehicle_fuel_type,date_of_birth,gender,pincode,notes";
