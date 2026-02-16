@@ -63,6 +63,10 @@ const roleColors: Record<AppRole, string> = {
   sales: "bg-blue-500 text-white",
   dealer: "bg-green-500 text-white",
   finance: "bg-amber-500 text-white",
+  insurance: "bg-emerald-500 text-white",
+  marketing: "bg-pink-500 text-white",
+  calling: "bg-cyan-500 text-white",
+  operations: "bg-indigo-500 text-white",
 };
 
 const roleDescriptions: Record<AppRole, string> = {
@@ -71,6 +75,10 @@ const roleDescriptions: Record<AppRole, string> = {
   sales: "Can view and manage assigned leads",
   dealer: "Dealer-specific access",
   finance: "Finance and payment access",
+  insurance: "Insurance CRM — clients, policies, renewals",
+  marketing: "Campaigns, SEO, content, analytics",
+  calling: "Calling team — filtered lead databases",
+  operations: "Day-to-day operations across verticals",
 };
 
 export const ProfileSettings = () => {
