@@ -4147,6 +4147,146 @@ export type Database = {
           },
         ]
       }
+      insurance_prospect_activity: {
+        Row: {
+          activity_type: string
+          created_at: string
+          description: string | null
+          id: string
+          metadata: Json | null
+          performed_by: string | null
+          prospect_id: string
+          title: string
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          performed_by?: string | null
+          prospect_id: string
+          title: string
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          performed_by?: string | null
+          prospect_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insurance_prospect_activity_prospect_id_fkey"
+            columns: ["prospect_id"]
+            isOneToOne: false
+            referencedRelation: "insurance_prospects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      insurance_prospects: {
+        Row: {
+          assigned_to: string | null
+          batch_id: string | null
+          call_count: number | null
+          city: string | null
+          converted_at: string | null
+          converted_by: string | null
+          converted_to_lead_id: string | null
+          created_at: string
+          customer_name: string | null
+          data_source: string
+          duplicate_of_client_id: string | null
+          email: string | null
+          expiry_date: string | null
+          id: string
+          insurer: string | null
+          is_grabyourcar_customer: boolean | null
+          last_contacted_at: string | null
+          next_callback_at: string | null
+          notes: string | null
+          phone: string
+          policy_type: string | null
+          premium_amount: number | null
+          prospect_status: string
+          source_file: string | null
+          state: string | null
+          tags: string[] | null
+          updated_at: string
+          vehicle_make: string | null
+          vehicle_model: string | null
+          vehicle_number: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          batch_id?: string | null
+          call_count?: number | null
+          city?: string | null
+          converted_at?: string | null
+          converted_by?: string | null
+          converted_to_lead_id?: string | null
+          created_at?: string
+          customer_name?: string | null
+          data_source?: string
+          duplicate_of_client_id?: string | null
+          email?: string | null
+          expiry_date?: string | null
+          id?: string
+          insurer?: string | null
+          is_grabyourcar_customer?: boolean | null
+          last_contacted_at?: string | null
+          next_callback_at?: string | null
+          notes?: string | null
+          phone: string
+          policy_type?: string | null
+          premium_amount?: number | null
+          prospect_status?: string
+          source_file?: string | null
+          state?: string | null
+          tags?: string[] | null
+          updated_at?: string
+          vehicle_make?: string | null
+          vehicle_model?: string | null
+          vehicle_number?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          batch_id?: string | null
+          call_count?: number | null
+          city?: string | null
+          converted_at?: string | null
+          converted_by?: string | null
+          converted_to_lead_id?: string | null
+          created_at?: string
+          customer_name?: string | null
+          data_source?: string
+          duplicate_of_client_id?: string | null
+          email?: string | null
+          expiry_date?: string | null
+          id?: string
+          insurer?: string | null
+          is_grabyourcar_customer?: boolean | null
+          last_contacted_at?: string | null
+          next_callback_at?: string | null
+          notes?: string | null
+          phone?: string
+          policy_type?: string | null
+          premium_amount?: number | null
+          prospect_status?: string
+          source_file?: string | null
+          state?: string | null
+          tags?: string[] | null
+          updated_at?: string
+          vehicle_make?: string | null
+          vehicle_model?: string | null
+          vehicle_number?: string | null
+        }
+        Relationships: []
+      }
       insurance_renewal_tracking: {
         Row: {
           advisor_alert_sent_at: string | null
