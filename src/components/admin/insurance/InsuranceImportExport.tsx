@@ -373,10 +373,11 @@ function ImportWizard() {
           let phone = (row.phone || "").replace(/\D/g, "");
           if (phone.length > 10) phone = phone.slice(-10);
           
-          // If no phone found in mapped field, scan all values for phone-like patterns
+          // If no phone found in mapped field, scan non-ID fields for phone-like patterns
           if (!phone || phone.length < 10) {
+            const skipFields = new Set(["external_lead_id", "policy_number", "idv", "premium_amount", "net_premium", "gst_amount", "addon_premium", "ncb_discount", "vehicle_year", "pincode", "commission", "tp_premium"]);
             for (const [key, val] of Object.entries(row)) {
-              if (key.startsWith("__raw_")) continue;
+              if (key.startsWith("__raw_") || skipFields.has(key)) continue;
               const digits = String(val).replace(/\D/g, "");
               if (digits.length >= 10 && digits.length <= 12) {
                 phone = digits.slice(-10);
@@ -386,7 +387,7 @@ function ImportWizard() {
           }
 
           // Create client name from available data
-          const customerName = row.customer_name || row.insured_name || "Unknown";
+          const customerName = row.customer_name || "Unknown";
 
           if (detectedType === "client" || detectedType === "client_insurance") {
             // Try to find existing client
