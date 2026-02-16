@@ -95,7 +95,7 @@ serve(async (req) => {
 
     console.log("Sending to AI for extraction, mime:", mime_type);
 
-    const aiResponse = await fetch("https://ai.lovable.dev/api/generate", {
+    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
