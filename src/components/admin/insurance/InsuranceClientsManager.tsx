@@ -13,7 +13,8 @@ import {
 } from "@/components/ui/table";
 import {
   Search, Plus, Phone, Mail, Eye, Edit, Trash2,
-  Download, ChevronLeft, ChevronRight, User, X
+  Download, ChevronLeft, ChevronRight, User, X,
+  MessageSquare, Share2, PhoneCall
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format } from "date-fns";
@@ -208,6 +209,20 @@ export function InsuranceClientsManager() {
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-0.5">
+                            {displayPhone(c.phone) !== "—" && (
+                              <>
+                                <a href={`tel:${c.phone}`}>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" title="Call">
+                                    <PhoneCall className="h-3.5 w-3.5 text-green-600" />
+                                  </Button>
+                                </a>
+                                <a href={`https://wa.me/91${c.phone}`} target="_blank" rel="noopener noreferrer">
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" title="WhatsApp">
+                                    <MessageSquare className="h-3.5 w-3.5 text-green-600" />
+                                  </Button>
+                                </a>
+                              </>
+                            )}
                             <Button variant="ghost" size="icon" className="h-7 w-7" title="View" onClick={() => setViewClient(c)}>
                               <Eye className="h-3.5 w-3.5" />
                             </Button>
@@ -333,11 +348,21 @@ function QuickClientForm({ initial, onClose }: { initial: any; onClose: () => vo
 
 // ── Client Detail Dialog ──
 function ClientDetailDialog({ client, policies, onClose }: { client: any; policies: any[]; onClose: () => void }) {
-  const displayPhone = client.phone?.startsWith("IB_") ? "Not available" : client.phone;
+  const phone = client.phone?.startsWith("IB_") ? null : client.phone;
+
+  const shareClient = () => {
+    const text = `👤 Client: ${client.customer_name}\n📱 Mobile: ${phone || "N/A"}\n✉️ Email: ${client.email || "N/A"}\n🚗 Vehicle: ${client.vehicle_number || "N/A"}\n👨‍💼 Agent: ${client.advisor_name || "N/A"}\n📋 Policies: ${policies.length}\n\n— Grabyourcar Insurance`;
+    if (navigator.share) {
+      navigator.share({ title: `Client - ${client.customer_name}`, text }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(text);
+      toast.success("Copied!");
+    }
+  };
 
   return (
     <Dialog open onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <User className="h-5 w-5 text-primary" />
@@ -348,7 +373,7 @@ function ClientDetailDialog({ client, policies, onClose }: { client: any; polici
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div>
               <p className="text-muted-foreground text-xs">Mobile</p>
-              <p className="font-medium">{displayPhone}</p>
+              <p className="font-medium">{phone || "Not available"}</p>
             </div>
             <div>
               <p className="text-muted-foreground text-xs">Email</p>
@@ -362,6 +387,37 @@ function ClientDetailDialog({ client, policies, onClose }: { client: any; polici
               <p className="text-muted-foreground text-xs">Agent</p>
               <p className="font-medium">{client.advisor_name || "—"}</p>
             </div>
+          </div>
+
+          {/* Communication Hub */}
+          <div className="flex flex-wrap gap-2 py-2 border-y">
+            {phone && (
+              <>
+                <a href={`tel:${phone}`}>
+                  <Button size="sm" className="gap-1.5 bg-green-600 hover:bg-green-700 text-white">
+                    <PhoneCall className="h-3.5 w-3.5" /> Call
+                  </Button>
+                </a>
+                <a href={`https://wa.me/91${phone}`} target="_blank" rel="noopener noreferrer">
+                  <Button size="sm" variant="outline" className="gap-1.5">
+                    <MessageSquare className="h-3.5 w-3.5 text-green-600" /> WhatsApp
+                  </Button>
+                </a>
+                <a href={`sms:${phone}`}>
+                  <Button size="sm" variant="outline" className="gap-1.5">SMS</Button>
+                </a>
+              </>
+            )}
+            {client.email && (
+              <a href={`mailto:${client.email}`}>
+                <Button size="sm" variant="outline" className="gap-1.5">
+                  <Mail className="h-3.5 w-3.5" /> Email
+                </Button>
+              </a>
+            )}
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={shareClient}>
+              <Share2 className="h-3.5 w-3.5" /> Share
+            </Button>
           </div>
 
           {policies.length > 0 && (
