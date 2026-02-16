@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,12 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import {
   Users, FileText, AlertTriangle, Clock, Search,
   Download, ChevronLeft, ChevronRight, Phone, Mail,
   Share2, Bell, CalendarDays, ArrowRight, Copy, ExternalLink,
-  Shield, Car, TrendingUp, CheckCircle2, MessageSquare, PhoneCall
+  Shield, Car, TrendingUp, CheckCircle2, MessageSquare, PhoneCall,
+  Eye, Send
 } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -180,16 +182,36 @@ export function InsuranceCRMDashboard() {
     a.click();
   }, [filtered, now]);
 
-  const sharePolicy = (r: PolicyRow) => {
-    const text = `📋 Policy Details\n━━━━━━━━━━━━━━━━\n👤 Customer: ${r.customer_name}\n📄 Policy: ${r.policy_number || "N/A"}\n🏢 Insurer: ${r.insurer || "N/A"}\n🚗 Vehicle: ${r.vehicle_number || "N/A"}\n💰 Premium: ₹${r.premium?.toLocaleString("en-IN") || "N/A"}\n📅 Renewal: ${r.renewal_date ? format(new Date(r.renewal_date), "dd MMM yyyy") : "N/A"}\n📱 Mobile: ${r.phone || "N/A"}\n✉️ Email: ${r.email || "N/A"}\n👨‍💼 Agent: ${r.agent_name || "N/A"}`;
+  const [shareDialogPolicy, setShareDialogPolicy] = useState<PolicyRow | null>(null);
 
-    if (navigator.share) {
-      navigator.share({ title: `Policy - ${r.customer_name}`, text }).catch(() => {});
-    } else {
-      navigator.clipboard.writeText(text);
-      toast.success("Policy details copied to clipboard!");
-    }
+  const getPolicyText = (r: PolicyRow) => {
+    return `📋 *Policy Details*\n━━━━━━━━━━━━━━━━\n👤 Customer: ${r.customer_name}\n📄 Policy: ${r.policy_number || "N/A"}\n🏢 Insurer: ${r.insurer || "N/A"}\n🚗 Vehicle: ${r.vehicle_number || "N/A"}\n💰 Premium: ₹${r.premium?.toLocaleString("en-IN") || "N/A"}\n📅 Renewal: ${r.renewal_date ? format(new Date(r.renewal_date), "dd MMM yyyy") : "N/A"}\n⏳ Days Left: ${r.daysUntilRenewal !== null ? (r.daysUntilRenewal < 0 ? `Expired ${Math.abs(r.daysUntilRenewal)}d ago` : `${r.daysUntilRenewal} days`) : "N/A"}\n📱 Mobile: ${r.phone || "N/A"}\n✉️ Email: ${r.email || "N/A"}\n👨‍💼 Agent: ${r.agent_name || "N/A"}\n\n🔗 Powered by Grabyourcar Insurance`;
   };
+
+  const downloadPolicyPDF = useCallback((r: PolicyRow) => {
+    const text = getPolicyText(r).replace(/\*/g, "");
+    const blob = new Blob([text], { type: "text/plain" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `policy-${r.policy_number || r.customer_name}-${format(now, "yyyyMMdd")}.txt`;
+    a.click();
+    toast.success("Policy details downloaded!");
+  }, [now]);
+
+  const shareViaWhatsApp = useCallback((r: PolicyRow, phone: string) => {
+    const cleanPhone = phone.replace(/\D/g, "");
+    const fullPhone = cleanPhone.startsWith("91") ? cleanPhone : `91${cleanPhone}`;
+    const text = encodeURIComponent(getPolicyText(r));
+    window.open(`https://wa.me/${fullPhone}?text=${text}`, "_blank");
+    toast.success("Opening WhatsApp...");
+  }, []);
+
+  const shareViaEmail = useCallback((r: PolicyRow, email: string) => {
+    const subject = encodeURIComponent(`Policy Details - ${r.customer_name} | ${r.policy_number || "N/A"}`);
+    const body = encodeURIComponent(getPolicyText(r).replace(/\*/g, ""));
+    window.open(`mailto:${email}?subject=${subject}&body=${body}`);
+    toast.success("Opening email client...");
+  }, []);
 
   const getUrgencyColor = (days: number | null) => {
     if (days === null) return "text-muted-foreground";
@@ -382,7 +404,7 @@ export function InsuranceCRMDashboard() {
                                 </a>
                               )}
                               <Button variant="ghost" size="icon" className="h-7 w-7" title="Share"
-                                onClick={() => sharePolicy(r)}>
+                                onClick={() => setShareDialogPolicy(r)}>
                                 <Share2 className="h-3.5 w-3.5" />
                               </Button>
                               <Button variant="ghost" size="icon" className="h-7 w-7" title="View Details"
@@ -461,7 +483,7 @@ export function InsuranceCRMDashboard() {
                               </a>
                             )}
                             <Button variant="outline" size="icon" className="h-7 w-7" title="Share"
-                              onClick={() => sharePolicy(r)}>
+                              onClick={() => setShareDialogPolicy(r)}>
                               <Share2 className="h-3 w-3" />
                             </Button>
                           </div>
@@ -527,7 +549,7 @@ export function InsuranceCRMDashboard() {
                               </a>
                             )}
                             <Button variant="outline" size="sm" className="gap-1 h-7 text-xs"
-                              onClick={() => sharePolicy(r)}>
+                              onClick={() => setShareDialogPolicy(r)}>
                               <Share2 className="h-3 w-3" /> Share
                             </Button>
                             <Button variant="ghost" size="icon" className="h-7 w-7"
@@ -551,7 +573,17 @@ export function InsuranceCRMDashboard() {
         <PolicyDetailDialog
           policy={selectedPolicy}
           onClose={() => setSelectedPolicy(null)}
-          onShare={() => sharePolicy(selectedPolicy)}
+          onShare={() => setShareDialogPolicy(selectedPolicy)}
+        />
+      )}
+
+      {shareDialogPolicy && (
+        <SharePolicyDialog
+          policy={shareDialogPolicy}
+          onClose={() => setShareDialogPolicy(null)}
+          onDownload={downloadPolicyPDF}
+          onWhatsApp={shareViaWhatsApp}
+          onEmail={shareViaEmail}
         />
       )}
     </div>
@@ -678,6 +710,119 @@ function PolicyDetailDialog({
               <Copy className="h-3.5 w-3.5" /> Copy
             </Button>
           </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Share Policy Dialog ──
+function SharePolicyDialog({
+  policy, onClose, onDownload, onWhatsApp, onEmail
+}: {
+  policy: PolicyRow;
+  onClose: () => void;
+  onDownload: (r: PolicyRow) => void;
+  onWhatsApp: (r: PolicyRow, phone: string) => void;
+  onEmail: (r: PolicyRow, email: string) => void;
+}) {
+  const [whatsappNumber, setWhatsappNumber] = useState(policy.phone || "");
+  const [emailAddress, setEmailAddress] = useState(policy.email || "");
+
+  return (
+    <Dialog open onOpenChange={() => onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <Share2 className="h-5 w-5 text-primary" />
+            Share Policy — {policy.customer_name}
+          </DialogTitle>
+        </DialogHeader>
+
+        {/* Policy Preview Card */}
+        <div className="p-3 rounded-xl bg-muted/50 border text-xs space-y-1.5">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+            <div><span className="text-muted-foreground">Policy:</span> <span className="font-medium">{policy.policy_number || "N/A"}</span></div>
+            <div><span className="text-muted-foreground">Insurer:</span> <span className="font-medium">{policy.insurer || "N/A"}</span></div>
+            <div><span className="text-muted-foreground">Vehicle:</span> <span className="font-mono font-medium">{policy.vehicle_number || "N/A"}</span></div>
+            <div><span className="text-muted-foreground">Premium:</span> <span className="font-semibold">₹{policy.premium?.toLocaleString("en-IN") || "N/A"}</span></div>
+            <div><span className="text-muted-foreground">Renewal:</span> <span className="font-medium">{policy.renewal_date ? format(new Date(policy.renewal_date), "dd MMM yyyy") : "N/A"}</span></div>
+            <div><span className="text-muted-foreground">Agent:</span> <span className="font-medium">{policy.agent_name || "N/A"}</span></div>
+          </div>
+        </div>
+
+        {/* Share Options */}
+        <div className="space-y-4">
+          {/* 1. Download */}
+          <Button
+            variant="outline"
+            className="w-full gap-2 h-10 justify-start"
+            onClick={() => { onDownload(policy); onClose(); }}
+          >
+            <Download className="h-4 w-4 text-primary" />
+            <span className="font-medium">Download Policy Copy</span>
+          </Button>
+
+          {/* 2. WhatsApp */}
+          <div className="space-y-2">
+            <Label className="text-xs font-medium flex items-center gap-1.5">
+              <MessageSquare className="h-3.5 w-3.5 text-chart-2" /> Send via WhatsApp
+            </Label>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Enter WhatsApp number"
+                value={whatsappNumber}
+                onChange={e => setWhatsappNumber(e.target.value)}
+                className="h-9 text-sm"
+              />
+              <Button
+                size="sm"
+                className="gap-1.5 h-9 bg-chart-2 hover:bg-chart-2/90 text-white shrink-0"
+                disabled={!whatsappNumber.replace(/\D/g, "")}
+                onClick={() => { onWhatsApp(policy, whatsappNumber); onClose(); }}
+              >
+                <Send className="h-3.5 w-3.5" /> Send
+              </Button>
+            </div>
+          </div>
+
+          {/* 3. Email */}
+          <div className="space-y-2">
+            <Label className="text-xs font-medium flex items-center gap-1.5">
+              <Mail className="h-3.5 w-3.5 text-primary" /> Send via Email
+            </Label>
+            <div className="flex gap-2">
+              <Input
+                type="email"
+                placeholder="Enter email address"
+                value={emailAddress}
+                onChange={e => setEmailAddress(e.target.value)}
+                className="h-9 text-sm"
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5 h-9 shrink-0"
+                disabled={!emailAddress.includes("@")}
+                onClick={() => { onEmail(policy, emailAddress); onClose(); }}
+              >
+                <Send className="h-3.5 w-3.5" /> Send
+              </Button>
+            </div>
+          </div>
+
+          {/* Copy to clipboard */}
+          <Button
+            variant="ghost"
+            className="w-full gap-2 h-9 text-xs text-muted-foreground"
+            onClick={() => {
+              const text = `Policy: ${policy.policy_number}\nCustomer: ${policy.customer_name}\nInsurer: ${policy.insurer}\nVehicle: ${policy.vehicle_number}\nPremium: ₹${policy.premium?.toLocaleString("en-IN") || "N/A"}\nRenewal: ${policy.renewal_date ? format(new Date(policy.renewal_date), "dd MMM yyyy") : "N/A"}\nAgent: ${policy.agent_name}`;
+              navigator.clipboard.writeText(text);
+              toast.success("Copied to clipboard!");
+            }}
+          >
+            <Copy className="h-3.5 w-3.5" /> Copy to Clipboard
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
