@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AdminGlobalSearch } from "./AdminGlobalSearch";
+import { useAdminAuth, AppRole } from "@/hooks/useAdminAuth";
 
 interface AdminSidebarProps {
   activeTab: string;
@@ -49,22 +50,25 @@ interface NavItem {
   label: string;
   icon: React.ElementType;
   badge?: string;
-  children?: { id: string; label: string; icon: React.ElementType; badge?: string }[];
+  /** Roles that can see this item. Empty/undefined = all roles */
+  allowedRoles?: AppRole[];
+  children?: { id: string; label: string; icon: React.ElementType; badge?: string; allowedRoles?: AppRole[] }[];
 }
 
 const navItems: NavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "unified-crm", label: "🧠 Master CRM", icon: Users, badge: "New" },
-  { id: "journey-automation", label: "⚡ Journey Automation", icon: Sparkles, badge: "New" },
-  { id: "revenue-intelligence", label: "📊 Revenue Intelligence", icon: BarChart3, badge: "New" },
-  { id: "lead-scoring", label: "🤖 AI Lead Scoring", icon: Brain, badge: "AI" },
+  { id: "journey-automation", label: "⚡ Journey Automation", icon: Sparkles, badge: "New", allowedRoles: ["super_admin", "admin", "operations"] },
+  { id: "revenue-intelligence", label: "📊 Revenue Intelligence", icon: BarChart3, badge: "New", allowedRoles: ["super_admin", "admin", "finance"] },
+  { id: "lead-scoring", label: "🤖 AI Lead Scoring", icon: Brain, badge: "AI", allowedRoles: ["super_admin", "admin", "sales", "calling"] },
   { id: "client-management", label: "👤 Client Management", icon: UserCog, badge: "New" },
-  { id: "lead-import", label: "📥 Lead Import", icon: Database, badge: "New" },
-  { id: "data-export", label: "📤 Data Export", icon: FileText, badge: "New" },
+  { id: "lead-import", label: "📥 Lead Import", icon: Database, badge: "New", allowedRoles: ["super_admin", "admin", "operations", "calling"] },
+  { id: "data-export", label: "📤 Data Export", icon: FileText, badge: "New", allowedRoles: ["super_admin", "admin", "operations"] },
   { 
     id: "leads", 
     label: "Lead Management", 
     icon: Users,
+    allowedRoles: ["super_admin", "admin", "sales", "calling"],
     children: [
       { id: "leads-all", label: "All Leads", icon: Users },
       { id: "leads-hot", label: "Hot Leads", icon: Users, badge: "Hot" },
@@ -75,28 +79,30 @@ const navItems: NavItem[] = [
     id: "cars", 
     label: "Car Management", 
     icon: Car,
+    allowedRoles: ["super_admin", "admin", "sales", "operations"],
     children: [
       { id: "cars-list", label: "Cars & Details", icon: Car },
       { id: "cars-brands", label: "🏭 Brands Management", icon: Database, badge: "New" },
-      { id: "cars-ai-entry", label: "🚗 AI Car Entry", icon: Sparkles, badge: "New" },
-      { id: "cars-bulk-import", label: "📊 Bulk Import", icon: Database, badge: "New" },
-      { id: "cars-quick-import", label: "💬 Quick Text Import", icon: MessageSquare, badge: "New" },
+      { id: "cars-ai-entry", label: "🚗 AI Car Entry", icon: Sparkles, badge: "New", allowedRoles: ["super_admin", "admin"] },
+      { id: "cars-bulk-import", label: "📊 Bulk Import", icon: Database, badge: "New", allowedRoles: ["super_admin", "admin"] },
+      { id: "cars-quick-import", label: "💬 Quick Text Import", icon: MessageSquare, badge: "New", allowedRoles: ["super_admin", "admin"] },
       { id: "cars-city-pricing", label: "📍 State/City Pricing", icon: CreditCard, badge: "New" },
       { id: "cars-attributes", label: "🏷️ Vehicle Attributes", icon: Tags, badge: "New" },
       { id: "cars-colors", label: "Colors & Images", icon: Palette },
-      { id: "cars-image-sync", label: "🤖 AI Image Sync", icon: Sparkles, badge: "AI" },
+      { id: "cars-image-sync", label: "🤖 AI Image Sync", icon: Sparkles, badge: "AI", allowedRoles: ["super_admin", "admin"] },
       { id: "cars-images", label: "Gallery", icon: Image },
       { id: "cars-variants", label: "Variants & Specs", icon: Tags },
       { id: "cars-pricing", label: "Pricing & Breakup", icon: CreditCard },
-      { id: "cars-migration", label: "Data Migration", icon: Database },
-      { id: "cars-ai", label: "AI Enhancement", icon: Brain },
-      { id: "cars-url-scraper", label: "🌐 URL Scraper", icon: Globe, badge: "New" },
+      { id: "cars-migration", label: "Data Migration", icon: Database, allowedRoles: ["super_admin", "admin"] },
+      { id: "cars-ai", label: "AI Enhancement", icon: Brain, allowedRoles: ["super_admin", "admin"] },
+      { id: "cars-url-scraper", label: "🌐 URL Scraper", icon: Globe, badge: "New", allowedRoles: ["super_admin", "admin"] },
     ]
   },
   { 
     id: "website", 
     label: "Website Manager", 
     icon: Globe,
+    allowedRoles: ["super_admin", "admin", "marketing"],
     children: [
       { id: "website-homepage", label: "Homepage", icon: Home },
       { id: "website-content", label: "Header & Footer", icon: Menu },
@@ -111,6 +117,7 @@ const navItems: NavItem[] = [
     label: "Social Proof", 
     icon: Users,
     badge: "New",
+    allowedRoles: ["super_admin", "admin", "marketing"],
     children: [
       { id: "socialproof-reviews", label: "Google Reviews", icon: MessageSquare },
       { id: "socialproof-stories", label: "Delivery Stories", icon: Image },
@@ -121,22 +128,23 @@ const navItems: NavItem[] = [
     label: "Services", 
     icon: Wrench,
     children: [
-      { id: "services-hsrp", label: "HSRP & FASTag", icon: Shield },
-      { id: "services-rentals", label: "Self-Drive Rentals", icon: CalendarDays },
-      { id: "services-driver-bookings", label: "🚗 Driver Bookings", icon: Car, badge: "New" },
-      { id: "services-api-partners", label: "🔗 API Partners", icon: Globe, badge: "New" },
-      { id: "services-insurance", label: "🛡️ Insurance CRM", icon: FileText },
-      { id: "services-insurance-import", label: "📥 Insurance Import/Export", icon: Database },
-      { id: "services-loans", label: "Car Loans", icon: CreditCard },
-      { id: "services-discounts", label: "Discount Presets", icon: Tags, badge: "New" },
-      { id: "services-emi-pdf", label: "EMI PDF Settings", icon: FileText },
-      { id: "services-quote-generator", label: "Manual Quote", icon: FileSignature, badge: "New" },
+      { id: "services-hsrp", label: "HSRP & FASTag", icon: Shield, allowedRoles: ["super_admin", "admin", "operations"] },
+      { id: "services-rentals", label: "Self-Drive Rentals", icon: CalendarDays, allowedRoles: ["super_admin", "admin", "operations"] },
+      { id: "services-driver-bookings", label: "🚗 Driver Bookings", icon: Car, badge: "New", allowedRoles: ["super_admin", "admin", "operations"] },
+      { id: "services-api-partners", label: "🔗 API Partners", icon: Globe, badge: "New", allowedRoles: ["super_admin", "admin"] },
+      { id: "services-insurance", label: "🛡️ Insurance CRM", icon: FileText, allowedRoles: ["super_admin", "admin", "insurance"] },
+      { id: "services-insurance-import", label: "📥 Insurance Import/Export", icon: Database, allowedRoles: ["super_admin", "admin", "insurance"] },
+      { id: "services-loans", label: "Car Loans", icon: CreditCard, allowedRoles: ["super_admin", "admin", "finance"] },
+      { id: "services-discounts", label: "Discount Presets", icon: Tags, badge: "New", allowedRoles: ["super_admin", "admin", "sales"] },
+      { id: "services-emi-pdf", label: "EMI PDF Settings", icon: FileText, allowedRoles: ["super_admin", "admin", "finance"] },
+      { id: "services-quote-generator", label: "Manual Quote", icon: FileSignature, badge: "New", allowedRoles: ["super_admin", "admin", "sales"] },
     ]
   },
   { 
     id: "ecommerce", 
     label: "E-Commerce", 
     icon: Package,
+    allowedRoles: ["super_admin", "admin", "operations"],
     children: [
       { id: "ecommerce-accessories", label: "Accessories", icon: Package },
       { id: "ecommerce-orders", label: "Orders", icon: FileText },
@@ -147,6 +155,7 @@ const navItems: NavItem[] = [
     id: "content", 
     label: "Content", 
     icon: FileText,
+    allowedRoles: ["super_admin", "admin", "marketing"],
     children: [
       { id: "content-blog", label: "Blog Posts", icon: FileText },
       { id: "content-news", label: "Auto News", icon: Newspaper },
@@ -160,6 +169,7 @@ const navItems: NavItem[] = [
     label: "Marketing", 
     icon: Users,
     badge: "New",
+    allowedRoles: ["super_admin", "admin", "marketing"],
     children: [
       { id: "marketing-templates", label: "📱 WhatsApp Templates", icon: MessageSquare, badge: "New" },
       { id: "marketing-automation", label: "📧 Email Automation", icon: Mail, badge: "New" },
@@ -171,6 +181,7 @@ const navItems: NavItem[] = [
     id: "integrations", 
     label: "Integrations", 
     icon: Settings,
+    allowedRoles: ["super_admin", "admin"],
     children: [
       { id: "integrations-api", label: "API Portal", icon: Database },
       { id: "integrations-whatsapp", label: "WhatsApp API", icon: MessageSquare },
@@ -184,6 +195,7 @@ const navItems: NavItem[] = [
     label: "Profile & Settings", 
     icon: UserCog,
     badge: "New",
+    allowedRoles: ["super_admin", "admin"],
     children: [
       { id: "profile-business", label: "Business Profile", icon: Settings },
       { id: "profile-logo", label: "Logo & Branding", icon: Palette },
@@ -192,16 +204,41 @@ const navItems: NavItem[] = [
       { id: "profile-otp", label: "OTP & Verification", icon: Shield },
     ]
   },
-  { id: "roles", label: "User Roles", icon: UserCog },
-  { id: "settings", label: "Settings", icon: Settings },
+  { id: "roles", label: "User Roles", icon: UserCog, allowedRoles: ["super_admin", "admin"] },
+  { id: "settings", label: "Settings", icon: Settings, allowedRoles: ["super_admin", "admin"] },
 ];
 
 export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => {
+  const { roles, isAdmin, isSuperAdmin } = useAdminAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [openSections, setOpenSections] = useState<string[]>(["cars", "website"]);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
+
+  // Determine user's role set
+  const userRoles = useMemo(() => roles.map(r => r.role), [roles]);
+  const hasFullAccess = userRoles.length === 0 || isSuperAdmin() || isAdmin();
+
+  // Filter nav items based on role
+  const filteredNavItems = useMemo(() => {
+    if (hasFullAccess) return navItems;
+
+    return navItems
+      .filter(item => {
+        if (!item.allowedRoles) return true;
+        return item.allowedRoles.some(r => userRoles.includes(r));
+      })
+      .map(item => {
+        if (!item.children) return item;
+        const filteredChildren = item.children.filter(child => {
+          if (!child.allowedRoles) return true;
+          return child.allowedRoles.some(r => userRoles.includes(r));
+        });
+        return filteredChildren.length > 0 ? { ...item, children: filteredChildren } : null;
+      })
+      .filter(Boolean) as NavItem[];
+  }, [hasFullAccess, userRoles]);
 
   // Handle responsive breakpoints
   useEffect(() => {
@@ -415,7 +452,7 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
           {/* Navigation */}
           <ScrollArea className="flex-1 px-2 py-3">
             <nav className="space-y-1">
-              {navItems.map(renderNavItem)}
+              {filteredNavItems.map(renderNavItem)}
             </nav>
           </ScrollArea>
 
