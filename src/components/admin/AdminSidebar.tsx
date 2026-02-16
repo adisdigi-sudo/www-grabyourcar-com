@@ -58,6 +58,9 @@ const navItems: NavItem[] = [
   { id: "journey-automation", label: "⚡ Journey Automation", icon: Sparkles, badge: "New" },
   { id: "revenue-intelligence", label: "📊 Revenue Intelligence", icon: BarChart3, badge: "New" },
   { id: "lead-scoring", label: "🤖 AI Lead Scoring", icon: Brain, badge: "AI" },
+  { id: "client-management", label: "👤 Client Management", icon: UserCog, badge: "New" },
+  { id: "lead-import", label: "📥 Lead Import", icon: Database, badge: "New" },
+  { id: "data-export", label: "📤 Data Export", icon: FileText, badge: "New" },
   { 
     id: "leads", 
     label: "Lead Management", 

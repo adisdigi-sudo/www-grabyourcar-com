@@ -1503,6 +1503,158 @@ export type Database = {
         }
         Relationships: []
       }
+      client_interactions: {
+        Row: {
+          client_id: string
+          created_at: string
+          details: Json | null
+          id: string
+          interaction_type: string
+          performed_by: string | null
+          summary: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          interaction_type: string
+          performed_by?: string | null
+          summary?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          interaction_type?: string
+          performed_by?: string | null
+          summary?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_interactions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_profiles: {
+        Row: {
+          address: string | null
+          assigned_to: string | null
+          car_brand: string | null
+          car_model: string | null
+          car_variant: string | null
+          chassis_number: string | null
+          city: string | null
+          created_at: string
+          customer_name: string
+          date_of_birth: string | null
+          delivery_date: string | null
+          email: string | null
+          external_portal: string | null
+          external_portal_id: string | null
+          external_portal_url: string | null
+          id: string
+          insurance_expiry: string | null
+          insurance_policy_number: string | null
+          insurance_premium: number | null
+          insurance_provider: string | null
+          insurebook_ref_id: string | null
+          last_interaction_at: string | null
+          lifecycle_stage: string
+          lifetime_value: number | null
+          next_follow_up_at: string | null
+          notes: string | null
+          phone: string
+          purchase_date: string | null
+          satisfaction_score: number | null
+          source: string | null
+          state: string | null
+          tags: string[] | null
+          total_spend: number | null
+          updated_at: string
+          vehicle_number: string | null
+        }
+        Insert: {
+          address?: string | null
+          assigned_to?: string | null
+          car_brand?: string | null
+          car_model?: string | null
+          car_variant?: string | null
+          chassis_number?: string | null
+          city?: string | null
+          created_at?: string
+          customer_name: string
+          date_of_birth?: string | null
+          delivery_date?: string | null
+          email?: string | null
+          external_portal?: string | null
+          external_portal_id?: string | null
+          external_portal_url?: string | null
+          id?: string
+          insurance_expiry?: string | null
+          insurance_policy_number?: string | null
+          insurance_premium?: number | null
+          insurance_provider?: string | null
+          insurebook_ref_id?: string | null
+          last_interaction_at?: string | null
+          lifecycle_stage?: string
+          lifetime_value?: number | null
+          next_follow_up_at?: string | null
+          notes?: string | null
+          phone: string
+          purchase_date?: string | null
+          satisfaction_score?: number | null
+          source?: string | null
+          state?: string | null
+          tags?: string[] | null
+          total_spend?: number | null
+          updated_at?: string
+          vehicle_number?: string | null
+        }
+        Update: {
+          address?: string | null
+          assigned_to?: string | null
+          car_brand?: string | null
+          car_model?: string | null
+          car_variant?: string | null
+          chassis_number?: string | null
+          city?: string | null
+          created_at?: string
+          customer_name?: string
+          date_of_birth?: string | null
+          delivery_date?: string | null
+          email?: string | null
+          external_portal?: string | null
+          external_portal_id?: string | null
+          external_portal_url?: string | null
+          id?: string
+          insurance_expiry?: string | null
+          insurance_policy_number?: string | null
+          insurance_premium?: number | null
+          insurance_provider?: string | null
+          insurebook_ref_id?: string | null
+          last_interaction_at?: string | null
+          lifecycle_stage?: string
+          lifetime_value?: number | null
+          next_follow_up_at?: string | null
+          notes?: string | null
+          phone?: string
+          purchase_date?: string | null
+          satisfaction_score?: number | null
+          source?: string | null
+          state?: string | null
+          tags?: string[] | null
+          total_spend?: number | null
+          updated_at?: string
+          vehicle_number?: string | null
+        }
+        Relationships: []
+      }
       corporate_clients: {
         Row: {
           company_name: string
@@ -2540,6 +2692,56 @@ export type Database = {
           sort_order?: number | null
         }
         Relationships: []
+      }
+      follow_up_reminders: {
+        Row: {
+          assigned_to: string | null
+          auto_send: boolean | null
+          client_id: string | null
+          completed_at: string | null
+          created_at: string
+          id: string
+          lead_id: string | null
+          notes: string | null
+          reminder_type: string
+          scheduled_at: string
+          status: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          auto_send?: boolean | null
+          client_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          lead_id?: string | null
+          notes?: string | null
+          reminder_type: string
+          scheduled_at: string
+          status?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          auto_send?: boolean | null
+          client_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          lead_id?: string | null
+          notes?: string | null
+          reminder_type?: string
+          scheduled_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "follow_up_reminders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       google_reviews: {
         Row: {
@@ -4339,6 +4541,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      lead_imports: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          errors: Json | null
+          failed: number | null
+          field_mapping: Json | null
+          file_name: string | null
+          id: string
+          import_type: string
+          imported: number | null
+          imported_by: string | null
+          skipped: number | null
+          source_name: string | null
+          status: string
+          total_rows: number | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          errors?: Json | null
+          failed?: number | null
+          field_mapping?: Json | null
+          file_name?: string | null
+          id?: string
+          import_type: string
+          imported?: number | null
+          imported_by?: string | null
+          skipped?: number | null
+          source_name?: string | null
+          status?: string
+          total_rows?: number | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          errors?: Json | null
+          failed?: number | null
+          field_mapping?: Json | null
+          file_name?: string | null
+          id?: string
+          import_type?: string
+          imported?: number | null
+          imported_by?: string | null
+          skipped?: number | null
+          source_name?: string | null
+          status?: string
+          total_rows?: number | null
+        }
+        Relationships: []
       }
       lead_scores: {
         Row: {
