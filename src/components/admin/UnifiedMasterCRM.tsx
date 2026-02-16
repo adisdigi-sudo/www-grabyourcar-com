@@ -41,14 +41,17 @@ import { InsuranceAddonsAdmin } from "./insurance/InsuranceAddonsAdmin";
 import { InsuranceScraperAdmin } from "./insurance/InsuranceScraperAdmin";
 import { InsuranceLeadsAdmin } from "./insurance/InsuranceLeadsAdmin";
 
-type Vertical = "overview" | "insurance" | "car-sales" | "loans" | "accessories";
+type Vertical = "overview" | "insurance" | "car-sales" | "loans" | "accessories" | "hsrp" | "rentals" | "fleet";
 
 const VERTICALS = [
   { id: "overview" as Vertical, label: "Overview", icon: LayoutDashboard, color: "text-primary" },
-  { id: "insurance" as Vertical, label: "Insurance", icon: Shield, color: "text-green-600", ready: true },
+  { id: "insurance" as Vertical, label: "Car Insurance", icon: Shield, color: "text-green-600", ready: true },
   { id: "car-sales" as Vertical, label: "Car Sales", icon: Car, color: "text-blue-600", ready: false },
-  { id: "loans" as Vertical, label: "Loans", icon: Banknote, color: "text-purple-600", ready: false },
+  { id: "loans" as Vertical, label: "Car Loans", icon: Banknote, color: "text-purple-600", ready: false },
   { id: "accessories" as Vertical, label: "Accessories", icon: ShoppingBag, color: "text-orange-600", ready: false },
+  { id: "hsrp" as Vertical, label: "HSRP & FASTag", icon: FileText, color: "text-teal-600", ready: false },
+  { id: "rentals" as Vertical, label: "Self-Drive Rental", icon: Car, color: "text-cyan-600", ready: false },
+  { id: "fleet" as Vertical, label: "Fleet Business", icon: Users, color: "text-indigo-600", ready: false },
 ];
 
 export function UnifiedMasterCRM() {
@@ -110,8 +113,11 @@ export function UnifiedMasterCRM() {
       {vertical === "overview" && <OverviewDashboard stats={stats} onSelectVertical={setVertical} />}
       {vertical === "insurance" && <InsuranceVerticalWorkspace />}
       {vertical === "car-sales" && <ComingSoonVertical name="Car Sales" icon={Car} color="text-blue-600" />}
-      {vertical === "loans" && <ComingSoonVertical name="Loans" icon={Banknote} color="text-purple-600" />}
+      {vertical === "loans" && <ComingSoonVertical name="Car Loans" icon={Banknote} color="text-purple-600" />}
       {vertical === "accessories" && <ComingSoonVertical name="Accessories" icon={ShoppingBag} color="text-orange-600" />}
+      {vertical === "hsrp" && <ComingSoonVertical name="HSRP & FASTag" icon={FileText} color="text-teal-600" />}
+      {vertical === "rentals" && <ComingSoonVertical name="Self-Drive Rental" icon={Car} color="text-cyan-600" />}
+      {vertical === "fleet" && <ComingSoonVertical name="Fleet Business" icon={Users} color="text-indigo-600" />}
     </div>
   );
 }
@@ -121,8 +127,8 @@ function OverviewDashboard({ stats, onSelectVertical }: { stats: any; onSelectVe
   const verticalCards = [
     {
       id: "insurance" as Vertical,
-      title: "🛡️ Insurance CRM",
-      desc: "Full lifecycle management — clients, policies, renewals, commissions, automation",
+      title: "🛡️ Car Insurance CRM",
+      desc: "Motor insurance lifecycle — clients, policies, renewals, commissions, automation",
       stats: `${stats?.insurance || 0} clients`,
       features: ["Client Management", "Policy Tracking", "Renewal Engine", "WhatsApp Automation", "Import/Export", "Commission Tracking", "AI Extractor", "Reports"],
       color: "border-green-200 dark:border-green-900",
@@ -155,6 +161,33 @@ function OverviewDashboard({ stats, onSelectVertical }: { stats: any; onSelectVe
       color: "border-orange-200 dark:border-orange-900",
       ready: false,
     },
+    {
+      id: "hsrp" as Vertical,
+      title: "🔢 HSRP & FASTag",
+      desc: "HSRP plate registrations, FASTag issuance, tracking",
+      stats: "—",
+      features: ["HSRP Orders", "FASTag Issuance", "Status Tracking", "Bulk Processing"],
+      color: "border-teal-200 dark:border-teal-900",
+      ready: false,
+    },
+    {
+      id: "rentals" as Vertical,
+      title: "🚗 Self-Drive Rental",
+      desc: "Fleet availability, bookings, returns, maintenance",
+      stats: "—",
+      features: ["Fleet Management", "Booking Engine", "Returns", "Maintenance Log"],
+      color: "border-cyan-200 dark:border-cyan-900",
+      ready: false,
+    },
+    {
+      id: "fleet" as Vertical,
+      title: "🏢 Fleet Business",
+      desc: "Corporate fleet, bulk deals, contract management",
+      stats: "—",
+      features: ["Corporate Clients", "Bulk Pricing", "Contract Mgmt", "Fleet Insurance"],
+      color: "border-indigo-200 dark:border-indigo-900",
+      ready: false,
+    },
   ];
 
   return (
@@ -178,7 +211,7 @@ function OverviewDashboard({ stats, onSelectVertical }: { stats: any; onSelectVe
       </div>
 
       {/* Vertical Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {verticalCards.map(v => (
           <Card key={v.id} className={`${v.color} hover:shadow-md transition-shadow cursor-pointer`} onClick={() => v.ready && onSelectVertical(v.id)}>
             <CardHeader className="pb-2">
@@ -286,8 +319,8 @@ function InsuranceVerticalWorkspace() {
                 <Shield className="h-5 w-5 text-green-600" />
               </div>
               <div>
-                <h2 className="font-bold text-lg">Insurance Vertical</h2>
-                <p className="text-xs text-muted-foreground">Full CRM with 25+ modules — Calling, Sales, Operations teams</p>
+                <h2 className="font-bold text-lg">Car Insurance Vertical</h2>
+                <p className="text-xs text-muted-foreground">Motor insurance CRM with 25+ modules — Calling, Sales, Operations teams</p>
               </div>
             </div>
             <Badge className="bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300 border-0">
