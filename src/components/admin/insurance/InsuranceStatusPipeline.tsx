@@ -220,21 +220,43 @@ export function InsuranceStatusPipeline() {
     }
   };
 
-  const requestPolicyViaWhatsApp = (client: Client) => {
+  const getWhatsAppPhone = (client: Client) => {
     const phone = client.phone?.startsWith("IB_") ? "" : client.phone;
-    if (!phone) { toast.error("No phone number available"); return; }
-    const cleanPhone = phone.replace(/\D/g, "");
-    const fullPhone = cleanPhone.startsWith("91") ? cleanPhone : `91${cleanPhone}`;
+    if (!phone) return null;
+    const clean = phone.replace(/\D/g, "");
+    return clean.startsWith("91") ? clean : `91${clean}`;
+  };
+
+  const requestPolicyViaWhatsApp = (client: Client) => {
+    const fullPhone = getWhatsAppPhone(client);
+    if (!fullPhone) { toast.error("No phone number available"); return; }
     const message = encodeURIComponent(
       `🙏 Namaste ${client.customer_name || "Sir/Madam"},\n\nThis is *Grabyourcar Insurance* team.\n\nWe need your current motor insurance policy document for ${client.vehicle_number ? `vehicle *${client.vehicle_number}*` : "your vehicle"} to prepare the best renewal quote.\n\n📎 Please share:\n1️⃣ Current Policy PDF/Photo\n2️⃣ RC Copy (if available)\n\nYou can simply *reply to this message* with the documents.\n\nThank you! 🚗\n— *Grabyourcar Insurance*`
     );
     window.open(`https://wa.me/${fullPhone}?text=${message}`, "_blank");
     toast.success("📱 WhatsApp opened to request documents!");
     supabase.from("insurance_activity_log").insert({
-      client_id: client.id,
-      activity_type: "whatsapp_sent",
+      client_id: client.id, activity_type: "whatsapp_sent",
       title: "Policy document requested via WhatsApp",
-      description: `Document request sent to ${phone}`,
+      description: `Document request sent to ${client.phone}`,
+    } as any);
+  };
+
+  const sendRenewalReminderWhatsApp = (client: Client) => {
+    const fullPhone = getWhatsAppPhone(client);
+    if (!fullPhone) { toast.error("No phone number available"); return; }
+    const expiryInfo = client.current_premium
+      ? `\n💰 Last Premium: ₹${client.current_premium.toLocaleString("en-IN")}`
+      : "";
+    const message = encodeURIComponent(
+      `🔔 *Insurance Renewal Reminder*\n━━━━━━━━━━━━━━━━\n\nDear *${client.customer_name || "Sir/Madam"}*,\n\nYour motor insurance for ${client.vehicle_number ? `vehicle *${client.vehicle_number}*` : "your vehicle"} is due for renewal.${expiryInfo}\n${client.current_insurer ? `🏢 Current Insurer: ${client.current_insurer}` : ""}\n\n⚡ *Why renew with Grabyourcar?*\n✅ Best quotes from 20+ insurers\n✅ Instant policy issuance\n✅ Dedicated claims support\n✅ Up to 70% discount on premium\n\n📞 Reply *RENEW* or call us to get your best quote today!\n\n— *Grabyourcar Insurance* 🚗`
+    );
+    window.open(`https://wa.me/${fullPhone}?text=${message}`, "_blank");
+    toast.success("📱 Renewal reminder sent via WhatsApp!");
+    supabase.from("insurance_activity_log").insert({
+      client_id: client.id, activity_type: "whatsapp_sent",
+      title: "Renewal reminder sent via WhatsApp",
+      description: `Renewal reminder sent to ${client.phone}`,
     } as any);
   };
 
@@ -493,9 +515,14 @@ export function InsuranceStatusPipeline() {
                 <Button size="sm" variant="outline" className="gap-1.5" onClick={() => shareClientDetails(selectedClient)}>
                   <Share2 className="h-3.5 w-3.5" /> Share
                 </Button>
-                <Button size="sm" className="gap-1.5 bg-primary/90 hover:bg-primary text-primary-foreground ml-auto" onClick={() => requestPolicyViaWhatsApp(selectedClient)}>
-                  <Upload className="h-3.5 w-3.5" /> Request Policy Doc
-                </Button>
+                <div className="ml-auto flex gap-1.5">
+                  <Button size="sm" variant="outline" className="gap-1.5 border-green-300 text-green-700 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-950" onClick={() => requestPolicyViaWhatsApp(selectedClient)}>
+                    <Upload className="h-3.5 w-3.5" /> Policy Share
+                  </Button>
+                  <Button size="sm" className="gap-1.5 bg-amber-600 hover:bg-amber-700 text-white" onClick={() => sendRenewalReminderWhatsApp(selectedClient)}>
+                    <Clock className="h-3.5 w-3.5" /> Renewal Reminder
+                  </Button>
+                </div>
               </div>
 
               {/* Tabs: Journey / Policies / Notes */}
