@@ -44,9 +44,14 @@ type PolicyRow = {
   premium: number | null;
   status: string | null;
   policy_type: string | null;
+  plan_name: string | null;
+  product_type: string | null;
+  vehicle_make: string | null;
+  vehicle_model: string | null;
   daysUntilRenewal: number | null;
   lead_status: string | null;
   lead_source: string | null;
+  created_at: string | null;
 };
 
 const LEAD_STATUS_OPTIONS = [
@@ -83,7 +88,7 @@ export function InsuranceCRMDashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("insurance_clients")
-        .select("id, customer_name, phone, email, vehicle_number, advisor_name, lead_status, lead_source")
+        .select("id, customer_name, phone, email, vehicle_number, vehicle_make, vehicle_model, advisor_name, lead_status, lead_source")
         .order("created_at", { ascending: false })
         .limit(1000);
       if (error) throw error;
@@ -96,8 +101,8 @@ export function InsuranceCRMDashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("insurance_policies")
-        .select("id, client_id, policy_number, insurer, premium_amount, expiry_date, status, start_date, policy_type")
-        .order("expiry_date", { ascending: true });
+        .select("id, client_id, policy_number, insurer, premium_amount, expiry_date, status, start_date, policy_type, plan_name, created_at")
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -141,12 +146,17 @@ export function InsuranceCRMDashboard() {
         rawPhone: rawPhone,
         email: c?.email || null,
         vehicle_number: c?.vehicle_number || null,
+        vehicle_make: c?.vehicle_make || null,
+        vehicle_model: c?.vehicle_model || null,
         premium: p.premium_amount ? Number(p.premium_amount) : null,
         status: p.status,
         policy_type: p.policy_type,
+        plan_name: p.plan_name || null,
+        product_type: c?.vehicle_make ? (c.vehicle_model?.toLowerCase().includes("activa") || c.vehicle_model?.toLowerCase().includes("splendor") || c.vehicle_model?.toLowerCase().includes("passion") || c.vehicle_model?.toLowerCase().includes("meteor") ? "Two Wheeler" : "Car") : null,
         daysUntilRenewal: daysUntil,
         lead_status: c?.lead_status || null,
         lead_source: c?.lead_source || null,
+        created_at: p.created_at || null,
       };
     });
   }, [clients, policies, now]);
@@ -429,138 +439,137 @@ export function InsuranceCRMDashboard() {
           )}
         </div>
 
-        {/* All Policies Tab */}
+        {/* All Policies Tab - PBPartners Style Card List */}
         <TabsContent value="policies" className="mt-4">
           <Card className="border shadow-sm">
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/40">
-                      <TableHead className="w-10 text-xs">#</TableHead>
-                      <TableHead className="text-xs">Policy Number</TableHead>
-                      <TableHead className="text-xs">Customer</TableHead>
-                      <TableHead className="text-xs">Agent</TableHead>
-                      <TableHead className="text-xs">Insurer</TableHead>
-                      <TableHead className="text-xs">Renewal</TableHead>
-                      <TableHead className="text-xs">Days</TableHead>
-                      <TableHead className="text-xs">Mobile</TableHead>
-                      <TableHead className="text-xs">Vehicle</TableHead>
-                      <TableHead className="text-xs text-right">Premium</TableHead>
-                      <TableHead className="text-xs">Status</TableHead>
-                      <TableHead className="text-xs w-28">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paged.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={12} className="text-center text-muted-foreground py-12">
-                          {filter !== "all" || statusFilterVal !== "all" ? "No policies match this filter" : "No policies found"}
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      paged.map((r, i) => (
-                        <TableRow key={r.id} className="hover:bg-muted/20 transition-colors">
-                          <TableCell className="text-xs text-muted-foreground">{page * pageSize + i + 1}</TableCell>
-                          <TableCell className="font-mono text-xs font-medium">{r.policy_number || "—"}</TableCell>
-                          <TableCell className="font-medium text-sm max-w-[140px] truncate">{r.customer_name}</TableCell>
-                          <TableCell className="text-xs text-muted-foreground max-w-[100px] truncate">{r.agent_name}</TableCell>
-                          <TableCell className="text-xs max-w-[120px] truncate">{r.insurer || "—"}</TableCell>
-                          <TableCell>
-                            {r.renewal_date ? (
-                              <span className="text-xs">{format(new Date(r.renewal_date), "dd MMM yy")}</span>
-                            ) : "—"}
-                          </TableCell>
-                          <TableCell>
-                            <span className={`text-xs font-semibold ${getUrgencyColor(r.daysUntilRenewal)}`}>
-                              {r.daysUntilRenewal !== null ? (r.daysUntilRenewal < 0 ? `${r.daysUntilRenewal}d` : `${r.daysUntilRenewal}d`) : "—"}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            {r.phone ? (
-                              <a href={`tel:${r.phone}`} className="text-xs text-primary hover:underline">{r.phone}</a>
-                            ) : <span className="text-xs text-muted-foreground">—</span>}
-                          </TableCell>
-                          <TableCell>
-                            {r.vehicle_number ? (
-                              <span className="font-mono text-[10px] bg-muted/60 px-1.5 py-0.5 rounded">{r.vehicle_number}</span>
-                            ) : <span className="text-xs text-muted-foreground">—</span>}
-                          </TableCell>
-                          <TableCell className="text-right font-semibold text-xs">
-                            {r.premium ? `₹${r.premium.toLocaleString("en-IN")}` : "—"}
-                          </TableCell>
-                          <TableCell>
+              <div className="divide-y">
+                {paged.length === 0 ? (
+                  <div className="text-center text-muted-foreground py-12">
+                    {filter !== "all" || statusFilterVal !== "all" ? "No policies match this filter" : "No policies found"}
+                  </div>
+                ) : (
+                  paged.map((r) => {
+                    const statusLabel = r.status === "active" ? "Sale Complete" : r.status === "cancelled" ? "Rejected(Post Issuance)" : r.status || "—";
+                    const statusColor = r.status === "active"
+                      ? "bg-emerald-100 text-emerald-700 border-emerald-200"
+                      : r.status === "cancelled"
+                        ? "bg-red-100 text-red-700 border-red-200"
+                        : "bg-muted text-muted-foreground";
+
+                    return (
+                      <div key={r.id} className="px-5 py-4 hover:bg-muted/30 transition-colors group">
+                        {/* Row 1: Customer Name + Status + Created Date */}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-2.5 flex-wrap min-w-0">
+                            <h4 className="font-bold text-sm text-foreground tracking-tight">{r.customer_name}</h4>
+                            <Badge variant="outline" className={`text-[10px] px-2 py-0.5 border font-semibold ${statusColor}`}>
+                              {statusLabel}
+                            </Badge>
+                            {r.policy_type?.toLowerCase().includes("renewal") || r.start_date ? null : null}
+                            {getStatusBadge(r.lead_status)}
+                          </div>
+                          <p className="text-xs text-muted-foreground shrink-0 whitespace-nowrap">
+                            Created On - {r.created_at ? format(new Date(r.created_at), "yyyy-MM-dd HH:mm:ss") : r.start_date ? format(new Date(r.start_date), "yyyy-MM-dd") : "—"}
+                          </p>
+                        </div>
+
+                        {/* Row 2: Insurer • Policy • Agent • Product(Plan) • More Info */}
+                        <div className="mt-1 flex flex-wrap items-center gap-x-1 text-xs text-muted-foreground leading-relaxed">
+                          <span>{r.insurer || "—"}</span>
+                          <span className="text-muted-foreground/30 mx-0.5">•</span>
+                          <span>Policy: {r.policy_number || "N/A"}</span>
+                          <span className="text-muted-foreground/30 mx-0.5">•</span>
+                          <span>Booked by {r.agent_name || "—"}</span>
+                          <span className="text-muted-foreground/30 mx-0.5">•</span>
+                          <span>{r.product_type || "Car"}({r.plan_name || r.policy_type || "—"})</span>
+                          <button
+                            onClick={() => setSelectedPolicy(r)}
+                            className="text-primary hover:underline font-medium ml-1"
+                          >
+                            More Info
+                          </button>
+                        </div>
+
+                        {/* Row 3: Vehicle + Premium + Expiry + Actions */}
+                        <div className="mt-2 flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3 text-xs flex-wrap">
+                            {r.vehicle_number && (
+                              <span className="flex items-center gap-1 font-mono bg-muted/60 px-1.5 py-0.5 rounded text-[10px]">
+                                <Car className="h-3 w-3" /> {r.vehicle_number}
+                              </span>
+                            )}
+                            {r.vehicle_make && r.vehicle_model && (
+                              <span className="text-muted-foreground">{r.vehicle_make} {r.vehicle_model}</span>
+                            )}
+                            <span className="font-semibold text-foreground">₹{r.premium?.toLocaleString("en-IN") || "—"}</span>
+                            {r.renewal_date && (
+                              <span className={`font-medium ${getUrgencyColor(r.daysUntilRenewal)}`}>
+                                Expiry: {format(new Date(r.renewal_date), "dd MMM yyyy")}
+                                {r.daysUntilRenewal !== null && ` (${getUrgencyLabel(r.daysUntilRenewal)})`}
+                              </span>
+                            )}
+                            {!r.renewal_date && (
+                              <span className="text-amber-600 text-[10px] italic">Expiry: Not set</span>
+                            )}
+                          </div>
+
+                          <div className="flex gap-1 shrink-0 opacity-60 group-hover:opacity-100 transition-opacity">
+                            {r.phone && (
+                              <a href={`tel:${r.phone}`} onClick={e => e.stopPropagation()}>
+                                <Button size="icon" className="h-7 w-7 bg-emerald-600 hover:bg-emerald-700 text-white" title="Call">
+                                  <PhoneCall className="h-3.5 w-3.5" />
+                                </Button>
+                              </a>
+                            )}
+                            {r.phone && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button size="sm" className="h-7 gap-1 text-xs px-2 bg-emerald-600 hover:bg-emerald-700 text-white" title="Remind">
+                                    <Send className="h-3 w-3" /> Remind
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-52">
+                                  <DropdownMenuItem onClick={() => openReminderPreview(r, "notice")} className="cursor-pointer gap-2">
+                                    <Bell className="h-3.5 w-3.5" /> Renewal Notice
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => openReminderPreview(r, "quote")} className="cursor-pointer gap-2">
+                                    <FileText className="h-3.5 w-3.5" /> Renewal Quote
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-6 px-1.5 gap-1 text-[10px]">
+                                <Button variant="ghost" size="sm" className="h-7 px-1.5 gap-1 text-[10px]">
                                   {getStatusBadge(r.lead_status) || <Badge variant="outline" className="text-[10px] px-1.5 py-0">Mark</Badge>}
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="min-w-[120px]">
                                 {LEAD_STATUS_OPTIONS.map(opt => (
-                                  <DropdownMenuItem
-                                    key={opt.value}
-                                    onClick={() => markStatus.mutate({ clientId: r.client_id, status: opt.value })}
-                                    className="text-xs gap-2"
-                                  >
-                                    <opt.icon className="h-3 w-3" />
-                                    {opt.label}
+                                  <DropdownMenuItem key={opt.value} onClick={() => markStatus.mutate({ clientId: r.client_id, status: opt.value })} className="text-xs gap-2">
+                                    <opt.icon className="h-3 w-3" /> {opt.label}
                                   </DropdownMenuItem>
                                 ))}
                               </DropdownMenuContent>
                             </DropdownMenu>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-0.5">
-                              {r.phone && (
-                                <a href={`tel:${r.phone}`}>
-                                  <Button size="icon" className="h-7 w-7 bg-emerald-600 hover:bg-emerald-700 text-white" title="Call Now">
-                                    <PhoneCall className="h-3.5 w-3.5" />
-                                  </Button>
-                                </a>
-                              )}
-                              {r.phone && (
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button size="sm" className="h-7 gap-1 text-xs px-2 bg-emerald-600 hover:bg-emerald-700 text-white" title="Send Reminder">
-                                      <Send className="h-3 w-3" /> Remind
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end" className="w-52">
-                                    <div className="px-2 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400">📲 WhatsApp Templates</div>
-                                    <DropdownMenuItem onClick={() => openReminderPreview(r, "notice")} className="cursor-pointer gap-2">
-                                      <Bell className="h-3.5 w-3.5 text-emerald-600" />
-                                      <div>
-                                        <p className="text-xs font-medium">Renewal Notice</p>
-                                        <p className="text-[10px] text-muted-foreground">Urgency reminder with countdown</p>
-                                      </div>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => openReminderPreview(r, "quote")} className="cursor-pointer gap-2">
-                                      <FileText className="h-3.5 w-3.5 text-emerald-600" />
-                                      <div>
-                                        <p className="text-xs font-medium">Renewal Quote</p>
-                                        <p className="text-[10px] text-muted-foreground">Premium details with benefits</p>
-                                      </div>
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              )}
-                              <Button variant="ghost" size="icon" className="h-7 w-7" title="Share"
-                                onClick={() => setShareDialogPolicy(r)}>
-                                <Share2 className="h-3.5 w-3.5" />
-                              </Button>
-                              <Button variant="ghost" size="icon" className="h-7 w-7" title="View Details"
-                                onClick={() => setSelectedPolicy(r)}>
-                                <ExternalLink className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" title="Share"
+                              onClick={(e) => { e.stopPropagation(); setShareDialogPolicy(r); }}>
+                              <Share2 className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" title="Details"
+                              onClick={() => setSelectedPolicy(r)}>
+                              <ExternalLink className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
+
+              {/* Pagination */}
               <div className="flex items-center justify-between px-4 py-3 border-t text-xs text-muted-foreground">
                 <span>
                   {filtered.length === 0 ? "No entries" : `${page * pageSize + 1}–${Math.min((page + 1) * pageSize, filtered.length)} of ${filtered.length}`}
