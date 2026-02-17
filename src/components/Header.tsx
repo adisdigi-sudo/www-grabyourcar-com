@@ -232,7 +232,7 @@ export const Header = () => {
                 </Link>
               )}
               
-               <a href="https://wa.me/919855924442?text=Hi%20Grabyourcar!%20I%27m%20interested%20in%20buying%20a%20new%20car%20and%20would%20like%20to%20speak%20with%20an%20expert." target="_blank" rel="noopener noreferrer">
+               <a href="https://wa.me/1155578093?text=Hi%20Grabyourcar!%20I%27m%20interested%20in%20buying%20a%20new%20car%20and%20would%20like%20to%20speak%20with%20an%20expert." target="_blank" rel="noopener noreferrer">
                  <Button variant="whatsapp" size="sm" className="hidden md:flex gap-1.5 font-semibold hover:scale-105 transition-transform px-5">
                    <MessageCircle className="h-4 w-4" />
                    Talk to Expert
@@ -350,13 +350,13 @@ export const Header = () => {
 
             {/* Contact Buttons */}
             <div className="mt-auto flex gap-3 pb-4">
-              <a href="https://wa.me/919855924442" target="_blank" rel="noopener noreferrer" className="flex-1">
+              <a href="https://wa.me/1155578093" target="_blank" rel="noopener noreferrer" className="flex-1">
                 <Button variant="whatsapp" className="w-full h-12">
                   <MessageCircle className="h-5 w-5 mr-2" />
                   WhatsApp
                 </Button>
               </a>
-              <a href="tel:+919855924442" className="flex-1">
+              <a href="tel:+1155578093" className="flex-1">
                 <Button variant="call" className="w-full h-12">
                   <Phone className="h-5 w-5 mr-2" />
                   Call Now

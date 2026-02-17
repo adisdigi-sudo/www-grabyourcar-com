@@ -47,7 +47,7 @@ export function InsuranceCTA() {
                 <ArrowRight className="h-5 w-5" />
               </Button>
               <WhatsAppCTA message={whatsappMessages.insurance} label="Get Insurance Quote" size="lg" className="h-14 px-10 text-base rounded-2xl font-bold" />
-              <a href="tel:+919855924442">
+              <a href="tel:+1155578093">
                 <Button size="lg" variant="outline" className="gap-2 text-base h-14 px-10 rounded-2xl font-bold bg-transparent border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground hover:text-primary">
                   <Phone className="h-5 w-5" />
                   Talk to Expert

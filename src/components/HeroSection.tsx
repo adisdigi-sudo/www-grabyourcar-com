@@ -73,7 +73,7 @@ export const HeroSection = () => {
            {/* CTA Button */}
            <div className="mt-8 flex justify-center">
              <a 
-               href="https://wa.me/919855924442?text=Hi%20Grabyourcar!%20I%27m%20interested%20in%20buying%20a%20new%20car%20and%20would%20like%20to%20speak%20with%20an%20expert." 
+               href="https://wa.me/1155578093?text=Hi%20Grabyourcar!%20I%27m%20interested%20in%20buying%20a%20new%20car%20and%20would%20like%20to%20speak%20with%20an%20expert." 
                target="_blank" 
                rel="noopener noreferrer"
              >

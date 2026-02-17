@@ -283,8 +283,8 @@ const CarDetail = () => {
                           <Phone className="h-4 w-4 text-primary" />
                           <span className="text-xs font-medium">Need Help?</span>
                         </div>
-                        <a href="tel:+919855924442" className="text-xs font-bold text-primary hover:underline">
-                          +91 98559 24442
+                        <a href="tel:+1155578093" className="text-xs font-bold text-primary hover:underline">
+                          +1 155578093
                         </a>
                       </div>
                     </div>
@@ -368,7 +368,7 @@ const CarDetail = () => {
                     type="price" 
                     size="lg"
                   />
-                  <a href="tel:+919855924442">
+                  <a href="tel:+1155578093">
                     <Button variant="call" size="lg" className="font-semibold hover:scale-105 transition-transform">
                       <Phone className="h-5 w-5 mr-2" />
                       Talk to Expert

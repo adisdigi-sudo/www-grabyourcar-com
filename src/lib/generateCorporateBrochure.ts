@@ -23,7 +23,7 @@ export const generateCorporateBrochure = () => {
 
   const TOTAL_PAGES = 9;
 
-  const WHATSAPP_URL = "https://wa.me/919855924442?text=Hi%20GrabYourCar!%20%F0%9F%8F%A2%0A%0AI%27m%20interested%20in%20*corporate%2Ffleet%20buying*.%0A%0APlease%20share%20a%20free%20quote%20and%20details.%0A%0AThanks!";
+  const WHATSAPP_URL = "https://wa.me/1155578093?text=Hi%20GrabYourCar!%20%F0%9F%8F%A2%0A%0AI%27m%20interested%20in%20*corporate%2Ffleet%20buying*.%0A%0APlease%20share%20a%20free%20quote%20and%20details.%0A%0AThanks!";
 
   // ── Helpers ──────────────────────────────────────────────
 
@@ -1017,7 +1017,7 @@ export const generateCorporateBrochure = () => {
   doc.text("Gurugram, Haryana", offX + cardW / 2, cardY + 30, { align: "center" });
 
   // WhatsApp link on phone card
-  doc.link(M, cardY, cardW, 36, { url: `tel:+919855924442` });
+  doc.link(M, cardY, cardW, 36, { url: `tel:+1155578093` });
   doc.link(emailX, cardY, cardW, 36, { url: `mailto:corporate@grabyourcar.com` });
 
   // Bottom tagline

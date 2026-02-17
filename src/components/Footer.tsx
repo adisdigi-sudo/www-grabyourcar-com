@@ -140,8 +140,8 @@ export const Footer = () => {
                   <li className="flex items-start gap-3">
                     <Phone className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
                     <div>
-                     <a href="tel:+919855924442" className="text-sm text-background/70 hover:text-accent transition-colors">
-                        +91 98559 24442
+                     <a href="tel:+1155578093" className="text-sm text-background/70 hover:text-accent transition-colors">
+                        +1 155578093
                       </a>
                       <p className="text-xs text-background/50">Mon-Sat, 9am-7pm</p>
                     </div>
@@ -149,7 +149,7 @@ export const Footer = () => {
                   <li className="flex items-start gap-3">
                     <MessageCircle className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
                      <a 
-                      href="https://wa.me/919855924442" 
+                      href="https://wa.me/1155578093" 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="text-sm text-background/70 hover:text-accent transition-colors"

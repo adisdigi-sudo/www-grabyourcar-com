@@ -79,7 +79,7 @@ export const CorporateFAQ = () => {
             <p className="text-muted-foreground text-sm">
               Have more questions?{" "}
               <a
-                href="tel:+919855924442"
+                href="tel:+1155578093"
                 className="text-primary font-medium hover:underline"
               >
                 Call us at +91 98559 24442

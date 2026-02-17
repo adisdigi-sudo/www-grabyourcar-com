@@ -266,13 +266,13 @@ const SelfDriveRentals = () => {
               Contact us for personalized recommendations and best rental deals.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <a href="https://wa.me/919855924442" target="_blank" rel="noopener noreferrer">
+              <a href="https://wa.me/1155578093" target="_blank" rel="noopener noreferrer">
                 <Button variant="whatsapp" size="lg" className="gap-2">
                   <MessageCircle className="h-5 w-5" />
                   WhatsApp Us
                 </Button>
               </a>
-              <a href="tel:+919855924442">
+              <a href="tel:+1155578093">
                 <Button variant="call" size="lg" className="gap-2">
                   <Phone className="h-5 w-5" />
                   Call Now

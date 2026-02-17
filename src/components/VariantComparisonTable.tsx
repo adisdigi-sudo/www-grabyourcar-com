@@ -297,7 +297,7 @@ export const VariantComparisonTable = ({
               <p className="font-semibold">Talk to our car expert</p>
             </div>
             <a
-              href={`https://wa.me/919855924442?text=Hi%20Grabyourcar!%20I%27m%20comparing%20variants%20of%20${encodeURIComponent(carBrand + " " + carName)}.%20Please%20help%20me%20choose%20the%20best%20one.`}
+              href={`https://wa.me/1155578093?text=Hi%20Grabyourcar!%20I%27m%20comparing%20variants%20of%20${encodeURIComponent(carBrand + " " + carName)}.%20Please%20help%20me%20choose%20the%20best%20one.`}
               target="_blank"
               rel="noopener noreferrer"
             >

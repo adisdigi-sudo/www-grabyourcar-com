@@ -95,7 +95,7 @@ serve(async (req) => {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              phoneNumberId: "1015140975005622",
+              phoneNoId: FINBITE_CLIENT,
               to: `91${phone}`,
               type: "text",
               text: { body: messageText },

@@ -109,7 +109,7 @@ export const CorporateCTA = () => {
 
             <div className="space-y-4">
               <a 
-                href="tel:+919855924442" 
+                href="tel:+1155578093" 
                 className="flex items-center gap-3 text-slate-300 hover:text-white transition-colors"
               >
                 <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
