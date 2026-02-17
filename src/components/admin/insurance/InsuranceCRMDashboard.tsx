@@ -265,6 +265,65 @@ export function InsuranceCRMDashboard() {
   // Reminder preview state
   const [reminderPreview, setReminderPreview] = useState<{ policy: PolicyRow; type: "notice" | "quote" } | null>(null);
   const [showUploadPolicy, setShowUploadPolicy] = useState(false);
+  const [bulkSending, setBulkSending] = useState(false);
+
+  const handleBulkSendMessage = useCallback(async () => {
+    const phonePolicies = filtered.filter(p => p.rawPhone && p.rawPhone.length >= 10);
+    if (phonePolicies.length === 0) {
+      toast.error("No policies with valid phone numbers found");
+      return;
+    }
+    setBulkSending(true);
+    let sent = 0, failed = 0;
+    for (const p of phonePolicies) {
+      try {
+        const daysLeft = p.renewal_date ? differenceInDays(new Date(p.renewal_date), now) : null;
+        const msg = `Hi ${p.customer_name || "Customer"},\nYour ${p.insurer || "insurance"} policy ${p.policy_number || ""} ${daysLeft !== null && daysLeft <= 0 ? "has expired" : `expires in ${daysLeft} days`}.\nRenew now to stay protected! 🚗\n— GrabYourCar Insurance`;
+        const phone = p.rawPhone!.replace(/\D/g, "");
+        const fullPhone = phone.startsWith("91") ? phone : `91${phone}`;
+        
+        await supabase.from("wa_message_logs").insert({
+          phone: phone.length > 10 ? phone.slice(-10) : phone,
+          customer_name: p.customer_name || null,
+          message_type: "text",
+          message_content: msg,
+          trigger_event: "bulk_renewal_reminder",
+          provider: "finbite",
+          status: "queued",
+        });
+        sent++;
+      } catch {
+        failed++;
+      }
+    }
+    setBulkSending(false);
+    toast.success(`Bulk message queued: ${sent} sent, ${failed} failed out of ${phonePolicies.length}`);
+  }, [filtered, now]);
+
+  const handleBulkSendNotification = useCallback(async () => {
+    const policies = filtered.filter(p => p.renewal_date);
+    if (policies.length === 0) {
+      toast.error("No policies with renewal dates found");
+      return;
+    }
+    setBulkSending(true);
+    try {
+      const logs = policies.map(p => ({
+        client_id: p.client_id,
+        activity_type: "renewal_reminder_sent",
+        title: "Bulk renewal notification",
+        description: `Reminder sent for ${p.insurer || "policy"} ${p.policy_number || ""}`,
+      }));
+      const BATCH = 50;
+      for (let i = 0; i < logs.length; i += BATCH) {
+        await supabase.from("insurance_activity_log").insert(logs.slice(i, i + BATCH));
+      }
+      toast.success(`Notifications logged for ${policies.length} policies`);
+    } catch {
+      toast.error("Failed to send notifications");
+    }
+    setBulkSending(false);
+  }, [filtered]);
 
   const openReminderPreview = useCallback((r: PolicyRow, type: "notice" | "quote") => {
     setReminderPreview({ policy: r, type });
@@ -338,9 +397,17 @@ export function InsuranceCRMDashboard() {
           </h2>
           <p className="text-sm text-muted-foreground">Manage policies, renewals & follow-ups</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="default" size="sm" onClick={() => setShowUploadPolicy(true)} className="gap-1.5">
             <Upload className="h-4 w-4" /> Upload Policy
+          </Button>
+          <Button variant="secondary" size="sm" onClick={handleBulkSendMessage} disabled={bulkSending} className="gap-1.5">
+            {bulkSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            Send All Messages
+          </Button>
+          <Button variant="secondary" size="sm" onClick={handleBulkSendNotification} disabled={bulkSending} className="gap-1.5">
+            {bulkSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bell className="h-4 w-4" />}
+            Send All Notifications
           </Button>
           <Button variant="outline" size="sm" onClick={exportCSV} className="gap-1.5">
             <Download className="h-4 w-4" /> Export
