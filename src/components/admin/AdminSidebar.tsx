@@ -36,11 +36,13 @@ import {
   FileSignature,
   Rocket,
   Mail,
+  LogOut,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AdminGlobalSearch } from "./AdminGlobalSearch";
 import { useAdminAuth, AppRole } from "@/hooks/useAdminAuth";
 import { useVerticalAccess } from "@/hooks/useVerticalAccess";
+import { useAuth } from "@/hooks/useAuth";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface AdminSidebarProps {
@@ -236,6 +238,7 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
   const navigate = useNavigate();
   const { roles, isAdmin, isSuperAdmin } = useAdminAuth();
   const { activeVertical, setActiveVertical } = useVerticalAccess();
+  const { signOut } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [openSections, setOpenSections] = useState<string[]>(["cars", "website"]);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -511,9 +514,27 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
 
           {/* Footer */}
           <div className={cn(
-            "border-t",
-            collapsed ? "p-2" : "p-4"
+            "border-t space-y-2",
+            collapsed ? "p-2" : "p-3"
           )}>
+            {/* Logout Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn(
+                "w-full text-destructive hover:text-destructive hover:bg-destructive/10 touch-manipulation",
+                collapsed ? "justify-center px-2" : "justify-start gap-2"
+              )}
+              onClick={async () => {
+                await signOut();
+                navigate('/admin-auth');
+              }}
+              title={collapsed ? "Sign Out" : undefined}
+            >
+              <LogOut className="h-4 w-4 shrink-0" />
+              {!collapsed && <span className="text-sm">Sign Out</span>}
+            </Button>
+            
             <div className={cn(
               "flex items-center",
               collapsed ? "justify-center" : "justify-between"
