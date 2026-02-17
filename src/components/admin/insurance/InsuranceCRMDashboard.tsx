@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import {
@@ -15,7 +16,7 @@ import {
   Download, ChevronLeft, ChevronRight, Phone, Mail,
   Share2, Bell, CalendarDays, ArrowRight, Copy, ExternalLink,
   Shield, Car, TrendingUp, CheckCircle2, MessageSquare, PhoneCall,
-  Eye, Send
+  Eye, Send, Tag, Trophy, XCircle, Play
 } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -23,6 +24,7 @@ import {
 import { format, addDays, differenceInDays, isBefore, isAfter } from "date-fns";
 
 type ViewFilter = "all" | "7" | "15" | "30" | "60" | "expired";
+type StatusFilter = "all" | "won" | "lost" | "running" | "new" | "grabyourcar";
 
 type PolicyRow = {
   id: string;
@@ -41,17 +43,37 @@ type PolicyRow = {
   status: string | null;
   policy_type: string | null;
   daysUntilRenewal: number | null;
+  lead_status: string | null;
+  lead_source: string | null;
+};
+
+const LEAD_STATUS_OPTIONS = [
+  { value: "new", label: "New", icon: Tag, color: "bg-blue-100 text-blue-700 border-blue-200" },
+  { value: "won", label: "Won", icon: Trophy, color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
+  { value: "lost", label: "Lost", icon: XCircle, color: "bg-red-100 text-red-700 border-red-200" },
+  { value: "running", label: "Running", icon: Play, color: "bg-amber-100 text-amber-700 border-amber-200" },
+];
+
+const getStatusBadge = (status: string | null) => {
+  const opt = LEAD_STATUS_OPTIONS.find(o => o.value === status?.toLowerCase());
+  if (!opt) return null;
+  return (
+    <Badge variant="outline" className={`text-[10px] px-1.5 py-0 border ${opt.color}`}>
+      {opt.label}
+    </Badge>
+  );
 };
 
 export function InsuranceCRMDashboard() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<ViewFilter>("all");
+  const [statusFilterVal, setStatusFilterVal] = useState<StatusFilter>("all");
   const [page, setPage] = useState(0);
   const [selectedPolicy, setSelectedPolicy] = useState<PolicyRow | null>(null);
   const [activeTab, setActiveTab] = useState("policies");
   const pageSize = 12;
+  const queryClient = useQueryClient();
 
-  // Use a stable "now" for the component lifecycle
   const now = useMemo(() => new Date(), []);
 
   const { data: clients } = useQuery({
@@ -59,7 +81,7 @@ export function InsuranceCRMDashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("insurance_clients")
-        .select("id, customer_name, phone, email, vehicle_number, advisor_name")
+        .select("id, customer_name, phone, email, vehicle_number, advisor_name, lead_status, lead_source")
         .order("created_at", { ascending: false })
         .limit(1000);
       if (error) throw error;
@@ -79,7 +101,23 @@ export function InsuranceCRMDashboard() {
     },
   });
 
-  // Merge into flat list with days calculation
+  // Mark client status mutation
+  const markStatus = useMutation({
+    mutationFn: async ({ clientId, status }: { clientId: string; status: string }) => {
+      const { error } = await supabase
+        .from("insurance_clients")
+        .update({ lead_status: status })
+        .eq("id", clientId);
+      if (error) throw error;
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["ins-dash-clients"] });
+      toast.success(`Client marked as ${vars.status.toUpperCase()}`);
+    },
+    onError: () => toast.error("Failed to update status"),
+  });
+
+  // Merge into flat list
   const rows: PolicyRow[] = useMemo(() => {
     if (!clients || !policies) return [];
     const clientMap = new Map(clients.map(c => [c.id, c]));
@@ -105,6 +143,8 @@ export function InsuranceCRMDashboard() {
         status: p.status,
         policy_type: p.policy_type,
         daysUntilRenewal: daysUntil,
+        lead_status: c?.lead_status || null,
+        lead_source: c?.lead_source || null,
       };
     });
   }, [clients, policies, now]);
@@ -117,13 +157,17 @@ export function InsuranceCRMDashboard() {
     const due7 = rows.filter(r => r.daysUntilRenewal !== null && r.daysUntilRenewal >= 0 && r.daysUntilRenewal <= 7).length;
     const due30 = rows.filter(r => r.daysUntilRenewal !== null && r.daysUntilRenewal >= 0 && r.daysUntilRenewal <= 30).length;
     const totalPremium = rows.reduce((sum, r) => sum + (r.premium || 0), 0);
-    return { total, active, expired, due7, due30, totalPremium };
+    const won = rows.filter(r => r.lead_status?.toLowerCase() === "won").length;
+    const lost = rows.filter(r => r.lead_status?.toLowerCase() === "lost").length;
+    const running = rows.filter(r => r.lead_status?.toLowerCase() === "running").length;
+    return { total, active, expired, due7, due30, totalPremium, won, lost, running };
   }, [rows]);
 
   // Filter + Search
   const filtered = useMemo(() => {
     let result = [...rows];
 
+    // Days filter
     if (filter !== "all") {
       result = result.filter(r => {
         if (r.daysUntilRenewal === null) return false;
@@ -131,6 +175,15 @@ export function InsuranceCRMDashboard() {
         const days = parseInt(filter);
         return r.daysUntilRenewal >= 0 && r.daysUntilRenewal <= days;
       });
+    }
+
+    // Status filter (Won/Lost/Running/GrabYourCar)
+    if (statusFilterVal !== "all") {
+      if (statusFilterVal === "grabyourcar") {
+        result = result.filter(r => r.lead_source?.toLowerCase().includes("grabyourcar") || r.lead_source?.toLowerCase().includes("grab"));
+      } else {
+        result = result.filter(r => r.lead_status?.toLowerCase() === statusFilterVal);
+      }
     }
 
     if (search.trim()) {
@@ -146,16 +199,16 @@ export function InsuranceCRMDashboard() {
     }
 
     return result;
-  }, [rows, filter, search]);
+  }, [rows, filter, statusFilterVal, search]);
 
-  // Upcoming renewals (next 60 days, sorted by urgency)
+  // Upcoming renewals
   const upcomingRenewals = useMemo(() => {
     return rows
       .filter(r => r.daysUntilRenewal !== null && r.daysUntilRenewal >= 0 && r.daysUntilRenewal <= 60)
       .sort((a, b) => (a.daysUntilRenewal || 0) - (b.daysUntilRenewal || 0));
   }, [rows]);
 
-  // Follow-ups: expired + due in 7 days
+  // Follow-ups
   const followUps = useMemo(() => {
     return rows
       .filter(r => r.daysUntilRenewal !== null && r.daysUntilRenewal <= 7)
@@ -167,12 +220,12 @@ export function InsuranceCRMDashboard() {
 
   const exportCSV = useCallback(() => {
     if (!filtered.length) return;
-    const headers = ["Policy Number", "Customer Name", "Agent", "Insurance Company", "Renewal Date", "Days Left", "Mobile", "Email", "Vehicle No", "Premium", "Status"];
+    const headers = ["Policy Number", "Customer Name", "Agent", "Insurance Company", "Renewal Date", "Days Left", "Mobile", "Email", "Vehicle No", "Premium", "Status", "Lead Status"];
     const csvRows = filtered.map(r => [
       r.policy_number, r.customer_name, r.agent_name, r.insurer,
       r.renewal_date ? format(new Date(r.renewal_date), "dd/MM/yyyy") : "",
       r.daysUntilRenewal ?? "",
-      r.phone || "", r.email || "", r.vehicle_number || "", r.premium || "", r.status || ""
+      r.phone || "", r.email || "", r.vehicle_number || "", r.premium || "", r.status || "", r.lead_status || ""
     ]);
     const csv = [headers.join(","), ...csvRows.map(r => r.map(v => `"${v || ""}"`).join(","))].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -261,8 +314,8 @@ export function InsuranceCRMDashboard() {
           { label: "Total Policies", value: stats.total, icon: FileText, color: "text-primary", bg: "bg-primary/10" },
           { label: "Active", value: stats.active, icon: CheckCircle2, color: "text-chart-2", bg: "bg-chart-2/10" },
           { label: "Due 7 Days", value: stats.due7, icon: AlertTriangle, color: "text-destructive", bg: "bg-destructive/10" },
-          { label: "Due 30 Days", value: stats.due30, icon: Clock, color: "text-chart-4", bg: "bg-chart-4/10" },
-          { label: "Expired", value: stats.expired, icon: AlertTriangle, color: "text-chart-5", bg: "bg-chart-5/10" },
+          { label: "Won", value: stats.won, icon: Trophy, color: "text-emerald-600", bg: "bg-emerald-100" },
+          { label: "Lost", value: stats.lost, icon: XCircle, color: "text-destructive", bg: "bg-red-100" },
           { label: "Total Premium", value: `₹${(stats.totalPremium / 1000).toFixed(0)}K`, icon: TrendingUp, color: "text-primary", bg: "bg-primary/10" },
         ].map(s => (
           <Card key={s.label} className="border shadow-sm hover:shadow-md transition-all cursor-pointer group">
@@ -279,7 +332,7 @@ export function InsuranceCRMDashboard() {
         ))}
       </div>
 
-      {/* Tabs: Policies / Upcoming Renewals / Follow-ups */}
+      {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
           <TabsList className="bg-muted/50">
@@ -301,8 +354,8 @@ export function InsuranceCRMDashboard() {
           </TabsList>
 
           {activeTab === "policies" && (
-            <div className="flex gap-2 items-center w-full sm:w-auto">
-              <div className="relative flex-1 sm:w-64">
+            <div className="flex gap-2 items-center w-full sm:w-auto flex-wrap">
+              <div className="relative flex-1 sm:w-56">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search name, policy, vehicle..."
@@ -312,7 +365,7 @@ export function InsuranceCRMDashboard() {
                 />
               </div>
               <Select value={filter} onValueChange={(v) => { setFilter(v as ViewFilter); setPage(0); }}>
-                <SelectTrigger className="w-[140px] h-9">
+                <SelectTrigger className="w-[130px] h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -322,6 +375,19 @@ export function InsuranceCRMDashboard() {
                   <SelectItem value="30">Due in 30 Days</SelectItem>
                   <SelectItem value="60">Due in 60 Days</SelectItem>
                   <SelectItem value="expired">Expired</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={statusFilterVal} onValueChange={(v) => { setStatusFilterVal(v as StatusFilter); setPage(0); }}>
+                <SelectTrigger className="w-[140px] h-9">
+                  <SelectValue placeholder="Lead Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Leads</SelectItem>
+                  <SelectItem value="won">✅ Won</SelectItem>
+                  <SelectItem value="lost">❌ Lost</SelectItem>
+                  <SelectItem value="running">🔄 Running</SelectItem>
+                  <SelectItem value="new">🆕 New</SelectItem>
+                  <SelectItem value="grabyourcar">🚗 GrabYourCar</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -346,14 +412,15 @@ export function InsuranceCRMDashboard() {
                       <TableHead className="text-xs">Mobile</TableHead>
                       <TableHead className="text-xs">Vehicle</TableHead>
                       <TableHead className="text-xs text-right">Premium</TableHead>
-                      <TableHead className="text-xs w-20">Actions</TableHead>
+                      <TableHead className="text-xs">Status</TableHead>
+                      <TableHead className="text-xs w-28">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {paged.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={11} className="text-center text-muted-foreground py-12">
-                          {filter !== "all" ? "No policies match this filter" : "No policies found"}
+                        <TableCell colSpan={12} className="text-center text-muted-foreground py-12">
+                          {filter !== "all" || statusFilterVal !== "all" ? "No policies match this filter" : "No policies found"}
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -388,18 +455,39 @@ export function InsuranceCRMDashboard() {
                             {r.premium ? `₹${r.premium.toLocaleString("en-IN")}` : "—"}
                           </TableCell>
                           <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-6 px-1.5 gap-1 text-[10px]">
+                                  {getStatusBadge(r.lead_status) || <Badge variant="outline" className="text-[10px] px-1.5 py-0">Mark</Badge>}
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="min-w-[120px]">
+                                {LEAD_STATUS_OPTIONS.map(opt => (
+                                  <DropdownMenuItem
+                                    key={opt.value}
+                                    onClick={() => markStatus.mutate({ clientId: r.client_id, status: opt.value })}
+                                    className="text-xs gap-2"
+                                  >
+                                    <opt.icon className="h-3 w-3" />
+                                    {opt.label}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                          <TableCell>
                             <div className="flex gap-0.5">
                               {r.phone && (
                                 <a href={`tel:${r.phone}`}>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7" title="Call">
-                                    <PhoneCall className="h-3.5 w-3.5 text-green-600" />
+                                  <Button size="icon" className="h-7 w-7 bg-emerald-600 hover:bg-emerald-700 text-white" title="Call Now">
+                                    <PhoneCall className="h-3.5 w-3.5" />
                                   </Button>
                                 </a>
                               )}
                               {r.phone && (
                                 <a href={`https://wa.me/91${r.phone}`} target="_blank" rel="noopener noreferrer">
-                                  <Button variant="ghost" size="icon" className="h-7 w-7" title="WhatsApp">
-                                    <MessageSquare className="h-3.5 w-3.5 text-green-600" />
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50" title="WhatsApp">
+                                    <MessageSquare className="h-3.5 w-3.5" />
                                   </Button>
                                 </a>
                               )}
@@ -456,6 +544,7 @@ export function InsuranceCRMDashboard() {
                           <div className="flex items-center gap-2 mb-1">
                             <h4 className="font-semibold text-sm truncate">{r.customer_name}</h4>
                             <Badge variant="outline" className="text-[10px] shrink-0">{r.policy_type || "Policy"}</Badge>
+                            {getStatusBadge(r.lead_status)}
                           </div>
                           <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                             <span className="flex items-center gap-1"><FileText className="h-3 w-3" /> {r.policy_number || "N/A"}</span>
@@ -477,7 +566,7 @@ export function InsuranceCRMDashboard() {
                           <div className="flex flex-col gap-1">
                             {r.phone && (
                               <a href={`tel:${r.phone}`}>
-                                <Button variant="outline" size="icon" className="h-7 w-7" title="Call">
+                                <Button size="icon" className="h-7 w-7 bg-emerald-600 hover:bg-emerald-700 text-white" title="Call Now">
                                   <Phone className="h-3 w-3" />
                                 </Button>
                               </a>
@@ -525,6 +614,7 @@ export function InsuranceCRMDashboard() {
                               <span className={`text-xs font-bold ${getUrgencyColor(r.daysUntilRenewal)}`}>
                                 {getUrgencyLabel(r.daysUntilRenewal)}
                               </span>
+                              {getStatusBadge(r.lead_status)}
                             </div>
                             <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground mt-1 pl-6">
                               <span>{r.policy_number}</span>
@@ -536,22 +626,32 @@ export function InsuranceCRMDashboard() {
                           <div className="flex gap-1.5 shrink-0">
                             {r.phone && (
                               <a href={`tel:${r.phone}`}>
-                                <Button size="sm" className="gap-1 h-7 text-xs bg-chart-2 hover:bg-chart-2/90 text-white">
-                                  <Phone className="h-3 w-3" /> Call
+                                <Button size="sm" className="gap-1 h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white">
+                                  <Phone className="h-3 w-3" /> Call Now
                                 </Button>
                               </a>
                             )}
                             {r.phone && (
                               <a href={`https://wa.me/91${r.phone}`} target="_blank" rel="noopener noreferrer">
-                                <Button variant="outline" size="sm" className="gap-1 h-7 text-xs">
+                                <Button variant="outline" size="sm" className="gap-1 h-7 text-xs text-emerald-600 border-emerald-200 hover:bg-emerald-50">
                                   WhatsApp
                                 </Button>
                               </a>
                             )}
-                            <Button variant="outline" size="sm" className="gap-1 h-7 text-xs"
-                              onClick={() => setShareDialogPolicy(r)}>
-                              <Share2 className="h-3 w-3" /> Share
-                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm" className="gap-1 h-7 text-xs">
+                                  <Tag className="h-3 w-3" /> Mark
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {LEAD_STATUS_OPTIONS.map(opt => (
+                                  <DropdownMenuItem key={opt.value} onClick={() => markStatus.mutate({ clientId: r.client_id, status: opt.value })} className="text-xs gap-2">
+                                    <opt.icon className="h-3 w-3" /> {opt.label}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                             <Button variant="ghost" size="icon" className="h-7 w-7"
                               onClick={() => setSelectedPolicy(r)}>
                               <ExternalLink className="h-3.5 w-3.5" />
@@ -574,6 +674,7 @@ export function InsuranceCRMDashboard() {
           policy={selectedPolicy}
           onClose={() => setSelectedPolicy(null)}
           onShare={() => setShareDialogPolicy(selectedPolicy)}
+          onMarkStatus={(status) => markStatus.mutate({ clientId: selectedPolicy.client_id, status })}
         />
       )}
 
@@ -592,11 +693,12 @@ export function InsuranceCRMDashboard() {
 
 // ── Policy Detail Dialog ──
 function PolicyDetailDialog({
-  policy, onClose, onShare
+  policy, onClose, onShare, onMarkStatus
 }: {
   policy: PolicyRow;
   onClose: () => void;
   onShare: () => void;
+  onMarkStatus: (status: string) => void;
 }) {
   const reminderDays = [60, 30, 15, 7, 1];
 
@@ -619,7 +721,10 @@ function PolicyDetailDialog({
         <div className="space-y-4">
           {/* Customer Info */}
           <div className="p-3 rounded-xl bg-primary/5 border border-primary/10">
-            <h3 className="font-semibold text-base">{policy.customer_name}</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-base">{policy.customer_name}</h3>
+              {getStatusBadge(policy.lead_status)}
+            </div>
             <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-muted-foreground">
               {policy.phone && (
                 <a href={`tel:${policy.phone}`} className="flex items-center gap-1 text-primary hover:underline">
@@ -631,6 +736,31 @@ function PolicyDetailDialog({
                   <Mail className="h-3 w-3" /> {policy.email}
                 </a>
               )}
+            </div>
+          </div>
+
+          {/* Mark Status */}
+          <div>
+            <Label className="text-xs font-medium mb-2 block">Mark Client Status</Label>
+            <div className="flex gap-2 flex-wrap">
+              {LEAD_STATUS_OPTIONS.map(opt => (
+                <Button
+                  key={opt.value}
+                  variant={policy.lead_status?.toLowerCase() === opt.value ? "default" : "outline"}
+                  size="sm"
+                  className={`gap-1.5 text-xs ${
+                    policy.lead_status?.toLowerCase() === opt.value
+                      ? opt.value === "won" ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                        : opt.value === "lost" ? "bg-red-600 hover:bg-red-700 text-white"
+                        : opt.value === "running" ? "bg-amber-500 hover:bg-amber-600 text-white"
+                        : "bg-blue-600 hover:bg-blue-700 text-white"
+                      : ""
+                  }`}
+                  onClick={() => onMarkStatus(opt.value)}
+                >
+                  <opt.icon className="h-3 w-3" /> {opt.label}
+                </Button>
+              ))}
             </div>
           </div>
 
@@ -663,10 +793,10 @@ function PolicyDetailDialog({
                 const status = getReminderStatus(d);
                 return (
                   <div key={d} className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs ${
-                    status === "sent" ? "bg-chart-2/10 text-chart-2" : "bg-muted/30 text-muted-foreground"
+                    status === "sent" ? "bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700" : "bg-muted/30 text-muted-foreground"
                   }`}>
                     <span className="font-medium">{d}-day reminder</span>
-                    <Badge variant={status === "sent" ? "default" : "secondary"} className="text-[10px] h-5">
+                    <Badge variant={status === "sent" ? "default" : "secondary"} className={`text-[10px] h-5 ${status === "sent" ? "bg-emerald-600" : ""}`}>
                       {status === "sent" ? "✓ Triggered" : "Scheduled"}
                     </Badge>
                   </div>
@@ -679,15 +809,15 @@ function PolicyDetailDialog({
           <div className="flex flex-wrap gap-2 pt-2 border-t">
             {policy.phone && (
               <a href={`tel:${policy.phone}`}>
-                <Button size="sm" className="gap-1.5 bg-chart-2 hover:bg-chart-2/90 text-white">
-                  <Phone className="h-3.5 w-3.5" /> Call
+                <Button size="sm" className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white">
+                  <Phone className="h-3.5 w-3.5" /> Call Now
                 </Button>
               </a>
             )}
             {policy.phone && (
               <a href={`https://wa.me/91${policy.phone}`} target="_blank" rel="noopener noreferrer">
-                <Button variant="outline" size="sm" className="gap-1.5">
-                  WhatsApp
+                <Button variant="outline" size="sm" className="gap-1.5 text-emerald-600 border-emerald-200 hover:bg-emerald-50">
+                  <MessageSquare className="h-3.5 w-3.5" /> WhatsApp
                 </Button>
               </a>
             )}
@@ -825,7 +955,7 @@ Thank you for choosing Grabyourcar for your motor insurance needs! Here's your p
         </div>
 
         <div className="space-y-3">
-          {/* Renewal Notice & Quote via WhatsApp */}
+          {/* Renewal Notice & Quote */}
           <div className="grid grid-cols-2 gap-2">
             <Button
               className="gap-1.5 h-10 bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
