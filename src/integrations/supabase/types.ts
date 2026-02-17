@@ -1948,6 +1948,56 @@ export type Database = {
           },
         ]
       }
+      cross_sell_opportunities: {
+        Row: {
+          created_at: string
+          customer_id: string
+          estimated_value: number | null
+          id: string
+          opportunity_type: string
+          priority: string | null
+          resolved_at: string | null
+          source_vertical: string
+          status: string | null
+          suggested_action: string | null
+          target_vertical: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          estimated_value?: number | null
+          id?: string
+          opportunity_type: string
+          priority?: string | null
+          resolved_at?: string | null
+          source_vertical: string
+          status?: string | null
+          suggested_action?: string | null
+          target_vertical: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          estimated_value?: number | null
+          id?: string
+          opportunity_type?: string
+          priority?: string | null
+          resolved_at?: string | null
+          source_vertical?: string
+          status?: string | null
+          suggested_action?: string | null
+          target_vertical?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cross_sell_opportunities_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "unified_customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cross_sell_rules: {
         Row: {
           conditions: Json | null
@@ -2084,6 +2134,53 @@ export type Database = {
           testimonial?: string | null
         }
         Relationships: []
+      }
+      customer_vertical_records: {
+        Row: {
+          created_at: string
+          customer_id: string
+          id: string
+          metadata: Json | null
+          record_id: string | null
+          record_type: string
+          status: string | null
+          updated_at: string
+          value: number | null
+          vertical_slug: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          id?: string
+          metadata?: Json | null
+          record_id?: string | null
+          record_type: string
+          status?: string | null
+          updated_at?: string
+          value?: number | null
+          vertical_slug: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          id?: string
+          metadata?: Json | null
+          record_id?: string | null
+          record_type?: string
+          status?: string | null
+          updated_at?: string
+          value?: number | null
+          vertical_slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_vertical_records_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "unified_customers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       delivery_stories: {
         Row: {

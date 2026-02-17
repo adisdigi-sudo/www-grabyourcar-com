@@ -66,6 +66,8 @@ import PartnersManager from "@/components/admin/PartnersManager";
 import { InsuranceManagement } from "@/components/admin/InsuranceManagement";
 import { InsuranceImportExport } from "@/components/admin/insurance/InsuranceImportExport";
 import { UnifiedMasterCRM } from "@/components/admin/UnifiedMasterCRM";
+import { UnifiedCustomerProfile } from "@/components/admin/unified/UnifiedCustomerProfile";
+import { CrossVerticalIntelligence } from "@/components/admin/unified/CrossVerticalIntelligence";
 import { JourneyAutomationPanel } from "@/components/admin/JourneyAutomationPanel";
 import { RevenueIntelligenceDashboard } from "@/components/admin/RevenueIntelligenceDashboard";
 import { LoanCRMDashboard } from "@/components/admin/LoanCRMDashboard";
@@ -160,9 +162,10 @@ const AdminLayout = () => {
         if (slug === "loans") return <LoanCRMDashboard />;
         return <AdminDashboard />;
       }
-        return <LoanCRMDashboard />;
       case "unified-crm":
-        return <UnifiedMasterCRM />;
+        return <UnifiedCustomerProfile />;
+      case "unified-intelligence":
+        return <CrossVerticalIntelligence />;
       case "journey-automation":
         return <JourneyAutomationPanel />;
       case "revenue-intelligence":

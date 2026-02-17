@@ -21,7 +21,12 @@ export const SalesDashboard = () => {
         .from("cars")
         .select("*", { count: "exact", head: true });
 
-      return { totalLeads: totalLeads || 0, hotLeads: hotLeads || 0, totalCars: totalCars || 0 };
+      const { count: unifiedBuyers } = await supabase
+        .from("unified_customers")
+        .select("*", { count: "exact", head: true })
+        .eq("has_car_inquiry", true);
+
+      return { totalLeads: totalLeads || 0, hotLeads: hotLeads || 0, totalCars: totalCars || 0, unifiedBuyers: unifiedBuyers || 0 };
     },
   });
 
@@ -29,7 +34,7 @@ export const SalesDashboard = () => {
     { label: "Total Leads", value: stats?.totalLeads || 0, icon: Users, color: "text-blue-500" },
     { label: "Hot Leads", value: stats?.hotLeads || 0, icon: Target, color: "text-red-500" },
     { label: "Cars Listed", value: stats?.totalCars || 0, icon: Car, color: "text-green-500" },
-    { label: "Conversions", value: "—", icon: TrendingUp, color: "text-primary" },
+    { label: "Unified Buyers", value: stats?.unifiedBuyers || 0, icon: TrendingUp, color: "text-primary" },
   ];
 
   return (
