@@ -130,7 +130,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const { action = "scan", client_id, policy_id } = body;
+    const { action = "scan", client_id, policy_id, custom_message } = body;
     const now = new Date();
     const results: Record<string, number> = { triggered: 0, tasks_created: 0, recovered: 0 };
 
@@ -190,7 +190,7 @@ serve(async (req) => {
         if (daysRemaining < 0) daysRemaining = 0;
       }
 
-      const message = buildMessage(template, client, policy, daysRemaining, advisorNumber);
+      const message = custom_message || buildMessage(template, client, policy, daysRemaining, advisorNumber);
 
       // Send via whatsapp-send
       const sendResp = await fetch(`${SUPABASE_URL}/functions/v1/whatsapp-send`, {

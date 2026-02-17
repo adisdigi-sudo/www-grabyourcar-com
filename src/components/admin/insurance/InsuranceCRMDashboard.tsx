@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
@@ -16,7 +17,7 @@ import {
   Download, ChevronLeft, ChevronRight, Phone, Mail,
   Share2, Bell, CalendarDays, ArrowRight, Copy, ExternalLink,
   Shield, Car, TrendingUp, CheckCircle2, MessageSquare, PhoneCall,
-  Eye, Send, Tag, Trophy, XCircle, Play
+  Eye, Send, Tag, Trophy, XCircle, Play, Edit, Zap, Loader2
 } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -235,83 +236,12 @@ export function InsuranceCRMDashboard() {
     a.click();
   }, [filtered, now]);
 
-  // Renewal reminder functions
-  const buildDashboardRenewalNotice = useCallback((r: PolicyRow) => {
-    const daysLeft = r.daysUntilRenewal !== null ? (r.daysUntilRenewal <= 0 ? 0 : r.daysUntilRenewal) : 0;
-    return `🚗 *Grabyourcar Policy Renewal Reminder*
-━━━━━━━━━━━━━━━━━━━━━
+  // Reminder preview state
+  const [reminderPreview, setReminderPreview] = useState<{ policy: PolicyRow; type: "notice" | "quote" } | null>(null);
 
-Hello *${r.customer_name || "Valued Customer"}*,
-
-We hope you are enjoying a smooth and safe drive!
-
-This is a friendly reminder from *Grabyourcar Insurance Desk* that your *${r.vehicle_number || "vehicle"}* insurance policy is set to expire on *${r.renewal_date ? format(new Date(r.renewal_date), "dd MMM yyyy") : "soon"}* — just *${daysLeft} days* to go.
-
-Renewing your policy before the expiry helps you:
-
-✅ Avoid inspection hassles
-✅ Maintain your No Claim Bonus
-✅ Stay financially protected
-✅ Ensure uninterrupted coverage
-
-Our team has already prepared renewal assistance for you to make the process quick and seamless.
-
-👉 Simply *reply to this message* or click below to get your renewal quote instantly.
-
-🔗 Renew Now: https://grabyourcar.lovable.app/insurance
-${r.policy_number || r.insurer || r.premium ? `
-📋 *Your Policy Details:*
-${r.policy_number ? `📄 Policy: ${r.policy_number}\n` : ""}${r.insurer ? `🏢 Insurer: ${r.insurer}\n` : ""}${r.premium ? `💰 Premium: ₹${r.premium.toLocaleString("en-IN")}\n` : ""}${r.vehicle_number ? `🚗 Vehicle: ${r.vehicle_number}\n` : ""}` : ""}
-If you need any help, feel free to contact your dedicated advisor.
-
-📞 +91 98559 24442
-🌐 www.grabyourcar.com
-
-Thank you for trusting *Grabyourcar* — we look forward to protecting your journeys ahead.
-
-Drive safe! 🚘`.replace(/\n{3,}/g, "\n\n");
+  const openReminderPreview = useCallback((r: PolicyRow, type: "notice" | "quote") => {
+    setReminderPreview({ policy: r, type });
   }, []);
-
-  const buildDashboardRenewalQuote = useCallback((r: PolicyRow) => {
-    return `🚗 *Grabyourcar — Renewal Quote*
-━━━━━━━━━━━━━━━━━━━━━
-
-Dear *${r.customer_name || "Valued Customer"}*,
-
-Your renewal quote for *${r.vehicle_number || "your vehicle"}* is ready!
-
-📋 *Quote Details:*
-${r.policy_number ? `📄 Policy: ${r.policy_number}\n` : ""}${r.insurer ? `🏢 Current Insurer: ${r.insurer}\n` : ""}${r.premium ? `💰 Renewal Premium: ₹${r.premium.toLocaleString("en-IN")}\n` : ""}📅 Current Expiry: ${r.renewal_date ? format(new Date(r.renewal_date), "dd MMM yyyy") : "N/A"}
-
-🎁 *Renewal Benefits:*
-✅ NCB (No Claim Bonus) Protection
-✅ Roadside Assistance Included
-✅ Zero Depreciation Option
-✅ Instant Policy Issuance
-✅ Hassle-free Claim Settlement
-
-💡 *Why renew with Grabyourcar?*
-• Best rates from 15+ insurers
-• Dedicated advisor support
-• Instant digital policy copy
-• Free claim assistance
-
-👉 *Reply YES* to confirm your renewal or call us now.
-
-📞 +91 98559 24442
-🌐 www.grabyourcar.com
-
-— *Grabyourcar Insurance Desk* 🚘`.replace(/\n{3,}/g, "\n\n");
-  }, []);
-
-  const sendReminderViaWhatsApp = useCallback((r: PolicyRow, type: "notice" | "quote") => {
-    const phone = r.phone?.replace(/\D/g, "");
-    if (!phone) { toast.error("No valid phone number"); return; }
-    const fullPhone = phone.startsWith("91") ? phone : `91${phone}`;
-    const message = type === "notice" ? buildDashboardRenewalNotice(r) : buildDashboardRenewalQuote(r);
-    window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`, "_blank");
-    toast.success(`${type === "notice" ? "Renewal Notice" : "Renewal Quote"} sent to ${r.customer_name}`);
-  }, [buildDashboardRenewalNotice, buildDashboardRenewalQuote]);
 
   const [shareDialogPolicy, setShareDialogPolicy] = useState<PolicyRow | null>(null);
 
@@ -571,14 +501,14 @@ ${r.policy_number ? `📄 Policy: ${r.policy_number}\n` : ""}${r.insurer ? `🏢
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end" className="w-52">
                                     <div className="px-2 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400">📲 WhatsApp Templates</div>
-                                    <DropdownMenuItem onClick={() => sendReminderViaWhatsApp(r, "notice")} className="cursor-pointer gap-2">
+                                    <DropdownMenuItem onClick={() => openReminderPreview(r, "notice")} className="cursor-pointer gap-2">
                                       <Bell className="h-3.5 w-3.5 text-emerald-600" />
                                       <div>
                                         <p className="text-xs font-medium">Renewal Notice</p>
                                         <p className="text-[10px] text-muted-foreground">Urgency reminder with countdown</p>
                                       </div>
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => sendReminderViaWhatsApp(r, "quote")} className="cursor-pointer gap-2">
+                                    <DropdownMenuItem onClick={() => openReminderPreview(r, "quote")} className="cursor-pointer gap-2">
                                       <FileText className="h-3.5 w-3.5 text-emerald-600" />
                                       <div>
                                         <p className="text-xs font-medium">Renewal Quote</p>
@@ -772,7 +702,7 @@ ${r.policy_number ? `📄 Policy: ${r.policy_number}\n` : ""}${r.insurer ? `🏢
           onClose={() => setSelectedPolicy(null)}
           onShare={() => setShareDialogPolicy(selectedPolicy)}
           onMarkStatus={(status) => markStatus.mutate({ clientId: selectedPolicy.client_id, status })}
-          onSendReminder={(type) => sendReminderViaWhatsApp(selectedPolicy, type)}
+          onSendReminder={(type) => openReminderPreview(selectedPolicy, type)}
         />
       )}
 
@@ -783,6 +713,14 @@ ${r.policy_number ? `📄 Policy: ${r.policy_number}\n` : ""}${r.insurer ? `🏢
           onDownload={downloadPolicyPDF}
           onWhatsApp={shareViaWhatsApp}
           onEmail={shareViaEmail}
+        />
+      )}
+
+      {reminderPreview && (
+        <ReminderPreviewDialog
+          policy={reminderPreview.policy}
+          templateType={reminderPreview.type}
+          onClose={() => setReminderPreview(null)}
         />
       )}
     </div>
@@ -942,6 +880,266 @@ function PolicyDetailDialog({
               <Copy className="h-3.5 w-3.5" /> Copy
             </Button>
           </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Reminder Preview & Edit Dialog ──
+function ReminderPreviewDialog({
+  policy, templateType, onClose
+}: {
+  policy: PolicyRow;
+  templateType: "notice" | "quote";
+  onClose: () => void;
+}) {
+  const [activeTemplate, setActiveTemplate] = useState(templateType);
+  const [editMode, setEditMode] = useState(false);
+  const [sending, setSending] = useState(false);
+
+  // Editable fields
+  const [customerName, setCustomerName] = useState(policy.customer_name || "Valued Customer");
+  const [vehicleNumber, setVehicleNumber] = useState(policy.vehicle_number || "");
+  const [insurer, setInsurer] = useState(policy.insurer || "");
+  const [policyNumber, setPolicyNumber] = useState(policy.policy_number || "");
+  const [premium, setPremium] = useState(policy.premium ? String(policy.premium) : "");
+  const [renewalDate, setRenewalDate] = useState(policy.renewal_date || "");
+  const [phone, setPhone] = useState(policy.phone || "");
+
+  const daysLeft = renewalDate ? Math.max(0, differenceInDays(new Date(renewalDate), new Date())) : 0;
+  const formattedDate = renewalDate ? format(new Date(renewalDate), "dd MMM yyyy") : "N/A";
+  const formattedPremium = premium ? `₹${Number(premium).toLocaleString("en-IN")}` : "N/A";
+
+  const buildNotice = () => {
+    return `🚗 *Grabyourcar Policy Renewal Reminder*
+━━━━━━━━━━━━━━━━━━━━━
+
+Hello *${customerName}*,
+
+We hope you are enjoying a smooth and safe drive!
+
+This is a friendly reminder from *Grabyourcar Insurance Desk* that your *${vehicleNumber || "vehicle"}* insurance policy is set to expire on *${formattedDate}* — just *${daysLeft} days* to go.
+
+Renewing your policy before the expiry helps you:
+
+✅ Avoid inspection hassles
+✅ Maintain your No Claim Bonus
+✅ Stay financially protected
+✅ Ensure uninterrupted coverage
+
+Our team has already prepared renewal assistance for you to make the process quick and seamless.
+
+👉 Simply *reply to this message* or click below to get your renewal quote instantly.
+
+🔗 Renew Now: https://grabyourcar.lovable.app/insurance
+${policyNumber || insurer || premium ? `
+📋 *Your Policy Details:*
+${policyNumber ? `📄 Policy: ${policyNumber}\n` : ""}${insurer ? `🏢 Insurer: ${insurer}\n` : ""}${premium ? `💰 Premium: ${formattedPremium}\n` : ""}${vehicleNumber ? `🚗 Vehicle: ${vehicleNumber}\n` : ""}` : ""}
+If you need any help, feel free to contact your dedicated advisor.
+
+📞 +91 98559 24442
+🌐 www.grabyourcar.com
+
+Thank you for trusting *Grabyourcar* — we look forward to protecting your journeys ahead.
+
+Drive safe! 🚘`.replace(/\n{3,}/g, "\n\n");
+  };
+
+  const buildQuote = () => {
+    return `🚗 *Grabyourcar — Renewal Quote*
+━━━━━━━━━━━━━━━━━━━━━
+
+Dear *${customerName}*,
+
+Your renewal quote for *${vehicleNumber || "your vehicle"}* is ready!
+
+📋 *Quote Details:*
+${policyNumber ? `📄 Policy: ${policyNumber}\n` : ""}${insurer ? `🏢 Current Insurer: ${insurer}\n` : ""}${premium ? `💰 Renewal Premium: ${formattedPremium}\n` : ""}📅 Current Expiry: ${formattedDate}
+
+🎁 *Renewal Benefits:*
+✅ NCB (No Claim Bonus) Protection
+✅ Roadside Assistance Included
+✅ Zero Depreciation Option
+✅ Instant Policy Issuance
+✅ Hassle-free Claim Settlement
+
+💡 *Why renew with Grabyourcar?*
+• Best rates from 15+ insurers
+• Dedicated advisor support
+• Instant digital policy copy
+• Free claim assistance
+
+👉 *Reply YES* to confirm your renewal or call us now.
+
+📞 +91 98559 24442
+🌐 www.grabyourcar.com
+
+— *Grabyourcar Insurance Desk* 🚘`.replace(/\n{3,}/g, "\n\n");
+  };
+
+  const currentMessage = activeTemplate === "notice" ? buildNotice() : buildQuote();
+
+  const sendViaWhatsAppLink = () => {
+    const cleanPhone = phone.replace(/\D/g, "");
+    if (!cleanPhone) { toast.error("Enter a valid phone number"); return; }
+    const fullPhone = cleanPhone.startsWith("91") ? cleanPhone : `91${cleanPhone}`;
+    window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(currentMessage)}`, "_blank");
+    toast.success(`${activeTemplate === "notice" ? "Renewal Notice" : "Renewal Quote"} opened in WhatsApp`);
+    onClose();
+  };
+
+  const sendViaAPI = async () => {
+    const cleanPhone = phone.replace(/\D/g, "");
+    if (!cleanPhone) { toast.error("Enter a valid phone number"); return; }
+    setSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("insurance-renewal-engine", {
+        body: {
+          action: "send_single",
+          client_id: policy.client_id,
+          policy_id: policy.id,
+          custom_message: currentMessage,
+        },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        toast.success("Reminder sent automatically via WhatsApp API!");
+      } else {
+        toast.error(data?.error || "Failed to send via API, try WhatsApp link instead");
+      }
+    } catch (err: any) {
+      console.error("API send error:", err);
+      toast.error("API send failed — try WhatsApp link instead");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <Dialog open onOpenChange={() => onClose()}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <Eye className="h-5 w-5 text-emerald-600" />
+            Preview & Send Reminder
+          </DialogTitle>
+        </DialogHeader>
+
+        {/* Template Toggle */}
+        <div className="flex gap-2">
+          <Button
+            variant={activeTemplate === "notice" ? "default" : "outline"}
+            size="sm"
+            className={`gap-1.5 text-xs flex-1 ${activeTemplate === "notice" ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""}`}
+            onClick={() => setActiveTemplate("notice")}
+          >
+            <Bell className="h-3.5 w-3.5" /> Renewal Notice
+          </Button>
+          <Button
+            variant={activeTemplate === "quote" ? "default" : "outline"}
+            size="sm"
+            className={`gap-1.5 text-xs flex-1 ${activeTemplate === "quote" ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""}`}
+            onClick={() => setActiveTemplate("quote")}
+          >
+            <FileText className="h-3.5 w-3.5" /> Renewal Quote
+          </Button>
+        </div>
+
+        {/* Editable Details */}
+        {editMode ? (
+          <div className="space-y-3 p-3 rounded-xl border bg-muted/20">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-semibold flex items-center gap-1.5">
+                <Edit className="h-3.5 w-3.5" /> Update Details Before Sending
+              </Label>
+              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setEditMode(false)}>
+                Done Editing
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-[10px] uppercase text-muted-foreground">Customer Name</Label>
+                <Input value={customerName} onChange={e => setCustomerName(e.target.value)} className="h-8 text-xs" />
+              </div>
+              <div>
+                <Label className="text-[10px] uppercase text-muted-foreground">Phone Number</Label>
+                <Input value={phone} onChange={e => setPhone(e.target.value)} className="h-8 text-xs" />
+              </div>
+              <div>
+                <Label className="text-[10px] uppercase text-muted-foreground">Vehicle Number</Label>
+                <Input value={vehicleNumber} onChange={e => setVehicleNumber(e.target.value)} className="h-8 text-xs" />
+              </div>
+              <div>
+                <Label className="text-[10px] uppercase text-muted-foreground">Insurer</Label>
+                <Input value={insurer} onChange={e => setInsurer(e.target.value)} className="h-8 text-xs" />
+              </div>
+              <div>
+                <Label className="text-[10px] uppercase text-muted-foreground">Policy Number</Label>
+                <Input value={policyNumber} onChange={e => setPolicyNumber(e.target.value)} className="h-8 text-xs" />
+              </div>
+              <div>
+                <Label className="text-[10px] uppercase text-muted-foreground">Premium (₹)</Label>
+                <Input type="number" value={premium} onChange={e => setPremium(e.target.value)} className="h-8 text-xs" />
+              </div>
+              <div className="col-span-2">
+                <Label className="text-[10px] uppercase text-muted-foreground">Renewal Date</Label>
+                <Input type="date" value={renewalDate} onChange={e => setRenewalDate(e.target.value)} className="h-8 text-xs" />
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">📋 Details in template</span>
+              <Button variant="ghost" size="sm" className="h-6 text-[10px] gap-1 text-emerald-600" onClick={() => setEditMode(true)}>
+                <Edit className="h-3 w-3" /> Update Details
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+              <div><span className="text-muted-foreground">Name:</span> <span className="font-medium">{customerName}</span></div>
+              <div><span className="text-muted-foreground">Phone:</span> <span className="font-medium">{phone || "—"}</span></div>
+              <div><span className="text-muted-foreground">Vehicle:</span> <span className="font-mono font-medium">{vehicleNumber || "—"}</span></div>
+              <div><span className="text-muted-foreground">Insurer:</span> <span className="font-medium">{insurer || "—"}</span></div>
+              <div><span className="text-muted-foreground">Policy:</span> <span className="font-medium">{policyNumber || "—"}</span></div>
+              <div><span className="text-muted-foreground">Premium:</span> <span className="font-semibold text-emerald-700 dark:text-emerald-400">{formattedPremium}</span></div>
+              <div><span className="text-muted-foreground">Expiry:</span> <span className="font-medium">{formattedDate}</span></div>
+              <div><span className="text-muted-foreground">Days Left:</span> <span className="font-bold">{daysLeft}</span></div>
+            </div>
+          </div>
+        )}
+
+        {/* WhatsApp Preview */}
+        <div className="rounded-xl border bg-[#e5ddd5] dark:bg-[#0b141a] p-3 max-h-48 overflow-y-auto">
+          <div className="bg-white dark:bg-[#1f2c34] rounded-lg p-3 shadow-sm max-w-[95%]">
+            <pre className="text-[11px] leading-relaxed whitespace-pre-wrap font-sans text-foreground">
+              {currentMessage}
+            </pre>
+            <p className="text-[9px] text-muted-foreground text-right mt-1">Preview</p>
+          </div>
+        </div>
+
+        {/* Send Actions */}
+        <div className="space-y-2 pt-1">
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              className="gap-1.5 h-10 bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
+              onClick={sendViaWhatsAppLink}
+            >
+              <ExternalLink className="h-3.5 w-3.5" /> Send via WhatsApp
+            </Button>
+            <Button
+              className="gap-1.5 h-10 bg-primary hover:bg-primary/90 text-primary-foreground text-xs"
+              onClick={sendViaAPI}
+              disabled={sending}
+            >
+              {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
+              {sending ? "Sending..." : "Auto-Send via API"}
+            </Button>
+          </div>
+          <p className="text-[10px] text-center text-muted-foreground">
+            💡 "WhatsApp" opens wa.me link • "Auto-Send" triggers WhatsApp API directly
+          </p>
         </div>
       </DialogContent>
     </Dialog>
