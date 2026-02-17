@@ -66,6 +66,9 @@ const navItems: NavItem[] = [
   // ── Universal ──
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "manager-dashboard", label: "📊 Manager Dashboard", icon: BarChart3, badge: "New", allowedRoles: ["super_admin", "admin"] },
+  { id: "team-engagement", label: "🏆 Team Engagement", icon: BarChart3, badge: "New", allowedRoles: ["super_admin", "admin"] },
+  { id: "error-prevention", label: "⚠️ Error Prevention", icon: BarChart3, badge: "New", allowedRoles: ["super_admin", "admin"] },
+  { id: "workflow-engine", label: "⚙️ Workflow Engine", icon: BarChart3, allowedRoles: ["super_admin", "admin"] },
 
   // ── Calling System — operational verticals only ──
   { id: "calling-system", label: "📞 Smart Calling", icon: Users, badge: "🔥",

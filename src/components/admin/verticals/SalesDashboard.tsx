@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Car, Users, TrendingUp, Target, IndianRupee, Phone, BarChart3, Zap } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Car, Users, TrendingUp, Target, Phone, BarChart3, Zap, IndianRupee, CalendarDays, ShoppingCart } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -8,34 +9,37 @@ export const SalesDashboard = () => {
   const { data: stats } = useQuery({
     queryKey: ["sales-dashboard-stats"],
     queryFn: async () => {
-      const { count: totalLeads } = await supabase
-        .from("leads")
-        .select("*", { count: "exact", head: true });
+      const [leads, hotLeads, cars, recentLeads] = await Promise.all([
+        supabase.from("leads").select("*", { count: "exact", head: true }),
+        supabase.from("leads").select("*", { count: "exact", head: true }).eq("priority", "hot"),
+        supabase.from("cars").select("*", { count: "exact", head: true }),
+        supabase.from("leads").select("status").order("created_at", { ascending: false }).limit(100),
+      ]);
 
-      const { count: hotLeads } = await supabase
-        .from("leads")
-        .select("*", { count: "exact", head: true })
-        .eq("priority", "hot");
+      const statusCounts: Record<string, number> = {};
+      recentLeads.data?.forEach((l) => {
+        statusCounts[l.status] = (statusCounts[l.status] || 0) + 1;
+      });
 
-      const { count: totalCars } = await supabase
-        .from("cars")
-        .select("*", { count: "exact", head: true });
-
-      const { count: unifiedBuyers } = await supabase
-        .from("unified_customers")
-        .select("*", { count: "exact", head: true })
-        .eq("has_car_inquiry", true);
-
-      return { totalLeads: totalLeads || 0, hotLeads: hotLeads || 0, totalCars: totalCars || 0, unifiedBuyers: unifiedBuyers || 0 };
+      return {
+        totalLeads: leads.count || 0,
+        hotLeads: hotLeads.count || 0,
+        totalCars: cars.count || 0,
+        statusCounts,
+      };
     },
   });
 
-  const kpis = [
-    { label: "Total Leads", value: stats?.totalLeads || 0, icon: Users, color: "text-blue-500" },
-    { label: "Hot Leads", value: stats?.hotLeads || 0, icon: Target, color: "text-red-500" },
-    { label: "Cars Listed", value: stats?.totalCars || 0, icon: Car, color: "text-green-500" },
-    { label: "Unified Buyers", value: stats?.unifiedBuyers || 0, icon: TrendingUp, color: "text-primary" },
+  const pipeline = [
+    { stage: "New Inquiry", key: "new", color: "bg-blue-500" },
+    { stage: "Contacted", key: "contacted", color: "bg-cyan-500" },
+    { stage: "Test Drive", key: "test_drive", color: "bg-amber-500" },
+    { stage: "Negotiation", key: "negotiation", color: "bg-orange-500" },
+    { stage: "Booking", key: "booked", color: "bg-purple-500" },
+    { stage: "Delivered", key: "delivered", color: "bg-green-500" },
   ];
+
+  const totalPipeline = Object.values(stats?.statusCounts || {}).reduce((s, v) => s + v, 0) || 1;
 
   return (
     <div className="space-y-6">
@@ -44,15 +48,23 @@ export const SalesDashboard = () => {
           <Car className="h-7 w-7 text-primary" />
           Automotive Sales Dashboard
         </h1>
-        <p className="text-muted-foreground mt-1">Manage leads, inventory, and sales pipeline</p>
+        <p className="text-muted-foreground mt-1">Leads, inventory & sales pipeline at a glance</p>
       </div>
 
+      {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {kpis.map((kpi) => (
+        {[
+          { label: "Total Leads", value: stats?.totalLeads || 0, icon: Users, color: "text-blue-500" },
+          { label: "Hot Leads", value: stats?.hotLeads || 0, icon: Target, color: "text-red-500" },
+          { label: "Cars Listed", value: stats?.totalCars || 0, icon: Car, color: "text-green-500" },
+          { label: "Conversion", value: `${Math.round(((stats?.statusCounts?.["delivered"] || 0) / totalPipeline) * 100)}%`, icon: TrendingUp, color: "text-primary" },
+        ].map((kpi) => (
           <Card key={kpi.label}>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <kpi.icon className={`h-8 w-8 ${kpi.color}`} />
+                <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
+                  <kpi.icon className={`h-5 w-5 ${kpi.color}`} />
+                </div>
                 <div>
                   <p className="text-2xl font-bold">{kpi.value}</p>
                   <p className="text-xs text-muted-foreground">{kpi.label}</p>
@@ -64,38 +76,46 @@ export const SalesDashboard = () => {
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">
+        {/* Pipeline */}
         <Card>
-          <CardHeader><CardTitle className="text-lg">Sales Pipeline</CardTitle></CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {["New Inquiry", "Test Drive", "Negotiation", "Booking", "Delivered"].map((stage, i) => (
-                <div key={stage} className="flex items-center justify-between">
-                  <span className="text-sm">{stage}</span>
-                  <div className="flex items-center gap-2">
-                    <div className="w-24 h-2 rounded-full bg-muted overflow-hidden">
-                      <div className="h-full bg-primary rounded-full" style={{ width: `${(5 - i) * 20}%` }} />
-                    </div>
-                    <span className="text-xs text-muted-foreground">{(5 - i) * 8}</span>
+          <CardHeader><CardTitle className="text-lg flex items-center gap-2"><BarChart3 className="h-5 w-5" /> Sales Pipeline</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            {pipeline.map((p) => {
+              const count = stats?.statusCounts?.[p.key] || 0;
+              const pct = Math.round((count / totalPipeline) * 100);
+              return (
+                <div key={p.stage} className="space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span>{p.stage}</span>
+                    <span className="font-medium">{count}</span>
                   </div>
+                  <Progress value={pct} className="h-2" />
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </CardContent>
         </Card>
 
+        {/* Quick Actions */}
         <Card>
-          <CardHeader><CardTitle className="text-lg">Quick Actions</CardTitle></CardHeader>
-          <CardContent className="flex flex-wrap gap-3">
-            {[
-              { label: "All Leads", icon: Users },
-              { label: "Car Catalog", icon: Car },
-              { label: "AI Scoring", icon: Zap },
-              { label: "Quote Gen", icon: BarChart3 },
-            ].map((a) => (
-              <Badge key={a.label} variant="outline" className="px-4 py-2 text-sm cursor-pointer hover:bg-accent">
-                <a.icon className="h-4 w-4 mr-2" />{a.label}
-              </Badge>
-            ))}
+          <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Zap className="h-5 w-5" /> Quick Actions</CardTitle></CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { label: "View All Leads", icon: Users, desc: "Browse & manage leads" },
+                { label: "Car Catalog", icon: Car, desc: "Manage car listings" },
+                { label: "AI Lead Scoring", icon: Zap, desc: "Prioritize hot leads" },
+                { label: "Quote Generator", icon: IndianRupee, desc: "Create customer quotes" },
+                { label: "Call Center", icon: Phone, desc: "Smart calling queue" },
+                { label: "Discount Presets", icon: ShoppingCart, desc: "Manage offers" },
+              ].map((a) => (
+                <div key={a.label} className="p-3 rounded-lg border hover:bg-accent cursor-pointer transition-colors">
+                  <a.icon className="h-5 w-5 text-primary mb-2" />
+                  <p className="text-sm font-medium">{a.label}</p>
+                  <p className="text-[11px] text-muted-foreground">{a.desc}</p>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       </div>
