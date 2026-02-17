@@ -2,33 +2,57 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { useVerticalAccess, BusinessVertical } from "@/hooks/useVerticalAccess";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Lock, Loader2, Shield, KeyRound, Building2, Eye, EyeOff, User, MessageSquare, ArrowLeft } from "lucide-react";
+import { Lock, Loader2, Shield, KeyRound, Building2, Eye, EyeOff, User, ArrowLeft, Crown, Phone } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import logoImage from "@/assets/logo-grabyourcar-main.png";
 import AdminForgotPassword from "@/components/admin/AdminForgotPassword";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { useQuery } from "@tanstack/react-query";
+
+type LoginStep = "choose-type" | "select-vertical" | "team-login" | "super-admin-phone" | "super-admin-otp" | "forgot-password";
+
+const iconMap: Record<string, React.ElementType> = {
+  Shield, Car: Building2, Banknote: Building2, Key: Building2, CreditCard: Building2, ShoppingBag: Building2, Megaphone: Building2,
+};
 
 const AdminAuth = () => {
   const navigate = useNavigate();
   const { user, signIn, loading } = useAuth();
   const { isSuperAdmin } = useAdminAuth();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { setActiveVertical } = useVerticalAccess();
+
+  const [step, setStep] = useState<LoginStep>("choose-type");
+  const [selectedVertical, setSelectedVertical] = useState<BusinessVertical | null>(null);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
-  
-  // Super Admin WhatsApp OTP state
-  const [otpStep, setOtpStep] = useState<'login' | 'otp-sent'>('login');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Super Admin OTP
+  const [superAdminPhone, setSuperAdminPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [otpSending, setOtpSending] = useState(false);
-  const [superAdminPhone, setSuperAdminPhone] = useState("");
+
+  // Fetch verticals for selection
+  const { data: verticals = [], isLoading: verticalsLoading } = useQuery({
+    queryKey: ["login-verticals"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("business_verticals")
+        .select("*")
+        .eq("is_active", true)
+        .order("sort_order");
+      if (error) throw error;
+      return data as BusinessVertical[];
+    },
+  });
 
   // Redirect if already logged in
   useEffect(() => {
@@ -38,13 +62,11 @@ const AdminAuth = () => {
   }, [user, loading, navigate]);
 
   const constructEmail = (uname: string): string => {
-    // If user already typed full email, use as-is
     if (uname.includes("@")) return uname;
-    // Otherwise construct username@grabyourcar.app
     return `${uname.toLowerCase().trim()}@grabyourcar.app`;
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleTeamLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username.trim() || !password.trim()) {
       toast.error("Please enter username and password");
@@ -65,14 +87,50 @@ const AdminAuth = () => {
       return;
     }
 
-    toast.success("Welcome! Select your workspace.");
-    navigate("/workspace");
+    // Verify user has access to the selected vertical
+    if (selectedVertical) {
+      const { data: session } = await supabase.auth.getSession();
+      const userId = session?.session?.user?.id;
+      
+      if (userId) {
+        // Check if user is admin/super_admin (they have access to all)
+        const { data: userRoles } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", userId);
+
+        const isAdminUser = userRoles?.some(r => r.role === "super_admin" || r.role === "admin");
+
+        if (!isAdminUser) {
+          // Check vertical access
+          const { data: access } = await supabase
+            .from("user_vertical_access")
+            .select("vertical_id")
+            .eq("user_id", userId)
+            .eq("vertical_id", selectedVertical.id);
+
+          if (!access || access.length === 0) {
+            toast.error(`You don't have access to ${selectedVertical.name}. Contact your Super Admin.`);
+            await supabase.auth.signOut();
+            setIsSubmitting(false);
+            return;
+          }
+        }
+      }
+
+      // Set active vertical and go directly to admin
+      setActiveVertical(selectedVertical);
+      toast.success(`Welcome to ${selectedVertical.name}!`);
+      navigate("/admin");
+    } else {
+      navigate("/workspace");
+    }
+
     setIsSubmitting(false);
   };
 
-  // Super Admin: Send WhatsApp OTP after successful password login
-  const handleSuperAdminOTP = async () => {
-    if (!superAdminPhone.trim()) {
+  const handleSendSuperAdminOTP = async () => {
+    if (!superAdminPhone.trim() || superAdminPhone.length < 10) {
       toast.error("Enter your registered WhatsApp number");
       return;
     }
@@ -82,7 +140,7 @@ const AdminAuth = () => {
         body: { phone: superAdminPhone, type: "admin_verify" },
       });
       if (error) throw error;
-      setOtpStep('otp-sent');
+      setStep("super-admin-otp");
       toast.success("OTP sent to your WhatsApp!");
     } catch (err: any) {
       toast.error(err.message || "Failed to send OTP");
@@ -91,7 +149,7 @@ const AdminAuth = () => {
     }
   };
 
-  const handleVerifyOTP = async () => {
+  const handleVerifySuperAdminOTP = async () => {
     if (otp.length !== 6) {
       toast.error("Enter 6-digit OTP");
       return;
@@ -103,8 +161,20 @@ const AdminAuth = () => {
       });
       if (error) throw error;
       if (data?.verified) {
-        toast.success("Verified! Welcome Super Admin.");
-        navigate("/workspace");
+        // Auto-login the super admin
+        const cleanPhone = superAdminPhone.replace(/\D/g, "");
+        const email = `91${cleanPhone}@grabyourcar.app`;
+        const pwd = `wa_${cleanPhone}_gyc2024`;
+        
+        const { error: signInErr } = await signIn(email, pwd);
+        if (signInErr) {
+          // Try with the super admin's known credentials
+          toast.error("OTP verified but login failed. Please use Team Login.");
+          setStep("choose-type");
+        } else {
+          toast.success("Welcome, Super Admin!");
+          navigate("/workspace");
+        }
       } else {
         toast.error("Invalid OTP. Try again.");
       }
@@ -113,6 +183,20 @@ const AdminAuth = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleSelectVertical = (vertical: BusinessVertical) => {
+    setSelectedVertical(vertical);
+    setStep("team-login");
+  };
+
+  const goBack = () => {
+    if (step === "team-login") setStep("select-vertical");
+    else if (step === "select-vertical") setStep("choose-type");
+    else if (step === "super-admin-phone") setStep("choose-type");
+    else if (step === "super-admin-otp") setStep("super-admin-phone");
+    else if (step === "forgot-password") setStep("team-login");
+    else setStep("choose-type");
   };
 
   if (loading) {
@@ -125,177 +209,312 @@ const AdminAuth = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background flex flex-col">
-      {/* Background Pattern */}
+      {/* Background */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/5 rounded-full blur-3xl" />
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-primary/5 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/3 rounded-full blur-3xl" />
       </div>
 
       <div className="flex-1 flex items-center justify-center p-4 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
           className="w-full max-w-md"
         >
-          {/* Logo & Branding */}
+          {/* Logo */}
           <div className="text-center mb-8">
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.1 }}
-              className="flex justify-center mb-6"
-            >
+            <div className="flex justify-center mb-6">
               <div className="relative">
                 <div className="absolute inset-0 bg-primary/20 rounded-2xl blur-xl" />
                 <img src={logoImage} alt="Grabyourcar Admin" className="h-16 relative dark:invert" />
               </div>
-            </motion.div>
-
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 mb-4">
-                <Shield className="h-4 w-4 text-primary" />
-                <span className="text-sm font-medium text-primary">Enterprise CRM</span>
-              </div>
-              <h1 className="text-2xl md:text-3xl font-heading font-bold text-foreground">
-                Welcome Back
-              </h1>
-              <p className="text-muted-foreground mt-2">
-                {showForgotPassword ? "Reset your password" : "Sign in to your workspace"}
-              </p>
-            </motion.div>
+            </div>
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 mb-4">
+              <Shield className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium text-primary">Enterprise CRM</span>
+            </div>
+            <h1 className="text-2xl md:text-3xl font-heading font-bold text-foreground">
+              {step === "choose-type" && "Sign In to CRM"}
+              {step === "select-vertical" && "Select Your Department"}
+              {step === "team-login" && selectedVertical?.name}
+              {step === "super-admin-phone" && "Super Admin Login"}
+              {step === "super-admin-otp" && "WhatsApp Verification"}
+              {step === "forgot-password" && "Reset Password"}
+            </h1>
+            <p className="text-muted-foreground mt-2">
+              {step === "choose-type" && "Choose your login method"}
+              {step === "select-vertical" && "You'll only see this department's data"}
+              {step === "team-login" && "Enter your credentials for this workspace"}
+              {step === "super-admin-phone" && "Verify via WhatsApp OTP"}
+              {step === "super-admin-otp" && "Enter the OTP sent to your WhatsApp"}
+              {step === "forgot-password" && "We'll help you reset your password"}
+            </p>
           </div>
 
           <AnimatePresence mode="wait">
-            {showForgotPassword ? (
-              <AdminForgotPassword key="forgot" onBack={() => setShowForgotPassword(false)} />
-            ) : (
-              <motion.div
-                key="login"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ delay: 0.3 }}
-              >
-                <Card className="border-border/50 shadow-xl shadow-primary/5 backdrop-blur-sm">
-                  <CardHeader className="pb-4">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <KeyRound className="h-5 w-5 text-primary" />
-                      {otpStep === 'otp-sent' ? 'WhatsApp Verification' : 'Sign In'}
-                    </CardTitle>
-                    <CardDescription>
-                      {otpStep === 'otp-sent'
-                        ? 'Enter the OTP sent to your WhatsApp'
-                        : 'Enter your credentials to continue'}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {otpStep === 'login' && (
-                      <form onSubmit={handleLogin} className="space-y-5">
-                        <div className="space-y-2">
-                          <Label htmlFor="admin-username" className="text-sm font-medium">
-                            Username
-                          </Label>
-                          <div className="relative">
-                            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                              id="admin-username"
-                              type="text"
-                              placeholder="username"
-                              className="pl-10 h-11 bg-background/50"
-                              value={username}
-                              onChange={(e) => setUsername(e.target.value)}
-                              required
-                              autoComplete="username"
-                            />
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            e.g. rahul → rahul@grabyourcar
-                          </p>
-                        </div>
+            {/* STEP 1: Choose login type */}
+            {step === "choose-type" && (
+              <motion.div key="choose" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+                <div className="space-y-4">
+                  <Card
+                    className="cursor-pointer hover:shadow-lg hover:border-primary/30 transition-all group"
+                    onClick={() => setStep("select-vertical")}
+                  >
+                    <CardContent className="p-6 flex items-center gap-4">
+                      <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <Building2 className="h-7 w-7 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg text-foreground">Team Login</h3>
+                        <p className="text-sm text-muted-foreground">Select your department & sign in</p>
+                      </div>
+                    </CardContent>
+                  </Card>
 
-                        <div className="space-y-2">
-                          <Label htmlFor="admin-password" className="text-sm font-medium">Password</Label>
-                          <div className="relative">
-                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                              id="admin-password"
-                              type={showPassword ? "text" : "password"}
-                              placeholder="Enter your password"
-                              className="pl-10 pr-10 h-11 bg-background/50"
-                              value={password}
-                              onChange={(e) => setPassword(e.target.value)}
-                              required
-                              autoComplete="current-password"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setShowPassword(!showPassword)}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  <Card
+                    className="cursor-pointer hover:shadow-lg hover:border-amber-500/30 transition-all group"
+                    onClick={() => setStep("super-admin-phone")}
+                  >
+                    <CardContent className="p-6 flex items-center gap-4">
+                      <div className="w-14 h-14 rounded-xl bg-amber-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <Crown className="h-7 w-7 text-amber-500" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg text-foreground">Super Admin</h3>
+                        <p className="text-sm text-muted-foreground">Login via WhatsApp OTP</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </motion.div>
+            )}
+
+            {/* STEP 2a: Select Vertical */}
+            {step === "select-vertical" && (
+              <motion.div key="verticals" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                <Card className="border-border/50 shadow-xl shadow-primary/5">
+                  <CardContent className="p-4">
+                    <div className="grid grid-cols-1 gap-2">
+                      {verticalsLoading ? (
+                        <div className="flex justify-center py-8">
+                          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                        </div>
+                      ) : (
+                        verticals.map((v) => (
+                          <button
+                            key={v.id}
+                            onClick={() => handleSelectVertical(v)}
+                            className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent transition-colors text-left w-full group"
+                          >
+                            <div
+                              className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform"
+                              style={{ backgroundColor: `${v.color}15` }}
                             >
-                              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                            </button>
-                          </div>
-                        </div>
-
-                        <Button type="submit" className="w-full h-11 text-base font-semibold shadow-lg shadow-primary/25" disabled={isSubmitting}>
-                          {isSubmitting ? (
-                            <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Authenticating...</>
-                          ) : (
-                            <><Shield className="h-4 w-4 mr-2" /> Sign In</>
-                          )}
-                        </Button>
-
-                        <div className="text-center">
-                          <button type="button" onClick={() => setShowForgotPassword(true)} className="text-sm text-primary hover:underline">
-                            Forgot your password?
+                              <Shield className="h-5 w-5" style={{ color: v.color || "#3B82F6" }} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm text-foreground">{v.name}</p>
+                              <p className="text-xs text-muted-foreground truncate">{v.description}</p>
+                            </div>
                           </button>
-                        </div>
-                      </form>
-                    )}
-
-                    {otpStep === 'otp-sent' && (
-                      <div className="space-y-5">
-                        <div className="flex justify-center">
-                          <InputOTP maxLength={6} value={otp} onChange={setOtp}>
-                            <InputOTPGroup>
-                              {[0, 1, 2, 3, 4, 5].map(i => (
-                                <InputOTPSlot key={i} index={i} />
-                              ))}
-                            </InputOTPGroup>
-                          </InputOTP>
-                        </div>
-                        <Button onClick={handleVerifyOTP} className="w-full h-11" disabled={isSubmitting || otp.length !== 6}>
-                          {isSubmitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Shield className="h-4 w-4 mr-2" />}
-                          Verify & Continue
-                        </Button>
-                        <Button variant="ghost" className="w-full" onClick={() => { setOtpStep('login'); setOtp(""); }}>
-                          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Login
-                        </Button>
-                      </div>
-                    )}
-
-                    <div className="mt-6 pt-4 border-t border-border/50">
-                      <div className="flex items-start gap-3 text-xs text-muted-foreground">
-                        <Shield className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                        <p>Protected area. All login attempts are monitored and logged.</p>
-                      </div>
+                        ))
+                      )}
                     </div>
+
+                    <Button variant="ghost" className="w-full mt-4" onClick={goBack}>
+                      <ArrowLeft className="h-4 w-4 mr-2" /> Back
+                    </Button>
                   </CardContent>
                 </Card>
               </motion.div>
             )}
+
+            {/* STEP 2b: Team Login Form */}
+            {step === "team-login" && (
+              <motion.div key="login" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                <Card className="border-border/50 shadow-xl shadow-primary/5">
+                  {selectedVertical && (
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-10 h-10 rounded-lg flex items-center justify-center"
+                          style={{ backgroundColor: `${selectedVertical.color}15` }}
+                        >
+                          <Shield className="h-5 w-5" style={{ color: selectedVertical.color || "#3B82F6" }} />
+                        </div>
+                        <div>
+                          <CardTitle className="text-base">{selectedVertical.name}</CardTitle>
+                          <CardDescription className="text-xs">{selectedVertical.description}</CardDescription>
+                        </div>
+                      </div>
+                    </CardHeader>
+                  )}
+                  <CardContent className="p-6 pt-4">
+                    <form onSubmit={handleTeamLogin} className="space-y-5">
+                      <div className="space-y-2">
+                        <Label htmlFor="admin-username" className="text-sm font-medium">Username</Label>
+                        <div className="relative">
+                          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="admin-username"
+                            type="text"
+                            placeholder="username"
+                            className="pl-10 h-11 bg-background/50"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            required
+                            autoComplete="username"
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground">e.g. rahul → rahul@grabyourcar</p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="admin-password" className="text-sm font-medium">Password</Label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="admin-password"
+                            type={showPassword ? "text" : "password"}
+                            placeholder="Enter your password"
+                            className="pl-10 pr-10 h-11 bg-background/50"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                            autoComplete="current-password"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      <Button type="submit" className="w-full h-11 text-base font-semibold shadow-lg shadow-primary/25" disabled={isSubmitting}>
+                        {isSubmitting ? (
+                          <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Authenticating...</>
+                        ) : (
+                          <><KeyRound className="h-4 w-4 mr-2" /> Sign In</>
+                        )}
+                      </Button>
+
+                      <div className="flex items-center justify-between">
+                        <Button type="button" variant="ghost" size="sm" onClick={goBack}>
+                          <ArrowLeft className="h-4 w-4 mr-1" /> Change Dept
+                        </Button>
+                        <button type="button" onClick={() => setStep("forgot-password")} className="text-sm text-primary hover:underline">
+                          Forgot password?
+                        </button>
+                      </div>
+                    </form>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
+            {/* SUPER ADMIN: Phone Entry */}
+            {step === "super-admin-phone" && (
+              <motion.div key="sa-phone" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                <Card className="border-border/50 shadow-xl shadow-amber-500/5">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Crown className="h-5 w-5 text-amber-500" />
+                      Super Admin Verification
+                    </CardTitle>
+                    <CardDescription>Enter your registered WhatsApp number for OTP</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-5">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">WhatsApp Number</Label>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          type="tel"
+                          placeholder="10-digit number"
+                          className="pl-10 h-11"
+                          value={superAdminPhone}
+                          onChange={(e) => setSuperAdminPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                        />
+                      </div>
+                    </div>
+
+                    <Button
+                      onClick={handleSendSuperAdminOTP}
+                      className="w-full h-11 bg-amber-500 hover:bg-amber-600 text-white"
+                      disabled={otpSending || superAdminPhone.length < 10}
+                    >
+                      {otpSending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Shield className="h-4 w-4 mr-2" />}
+                      Send WhatsApp OTP
+                    </Button>
+
+                    <Button variant="ghost" className="w-full" onClick={goBack}>
+                      <ArrowLeft className="h-4 w-4 mr-2" /> Back
+                    </Button>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
+            {/* SUPER ADMIN: OTP Verification */}
+            {step === "super-admin-otp" && (
+              <motion.div key="sa-otp" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                <Card className="border-border/50 shadow-xl shadow-amber-500/5">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Crown className="h-5 w-5 text-amber-500" />
+                      Enter OTP
+                    </CardTitle>
+                    <CardDescription>Sent to +91 {superAdminPhone}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-5">
+                    <div className="flex justify-center">
+                      <InputOTP maxLength={6} value={otp} onChange={setOtp}>
+                        <InputOTPGroup>
+                          {[0, 1, 2, 3, 4, 5].map(i => (
+                            <InputOTPSlot key={i} index={i} />
+                          ))}
+                        </InputOTPGroup>
+                      </InputOTP>
+                    </div>
+
+                    <Button
+                      onClick={handleVerifySuperAdminOTP}
+                      className="w-full h-11 bg-amber-500 hover:bg-amber-600 text-white"
+                      disabled={isSubmitting || otp.length !== 6}
+                    >
+                      {isSubmitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Shield className="h-4 w-4 mr-2" />}
+                      Verify & Enter
+                    </Button>
+
+                    <Button variant="ghost" className="w-full" onClick={goBack}>
+                      <ArrowLeft className="h-4 w-4 mr-2" /> Back
+                    </Button>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
+            {/* Forgot Password */}
+            {step === "forgot-password" && (
+              <motion.div key="forgot" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+                <AdminForgotPassword onBack={goBack} />
+              </motion.div>
+            )}
           </AnimatePresence>
 
+          {/* Footer */}
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="text-center mt-8">
             <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
               <Building2 className="h-4 w-4" />
               <span>Grabyourcar Enterprise CRM</span>
             </div>
-            <p className="text-xs text-muted-foreground/70 mt-2">
-              © {new Date().getFullYear()} Grabyourcar. All rights reserved.
-            </p>
+            <div className="flex items-start gap-3 text-xs text-muted-foreground mt-3 justify-center">
+              <Shield className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
+              <p>Protected area. All login attempts are monitored.</p>
+            </div>
           </motion.div>
         </motion.div>
       </div>
