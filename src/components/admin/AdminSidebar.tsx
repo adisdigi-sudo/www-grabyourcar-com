@@ -61,18 +61,23 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  
+  // Loan vertical
   { id: "loan-crm", label: "💰 Loan CRM", icon: CreditCard, badge: "New", verticals: ["loans"], allowedRoles: ["super_admin", "admin", "finance", "sales"] },
+  
+  // Cross-vertical tools (show in all)
   { id: "unified-crm", label: "🧠 Master CRM", icon: Users, badge: "New" },
   { id: "journey-automation", label: "⚡ Journey Automation", icon: Sparkles, badge: "New", allowedRoles: ["super_admin", "admin", "operations"] },
   { id: "revenue-intelligence", label: "📊 Revenue Intelligence", icon: BarChart3, badge: "New", allowedRoles: ["super_admin", "admin", "finance"] },
-  { id: "lead-scoring", label: "🤖 AI Lead Scoring", icon: Brain, badge: "AI", allowedRoles: ["super_admin", "admin", "sales", "calling"] },
+  { id: "lead-scoring", label: "🤖 AI Lead Scoring", icon: Brain, badge: "AI", verticals: ["sales", "loans", "insurance"], allowedRoles: ["super_admin", "admin", "sales", "calling"] },
   { id: "client-management", label: "👤 Client Management", icon: UserCog, badge: "New" },
-  { id: "lead-import", label: "📥 Lead Import", icon: Database, badge: "New", allowedRoles: ["super_admin", "admin", "operations", "calling"] },
+  { id: "lead-import", label: "📥 Lead Import", icon: Database, badge: "New", verticals: ["sales", "loans", "insurance"], allowedRoles: ["super_admin", "admin", "operations", "calling"] },
   { id: "data-export", label: "📤 Data Export", icon: FileText, badge: "New", allowedRoles: ["super_admin", "admin", "operations"] },
   { 
     id: "leads", 
     label: "Lead Management", 
     icon: Users,
+    verticals: ["sales", "loans", "insurance"],
     allowedRoles: ["super_admin", "admin", "sales", "calling"],
     children: [
       { id: "leads-all", label: "All Leads", icon: Users },
@@ -84,6 +89,7 @@ const navItems: NavItem[] = [
     id: "cars", 
     label: "Car Management", 
     icon: Car,
+    verticals: ["sales"],
     allowedRoles: ["super_admin", "admin", "sales", "operations"],
     children: [
       { id: "cars-list", label: "Cars & Details", icon: Car },
@@ -107,6 +113,7 @@ const navItems: NavItem[] = [
     id: "website", 
     label: "Website Manager", 
     icon: Globe,
+    verticals: ["marketing"],
     allowedRoles: ["super_admin", "admin", "marketing"],
     children: [
       { id: "website-homepage", label: "Homepage", icon: Home },
@@ -122,6 +129,7 @@ const navItems: NavItem[] = [
     label: "Social Proof", 
     icon: Users,
     badge: "New",
+    verticals: ["marketing"],
     allowedRoles: ["super_admin", "admin", "marketing"],
     children: [
       { id: "socialproof-reviews", label: "Google Reviews", icon: MessageSquare },
@@ -133,22 +141,23 @@ const navItems: NavItem[] = [
     label: "Services", 
     icon: Wrench,
     children: [
-      { id: "services-hsrp", label: "HSRP & FASTag", icon: Shield, allowedRoles: ["super_admin", "admin", "operations"] },
-      { id: "services-rentals", label: "Self-Drive Rentals", icon: CalendarDays, allowedRoles: ["super_admin", "admin", "operations"] },
-      { id: "services-driver-bookings", label: "🚗 Driver Bookings", icon: Car, badge: "New", allowedRoles: ["super_admin", "admin", "operations"] },
-      { id: "services-api-partners", label: "🔗 API Partners", icon: Globe, badge: "New", allowedRoles: ["super_admin", "admin"] },
-      { id: "services-insurance", label: "🛡️ Insurance CRM", icon: FileText, allowedRoles: ["super_admin", "admin", "insurance"] },
-      { id: "services-insurance-import", label: "📥 Insurance Import/Export", icon: Database, allowedRoles: ["super_admin", "admin", "insurance"] },
-      { id: "services-loans", label: "Car Loans", icon: CreditCard, allowedRoles: ["super_admin", "admin", "finance"] },
-      { id: "services-discounts", label: "Discount Presets", icon: Tags, badge: "New", allowedRoles: ["super_admin", "admin", "sales"] },
-      { id: "services-emi-pdf", label: "EMI PDF Settings", icon: FileText, allowedRoles: ["super_admin", "admin", "finance"] },
-      { id: "services-quote-generator", label: "Manual Quote", icon: FileSignature, badge: "New", allowedRoles: ["super_admin", "admin", "sales"] },
+      { id: "services-hsrp", label: "HSRP & FASTag", icon: Shield, verticals: ["hsrp"], allowedRoles: ["super_admin", "admin", "operations"] },
+      { id: "services-rentals", label: "Self-Drive Rentals", icon: CalendarDays, verticals: ["rental"], allowedRoles: ["super_admin", "admin", "operations"] },
+      { id: "services-driver-bookings", label: "🚗 Driver Bookings", icon: Car, badge: "New", verticals: ["rental"], allowedRoles: ["super_admin", "admin", "operations"] },
+      { id: "services-api-partners", label: "🔗 API Partners", icon: Globe, badge: "New", verticals: ["rental"], allowedRoles: ["super_admin", "admin"] },
+      { id: "services-insurance", label: "🛡️ Insurance CRM", icon: FileText, verticals: ["insurance"], allowedRoles: ["super_admin", "admin", "insurance"] },
+      { id: "services-insurance-import", label: "📥 Insurance Import/Export", icon: Database, verticals: ["insurance"], allowedRoles: ["super_admin", "admin", "insurance"] },
+      { id: "services-loans", label: "Car Loans", icon: CreditCard, verticals: ["loans"], allowedRoles: ["super_admin", "admin", "finance"] },
+      { id: "services-discounts", label: "Discount Presets", icon: Tags, badge: "New", verticals: ["sales"], allowedRoles: ["super_admin", "admin", "sales"] },
+      { id: "services-emi-pdf", label: "EMI PDF Settings", icon: FileText, verticals: ["loans"], allowedRoles: ["super_admin", "admin", "finance"] },
+      { id: "services-quote-generator", label: "Manual Quote", icon: FileSignature, badge: "New", verticals: ["sales"], allowedRoles: ["super_admin", "admin", "sales"] },
     ]
   },
   { 
     id: "ecommerce", 
     label: "E-Commerce", 
     icon: Package,
+    verticals: ["accessories"],
     allowedRoles: ["super_admin", "admin", "operations"],
     children: [
       { id: "ecommerce-accessories", label: "Accessories", icon: Package },
@@ -160,6 +169,7 @@ const navItems: NavItem[] = [
     id: "content", 
     label: "Content", 
     icon: FileText,
+    verticals: ["marketing"],
     allowedRoles: ["super_admin", "admin", "marketing"],
     children: [
       { id: "content-blog", label: "Blog Posts", icon: FileText },
@@ -174,6 +184,7 @@ const navItems: NavItem[] = [
     label: "Marketing", 
     icon: Users,
     badge: "New",
+    verticals: ["marketing"],
     allowedRoles: ["super_admin", "admin", "marketing"],
     children: [
       { id: "marketing-templates", label: "📱 WhatsApp Templates", icon: MessageSquare, badge: "New" },

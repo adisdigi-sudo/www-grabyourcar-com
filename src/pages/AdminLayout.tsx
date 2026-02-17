@@ -73,6 +73,12 @@ import { LeadScoringDashboard } from "@/components/admin/LeadScoringDashboard";
 import { ClientManagement } from "@/components/admin/ClientManagement";
 import { LeadImportManager } from "@/components/admin/LeadImportManager";
 import { DataExportEngine } from "@/components/admin/DataExportEngine";
+import { InsuranceDashboard } from "@/components/admin/verticals/InsuranceDashboard";
+import { SalesDashboard } from "@/components/admin/verticals/SalesDashboard";
+import { RentalDashboard } from "@/components/admin/verticals/RentalDashboard";
+import { HSRPDashboard } from "@/components/admin/verticals/HSRPDashboard";
+import { AccessoriesDashboard } from "@/components/admin/verticals/AccessoriesDashboard";
+import { MarketingDashboard } from "@/components/admin/verticals/MarketingDashboard";
 
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
@@ -143,9 +149,17 @@ const AdminLayout = () => {
   // Render content based on active tab
   const renderContent = () => {
     switch (activeTab) {
-      case "dashboard":
+      case "dashboard": {
+        const slug = activeVertical?.slug;
+        if (slug === "insurance") return <InsuranceDashboard />;
+        if (slug === "sales") return <SalesDashboard />;
+        if (slug === "rental") return <RentalDashboard />;
+        if (slug === "hsrp") return <HSRPDashboard />;
+        if (slug === "accessories") return <AccessoriesDashboard />;
+        if (slug === "marketing") return <MarketingDashboard />;
+        if (slug === "loans") return <LoanCRMDashboard />;
         return <AdminDashboard />;
-      case "loan-crm":
+      }
         return <LoanCRMDashboard />;
       case "unified-crm":
         return <UnifiedMasterCRM />;
