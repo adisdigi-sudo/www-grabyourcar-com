@@ -16,7 +16,7 @@ import AdminForgotPassword from "@/components/admin/AdminForgotPassword";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { useQuery } from "@tanstack/react-query";
 
-type LoginStep = "choose-type" | "select-vertical" | "team-login" | "super-admin-phone" | "super-admin-otp" | "forgot-password";
+type LoginStep = "choose-type" | "select-vertical" | "team-login" | "super-admin-phone" | "super-admin-otp" | "super-admin-login" | "forgot-password";
 
 const iconMap: Record<string, React.ElementType> = {
   Shield, Car: Building2, Banknote: Building2, Key: Building2, CreditCard: Building2, ShoppingBag: Building2, Megaphone: Building2,
@@ -149,6 +149,8 @@ const AdminAuth = () => {
     }
   };
 
+  const [otpVerified, setOtpVerified] = useState(false);
+
   const handleVerifySuperAdminOTP = async () => {
     if (otp.length !== 6) {
       toast.error("Enter 6-digit OTP");
@@ -161,20 +163,9 @@ const AdminAuth = () => {
       });
       if (error) throw error;
       if (data?.verified) {
-        // Auto-login the super admin
-        const cleanPhone = superAdminPhone.replace(/\D/g, "");
-        const email = `91${cleanPhone}@grabyourcar.app`;
-        const pwd = `wa_${cleanPhone}_gyc2024`;
-        
-        const { error: signInErr } = await signIn(email, pwd);
-        if (signInErr) {
-          // Try with the super admin's known credentials
-          toast.error("OTP verified but login failed. Please use Team Login.");
-          setStep("choose-type");
-        } else {
-          toast.success("Welcome, Super Admin!");
-          navigate("/workspace");
-        }
+        setOtpVerified(true);
+        toast.success("OTP verified! Now enter your credentials.");
+        setStep("super-admin-login");
       } else {
         toast.error("Invalid OTP. Try again.");
       }
@@ -183,6 +174,55 @@ const AdminAuth = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleSuperAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!username.trim() || !password.trim()) {
+      toast.error("Please enter username and password");
+      return;
+    }
+    if (!otpVerified) {
+      toast.error("OTP verification required first");
+      setStep("super-admin-phone");
+      return;
+    }
+    setIsSubmitting(true);
+
+    const email = constructEmail(username);
+    const { error } = await signIn(email, password);
+
+    if (error) {
+      if (error.message.includes("Invalid login credentials")) {
+        toast.error("Invalid username or password");
+      } else {
+        toast.error(error.message);
+      }
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Verify this user is actually a super_admin
+    const { data: session } = await supabase.auth.getSession();
+    const userId = session?.session?.user?.id;
+    if (userId) {
+      const { data: userRoles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId);
+      const isSA = userRoles?.some(r => r.role === "super_admin");
+      if (!isSA) {
+        toast.error("This account is not a Super Admin. Use Team Login instead.");
+        await supabase.auth.signOut();
+        setIsSubmitting(false);
+        setStep("choose-type");
+        return;
+      }
+    }
+
+    toast.success("Welcome, Super Admin!");
+    navigate("/workspace");
+    setIsSubmitting(false);
   };
 
   const handleSelectVertical = (vertical: BusinessVertical) => {
@@ -195,7 +235,8 @@ const AdminAuth = () => {
     else if (step === "select-vertical") setStep("choose-type");
     else if (step === "super-admin-phone") setStep("choose-type");
     else if (step === "super-admin-otp") setStep("super-admin-phone");
-    else if (step === "forgot-password") setStep("team-login");
+    else if (step === "super-admin-login") setStep("super-admin-otp");
+    else if (step === "forgot-password") setStep(selectedVertical ? "team-login" : "super-admin-login");
     else setStep("choose-type");
   };
 
@@ -239,6 +280,7 @@ const AdminAuth = () => {
               {step === "team-login" && selectedVertical?.name}
               {step === "super-admin-phone" && "Super Admin Login"}
               {step === "super-admin-otp" && "WhatsApp Verification"}
+              {step === "super-admin-login" && "Super Admin Credentials"}
               {step === "forgot-password" && "Reset Password"}
             </h1>
             <p className="text-muted-foreground mt-2">
@@ -247,6 +289,7 @@ const AdminAuth = () => {
               {step === "team-login" && "Enter your credentials for this workspace"}
               {step === "super-admin-phone" && "Verify via WhatsApp OTP"}
               {step === "super-admin-otp" && "Enter the OTP sent to your WhatsApp"}
+              {step === "super-admin-login" && "OTP verified ✓ — Now enter your username & password"}
               {step === "forgot-password" && "We'll help you reset your password"}
             </p>
           </div>
@@ -497,7 +540,83 @@ const AdminAuth = () => {
               </motion.div>
             )}
 
-            {/* Forgot Password */}
+            {/* SUPER ADMIN: Username + Password after OTP */}
+            {step === "super-admin-login" && (
+              <motion.div key="sa-login" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                <Card className="border-border/50 shadow-xl shadow-amber-500/5">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                        <Crown className="h-5 w-5 text-amber-500" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-base">Super Admin Access</CardTitle>
+                        <CardDescription className="text-xs flex items-center gap-1">
+                          <Shield className="h-3 w-3 text-green-500" /> OTP Verified
+                        </CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-6 pt-4">
+                    <form onSubmit={handleSuperAdminLogin} className="space-y-5">
+                      <div className="space-y-2">
+                        <Label htmlFor="sa-username" className="text-sm font-medium">Username</Label>
+                        <div className="relative">
+                          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="sa-username"
+                            type="text"
+                            placeholder="super admin username"
+                            className="pl-10 h-11 bg-background/50"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            required
+                            autoComplete="username"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="sa-password" className="text-sm font-medium">Password</Label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="sa-password"
+                            type={showPassword ? "text" : "password"}
+                            placeholder="Enter your password"
+                            className="pl-10 pr-10 h-11 bg-background/50"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                            autoComplete="current-password"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      <Button type="submit" className="w-full h-11 text-base font-semibold bg-amber-500 hover:bg-amber-600 text-white" disabled={isSubmitting}>
+                        {isSubmitting ? (
+                          <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Authenticating...</>
+                        ) : (
+                          <><Crown className="h-4 w-4 mr-2" /> Enter Master CRM</>
+                        )}
+                      </Button>
+
+                      <Button type="button" variant="ghost" className="w-full" onClick={goBack}>
+                        <ArrowLeft className="h-4 w-4 mr-2" /> Back
+                      </Button>
+                    </form>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
             {step === "forgot-password" && (
               <motion.div key="forgot" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
                 <AdminForgotPassword onBack={goBack} />
