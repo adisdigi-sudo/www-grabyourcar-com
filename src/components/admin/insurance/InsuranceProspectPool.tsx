@@ -76,6 +76,7 @@ export function InsuranceProspectPool() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sourceFilter, setSourceFilter] = useState("all");
+  const [cityFilter, setCityFilter] = useState("all");
   const [activeTab, setActiveTab] = useState<"active" | "lost">("active");
   const [addOpen, setAddOpen] = useState(false);
   const [convertOpen, setConvertOpen] = useState<Prospect | null>(null);
@@ -99,13 +100,20 @@ export function InsuranceProspectPool() {
   const { data: prospects = [], isLoading } = useQuery({
     queryKey: ["insurance-prospects"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("insurance_prospects")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(1000);
-      if (error) throw error;
-      return data as Prospect[];
+      const { count } = await supabase.from("insurance_prospects").select("*", { count: "exact", head: true });
+      const total = count || 0;
+      const allData: Prospect[] = [];
+      const batchSize = 1000;
+      for (let i = 0; i < total; i += batchSize) {
+        const { data, error } = await supabase
+          .from("insurance_prospects")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .range(i, i + batchSize - 1);
+        if (error) throw error;
+        allData.push(...(data as Prospect[]));
+      }
+      return allData;
     },
   });
 
@@ -124,9 +132,15 @@ export function InsuranceProspectPool() {
         p.vehicle_number?.toLowerCase().includes(search.toLowerCase());
       const matchStatus = statusFilter === "all" || p.prospect_status === statusFilter;
       const matchSource = sourceFilter === "all" || p.data_source === sourceFilter;
-      return matchSearch && matchStatus && matchSource;
+      const matchCity = cityFilter === "all" || (p.city?.toLowerCase() === cityFilter.toLowerCase());
+      return matchSearch && matchStatus && matchSource && matchCity;
     });
-  }, [currentList, search, statusFilter, sourceFilter]);
+  }, [currentList, search, statusFilter, sourceFilter, cityFilter]);
+
+  const uniqueCities = useMemo(() => {
+    const cities = [...new Set(prospects.map(p => p.city).filter(Boolean))] as string[];
+    return cities.sort();
+  }, [prospects]);
 
   const paged = filtered.slice(page * pageSize, (page + 1) * pageSize);
   const totalPages = Math.ceil(filtered.length / pageSize);
@@ -340,6 +354,15 @@ export function InsuranceProspectPool() {
             {DATA_SOURCES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
           </SelectContent>
         </Select>
+        {uniqueCities.length > 0 && (
+          <Select value={cityFilter} onValueChange={v => { setCityFilter(v); setPage(0); }}>
+            <SelectTrigger className="w-[140px] h-9"><SelectValue placeholder="All Cities" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Cities</SelectItem>
+              {uniqueCities.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       {/* Prospect Data Table */}
