@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Shield, Banknote, Car, Key, CreditCard, ShoppingBag, Megaphone, LogOut, Crown } from "lucide-react";
 import { motion } from "framer-motion";
 import logoImage from "@/assets/logo-grabyourcar-main.png";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const iconMap: Record<string, React.ElementType> = {
   Shield,
@@ -66,6 +67,11 @@ const WorkspaceSelector = () => {
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/5 rounded-full blur-3xl" />
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-primary/5 rounded-full blur-3xl" />
+      </div>
+
+      {/* Theme Toggle - top right */}
+      <div className="fixed top-4 right-4 z-20">
+        <ThemeToggle />
       </div>
 
       <div className="flex-1 flex items-center justify-center p-4 relative z-10">
