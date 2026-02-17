@@ -15,6 +15,11 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
+    const body = await req.json();
+    const { action, ...payload } = body;
+
+    // All actions require super_admin auth
+
     // Verify caller is super_admin
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) throw new Error("No authorization header");
@@ -30,8 +35,6 @@ Deno.serve(async (req) => {
 
     const isSuperAdmin = callerRoles?.some((r: any) => r.role === "super_admin");
     if (!isSuperAdmin) throw new Error("Only super admins can manage users");
-
-    const { action, ...payload } = await req.json();
 
     switch (action) {
       case "create_user": {

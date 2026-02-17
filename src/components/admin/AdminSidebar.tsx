@@ -41,6 +41,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { AdminGlobalSearch } from "./AdminGlobalSearch";
 import { useAdminAuth, AppRole } from "@/hooks/useAdminAuth";
 import { useVerticalAccess } from "@/hooks/useVerticalAccess";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface AdminSidebarProps {
   activeTab: string;
@@ -512,16 +513,17 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
             "border-t",
             collapsed ? "p-2" : "p-4"
           )}>
-            {!collapsed && (
-              <p className="text-xs text-muted-foreground text-center">
-                © 2025 Grabyourcar
-              </p>
-            )}
-            {collapsed && (
-              <div className="flex justify-center">
-                <Settings className="h-4 w-4 text-muted-foreground" />
-              </div>
-            )}
+            <div className={cn(
+              "flex items-center",
+              collapsed ? "justify-center" : "justify-between"
+            )}>
+              {!collapsed && (
+                <p className="text-xs text-muted-foreground">
+                  © 2025 Grabyourcar
+                </p>
+              )}
+              <ThemeToggle />
+            </div>
           </div>
         </div>
       </aside>
