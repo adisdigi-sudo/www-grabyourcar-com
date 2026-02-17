@@ -1,35 +1,23 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Banknote, TrendingUp, Users, Clock, CheckCircle2, XCircle, 
-  ArrowRight, IndianRupee, Building2, FileText, BarChart3 
+  ArrowRight, IndianRupee, Building2, BarChart3, Upload
 } from "lucide-react";
 import { LoanPipelineBoard } from "./loans/LoanPipelineBoard";
 import { LoanLeadsList } from "./loans/LoanLeadsList";
 import { LoanBankPartners } from "./loans/LoanBankPartners";
 import { LoanAnalytics } from "./loans/LoanAnalytics";
-
-const STAGES = ['new', 'contacted', 'documents_collected', 'bank_submitted', 'sanctioned', 'disbursed', 'rejected'] as const;
-
-const stageLabels: Record<string, string> = {
-  new: 'New',
-  contacted: 'Contacted',
-  documents_collected: 'Docs Collected',
-  bank_submitted: 'Bank Submitted',
-  sanctioned: 'Sanctioned',
-  disbursed: 'Disbursed',
-  rejected: 'Rejected',
-};
+import { LoanBulkImport } from "./loans/LoanBulkImport";
+import { LOAN_STAGES, STAGE_LABELS } from "./loans/LoanStageConfig";
 
 export const LoanCRMDashboard = () => {
   const [activeTab, setActiveTab] = useState("pipeline");
 
-  // Fetch pipeline stats
   const { data: applications = [] } = useQuery({
     queryKey: ['loan-applications'],
     queryFn: async () => {
@@ -42,7 +30,6 @@ export const LoanCRMDashboard = () => {
     },
   });
 
-  // Fetch loan leads
   const { data: leads = [] } = useQuery({
     queryKey: ['car-loan-leads-stats'],
     queryFn: async () => {
@@ -56,93 +43,103 @@ export const LoanCRMDashboard = () => {
     },
   });
 
-  // Stats
+  // Stats from 12-stage pipeline
   const totalApps = applications.length;
-  const newApps = applications.filter(a => a.stage === 'new').length;
-  const sanctioned = applications.filter(a => a.stage === 'sanctioned').length;
-  const disbursed = applications.filter(a => a.stage === 'disbursed').length;
-  const rejected = applications.filter(a => a.stage === 'rejected').length;
+  const newApps = applications.filter(a => a.stage === 'new_lead').length;
+  const inPipeline = applications.filter(a => !['converted', 'lost'].includes(a.stage)).length;
+  const converted = applications.filter(a => a.stage === 'converted').length;
+  const lost = applications.filter(a => a.stage === 'lost').length;
   const totalDisbursed = applications
-    .filter(a => a.stage === 'disbursed')
-    .reduce((sum, a) => sum + (Number(a.disbursement_amount) || 0), 0);
-  const totalSanctioned = applications
-    .filter(a => a.stage === 'sanctioned' || a.stage === 'disbursed')
-    .reduce((sum, a) => sum + (Number(a.sanction_amount) || 0), 0);
-  const hotLeads = leads.filter(l => l.lead_priority === 'Hot').length;
+    .filter(a => ['disbursement', 'converted'].includes(a.stage))
+    .reduce((sum, a) => sum + (Number(a.disbursement_amount) || Number(a.loan_amount) || 0), 0);
+  const hotLeads = applications.filter(a => a.priority === 'hot').length;
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
-          <Banknote className="h-8 w-8 text-emerald-500" />
-          Car Loans / Finance CRM
-        </h1>
-        <p className="text-muted-foreground mt-1">Loan pipeline, bank tracking, and disbursement management</p>
+      <div className="flex justify-between items-start flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
+            <Banknote className="h-8 w-8 text-emerald-500" />
+            Car Loans / Finance CRM
+          </h1>
+          <p className="text-muted-foreground mt-1">12-stage pipeline with forced workflows & document guardrails</p>
+        </div>
+        <LoanBulkImport />
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
         <Card className="border-border/50">
-          <CardContent className="p-4">
+          <CardContent className="p-3">
             <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">Total Leads</p>
-              <Users className="h-4 w-4 text-blue-500" />
+              <p className="text-[11px] text-muted-foreground">Total</p>
+              <Users className="h-3.5 w-3.5 text-blue-500" />
             </div>
-            <p className="text-2xl font-bold mt-1">{leads.length}</p>
-            <p className="text-xs text-muted-foreground">{hotLeads} hot</p>
+            <p className="text-xl font-bold mt-0.5">{totalApps}</p>
+            <p className="text-[10px] text-muted-foreground">{hotLeads} hot</p>
           </CardContent>
         </Card>
         <Card className="border-border/50">
-          <CardContent className="p-4">
+          <CardContent className="p-3">
             <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">Pipeline</p>
-              <Clock className="h-4 w-4 text-amber-500" />
+              <p className="text-[11px] text-muted-foreground">New</p>
+              <Clock className="h-3.5 w-3.5 text-amber-500" />
             </div>
-            <p className="text-2xl font-bold mt-1">{totalApps}</p>
-            <p className="text-xs text-muted-foreground">{newApps} new</p>
+            <p className="text-xl font-bold mt-0.5">{newApps}</p>
+            <p className="text-[10px] text-muted-foreground">awaiting contact</p>
           </CardContent>
         </Card>
         <Card className="border-border/50">
-          <CardContent className="p-4">
+          <CardContent className="p-3">
             <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">Sanctioned</p>
-              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              <p className="text-[11px] text-muted-foreground">In Pipeline</p>
+              <ArrowRight className="h-3.5 w-3.5 text-indigo-500" />
             </div>
-            <p className="text-2xl font-bold mt-1">{sanctioned}</p>
-            <p className="text-xs text-muted-foreground">₹{(totalSanctioned / 100000).toFixed(1)}L</p>
+            <p className="text-xl font-bold mt-0.5">{inPipeline}</p>
+            <p className="text-[10px] text-muted-foreground">active deals</p>
           </CardContent>
         </Card>
         <Card className="border-border/50">
-          <CardContent className="p-4">
+          <CardContent className="p-3">
             <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">Disbursed</p>
-              <IndianRupee className="h-4 w-4 text-emerald-500" />
+              <p className="text-[11px] text-muted-foreground">Converted</p>
+              <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
             </div>
-            <p className="text-2xl font-bold mt-1">{disbursed}</p>
-            <p className="text-xs text-muted-foreground">₹{(totalDisbursed / 100000).toFixed(1)}L</p>
+            <p className="text-xl font-bold mt-0.5 text-green-600">{converted}</p>
+            <p className="text-[10px] text-muted-foreground">with docs</p>
           </CardContent>
         </Card>
         <Card className="border-border/50">
-          <CardContent className="p-4">
+          <CardContent className="p-3">
             <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">Rejected</p>
-              <XCircle className="h-4 w-4 text-red-500" />
+              <p className="text-[11px] text-muted-foreground">Lost</p>
+              <XCircle className="h-3.5 w-3.5 text-red-500" />
             </div>
-            <p className="text-2xl font-bold mt-1">{rejected}</p>
-            <p className="text-xs text-muted-foreground">{totalApps > 0 ? ((rejected / totalApps) * 100).toFixed(0) : 0}% rate</p>
+            <p className="text-xl font-bold mt-0.5 text-red-500">{lost}</p>
+            <p className="text-[10px] text-muted-foreground">{totalApps > 0 ? ((lost / totalApps) * 100).toFixed(0) : 0}% rate</p>
           </CardContent>
         </Card>
         <Card className="border-border/50">
-          <CardContent className="p-4">
+          <CardContent className="p-3">
             <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">Conversion</p>
-              <TrendingUp className="h-4 w-4 text-primary" />
+              <p className="text-[11px] text-muted-foreground">Disbursed</p>
+              <IndianRupee className="h-3.5 w-3.5 text-emerald-500" />
             </div>
-            <p className="text-2xl font-bold mt-1">
-              {leads.length > 0 ? ((disbursed / Math.max(leads.length, 1)) * 100).toFixed(1) : 0}%
+            <p className="text-xl font-bold mt-0.5">₹{(totalDisbursed / 100000).toFixed(1)}L</p>
+            <p className="text-[10px] text-muted-foreground">total value</p>
+          </CardContent>
+        </Card>
+        <Card className="border-border/50">
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] text-muted-foreground">Conversion</p>
+              <TrendingUp className="h-3.5 w-3.5 text-primary" />
+            </div>
+            <p className="text-xl font-bold mt-0.5">
+              {totalApps > 0 ? ((converted / totalApps) * 100).toFixed(1) : 0}%
             </p>
-            <p className="text-xs text-muted-foreground">Lead → Disbursement</p>
+            <p className="text-[10px] text-muted-foreground">lead → client</p>
           </CardContent>
         </Card>
       </div>
@@ -154,7 +151,7 @@ export const LoanCRMDashboard = () => {
             <ArrowRight className="h-4 w-4" /> Pipeline
           </TabsTrigger>
           <TabsTrigger value="leads" className="gap-2">
-            <Users className="h-4 w-4" /> Loan Leads
+            <Users className="h-4 w-4" /> All Applications
           </TabsTrigger>
           <TabsTrigger value="banks" className="gap-2">
             <Building2 className="h-4 w-4" /> Bank Partners
@@ -165,7 +162,7 @@ export const LoanCRMDashboard = () => {
         </TabsList>
 
         <TabsContent value="pipeline">
-          <LoanPipelineBoard applications={applications} stages={STAGES} stageLabels={stageLabels} />
+          <LoanPipelineBoard applications={applications} />
         </TabsContent>
         <TabsContent value="leads">
           <LoanLeadsList />
