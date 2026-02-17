@@ -26,6 +26,7 @@ import { format, addDays, differenceInDays, isBefore, isAfter } from "date-fns";
 
 type ViewFilter = "all" | "7" | "15" | "30" | "60" | "expired";
 type StatusFilter = "all" | "won" | "lost" | "running" | "new" | "grabyourcar";
+type PolicySegment = "upcoming" | "running" | "expired";
 
 type PolicyRow = {
   id: string;
@@ -202,10 +203,24 @@ export function InsuranceCRMDashboard() {
     return result;
   }, [rows, filter, statusFilterVal, search]);
 
-  // Upcoming renewals
+  // Upcoming renewals (expiring within 60 days)
   const upcomingRenewals = useMemo(() => {
     return rows
       .filter(r => r.daysUntilRenewal !== null && r.daysUntilRenewal >= 0 && r.daysUntilRenewal <= 60)
+      .sort((a, b) => (a.daysUntilRenewal || 0) - (b.daysUntilRenewal || 0));
+  }, [rows]);
+
+  // Running policies (active, not expiring within 60 days)
+  const runningPolicies = useMemo(() => {
+    return rows
+      .filter(r => r.status === "active" && r.daysUntilRenewal !== null && r.daysUntilRenewal > 60)
+      .sort((a, b) => (a.daysUntilRenewal || 0) - (b.daysUntilRenewal || 0));
+  }, [rows]);
+
+  // Expired / Closed policies
+  const expiredPolicies = useMemo(() => {
+    return rows
+      .filter(r => r.daysUntilRenewal !== null && r.daysUntilRenewal < 0)
       .sort((a, b) => (a.daysUntilRenewal || 0) - (b.daysUntilRenewal || 0));
   }, [rows]);
 
@@ -343,14 +358,26 @@ export function InsuranceCRMDashboard() {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-          <TabsList className="bg-muted/50">
+          <TabsList className="bg-muted/50 flex-wrap">
             <TabsTrigger value="policies" className="gap-1.5 text-xs">
               <FileText className="h-3.5 w-3.5" /> All Policies
             </TabsTrigger>
             <TabsTrigger value="renewals" className="gap-1.5 text-xs">
-              <CalendarDays className="h-3.5 w-3.5" /> Upcoming Renewals
+              <CalendarDays className="h-3.5 w-3.5" /> Upcoming
               {upcomingRenewals.length > 0 && (
                 <Badge variant="destructive" className="ml-1 h-4 text-[10px] px-1">{upcomingRenewals.length}</Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="running" className="gap-1.5 text-xs">
+              <Play className="h-3.5 w-3.5" /> Running
+              {runningPolicies.length > 0 && (
+                <Badge variant="secondary" className="ml-1 h-4 text-[10px] px-1">{runningPolicies.length}</Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="expired" className="gap-1.5 text-xs">
+              <XCircle className="h-3.5 w-3.5" /> Expired/Closed
+              {expiredPolicies.length > 0 && (
+                <Badge variant="destructive" className="ml-1 h-4 text-[10px] px-1">{expiredPolicies.length}</Badge>
               )}
             </TabsTrigger>
             <TabsTrigger value="followups" className="gap-1.5 text-xs">
@@ -592,6 +619,23 @@ export function InsuranceCRMDashboard() {
                           </div>
                           <div className="flex flex-col gap-1">
                             {r.phone && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button size="sm" className="h-7 gap-1 text-xs px-2 bg-emerald-600 hover:bg-emerald-700 text-white">
+                                    <Send className="h-3 w-3" /> Remind
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-52">
+                                  <DropdownMenuItem onClick={() => openReminderPreview(r, "notice")} className="cursor-pointer gap-2">
+                                    <Bell className="h-3.5 w-3.5" /> Renewal Notice
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => openReminderPreview(r, "quote")} className="cursor-pointer gap-2">
+                                    <FileText className="h-3.5 w-3.5" /> Renewal Quote
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+                            {r.phone && (
                               <a href={`tel:${r.phone}`}>
                                 <Button size="icon" className="h-7 w-7 bg-emerald-600 hover:bg-emerald-700 text-white" title="Call Now">
                                   <Phone className="h-3 w-3" />
@@ -601,6 +645,136 @@ export function InsuranceCRMDashboard() {
                             <Button variant="outline" size="icon" className="h-7 w-7" title="Share"
                               onClick={() => setShareDialogPolicy(r)}>
                               <Share2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* Running Policies Tab */}
+        <TabsContent value="running" className="mt-4">
+          <div className="space-y-3">
+            {runningPolicies.length === 0 ? (
+              <Card className="border shadow-sm">
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  <Play className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                  <p>No running policies with 60+ days remaining</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Play className="h-4 w-4 text-emerald-600" />
+                  <p className="text-sm font-semibold">{runningPolicies.length} active policies running smoothly</p>
+                </div>
+                {runningPolicies.map(r => (
+                  <Card key={r.id} className="border transition-all hover:shadow-md bg-emerald-50/30 dark:bg-emerald-950/10 border-emerald-100 dark:border-emerald-900">
+                    <CardContent className="py-3 px-4">
+                      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-semibold text-sm truncate">{r.customer_name}</h4>
+                            <Badge variant="outline" className="text-[10px] shrink-0 bg-emerald-100 text-emerald-700 border-emerald-200">Active</Badge>
+                            {getStatusBadge(r.lead_status)}
+                          </div>
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1"><FileText className="h-3 w-3" /> {r.policy_number || "N/A"}</span>
+                            <span>{r.insurer}</span>
+                            {r.vehicle_number && <span className="flex items-center gap-1"><Car className="h-3 w-3" /> {r.vehicle_number}</span>}
+                            {r.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {r.phone}</span>}
+                            <span className="font-semibold">₹{r.premium?.toLocaleString("en-IN") || "—"}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <div className="text-right">
+                            <p className="text-sm font-bold text-emerald-600">{r.daysUntilRenewal}d left</p>
+                            <p className="text-xs text-muted-foreground">
+                              Expires {r.renewal_date && format(new Date(r.renewal_date), "dd MMM yyyy")}
+                            </p>
+                          </div>
+                          <Button variant="ghost" size="icon" className="h-7 w-7"
+                            onClick={() => setSelectedPolicy(r)}>
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* Expired / Closed Tab */}
+        <TabsContent value="expired" className="mt-4">
+          <div className="space-y-3">
+            {expiredPolicies.length === 0 ? (
+              <Card className="border shadow-sm">
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  <XCircle className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                  <p>No expired or closed policies</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <XCircle className="h-4 w-4 text-destructive" />
+                  <p className="text-sm font-semibold text-destructive">{expiredPolicies.length} expired/closed policies — recovery needed</p>
+                </div>
+                {expiredPolicies.map(r => (
+                  <Card key={r.id} className="border transition-all hover:shadow-md bg-destructive/5 border-destructive/20">
+                    <CardContent className="py-3 px-4">
+                      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-semibold text-sm truncate">{r.customer_name}</h4>
+                            <Badge variant="destructive" className="text-[10px] shrink-0">Expired</Badge>
+                            {getStatusBadge(r.lead_status)}
+                          </div>
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1"><FileText className="h-3 w-3" /> {r.policy_number || "N/A"}</span>
+                            <span>{r.insurer}</span>
+                            {r.vehicle_number && <span className="flex items-center gap-1"><Car className="h-3 w-3" /> {r.vehicle_number}</span>}
+                            <span className="font-semibold">₹{r.premium?.toLocaleString("en-IN") || "—"}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <div className="text-right">
+                            <p className="text-sm font-bold text-destructive">
+                              Expired {Math.abs(r.daysUntilRenewal || 0)}d ago
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Was {r.renewal_date && format(new Date(r.renewal_date), "dd MMM yyyy")}
+                            </p>
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            {r.phone && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button size="sm" className="h-7 gap-1 text-xs px-2 bg-emerald-600 hover:bg-emerald-700 text-white">
+                                    <Send className="h-3 w-3" /> Recover
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-52">
+                                  <DropdownMenuItem onClick={() => openReminderPreview(r, "notice")} className="cursor-pointer gap-2">
+                                    <Bell className="h-3.5 w-3.5" /> Send Renewal Notice
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => openReminderPreview(r, "quote")} className="cursor-pointer gap-2">
+                                    <FileText className="h-3.5 w-3.5" /> Send Renewal Quote
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+                            <Button variant="ghost" size="icon" className="h-7 w-7"
+                              onClick={() => setSelectedPolicy(r)}>
+                              <ExternalLink className="h-3.5 w-3.5" />
                             </Button>
                           </div>
                         </div>
@@ -886,7 +1060,7 @@ function PolicyDetailDialog({
   );
 }
 
-// ── Reminder Preview & Edit Dialog ──
+// ── Reminder Preview & Edit Dialog (Policy vs Renewal Quote separated) ──
 function ReminderPreviewDialog({
   policy, templateType, onClose
 }: {
@@ -898,19 +1072,30 @@ function ReminderPreviewDialog({
   const [editMode, setEditMode] = useState(false);
   const [sending, setSending] = useState(false);
 
-  // Editable fields
+  // ── CURRENT POLICY fields (read from DB, editable for correction) ──
   const [customerName, setCustomerName] = useState(policy.customer_name || "Valued Customer");
   const [vehicleNumber, setVehicleNumber] = useState(policy.vehicle_number || "");
-  const [insurer, setInsurer] = useState(policy.insurer || "");
-  const [policyNumber, setPolicyNumber] = useState(policy.policy_number || "");
-  const [premium, setPremium] = useState(policy.premium ? String(policy.premium) : "");
-  const [renewalDate, setRenewalDate] = useState(policy.renewal_date || "");
+  const [currentInsurer, setCurrentInsurer] = useState(policy.insurer || "");
+  const [currentPolicyNumber, setCurrentPolicyNumber] = useState(policy.policy_number || "");
+  const [currentPremium, setCurrentPremium] = useState(policy.premium ? String(policy.premium) : "");
+  const [expiryDate, setExpiryDate] = useState(policy.renewal_date || "");
   const [phone, setPhone] = useState(policy.phone || "");
 
-  const daysLeft = renewalDate ? Math.max(0, differenceInDays(new Date(renewalDate), new Date())) : 0;
-  const formattedDate = renewalDate ? format(new Date(renewalDate), "dd MMM yyyy") : "N/A";
-  const formattedPremium = premium ? `₹${Number(premium).toLocaleString("en-IN")}` : "N/A";
+  // ── RENEWAL QUOTE fields (agent fills for the new quote) ──
+  const [renewalInsurer, setRenewalInsurer] = useState("");
+  const [renewalPremium, setRenewalPremium] = useState("");
+  const [renewalPolicyType, setRenewalPolicyType] = useState(policy.policy_type || "Comprehensive");
+  const [renewalIdv, setRenewalIdv] = useState("");
+  const [renewalNcb, setRenewalNcb] = useState("");
+  const [renewalAddons, setRenewalAddons] = useState("Zero Depreciation, RSA, Engine Protect");
+  const [quoteValidity, setQuoteValidity] = useState("7 days");
 
+  const daysLeft = expiryDate ? Math.max(0, differenceInDays(new Date(expiryDate), new Date())) : 0;
+  const formattedExpiry = expiryDate ? format(new Date(expiryDate), "dd MMM yyyy") : "N/A";
+  const formattedCurrentPremium = currentPremium ? `₹${Number(currentPremium).toLocaleString("en-IN")}` : "N/A";
+  const formattedRenewalPremium = renewalPremium ? `₹${Number(renewalPremium).toLocaleString("en-IN")}` : "To be confirmed";
+
+  // ── RENEWAL NOTICE: focuses on urgency + current policy ──
   const buildNotice = () => {
     return `🚗 *Grabyourcar Policy Renewal Reminder*
 ━━━━━━━━━━━━━━━━━━━━━
@@ -919,8 +1104,10 @@ Hello *${customerName}*,
 
 We hope you are enjoying a smooth and safe drive!
 
-This is a friendly reminder from *Grabyourcar Insurance Desk* that your *${vehicleNumber || "vehicle"}* insurance policy is set to expire on *${formattedDate}* — just *${daysLeft} days* to go.
+This is a friendly reminder from *Grabyourcar Insurance Desk* that your vehicle${vehicleNumber ? ` *(${vehicleNumber})*` : ""} insurance policy is set to expire on *${formattedExpiry}* — just *${daysLeft} days* to go.
 
+📋 *Your Current Policy:*
+${currentPolicyNumber ? `📄 Policy No: ${currentPolicyNumber}\n` : ""}${currentInsurer ? `🏢 Insurer: ${currentInsurer}\n` : ""}${currentPremium ? `💰 Current Premium: ${formattedCurrentPremium}\n` : ""}${vehicleNumber ? `🚗 Vehicle: ${vehicleNumber}\n` : ""}
 Renewing your policy before the expiry helps you:
 
 ✅ Avoid inspection hassles
@@ -933,10 +1120,6 @@ Our team has already prepared renewal assistance for you to make the process qui
 👉 Simply *reply to this message* or click below to get your renewal quote instantly.
 
 🔗 Renew Now: https://grabyourcar.lovable.app/insurance
-${policyNumber || insurer || premium ? `
-📋 *Your Policy Details:*
-${policyNumber ? `📄 Policy: ${policyNumber}\n` : ""}${insurer ? `🏢 Insurer: ${insurer}\n` : ""}${premium ? `💰 Premium: ${formattedPremium}\n` : ""}${vehicleNumber ? `🚗 Vehicle: ${vehicleNumber}\n` : ""}` : ""}
-If you need any help, feel free to contact your dedicated advisor.
 
 📞 +91 98559 24442
 🌐 www.grabyourcar.com
@@ -946,16 +1129,25 @@ Thank you for trusting *Grabyourcar* — we look forward to protecting your jour
 Drive safe! 🚘`.replace(/\n{3,}/g, "\n\n");
   };
 
+  // ── RENEWAL QUOTE: focuses on NEW quote details + comparison ──
   const buildQuote = () => {
     return `🚗 *Grabyourcar — Renewal Quote*
 ━━━━━━━━━━━━━━━━━━━━━
 
 Dear *${customerName}*,
 
-Your renewal quote for *${vehicleNumber || "your vehicle"}* is ready!
+Your personalized renewal quote for${vehicleNumber ? ` *${vehicleNumber}*` : " your vehicle"} is ready!
 
-📋 *Quote Details:*
-${policyNumber ? `📄 Policy: ${policyNumber}\n` : ""}${insurer ? `🏢 Current Insurer: ${insurer}\n` : ""}${premium ? `💰 Renewal Premium: ${formattedPremium}\n` : ""}📅 Current Expiry: ${formattedDate}
+📋 *Current Policy (Expiring):*
+${currentPolicyNumber ? `📄 Policy No: ${currentPolicyNumber}\n` : ""}${currentInsurer ? `🏢 Current Insurer: ${currentInsurer}\n` : ""}${currentPremium ? `💰 Current Premium: ${formattedCurrentPremium}\n` : ""}📅 Expiry Date: ${formattedExpiry}
+
+━━━━━━━━━━━━━━━━━━━━━
+
+💰 *Renewal Quote Details:*
+${renewalInsurer ? `🏢 Proposed Insurer: ${renewalInsurer}\n` : ""}💵 *Renewal Premium: ${formattedRenewalPremium}*
+📑 Policy Type: ${renewalPolicyType}
+${renewalIdv ? `🏷️ IDV: ₹${Number(renewalIdv).toLocaleString("en-IN")}\n` : ""}${renewalNcb ? `🎯 NCB Discount: ${renewalNcb}%\n` : ""}${renewalAddons ? `🛡️ Add-ons: ${renewalAddons}\n` : ""}📅 Quote Valid: ${quoteValidity}
+${currentPremium && renewalPremium ? `\n📊 *Comparison:*\n💰 Current: ${formattedCurrentPremium}\n💵 Renewal: ${formattedRenewalPremium}\n${Number(renewalPremium) < Number(currentPremium) ? `✅ You save: ₹${(Number(currentPremium) - Number(renewalPremium)).toLocaleString("en-IN")}` : `📈 Difference: ₹${Math.abs(Number(renewalPremium) - Number(currentPremium)).toLocaleString("en-IN")}`}` : ""}
 
 🎁 *Renewal Benefits:*
 ✅ NCB (No Claim Bonus) Protection
@@ -1022,7 +1214,7 @@ ${policyNumber ? `📄 Policy: ${policyNumber}\n` : ""}${insurer ? `🏢 Current
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
             <Eye className="h-5 w-5 text-emerald-600" />
-            Preview & Send Reminder
+            Preview & Send — {activeTemplate === "notice" ? "Renewal Notice" : "Renewal Quote"}
           </DialogTitle>
         </DialogHeader>
 
@@ -1046,7 +1238,7 @@ ${policyNumber ? `📄 Policy: ${policyNumber}\n` : ""}${insurer ? `🏢 Current
           </Button>
         </div>
 
-        {/* Editable Details */}
+        {/* Editable Details - SEPARATED sections */}
         {editMode ? (
           <div className="space-y-3 p-3 rounded-xl border bg-muted/20">
             <div className="flex items-center justify-between">
@@ -1057,55 +1249,128 @@ ${policyNumber ? `📄 Policy: ${policyNumber}\n` : ""}${insurer ? `🏢 Current
                 Done Editing
               </Button>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label className="text-[10px] uppercase text-muted-foreground">Customer Name</Label>
-                <Input value={customerName} onChange={e => setCustomerName(e.target.value)} className="h-8 text-xs" />
-              </div>
-              <div>
-                <Label className="text-[10px] uppercase text-muted-foreground">Phone Number</Label>
-                <Input value={phone} onChange={e => setPhone(e.target.value)} className="h-8 text-xs" />
-              </div>
-              <div>
-                <Label className="text-[10px] uppercase text-muted-foreground">Vehicle Number</Label>
-                <Input value={vehicleNumber} onChange={e => setVehicleNumber(e.target.value)} className="h-8 text-xs" />
-              </div>
-              <div>
-                <Label className="text-[10px] uppercase text-muted-foreground">Insurer</Label>
-                <Input value={insurer} onChange={e => setInsurer(e.target.value)} className="h-8 text-xs" />
-              </div>
-              <div>
-                <Label className="text-[10px] uppercase text-muted-foreground">Policy Number</Label>
-                <Input value={policyNumber} onChange={e => setPolicyNumber(e.target.value)} className="h-8 text-xs" />
-              </div>
-              <div>
-                <Label className="text-[10px] uppercase text-muted-foreground">Premium (₹)</Label>
-                <Input type="number" value={premium} onChange={e => setPremium(e.target.value)} className="h-8 text-xs" />
-              </div>
-              <div className="col-span-2">
-                <Label className="text-[10px] uppercase text-muted-foreground">Renewal Date</Label>
-                <Input type="date" value={renewalDate} onChange={e => setRenewalDate(e.target.value)} className="h-8 text-xs" />
+
+            {/* Current Policy Section */}
+            <div className="space-y-2">
+              <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground border-b pb-1">📋 Current Policy Details</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-[10px] uppercase text-muted-foreground">Customer Name</Label>
+                  <Input value={customerName} onChange={e => setCustomerName(e.target.value)} className="h-8 text-xs" />
+                </div>
+                <div>
+                  <Label className="text-[10px] uppercase text-muted-foreground">Phone Number</Label>
+                  <Input value={phone} onChange={e => setPhone(e.target.value)} className="h-8 text-xs" />
+                </div>
+                <div>
+                  <Label className="text-[10px] uppercase text-muted-foreground">Vehicle Number</Label>
+                  <Input value={vehicleNumber} onChange={e => setVehicleNumber(e.target.value)} className="h-8 text-xs" />
+                </div>
+                <div>
+                  <Label className="text-[10px] uppercase text-muted-foreground">Current Insurer</Label>
+                  <Input value={currentInsurer} onChange={e => setCurrentInsurer(e.target.value)} className="h-8 text-xs" />
+                </div>
+                <div>
+                  <Label className="text-[10px] uppercase text-muted-foreground">Current Policy No</Label>
+                  <Input value={currentPolicyNumber} onChange={e => setCurrentPolicyNumber(e.target.value)} className="h-8 text-xs" />
+                </div>
+                <div>
+                  <Label className="text-[10px] uppercase text-muted-foreground">Current Premium (₹)</Label>
+                  <Input type="number" value={currentPremium} onChange={e => setCurrentPremium(e.target.value)} className="h-8 text-xs" />
+                </div>
+                <div className="col-span-2">
+                  <Label className="text-[10px] uppercase text-muted-foreground">Expiry Date</Label>
+                  <Input type="date" value={expiryDate} onChange={e => setExpiryDate(e.target.value)} className="h-8 text-xs" />
+                </div>
               </div>
             </div>
+
+            {/* Renewal Quote Section - only shown for quote template */}
+            {activeTemplate === "quote" && (
+              <div className="space-y-2">
+                <p className="text-[10px] uppercase font-bold tracking-wider text-emerald-600 border-b border-emerald-200 pb-1">💰 Renewal Quote Details (New)</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-[10px] uppercase text-muted-foreground">Proposed Insurer</Label>
+                    <Input value={renewalInsurer} onChange={e => setRenewalInsurer(e.target.value)} className="h-8 text-xs" placeholder="e.g. HDFC ERGO, ICICI Lombard" />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] uppercase text-muted-foreground">Renewal Premium (₹)</Label>
+                    <Input type="number" value={renewalPremium} onChange={e => setRenewalPremium(e.target.value)} className="h-8 text-xs" placeholder="New premium amount" />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] uppercase text-muted-foreground">Policy Type</Label>
+                    <Input value={renewalPolicyType} onChange={e => setRenewalPolicyType(e.target.value)} className="h-8 text-xs" placeholder="Comprehensive / TP" />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] uppercase text-muted-foreground">IDV (₹)</Label>
+                    <Input type="number" value={renewalIdv} onChange={e => setRenewalIdv(e.target.value)} className="h-8 text-xs" placeholder="Insured Declared Value" />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] uppercase text-muted-foreground">NCB Discount (%)</Label>
+                    <Input value={renewalNcb} onChange={e => setRenewalNcb(e.target.value)} className="h-8 text-xs" placeholder="e.g. 50" />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] uppercase text-muted-foreground">Quote Validity</Label>
+                    <Input value={quoteValidity} onChange={e => setQuoteValidity(e.target.value)} className="h-8 text-xs" placeholder="e.g. 7 days" />
+                  </div>
+                  <div className="col-span-2">
+                    <Label className="text-[10px] uppercase text-muted-foreground">Add-ons Included</Label>
+                    <Input value={renewalAddons} onChange={e => setRenewalAddons(e.target.value)} className="h-8 text-xs" placeholder="Zero Dep, RSA, Engine Protect..." />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
-          <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">📋 Details in template</span>
-              <Button variant="ghost" size="sm" className="h-6 text-[10px] gap-1 text-emerald-600" onClick={() => setEditMode(true)}>
-                <Edit className="h-3 w-3" /> Update Details
-              </Button>
+          <div className="space-y-2">
+            {/* Current Policy Summary */}
+            <div className="p-3 rounded-xl bg-muted/30 border">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold text-muted-foreground">📋 Current Policy</span>
+                <Button variant="ghost" size="sm" className="h-6 text-[10px] gap-1" onClick={() => setEditMode(true)}>
+                  <Edit className="h-3 w-3" /> Edit Details
+                </Button>
+              </div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                <div><span className="text-muted-foreground">Name:</span> <span className="font-medium">{customerName}</span></div>
+                <div><span className="text-muted-foreground">Phone:</span> <span className="font-medium">{phone || "—"}</span></div>
+                <div><span className="text-muted-foreground">Vehicle:</span> <span className="font-mono font-medium">{vehicleNumber || "—"}</span></div>
+                <div><span className="text-muted-foreground">Insurer:</span> <span className="font-medium">{currentInsurer || "—"}</span></div>
+                <div><span className="text-muted-foreground">Policy:</span> <span className="font-medium">{currentPolicyNumber || "—"}</span></div>
+                <div><span className="text-muted-foreground">Premium:</span> <span className="font-semibold">{formattedCurrentPremium}</span></div>
+                <div><span className="text-muted-foreground">Expiry:</span> <span className="font-medium">{formattedExpiry}</span></div>
+                <div><span className="text-muted-foreground">Days Left:</span> <span className="font-bold">{daysLeft}</span></div>
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-              <div><span className="text-muted-foreground">Name:</span> <span className="font-medium">{customerName}</span></div>
-              <div><span className="text-muted-foreground">Phone:</span> <span className="font-medium">{phone || "—"}</span></div>
-              <div><span className="text-muted-foreground">Vehicle:</span> <span className="font-mono font-medium">{vehicleNumber || "—"}</span></div>
-              <div><span className="text-muted-foreground">Insurer:</span> <span className="font-medium">{insurer || "—"}</span></div>
-              <div><span className="text-muted-foreground">Policy:</span> <span className="font-medium">{policyNumber || "—"}</span></div>
-              <div><span className="text-muted-foreground">Premium:</span> <span className="font-semibold text-emerald-700 dark:text-emerald-400">{formattedPremium}</span></div>
-              <div><span className="text-muted-foreground">Expiry:</span> <span className="font-medium">{formattedDate}</span></div>
-              <div><span className="text-muted-foreground">Days Left:</span> <span className="font-bold">{daysLeft}</span></div>
-            </div>
+
+            {/* Renewal Quote Summary - only for quote */}
+            {activeTemplate === "quote" && (
+              <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">💰 Renewal Quote (New)</span>
+                  <Button variant="ghost" size="sm" className="h-6 text-[10px] gap-1 text-emerald-600" onClick={() => setEditMode(true)}>
+                    <Edit className="h-3 w-3" /> Fill Quote
+                  </Button>
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                  <div><span className="text-muted-foreground">Insurer:</span> <span className="font-medium">{renewalInsurer || "—"}</span></div>
+                  <div><span className="text-muted-foreground">Premium:</span> <span className="font-semibold text-emerald-700 dark:text-emerald-400">{formattedRenewalPremium}</span></div>
+                  <div><span className="text-muted-foreground">Type:</span> <span className="font-medium">{renewalPolicyType}</span></div>
+                  <div><span className="text-muted-foreground">IDV:</span> <span className="font-medium">{renewalIdv ? `₹${Number(renewalIdv).toLocaleString("en-IN")}` : "—"}</span></div>
+                  <div><span className="text-muted-foreground">NCB:</span> <span className="font-medium">{renewalNcb ? `${renewalNcb}%` : "—"}</span></div>
+                  <div><span className="text-muted-foreground">Valid:</span> <span className="font-medium">{quoteValidity}</span></div>
+                  <div className="col-span-2"><span className="text-muted-foreground">Add-ons:</span> <span className="font-medium">{renewalAddons || "—"}</span></div>
+                </div>
+                {currentPremium && renewalPremium && (
+                  <div className={`mt-2 text-xs font-bold ${Number(renewalPremium) <= Number(currentPremium) ? "text-emerald-700" : "text-chart-5"}`}>
+                    {Number(renewalPremium) <= Number(currentPremium)
+                      ? `✅ Client saves ₹${(Number(currentPremium) - Number(renewalPremium)).toLocaleString("en-IN")}`
+                      : `📈 ₹${(Number(renewalPremium) - Number(currentPremium)).toLocaleString("en-IN")} increase from current`}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -1118,6 +1383,16 @@ ${policyNumber ? `📄 Policy: ${policyNumber}\n` : ""}${insurer ? `🏢 Current
             <p className="text-[9px] text-muted-foreground text-right mt-1">Preview</p>
           </div>
         </div>
+
+        {/* Attached notice info for quote */}
+        {activeTemplate === "quote" && (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 text-xs">
+            <Shield className="h-4 w-4 text-blue-600 shrink-0" />
+            <span className="text-blue-700 dark:text-blue-400">
+              <strong>Renewal Notice attached:</strong> Current policy details + new quote comparison included in the message
+            </span>
+          </div>
+        )}
 
         {/* Send Actions */}
         <div className="space-y-2 pt-1">
