@@ -22,12 +22,13 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { format, addDays, differenceInDays, isBefore, isAfter } from "date-fns";
+import { format, addDays, differenceInDays, isBefore, isAfter, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isSameDay, getWeek, getMonth, getYear } from "date-fns";
 import { InsuranceAddPolicyForm } from "./InsuranceAddPolicyForm";
 
 type ViewFilter = "all" | "7" | "15" | "30" | "60" | "expired";
 type StatusFilter = "all" | "won" | "lost" | "running" | "new" | "grabyourcar";
 type PolicySegment = "upcoming" | "running" | "expired";
+type RenewalViewMode = "all" | "month" | "week" | "date";
 
 type PolicyRow = {
   id: string;
@@ -79,6 +80,8 @@ export function InsuranceCRMDashboard() {
   const [page, setPage] = useState(0);
   const [selectedPolicy, setSelectedPolicy] = useState<PolicyRow | null>(null);
   const [activeTab, setActiveTab] = useState("policies");
+  const [renewalView, setRenewalView] = useState<RenewalViewMode>("all");
+  const [selectedRenewalDate, setSelectedRenewalDate] = useState<string>("");
   const pageSize = 12;
   const queryClient = useQueryClient();
 
@@ -220,6 +223,70 @@ export function InsuranceCRMDashboard() {
       .filter(r => r.daysUntilRenewal !== null && r.daysUntilRenewal >= 0 && r.daysUntilRenewal <= 60)
       .sort((a, b) => (a.daysUntilRenewal || 0) - (b.daysUntilRenewal || 0));
   }, [rows]);
+
+  // Grouped upcoming renewals by month
+  const renewalsByMonth = useMemo(() => {
+    const map = new Map<string, PolicyRow[]>();
+    upcomingRenewals.forEach(r => {
+      if (!r.renewal_date) return;
+      const d = new Date(r.renewal_date);
+      const key = format(d, "yyyy-MM");
+      const label = format(d, "MMMM yyyy");
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(r);
+    });
+    return Array.from(map.entries()).map(([key, items]) => ({
+      key,
+      label: format(new Date(key + "-01"), "MMMM yyyy"),
+      items,
+      totalPremium: items.reduce((s, r) => s + (r.premium || 0), 0),
+    }));
+  }, [upcomingRenewals]);
+
+  // Grouped upcoming renewals by week
+  const renewalsByWeek = useMemo(() => {
+    const map = new Map<string, PolicyRow[]>();
+    upcomingRenewals.forEach(r => {
+      if (!r.renewal_date) return;
+      const d = new Date(r.renewal_date);
+      const ws = startOfWeek(d, { weekStartsOn: 1 });
+      const we = endOfWeek(d, { weekStartsOn: 1 });
+      const key = format(ws, "yyyy-MM-dd");
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(r);
+    });
+    return Array.from(map.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, items]) => {
+        const ws = new Date(key);
+        const we = endOfWeek(ws, { weekStartsOn: 1 });
+        return {
+          key,
+          label: `${format(ws, "dd MMM")} – ${format(we, "dd MMM yyyy")}`,
+          items,
+          totalPremium: items.reduce((s, r) => s + (r.premium || 0), 0),
+        };
+      });
+  }, [upcomingRenewals]);
+
+  // Grouped upcoming renewals by date
+  const renewalsByDate = useMemo(() => {
+    const map = new Map<string, PolicyRow[]>();
+    upcomingRenewals.forEach(r => {
+      if (!r.renewal_date) return;
+      const key = format(new Date(r.renewal_date), "yyyy-MM-dd");
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(r);
+    });
+    return Array.from(map.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, items]) => ({
+        key,
+        label: format(new Date(key), "dd MMM yyyy (EEEE)"),
+        items,
+        totalPremium: items.reduce((s, r) => s + (r.premium || 0), 0),
+      }));
+  }, [upcomingRenewals]);
 
   // Running policies (active, not expiring within 60 days)
   const runningPolicies = useMemo(() => {
@@ -664,6 +731,23 @@ export function InsuranceCRMDashboard() {
         {/* Upcoming Renewals Tab */}
         <TabsContent value="renewals" className="mt-4">
           <div className="space-y-3">
+            {/* Sub-filters: All / Month / Week / Date */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium text-muted-foreground">View by:</span>
+              {(["all", "month", "week", "date"] as RenewalViewMode[]).map(mode => (
+                <Button
+                  key={mode}
+                  size="sm"
+                  variant={renewalView === mode ? "default" : "outline"}
+                  className="h-7 text-xs capitalize"
+                  onClick={() => { setRenewalView(mode); setSelectedRenewalDate(""); }}
+                >
+                  {mode === "all" ? "All" : mode === "month" ? "📅 Month-wise" : mode === "week" ? "📆 Week-wise" : "📋 Date-wise"}
+                </Button>
+              ))}
+              <span className="text-xs text-muted-foreground ml-auto">{upcomingRenewals.length} renewals in next 60 days</span>
+            </div>
+
             {upcomingRenewals.length === 0 ? (
               <Card className="border shadow-sm">
                 <CardContent className="py-12 text-center text-muted-foreground">
@@ -671,68 +755,38 @@ export function InsuranceCRMDashboard() {
                   <p>No upcoming renewals in the next 60 days</p>
                 </CardContent>
               </Card>
-            ) : (
+            ) : renewalView === "all" ? (
               <div className="grid gap-3">
                 {upcomingRenewals.map(r => (
-                  <Card key={r.id} className={`border transition-all hover:shadow-md ${getUrgencyBg(r.daysUntilRenewal)}`}>
-                    <CardContent className="py-3 px-4">
-                      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h4 className="font-semibold text-sm truncate">{r.customer_name}</h4>
-                            <Badge variant="outline" className="text-[10px] shrink-0">{r.policy_type || "Policy"}</Badge>
-                            {getStatusBadge(r.lead_status)}
-                          </div>
-                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                            <span className="flex items-center gap-1"><FileText className="h-3 w-3" /> {r.policy_number || "N/A"}</span>
-                            <span>{r.insurer}</span>
-                            {r.vehicle_number && <span className="flex items-center gap-1"><Car className="h-3 w-3" /> {r.vehicle_number}</span>}
-                            {r.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {r.phone}</span>}
-                          </div>
+                  <RenewalCard key={r.id} r={r} getUrgencyBg={getUrgencyBg} getUrgencyColor={getUrgencyColor} getUrgencyLabel={getUrgencyLabel} getStatusBadge={getStatusBadge} openReminderPreview={openReminderPreview} setShareDialogPolicy={setShareDialogPolicy} setSelectedPolicy={setSelectedPolicy} />
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {(renewalView === "month" ? renewalsByMonth : renewalView === "week" ? renewalsByWeek : renewalsByDate).map(group => (
+                  <Card key={group.key} className="border shadow-sm">
+                    <CardHeader className="py-3 px-4 cursor-pointer" onClick={() => setSelectedRenewalDate(selectedRenewalDate === group.key ? "" : group.key)}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <CalendarDays className="h-4 w-4 text-primary" />
+                          <CardTitle className="text-sm">{group.label}</CardTitle>
+                          <Badge variant="secondary" className="text-xs">{group.items.length} policies</Badge>
                         </div>
-                        <div className="flex items-center gap-3 shrink-0">
-                          <div className="text-right">
-                            <p className={`text-sm font-bold ${getUrgencyColor(r.daysUntilRenewal)}`}>
-                              {getUrgencyLabel(r.daysUntilRenewal)}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {r.renewal_date && format(new Date(r.renewal_date), "dd MMM yyyy")}
-                            </p>
-                            <p className="text-xs font-semibold mt-0.5">₹{r.premium?.toLocaleString("en-IN") || "—"}</p>
-                          </div>
-                          <div className="flex flex-col gap-1">
-                            {r.phone && (
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button size="sm" className="h-7 gap-1 text-xs px-2 bg-emerald-600 hover:bg-emerald-700 text-white">
-                                    <Send className="h-3 w-3" /> Remind
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-52">
-                                  <DropdownMenuItem onClick={() => openReminderPreview(r, "notice")} className="cursor-pointer gap-2">
-                                    <Bell className="h-3.5 w-3.5" /> Renewal Notice
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => openReminderPreview(r, "quote")} className="cursor-pointer gap-2">
-                                    <FileText className="h-3.5 w-3.5" /> Renewal Quote
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            )}
-                            {r.phone && (
-                              <a href={`tel:${r.phone}`}>
-                                <Button size="icon" className="h-7 w-7 bg-emerald-600 hover:bg-emerald-700 text-white" title="Call Now">
-                                  <Phone className="h-3 w-3" />
-                                </Button>
-                              </a>
-                            )}
-                            <Button variant="outline" size="icon" className="h-7 w-7" title="Share"
-                              onClick={() => setShareDialogPolicy(r)}>
-                              <Share2 className="h-3 w-3" />
-                            </Button>
-                          </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-semibold">₹{group.totalPremium.toLocaleString("en-IN")}</span>
+                          <ChevronRight className={`h-4 w-4 transition-transform ${selectedRenewalDate === group.key ? "rotate-90" : ""}`} />
                         </div>
                       </div>
-                    </CardContent>
+                    </CardHeader>
+                    {selectedRenewalDate === group.key && (
+                      <CardContent className="pt-0 px-4 pb-3">
+                        <div className="grid gap-2">
+                          {group.items.map(r => (
+                            <RenewalCard key={r.id} r={r} getUrgencyBg={getUrgencyBg} getUrgencyColor={getUrgencyColor} getUrgencyLabel={getUrgencyLabel} getStatusBadge={getStatusBadge} openReminderPreview={openReminderPreview} setShareDialogPolicy={setShareDialogPolicy} setSelectedPolicy={setSelectedPolicy} />
+                          ))}
+                        </div>
+                      </CardContent>
+                    )}
                   </Card>
                 ))}
               </div>
@@ -997,6 +1051,81 @@ export function InsuranceCRMDashboard() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+// ── Renewal Card (reusable) ──
+function RenewalCard({ r, getUrgencyBg, getUrgencyColor, getUrgencyLabel, getStatusBadge, openReminderPreview, setShareDialogPolicy, setSelectedPolicy }: {
+  r: PolicyRow;
+  getUrgencyBg: (d: number | null) => string;
+  getUrgencyColor: (d: number | null) => string;
+  getUrgencyLabel: (d: number | null) => string;
+  getStatusBadge: (s: string | null) => React.ReactNode;
+  openReminderPreview: (r: PolicyRow, type: "notice" | "quote") => void;
+  setShareDialogPolicy: (r: PolicyRow) => void;
+  setSelectedPolicy: (r: PolicyRow) => void;
+}) {
+  return (
+    <Card className={`border transition-all hover:shadow-md ${getUrgencyBg(r.daysUntilRenewal)}`}>
+      <CardContent className="py-3 px-4">
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <h4 className="font-semibold text-sm truncate">{r.customer_name}</h4>
+              <Badge variant="outline" className="text-[10px] shrink-0">{r.policy_type || "Policy"}</Badge>
+              {getStatusBadge(r.lead_status)}
+            </div>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1"><FileText className="h-3 w-3" /> {r.policy_number || "N/A"}</span>
+              <span>{r.insurer}</span>
+              {r.vehicle_number && <span className="flex items-center gap-1"><Car className="h-3 w-3" /> {r.vehicle_number}</span>}
+              {r.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {r.phone}</span>}
+            </div>
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="text-right">
+              <p className={`text-sm font-bold ${getUrgencyColor(r.daysUntilRenewal)}`}>
+                {getUrgencyLabel(r.daysUntilRenewal)}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {r.renewal_date && format(new Date(r.renewal_date), "dd MMM yyyy")}
+              </p>
+              <p className="text-xs font-semibold mt-0.5">₹{r.premium?.toLocaleString("en-IN") || "—"}</p>
+            </div>
+            <div className="flex flex-col gap-1">
+              {r.phone && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" className="h-7 gap-1 text-xs px-2 bg-emerald-600 hover:bg-emerald-700 text-white">
+                      <Send className="h-3 w-3" /> Remind
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-52">
+                    <DropdownMenuItem onClick={() => openReminderPreview(r, "notice")} className="cursor-pointer gap-2">
+                      <Bell className="h-3.5 w-3.5" /> Renewal Notice
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => openReminderPreview(r, "quote")} className="cursor-pointer gap-2">
+                      <FileText className="h-3.5 w-3.5" /> Renewal Quote
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+              {r.phone && (
+                <a href={`tel:${r.phone}`}>
+                  <Button size="icon" className="h-7 w-7 bg-emerald-600 hover:bg-emerald-700 text-white" title="Call Now">
+                    <Phone className="h-3 w-3" />
+                  </Button>
+                </a>
+              )}
+              <Button variant="outline" size="icon" className="h-7 w-7" title="Share"
+                onClick={() => setShareDialogPolicy(r)}>
+                <Share2 className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
