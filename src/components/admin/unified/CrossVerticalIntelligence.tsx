@@ -14,7 +14,7 @@ export const CrossVerticalIntelligence = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("cross_sell_opportunities")
-        .select("*, unified_customers(name, phone)")
+        .select("*, unified_customers(customer_name, phone)")
         .eq("status", "open")
         .order("created_at", { ascending: false })
         .limit(50);
@@ -33,8 +33,7 @@ export const CrossVerticalIntelligence = () => {
       const { count: multiVertical } = await supabase
         .from("unified_customers")
         .select("*", { count: "exact", head: true })
-        .or("is_car_buyer.eq.true,is_insurance_client.eq.true,is_loan_client.eq.true")
-        .or("is_car_buyer.eq.true,is_insurance_client.eq.true");
+        .or("has_car_inquiry.eq.true,has_insurance.eq.true,has_loan_inquiry.eq.true");
 
       const { count: openOps } = await supabase
         .from("cross_sell_opportunities")
@@ -115,7 +114,7 @@ export const CrossVerticalIntelligence = () => {
                 <div key={op.id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="font-medium text-sm">{op.unified_customers?.name || op.unified_customers?.phone || "Unknown"}</span>
+                      <span className="font-medium text-sm">{op.unified_customers?.customer_name || op.unified_customers?.phone || "Unknown"}</span>
                       <Badge variant={priorityColor(op.priority)} className="text-[10px]">{op.priority}</Badge>
                     </div>
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
