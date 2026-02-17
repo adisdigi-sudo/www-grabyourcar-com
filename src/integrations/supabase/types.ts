@@ -754,6 +754,77 @@ export type Database = {
         }
         Relationships: []
       }
+      call_logs: {
+        Row: {
+          agent_id: string
+          call_method: string
+          call_type: string
+          created_at: string
+          disposition: Database["public"]["Enums"]["call_disposition"] | null
+          duration_seconds: number | null
+          follow_up_at: string | null
+          follow_up_priority: string | null
+          id: string
+          lead_id: string | null
+          lead_name: string | null
+          lead_phone: string
+          lead_stage_after: string | null
+          lead_stage_before: string | null
+          lead_type: string
+          notes: string | null
+          updated_at: string
+          vertical_id: string | null
+        }
+        Insert: {
+          agent_id: string
+          call_method?: string
+          call_type?: string
+          created_at?: string
+          disposition?: Database["public"]["Enums"]["call_disposition"] | null
+          duration_seconds?: number | null
+          follow_up_at?: string | null
+          follow_up_priority?: string | null
+          id?: string
+          lead_id?: string | null
+          lead_name?: string | null
+          lead_phone: string
+          lead_stage_after?: string | null
+          lead_stage_before?: string | null
+          lead_type?: string
+          notes?: string | null
+          updated_at?: string
+          vertical_id?: string | null
+        }
+        Update: {
+          agent_id?: string
+          call_method?: string
+          call_type?: string
+          created_at?: string
+          disposition?: Database["public"]["Enums"]["call_disposition"] | null
+          duration_seconds?: number | null
+          follow_up_at?: string | null
+          follow_up_priority?: string | null
+          id?: string
+          lead_id?: string | null
+          lead_name?: string | null
+          lead_phone?: string
+          lead_stage_after?: string | null
+          lead_stage_before?: string | null
+          lead_type?: string
+          notes?: string | null
+          updated_at?: string
+          vertical_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "call_logs_vertical_id_fkey"
+            columns: ["vertical_id"]
+            isOneToOne: false
+            referencedRelation: "business_verticals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_conversions: {
         Row: {
           attributed_revenue: number | null
@@ -7487,7 +7558,34 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      calling_queue: {
+        Row: {
+          agent_id: string | null
+          follow_up_at: string | null
+          follow_up_priority: string | null
+          last_call_id: string | null
+          last_called_at: string | null
+          last_disposition:
+            | Database["public"]["Enums"]["call_disposition"]
+            | null
+          last_notes: string | null
+          lead_id: string | null
+          lead_name: string | null
+          lead_phone: string | null
+          lead_type: string | null
+          queue_priority: number | null
+          vertical_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "call_logs_vertical_id_fkey"
+            columns: ["vertical_id"]
+            isOneToOne: false
+            referencedRelation: "business_verticals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       has_role: {
@@ -7510,6 +7608,14 @@ export type Database = {
         | "marketing"
         | "calling"
         | "operations"
+      call_disposition:
+        | "connected"
+        | "not_connected"
+        | "busy"
+        | "switched_off"
+        | "wrong_number"
+        | "no_answer"
+        | "callback_requested"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -7647,6 +7753,15 @@ export const Constants = {
         "marketing",
         "calling",
         "operations",
+      ],
+      call_disposition: [
+        "connected",
+        "not_connected",
+        "busy",
+        "switched_off",
+        "wrong_number",
+        "no_answer",
+        "callback_requested",
       ],
     },
   },
