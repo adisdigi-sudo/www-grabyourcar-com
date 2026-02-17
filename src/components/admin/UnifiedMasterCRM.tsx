@@ -44,18 +44,22 @@ import { InsuranceProspectPool } from "./insurance/InsuranceProspectPool";
 import { InsuranceDataHealth } from "./insurance/InsuranceDataHealth";
 import { InsuranceAddLeadForm } from "./insurance/InsuranceAddLeadForm";
 import { InsuranceAddPolicyForm } from "./insurance/InsuranceAddPolicyForm";
-
+import { SalesVerticalWorkspace } from "./verticals/SalesVerticalWorkspace";
+import { LoansVerticalWorkspace } from "./verticals/LoansVerticalWorkspace";
+import { AccessoriesVerticalWorkspace } from "./verticals/AccessoriesVerticalWorkspace";
+import { HSRPVerticalWorkspace } from "./verticals/HSRPVerticalWorkspace";
+import { RentalVerticalWorkspace } from "./verticals/RentalVerticalWorkspace";
 type Vertical = "overview" | "insurance" | "car-sales" | "loans" | "accessories" | "hsrp" | "rentals" | "fleet";
 
 const VERTICALS = [
   { id: "overview" as Vertical, label: "Overview", icon: LayoutDashboard, color: "text-primary" },
   { id: "insurance" as Vertical, label: "Car Insurance", icon: Shield, color: "text-green-600", ready: true },
-  { id: "car-sales" as Vertical, label: "Car Sales", icon: Car, color: "text-blue-600", ready: false },
-  { id: "loans" as Vertical, label: "Car Loans", icon: Banknote, color: "text-purple-600", ready: false },
-  { id: "accessories" as Vertical, label: "Accessories", icon: ShoppingBag, color: "text-orange-600", ready: false },
-  { id: "hsrp" as Vertical, label: "HSRP & FASTag", icon: FileText, color: "text-teal-600", ready: false },
-  { id: "rentals" as Vertical, label: "Self-Drive Rental", icon: Car, color: "text-cyan-600", ready: false },
-  { id: "fleet" as Vertical, label: "Fleet Business", icon: Users, color: "text-indigo-600", ready: false },
+  { id: "car-sales" as Vertical, label: "Car Sales", icon: Car, color: "text-blue-600", ready: true },
+  { id: "loans" as Vertical, label: "Car Loans", icon: Banknote, color: "text-purple-600", ready: true },
+  { id: "accessories" as Vertical, label: "Accessories", icon: ShoppingBag, color: "text-orange-600", ready: true },
+  { id: "hsrp" as Vertical, label: "HSRP & FASTag", icon: FileText, color: "text-teal-600", ready: true },
+  { id: "rentals" as Vertical, label: "Self-Drive Rental", icon: Car, color: "text-cyan-600", ready: true },
+  { id: "fleet" as Vertical, label: "Fleet Business", icon: Users, color: "text-indigo-600", ready: true },
 ];
 
 export function UnifiedMasterCRM() {
@@ -116,12 +120,12 @@ export function UnifiedMasterCRM() {
       {/* Vertical Content */}
       {vertical === "overview" && <OverviewDashboard stats={stats} onSelectVertical={setVertical} />}
       {vertical === "insurance" && <InsuranceVerticalWorkspace />}
-      {vertical === "car-sales" && <ComingSoonVertical name="Car Sales" icon={Car} color="text-blue-600" />}
-      {vertical === "loans" && <ComingSoonVertical name="Car Loans" icon={Banknote} color="text-purple-600" />}
-      {vertical === "accessories" && <ComingSoonVertical name="Accessories" icon={ShoppingBag} color="text-orange-600" />}
-      {vertical === "hsrp" && <ComingSoonVertical name="HSRP & FASTag" icon={FileText} color="text-teal-600" />}
-      {vertical === "rentals" && <ComingSoonVertical name="Self-Drive Rental" icon={Car} color="text-cyan-600" />}
-      {vertical === "fleet" && <ComingSoonVertical name="Fleet Business" icon={Users} color="text-indigo-600" />}
+      {vertical === "car-sales" && <SalesVerticalWorkspace />}
+      {vertical === "loans" && <LoansVerticalWorkspace />}
+      {vertical === "accessories" && <AccessoriesVerticalWorkspace />}
+      {vertical === "hsrp" && <HSRPVerticalWorkspace />}
+      {vertical === "rentals" && <RentalVerticalWorkspace />}
+      {vertical === "fleet" && <RentalVerticalWorkspace />}
     </div>
   );
 }
@@ -145,7 +149,7 @@ function OverviewDashboard({ stats, onSelectVertical }: { stats: any; onSelectVe
       stats: `${stats?.leads || 0} leads`,
       features: ["Lead Pipeline", "Test Drive Scheduler", "Booking Tracker", "Delivery Status"],
       color: "border-blue-200 dark:border-blue-900",
-      ready: false,
+      ready: true,
     },
     {
       id: "loans" as Vertical,
@@ -154,7 +158,7 @@ function OverviewDashboard({ stats, onSelectVertical }: { stats: any; onSelectVe
       stats: `${stats?.loans || 0} applications`,
       features: ["Loan Applications", "Eligibility Engine", "Bank Partners", "EMI Calculator"],
       color: "border-purple-200 dark:border-purple-900",
-      ready: false,
+      ready: true,
     },
     {
       id: "accessories" as Vertical,
@@ -163,7 +167,7 @@ function OverviewDashboard({ stats, onSelectVertical }: { stats: any; onSelectVe
       stats: `${stats?.clients || 0} customers`,
       features: ["Order Management", "Inventory", "Cross-Sell", "Shipping Partners"],
       color: "border-orange-200 dark:border-orange-900",
-      ready: false,
+      ready: true,
     },
     {
       id: "hsrp" as Vertical,
@@ -172,7 +176,7 @@ function OverviewDashboard({ stats, onSelectVertical }: { stats: any; onSelectVe
       stats: "—",
       features: ["HSRP Orders", "FASTag Issuance", "Status Tracking", "Bulk Processing"],
       color: "border-teal-200 dark:border-teal-900",
-      ready: false,
+      ready: true,
     },
     {
       id: "rentals" as Vertical,
@@ -181,7 +185,7 @@ function OverviewDashboard({ stats, onSelectVertical }: { stats: any; onSelectVe
       stats: "—",
       features: ["Fleet Management", "Booking Engine", "Returns", "Maintenance Log"],
       color: "border-cyan-200 dark:border-cyan-900",
-      ready: false,
+      ready: true,
     },
     {
       id: "fleet" as Vertical,
@@ -190,7 +194,7 @@ function OverviewDashboard({ stats, onSelectVertical }: { stats: any; onSelectVe
       stats: "—",
       features: ["Corporate Clients", "Bulk Pricing", "Contract Mgmt", "Fleet Insurance"],
       color: "border-indigo-200 dark:border-indigo-900",
-      ready: false,
+      ready: true,
     },
   ];
 
