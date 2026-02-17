@@ -16,6 +16,7 @@ import {
   Download, ChevronLeft, ChevronRight, User, X,
   MessageSquare, Share2, PhoneCall
 } from "lucide-react";
+import { BulkImportButton } from "./BulkClientImport";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format } from "date-fns";
 
@@ -139,6 +140,7 @@ export function InsuranceClientsManager() {
           <Button variant="outline" size="sm" onClick={exportCSV} className="gap-1.5">
             <Download className="h-4 w-4" /> Export
           </Button>
+          <BulkImportButton />
           <Button size="sm" onClick={() => { setEditClient(null); setShowAdd(true); }} className="gap-1.5">
             <Plus className="h-4 w-4" /> Add Client
           </Button>
