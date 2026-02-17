@@ -25,6 +25,7 @@ export function InsuranceClientsManager() {
   const [showAdd, setShowAdd] = useState(false);
   const [editClient, setEditClient] = useState<any>(null);
   const [viewClient, setViewClient] = useState<any>(null);
+  const [clientFilter, setClientFilter] = useState<"all" | "prospect" | "active" | "won" | "lost">("all");
   const queryClient = useQueryClient();
   const pageSize = 15;
 
@@ -33,7 +34,7 @@ export function InsuranceClientsManager() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("insurance_clients")
-        .select("id, customer_name, phone, email, vehicle_number, advisor_name, created_at, is_active")
+        .select("id, customer_name, phone, email, vehicle_number, advisor_name, created_at, is_active, lead_status, lead_source")
         .order("created_at", { ascending: false })
         .limit(1000);
       if (error) throw error;
@@ -65,15 +66,30 @@ export function InsuranceClientsManager() {
 
   const filtered = useMemo(() => {
     if (!clients) return [];
-    if (!search.trim()) return clients;
-    const s = search.toLowerCase();
-    return clients.filter(c =>
-      c.customer_name?.toLowerCase().includes(s) ||
-      c.phone?.includes(s) ||
-      c.email?.toLowerCase().includes(s) ||
-      c.vehicle_number?.toLowerCase().includes(s)
-    );
-  }, [clients, search]);
+    let result = [...clients];
+    
+    // Client type filter
+    if (clientFilter === "prospect") {
+      result = result.filter(c => !c.lead_status || c.lead_status === "new" || c.lead_status === "running");
+    } else if (clientFilter === "active") {
+      result = result.filter(c => c.lead_status === "won");
+    } else if (clientFilter === "won") {
+      result = result.filter(c => c.lead_status === "won");
+    } else if (clientFilter === "lost") {
+      result = result.filter(c => c.lead_status === "lost");
+    }
+    
+    if (search.trim()) {
+      const s = search.toLowerCase();
+      result = result.filter(c =>
+        c.customer_name?.toLowerCase().includes(s) ||
+        c.phone?.includes(s) ||
+        c.email?.toLowerCase().includes(s) ||
+        c.vehicle_number?.toLowerCase().includes(s)
+      );
+    }
+    return result;
+  }, [clients, search, clientFilter]);
 
   const paged = filtered.slice(page * pageSize, (page + 1) * pageSize);
   const totalPages = Math.ceil(filtered.length / pageSize);
@@ -129,6 +145,26 @@ export function InsuranceClientsManager() {
         </div>
       </div>
 
+      {/* Filter Tabs */}
+      <div className="flex flex-wrap gap-2 items-center">
+        {([
+          { key: "all", label: "All Clients", count: clients?.length || 0 },
+          { key: "prospect", label: "🔵 Prospects", count: clients?.filter(c => !c.lead_status || c.lead_status === "new" || c.lead_status === "running").length || 0 },
+          { key: "active", label: "✅ Active (Won)", count: clients?.filter(c => c.lead_status === "won").length || 0 },
+          { key: "lost", label: "❌ Lost", count: clients?.filter(c => c.lead_status === "lost").length || 0 },
+        ] as { key: typeof clientFilter; label: string; count: number }[]).map(f => (
+          <Button
+            key={f.key}
+            size="sm"
+            variant={clientFilter === f.key ? "default" : "outline"}
+            className="h-7 text-xs gap-1"
+            onClick={() => { setClientFilter(f.key); setPage(0); }}
+          >
+            {f.label} <Badge variant="secondary" className="text-[10px] ml-1 h-4 px-1">{f.count}</Badge>
+          </Button>
+        ))}
+      </div>
+
       {/* Search */}
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -153,6 +189,7 @@ export function InsuranceClientsManager() {
                   <TableHead className="text-xs">Email</TableHead>
                   <TableHead className="text-xs">Vehicle No.</TableHead>
                   <TableHead className="text-xs">Agent</TableHead>
+                  <TableHead className="text-xs">Status</TableHead>
                   <TableHead className="text-xs text-center">Policies</TableHead>
                   <TableHead className="text-xs w-28">Actions</TableHead>
                 </TableRow>
@@ -160,11 +197,11 @@ export function InsuranceClientsManager() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">Loading...</TableCell>
-                  </TableRow>
-                ) : paged.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">No clients found</TableCell>
+                     <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">Loading...</TableCell>
+                   </TableRow>
+                 ) : paged.length === 0 ? (
+                   <TableRow>
+                     <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">No clients found</TableCell>
                   </TableRow>
                 ) : (
                   paged.map((c, i) => {
@@ -204,6 +241,20 @@ export function InsuranceClientsManager() {
                           )}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">{c.advisor_name || "—"}</TableCell>
+                        <TableCell>
+                          {c.lead_status ? (
+                            <Badge variant="outline" className={`text-[10px] px-1.5 py-0 border ${
+                              c.lead_status === "won" ? "bg-emerald-100 text-emerald-700 border-emerald-200" :
+                              c.lead_status === "lost" ? "bg-red-100 text-red-700 border-red-200" :
+                              c.lead_status === "running" ? "bg-amber-100 text-amber-700 border-amber-200" :
+                              "bg-blue-100 text-blue-700 border-blue-200"
+                            }`}>
+                              {c.lead_status === "won" ? "Active" : c.lead_status === "new" || !c.lead_status ? "Prospect" : c.lead_status.charAt(0).toUpperCase() + c.lead_status.slice(1)}
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 border bg-blue-100 text-blue-700 border-blue-200">Prospect</Badge>
+                          )}
+                        </TableCell>
                         <TableCell className="text-center">
                           <Badge variant="secondary" className="text-xs">{clientPolicies.length}</Badge>
                         </TableCell>
