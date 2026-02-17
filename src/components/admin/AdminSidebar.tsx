@@ -63,89 +63,77 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
+  // ── Universal ──
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "manager-dashboard", label: "📊 Manager Dashboard", icon: BarChart3, badge: "New", allowedRoles: ["super_admin", "admin"] },
-  
-  // Calling System — available across verticals for calling/sales roles
+
+  // ── Calling System — operational verticals only ──
   { id: "calling-system", label: "📞 Smart Calling", icon: Users, badge: "🔥",
     verticals: ["sales", "loans", "insurance"],
     allowedRoles: ["super_admin", "admin", "sales", "calling", "insurance", "finance"] },
 
-  // Loan vertical
-  { id: "loan-crm", label: "💰 Loan CRM", icon: CreditCard, badge: "New", verticals: ["loans"], allowedRoles: ["super_admin", "admin", "finance", "sales"] },
-  
-  // Cross-vertical tools (super admin / admin only)
+  // ── Loan CRM — loans vertical ──
+  { id: "loan-crm", label: "💰 Loan CRM", icon: CreditCard, badge: "New",
+    verticals: ["loans"],
+    allowedRoles: ["super_admin", "admin", "finance", "sales"] },
+
+  // ── Cross-Vertical Intelligence — super admin / admin only ──
   { id: "unified-crm", label: "🧠 Unified Customers", icon: Users, badge: "New", allowedRoles: ["super_admin", "admin"] },
   { id: "unified-intelligence", label: "🔗 Cross-Vertical Intel", icon: Sparkles, badge: "AI", allowedRoles: ["super_admin", "admin"] },
   { id: "journey-automation", label: "⚡ Journey Automation", icon: Sparkles, badge: "New", allowedRoles: ["super_admin", "admin"] },
   { id: "revenue-intelligence", label: "📊 Revenue Intelligence", icon: BarChart3, badge: "New", allowedRoles: ["super_admin", "admin", "finance"] },
-  { id: "lead-scoring", label: "🤖 AI Lead Scoring", icon: Brain, badge: "AI", verticals: ["sales", "loans", "insurance"], allowedRoles: ["super_admin", "admin", "sales", "calling"] },
-  { id: "client-management", label: "👤 Client Management", icon: UserCog, badge: "New", allowedRoles: ["super_admin", "admin", "insurance", "sales"] },
-  { id: "lead-import", label: "📥 Lead Import", icon: Database, badge: "New", verticals: ["sales", "loans", "insurance"], allowedRoles: ["super_admin", "admin", "operations", "calling"] },
+  { id: "lead-scoring", label: "🤖 AI Lead Scoring", icon: Brain, badge: "AI",
+    verticals: ["sales", "loans", "insurance"],
+    allowedRoles: ["super_admin", "admin", "sales", "calling", "insurance"] },
+  { id: "client-management", label: "👤 Client Management", icon: UserCog, badge: "New",
+    verticals: ["sales", "insurance", "loans"],
+    allowedRoles: ["super_admin", "admin", "insurance", "sales", "finance"] },
+  { id: "lead-import", label: "📥 Lead Import", icon: Database, badge: "New",
+    verticals: ["sales", "loans", "insurance"],
+    allowedRoles: ["super_admin", "admin", "operations", "calling"] },
   { id: "data-export", label: "📤 Data Export", icon: FileText, badge: "New", allowedRoles: ["super_admin", "admin"] },
+
+  // ── Lead Management — sales, loans, insurance ──
   { 
     id: "leads", 
     label: "Lead Management", 
     icon: Users,
     verticals: ["sales", "loans", "insurance"],
-    allowedRoles: ["super_admin", "admin", "sales", "calling"],
+    allowedRoles: ["super_admin", "admin", "sales", "calling", "insurance", "finance"],
     children: [
       { id: "leads-all", label: "All Leads", icon: Users },
       { id: "leads-hot", label: "Hot Leads", icon: Users, badge: "Hot" },
       { id: "leads-whatsapp", label: "WhatsApp Leads", icon: MessageSquare },
     ]
   },
+
+  // ── Car Database — ALL operational verticals EXCEPT marketing ──
   { 
     id: "cars", 
-    label: "Car Management", 
+    label: "🚗 Car Database", 
     icon: Car,
-    verticals: ["sales"],
-    allowedRoles: ["super_admin", "admin", "sales", "operations"],
+    verticals: ["sales", "insurance", "loans", "rental", "hsrp", "accessories"],
+    allowedRoles: ["super_admin", "admin", "sales", "operations", "finance", "insurance", "dealer"],
     children: [
       { id: "cars-list", label: "Cars & Details", icon: Car },
-      { id: "cars-brands", label: "🏭 Brands Management", icon: Database, badge: "New" },
-      { id: "cars-ai-entry", label: "🚗 AI Car Entry", icon: Sparkles, badge: "New", allowedRoles: ["super_admin", "admin"] },
-      { id: "cars-bulk-import", label: "📊 Bulk Import", icon: Database, badge: "New", allowedRoles: ["super_admin", "admin"] },
-      { id: "cars-quick-import", label: "💬 Quick Text Import", icon: MessageSquare, badge: "New", allowedRoles: ["super_admin", "admin"] },
-      { id: "cars-city-pricing", label: "📍 State/City Pricing", icon: CreditCard, badge: "New" },
-      { id: "cars-attributes", label: "🏷️ Vehicle Attributes", icon: Tags, badge: "New" },
-      { id: "cars-colors", label: "Colors & Images", icon: Palette },
-      { id: "cars-image-sync", label: "🤖 AI Image Sync", icon: Sparkles, badge: "AI", allowedRoles: ["super_admin", "admin"] },
-      { id: "cars-images", label: "Gallery", icon: Image },
+      { id: "cars-brands", label: "🏭 Brands", icon: Database },
       { id: "cars-variants", label: "Variants & Specs", icon: Tags },
       { id: "cars-pricing", label: "Pricing & Breakup", icon: CreditCard },
+      { id: "cars-city-pricing", label: "📍 State/City Pricing", icon: CreditCard },
+      { id: "cars-colors", label: "Colors & Images", icon: Palette },
+      { id: "cars-images", label: "Gallery", icon: Image },
+      { id: "cars-attributes", label: "🏷️ Vehicle Attributes", icon: Tags },
+      { id: "cars-ai-entry", label: "🤖 AI Car Entry", icon: Sparkles, badge: "AI", allowedRoles: ["super_admin", "admin"] },
+      { id: "cars-bulk-import", label: "📊 Bulk Import", icon: Database, allowedRoles: ["super_admin", "admin"] },
+      { id: "cars-quick-import", label: "💬 Quick Text Import", icon: MessageSquare, allowedRoles: ["super_admin", "admin"] },
+      { id: "cars-image-sync", label: "🤖 AI Image Sync", icon: Sparkles, badge: "AI", allowedRoles: ["super_admin", "admin"] },
       { id: "cars-migration", label: "Data Migration", icon: Database, allowedRoles: ["super_admin", "admin"] },
       { id: "cars-ai", label: "AI Enhancement", icon: Brain, allowedRoles: ["super_admin", "admin"] },
-      { id: "cars-url-scraper", label: "🌐 URL Scraper", icon: Globe, badge: "New", allowedRoles: ["super_admin", "admin"] },
+      { id: "cars-url-scraper", label: "🌐 URL Scraper", icon: Globe, allowedRoles: ["super_admin", "admin"] },
     ]
   },
-  { 
-    id: "website", 
-    label: "Website Manager", 
-    icon: Globe,
-    verticals: ["marketing"],
-    allowedRoles: ["super_admin", "admin", "marketing"],
-    children: [
-      { id: "website-homepage", label: "Homepage", icon: Home },
-      { id: "website-content", label: "Header & Footer", icon: Menu },
-      { id: "website-offers", label: "Offers & Layout", icon: Settings, badge: "New" },
-      { id: "website-banners", label: "Banners & Sliders", icon: Image },
-      { id: "website-branding", label: "Logo & Branding", icon: Palette },
-      { id: "website-seo", label: "SEO Settings", icon: Settings },
-    ]
-  },
-  { 
-    id: "socialproof", 
-    label: "Social Proof", 
-    icon: Users,
-    badge: "New",
-    verticals: ["marketing"],
-    allowedRoles: ["super_admin", "admin", "marketing"],
-    children: [
-      { id: "socialproof-reviews", label: "Google Reviews", icon: MessageSquare },
-      { id: "socialproof-stories", label: "Delivery Stories", icon: Image },
-    ]
-  },
+
+  // ── Services — vertical-specific children ──
   { 
     id: "services", 
     label: "Services", 
@@ -153,74 +141,116 @@ const navItems: NavItem[] = [
     children: [
       { id: "services-hsrp", label: "HSRP & FASTag", icon: Shield, verticals: ["hsrp"], allowedRoles: ["super_admin", "admin", "operations"] },
       { id: "services-rentals", label: "Self-Drive Rentals", icon: CalendarDays, verticals: ["rental"], allowedRoles: ["super_admin", "admin", "operations"] },
-      { id: "services-driver-bookings", label: "🚗 Driver Bookings", icon: Car, badge: "New", verticals: ["rental"], allowedRoles: ["super_admin", "admin", "operations"] },
-      { id: "services-api-partners", label: "🔗 API Partners", icon: Globe, badge: "New", verticals: ["rental"], allowedRoles: ["super_admin", "admin"] },
+      { id: "services-driver-bookings", label: "🚗 Driver Bookings", icon: Car, verticals: ["rental"], allowedRoles: ["super_admin", "admin", "operations"] },
+      { id: "services-api-partners", label: "🔗 API Partners", icon: Globe, verticals: ["rental"], allowedRoles: ["super_admin", "admin"] },
       { id: "services-insurance", label: "🛡️ Insurance CRM", icon: FileText, verticals: ["insurance"], allowedRoles: ["super_admin", "admin", "insurance"] },
-      { id: "services-insurance-import", label: "📥 Insurance Import/Export", icon: Database, verticals: ["insurance"], allowedRoles: ["super_admin", "admin", "insurance"] },
+      { id: "services-insurance-import", label: "📥 Insurance Import", icon: Database, verticals: ["insurance"], allowedRoles: ["super_admin", "admin", "insurance"] },
       { id: "services-loans", label: "Car Loans", icon: CreditCard, verticals: ["loans"], allowedRoles: ["super_admin", "admin", "finance"] },
-      { id: "services-discounts", label: "Discount Presets", icon: Tags, badge: "New", verticals: ["sales"], allowedRoles: ["super_admin", "admin", "sales"] },
       { id: "services-emi-pdf", label: "EMI PDF Settings", icon: FileText, verticals: ["loans"], allowedRoles: ["super_admin", "admin", "finance"] },
-      { id: "services-quote-generator", label: "Manual Quote", icon: FileSignature, badge: "New", verticals: ["sales"], allowedRoles: ["super_admin", "admin", "sales"] },
+      { id: "services-discounts", label: "Discount Presets", icon: Tags, verticals: ["sales"], allowedRoles: ["super_admin", "admin", "sales"] },
+      { id: "services-quote-generator", label: "Manual Quote", icon: FileSignature, verticals: ["sales"], allowedRoles: ["super_admin", "admin", "sales"] },
+      { id: "services-pricing", label: "Service Pricing", icon: CreditCard, verticals: ["hsrp", "rental"], allowedRoles: ["super_admin", "admin", "operations"] },
+      { id: "services-partners", label: "Partners", icon: Users, verticals: ["insurance", "rental"], allowedRoles: ["super_admin", "admin"] },
     ]
   },
+
+  // ── E-Commerce — accessories vertical only ──
   { 
     id: "ecommerce", 
     label: "E-Commerce", 
     icon: Package,
     verticals: ["accessories"],
-    allowedRoles: ["super_admin", "admin", "operations"],
+    allowedRoles: ["super_admin", "admin", "operations", "sales"],
     children: [
       { id: "ecommerce-accessories", label: "Accessories", icon: Package },
       { id: "ecommerce-orders", label: "Orders", icon: FileText },
-      { id: "ecommerce-crosssell", label: "Cross-Sell", icon: Tags, badge: "New" },
+      { id: "ecommerce-crosssell", label: "Cross-Sell", icon: Tags },
     ]
   },
+
+  // ── Website Manager — marketing only ──
+  { 
+    id: "website", 
+    label: "🌐 Website Manager", 
+    icon: Globe,
+    verticals: ["marketing"],
+    allowedRoles: ["super_admin", "admin", "marketing"],
+    children: [
+      { id: "website-homepage", label: "Homepage", icon: Home },
+      { id: "website-content", label: "Header & Footer", icon: Menu },
+      { id: "website-offers", label: "Offers & Layout", icon: Settings },
+      { id: "website-banners", label: "Banners & Sliders", icon: Image },
+      { id: "website-branding", label: "Logo & Branding", icon: Palette },
+      { id: "website-testimonials", label: "Testimonials", icon: MessageSquare },
+      { id: "website-faqs", label: "FAQs", icon: FileText },
+      { id: "website-seo", label: "SEO Settings", icon: Settings },
+    ]
+  },
+
+  // ── Social Proof — marketing only ──
+  { 
+    id: "socialproof", 
+    label: "⭐ Social Proof", 
+    icon: Users,
+    verticals: ["marketing"],
+    allowedRoles: ["super_admin", "admin", "marketing"],
+    children: [
+      { id: "socialproof-reviews", label: "Google Reviews", icon: MessageSquare },
+      { id: "socialproof-stories", label: "Delivery Stories", icon: Image },
+    ]
+  },
+
+  // ── Content — marketing only ──
   { 
     id: "content", 
-    label: "Content", 
+    label: "📝 Content", 
     icon: FileText,
     verticals: ["marketing"],
     allowedRoles: ["super_admin", "admin", "marketing"],
     children: [
       { id: "content-blog", label: "Blog Posts", icon: FileText },
       { id: "content-news", label: "Auto News", icon: Newspaper },
-      { id: "content-launches", label: "Launches & Upcoming", icon: Rocket, badge: "New" },
+      { id: "content-launches", label: "Launches & Upcoming", icon: Rocket },
       { id: "content-ai", label: "AI Content Hub", icon: Brain },
       { id: "content-intelligence", label: "Auto Intelligence", icon: Sparkles },
     ]
   },
+
+  // ── Marketing Campaigns — marketing only ──
   { 
     id: "marketing", 
-    label: "Marketing", 
+    label: "📢 Marketing", 
     icon: Users,
-    badge: "New",
     verticals: ["marketing"],
     allowedRoles: ["super_admin", "admin", "marketing"],
     children: [
-      { id: "marketing-templates", label: "📱 WhatsApp Templates", icon: MessageSquare, badge: "New" },
-      { id: "marketing-automation", label: "📧 Email Automation", icon: Mail, badge: "New" },
+      { id: "marketing-templates", label: "📱 WhatsApp Templates", icon: MessageSquare },
+      { id: "marketing-automation", label: "📧 Email Automation", icon: Mail },
       { id: "marketing-email", label: "Email Campaigns", icon: MessageSquare },
       { id: "marketing-bulk", label: "Bulk Data Manager", icon: Database },
     ]
   },
+
+  // ── Integrations — super admin only ──
   { 
     id: "integrations", 
-    label: "Integrations", 
+    label: "🔌 Integrations", 
     icon: Settings,
+    verticals: ["marketing"],
     allowedRoles: ["super_admin", "admin"],
     children: [
       { id: "integrations-api", label: "API Portal", icon: Database },
       { id: "integrations-whatsapp", label: "WhatsApp API", icon: MessageSquare },
-      { id: "integrations-chatbot", label: "AI Chatbot", icon: Brain, badge: "New" },
       { id: "integrations-shipping", label: "Shipping Partners", icon: Package },
       { id: "integrations-payments", label: "Payment Gateway", icon: CreditCard },
     ]
   },
+
+  // ── Profile & Settings — super admin only ──
   { 
     id: "profile", 
-    label: "Profile & Settings", 
+    label: "⚙️ Profile & Settings", 
     icon: UserCog,
-    badge: "New",
     allowedRoles: ["super_admin", "admin"],
     children: [
       { id: "profile-business", label: "Business Profile", icon: Settings },
@@ -230,8 +260,8 @@ const navItems: NavItem[] = [
       { id: "profile-otp", label: "OTP & Verification", icon: Shield },
     ]
   },
-  { id: "roles", label: "User Roles", icon: UserCog, allowedRoles: ["super_admin", "admin"] },
-  { id: "settings", label: "Settings", icon: Settings, allowedRoles: ["super_admin", "admin"] },
+  { id: "roles", label: "👥 User Roles", icon: UserCog, allowedRoles: ["super_admin", "admin"] },
+  { id: "settings", label: "⚙️ Site Settings", icon: Settings, allowedRoles: ["super_admin", "admin"] },
 ];
 
 export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => {
