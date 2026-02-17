@@ -84,6 +84,9 @@ import { AccessoriesDashboard } from "@/components/admin/verticals/AccessoriesDa
 import { MarketingDashboard } from "@/components/admin/verticals/MarketingDashboard";
 import { CallingDashboard } from "@/components/admin/calling/CallingDashboard";
 import { ManagerDashboard } from "@/components/admin/ManagerDashboard";
+import TeamEngagement from "@/components/admin/TeamEngagement";
+import ErrorPrevention from "@/components/admin/ErrorPrevention";
+import WorkflowEngine from "@/components/admin/WorkflowEngine";
 
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
@@ -310,6 +313,12 @@ const AdminLayout = () => {
         return <CallingDashboard />;
       case "manager-dashboard":
         return <ManagerDashboard />;
+      case "team-engagement":
+        return <TeamEngagement />;
+      case "error-prevention":
+        return <ErrorPrevention />;
+      case "workflow-engine":
+        return <WorkflowEngine />;
       default:
         return <AdminDashboard />;
     }
