@@ -75,6 +75,7 @@ import { LeadScoringDashboard } from "@/components/admin/LeadScoringDashboard";
 import { ClientManagement } from "@/components/admin/ClientManagement";
 import { LeadImportManager } from "@/components/admin/LeadImportManager";
 import { DataExportEngine } from "@/components/admin/DataExportEngine";
+import { SuperAdminUserManager } from "@/components/admin/SuperAdminUserManager";
 import { InsuranceDashboard } from "@/components/admin/verticals/InsuranceDashboard";
 import { SalesDashboard } from "@/components/admin/verticals/SalesDashboard";
 import { RentalDashboard } from "@/components/admin/verticals/RentalDashboard";
@@ -135,7 +136,7 @@ const AdminLayout = () => {
   }
 
   // Check admin access
-  const hasAdminAccess = roles.length === 0 || isAdmin();
+  const hasAdminAccess = roles.length > 0;
 
   if (!hasAdminAccess) {
     return (
@@ -296,7 +297,7 @@ const AdminLayout = () => {
       case "profile-otp":
         return <ProfileSettings />;
       case "roles":
-        return <TeamUserManagement />;
+        return <SuperAdminUserManager />;
       case "settings":
         return <SiteSettingsManager />;
       case "services-pricing":

@@ -65,15 +65,15 @@ const navItems: NavItem[] = [
   // Loan vertical
   { id: "loan-crm", label: "💰 Loan CRM", icon: CreditCard, badge: "New", verticals: ["loans"], allowedRoles: ["super_admin", "admin", "finance", "sales"] },
   
-  // Cross-vertical tools (show in all)
-  { id: "unified-crm", label: "🧠 Unified Customers", icon: Users, badge: "New" },
-  { id: "unified-intelligence", label: "🔗 Cross-Vertical Intel", icon: Sparkles, badge: "AI" },
-  { id: "journey-automation", label: "⚡ Journey Automation", icon: Sparkles, badge: "New", allowedRoles: ["super_admin", "admin", "operations"] },
+  // Cross-vertical tools (super admin / admin only)
+  { id: "unified-crm", label: "🧠 Unified Customers", icon: Users, badge: "New", allowedRoles: ["super_admin", "admin"] },
+  { id: "unified-intelligence", label: "🔗 Cross-Vertical Intel", icon: Sparkles, badge: "AI", allowedRoles: ["super_admin", "admin"] },
+  { id: "journey-automation", label: "⚡ Journey Automation", icon: Sparkles, badge: "New", allowedRoles: ["super_admin", "admin"] },
   { id: "revenue-intelligence", label: "📊 Revenue Intelligence", icon: BarChart3, badge: "New", allowedRoles: ["super_admin", "admin", "finance"] },
   { id: "lead-scoring", label: "🤖 AI Lead Scoring", icon: Brain, badge: "AI", verticals: ["sales", "loans", "insurance"], allowedRoles: ["super_admin", "admin", "sales", "calling"] },
-  { id: "client-management", label: "👤 Client Management", icon: UserCog, badge: "New" },
+  { id: "client-management", label: "👤 Client Management", icon: UserCog, badge: "New", allowedRoles: ["super_admin", "admin", "insurance", "sales"] },
   { id: "lead-import", label: "📥 Lead Import", icon: Database, badge: "New", verticals: ["sales", "loans", "insurance"], allowedRoles: ["super_admin", "admin", "operations", "calling"] },
-  { id: "data-export", label: "📤 Data Export", icon: FileText, badge: "New", allowedRoles: ["super_admin", "admin", "operations"] },
+  { id: "data-export", label: "📤 Data Export", icon: FileText, badge: "New", allowedRoles: ["super_admin", "admin"] },
   { 
     id: "leads", 
     label: "Lead Management", 
@@ -237,7 +237,7 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
 
   // Determine user's role set
   const userRoles = useMemo(() => roles.map(r => r.role), [roles]);
-  const hasFullAccess = userRoles.length === 0 || isSuperAdmin() || isAdmin();
+  const hasFullAccess = isSuperAdmin() || isAdmin();
 
   // Filter nav items based on role AND active vertical
   const activeSlug = activeVertical?.slug;
