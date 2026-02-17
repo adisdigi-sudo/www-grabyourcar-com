@@ -8,22 +8,26 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
 import {
   Upload, FileText, ClipboardPaste, Table2,
-  CheckCircle2, Loader2, X, Download, Database,
+  CheckCircle2, Loader2, X, Download, Database, FileSpreadsheet,
 } from "lucide-react";
+import * as XLSX from "xlsx";
 
 type ParsedProspect = {
   phone: string;
   customer_name: string;
   vehicle_number?: string;
+  vehicle_model?: string;
   email?: string;
   insurer?: string;
   expiry_date?: string;
   premium_amount?: string;
   city?: string;
+  state?: string;
+  address?: string;
 };
 
 const DATA_SOURCES = [
@@ -49,49 +53,64 @@ export function BulkProspectImportButton({ onImported }: { onImported?: () => vo
 }
 
 function BulkProspectImportDialog({ open, onClose, onImported }: { open: boolean; onClose: () => void; onImported?: () => void }) {
-  const [tab, setTab] = useState("text");
+  const [tab, setTab] = useState("excel");
   const [parsed, setParsed] = useState<ParsedProspect[]>([]);
   const [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
   const [result, setResult] = useState<{ success: number; failed: number } | null>(null);
-  const [dataSource, setDataSource] = useState("rollover_data");
+  const [dataSource, setDataSource] = useState("purchased_database");
   const queryClient = useQueryClient();
 
-  const reset = () => { setParsed([]); setResult(null); setImporting(false); };
+  const reset = () => { setParsed([]); setResult(null); setImporting(false); setImportProgress(0); };
   const handleClose = () => { reset(); onClose(); };
 
   const doImport = async () => {
     if (!parsed.length) return;
     setImporting(true);
-    let success = 0, failed = 0;
+    setImportProgress(0);
 
-    const payload = parsed.map(c => ({
-      phone: c.phone.replace(/\D/g, "").slice(-10) || `P_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-      customer_name: c.customer_name || null,
-      email: c.email || null,
-      vehicle_number: c.vehicle_number || null,
-      insurer: c.insurer || null,
-      expiry_date: c.expiry_date || null,
-      premium_amount: c.premium_amount ? Number(c.premium_amount) : null,
-      city: c.city || null,
-      data_source: dataSource,
-      prospect_status: "new",
-    }));
+    const batchId = `import_${Date.now()}`;
+    const chunkSize = 2000;
+    let totalSuccess = 0, totalFailed = 0;
 
-    const { error } = await supabase.from("insurance_prospects").insert(payload);
-    if (error) {
-      for (const row of payload) {
-        const { error: e } = await supabase.from("insurance_prospects").insert(row);
-        if (e) failed++; else success++;
+    for (let i = 0; i < parsed.length; i += chunkSize) {
+      const chunk = parsed.slice(i, i + chunkSize);
+      setImportProgress(Math.round((i / parsed.length) * 100));
+
+      try {
+        const { data, error } = await supabase.functions.invoke("bulk-import-prospects", {
+          body: { prospects: chunk, data_source: dataSource, batch_id: batchId },
+        });
+
+        if (error) throw error;
+        totalSuccess += data.success || 0;
+        totalFailed += data.failed || 0;
+      } catch (err) {
+        // Fallback: direct insert
+        const payload = chunk.map(c => ({
+          phone: c.phone.replace(/\D/g, "").slice(-10) || `P_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          customer_name: c.customer_name || null,
+          email: c.email || null,
+          vehicle_number: c.vehicle_number || null,
+          vehicle_model: c.vehicle_model || null,
+          city: c.city || null,
+          state: c.state || null,
+          data_source: dataSource,
+          prospect_status: "new",
+          batch_id: batchId,
+        }));
+        const { error: insertErr } = await supabase.from("insurance_prospects").insert(payload);
+        if (insertErr) totalFailed += chunk.length;
+        else totalSuccess += chunk.length;
       }
-    } else {
-      success = payload.length;
     }
 
-    setResult({ success, failed });
+    setImportProgress(100);
+    setResult({ success: totalSuccess, failed: totalFailed });
     setImporting(false);
     queryClient.invalidateQueries({ queryKey: ["insurance-prospects"] });
     onImported?.();
-    toast.success(`${success} prospects imported${failed ? `, ${failed} failed` : ""}`);
+    toast.success(`${totalSuccess} prospects imported${totalFailed ? `, ${totalFailed} failed` : ""}`);
   };
 
   const downloadTemplate = () => {
@@ -118,8 +137,8 @@ function BulkProspectImportDialog({ open, onClose, onImported }: { open: boolean
             <div>
               <h3 className="text-lg font-semibold">Import Complete!</h3>
               <p className="text-sm text-muted-foreground mt-1">
-                <span className="text-emerald-600 font-medium">{result.success} prospects</span> imported
-                {result.failed > 0 && <>, <span className="text-destructive font-medium">{result.failed} failed</span></>}
+                <span className="text-emerald-600 font-medium">{result.success.toLocaleString()} prospects</span> imported
+                {result.failed > 0 && <>, <span className="text-destructive font-medium">{result.failed.toLocaleString()} failed</span></>}
               </p>
             </div>
             <div className="flex gap-2 justify-center">
@@ -129,7 +148,6 @@ function BulkProspectImportDialog({ open, onClose, onImported }: { open: boolean
           </div>
         ) : (
           <>
-            {/* Data Source Selection */}
             <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg border">
               <Label className="text-xs font-medium whitespace-nowrap">Data Source:</Label>
               <Select value={dataSource} onValueChange={setDataSource}>
@@ -139,12 +157,16 @@ function BulkProspectImportDialog({ open, onClose, onImported }: { open: boolean
             </div>
 
             <Tabs value={tab} onValueChange={v => { setTab(v); setParsed([]); }}>
-              <TabsList className="grid grid-cols-3 w-full">
+              <TabsList className="grid grid-cols-4 w-full">
+                <TabsTrigger value="excel" className="gap-1.5 text-xs"><FileSpreadsheet className="h-3.5 w-3.5" /> Excel</TabsTrigger>
                 <TabsTrigger value="text" className="gap-1.5 text-xs"><ClipboardPaste className="h-3.5 w-3.5" /> Quick Text</TabsTrigger>
-                <TabsTrigger value="csv" className="gap-1.5 text-xs"><FileText className="h-3.5 w-3.5" /> CSV Upload</TabsTrigger>
+                <TabsTrigger value="csv" className="gap-1.5 text-xs"><FileText className="h-3.5 w-3.5" /> CSV</TabsTrigger>
                 <TabsTrigger value="sheet" className="gap-1.5 text-xs"><Table2 className="h-3.5 w-3.5" /> Spreadsheet</TabsTrigger>
               </TabsList>
 
+              <TabsContent value="excel" className="mt-4">
+                <ProspectExcel onParsed={setParsed} />
+              </TabsContent>
               <TabsContent value="text" className="mt-4">
                 <ProspectQuickText onParsed={setParsed} />
               </TabsContent>
@@ -160,7 +182,7 @@ function BulkProspectImportDialog({ open, onClose, onImported }: { open: boolean
                   <div className="flex items-center justify-between">
                     <h4 className="text-sm font-semibold flex items-center gap-1.5">
                       <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                      {parsed.length} prospects ready
+                      {parsed.length.toLocaleString()} prospects ready
                     </h4>
                     <Button variant="ghost" size="sm" onClick={() => setParsed([])}><X className="h-3.5 w-3.5 mr-1" /> Clear</Button>
                   </div>
@@ -171,26 +193,41 @@ function BulkProspectImportDialog({ open, onClose, onImported }: { open: boolean
                           <th className="text-left px-3 py-2 font-medium">#</th>
                           <th className="text-left px-3 py-2 font-medium">Name</th>
                           <th className="text-left px-3 py-2 font-medium">Phone</th>
+                          <th className="text-left px-3 py-2 font-medium">City</th>
                           <th className="text-left px-3 py-2 font-medium">Vehicle</th>
-                          <th className="text-left px-3 py-2 font-medium">Insurer</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {parsed.map((c, i) => (
+                        {parsed.slice(0, 50).map((c, i) => (
                           <tr key={i} className="border-t">
                             <td className="px-3 py-1.5 text-muted-foreground">{i + 1}</td>
                             <td className="px-3 py-1.5 font-medium">{c.customer_name || "—"}</td>
                             <td className="px-3 py-1.5">{c.phone || "—"}</td>
-                            <td className="px-3 py-1.5 font-mono">{c.vehicle_number || "—"}</td>
-                            <td className="px-3 py-1.5">{c.insurer || "—"}</td>
+                            <td className="px-3 py-1.5">{c.city || "—"}</td>
+                            <td className="px-3 py-1.5 font-mono">{c.vehicle_model || c.vehicle_number || "—"}</td>
                           </tr>
                         ))}
+                        {parsed.length > 50 && (
+                          <tr className="border-t">
+                            <td colSpan={5} className="px-3 py-2 text-center text-muted-foreground">
+                              ... and {(parsed.length - 50).toLocaleString()} more records
+                            </td>
+                          </tr>
+                        )}
                       </tbody>
                     </table>
                   </div>
+
+                  {importing && (
+                    <div className="space-y-2">
+                      <Progress value={importProgress} className="h-2" />
+                      <p className="text-xs text-muted-foreground text-center">Importing... {importProgress}%</p>
+                    </div>
+                  )}
+
                   <Button onClick={doImport} disabled={importing} className="w-full gap-2">
                     {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                    {importing ? "Importing..." : `Import ${parsed.length} Prospects`}
+                    {importing ? "Importing..." : `Import ${parsed.length.toLocaleString()} Prospects`}
                   </Button>
                 </div>
               )}
@@ -199,6 +236,95 @@ function BulkProspectImportDialog({ open, onClose, onImported }: { open: boolean
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function ProspectExcel({ onParsed }: { onParsed: (c: ParsedProspect[]) => void }) {
+  const [fileName, setFileName] = useState("");
+  const [parsing, setParsing] = useState(false);
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    setFileName(file.name);
+    setParsing(true);
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = new Uint8Array(ev.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: "array" });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: "" });
+
+        const prospects: ParsedProspect[] = [];
+        for (const row of rows) {
+          const keys = Object.keys(row);
+          const lk = keys.map(k => k.toLowerCase());
+
+          const nameKey = keys.find((_, i) => lk[i].includes("name") && !lk[i].includes("user name"));
+          const phoneKey = keys.find((_, i) => lk[i].includes("mobile") || lk[i].includes("phone"));
+          const cityKey = keys.find((_, i) => lk[i] === "city");
+          const stateKey = keys.find((_, i) => lk[i] === "state");
+          const addressKey = keys.find((_, i) => lk[i].includes("address"));
+          const modelKey = keys.find((_, i) => lk[i] === "model" || lk[i].includes("submodel"));
+          const vehicleKey = keys.find((_, i) => lk[i].includes("vehicle") || lk[i].includes("reg"));
+          const emailKey = keys.find((_, i) => lk[i].includes("email"));
+          const pinKey = keys.find((_, i) => lk[i].includes("pin"));
+
+          const name = nameKey ? String(row[nameKey]).trim() : "";
+          let phone = phoneKey ? String(row[phoneKey]).replace(/[^0-9+]/g, "") : "";
+          // Handle multiple phone columns
+          if (!phone || phone.length < 10) {
+            const altPhoneKey = keys.find((_, i) => (lk[i].includes("mobile") || lk[i].includes("phone")) && keys[i] !== phoneKey);
+            if (altPhoneKey) phone = String(row[altPhoneKey]).replace(/[^0-9+]/g, "");
+          }
+          phone = phone.slice(-10);
+
+          if (!name && !phone) continue;
+          if (phone.length < 10 && !name) continue;
+
+          prospects.push({
+            customer_name: name || "Unknown",
+            phone: phone || `P_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+            city: cityKey ? String(row[cityKey]).trim() : "",
+            state: stateKey ? String(row[stateKey]).trim() : "",
+            vehicle_model: modelKey ? String(row[modelKey]).trim() : "",
+            vehicle_number: vehicleKey ? String(row[vehicleKey]).trim() : "",
+            email: emailKey ? String(row[emailKey]).trim() : "",
+            address: addressKey ? String(row[addressKey]).trim() : "",
+          });
+        }
+
+        onParsed(prospects);
+        toast.success(`Parsed ${prospects.length.toLocaleString()} prospects from Excel`);
+      } catch (err) {
+        toast.error("Failed to parse Excel file");
+        console.error(err);
+      } finally {
+        setParsing(false);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="p-3 rounded-lg bg-muted/30 border text-xs text-muted-foreground">
+        <p className="font-medium text-foreground text-sm mb-1">Upload Excel File (.xlsx, .xls)</p>
+        <p>Auto-detects columns: Name, Mobile/Phone, City, State, Model, Vehicle, Email, Address</p>
+        <p className="mt-1 text-emerald-600 font-medium">✓ Supports large files (10K-100K+ records)</p>
+      </div>
+      <Label htmlFor="prospect-excel-upload" className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-8 cursor-pointer hover:bg-muted/20 transition-colors">
+        {parsing ? (
+          <Loader2 className="h-8 w-8 text-primary animate-spin mb-2" />
+        ) : (
+          <FileSpreadsheet className="h-8 w-8 text-muted-foreground mb-2" />
+        )}
+        <span className="text-sm font-medium">{parsing ? "Parsing..." : fileName || "Click to select Excel file"}</span>
+        <span className="text-xs text-muted-foreground mt-1">.xlsx, .xls supported</span>
+        <Input id="prospect-excel-upload" type="file" accept=".xlsx,.xls" className="hidden" onChange={handleFile} />
+      </Label>
+    </div>
   );
 }
 
