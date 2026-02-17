@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import {
@@ -234,6 +234,84 @@ export function InsuranceCRMDashboard() {
     a.download = `policies-${format(now, "yyyy-MM-dd")}.csv`;
     a.click();
   }, [filtered, now]);
+
+  // Renewal reminder functions
+  const buildDashboardRenewalNotice = useCallback((r: PolicyRow) => {
+    const daysLeft = r.daysUntilRenewal !== null ? (r.daysUntilRenewal <= 0 ? 0 : r.daysUntilRenewal) : 0;
+    return `🚗 *Grabyourcar Policy Renewal Reminder*
+━━━━━━━━━━━━━━━━━━━━━
+
+Hello *${r.customer_name || "Valued Customer"}*,
+
+We hope you are enjoying a smooth and safe drive!
+
+This is a friendly reminder from *Grabyourcar Insurance Desk* that your *${r.vehicle_number || "vehicle"}* insurance policy is set to expire on *${r.renewal_date ? format(new Date(r.renewal_date), "dd MMM yyyy") : "soon"}* — just *${daysLeft} days* to go.
+
+Renewing your policy before the expiry helps you:
+
+✅ Avoid inspection hassles
+✅ Maintain your No Claim Bonus
+✅ Stay financially protected
+✅ Ensure uninterrupted coverage
+
+Our team has already prepared renewal assistance for you to make the process quick and seamless.
+
+👉 Simply *reply to this message* or click below to get your renewal quote instantly.
+
+🔗 Renew Now: https://grabyourcar.lovable.app/insurance
+${r.policy_number || r.insurer || r.premium ? `
+📋 *Your Policy Details:*
+${r.policy_number ? `📄 Policy: ${r.policy_number}\n` : ""}${r.insurer ? `🏢 Insurer: ${r.insurer}\n` : ""}${r.premium ? `💰 Premium: ₹${r.premium.toLocaleString("en-IN")}\n` : ""}${r.vehicle_number ? `🚗 Vehicle: ${r.vehicle_number}\n` : ""}` : ""}
+If you need any help, feel free to contact your dedicated advisor.
+
+📞 +91 98559 24442
+🌐 www.grabyourcar.com
+
+Thank you for trusting *Grabyourcar* — we look forward to protecting your journeys ahead.
+
+Drive safe! 🚘`.replace(/\n{3,}/g, "\n\n");
+  }, []);
+
+  const buildDashboardRenewalQuote = useCallback((r: PolicyRow) => {
+    return `🚗 *Grabyourcar — Renewal Quote*
+━━━━━━━━━━━━━━━━━━━━━
+
+Dear *${r.customer_name || "Valued Customer"}*,
+
+Your renewal quote for *${r.vehicle_number || "your vehicle"}* is ready!
+
+📋 *Quote Details:*
+${r.policy_number ? `📄 Policy: ${r.policy_number}\n` : ""}${r.insurer ? `🏢 Current Insurer: ${r.insurer}\n` : ""}${r.premium ? `💰 Renewal Premium: ₹${r.premium.toLocaleString("en-IN")}\n` : ""}📅 Current Expiry: ${r.renewal_date ? format(new Date(r.renewal_date), "dd MMM yyyy") : "N/A"}
+
+🎁 *Renewal Benefits:*
+✅ NCB (No Claim Bonus) Protection
+✅ Roadside Assistance Included
+✅ Zero Depreciation Option
+✅ Instant Policy Issuance
+✅ Hassle-free Claim Settlement
+
+💡 *Why renew with Grabyourcar?*
+• Best rates from 15+ insurers
+• Dedicated advisor support
+• Instant digital policy copy
+• Free claim assistance
+
+👉 *Reply YES* to confirm your renewal or call us now.
+
+📞 +91 98559 24442
+🌐 www.grabyourcar.com
+
+— *Grabyourcar Insurance Desk* 🚘`.replace(/\n{3,}/g, "\n\n");
+  }, []);
+
+  const sendReminderViaWhatsApp = useCallback((r: PolicyRow, type: "notice" | "quote") => {
+    const phone = r.phone?.replace(/\D/g, "");
+    if (!phone) { toast.error("No valid phone number"); return; }
+    const fullPhone = phone.startsWith("91") ? phone : `91${phone}`;
+    const message = type === "notice" ? buildDashboardRenewalNotice(r) : buildDashboardRenewalQuote(r);
+    window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`, "_blank");
+    toast.success(`${type === "notice" ? "Renewal Notice" : "Renewal Quote"} sent to ${r.customer_name}`);
+  }, [buildDashboardRenewalNotice, buildDashboardRenewalQuote]);
 
   const [shareDialogPolicy, setShareDialogPolicy] = useState<PolicyRow | null>(null);
 
@@ -485,11 +563,30 @@ export function InsuranceCRMDashboard() {
                                 </a>
                               )}
                               {r.phone && (
-                                <a href={`https://wa.me/91${r.phone}`} target="_blank" rel="noopener noreferrer">
-                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50" title="WhatsApp">
-                                    <MessageSquare className="h-3.5 w-3.5" />
-                                  </Button>
-                                </a>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button size="sm" className="h-7 gap-1 text-xs px-2 bg-emerald-600 hover:bg-emerald-700 text-white" title="Send Reminder">
+                                      <Send className="h-3 w-3" /> Remind
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="w-52">
+                                    <div className="px-2 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400">📲 WhatsApp Templates</div>
+                                    <DropdownMenuItem onClick={() => sendReminderViaWhatsApp(r, "notice")} className="cursor-pointer gap-2">
+                                      <Bell className="h-3.5 w-3.5 text-emerald-600" />
+                                      <div>
+                                        <p className="text-xs font-medium">Renewal Notice</p>
+                                        <p className="text-[10px] text-muted-foreground">Urgency reminder with countdown</p>
+                                      </div>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => sendReminderViaWhatsApp(r, "quote")} className="cursor-pointer gap-2">
+                                      <FileText className="h-3.5 w-3.5 text-emerald-600" />
+                                      <div>
+                                        <p className="text-xs font-medium">Renewal Quote</p>
+                                        <p className="text-[10px] text-muted-foreground">Premium details with benefits</p>
+                                      </div>
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                               )}
                               <Button variant="ghost" size="icon" className="h-7 w-7" title="Share"
                                 onClick={() => setShareDialogPolicy(r)}>
@@ -675,6 +772,7 @@ export function InsuranceCRMDashboard() {
           onClose={() => setSelectedPolicy(null)}
           onShare={() => setShareDialogPolicy(selectedPolicy)}
           onMarkStatus={(status) => markStatus.mutate({ clientId: selectedPolicy.client_id, status })}
+          onSendReminder={(type) => sendReminderViaWhatsApp(selectedPolicy, type)}
         />
       )}
 
@@ -693,12 +791,13 @@ export function InsuranceCRMDashboard() {
 
 // ── Policy Detail Dialog ──
 function PolicyDetailDialog({
-  policy, onClose, onShare, onMarkStatus
+  policy, onClose, onShare, onMarkStatus, onSendReminder
 }: {
   policy: PolicyRow;
   onClose: () => void;
   onShare: () => void;
   onMarkStatus: (status: string) => void;
+  onSendReminder: (type: "notice" | "quote") => void;
 }) {
   const reminderDays = [60, 30, 15, 7, 1];
 
@@ -815,11 +914,14 @@ function PolicyDetailDialog({
               </a>
             )}
             {policy.phone && (
-              <a href={`https://wa.me/91${policy.phone}`} target="_blank" rel="noopener noreferrer">
-                <Button variant="outline" size="sm" className="gap-1.5 text-emerald-600 border-emerald-200 hover:bg-emerald-50">
-                  <MessageSquare className="h-3.5 w-3.5" /> WhatsApp
-                </Button>
-              </a>
+              <Button size="sm" className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => onSendReminder("notice")}>
+                <Bell className="h-3.5 w-3.5" /> Renewal Notice
+              </Button>
+            )}
+            {policy.phone && (
+              <Button size="sm" className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => onSendReminder("quote")}>
+                <FileText className="h-3.5 w-3.5" /> Renewal Quote
+              </Button>
             )}
             {policy.email && (
               <a href={`mailto:${policy.email}`}>
