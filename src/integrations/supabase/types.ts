@@ -4054,7 +4054,7 @@ export type Database = {
           addons: string[] | null
           client_id: string
           created_at: string
-          expiry_date: string
+          expiry_date: string | null
           gst_amount: number | null
           id: string
           idv: number | null
@@ -4081,7 +4081,7 @@ export type Database = {
           addons?: string[] | null
           client_id: string
           created_at?: string
-          expiry_date: string
+          expiry_date?: string | null
           gst_amount?: number | null
           id?: string
           idv?: number | null
@@ -4108,7 +4108,7 @@ export type Database = {
           addons?: string[] | null
           client_id?: string
           created_at?: string
-          expiry_date?: string
+          expiry_date?: string | null
           gst_amount?: number | null
           id?: string
           idv?: number | null
