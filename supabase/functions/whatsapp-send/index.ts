@@ -113,7 +113,8 @@ serve(async (req) => {
     const FINBITE_WHATSAPP_CLIENT = (Deno.env.get("FINBITE_WHATSAPP_CLIENT") || "").replace(/[^\x20-\x7E]/g, "").trim();
     const FINBITE_CLIENT_ID = (Deno.env.get("FINBITE_CLIENT_ID") || "").replace(/[^\x20-\x7E]/g, "").trim();
     
-    console.log("API Key length:", FINBITE_API_KEY.length, "starts:", FINBITE_API_KEY.substring(0, 8), "Phone ID:", FINBITE_WHATSAPP_CLIENT);
+    const PHONE_NO_ID = "474586035740177";
+    console.log("API Key length:", FINBITE_API_KEY.length, "starts:", FINBITE_API_KEY.substring(0, 8), "Phone ID:", PHONE_NO_ID);
 
     if (!FINBITE_API_KEY || !FINBITE_WHATSAPP_CLIENT) {
       return new Response(
@@ -144,24 +145,24 @@ serve(async (req) => {
     // Try v2 API first
     if (messageType === "template" && template_name) {
       // Template message — exact Finbite v2 body format
-      result = await sendV2(FINBITE_API_KEY, FINBITE_WHATSAPP_CLIENT, phone.full, {
+      result = await sendV2(FINBITE_API_KEY, PHONE_NO_ID, phone.full, {
         type: "template",
         name: template_name,
         language: "en_US",
       });
     } else if (messageType === "image" && mediaUrl) {
-      result = await sendV2(FINBITE_API_KEY, FINBITE_WHATSAPP_CLIENT, phone.full, {
+      result = await sendV2(FINBITE_API_KEY, PHONE_NO_ID, phone.full, {
         type: "image",
         image: { link: mediaUrl, caption: message || "" },
       });
     } else if (messageType === "document" && mediaUrl) {
-      result = await sendV2(FINBITE_API_KEY, FINBITE_WHATSAPP_CLIENT, phone.full, {
+      result = await sendV2(FINBITE_API_KEY, PHONE_NO_ID, phone.full, {
         type: "document",
         document: { link: mediaUrl, caption: message || "", filename: "document.pdf" },
       });
     } else {
       // Text message
-      result = await sendV2(FINBITE_API_KEY, FINBITE_WHATSAPP_CLIENT, phone.full, {
+      result = await sendV2(FINBITE_API_KEY, PHONE_NO_ID, phone.full, {
         type: "text",
         text: { body: message || "Hello from GrabYourCar!" },
       });
