@@ -391,7 +391,8 @@ export function InsuranceProspectPool() {
                       <th className="text-left py-2.5 px-3 font-medium text-xs">Name</th>
                       <th className="text-left py-2.5 px-3 font-medium text-xs">Status</th>
                       <th className="text-left py-2.5 px-3 font-medium text-xs">Source</th>
-                      <th className="text-left py-2.5 px-3 font-medium text-xs hidden md:table-cell">Vehicle</th>
+                      <th className="text-left py-2.5 px-3 font-medium text-xs hidden md:table-cell">Vehicle / Model</th>
+                      <th className="text-left py-2.5 px-3 font-medium text-xs hidden md:table-cell">City</th>
                       <th className="text-left py-2.5 px-3 font-medium text-xs hidden lg:table-cell">Calls</th>
                       <th className="text-left py-2.5 px-3 font-medium text-xs hidden lg:table-cell">Last Remark</th>
                       <th className="text-left py-2.5 px-3 font-medium text-xs">Actions</th>
@@ -414,7 +415,8 @@ export function InsuranceProspectPool() {
                         </td>
                         <td className="py-2 px-3">{getStatusBadge(p.prospect_status)}</td>
                         <td className="py-2 px-3 text-xs text-muted-foreground">{getSourceLabel(p.data_source)}</td>
-                        <td className="py-2 px-3 hidden md:table-cell text-xs font-mono">{p.vehicle_number || "—"}</td>
+                        <td className="py-2 px-3 hidden md:table-cell text-xs font-mono">{p.vehicle_number || p.vehicle_model || "—"}</td>
+                        <td className="py-2 px-3 hidden md:table-cell text-xs text-muted-foreground">{p.city || "—"}</td>
                         <td className="py-2 px-3 hidden lg:table-cell">
                           <Badge variant="secondary" className="text-xs">{p.call_count || 0}</Badge>
                         </td>

@@ -30,23 +30,29 @@ Deno.serve(async (req) => {
     const batchSize = 500;
 
     for (let i = 0; i < prospects.length; i += batchSize) {
-      const batch = prospects.slice(i, i + batchSize).map((p: any) => ({
-        phone: String(p.phone || "").replace(/\D/g, "").slice(-10) || `P_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-        customer_name: p.customer_name || p.name || null,
-        email: p.email || null,
-        vehicle_number: p.vehicle_number || null,
-        vehicle_make: p.vehicle_make || null,
-        vehicle_model: p.vehicle_model || p.model || null,
-        insurer: p.insurer || null,
-        expiry_date: p.expiry_date || null,
-        premium_amount: p.premium_amount ? Number(p.premium_amount) : null,
-        city: p.city || null,
-        state: p.state || null,
-        data_source: data_source || "purchased_database",
-        prospect_status: "new",
-        source_file: source_file || null,
-        batch_id: batch_id || null,
-      }));
+      const batch = prospects.slice(i, i + batchSize).map((p: any) => {
+        const model = p.vehicle_model || p.model || "";
+        const submodel = p.submodel || "";
+        const vehicleModel = model ? (submodel ? `${model} ${submodel}` : model) : submodel;
+        
+        return {
+          phone: String(p.phone || "").replace(/\D/g, "").slice(-10) || `P_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          customer_name: p.customer_name || p.name || null,
+          email: p.email || null,
+          vehicle_number: p.vehicle_number || null,
+          vehicle_make: p.vehicle_make || null,
+          vehicle_model: vehicleModel || null,
+          insurer: p.insurer || null,
+          expiry_date: p.expiry_date || null,
+          premium_amount: p.premium_amount ? Number(p.premium_amount) : null,
+          city: p.city || null,
+          state: p.state || null,
+          data_source: data_source || "purchased_database",
+          prospect_status: "new",
+          source_file: source_file || null,
+          batch_id: batch_id || null,
+        };
+      });
 
       const { error } = await supabase.from("insurance_prospects").insert(batch);
       if (error) {
