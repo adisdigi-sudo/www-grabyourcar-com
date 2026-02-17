@@ -93,8 +93,17 @@ const AdminAuth = () => {
       .select("role")
       .eq("user_id", userId);
 
+    // BLOCK super_admin from team login — they MUST use OTP
+    const isSuperAdmin = userRoles?.some((r) => r.role === "super_admin");
+    if (isSuperAdmin) {
+      toast.error("Super Admins must login via WhatsApp OTP, not User ID/Password.");
+      await supabase.auth.signOut();
+      setIsSubmitting(false);
+      return;
+    }
+
     const isAdminUser = userRoles?.some(
-      (r) => r.role === "super_admin" || r.role === "admin"
+      (r) => r.role === "admin"
     );
 
     // Fetch verticals
@@ -166,9 +175,17 @@ const AdminAuth = () => {
   };
 
   // ── Super Admin: Send OTP ──
+  // Registered Super Admin numbers (primary + backup)
+  const REGISTERED_SA_NUMBERS = ["9855924442"];
+
   const handleSendSuperAdminOTP = async () => {
-    if (!superAdminPhone.trim() || superAdminPhone.length < 10) {
-      toast.error("Enter your registered 10-digit WhatsApp number");
+    const cleanNum = superAdminPhone.replace(/\D/g, "").replace(/^91/, "");
+    if (cleanNum.length !== 10) {
+      toast.error("Enter a valid 10-digit WhatsApp number");
+      return;
+    }
+    if (!REGISTERED_SA_NUMBERS.includes(cleanNum)) {
+      toast.error("This number is not registered as a Super Admin.");
       return;
     }
     setOtpSending(true);
