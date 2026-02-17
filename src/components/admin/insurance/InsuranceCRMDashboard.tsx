@@ -17,12 +17,13 @@ import {
   Download, ChevronLeft, ChevronRight, Phone, Mail,
   Share2, Bell, CalendarDays, ArrowRight, Copy, ExternalLink,
   Shield, Car, TrendingUp, CheckCircle2, MessageSquare, PhoneCall,
-  Eye, Send, Tag, Trophy, XCircle, Play, Edit, Zap, Loader2
+  Eye, Send, Tag, Trophy, XCircle, Play, Edit, Zap, Loader2, Upload
 } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { format, addDays, differenceInDays, isBefore, isAfter } from "date-fns";
+import { InsuranceAddPolicyForm } from "./InsuranceAddPolicyForm";
 
 type ViewFilter = "all" | "7" | "15" | "30" | "60" | "expired";
 type StatusFilter = "all" | "won" | "lost" | "running" | "new" | "grabyourcar";
@@ -263,6 +264,7 @@ export function InsuranceCRMDashboard() {
 
   // Reminder preview state
   const [reminderPreview, setReminderPreview] = useState<{ policy: PolicyRow; type: "notice" | "quote" } | null>(null);
+  const [showUploadPolicy, setShowUploadPolicy] = useState(false);
 
   const openReminderPreview = useCallback((r: PolicyRow, type: "notice" | "quote") => {
     setReminderPreview({ policy: r, type });
@@ -336,9 +338,14 @@ export function InsuranceCRMDashboard() {
           </h2>
           <p className="text-sm text-muted-foreground">Manage policies, renewals & follow-ups</p>
         </div>
-        <Button variant="outline" size="sm" onClick={exportCSV} className="gap-1.5">
-          <Download className="h-4 w-4" /> Export
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="default" size="sm" onClick={() => setShowUploadPolicy(true)} className="gap-1.5">
+            <Upload className="h-4 w-4" /> Upload Policy
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportCSV} className="gap-1.5">
+            <Download className="h-4 w-4" /> Export
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -906,6 +913,22 @@ export function InsuranceCRMDashboard() {
           onClose={() => setReminderPreview(null)}
         />
       )}
+
+      {/* Upload Policy Dialog */}
+      <Dialog open={showUploadPolicy} onOpenChange={setShowUploadPolicy}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5 text-primary" /> Upload New Policy
+            </DialogTitle>
+          </DialogHeader>
+          <InsuranceAddPolicyForm onSuccess={() => {
+            setShowUploadPolicy(false);
+            queryClient.invalidateQueries({ queryKey: ["ins-dash-policies"] });
+            queryClient.invalidateQueries({ queryKey: ["ins-dash-clients"] });
+          }} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
