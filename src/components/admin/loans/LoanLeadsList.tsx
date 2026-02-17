@@ -7,42 +7,39 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Phone, User, IndianRupee, Calendar, Filter } from "lucide-react";
+import { Search, Phone, IndianRupee, Filter, Eye } from "lucide-react";
 import { format } from "date-fns";
+import { STAGE_LABELS, STAGE_COLORS, LOAN_STAGES, PRIORITY_OPTIONS, type LoanStage } from "./LoanStageConfig";
+import { LoanStageChangeModal } from "./LoanStageChangeModal";
 
 export const LoanLeadsList = () => {
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [stageFilter, setStageFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
+  const [selectedApp, setSelectedApp] = useState<any>(null);
+  const [showStageModal, setShowStageModal] = useState(false);
 
-  const { data: leads = [], isLoading } = useQuery({
-    queryKey: ['car-loan-leads-full'],
+  const { data: applications = [], isLoading } = useQuery({
+    queryKey: ['loan-applications'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('car_loan_leads')
+        .from('loan_applications')
         .select('*')
-        .order('created_at', { ascending: false })
-        .limit(500);
+        .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
     },
   });
 
-  const filtered = leads.filter(lead => {
-    const matchSearch = !search || 
-      lead.name?.toLowerCase().includes(search.toLowerCase()) ||
-      lead.phone.includes(search) ||
-      lead.preferred_car?.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === 'all' || lead.status === statusFilter;
-    const matchPriority = priorityFilter === 'all' || lead.lead_priority === priorityFilter;
-    return matchSearch && matchStatus && matchPriority;
+  const filtered = applications.filter(app => {
+    const matchSearch = !search ||
+      app.customer_name?.toLowerCase().includes(search.toLowerCase()) ||
+      app.phone?.includes(search) ||
+      app.car_model?.toLowerCase().includes(search.toLowerCase());
+    const matchStage = stageFilter === 'all' || app.stage === stageFilter;
+    const matchPriority = priorityFilter === 'all' || app.priority === priorityFilter;
+    return matchSearch && matchStage && matchPriority;
   });
-
-  const priorityColor: Record<string, string> = {
-    Hot: 'bg-red-500/10 text-red-500',
-    Warm: 'bg-amber-500/10 text-amber-500',
-    Cold: 'bg-blue-500/10 text-blue-500',
-  };
 
   return (
     <div className="space-y-4">
@@ -52,34 +49,30 @@ export const LoanLeadsList = () => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Search by name, phone, car..." className="pl-10" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[150px]"><Filter className="h-4 w-4 mr-2" /><SelectValue placeholder="Status" /></SelectTrigger>
+        <Select value={stageFilter} onValueChange={setStageFilter}>
+          <SelectTrigger className="w-[170px]"><Filter className="h-4 w-4 mr-2" /><SelectValue placeholder="Stage" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="new">New</SelectItem>
-            <SelectItem value="contacted">Contacted</SelectItem>
-            <SelectItem value="qualified">Qualified</SelectItem>
-            <SelectItem value="converted">Converted</SelectItem>
-            <SelectItem value="lost">Lost</SelectItem>
+            <SelectItem value="all">All Stages</SelectItem>
+            {LOAN_STAGES.map(s => (
+              <SelectItem key={s} value={s}>{STAGE_LABELS[s]}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <Select value={priorityFilter} onValueChange={setPriorityFilter}>
           <SelectTrigger className="w-[140px]"><SelectValue placeholder="Priority" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Priority</SelectItem>
-            <SelectItem value="Hot">🔥 Hot</SelectItem>
-            <SelectItem value="Warm">Warm</SelectItem>
-            <SelectItem value="Cold">Cold</SelectItem>
+            {PRIORITY_OPTIONS.map(o => (
+              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
 
-      {/* Stats */}
       <div className="text-sm text-muted-foreground">
-        Showing {filtered.length} of {leads.length} leads
+        Showing {filtered.length} of {applications.length} applications
       </div>
 
-      {/* Table */}
       <Card className="border-border/50">
         <CardContent className="p-0">
           <Table>
@@ -87,62 +80,64 @@ export const LoanLeadsList = () => {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Phone</TableHead>
-                <TableHead>Preferred Car</TableHead>
-                <TableHead>Loan Amount</TableHead>
-                <TableHead>Income</TableHead>
-                <TableHead>Credit Score</TableHead>
+                <TableHead>Car</TableHead>
+                <TableHead>Loan Amt</TableHead>
+                <TableHead>Stage</TableHead>
                 <TableHead>Priority</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>Source</TableHead>
                 <TableHead>Date</TableHead>
+                <TableHead>Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.slice(0, 100).map(lead => (
-                <TableRow key={lead.id}>
-                  <TableCell className="font-medium">{lead.name || '—'}</TableCell>
-                  <TableCell>{lead.phone}</TableCell>
-                  <TableCell>{lead.preferred_car || '—'}</TableCell>
+              {filtered.slice(0, 100).map(app => (
+                <TableRow key={app.id} className="cursor-pointer hover:bg-muted/50" onClick={() => { setSelectedApp(app); setShowStageModal(true); }}>
+                  <TableCell className="font-medium">{app.customer_name}</TableCell>
+                  <TableCell className="text-muted-foreground">{app.phone}</TableCell>
+                  <TableCell>{app.car_model || '—'}</TableCell>
                   <TableCell>
-                    {lead.loan_amount_requested 
-                      ? `₹${(Number(lead.loan_amount_requested) / 100000).toFixed(1)}L` 
-                      : '—'}
+                    {app.loan_amount ? (
+                      <span className="flex items-center gap-1"><IndianRupee className="h-3 w-3" />{(Number(app.loan_amount) / 100000).toFixed(1)}L</span>
+                    ) : '—'}
                   </TableCell>
                   <TableCell>
-                    {lead.monthly_income 
-                      ? `₹${(Number(lead.monthly_income) / 1000).toFixed(0)}K` 
-                      : '—'}
+                    <Badge className={`text-[10px] ${STAGE_COLORS[app.stage as LoanStage] || ''}`}>
+                      {STAGE_LABELS[app.stage as LoanStage] || app.stage}
+                    </Badge>
                   </TableCell>
                   <TableCell>
-                    {lead.credit_score ? (
-                      <Badge className={lead.credit_score >= 700 ? 'bg-green-500/10 text-green-500' : lead.credit_score >= 600 ? 'bg-amber-500/10 text-amber-500' : 'bg-red-500/10 text-red-500'}>
-                        {lead.credit_score}
+                    {app.priority ? (
+                      <Badge className={`text-[10px] ${PRIORITY_OPTIONS.find(o => o.value === app.priority)?.color || ''}`}>
+                        {app.priority}
                       </Badge>
                     ) : '—'}
                   </TableCell>
-                  <TableCell>
-                    {lead.lead_priority ? (
-                      <Badge className={priorityColor[lead.lead_priority] || ''}>{lead.lead_priority}</Badge>
-                    ) : '—'}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{lead.status || 'new'}</Badge>
-                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{app.source || '—'}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">
-                    {format(new Date(lead.created_at), 'dd MMM yyyy')}
+                    {format(new Date(app.created_at), 'dd MMM yy')}
+                  </TableCell>
+                  <TableCell>
+                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={e => { e.stopPropagation(); setSelectedApp(app); setShowStageModal(true); }}>
+                      <Eye className="h-3 w-3 mr-1" /> View
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
               {filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
-                    No loan leads found
-                  </TableCell>
+                  <TableCell colSpan={9} className="text-center text-muted-foreground py-8">No applications found</TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
+
+      <LoanStageChangeModal
+        open={showStageModal}
+        onOpenChange={setShowStageModal}
+        application={selectedApp}
+      />
     </div>
   );
 };

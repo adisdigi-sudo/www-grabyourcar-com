@@ -5198,10 +5198,13 @@ export type Database = {
       }
       loan_applications: {
         Row: {
+          activity_count: number | null
           assigned_to: string | null
           bank_partner_id: string | null
           car_model: string | null
           car_variant: string | null
+          client_profile_id: string | null
+          converted_at: string | null
           created_at: string | null
           customer_name: string
           dealer_name: string | null
@@ -5209,13 +5212,24 @@ export type Database = {
           disbursement_date: string | null
           disbursement_reference: string | null
           documents_collected: string[] | null
+          documents_required: string[] | null
+          documents_uploaded: string[] | null
           down_payment: number | null
+          eligibility_result: Json | null
           email: string | null
           emi_amount: number | null
+          follow_up_at: string | null
+          follow_up_notes: string | null
           id: string
           interest_rate: number | null
+          last_activity_at: string | null
           lead_id: string | null
+          lead_source_tag: string | null
+          lender_name: string | null
           loan_amount: number | null
+          lost_reason: string | null
+          lost_remarks: string | null
+          offer_details: Json | null
           phone: string
           priority: string | null
           processing_fee: number | null
@@ -5223,16 +5237,20 @@ export type Database = {
           remarks: string | null
           sanction_amount: number | null
           sanction_date: string | null
+          source: string | null
           stage: string
           stage_updated_at: string | null
           tenure_months: number | null
           updated_at: string | null
         }
         Insert: {
+          activity_count?: number | null
           assigned_to?: string | null
           bank_partner_id?: string | null
           car_model?: string | null
           car_variant?: string | null
+          client_profile_id?: string | null
+          converted_at?: string | null
           created_at?: string | null
           customer_name: string
           dealer_name?: string | null
@@ -5240,13 +5258,24 @@ export type Database = {
           disbursement_date?: string | null
           disbursement_reference?: string | null
           documents_collected?: string[] | null
+          documents_required?: string[] | null
+          documents_uploaded?: string[] | null
           down_payment?: number | null
+          eligibility_result?: Json | null
           email?: string | null
           emi_amount?: number | null
+          follow_up_at?: string | null
+          follow_up_notes?: string | null
           id?: string
           interest_rate?: number | null
+          last_activity_at?: string | null
           lead_id?: string | null
+          lead_source_tag?: string | null
+          lender_name?: string | null
           loan_amount?: number | null
+          lost_reason?: string | null
+          lost_remarks?: string | null
+          offer_details?: Json | null
           phone: string
           priority?: string | null
           processing_fee?: number | null
@@ -5254,16 +5283,20 @@ export type Database = {
           remarks?: string | null
           sanction_amount?: number | null
           sanction_date?: string | null
+          source?: string | null
           stage?: string
           stage_updated_at?: string | null
           tenure_months?: number | null
           updated_at?: string | null
         }
         Update: {
+          activity_count?: number | null
           assigned_to?: string | null
           bank_partner_id?: string | null
           car_model?: string | null
           car_variant?: string | null
+          client_profile_id?: string | null
+          converted_at?: string | null
           created_at?: string | null
           customer_name?: string
           dealer_name?: string | null
@@ -5271,13 +5304,24 @@ export type Database = {
           disbursement_date?: string | null
           disbursement_reference?: string | null
           documents_collected?: string[] | null
+          documents_required?: string[] | null
+          documents_uploaded?: string[] | null
           down_payment?: number | null
+          eligibility_result?: Json | null
           email?: string | null
           emi_amount?: number | null
+          follow_up_at?: string | null
+          follow_up_notes?: string | null
           id?: string
           interest_rate?: number | null
+          last_activity_at?: string | null
           lead_id?: string | null
+          lead_source_tag?: string | null
+          lender_name?: string | null
           loan_amount?: number | null
+          lost_reason?: string | null
+          lost_remarks?: string | null
+          offer_details?: Json | null
           phone?: string
           priority?: string | null
           processing_fee?: number | null
@@ -5285,6 +5329,7 @@ export type Database = {
           remarks?: string | null
           sanction_amount?: number | null
           sanction_date?: string | null
+          source?: string | null
           stage?: string
           stage_updated_at?: string | null
           tenure_months?: number | null
@@ -5296,6 +5341,13 @@ export type Database = {
             columns: ["bank_partner_id"]
             isOneToOne: false
             referencedRelation: "loan_bank_partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loan_applications_client_profile_id_fkey"
+            columns: ["client_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_profiles"
             referencedColumns: ["id"]
           },
           {
@@ -5372,6 +5424,101 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      loan_bulk_imports: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          error_rows: number
+          errors: Json | null
+          file_name: string
+          id: string
+          imported_by: string | null
+          processed_rows: number
+          status: string
+          success_rows: number
+          total_rows: number
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          error_rows?: number
+          errors?: Json | null
+          file_name: string
+          id?: string
+          imported_by?: string | null
+          processed_rows?: number
+          status?: string
+          success_rows?: number
+          total_rows?: number
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          error_rows?: number
+          errors?: Json | null
+          file_name?: string
+          id?: string
+          imported_by?: string | null
+          processed_rows?: number
+          status?: string
+          success_rows?: number
+          total_rows?: number
+        }
+        Relationships: []
+      }
+      loan_documents: {
+        Row: {
+          application_id: string
+          created_at: string
+          document_type: string
+          file_name: string
+          file_size: number | null
+          file_url: string
+          id: string
+          notes: string | null
+          uploaded_by: string | null
+          verified: boolean | null
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          application_id: string
+          created_at?: string
+          document_type: string
+          file_name: string
+          file_size?: number | null
+          file_url: string
+          id?: string
+          notes?: string | null
+          uploaded_by?: string | null
+          verified?: boolean | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          application_id?: string
+          created_at?: string
+          document_type?: string
+          file_name?: string
+          file_size?: number | null
+          file_url?: string
+          id?: string
+          notes?: string | null
+          uploaded_by?: string | null
+          verified?: boolean | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loan_documents_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "loan_applications"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       loan_page_settings: {
         Row: {
@@ -5459,6 +5606,47 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      loan_stage_history: {
+        Row: {
+          application_id: string
+          changed_by: string | null
+          created_at: string
+          from_stage: string | null
+          id: string
+          metadata: Json | null
+          remarks: string | null
+          to_stage: string
+        }
+        Insert: {
+          application_id: string
+          changed_by?: string | null
+          created_at?: string
+          from_stage?: string | null
+          id?: string
+          metadata?: Json | null
+          remarks?: string | null
+          to_stage: string
+        }
+        Update: {
+          application_id?: string
+          changed_by?: string | null
+          created_at?: string
+          from_stage?: string | null
+          id?: string
+          metadata?: Json | null
+          remarks?: string | null
+          to_stage?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loan_stage_history_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "loan_applications"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       marketing_alerts: {
         Row: {
@@ -7616,6 +7804,19 @@ export type Database = {
         | "wrong_number"
         | "no_answer"
         | "callback_requested"
+      loan_stage:
+        | "new_lead"
+        | "contacted"
+        | "qualified"
+        | "eligibility_check"
+        | "lender_match"
+        | "offer_shared"
+        | "documents_requested"
+        | "documents_received"
+        | "approval"
+        | "disbursement"
+        | "converted"
+        | "lost"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -7762,6 +7963,20 @@ export const Constants = {
         "wrong_number",
         "no_answer",
         "callback_requested",
+      ],
+      loan_stage: [
+        "new_lead",
+        "contacted",
+        "qualified",
+        "eligibility_check",
+        "lender_match",
+        "offer_shared",
+        "documents_requested",
+        "documents_received",
+        "approval",
+        "disbursement",
+        "converted",
+        "lost",
       ],
     },
   },
