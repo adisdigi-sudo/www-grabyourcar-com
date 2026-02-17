@@ -65,9 +65,9 @@ export const ErrorPrevention = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("insurance_clients")
-        .select("id, client_name, mobile_number, lead_status, created_at")
+        .select("id, customer_name, phone, lead_status, created_at")
         .eq("lead_status", "Won")
-        .is("policy_number", null)
+        .is("current_policy_number", null)
         .limit(20);
       if (error) throw error;
       return data || [];
@@ -80,10 +80,10 @@ export const ErrorPrevention = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("insurance_clients")
-        .select("id, client_name, mobile_number, expiry_date")
-        .lt("expiry_date", new Date().toISOString().split("T")[0])
+        .select("id, customer_name, phone, policy_expiry_date")
+        .lt("policy_expiry_date", new Date().toISOString().split("T")[0])
         .not("lead_status", "eq", "Lost")
-        .order("expiry_date", { ascending: true })
+        .order("policy_expiry_date", { ascending: true })
         .limit(20);
       if (error) throw error;
       return data || [];
@@ -126,7 +126,7 @@ export const ErrorPrevention = () => {
       bgColor: "bg-orange-500/10",
       count: missingPolicies?.length || 0,
       items: missingPolicies?.map((p: any) => ({
-        label: p.client_name || p.mobile_number,
+        label: p.customer_name || p.phone,
         sub: `Since ${new Date(p.created_at).toLocaleDateString("en-IN")}`,
       })) || [],
       severity: "warning" as const,
@@ -139,8 +139,8 @@ export const ErrorPrevention = () => {
       bgColor: "bg-purple-500/10",
       count: expiredNoFollowup?.length || 0,
       items: expiredNoFollowup?.map((e: any) => ({
-        label: e.client_name || e.mobile_number,
-        sub: `Expired ${new Date(e.expiry_date).toLocaleDateString("en-IN")}`,
+        label: e.customer_name || e.phone,
+        sub: `Expired ${new Date(e.policy_expiry_date).toLocaleDateString("en-IN")}`,
       })) || [],
       severity: "info" as const,
     },

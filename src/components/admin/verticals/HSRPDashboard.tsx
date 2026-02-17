@@ -9,15 +9,15 @@ export const HSRPDashboard = () => {
   const { data: stats } = useQuery({
     queryKey: ["hsrp-dashboard-stats"],
     queryFn: async () => {
-      const [total, pending, delivered] = await Promise.all([
-        supabase.from("accessory_orders").select("*", { count: "exact", head: true }),
-        supabase.from("accessory_orders").select("*", { count: "exact", head: true }).eq("order_status", "pending"),
-        supabase.from("accessory_orders").select("*", { count: "exact", head: true }).eq("order_status", "delivered"),
+      const [total, pending, completed] = await Promise.all([
+        supabase.from("hsrp_bookings").select("*", { count: "exact", head: true }),
+        supabase.from("hsrp_bookings").select("*", { count: "exact", head: true }).eq("order_status", "pending"),
+        supabase.from("hsrp_bookings").select("*", { count: "exact", head: true }).eq("order_status", "completed"),
       ]);
       return {
         total: total.count || 0,
         pending: pending.count || 0,
-        delivered: delivered.count || 0,
+        delivered: completed.count || 0,
       };
     },
   });
