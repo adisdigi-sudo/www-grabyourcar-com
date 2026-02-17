@@ -32,6 +32,14 @@ const WorkspaceSelector = () => {
     }
   }, [user, authLoading, navigate]);
 
+  // If only 1 vertical available, auto-select it
+  useEffect(() => {
+    if (!authLoading && !verticalLoading && user && availableVerticals.length === 1) {
+      setActiveVertical(availableVerticals[0]);
+      navigate("/admin");
+    }
+  }, [authLoading, verticalLoading, user, availableVerticals]);
+
   const handleSelectVertical = (vertical: BusinessVertical) => {
     setActiveVertical(vertical);
     navigate("/admin");
