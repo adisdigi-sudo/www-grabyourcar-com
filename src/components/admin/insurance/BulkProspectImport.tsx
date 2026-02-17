@@ -239,6 +239,23 @@ function BulkProspectImportDialog({ open, onClose, onImported }: { open: boolean
   );
 }
 
+function normalizeHeader(header: any): string {
+  if (!header) return "";
+  return String(header).trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ");
+}
+
+function findColumnIndex(headers: string[], possibleNames: string[]): number {
+  const nh = headers.map(normalizeHeader);
+  const nn = possibleNames.map(normalizeHeader);
+  // Exact match
+  for (const name of nn) { const idx = nh.indexOf(name); if (idx !== -1) return idx; }
+  // Starts with
+  for (const name of nn) { const idx = nh.findIndex(h => h.startsWith(name)); if (idx !== -1) return idx; }
+  // Contains
+  for (const name of nn) { const idx = nh.findIndex(h => h.includes(name)); if (idx !== -1) return idx; }
+  return -1;
+}
+
 function ProspectExcel({ onParsed }: { onParsed: (c: ParsedProspect[]) => void }) {
   const [fileName, setFileName] = useState("");
   const [parsing, setParsing] = useState(false);
@@ -256,42 +273,56 @@ function ProspectExcel({ onParsed }: { onParsed: (c: ParsedProspect[]) => void }
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: "" });
 
+        if (!rows.length) { toast.error("No data found in Excel file"); setParsing(false); return; }
+
+        // Build column map from headers
+        const headers = Object.keys(rows[0]);
+        const nameIdx = findColumnIndex(headers, ["name", "customer name", "customer", "full name"]);
+        const phoneIdx = findColumnIndex(headers, ["mobile no", "mobile", "phone", "phone no", "contact", "mobile number", "phone number"]);
+        const cityIdx = findColumnIndex(headers, ["city"]);
+        const stateIdx = findColumnIndex(headers, ["state"]);
+        const addressIdx = findColumnIndex(headers, ["address", "address1", "address2"]);
+        const modelIdx = findColumnIndex(headers, ["model", "car model", "vehicle model"]);
+        const submodelIdx = findColumnIndex(headers, ["submodel", "sub model", "variant"]);
+        const vehicleIdx = findColumnIndex(headers, ["vehicle number", "vehicle no", "registration", "reg no", "car number", "plate number", "registration number"]);
+        const emailIdx = findColumnIndex(headers, ["email", "email id", "e-mail"]);
+        const insurerIdx = findColumnIndex(headers, ["insurer", "insurance company", "company"]);
+        const expiryIdx = findColumnIndex(headers, ["expiry", "expiry date", "renewal", "renewal date"]);
+        const premiumIdx = findColumnIndex(headers, ["premium", "premium amount", "amount"]);
+        const pinIdx = findColumnIndex(headers, ["pin code", "pincode", "zip"]);
+
+        // Find alt phone column (some files have 2 mobile columns)
+        const altPhoneIdx = headers.findIndex((h, i) => i !== phoneIdx && normalizeHeader(h).match(/mobile|phone/));
+
         const prospects: ParsedProspect[] = [];
         for (const row of rows) {
-          const keys = Object.keys(row);
-          const lk = keys.map(k => k.toLowerCase());
+          const vals = headers.map(h => row[h]);
 
-          const nameKey = keys.find((_, i) => lk[i].includes("name") && !lk[i].includes("user name"));
-          const phoneKey = keys.find((_, i) => lk[i].includes("mobile") || lk[i].includes("phone"));
-          const cityKey = keys.find((_, i) => lk[i] === "city");
-          const stateKey = keys.find((_, i) => lk[i] === "state");
-          const addressKey = keys.find((_, i) => lk[i].includes("address"));
-          const modelKey = keys.find((_, i) => lk[i] === "model" || lk[i].includes("submodel"));
-          const vehicleKey = keys.find((_, i) => lk[i].includes("vehicle") || lk[i].includes("reg"));
-          const emailKey = keys.find((_, i) => lk[i].includes("email"));
-          const pinKey = keys.find((_, i) => lk[i].includes("pin"));
-
-          const name = nameKey ? String(row[nameKey]).trim() : "";
-          let phone = phoneKey ? String(row[phoneKey]).replace(/[^0-9+]/g, "") : "";
-          // Handle multiple phone columns
-          if (!phone || phone.length < 10) {
-            const altPhoneKey = keys.find((_, i) => (lk[i].includes("mobile") || lk[i].includes("phone")) && keys[i] !== phoneKey);
-            if (altPhoneKey) phone = String(row[altPhoneKey]).replace(/[^0-9+]/g, "");
+          const name = nameIdx >= 0 ? String(vals[nameIdx] || "").trim() : "";
+          let phone = phoneIdx >= 0 ? String(vals[phoneIdx] || "").replace(/[^0-9+]/g, "") : "";
+          if ((!phone || phone.length < 10) && altPhoneIdx >= 0) {
+            phone = String(vals[altPhoneIdx] || "").replace(/[^0-9+]/g, "");
           }
           phone = phone.slice(-10);
 
-          if (!name && !phone) continue;
-          if (phone.length < 10 && !name) continue;
+          if (!name && phone.length < 10) continue;
+
+          const model = modelIdx >= 0 ? String(vals[modelIdx] || "").trim() : "";
+          const submodel = submodelIdx >= 0 ? String(vals[submodelIdx] || "").trim() : "";
+          const vehicleModel = model ? (submodel ? `${model} ${submodel}` : model) : submodel;
 
           prospects.push({
             customer_name: name || "Unknown",
             phone: phone || `P_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-            city: cityKey ? String(row[cityKey]).trim() : "",
-            state: stateKey ? String(row[stateKey]).trim() : "",
-            vehicle_model: modelKey ? String(row[modelKey]).trim() : "",
-            vehicle_number: vehicleKey ? String(row[vehicleKey]).trim() : "",
-            email: emailKey ? String(row[emailKey]).trim() : "",
-            address: addressKey ? String(row[addressKey]).trim() : "",
+            city: cityIdx >= 0 ? String(vals[cityIdx] || "").trim() : "",
+            state: stateIdx >= 0 ? String(vals[stateIdx] || "").trim() : "",
+            vehicle_model: vehicleModel,
+            vehicle_number: vehicleIdx >= 0 ? String(vals[vehicleIdx] || "").trim() : "",
+            email: emailIdx >= 0 ? String(vals[emailIdx] || "").trim() : "",
+            insurer: insurerIdx >= 0 ? String(vals[insurerIdx] || "").trim() : "",
+            expiry_date: expiryIdx >= 0 ? String(vals[expiryIdx] || "").trim() : "",
+            premium_amount: premiumIdx >= 0 ? String(vals[premiumIdx] || "").replace(/[^0-9.]/g, "") : "",
+            address: addressIdx >= 0 ? String(vals[addressIdx] || "").trim() : "",
           });
         }
 
@@ -311,7 +342,7 @@ function ProspectExcel({ onParsed }: { onParsed: (c: ParsedProspect[]) => void }
     <div className="space-y-3">
       <div className="p-3 rounded-lg bg-muted/30 border text-xs text-muted-foreground">
         <p className="font-medium text-foreground text-sm mb-1">Upload Excel File (.xlsx, .xls)</p>
-        <p>Auto-detects columns: Name, Mobile/Phone, City, State, Model, Vehicle, Email, Address</p>
+        <p>Auto-detects columns: Name, Mobile/Phone, City, State, Model, Submodel, Vehicle No, Email, Insurer</p>
         <p className="mt-1 text-emerald-600 font-medium">✓ Supports large files (10K-100K+ records)</p>
       </div>
       <Label htmlFor="prospect-excel-upload" className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-8 cursor-pointer hover:bg-muted/20 transition-colors">
