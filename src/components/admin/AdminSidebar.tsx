@@ -66,7 +66,8 @@ const navItems: NavItem[] = [
   { id: "loan-crm", label: "💰 Loan CRM", icon: CreditCard, badge: "New", verticals: ["loans"], allowedRoles: ["super_admin", "admin", "finance", "sales"] },
   
   // Cross-vertical tools (show in all)
-  { id: "unified-crm", label: "🧠 Master CRM", icon: Users, badge: "New" },
+  { id: "unified-crm", label: "🧠 Unified Customers", icon: Users, badge: "New" },
+  { id: "unified-intelligence", label: "🔗 Cross-Vertical Intel", icon: Sparkles, badge: "AI" },
   { id: "journey-automation", label: "⚡ Journey Automation", icon: Sparkles, badge: "New", allowedRoles: ["super_admin", "admin", "operations"] },
   { id: "revenue-intelligence", label: "📊 Revenue Intelligence", icon: BarChart3, badge: "New", allowedRoles: ["super_admin", "admin", "finance"] },
   { id: "lead-scoring", label: "🤖 AI Lead Scoring", icon: Brain, badge: "AI", verticals: ["sales", "loans", "insurance"], allowedRoles: ["super_admin", "admin", "sales", "calling"] },

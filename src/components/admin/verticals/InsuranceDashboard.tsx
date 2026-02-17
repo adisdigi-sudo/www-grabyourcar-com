@@ -18,9 +18,22 @@ export const InsuranceDashboard = () => {
         .not("insurance_expiry", "is", null)
         .lte("insurance_expiry", new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString());
 
+      const { count: unifiedInsurance } = await supabase
+        .from("unified_customers")
+        .select("*", { count: "exact", head: true })
+        .eq("has_insurance", true);
+
+      const { count: crossSellOps } = await supabase
+        .from("cross_sell_opportunities")
+        .select("*", { count: "exact", head: true })
+        .eq("source_vertical", "insurance")
+        .eq("status", "open");
+
       return {
         totalClients: totalClients || 0,
         expiringPolicies: expiringPolicies || 0,
+        unifiedInsurance: unifiedInsurance || 0,
+        crossSellOps: crossSellOps || 0,
       };
     },
   });
@@ -28,8 +41,8 @@ export const InsuranceDashboard = () => {
   const kpis = [
     { label: "Total Policyholders", value: stats?.totalClients || 0, icon: Users, color: "text-blue-500" },
     { label: "Expiring in 30 Days", value: stats?.expiringPolicies || 0, icon: AlertTriangle, color: "text-amber-500" },
-    { label: "Renewals This Month", value: "—", icon: Clock, color: "text-green-500" },
-    { label: "Revenue This Month", value: "—", icon: IndianRupee, color: "text-primary" },
+    { label: "Unified Profiles", value: stats?.unifiedInsurance || 0, icon: CheckCircle, color: "text-green-500" },
+    { label: "Cross-Sell Ops", value: stats?.crossSellOps || 0, icon: TrendingUp, color: "text-primary" },
   ];
 
   const quickActions = [
