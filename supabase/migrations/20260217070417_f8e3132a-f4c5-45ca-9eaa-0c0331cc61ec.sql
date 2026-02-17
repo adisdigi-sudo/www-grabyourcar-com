@@ -1,0 +1,1 @@
+ALTER TABLE insurance_policies ALTER COLUMN expiry_date DROP NOT NULL;
