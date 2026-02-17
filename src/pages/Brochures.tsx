@@ -230,7 +230,7 @@ const Brochures = () => {
                               </Button>
                             </Link>
                             <WhatsAppCardButton carName={car.name} className="h-8" />
-                            <a href="tel:+919855924442">
+                            <a href="tel:+1155578093">
                               <Button variant="call" size="sm" className="gap-1 h-8">
                                 <Phone className="h-3.5 w-3.5" />
                                 Call

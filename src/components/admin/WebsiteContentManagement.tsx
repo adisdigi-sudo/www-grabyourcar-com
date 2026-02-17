@@ -56,8 +56,8 @@ export const WebsiteContentManagement = () => {
   
   // CTA Settings State
   const [ctaSettings, setCtaSettings] = useState<CTASettings>({
-    phone: "+91 98559 24442",
-    whatsappNumber: "919855924442",
+    phone: "+1 155578093",
+    whatsappNumber: "1155578093",
     whatsappMessage: "Hi Grabyourcar! I'm interested in buying a new car.",
     buttonText: "Talk to Expert",
     isVisible: true,
@@ -364,7 +364,7 @@ export const WebsiteContentManagement = () => {
                   <Input 
                     value={ctaSettings.whatsappNumber}
                     onChange={(e) => setCtaSettings({ ...ctaSettings, whatsappNumber: e.target.value })}
-                    placeholder="919855924442"
+                    placeholder="1155578093"
                   />
                 </div>
                 <div className="flex items-center gap-3">

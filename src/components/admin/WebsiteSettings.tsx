@@ -44,8 +44,8 @@ export const WebsiteSettings = () => {
   });
 
   const [contactSettings, setContactSettings] = useState({
-    phone: "+91 98559 24442",
-    whatsapp: "919855924442",
+    phone: "+1 155578093",
+    whatsapp: "1155578093",
     email: "hello@grabyourcar.com",
     address: "MS 228, 2nd Floor, DT Mega Mall, Sector 28, Gurugram, Haryana – 122001",
   });

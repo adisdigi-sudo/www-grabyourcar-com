@@ -476,13 +476,13 @@ const DealerLocatorPage = () => {
                    </Button>
                  )}
                  
-                <a href="https://wa.me/919855924442?text=Hi!%20I%27m%20looking%20for%20the%20best%20car%20deal%20from%20a%20nearby%20dealer.">
+                <a href="https://wa.me/1155578093?text=Hi!%20I%27m%20looking%20for%20the%20best%20car%20deal%20from%20a%20nearby%20dealer.">
                   <Button variant="whatsapp" size="lg" className="gap-2 shadow-lg hover:shadow-xl">
                     <MessageCircle className="h-5 w-5" />
                     Get Best Deal via WhatsApp
                   </Button>
                 </a>
-                <a href="tel:+919855924442">
+                <a href="tel:+1155578093">
                   <Button variant="call" size="lg" className="gap-2 shadow-lg hover:shadow-xl">
                     <Phone className="h-5 w-5" />
                     Talk to Expert

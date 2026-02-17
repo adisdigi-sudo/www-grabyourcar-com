@@ -67,7 +67,7 @@ export function InsuranceClaimsAssistance() {
               <h3 className="font-heading font-bold text-lg mb-1">Need help with a claim?</h3>
               <p className="text-sm text-muted-foreground">Our claims experts are available Mon-Sat, 9 AM to 8 PM</p>
             </div>
-            <a href="tel:+919855924442">
+            <a href="tel:+1155578093">
               <Button className="gap-2 shrink-0 rounded-xl h-12 px-6 font-bold" size="lg">
                 <Phone className="h-5 w-5" />
                 Get Claims Help

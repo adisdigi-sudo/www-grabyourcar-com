@@ -202,8 +202,8 @@ export const HomepageSEOContent = () => {
             </h2>
             <p className="text-muted-foreground leading-relaxed max-w-2xl mx-auto mb-6">
               Join 500+ happy customers who bought their cars through GrabYourCar. Call us at 
-              <a href="tel:+919855924442" className="text-primary font-semibold hover:underline"> +91 98559 24442</a> or 
-              <a href="https://wa.me/919855924442" className="text-primary font-semibold hover:underline" target="_blank" rel="noopener noreferrer"> WhatsApp us</a> for 
+              <a href="tel:+1155578093" className="text-primary font-semibold hover:underline"> +1 155578093</a> or 
+              <a href="https://wa.me/1155578093" className="text-primary font-semibold hover:underline" target="_blank" rel="noopener noreferrer"> WhatsApp us</a> for 
               instant quotes. Visit our office at MS 228, 2nd Floor, DT Mega Mall, Sector 28, Gurugram, Haryana 122001.
             </p>
             <div className="flex flex-wrap gap-4 justify-center">

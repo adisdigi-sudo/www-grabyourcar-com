@@ -92,8 +92,8 @@ export const ProfileSettings = () => {
     company_name: "Grabyourcar",
     tagline: "India's Smarter Way to Buy New Cars",
     email: "hello@grabyourcar.com",
-    phone: "+91 98559 24442",
-    whatsapp: "919855924442",
+    phone: "+1 155578093",
+    whatsapp: "1155578093",
     address: "MS 228, 2nd Floor, DT Mega Mall, Sector 28",
     city: "Gurugram",
     state: "Haryana",
@@ -630,7 +630,7 @@ export const ProfileSettings = () => {
                   <Input
                     value={businessProfile.whatsapp}
                     onChange={(e) => setBusinessProfile({ ...businessProfile, whatsapp: e.target.value })}
-                    placeholder="919855924442"
+                    placeholder="1155578093"
                   />
                 </div>
                 <Button variant="outline" size="sm" onClick={() => handleTestOTP("whatsapp")}>

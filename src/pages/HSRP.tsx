@@ -210,7 +210,7 @@ const HSRP = () => {
                 Home Installation
               </a>
               <span className="text-border">|</span>
-              <a href="tel:+919855924442" className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors">
+              <a href="tel:+1155578093" className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors">
                 <Phone className="h-4 w-4" />
                 Contact Us
               </a>
@@ -323,7 +323,7 @@ const HSRP = () => {
                     <p className="font-semibold">Need Help?</p>
                     <p className="text-sm text-muted-foreground mb-4">Our team is available 24/7</p>
                     <Button variant="outline" className="w-full gap-2" asChild>
-                      <a href="tel:+919855924442">
+                      <a href="tel:+1155578093">
                         <Phone className="w-4 h-4" />
                         Call Now
                       </a>
@@ -490,7 +490,7 @@ const HSRP = () => {
                 size="lg"
                 variant="whatsapp"
               />
-              <a href="tel:+919855924442">
+              <a href="tel:+1155578093">
                 <Button variant="outline" size="lg" className="gap-2 bg-transparent border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10">
                   <Phone className="h-5 w-5" />
                   Call: +91 95772 00023
