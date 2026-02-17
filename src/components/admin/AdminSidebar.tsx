@@ -62,6 +62,11 @@ interface NavItem {
 const navItems: NavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   
+  // Calling System — available across verticals for calling/sales roles
+  { id: "calling-system", label: "📞 Smart Calling", icon: Users, badge: "🔥",
+    verticals: ["sales", "loans", "insurance"],
+    allowedRoles: ["super_admin", "admin", "sales", "calling", "insurance", "finance"] },
+
   // Loan vertical
   { id: "loan-crm", label: "💰 Loan CRM", icon: CreditCard, badge: "New", verticals: ["loans"], allowedRoles: ["super_admin", "admin", "finance", "sales"] },
   

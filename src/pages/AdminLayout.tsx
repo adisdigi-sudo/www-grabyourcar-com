@@ -82,6 +82,7 @@ import { RentalDashboard } from "@/components/admin/verticals/RentalDashboard";
 import { HSRPDashboard } from "@/components/admin/verticals/HSRPDashboard";
 import { AccessoriesDashboard } from "@/components/admin/verticals/AccessoriesDashboard";
 import { MarketingDashboard } from "@/components/admin/verticals/MarketingDashboard";
+import { CallingDashboard } from "@/components/admin/calling/CallingDashboard";
 
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
@@ -304,6 +305,8 @@ const AdminLayout = () => {
         return <ServicePricingManager />;
       case "services-partners":
         return <PartnersManager />;
+      case "calling-system":
+        return <CallingDashboard />;
       default:
         return <AdminDashboard />;
     }
