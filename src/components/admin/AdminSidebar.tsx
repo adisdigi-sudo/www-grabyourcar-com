@@ -54,11 +54,14 @@ interface NavItem {
   badge?: string;
   /** Roles that can see this item. Empty/undefined = all roles */
   allowedRoles?: AppRole[];
-  children?: { id: string; label: string; icon: React.ElementType; badge?: string; allowedRoles?: AppRole[] }[];
+  /** Which vertical slugs this item belongs to. undefined = show in all verticals */
+  verticals?: string[];
+  children?: { id: string; label: string; icon: React.ElementType; badge?: string; allowedRoles?: AppRole[]; verticals?: string[] }[];
 }
 
 const navItems: NavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "loan-crm", label: "💰 Loan CRM", icon: CreditCard, badge: "New", verticals: ["loans"], allowedRoles: ["super_admin", "admin", "finance", "sales"] },
   { id: "unified-crm", label: "🧠 Master CRM", icon: Users, badge: "New" },
   { id: "journey-automation", label: "⚡ Journey Automation", icon: Sparkles, badge: "New", allowedRoles: ["super_admin", "admin", "operations"] },
   { id: "revenue-intelligence", label: "📊 Revenue Intelligence", icon: BarChart3, badge: "New", allowedRoles: ["super_admin", "admin", "finance"] },
@@ -224,25 +227,41 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
   const userRoles = useMemo(() => roles.map(r => r.role), [roles]);
   const hasFullAccess = userRoles.length === 0 || isSuperAdmin() || isAdmin();
 
-  // Filter nav items based on role
+  // Filter nav items based on role AND active vertical
+  const activeSlug = activeVertical?.slug;
+  
   const filteredNavItems = useMemo(() => {
-    if (hasFullAccess) return navItems;
+    const filterByVertical = (item: NavItem) => {
+      // Items without verticals tag show everywhere (for super admins) or when no vertical is active
+      if (!item.verticals) return true;
+      if (!activeSlug) return true;
+      return item.verticals.includes(activeSlug);
+    };
 
-    return navItems
-      .filter(item => {
-        if (!item.allowedRoles) return true;
-        return item.allowedRoles.some(r => userRoles.includes(r));
-      })
+    let items = navItems.filter(filterByVertical);
+
+    if (!hasFullAccess) {
+      items = items
+        .filter(item => {
+          if (!item.allowedRoles) return true;
+          return item.allowedRoles.some(r => userRoles.includes(r));
+        });
+    }
+
+    return items
       .map(item => {
         if (!item.children) return item;
-        const filteredChildren = item.children.filter(child => {
-          if (!child.allowedRoles) return true;
-          return child.allowedRoles.some(r => userRoles.includes(r));
+        let filteredChildren = item.children.filter(child => {
+          if (child.verticals && activeSlug && !child.verticals.includes(activeSlug)) return false;
+          if (!hasFullAccess && child.allowedRoles) {
+            return child.allowedRoles.some(r => userRoles.includes(r));
+          }
+          return true;
         });
         return filteredChildren.length > 0 ? { ...item, children: filteredChildren } : null;
       })
       .filter(Boolean) as NavItem[];
-  }, [hasFullAccess, userRoles]);
+  }, [hasFullAccess, userRoles, activeSlug]);
 
   // Handle responsive breakpoints
   useEffect(() => {

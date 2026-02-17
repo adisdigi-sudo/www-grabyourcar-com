@@ -4987,6 +4987,224 @@ export type Database = {
         }
         Relationships: []
       }
+      loan_activity_log: {
+        Row: {
+          action: string
+          application_id: string
+          created_at: string | null
+          id: string
+          new_value: string | null
+          notes: string | null
+          old_value: string | null
+          performed_by: string | null
+        }
+        Insert: {
+          action: string
+          application_id: string
+          created_at?: string | null
+          id?: string
+          new_value?: string | null
+          notes?: string | null
+          old_value?: string | null
+          performed_by?: string | null
+        }
+        Update: {
+          action?: string
+          application_id?: string
+          created_at?: string | null
+          id?: string
+          new_value?: string | null
+          notes?: string | null
+          old_value?: string | null
+          performed_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loan_activity_log_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "loan_applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loan_applications: {
+        Row: {
+          assigned_to: string | null
+          bank_partner_id: string | null
+          car_model: string | null
+          car_variant: string | null
+          created_at: string | null
+          customer_name: string
+          dealer_name: string | null
+          disbursement_amount: number | null
+          disbursement_date: string | null
+          disbursement_reference: string | null
+          documents_collected: string[] | null
+          down_payment: number | null
+          email: string | null
+          emi_amount: number | null
+          id: string
+          interest_rate: number | null
+          lead_id: string | null
+          loan_amount: number | null
+          phone: string
+          priority: string | null
+          processing_fee: number | null
+          rejection_reason: string | null
+          remarks: string | null
+          sanction_amount: number | null
+          sanction_date: string | null
+          stage: string
+          stage_updated_at: string | null
+          tenure_months: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          bank_partner_id?: string | null
+          car_model?: string | null
+          car_variant?: string | null
+          created_at?: string | null
+          customer_name: string
+          dealer_name?: string | null
+          disbursement_amount?: number | null
+          disbursement_date?: string | null
+          disbursement_reference?: string | null
+          documents_collected?: string[] | null
+          down_payment?: number | null
+          email?: string | null
+          emi_amount?: number | null
+          id?: string
+          interest_rate?: number | null
+          lead_id?: string | null
+          loan_amount?: number | null
+          phone: string
+          priority?: string | null
+          processing_fee?: number | null
+          rejection_reason?: string | null
+          remarks?: string | null
+          sanction_amount?: number | null
+          sanction_date?: string | null
+          stage?: string
+          stage_updated_at?: string | null
+          tenure_months?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          bank_partner_id?: string | null
+          car_model?: string | null
+          car_variant?: string | null
+          created_at?: string | null
+          customer_name?: string
+          dealer_name?: string | null
+          disbursement_amount?: number | null
+          disbursement_date?: string | null
+          disbursement_reference?: string | null
+          documents_collected?: string[] | null
+          down_payment?: number | null
+          email?: string | null
+          emi_amount?: number | null
+          id?: string
+          interest_rate?: number | null
+          lead_id?: string | null
+          loan_amount?: number | null
+          phone?: string
+          priority?: string | null
+          processing_fee?: number | null
+          rejection_reason?: string | null
+          remarks?: string | null
+          sanction_amount?: number | null
+          sanction_date?: string | null
+          stage?: string
+          stage_updated_at?: string | null
+          tenure_months?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loan_applications_bank_partner_fk"
+            columns: ["bank_partner_id"]
+            isOneToOne: false
+            referencedRelation: "loan_bank_partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loan_applications_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "car_loan_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loan_bank_partners: {
+        Row: {
+          commission_percent: number | null
+          contact_email: string | null
+          contact_person: string | null
+          contact_phone: string | null
+          created_at: string | null
+          id: string
+          interest_rate_max: number | null
+          interest_rate_min: number | null
+          is_active: boolean | null
+          logo_url: string | null
+          max_loan_amount: number | null
+          max_tenure_months: number | null
+          name: string
+          notes: string | null
+          partner_type: string
+          processing_fee_percent: number | null
+          short_name: string | null
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          commission_percent?: number | null
+          contact_email?: string | null
+          contact_person?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          id?: string
+          interest_rate_max?: number | null
+          interest_rate_min?: number | null
+          is_active?: boolean | null
+          logo_url?: string | null
+          max_loan_amount?: number | null
+          max_tenure_months?: number | null
+          name: string
+          notes?: string | null
+          partner_type?: string
+          processing_fee_percent?: number | null
+          short_name?: string | null
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          commission_percent?: number | null
+          contact_email?: string | null
+          contact_person?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          id?: string
+          interest_rate_max?: number | null
+          interest_rate_min?: number | null
+          is_active?: boolean | null
+          logo_url?: string | null
+          max_loan_amount?: number | null
+          max_tenure_months?: number | null
+          name?: string
+          notes?: string | null
+          partner_type?: string
+          processing_fee_percent?: number | null
+          short_name?: string | null
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       loan_page_settings: {
         Row: {
           created_at: string
