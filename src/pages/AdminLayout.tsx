@@ -68,6 +68,7 @@ import { InsuranceImportExport } from "@/components/admin/insurance/InsuranceImp
 import { UnifiedMasterCRM } from "@/components/admin/UnifiedMasterCRM";
 import { JourneyAutomationPanel } from "@/components/admin/JourneyAutomationPanel";
 import { RevenueIntelligenceDashboard } from "@/components/admin/RevenueIntelligenceDashboard";
+import { LoanCRMDashboard } from "@/components/admin/LoanCRMDashboard";
 import { LeadScoringDashboard } from "@/components/admin/LeadScoringDashboard";
 import { ClientManagement } from "@/components/admin/ClientManagement";
 import { LeadImportManager } from "@/components/admin/LeadImportManager";
@@ -144,6 +145,8 @@ const AdminLayout = () => {
     switch (activeTab) {
       case "dashboard":
         return <AdminDashboard />;
+      case "loan-crm":
+        return <LoanCRMDashboard />;
       case "unified-crm":
         return <UnifiedMasterCRM />;
       case "journey-automation":
