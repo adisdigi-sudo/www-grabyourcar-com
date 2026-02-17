@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -39,6 +40,7 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AdminGlobalSearch } from "./AdminGlobalSearch";
 import { useAdminAuth, AppRole } from "@/hooks/useAdminAuth";
+import { useVerticalAccess } from "@/hooks/useVerticalAccess";
 
 interface AdminSidebarProps {
   activeTab: string;
@@ -209,7 +211,9 @@ const navItems: NavItem[] = [
 ];
 
 export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => {
+  const navigate = useNavigate();
   const { roles, isAdmin, isSuperAdmin } = useAdminAuth();
+  const { activeVertical, setActiveVertical } = useVerticalAccess();
   const [collapsed, setCollapsed] = useState(false);
   const [openSections, setOpenSections] = useState<string[]>(["cars", "website"]);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -417,29 +421,40 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
           <div className={cn(
             "border-b flex items-center",
             collapsed ? "p-3 justify-center" : "p-4 justify-between",
-            isMobile && "mt-14" // Account for mobile header
+            isMobile && "mt-14"
           )}>
             {!collapsed && (
               <div className="min-w-0">
-                <h2 className="font-bold text-lg truncate">Admin Panel</h2>
+                <h2 className="font-bold text-lg truncate">
+                  {activeVertical?.name || "Admin Panel"}
+                </h2>
                 <p className="text-xs text-muted-foreground">Grabyourcar.com</p>
               </div>
             )}
             {!isMobile && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setCollapsed(!collapsed)}
-                className="shrink-0"
-              >
-                {collapsed ? (
-                  <ChevronRight className="h-4 w-4" />
-                ) : (
-                  <ChevronLeft className="h-4 w-4" />
-                )}
+              <Button variant="ghost" size="icon" onClick={() => setCollapsed(!collapsed)} className="shrink-0">
+                {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
               </Button>
             )}
           </div>
+
+          {/* Switch Workspace Button */}
+          {!collapsed && (
+            <div className="px-3 py-2 border-b">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-start text-xs"
+                onClick={() => {
+                  setActiveVertical(null);
+                  navigate('/workspace');
+                }}
+              >
+                <PanelLeft className="h-3 w-3 mr-2" />
+                Switch Workspace
+              </Button>
+            </div>
+          )}
 
           {/* Navigation */}
           {/* Global Search */}

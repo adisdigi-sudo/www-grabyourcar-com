@@ -673,6 +673,45 @@ export type Database = {
           },
         ]
       }
+      business_verticals: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          slug: string
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          slug: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          slug?: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       call_bookings: {
         Row: {
           created_at: string
@@ -5813,6 +5852,48 @@ export type Database = {
         }
         Relationships: []
       }
+      team_members: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          department: string | null
+          designation: string | null
+          display_name: string
+          id: string
+          is_active: boolean | null
+          phone: string | null
+          updated_at: string | null
+          user_id: string
+          username: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          department?: string | null
+          designation?: string | null
+          display_name: string
+          id?: string
+          is_active?: boolean | null
+          phone?: string | null
+          updated_at?: string | null
+          user_id: string
+          username: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          department?: string | null
+          designation?: string | null
+          display_name?: string
+          id?: string
+          is_active?: boolean | null
+          phone?: string | null
+          updated_at?: string | null
+          user_id?: string
+          username?: string
+        }
+        Relationships: []
+      }
       testimonials: {
         Row: {
           car_purchased: string | null
@@ -6018,6 +6099,41 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_vertical_access: {
+        Row: {
+          access_level: string | null
+          created_at: string | null
+          granted_by: string | null
+          id: string
+          user_id: string
+          vertical_id: string
+        }
+        Insert: {
+          access_level?: string | null
+          created_at?: string | null
+          granted_by?: string | null
+          id?: string
+          user_id: string
+          vertical_id: string
+        }
+        Update: {
+          access_level?: string | null
+          created_at?: string | null
+          granted_by?: string | null
+          id?: string
+          user_id?: string
+          vertical_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_vertical_access_vertical_id_fkey"
+            columns: ["vertical_id"]
+            isOneToOne: false
+            referencedRelation: "business_verticals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vehicle_body_types: {
         Row: {
