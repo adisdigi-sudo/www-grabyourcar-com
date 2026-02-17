@@ -94,7 +94,7 @@ export function ManagerDashboard() {
 
   // Calls
   const totalCalls = callLogs.length;
-  const answeredCalls = callLogs.filter((c: any) => c.disposition === "answered" || c.disposition === "interested" || c.disposition === "converted" || c.disposition === "callback_scheduled").length;
+  const answeredCalls = callLogs.filter((c: any) => c.disposition === "connected" || c.disposition === "callback_requested").length;
   const avgCallDuration = totalCalls > 0 
     ? Math.round(callLogs.reduce((s: number, c: any) => s + (c.duration_seconds || 0), 0) / totalCalls) 
     : 0;
@@ -104,8 +104,8 @@ export function ManagerDashboard() {
       const agent = c.agent_id || "Unknown";
       const existing = map.get(agent) || { total: 0, answered: 0, duration: 0, conversions: 0 };
       existing.total++;
-      if (c.disposition === "answered" || c.disposition === "interested" || c.disposition === "converted" || c.disposition === "callback_scheduled") existing.answered++;
-      if (c.disposition === "converted") existing.conversions++;
+      if (c.disposition === "connected" || c.disposition === "callback_requested") existing.answered++;
+      if (c.disposition === "callback_requested") existing.conversions++;
       existing.duration += c.duration_seconds || 0;
       map.set(agent, existing);
     });
@@ -122,7 +122,7 @@ export function ManagerDashboard() {
   const conversionRate = totalLeads > 0 ? ((convertedLeads / totalLeads) * 100).toFixed(1) : "0";
 
   // Insurance
-  const insConverted = insClients.filter((c: any) => c.lead_status === "converted" || c.lead_status === "won").length;
+  const insConverted = insClients.filter((c: any) => c.lead_status === "Won" || c.lead_status === "converted").length;
   const insPremiumTotal = insClients.reduce((s: number, c: any) => s + (c.current_premium || 0), 0);
 
   // Loans
