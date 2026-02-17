@@ -62,6 +62,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "manager-dashboard", label: "📊 Manager Dashboard", icon: BarChart3, badge: "New", allowedRoles: ["super_admin", "admin"] },
   
   // Calling System — available across verticals for calling/sales roles
   { id: "calling-system", label: "📞 Smart Calling", icon: Users, badge: "🔥",
