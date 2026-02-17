@@ -113,6 +113,8 @@ export function InsuranceCRMDashboard() {
   });
 
   // Mark client status mutation
+  const [wonClientForUpload, setWonClientForUpload] = useState<string | null>(null);
+
   const markStatus = useMutation({
     mutationFn: async ({ clientId, status }: { clientId: string; status: string }) => {
       const { error } = await supabase
@@ -127,6 +129,24 @@ export function InsuranceCRMDashboard() {
     },
     onError: () => toast.error("Failed to update status"),
   });
+
+  const handleMarkStatus = useCallback((clientId: string, status: string) => {
+    if (status === "won") {
+      supabase
+        .from("insurance_clients")
+        .update({ lead_status: "won" })
+        .eq("id", clientId)
+        .then(({ error }) => {
+          if (error) { toast.error("Failed to update status"); return; }
+          queryClient.invalidateQueries({ queryKey: ["ins-dash-clients"] });
+          toast.success("🎉 Client marked as WON! Upload their policy now.");
+          setWonClientForUpload(clientId);
+          setShowUploadPolicy(true);
+        });
+    } else {
+      markStatus.mutate({ clientId, status });
+    }
+  }, [queryClient, markStatus]);
 
   // Merge into flat list
   const rows: PolicyRow[] = useMemo(() => {
@@ -688,7 +708,7 @@ export function InsuranceCRMDashboard() {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="min-w-[120px]">
                                 {LEAD_STATUS_OPTIONS.map(opt => (
-                                  <DropdownMenuItem key={opt.value} onClick={() => markStatus.mutate({ clientId: r.client_id, status: opt.value })} className="text-xs gap-2">
+                                  <DropdownMenuItem key={opt.value} onClick={() => handleMarkStatus(r.client_id, opt.value)} className="text-xs gap-2">
                                     <opt.icon className="h-3 w-3" /> {opt.label}
                                   </DropdownMenuItem>
                                 ))}
@@ -828,18 +848,32 @@ export function InsuranceCRMDashboard() {
                             <span className="font-semibold">₹{r.premium?.toLocaleString("en-IN") || "—"}</span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3 shrink-0">
-                          <div className="text-right">
-                            <p className="text-sm font-bold text-emerald-600">{r.daysUntilRenewal}d left</p>
-                            <p className="text-xs text-muted-foreground">
-                              Expires {r.renewal_date && format(new Date(r.renewal_date), "dd MMM yyyy")}
-                            </p>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <div className="text-right">
+                              <p className="text-sm font-bold text-emerald-600">{r.daysUntilRenewal}d left</p>
+                              <p className="text-xs text-muted-foreground">
+                                Expires {r.renewal_date && format(new Date(r.renewal_date), "dd MMM yyyy")}
+                              </p>
+                            </div>
+                            {r.phone && (
+                              <a href={`https://wa.me/91${r.phone}`} target="_blank" rel="noopener noreferrer">
+                                <Button size="icon" className="h-7 w-7 bg-emerald-600 hover:bg-emerald-700 text-white" title="WhatsApp">
+                                  <MessageSquare className="h-3.5 w-3.5" />
+                                </Button>
+                              </a>
+                            )}
+                            {r.phone && (
+                              <a href={`tel:${r.phone}`}>
+                                <Button size="icon" className="h-7 w-7 bg-primary hover:bg-primary/90 text-primary-foreground" title="Call">
+                                  <Phone className="h-3 w-3" />
+                                </Button>
+                              </a>
+                            )}
+                            <Button variant="ghost" size="icon" className="h-7 w-7"
+                              onClick={() => setSelectedPolicy(r)}>
+                              <ExternalLink className="h-3.5 w-3.5" />
+                            </Button>
                           </div>
-                          <Button variant="ghost" size="icon" className="h-7 w-7"
-                            onClick={() => setSelectedPolicy(r)}>
-                            <ExternalLink className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -908,6 +942,13 @@ export function InsuranceCRMDashboard() {
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
+                            )}
+                            {r.phone && (
+                              <a href={`https://wa.me/91${r.phone}`} target="_blank" rel="noopener noreferrer">
+                                <Button size="icon" className="h-7 w-7 bg-emerald-600 hover:bg-emerald-700 text-white" title="WhatsApp">
+                                  <MessageSquare className="h-3.5 w-3.5" />
+                                </Button>
+                              </a>
                             )}
                             <Button variant="ghost" size="icon" className="h-7 w-7"
                               onClick={() => setSelectedPolicy(r)}>
@@ -984,7 +1025,7 @@ export function InsuranceCRMDashboard() {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 {LEAD_STATUS_OPTIONS.map(opt => (
-                                  <DropdownMenuItem key={opt.value} onClick={() => markStatus.mutate({ clientId: r.client_id, status: opt.value })} className="text-xs gap-2">
+                                  <DropdownMenuItem key={opt.value} onClick={() => handleMarkStatus(r.client_id, opt.value)} className="text-xs gap-2">
                                     <opt.icon className="h-3 w-3" /> {opt.label}
                                   </DropdownMenuItem>
                                 ))}
@@ -1012,7 +1053,7 @@ export function InsuranceCRMDashboard() {
           policy={selectedPolicy}
           onClose={() => setSelectedPolicy(null)}
           onShare={() => setShareDialogPolicy(selectedPolicy)}
-          onMarkStatus={(status) => markStatus.mutate({ clientId: selectedPolicy.client_id, status })}
+          onMarkStatus={(status) => handleMarkStatus(selectedPolicy.client_id, status)}
           onSendReminder={(type) => openReminderPreview(selectedPolicy, type)}
         />
       )}
@@ -1036,11 +1077,12 @@ export function InsuranceCRMDashboard() {
       )}
 
       {/* Upload Policy Dialog */}
-      <Dialog open={showUploadPolicy} onOpenChange={setShowUploadPolicy}>
+      <Dialog open={showUploadPolicy} onOpenChange={(open) => { setShowUploadPolicy(open); if (!open) setWonClientForUpload(null); }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Upload className="h-5 w-5 text-primary" /> Upload New Policy
+              <Upload className="h-5 w-5 text-primary" /> 
+              {wonClientForUpload ? "🎉 Won! Upload Policy for this Client" : "Upload New Policy"}
             </DialogTitle>
           </DialogHeader>
           <InsuranceAddPolicyForm onSuccess={() => {
