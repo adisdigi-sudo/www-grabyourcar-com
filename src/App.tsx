@@ -34,6 +34,8 @@ import CarFinder from "./pages/CarFinder";
 import AdminLayout from "./pages/AdminLayout";
 import AdminAuth from "./pages/AdminAuth";
 import AdminResetPassword from "./pages/AdminResetPassword";
+import WorkspaceSelector from "./pages/WorkspaceSelector";
+import { VerticalProvider } from "@/hooks/useVerticalAccess";
 import SelfDriveRentals from "./pages/SelfDriveRentals";
 import HSRP from "./pages/HSRP";
 import UpcomingCars from "./pages/UpcomingCars";
@@ -64,6 +66,7 @@ const App = () => (
     <AuthProvider>
       <CartProvider>
         <CompareProvider>
+          <VerticalProvider>
           <RealtimeSyncProvider>
             <TooltipProvider>
             <Toaster />
@@ -96,6 +99,7 @@ const App = () => (
                   <Route path="/admin" element={<AdminLayout />} />
                   <Route path="/admin-auth" element={<AdminAuth />} />
                   <Route path="/admin-reset-password" element={<AdminResetPassword />} />
+                  <Route path="/workspace" element={<WorkspaceSelector />} />
                   <Route path="/self-drive" element={<SelfDriveRentals />} />
                   <Route path="/hsrp" element={<HSRP />} />
                   <Route path="/upcoming-cars" element={<UpcomingCars />} />
@@ -117,6 +121,7 @@ const App = () => (
             </BrowserRouter>
             </TooltipProvider>
           </RealtimeSyncProvider>
+          </VerticalProvider>
         </CompareProvider>
       </CartProvider>
     </AuthProvider>

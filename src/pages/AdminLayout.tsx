@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { useVerticalAccess } from "@/hooks/useVerticalAccess";
 import { cn } from "@/lib/utils";
 import { logAdminActivity } from "@/lib/adminActivityLogger";
 
@@ -78,6 +79,7 @@ import { Shield } from "lucide-react";
 const AdminLayout = () => {
   const navigate = useNavigate();
   const { user, isLoading, isAdmin, roles } = useAdminAuth();
+  const { activeVertical } = useVerticalAccess();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
@@ -105,6 +107,12 @@ const AdminLayout = () => {
   // Redirect if not authenticated
   if (!isLoading && !user) {
     navigate('/admin-auth');
+    return null;
+  }
+
+  // Redirect to workspace selector if no vertical selected
+  if (!isLoading && user && !activeVertical) {
+    navigate('/workspace');
     return null;
   }
 
