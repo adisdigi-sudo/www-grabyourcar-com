@@ -50,8 +50,12 @@ const AdminAuth = () => {
   }, [user, loading, navigate, step]);
 
   const constructEmail = (uname: string): string => {
-    if (uname.includes("@")) return uname;
-    return `${uname.toLowerCase().trim()}@grabyourcar.app`;
+    let clean = uname.toLowerCase().trim();
+    // Strip @grabyourcar or @grabyourcar.app if user typed it
+    clean = clean.replace(/@grabyourcar(\.app)?$/i, "");
+    // Remove any remaining @ — usernames shouldn't have them
+    clean = clean.replace(/@/g, "");
+    return `${clean}@grabyourcar.app`;
   };
 
   // ── STEP 1: Team Login — credentials first ──
