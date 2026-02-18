@@ -95,7 +95,7 @@ serve(async (req) => {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              phoneNoId: "1015140975005622",
+              phoneNoId: "998733619990657",
               to: `91${phone}`,
               type: "text",
               text: { body: messageText },
