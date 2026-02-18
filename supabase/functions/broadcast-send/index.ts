@@ -168,7 +168,7 @@ serve(async (req) => {
 
       try {
         const result = await sendViaV2(
-          FINBITE_API_KEY, "1015140975005622",
+          FINBITE_API_KEY, "998733619990657",
           phone.full, templateName, personalizedMsg, variables
         );
 

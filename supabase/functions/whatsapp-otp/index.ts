@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 const FINBITE_V2_URL = "https://app.finbite.in/api/v2/whatsapp-business/messages";
-const PHONE_NUMBER_ID = "1015140975005622";
+const PHONE_NUMBER_ID = "998733619990657";
 
 function generateOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
