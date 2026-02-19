@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { useVerticalAccess } from "@/hooks/useVerticalAccess";
+import { useSessionTimeout } from "@/hooks/useSessionTimeout";
 import { cn } from "@/lib/utils";
 import { logAdminActivity } from "@/lib/adminActivityLogger";
 
@@ -97,6 +98,9 @@ const AdminLayout = () => {
   const { activeVertical } = useVerticalAccess();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isMobile, setIsMobile] = useState(false);
+
+  // Auto-logout after 10 minutes of inactivity
+  useSessionTimeout(!isLoading && !!user);
   const [isTablet, setIsTablet] = useState(false);
 
   // Handle responsive breakpoints
