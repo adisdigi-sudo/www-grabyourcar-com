@@ -110,13 +110,12 @@ const navItems: NavItem[] = [
     ]
   },
 
-  // ── Car Database — ALL operational verticals EXCEPT marketing ──
+  // ── Car Database — ONLY super_admin / admin (managed separately, not inside other verticals) ──
   { 
     id: "cars", 
     label: "🚗 Car Database", 
     icon: Car,
-    verticals: ["sales", "insurance", "loans", "rental", "hsrp", "accessories"],
-    allowedRoles: ["super_admin", "admin", "sales", "operations", "finance", "insurance", "dealer"],
+    allowedRoles: ["super_admin", "admin"],
     children: [
       { id: "cars-list", label: "Cars & Details", icon: Car },
       { id: "cars-brands", label: "🏭 Brands", icon: Database },
