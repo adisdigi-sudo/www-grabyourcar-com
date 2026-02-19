@@ -3720,8 +3720,10 @@ export type Database = {
           advisor_name: string | null
           anniversary_date: string | null
           assigned_advisor_id: string | null
+          assigned_executive: string | null
           chassis_number: string | null
           city: string | null
+          contact_attempts: number | null
           created_at: string
           current_insurer: string | null
           current_policy_number: string | null
@@ -3732,6 +3734,7 @@ export type Database = {
           email: string | null
           engine_number: string | null
           fitness_expiry: string | null
+          follow_up_date: string | null
           gender: string | null
           id: string
           is_active: boolean | null
@@ -3739,16 +3742,21 @@ export type Database = {
           last_contacted_at: string | null
           lead_source: string | null
           lead_status: string | null
+          lost_reason: string | null
           national_permit_expiry: string | null
           ncb_percentage: number | null
           notes: string | null
           original_lead_id: string | null
           phone: string
           pincode: string | null
+          pipeline_stage: string | null
           policy_expiry_date: string | null
           policy_start_date: string | null
+          previous_claim: boolean | null
           priority: string | null
           puc_expiry: string | null
+          quote_amount: number | null
+          quote_insurer: string | null
           rc_expiry: string | null
           relationship: string | null
           rto_tax_expiry: string | null
@@ -3772,8 +3780,10 @@ export type Database = {
           advisor_name?: string | null
           anniversary_date?: string | null
           assigned_advisor_id?: string | null
+          assigned_executive?: string | null
           chassis_number?: string | null
           city?: string | null
+          contact_attempts?: number | null
           created_at?: string
           current_insurer?: string | null
           current_policy_number?: string | null
@@ -3784,6 +3794,7 @@ export type Database = {
           email?: string | null
           engine_number?: string | null
           fitness_expiry?: string | null
+          follow_up_date?: string | null
           gender?: string | null
           id?: string
           is_active?: boolean | null
@@ -3791,16 +3802,21 @@ export type Database = {
           last_contacted_at?: string | null
           lead_source?: string | null
           lead_status?: string | null
+          lost_reason?: string | null
           national_permit_expiry?: string | null
           ncb_percentage?: number | null
           notes?: string | null
           original_lead_id?: string | null
           phone: string
           pincode?: string | null
+          pipeline_stage?: string | null
           policy_expiry_date?: string | null
           policy_start_date?: string | null
+          previous_claim?: boolean | null
           priority?: string | null
           puc_expiry?: string | null
+          quote_amount?: number | null
+          quote_insurer?: string | null
           rc_expiry?: string | null
           relationship?: string | null
           rto_tax_expiry?: string | null
@@ -3824,8 +3840,10 @@ export type Database = {
           advisor_name?: string | null
           anniversary_date?: string | null
           assigned_advisor_id?: string | null
+          assigned_executive?: string | null
           chassis_number?: string | null
           city?: string | null
+          contact_attempts?: number | null
           created_at?: string
           current_insurer?: string | null
           current_policy_number?: string | null
@@ -3836,6 +3854,7 @@ export type Database = {
           email?: string | null
           engine_number?: string | null
           fitness_expiry?: string | null
+          follow_up_date?: string | null
           gender?: string | null
           id?: string
           is_active?: boolean | null
@@ -3843,16 +3862,21 @@ export type Database = {
           last_contacted_at?: string | null
           lead_source?: string | null
           lead_status?: string | null
+          lost_reason?: string | null
           national_permit_expiry?: string | null
           ncb_percentage?: number | null
           notes?: string | null
           original_lead_id?: string | null
           phone?: string
           pincode?: string | null
+          pipeline_stage?: string | null
           policy_expiry_date?: string | null
           policy_start_date?: string | null
+          previous_claim?: boolean | null
           priority?: string | null
           puc_expiry?: string | null
+          quote_amount?: number | null
+          quote_insurer?: string | null
           rc_expiry?: string | null
           relationship?: string | null
           rto_tax_expiry?: string | null
