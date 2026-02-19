@@ -110,11 +110,12 @@ const navItems: NavItem[] = [
     ]
   },
 
-  // ── Car Database — ONLY super_admin / admin (managed separately, not inside other verticals) ──
+  // ── Car Database — dedicated vertical only, NOT inside other verticals ──
   { 
     id: "cars", 
     label: "🚗 Car Database", 
     icon: Car,
+    verticals: ["car-database"],
     allowedRoles: ["super_admin", "admin"],
     children: [
       { id: "cars-list", label: "Cars & Details", icon: Car },
