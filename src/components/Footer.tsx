@@ -1,4 +1,4 @@
-import { Mail, Phone, MapPin, Facebook, Instagram, Twitter, Youtube, MessageCircle } from "lucide-react";
+import { Mail, Phone, MapPin, Facebook, Instagram, Linkedin, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ResponsiveLogo } from "@/components/ResponsiveLogo";
@@ -72,10 +72,10 @@ export const Footer = () => {
             {/* Social Links */}
             <div className="flex items-center gap-3 pt-2">
               {[
-                { Icon: Facebook, href: "#" },
-                { Icon: Instagram, href: "#" },
-                { Icon: Twitter, href: "#" },
-                { Icon: Youtube, href: "#" },
+                { Icon: Facebook, href: "https://www.facebook.com/share/p/188WKuB8zv/" },
+                { Icon: Instagram, href: "https://www.instagram.com/grabyourcar_?igsh=MW9wM2V4N2I1Z2lodg==" },
+                { Icon: MessageCircle, href: "https://whatsapp.com/channel/0029VaDndBYGpLHSSmJs551A" },
+                { Icon: Linkedin, href: "https://www.linkedin.com/company/grabyourcar/" },
               ].map(({ Icon, href }, index) => (
                 <a
                   key={index}
