@@ -86,7 +86,7 @@ export const HSRPDashboard = () => {
               {[
                 { label: "HSRP Management", icon: Shield, desc: "View all applications" },
                 { label: "Order Tracking", icon: Truck, desc: "Track deliveries" },
-                { label: "Car Database", icon: Car, desc: "Vehicle lookup" },
+                { label: "Vehicle Lookup", icon: Car, desc: "Search vehicles" },
                 { label: "Reports", icon: FileText, desc: "Generate reports" },
               ].map((a) => (
                 <div key={a.label} className="p-3 rounded-lg border hover:bg-accent cursor-pointer transition-colors">

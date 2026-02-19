@@ -95,7 +95,7 @@ export const RentalDashboard = () => {
                 { label: "Rental Bookings", icon: CalendarDays, desc: "View all bookings" },
                 { label: "Driver Assignments", icon: Users, desc: "Manage drivers" },
                 { label: "API Partners", icon: MapPin, desc: "External integrations" },
-                { label: "Car Database", icon: Car, desc: "Available fleet" },
+                { label: "Fleet Management", icon: Car, desc: "Available fleet" },
               ].map((a) => (
                 <div key={a.label} className="p-3 rounded-lg border hover:bg-accent cursor-pointer transition-colors">
                   <a.icon className="h-5 w-5 text-primary mb-2" />

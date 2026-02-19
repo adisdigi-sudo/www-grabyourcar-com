@@ -98,7 +98,7 @@ export const AccessoriesDashboard = () => {
                 { label: "Products", icon: Package, desc: "Manage catalog" },
                 { label: "Orders", icon: FileText, desc: "View all orders" },
                 { label: "Cross-Sell", icon: Tags, desc: "Configure rules" },
-                { label: "Car Database", icon: Car, desc: "Vehicle accessories" },
+                { label: "Inventory", icon: Car, desc: "Stock management" },
               ].map((a) => (
                 <div key={a.label} className="p-3 rounded-lg border hover:bg-accent cursor-pointer transition-colors">
                   <a.icon className="h-5 w-5 text-primary mb-2" />
