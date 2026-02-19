@@ -775,8 +775,65 @@ We'll keep you updated at every stage!
 
 ---
 
-*This Q&A dataset covers the complete GrabYourCar customer journey across all verticals. For Finbite WhatsApp Bot training — use each Q&A pair as a training example. The bot should match user intent keywords to provide the most relevant response.*
+---
+
+## ⭐ SECTION 16: CUSTOMER TESTIMONIALS & REVIEWS
+
+**Q: What do your customers say about GrabYourCar?**
+A: We're proud of our 4.6 ⭐ Google rating with 142+ reviews! Here's what our happy customers say:
+
+⭐⭐⭐⭐⭐ *Rahul Sharma* (Local Guide) — 2 weeks ago
+"Excellent service! Got my Hyundai Creta at the best price in Mumbai. The team was very professional and handled all the paperwork smoothly. Highly recommend GrabYourCar for hassle-free car buying."
+
+⭐⭐⭐⭐⭐ *Priya Patel* — 1 month ago
+"Amazing experience buying my first car through GrabYourCar. They helped me compare multiple variants of Tata Nexon and got me the best finance option. Doorstep delivery was cherry on top!"
+
+⭐⭐⭐⭐ *Amit Kumar Singh* (Local Guide) — 3 weeks ago
+"Good experience overall. The price was competitive and the team was helpful. Waiting time for XUV700 was long but that's expected. Would have given 5 stars if communication was more frequent."
+
+⭐⭐⭐⭐⭐ *Sneha Reddy* — 1 week ago
+"Second purchase from GrabYourCar. Got a Swift for my parents last year and now Kia Seltos for myself. They always deliver on their promise of best deals. Trusted platform!"
+
+⭐⭐⭐⭐⭐ *Vikram Mehta* (Local Guide) — 1 month ago
+"The hybrid Maruti Grand Vitara was hard to find anywhere, but GrabYourCar located one quickly. Great pricing on insurance too. Very satisfied with the entire process."
+
+⭐⭐⭐⭐ *Ananya Singh* — 2 months ago
+"Bought Toyota Innova Hycross. The wait was long but the team followed up consistently. Good savings compared to direct dealer price. Professional service."
+
+**Q: What is GrabYourCar's Google rating?**
+A: We have a ⭐ 4.6 out of 5 Google rating with 142+ verified reviews and a 100% response rate! Our average response time is within 1 hour. We've delivered 500+ cars to happy customers across India.
+
+**Q: How many cars has GrabYourCar delivered?**
+A: We've delivered 500+ cars to satisfied customers across India. Our customers love us for the best prices, transparent deals, and hassle-free buying experience! 🚗✨
+
+**Q: Can I see GrabYourCar reviews?**
+A: Absolutely! You can see all our customer reviews on:
+⭐ Our website: grabyourcar.lovable.app (scroll to Testimonials section)
+⭐ Google Reviews: Search "GrabYourCar" on Google Maps
+
+Here are some highlights:
+• 4.6/5 average rating
+• 142+ verified reviews
+• 500+ cars delivered
+• 100% response rate
+• Within 1 hour average response time
+
+**Q: Is GrabYourCar trustworthy / reliable?**
+A: Yes, 100%! Here's proof:
+✅ 4.6 ⭐ Google rating (142+ reviews)
+✅ 500+ cars delivered successfully
+✅ Verified & authorized dealer partners
+✅ Transparent pricing — no hidden charges
+✅ Repeat customers like Sneha Reddy who bought her second car through us
+✅ Registered company: Adis Makethemoney Services Pvt Ltd
+✅ Head office in Gurugram, Haryana
+
+Our customers are our best advocates! 🙌
+
+---
+
+*This Q&A dataset covers the complete GrabYourCar customer journey across all verticals including customer testimonials. For Finbite WhatsApp Bot training — use each Q&A pair as a training example. The bot should match user intent keywords to provide the most relevant response.*
 
 *Last Updated: February 2026*
 *Company: Adis Makethemoney Services Pvt Ltd (Trading as GrabYourCar)*
-*HQ: Gurugram, Haryana*
+*HQ: MS 228, 2nd Floor, DT Mega Mall, Sector 28, Gurugram, Haryana – 122001*
