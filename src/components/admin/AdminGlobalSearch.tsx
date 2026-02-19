@@ -93,9 +93,19 @@ const allSearchItems: SearchResult[] = [
 
 interface AdminGlobalSearchProps {
   onNavigate: (tabId: string) => void;
+  activeVerticalSlug?: string | null;
 }
 
-export const AdminGlobalSearch = ({ onNavigate }: AdminGlobalSearchProps) => {
+// Map search items to their vertical
+const itemVerticalMap: Record<string, string[]> = {
+  "cars-list": ["car-database"], "cars-brands": ["car-database"], "cars-ai-entry": ["car-database"],
+  "cars-bulk-import": ["car-database"], "cars-quick-import": ["car-database"], "cars-city-pricing": ["car-database"],
+  "cars-attributes": ["car-database"], "cars-colors": ["car-database"], "cars-image-sync": ["car-database"],
+  "cars-images": ["car-database"], "cars-variants": ["car-database"], "cars-pricing": ["car-database"],
+  "cars-migration": ["car-database"], "cars-ai": ["car-database"],
+};
+
+export const AdminGlobalSearch = ({ onNavigate, activeVerticalSlug }: AdminGlobalSearchProps) => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -122,15 +132,25 @@ export const AdminGlobalSearch = ({ onNavigate }: AdminGlobalSearchProps) => {
     }
   }, [open]);
 
+  // Filter items by active vertical
+  const verticalFilteredItems = useMemo(() => {
+    return allSearchItems.filter(item => {
+      const verticals = itemVerticalMap[item.id];
+      if (!verticals) return true; // universal items
+      if (!activeVerticalSlug) return false; // no vertical active, hide vertical-specific
+      return verticals.includes(activeVerticalSlug);
+    });
+  }, [activeVerticalSlug]);
+
   const results = useMemo(() => {
-    if (!query.trim()) return allSearchItems.slice(0, 10);
+    if (!query.trim()) return verticalFilteredItems.slice(0, 10);
     const q = query.toLowerCase();
-    return allSearchItems.filter(item =>
+    return verticalFilteredItems.filter(item =>
       item.label.toLowerCase().includes(q) ||
       item.category.toLowerCase().includes(q) ||
       item.keywords.some(k => k.includes(q))
     );
-  }, [query]);
+  }, [query, verticalFilteredItems]);
 
   useEffect(() => {
     setSelectedIndex(0);

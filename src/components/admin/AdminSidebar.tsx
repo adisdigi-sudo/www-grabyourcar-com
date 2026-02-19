@@ -536,7 +536,7 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
           {/* Global Search */}
           {!collapsed && (
             <div className="px-3 py-2 border-b">
-              <AdminGlobalSearch onNavigate={handleNavClick} />
+              <AdminGlobalSearch onNavigate={handleNavClick} activeVerticalSlug={activeSlug} />
             </div>
           )}
 
