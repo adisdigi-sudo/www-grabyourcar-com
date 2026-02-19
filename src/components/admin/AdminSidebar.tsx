@@ -287,9 +287,11 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
   
   const filteredNavItems = useMemo(() => {
     const filterByVertical = (item: NavItem) => {
-      // Items without verticals tag show everywhere (for super admins) or when no vertical is active
+      // Items without verticals tag show everywhere
       if (!item.verticals) return true;
-      if (!activeSlug) return true;
+      // If no vertical is active, hide vertical-specific items
+      if (!activeSlug) return false;
+      // Only show if item belongs to active vertical
       return item.verticals.includes(activeSlug);
     };
 
