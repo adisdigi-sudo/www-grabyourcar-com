@@ -88,6 +88,7 @@ import { ManagerDashboard } from "@/components/admin/ManagerDashboard";
 import TeamEngagement from "@/components/admin/TeamEngagement";
 import ErrorPrevention from "@/components/admin/ErrorPrevention";
 import WorkflowEngine from "@/components/admin/WorkflowEngine";
+import AutomationCommandCenter from "@/components/admin/AutomationCommandCenter";
 
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
@@ -323,6 +324,8 @@ const AdminLayout = () => {
         return <ErrorPrevention />;
       case "workflow-engine":
         return <WorkflowEngine />;
+      case "automation-center":
+        return <AutomationCommandCenter />;
       default:
         return <AdminDashboard />;
     }
