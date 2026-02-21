@@ -181,3 +181,9 @@ verify_jwt = false
 
 [functions.admin-manage-users]
 verify_jwt = false
+
+[functions.lead-intake-engine]
+verify_jwt = false
+
+[functions.lead-followup-checker]
+verify_jwt = false
