@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 /**
- * Lead Intake Engine — Replaces n8n "Grabyourcar Complete Backend Automation System"
+ * Lead Intake Engine — Grabyourcar Native Backend Automation
  * 
  * Flow: Webhook → Normalize → Classify Vertical → Dedup by Phone → Store → 
  *       Notify Executive (WhatsApp + Email) → Schedule 30-min Follow-up Check
