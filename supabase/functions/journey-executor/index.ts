@@ -7,12 +7,8 @@ const corsHeaders = {
 };
 
 /**
- * Journey Executor
- * Processes pending cross-vertical triggers and sends WhatsApp messages via Finbite.
- *
- * Actions:
- * - execute_pending: Process all pending triggers
- * - execute_single: Process a single trigger by ID
+ * Journey Executor — Direct Meta WhatsApp Cloud API
+ * Processes pending cross-vertical triggers and sends WhatsApp messages.
  */
 
 const JOURNEY_MESSAGES: Record<string, (name: string) => string> = {
@@ -30,13 +26,44 @@ const JOURNEY_MESSAGES: Record<string, (name: string) => string> = {
     `Hey ${name}! 💳 Since you're exploring car financing, don't forget about insurance! Grabyourcar offers the best insurance deals bundled with your loan. Reply YES for a combined quote!`,
 };
 
+async function sendViaMeta(
+  token: string,
+  phoneNumberId: string,
+  to: string,
+  message: string
+): Promise<boolean> {
+  const url = `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`;
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      to,
+      type: "text",
+      text: { preview_url: false, body: message },
+    }),
+  });
+
+  if (!resp.ok) {
+    const errText = await resp.text();
+    console.error("Meta API send failed:", errText);
+    return false;
+  }
+
+  const result = await resp.json();
+  return !!result.messages?.[0]?.id;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
   const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const FINBITE_BEARER = Deno.env.get("FINBITE_BEARER_TOKEN");
-  const FINBITE_CLIENT = Deno.env.get("FINBITE_WHATSAPP_CLIENT");
+  const WHATSAPP_ACCESS_TOKEN = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
+  const WHATSAPP_PHONE_NUMBER_ID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
   const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
 
   try {
@@ -49,17 +76,14 @@ serve(async (req) => {
       const { data } = await supabase
         .from("customer_journey_triggers")
         .select("*, unified_customers(phone, customer_name, city)")
-        .eq("id", trigger_id)
-        .limit(1);
+        .eq("id", trigger_id).limit(1);
       triggersToProcess = data || [];
     } else {
-      // Get all pending triggers
       const { data } = await supabase
         .from("customer_journey_triggers")
         .select("*, unified_customers(phone, customer_name, city)")
         .eq("status", "pending")
-        .order("created_at", { ascending: true })
-        .limit(100);
+        .order("created_at", { ascending: true }).limit(100);
       triggersToProcess = data || [];
     }
 
@@ -84,32 +108,10 @@ serve(async (req) => {
       const messageGen = JOURNEY_MESSAGES[trigger.trigger_type];
       const messageText = messageGen ? messageGen(name) : trigger.recommendation;
 
-      // Send via Finbite
       let sendSuccess = false;
-      if (FINBITE_BEARER && FINBITE_CLIENT) {
-        try {
-          const finbiteResp = await fetch("https://app.finbite.in/api/v2/whatsapp-business/messages", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${FINBITE_BEARER}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              phoneNoId: "998733619990657",
-              to: `91${phone}`,
-              type: "text",
-              text: { body: messageText },
-            }),
-          });
-          sendSuccess = finbiteResp.ok;
-          if (!sendSuccess) {
-            console.error("Finbite send failed:", await finbiteResp.text());
-          }
-        } catch (e) {
-          console.error("Finbite error:", e);
-        }
+      if (WHATSAPP_ACCESS_TOKEN && WHATSAPP_PHONE_NUMBER_ID) {
+        sendSuccess = await sendViaMeta(WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID, `91${phone}`, messageText);
       } else {
-        // No Finbite config — mark as sent for demo
         console.log(`[DEMO] Would send to ${phone}: ${messageText.substring(0, 80)}...`);
         sendSuccess = true;
       }
@@ -120,7 +122,6 @@ serve(async (req) => {
           sent_at: new Date().toISOString(),
         }).eq("id", trigger.id);
 
-        // Log to activity timeline
         await supabase.from("unified_activity_timeline").insert({
           customer_id: trigger.customer_id,
           vertical: "marketing",
@@ -129,6 +130,7 @@ serve(async (req) => {
             trigger_type: trigger.trigger_type,
             trigger_event: trigger.trigger_event,
             message_preview: messageText.substring(0, 100),
+            provider: "meta",
           },
         });
 
@@ -138,7 +140,6 @@ serve(async (req) => {
         results.failed++;
       }
 
-      // Rate limit: 200ms between messages
       await new Promise(r => setTimeout(r, 200));
     }
 
