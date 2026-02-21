@@ -11,7 +11,6 @@ const corsHeaders = {
  * 
  * Runs on cron (every 5 min) or manual trigger.
  * Finds leads not contacted within 30 min → Alerts manager via WhatsApp + Email.
- * Mirrors n8n "Wait 30 Minutes → Check Lead Status → Lead Contacted? → Manager Alert" flow.
  */
 
 serve(async (req) => {
