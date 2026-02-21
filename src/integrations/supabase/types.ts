@@ -565,6 +565,87 @@ export type Database = {
         }
         Relationships: []
       }
+      automation_lead_tracking: {
+        Row: {
+          assigned_at: string | null
+          assigned_executive_email: string | null
+          assigned_executive_phone: string | null
+          city: string | null
+          contacted: boolean
+          contacted_at: string | null
+          created_at: string
+          email: string | null
+          executive_notified: boolean
+          follow_up_alert_sent: boolean
+          follow_up_due: string | null
+          id: string
+          last_updated: string
+          lead_id: string
+          lead_source_type: string | null
+          manager_alerted: boolean
+          message: string | null
+          multi_vertical_tags: string[] | null
+          name: string | null
+          phone: string
+          raw_data: Json | null
+          source: string | null
+          status: string
+          vertical: string
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_executive_email?: string | null
+          assigned_executive_phone?: string | null
+          city?: string | null
+          contacted?: boolean
+          contacted_at?: string | null
+          created_at?: string
+          email?: string | null
+          executive_notified?: boolean
+          follow_up_alert_sent?: boolean
+          follow_up_due?: string | null
+          id?: string
+          last_updated?: string
+          lead_id: string
+          lead_source_type?: string | null
+          manager_alerted?: boolean
+          message?: string | null
+          multi_vertical_tags?: string[] | null
+          name?: string | null
+          phone: string
+          raw_data?: Json | null
+          source?: string | null
+          status?: string
+          vertical?: string
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_executive_email?: string | null
+          assigned_executive_phone?: string | null
+          city?: string | null
+          contacted?: boolean
+          contacted_at?: string | null
+          created_at?: string
+          email?: string | null
+          executive_notified?: boolean
+          follow_up_alert_sent?: boolean
+          follow_up_due?: string | null
+          id?: string
+          last_updated?: string
+          lead_id?: string
+          lead_source_type?: string | null
+          manager_alerted?: boolean
+          message?: string | null
+          multi_vertical_tags?: string[] | null
+          name?: string | null
+          phone?: string
+          raw_data?: Json | null
+          source?: string | null
+          status?: string
+          vertical?: string
+        }
+        Relationships: []
+      }
       banners: {
         Row: {
           created_at: string
