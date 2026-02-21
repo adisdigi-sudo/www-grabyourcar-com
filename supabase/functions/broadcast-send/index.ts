@@ -6,12 +6,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const FINBITE_V2_URL = "https://app.finbite.in/api/v2/whatsapp-business/messages";
-
 /**
- * Broadcast Send — Updated for Finbite v2 API with template support
- * Sends broadcast messages using Finbite-approved templates.
- * All messages are logged to wa_message_logs for data ownership.
+ * Broadcast Send — Direct Meta WhatsApp Cloud API
+ * Sends broadcast messages using Meta-approved templates or text.
+ * All messages logged to wa_message_logs for data ownership.
  */
 
 function normalizePhone(phone: string): { full: string; short: string; valid: boolean } {
@@ -21,49 +19,58 @@ function normalizePhone(phone: string): { full: string; short: string; valid: bo
   return { full: `91${short}`, short, valid: /^[6-9]\d{9}$/.test(short) };
 }
 
-async function sendViaV2(
-  apiKey: string,
-  phoneId: string,
+async function sendViaMeta(
+  token: string,
+  phoneNumberId: string,
   to: string,
   templateName: string | null,
   message: string,
   variables?: Record<string, string>
 ): Promise<{ success: boolean; provider_message_id?: string; error?: string }> {
-  let body: Record<string, unknown>;
+  const url = `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`;
 
+  let body: Record<string, unknown>;
   if (templateName) {
-    // Exact Finbite v2 body format for templates
+    const components: unknown[] = [];
+    if (variables && Object.keys(variables).length > 0) {
+      components.push({
+        type: "body",
+        parameters: Object.values(variables).map((val) => ({ type: "text", text: val })),
+      });
+    }
     body = {
+      messaging_product: "whatsapp",
       to,
-      phoneNoId: phoneId,
       type: "template",
-      name: templateName,
-      language: "en_US",
+      template: {
+        name: templateName,
+        language: { code: "en_US" },
+        ...(components.length > 0 ? { components } : {}),
+      },
     };
   } else {
-    body = { to, phoneNoId: phoneId, type: "text", text: { body: message } };
+    body = {
+      messaging_product: "whatsapp",
+      to,
+      type: "text",
+      text: { preview_url: false, body: message },
+    };
   }
 
-  const resp = await fetch(FINBITE_V2_URL, {
+  const resp = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`,
-      "X-Phone-ID": phoneId,
+      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(body),
   });
 
-  const ct = resp.headers.get("content-type") || "";
-  if (ct.includes("application/json")) {
-    const result = await resp.json();
-    if (resp.ok && !result.error) {
-      return { success: true, provider_message_id: result.messages?.[0]?.id || null };
-    }
-    return { success: false, error: JSON.stringify(result) };
+  const result = await resp.json();
+  if (resp.ok && result.messages?.[0]?.id) {
+    return { success: true, provider_message_id: result.messages[0].id };
   }
-  const text = await resp.text();
-  return { success: false, error: `Non-JSON (${resp.status})` };
+  return { success: false, error: result.error?.message || JSON.stringify(result) };
 }
 
 serve(async (req) => {
@@ -72,13 +79,13 @@ serve(async (req) => {
   }
 
   try {
-    const FINBITE_API_KEY = Deno.env.get("FINBITE_API_KEY");
-    const FINBITE_WHATSAPP_CLIENT = Deno.env.get("FINBITE_WHATSAPP_CLIENT");
+    const WHATSAPP_ACCESS_TOKEN = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
+    const WHATSAPP_PHONE_NUMBER_ID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-    if (!FINBITE_API_KEY || !FINBITE_WHATSAPP_CLIENT) {
-      return new Response(JSON.stringify({ error: "WhatsApp not configured" }), {
+    if (!WHATSAPP_ACCESS_TOKEN || !WHATSAPP_PHONE_NUMBER_ID) {
+      return new Response(JSON.stringify({ error: "WhatsApp Meta API not configured" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -99,10 +106,7 @@ serve(async (req) => {
 
     // Fetch broadcast
     const { data: broadcast, error: bErr } = await supabase
-      .from("whatsapp_broadcasts")
-      .select("*")
-      .eq("id", broadcastId)
-      .single();
+      .from("whatsapp_broadcasts").select("*").eq("id", broadcastId).single();
 
     if (bErr || !broadcast) {
       return new Response(JSON.stringify({ error: "Broadcast not found" }), {
@@ -110,13 +114,11 @@ serve(async (req) => {
       });
     }
 
-    // Update status
     await supabase.from("whatsapp_broadcasts")
       .update({ status: "sending", started_at: new Date().toISOString() })
       .eq("id", broadcastId);
 
     // Fetch leads
-    const segmentFilters = broadcast.segment_filters || {};
     const targetSegment = broadcast.target_segment || {};
     let leadsQuery = supabase.from("leads").select("id, name, phone, priority, service_category, created_at");
 
@@ -141,38 +143,33 @@ serve(async (req) => {
     }
 
     await supabase.from("whatsapp_broadcasts")
-      .update({ total_recipients: leads.length })
-      .eq("id", broadcastId);
+      .update({ total_recipients: leads.length }).eq("id", broadcastId);
 
-    // Get template name from broadcast (if configured)
     const templateName = broadcast.template_name || null;
     const messageContent = broadcast.message_content || "Hello from GrabYourCar! 🚗";
     let sentCount = 0, deliveredCount = 0, failedCount = 0;
 
     for (const lead of leads) {
       if (!lead.phone) { failedCount++; continue; }
-
       const phone = normalizePhone(lead.phone);
       if (!phone.valid) { failedCount++; continue; }
 
-      // Build personalized variables
       const variables: Record<string, string> = {
         name: lead.name || "Customer",
         phone: lead.phone || "",
       };
 
-      // Personalize text message
       const personalizedMsg = messageContent
         .replace(/\{name\}/gi, lead.name || "Customer")
         .replace(/\{phone\}/gi, lead.phone || "");
 
       try {
-        const result = await sendViaV2(
-          FINBITE_API_KEY, "998733619990657",
+        const result = await sendViaMeta(
+          WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID,
           phone.full, templateName, personalizedMsg, variables
         );
 
-        // Log to wa_message_logs (data ownership)
+        // Log to wa_message_logs
         await supabase.from("wa_message_logs").insert({
           phone: phone.short,
           customer_name: lead.name || null,
@@ -182,7 +179,7 @@ serve(async (req) => {
           trigger_event: "broadcast",
           lead_id: lead.id,
           campaign_id: broadcastId,
-          provider: "finbite",
+          provider: "meta",
           provider_message_id: result.provider_message_id || null,
           status: result.success ? "sent" : "failed",
           sent_at: result.success ? new Date().toISOString() : null,
@@ -211,10 +208,8 @@ serve(async (req) => {
         });
       }
 
-      // Rate limiting
       await new Promise(r => setTimeout(r, 200));
 
-      // Progress update every 10
       if ((sentCount + failedCount) % 10 === 0) {
         await supabase.from("whatsapp_broadcasts")
           .update({ sent_count: sentCount, delivered_count: deliveredCount, failed_count: failedCount })
@@ -222,7 +217,6 @@ serve(async (req) => {
       }
     }
 
-    // Final update
     await supabase.from("whatsapp_broadcasts").update({
       status: failedCount === leads.length ? "failed" : "completed",
       completed_at: new Date().toISOString(),
