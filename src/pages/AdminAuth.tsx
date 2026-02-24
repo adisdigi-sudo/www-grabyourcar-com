@@ -28,7 +28,7 @@ const AdminAuth = () => {
   const { user, signIn, signInWithPhone, loading } = useAuth();
   const { setActiveVertical } = useVerticalAccess();
 
-  const [step, setStep] = useState<LoginStep>("choose-type");
+  const [step, setStep] = useState<LoginStep>("team-login");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
