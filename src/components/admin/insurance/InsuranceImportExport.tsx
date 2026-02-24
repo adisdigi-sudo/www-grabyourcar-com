@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import * as XLSX from "xlsx";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -301,8 +302,22 @@ function ImportWizard() {
     if (!file) return;
 
     try {
-      const text = await file.text();
-      const lines = text.split(/\r?\n/).filter(l => l.trim());
+      let lines: string[];
+      const isExcel = file.name.match(/\.(xlsx|xls)$/i);
+
+      if (isExcel) {
+        // Parse Excel using XLSX library
+        const buffer = await file.arrayBuffer();
+        const workbook = XLSX.read(buffer, { type: "array" });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const csvText = XLSX.utils.sheet_to_csv(sheet);
+        lines = csvText.split(/\r?\n/).filter(l => l.trim());
+      } else {
+        const text = await file.text();
+        lines = text.split(/\r?\n/).filter(l => l.trim());
+      }
+
       if (lines.length < 2) throw new Error("File must have header + at least 1 data row");
 
       // Auto-detect delimiter
