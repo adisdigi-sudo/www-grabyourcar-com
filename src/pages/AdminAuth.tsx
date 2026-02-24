@@ -28,7 +28,7 @@ const AdminAuth = () => {
   const { user, signIn, signInWithPhone, loading } = useAuth();
   const { setActiveVertical } = useVerticalAccess();
 
-  const [step, setStep] = useState<LoginStep>("team-login");
+  const [step, setStep] = useState<LoginStep>("choose-type");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -366,7 +366,7 @@ const AdminAuth = () => {
 
                   <Card
                     className="cursor-pointer hover:shadow-lg hover:border-amber-500/30 transition-all group"
-                    onClick={() => setStep("super-admin-phone")}
+                    onClick={() => setStep("team-login")}
                   >
                     <CardContent className="p-6 flex items-center gap-4">
                       <div className="w-14 h-14 rounded-xl bg-amber-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -375,7 +375,7 @@ const AdminAuth = () => {
                       <div className="flex-1">
                         <h3 className="font-semibold text-lg text-foreground">Super Admin</h3>
                         <p className="text-sm text-muted-foreground">
-                          WhatsApp OTP only — full access
+                          User ID & Password — full access
                         </p>
                       </div>
                     </CardContent>
