@@ -56,6 +56,10 @@ const AdminAuth = () => {
     clean = clean.replace(/@grabyourcar(\.app)?$/i, "");
     // Remove any remaining @ — usernames shouldn't have them
     clean = clean.replace(/@/g, "");
+    // If input is a 10-digit phone number, prefix with 91 (WhatsApp shadow account format)
+    if (/^\d{10}$/.test(clean)) {
+      return `91${clean}@grabyourcar.app`;
+    }
     return `${clean}@grabyourcar.app`;
   };
 
@@ -98,17 +102,11 @@ const AdminAuth = () => {
       .select("role")
       .eq("user_id", userId);
 
-    // BLOCK super_admin from team login — they MUST use OTP
+    // Super admins can now also login via User ID/Password
     const isSuperAdmin = userRoles?.some((r) => r.role === "super_admin");
-    if (isSuperAdmin) {
-      toast.error("Super Admins must login via WhatsApp OTP, not User ID/Password.");
-      await supabase.auth.signOut();
-      setIsSubmitting(false);
-      return;
-    }
 
     const isAdminUser = userRoles?.some(
-      (r) => r.role === "admin"
+      (r) => r.role === "admin" || r.role === "super_admin"
     );
 
     // Fetch verticals
