@@ -4173,17 +4173,29 @@ export type Database = {
       }
       insurance_leads: {
         Row: {
+          assigned_executive: string | null
           assigned_to: string | null
+          contact_attempts: number | null
+          converted_at: string | null
+          converted_client_id: string | null
           created_at: string
           current_insurer: string | null
           customer_name: string | null
           email: string | null
+          follow_up_date: string | null
           id: string
+          lost_reason: string | null
+          ncb_percentage: number | null
           notes: string | null
           ownership_type: string | null
           phone: string
+          pipeline_stage: string
           policy_expiry: string | null
           policy_type: string | null
+          previous_claim: boolean | null
+          priority: string | null
+          quote_amount: number | null
+          quote_insurer: string | null
           source: string | null
           status: string | null
           updated_at: string
@@ -4196,17 +4208,29 @@ export type Database = {
           vehicle_year: number | null
         }
         Insert: {
+          assigned_executive?: string | null
           assigned_to?: string | null
+          contact_attempts?: number | null
+          converted_at?: string | null
+          converted_client_id?: string | null
           created_at?: string
           current_insurer?: string | null
           customer_name?: string | null
           email?: string | null
+          follow_up_date?: string | null
           id?: string
+          lost_reason?: string | null
+          ncb_percentage?: number | null
           notes?: string | null
           ownership_type?: string | null
           phone: string
+          pipeline_stage?: string
           policy_expiry?: string | null
           policy_type?: string | null
+          previous_claim?: boolean | null
+          priority?: string | null
+          quote_amount?: number | null
+          quote_insurer?: string | null
           source?: string | null
           status?: string | null
           updated_at?: string
@@ -4219,17 +4243,29 @@ export type Database = {
           vehicle_year?: number | null
         }
         Update: {
+          assigned_executive?: string | null
           assigned_to?: string | null
+          contact_attempts?: number | null
+          converted_at?: string | null
+          converted_client_id?: string | null
           created_at?: string
           current_insurer?: string | null
           customer_name?: string | null
           email?: string | null
+          follow_up_date?: string | null
           id?: string
+          lost_reason?: string | null
+          ncb_percentage?: number | null
           notes?: string | null
           ownership_type?: string | null
           phone?: string
+          pipeline_stage?: string
           policy_expiry?: string | null
           policy_type?: string | null
+          previous_claim?: boolean | null
+          priority?: string | null
+          quote_amount?: number | null
+          quote_insurer?: string | null
           source?: string | null
           status?: string | null
           updated_at?: string
