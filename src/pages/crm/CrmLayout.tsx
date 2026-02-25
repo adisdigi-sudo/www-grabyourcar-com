@@ -6,7 +6,7 @@ import { Loader2 } from "lucide-react";
 
 export default function CrmLayout() {
   const { user, loading: authLoading } = useAuth();
-  const { isLoading: crmLoading, crmUser } = useCrmAccess();
+  const { isLoading: crmLoading, hasCrmAccess } = useCrmAccess();
 
   if (authLoading || crmLoading) {
     return (
@@ -17,7 +17,7 @@ export default function CrmLayout() {
   }
 
   if (!user) return <Navigate to="/admin-auth" replace />;
-  if (!crmUser) return <Navigate to="/workspace" replace />;
+  if (!hasCrmAccess) return <Navigate to="/workspace" replace />;
 
   return (
     <div className="flex h-screen overflow-hidden">

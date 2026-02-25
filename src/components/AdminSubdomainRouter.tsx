@@ -16,19 +16,10 @@ export const AdminSubdomainRouter = ({ children }: AdminSubdomainRouterProps) =>
   const location = useLocation();
   const { user, loading } = useAuth();
   
-  const hostname = typeof window !== "undefined" ? window.location.hostname : "";
   const isAdmin = isAdminSubdomain();
-  
-  // Debug logging - remove after fixing
-  console.log("[AdminSubdomainRouter] Hostname:", hostname);
-  console.log("[AdminSubdomainRouter] isAdminSubdomain:", isAdmin);
-  console.log("[AdminSubdomainRouter] Current path:", location.pathname);
-  console.log("[AdminSubdomainRouter] User:", user?.email || "not logged in");
-  console.log("[AdminSubdomainRouter] Loading:", loading);
 
   // Only apply special routing on admin subdomain
   if (!isAdmin) {
-    console.log("[AdminSubdomainRouter] Not admin subdomain, rendering children normally");
     return <>{children}</>;
   }
 
