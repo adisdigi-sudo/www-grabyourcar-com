@@ -347,6 +347,32 @@ Deno.serve(async (req) => {
         const { customerId, call_status, call_notes, call_duration } = payload;
         if (!customerId || !call_status) throw new Error("customerId and call_status are required");
 
+        // Verify executive can only log calls for assigned customers
+        const { data: crmUser } = await supabase
+          .from("crm_users")
+          .select("vertical_access")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        // Check if user is admin/super_admin
+        const { data: roleRow } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id)
+          .in("role", ["super_admin", "admin"])
+          .maybeSingle();
+
+        if (!roleRow) {
+          // Not admin — verify customer is assigned to this user
+          const { data: customerCheck } = await supabase
+            .from("master_customers")
+            .select("id")
+            .eq("id", customerId)
+            .eq("assigned_to", user.id)
+            .maybeSingle();
+          if (!customerCheck) throw new Error("You can only log calls for customers assigned to you");
+        }
+
         // Insert call log
         const { data: callLog, error: callError } = await supabase
           .from("customer_call_logs")
