@@ -159,6 +159,96 @@ Deno.serve(async (req) => {
         });
       }
 
+      // ─── GET VERTICAL PIPELINE STAGES ───
+      case "get_pipeline_stages": {
+        const { vertical_name } = payload;
+        if (!vertical_name) throw new Error("vertical_name is required");
+        const { data, error } = await supabase
+          .from("vertical_pipelines")
+          .select("*")
+          .eq("vertical_name", vertical_name)
+          .order("stage_order", { ascending: true });
+        if (error) throw error;
+        return new Response(JSON.stringify({ success: true, stages: data }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // ─── GET/SET CUSTOMER VERTICAL STATUS ───
+      case "get_vertical_status": {
+        const { customerId } = payload;
+        if (!customerId) throw new Error("customerId is required");
+        const { data, error } = await supabase
+          .from("customer_vertical_status")
+          .select("*")
+          .eq("customer_id", customerId);
+        if (error) throw error;
+        return new Response(JSON.stringify({ success: true, statuses: data }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case "update_vertical_stage": {
+        const { customerId, vertical_name, new_stage } = payload;
+        if (!customerId || !vertical_name || !new_stage) throw new Error("customerId, vertical_name, and new_stage are required");
+
+        // Upsert: insert if not exists, update if exists
+        const { data: existing } = await supabase
+          .from("customer_vertical_status")
+          .select("*")
+          .eq("customer_id", customerId)
+          .eq("vertical_name", vertical_name)
+          .maybeSingle();
+
+        let data, error;
+        if (existing) {
+          ({ data, error } = await supabase
+            .from("customer_vertical_status")
+            .update({ current_stage: new_stage })
+            .eq("id", existing.id)
+            .select()
+            .single());
+        } else {
+          // First time — also log history manually since trigger only fires on UPDATE
+          ({ data, error } = await supabase
+            .from("customer_vertical_status")
+            .insert({ customer_id: customerId, vertical_name, current_stage: new_stage })
+            .select()
+            .single());
+
+          if (!error) {
+            await supabase.from("vertical_pipeline_history").insert({
+              customer_id: customerId, vertical_name, previous_stage: null, new_stage, changed_by: user.id,
+            });
+            await supabase.from("customer_activity_logs").insert({
+              customer_id: customerId, activity_type: "vertical_stage_set",
+              notes: `${vertical_name}: Initial stage → ${new_stage}`, performed_by: user.id,
+            });
+          }
+        }
+        if (error) throw error;
+        return new Response(JSON.stringify({ success: true, status: data }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // ─── GET VERTICAL PIPELINE HISTORY ───
+      case "get_vertical_history": {
+        const { customerId, vertical_name } = payload;
+        if (!customerId) throw new Error("customerId is required");
+        let query = supabase
+          .from("vertical_pipeline_history")
+          .select("*")
+          .eq("customer_id", customerId)
+          .order("changed_at", { ascending: false });
+        if (vertical_name) query = query.eq("vertical_name", vertical_name);
+        const { data, error } = await query;
+        if (error) throw error;
+        return new Response(JSON.stringify({ success: true, history: data }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       default:
         throw new Error(`Unknown action: ${action}`);
     }
