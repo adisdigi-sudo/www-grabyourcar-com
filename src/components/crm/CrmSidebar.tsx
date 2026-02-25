@@ -9,6 +9,7 @@ import {
   UserCog,
   Settings,
   LogOut,
+  IndianRupee,
 } from "lucide-react";
 import { useCrmAccess } from "@/hooks/useCrmAccess";
 import { useAuth } from "@/hooks/useAuth";
@@ -20,6 +21,7 @@ const navItems = [
   { to: "/crm/activities", icon: Activity, label: "Activities" },
   { to: "/crm/marketing", icon: Megaphone, label: "Marketing" },
   { to: "/crm/reports", icon: BarChart3, label: "Reports" },
+  { to: "/crm/finance", icon: IndianRupee, label: "Finance" },
 ];
 
 const adminItems = [

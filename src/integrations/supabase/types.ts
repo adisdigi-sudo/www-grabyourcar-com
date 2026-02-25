@@ -6442,6 +6442,56 @@ export type Database = {
         }
         Relationships: []
       }
+      monthly_financial_snapshots: {
+        Row: {
+          created_at: string | null
+          id: string
+          month_year: string
+          net_profit: number | null
+          tenant_id: string
+          total_commission: number | null
+          total_deal_value: number | null
+          total_dealer_payout: number | null
+          total_expenses: number | null
+          total_revenue_margin: number | null
+          vertical_name: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          month_year: string
+          net_profit?: number | null
+          tenant_id: string
+          total_commission?: number | null
+          total_deal_value?: number | null
+          total_dealer_payout?: number | null
+          total_expenses?: number | null
+          total_revenue_margin?: number | null
+          vertical_name: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          month_year?: string
+          net_profit?: number | null
+          tenant_id?: string
+          total_commission?: number | null
+          total_deal_value?: number | null
+          total_dealer_payout?: number | null
+          total_expenses?: number | null
+          total_revenue_margin?: number | null
+          vertical_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monthly_financial_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       navigation_menu: {
         Row: {
           created_at: string
@@ -8566,6 +8616,25 @@ export type Database = {
             columns: ["vertical_id"]
             isOneToOne: false
             referencedRelation: "business_verticals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_financial_summary: {
+        Row: {
+          tenant_id: string | null
+          total_commission: number | null
+          total_deal_value: number | null
+          total_dealer_payout: number | null
+          total_revenue_margin: number | null
+          vertical_name: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deals_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
