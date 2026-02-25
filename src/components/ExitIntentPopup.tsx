@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -107,6 +107,10 @@ export const ExitIntentPopup = () => {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleDismiss(); }}>
       <DialogContent className="sm:max-w-sm p-0 overflow-hidden border-0 bg-transparent shadow-none [&>button]:hidden max-h-[90vh] overflow-y-auto mx-3 md:mx-auto">
+        <DialogHeader className="sr-only">
+          <DialogTitle>Exit offer</DialogTitle>
+          <DialogDescription>Before leaving, submit your contact number for priority delivery deals.</DialogDescription>
+        </DialogHeader>
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
