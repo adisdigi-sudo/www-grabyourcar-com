@@ -1846,6 +1846,62 @@ export type Database = {
         }
         Relationships: []
       }
+      commission_rules: {
+        Row: {
+          base_amount: number | null
+          commission_type: string
+          conditions: Json | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          percentage: number | null
+          role: string
+          rule_name: string
+          slab_config: Json | null
+          tenant_id: string
+          updated_at: string
+          vertical_name: string
+        }
+        Insert: {
+          base_amount?: number | null
+          commission_type?: string
+          conditions?: Json | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          percentage?: number | null
+          role?: string
+          rule_name: string
+          slab_config?: Json | null
+          tenant_id: string
+          updated_at?: string
+          vertical_name: string
+        }
+        Update: {
+          base_amount?: number | null
+          commission_type?: string
+          conditions?: Json | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          percentage?: number | null
+          role?: string
+          rule_name?: string
+          slab_config?: Json | null
+          tenant_id?: string
+          updated_at?: string
+          vertical_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_rules_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       corporate_clients: {
         Row: {
           company_name: string
@@ -2503,6 +2559,151 @@ export type Database = {
           },
         ]
       }
+      dealer_payout_rules: {
+        Row: {
+          base_amount: number | null
+          conditions: Json | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          payout_type: string
+          percentage: number | null
+          rule_name: string
+          slab_config: Json | null
+          tenant_id: string
+          updated_at: string
+          vertical_name: string
+        }
+        Insert: {
+          base_amount?: number | null
+          conditions?: Json | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          payout_type?: string
+          percentage?: number | null
+          rule_name: string
+          slab_config?: Json | null
+          tenant_id: string
+          updated_at?: string
+          vertical_name: string
+        }
+        Update: {
+          base_amount?: number | null
+          conditions?: Json | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          payout_type?: string
+          percentage?: number | null
+          rule_name?: string
+          slab_config?: Json | null
+          tenant_id?: string
+          updated_at?: string
+          vertical_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dealer_payout_rules_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      deals: {
+        Row: {
+          assigned_to: string | null
+          closed_at: string | null
+          commission_amount: number | null
+          commission_rule_id: string | null
+          created_at: string
+          customer_id: string
+          deal_number: string | null
+          deal_status: string
+          deal_value: number | null
+          dealer_payout: number | null
+          id: string
+          metadata: Json | null
+          notes: string | null
+          payout_rule_id: string | null
+          revenue: number | null
+          tenant_id: string
+          updated_at: string
+          vertical_name: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          closed_at?: string | null
+          commission_amount?: number | null
+          commission_rule_id?: string | null
+          created_at?: string
+          customer_id: string
+          deal_number?: string | null
+          deal_status?: string
+          deal_value?: number | null
+          dealer_payout?: number | null
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          payout_rule_id?: string | null
+          revenue?: number | null
+          tenant_id: string
+          updated_at?: string
+          vertical_name: string
+        }
+        Update: {
+          assigned_to?: string | null
+          closed_at?: string | null
+          commission_amount?: number | null
+          commission_rule_id?: string | null
+          created_at?: string
+          customer_id?: string
+          deal_number?: string | null
+          deal_status?: string
+          deal_value?: number | null
+          dealer_payout?: number | null
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          payout_rule_id?: string | null
+          revenue?: number | null
+          tenant_id?: string
+          updated_at?: string
+          vertical_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deals_commission_rule_id_fkey"
+            columns: ["commission_rule_id"]
+            isOneToOne: false
+            referencedRelation: "commission_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "master_customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_payout_rule_id_fkey"
+            columns: ["payout_rule_id"]
+            isOneToOne: false
+            referencedRelation: "dealer_payout_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       delivery_stories: {
         Row: {
           buyer_type: string | null
@@ -3056,6 +3257,62 @@ export type Database = {
           variables?: string[] | null
         }
         Relationships: []
+      }
+      expenses: {
+        Row: {
+          amount: number
+          approved_by: string | null
+          created_at: string
+          description: string | null
+          expense_date: string
+          expense_type: string
+          id: string
+          metadata: Json | null
+          month_year: string | null
+          receipt_url: string | null
+          tenant_id: string
+          updated_at: string
+          vertical_name: string
+        }
+        Insert: {
+          amount?: number
+          approved_by?: string | null
+          created_at?: string
+          description?: string | null
+          expense_date?: string
+          expense_type: string
+          id?: string
+          metadata?: Json | null
+          month_year?: string | null
+          receipt_url?: string | null
+          tenant_id: string
+          updated_at?: string
+          vertical_name: string
+        }
+        Update: {
+          amount?: number
+          approved_by?: string | null
+          created_at?: string
+          description?: string | null
+          expense_date?: string
+          expense_type?: string
+          id?: string
+          metadata?: Json | null
+          month_year?: string | null
+          receipt_url?: string | null
+          tenant_id?: string
+          updated_at?: string
+          vertical_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       faqs: {
         Row: {
