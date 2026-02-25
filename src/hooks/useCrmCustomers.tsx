@@ -122,3 +122,43 @@ export function useVerticalPipelineHistory(customerId: string | undefined, verti
     enabled: !!customerId,
   });
 }
+
+export function useScheduleFollowup() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { customerId: string; next_followup_at: string; notes?: string }) =>
+      callCrm("schedule_followup", data),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["crm-customer", vars.customerId] });
+      qc.invalidateQueries({ queryKey: ["crm-customers"] });
+    },
+  });
+}
+
+export function useLogCall() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { customerId: string; call_status: string; call_notes?: string; call_duration?: number }) =>
+      callCrm("log_call", data),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["crm-customer", vars.customerId] });
+      qc.invalidateQueries({ queryKey: ["crm-call-logs", vars.customerId] });
+      qc.invalidateQueries({ queryKey: ["crm-customers"] });
+    },
+  });
+}
+
+export function useCallLogs(customerId: string | undefined) {
+  return useQuery({
+    queryKey: ["crm-call-logs", customerId],
+    queryFn: () => callCrm("get_call_logs", { customerId }),
+    enabled: !!customerId,
+  });
+}
+
+export function useOverdueFollowups(filters: { vertical_name?: string; assigned_to?: string }) {
+  return useQuery({
+    queryKey: ["crm-overdue-followups", filters],
+    queryFn: () => callCrm("get_overdue_followups", filters),
+  });
+}

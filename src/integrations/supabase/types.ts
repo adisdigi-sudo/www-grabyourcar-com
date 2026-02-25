@@ -2266,6 +2266,44 @@ export type Database = {
           },
         ]
       }
+      customer_call_logs: {
+        Row: {
+          call_duration: number | null
+          call_notes: string | null
+          call_status: string
+          called_at: string
+          called_by: string
+          customer_id: string
+          id: string
+        }
+        Insert: {
+          call_duration?: number | null
+          call_notes?: string | null
+          call_status: string
+          called_at?: string
+          called_by: string
+          customer_id: string
+          id?: string
+        }
+        Update: {
+          call_duration?: number | null
+          call_notes?: string | null
+          call_status?: string
+          called_at?: string
+          called_by?: string
+          customer_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_call_logs_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "master_customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_journey_triggers: {
         Row: {
           converted_at: string | null
