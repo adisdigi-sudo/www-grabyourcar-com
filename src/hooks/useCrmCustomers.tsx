@@ -162,3 +162,17 @@ export function useOverdueFollowups(filters: { vertical_name?: string; assigned_
     queryFn: () => callCrm("get_overdue_followups", filters),
   });
 }
+
+export function useDashboardMetrics(filters: { vertical_name?: string; assigned_to?: string }) {
+  return useQuery({
+    queryKey: ["crm-dashboard-metrics", filters],
+    queryFn: () => callCrm("get_dashboard_metrics", filters),
+  });
+}
+
+export function useExecutivePerformance(filters: { vertical_name?: string; executive_id?: string }) {
+  return useQuery({
+    queryKey: ["crm-executive-performance", filters],
+    queryFn: () => callCrm("get_executive_performance", filters),
+  });
+}
