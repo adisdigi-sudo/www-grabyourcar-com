@@ -2231,6 +2231,41 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_activity_logs: {
+        Row: {
+          activity_type: string
+          created_at: string
+          customer_id: string
+          id: string
+          notes: string | null
+          performed_by: string | null
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string
+          customer_id: string
+          id?: string
+          notes?: string | null
+          performed_by?: string | null
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string
+          customer_id?: string
+          id?: string
+          notes?: string | null
+          performed_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_activity_logs_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "master_customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_journey_triggers: {
         Row: {
           converted_at: string | null
@@ -5918,6 +5953,63 @@ export type Database = {
           total_recipients?: number | null
           updated_at?: string
           winning_variant?: string | null
+        }
+        Relationships: []
+      }
+      master_customers: {
+        Row: {
+          assigned_to: string | null
+          city: string | null
+          created_at: string
+          email: string | null
+          id: string
+          last_contacted_at: string | null
+          lead_score: number | null
+          lifecycle_stage: string | null
+          multi_vertical_tags: string[] | null
+          name: string
+          next_followup_at: string | null
+          phone: string
+          primary_vertical: string | null
+          source: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          city?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          last_contacted_at?: string | null
+          lead_score?: number | null
+          lifecycle_stage?: string | null
+          multi_vertical_tags?: string[] | null
+          name: string
+          next_followup_at?: string | null
+          phone: string
+          primary_vertical?: string | null
+          source?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          city?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          last_contacted_at?: string | null
+          lead_score?: number | null
+          lifecycle_stage?: string | null
+          multi_vertical_tags?: string[] | null
+          name?: string
+          next_followup_at?: string | null
+          phone?: string
+          primary_vertical?: string | null
+          source?: string | null
+          status?: string
+          updated_at?: string
         }
         Relationships: []
       }
