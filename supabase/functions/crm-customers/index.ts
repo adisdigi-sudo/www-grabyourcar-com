@@ -457,6 +457,198 @@ Deno.serve(async (req) => {
         });
       }
 
+      // ─── DASHBOARD METRICS ───
+      case "get_dashboard_metrics": {
+        const { vertical_name, assigned_to: filterAssignedTo } = payload;
+
+        // Role check
+        const { data: roleRow } = await supabase
+          .from("user_roles").select("role").eq("user_id", user.id)
+          .in("role", ["super_admin", "admin"]).maybeSingle();
+        const { data: crmUser } = await supabase
+          .from("crm_users").select("vertical_access").eq("user_id", user.id).maybeSingle();
+        const isAdmin = !!roleRow;
+        const verticalAccess = crmUser?.vertical_access || [];
+
+        // Determine effective vertical filter
+        let effectiveVerticals: string[] = [];
+        if (vertical_name) {
+          if (!isAdmin && !verticalAccess.includes(vertical_name)) throw new Error("Access denied to this vertical");
+          effectiveVerticals = [vertical_name];
+        } else if (isAdmin) {
+          const { data: allVerts } = await supabase.from("vertical_pipelines").select("vertical_name");
+          effectiveVerticals = [...new Set((allVerts || []).map((v: any) => v.vertical_name))];
+        } else {
+          effectiveVerticals = verticalAccess;
+        }
+
+        // Effective assigned_to for executives
+        const effectiveAssignedTo = isAdmin ? filterAssignedTo : (verticalAccess.length > 0 ? filterAssignedTo : user.id);
+
+        const now = new Date().toISOString();
+        const todayStart = new Date(); todayStart.setUTCHours(0, 0, 0, 0);
+        const todayISO = todayStart.toISOString();
+
+        const metrics: any = { verticals: {} };
+
+        for (const vn of effectiveVerticals) {
+          // Get stages for this vertical
+          const { data: stages } = await supabase
+            .from("vertical_pipelines").select("*").eq("vertical_name", vn).order("stage_order");
+          const finalStages = (stages || []).filter((s: any) => s.is_final_stage).map((s: any) => s.stage_name);
+          const lostStages = (stages || []).filter((s: any) => s.is_lost_stage).map((s: any) => s.stage_name);
+
+          // Leads per stage
+          let statusQuery = supabase
+            .from("customer_vertical_status").select("current_stage, customer:master_customers(id, assigned_to)")
+            .eq("vertical_name", vn);
+          const { data: statusRows } = await statusQuery;
+
+          let rows = (statusRows || []).filter((r: any) => r.customer);
+          if (effectiveAssignedTo) rows = rows.filter((r: any) => r.customer.assigned_to === effectiveAssignedTo);
+
+          const stageBreakdown: Record<string, number> = {};
+          (stages || []).forEach((s: any) => { stageBreakdown[s.stage_name] = 0; });
+          rows.forEach((r: any) => { stageBreakdown[r.current_stage] = (stageBreakdown[r.current_stage] || 0) + 1; });
+
+          const totalLeads = rows.length;
+          const doneCount = rows.filter((r: any) => finalStages.includes(r.current_stage)).length;
+          const lostCount = rows.filter((r: any) => lostStages.includes(r.current_stage)).length;
+
+          // Overdue followups for this vertical
+          const customerIds = rows.map((r: any) => r.customer.id);
+          let overdueCount = 0;
+          if (customerIds.length > 0) {
+            const { data: overdueRows } = await supabase
+              .from("master_customers").select("id").lt("next_followup_at", now)
+              .not("next_followup_at", "is", null).in("id", customerIds);
+            overdueCount = (overdueRows || []).length;
+          }
+
+          metrics.verticals[vn] = {
+            total_leads: totalLeads,
+            stage_breakdown: stageBreakdown,
+            done_clients: doneCount,
+            lost_clients: lostCount,
+            overdue_followups: overdueCount,
+          };
+        }
+
+        // Calls today (across all verticals)
+        let callQuery = supabase
+          .from("customer_call_logs").select("called_by", { count: "exact" }).gte("called_at", todayISO);
+        if (effectiveAssignedTo) callQuery = callQuery.eq("called_by", effectiveAssignedTo);
+        const { count: totalCallsToday } = await callQuery;
+
+        // Followups scheduled today
+        const tomorrowStart = new Date(todayStart); tomorrowStart.setUTCDate(tomorrowStart.getUTCDate() + 1);
+        let fuQuery = supabase
+          .from("master_customers").select("id", { count: "exact" })
+          .gte("next_followup_at", todayISO).lt("next_followup_at", tomorrowStart.toISOString());
+        if (effectiveAssignedTo) fuQuery = fuQuery.eq("assigned_to", effectiveAssignedTo);
+        const { count: followupsToday } = await fuQuery;
+
+        metrics.total_calls_today = totalCallsToday || 0;
+        metrics.followups_scheduled_today = followupsToday || 0;
+
+        return new Response(JSON.stringify({ success: true, metrics }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // ─── EXECUTIVE PERFORMANCE ───
+      case "get_executive_performance": {
+        const { vertical_name, executive_id } = payload;
+
+        // Role enforcement
+        const { data: roleRow } = await supabase
+          .from("user_roles").select("role").eq("user_id", user.id)
+          .in("role", ["super_admin", "admin"]).maybeSingle();
+        const { data: crmUser } = await supabase
+          .from("crm_users").select("vertical_access").eq("user_id", user.id).maybeSingle();
+        const isAdmin = !!roleRow;
+
+        // Executives can only see their own performance
+        const targetId = isAdmin ? (executive_id || null) : user.id;
+
+        if (!isAdmin && !vertical_name) {
+          // Manager must specify vertical — executive defaults to self
+        }
+        if (!isAdmin && vertical_name && !(crmUser?.vertical_access || []).includes(vertical_name)) {
+          throw new Error("Access denied to this vertical");
+        }
+
+        // Get all CRM users (or single if targetId)
+        let execQuery = supabase.from("crm_users").select("*").eq("is_active", true);
+        if (targetId) execQuery = execQuery.eq("user_id", targetId);
+        if (!isAdmin && !targetId && vertical_name) {
+          execQuery = execQuery.contains("vertical_access", [vertical_name]);
+        }
+        const { data: executives } = await execQuery;
+
+        const now = new Date().toISOString();
+        const todayStart = new Date(); todayStart.setUTCHours(0, 0, 0, 0);
+        const todayISO = todayStart.toISOString();
+
+        // Get stages metadata if vertical specified
+        let finalStages: string[] = [];
+        let lostStages: string[] = [];
+        if (vertical_name) {
+          const { data: stages } = await supabase
+            .from("vertical_pipelines").select("stage_name, is_final_stage, is_lost_stage")
+            .eq("vertical_name", vertical_name);
+          finalStages = (stages || []).filter((s: any) => s.is_final_stage).map((s: any) => s.stage_name);
+          lostStages = (stages || []).filter((s: any) => s.is_lost_stage).map((s: any) => s.stage_name);
+        }
+
+        const performanceData = [];
+
+        for (const exec of (executives || [])) {
+          // Total assigned leads
+          const { count: assignedLeads } = await supabase
+            .from("master_customers").select("id", { count: "exact" }).eq("assigned_to", exec.user_id);
+
+          // Overdue followups
+          const { count: overdueFollowups } = await supabase
+            .from("master_customers").select("id", { count: "exact" })
+            .eq("assigned_to", exec.user_id)
+            .lt("next_followup_at", now).not("next_followup_at", "is", null);
+
+          // Calls today
+          const { count: callsToday } = await supabase
+            .from("customer_call_logs").select("id", { count: "exact" })
+            .eq("called_by", exec.user_id).gte("called_at", todayISO);
+
+          // Final & lost stage counts (if vertical specified)
+          let finalCount = 0, lostCount = 0;
+          if (vertical_name) {
+            // Get customers assigned to this exec in this vertical
+            const { data: vertRows } = await supabase
+              .from("customer_vertical_status")
+              .select("current_stage, customer:master_customers(assigned_to)")
+              .eq("vertical_name", vertical_name);
+            const execRows = (vertRows || []).filter((r: any) => r.customer?.assigned_to === exec.user_id);
+            finalCount = execRows.filter((r: any) => finalStages.includes(r.current_stage)).length;
+            lostCount = execRows.filter((r: any) => lostStages.includes(r.current_stage)).length;
+          }
+
+          performanceData.push({
+            user_id: exec.user_id,
+            name: exec.name,
+            email: exec.email,
+            assigned_leads: assignedLeads || 0,
+            overdue_followups: overdueFollowups || 0,
+            calls_today: callsToday || 0,
+            leads_final_stage: finalCount,
+            leads_lost: lostCount,
+          });
+        }
+
+        return new Response(JSON.stringify({ success: true, performance: performanceData }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       default:
         throw new Error(`Unknown action: ${action}`);
     }
