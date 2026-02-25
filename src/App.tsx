@@ -35,6 +35,17 @@ import AdminLayout from "./pages/AdminLayout";
 import AdminAuth from "./pages/AdminAuth";
 import AdminResetPassword from "./pages/AdminResetPassword";
 import WorkspaceSelector from "./pages/WorkspaceSelector";
+import CrmLayout from "./pages/crm/CrmLayout";
+import CrmDashboard from "./pages/crm/CrmDashboard";
+import CrmCustomers from "./pages/crm/CrmCustomers";
+import CrmCustomerDetail from "./pages/crm/CrmCustomerDetail";
+import CrmCustomerNew from "./pages/crm/CrmCustomerNew";
+import CrmPipeline from "./pages/crm/CrmPipeline";
+import CrmActivities from "./pages/crm/CrmActivities";
+import CrmMarketing from "./pages/crm/CrmMarketing";
+import CrmReports from "./pages/crm/CrmReports";
+import CrmTeam from "./pages/crm/CrmTeam";
+import CrmSettings from "./pages/crm/CrmSettings";
 import { VerticalProvider } from "@/hooks/useVerticalAccess";
 import SelfDriveRentals from "./pages/SelfDriveRentals";
 import HSRP from "./pages/HSRP";
@@ -100,6 +111,18 @@ const App = () => (
                   <Route path="/admin-auth" element={<AdminAuth />} />
                   <Route path="/admin-reset-password" element={<AdminResetPassword />} />
                   <Route path="/workspace" element={<WorkspaceSelector />} />
+                  <Route path="/crm" element={<CrmLayout />}>
+                    <Route index element={<CrmDashboard />} />
+                    <Route path="customers" element={<CrmCustomers />} />
+                    <Route path="customers/new" element={<CrmCustomerNew />} />
+                    <Route path="customers/:id" element={<CrmCustomerDetail />} />
+                    <Route path="pipeline" element={<CrmPipeline />} />
+                    <Route path="activities" element={<CrmActivities />} />
+                    <Route path="marketing" element={<CrmMarketing />} />
+                    <Route path="reports" element={<CrmReports />} />
+                    <Route path="team" element={<CrmTeam />} />
+                    <Route path="settings" element={<CrmSettings />} />
+                  </Route>
                   <Route path="/self-drive" element={<SelfDriveRentals />} />
                   <Route path="/hsrp" element={<HSRP />} />
                   <Route path="/upcoming-cars" element={<UpcomingCars />} />
