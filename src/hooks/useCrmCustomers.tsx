@@ -71,6 +71,21 @@ export function useAddActivity() {
   });
 }
 
+export function useCustomersByVerticalStage(filters: {
+  vertical_name?: string;
+  stage?: string;
+  assigned_to?: string;
+  search?: string;
+  is_final?: boolean;
+  is_lost?: boolean;
+}) {
+  return useQuery({
+    queryKey: ["crm-customers-by-vertical", filters],
+    queryFn: () => callCrm("list_by_vertical_stage", filters),
+    enabled: !!filters.vertical_name,
+  });
+}
+
 export function useVerticalPipelineStages(verticalName: string | undefined) {
   return useQuery({
     queryKey: ["crm-pipeline-stages", verticalName],
@@ -95,6 +110,7 @@ export function useUpdateVerticalStage() {
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["crm-vertical-status", vars.customerId] });
       qc.invalidateQueries({ queryKey: ["crm-customers"] });
+      qc.invalidateQueries({ queryKey: ["crm-customers-by-vertical"] });
     },
   });
 }
