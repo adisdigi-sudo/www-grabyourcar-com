@@ -176,3 +176,30 @@ export function useExecutivePerformance(filters: { vertical_name?: string; execu
     queryFn: () => callCrm("get_executive_performance", filters),
   });
 }
+
+// ─── Analytics (separate edge function) ───
+
+async function callAnalytics(action: string, payload: Record<string, any> = {}) {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData.session?.access_token;
+  if (!token) throw new Error("Not authenticated");
+  const res = await supabase.functions.invoke("crm-analytics", { body: { action, ...payload } });
+  if (res.error) throw new Error(res.error.message);
+  const result = res.data;
+  if (!result.success) throw new Error(result.error || "Unknown error");
+  return result;
+}
+
+export function useRevenueMetrics(filters: { vertical_name?: string; executive_id?: string }) {
+  return useQuery({
+    queryKey: ["crm-revenue-metrics", filters],
+    queryFn: () => callAnalytics("get_revenue_metrics", filters),
+  });
+}
+
+export function useAgingBuckets(filters: { vertical_name?: string; assigned_to?: string }) {
+  return useQuery({
+    queryKey: ["crm-aging-buckets", filters],
+    queryFn: () => callAnalytics("get_aging_buckets", filters),
+  });
+}
