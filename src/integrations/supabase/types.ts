@@ -1879,6 +1879,39 @@ export type Database = {
         }
         Relationships: []
       }
+      crm_users: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string
+          user_id: string
+          vertical_access: string[] | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string
+          user_id: string
+          vertical_access?: string[] | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string
+          user_id?: string
+          vertical_access?: string[] | null
+        }
+        Relationships: []
+      }
       cross_sell_analytics: {
         Row: {
           bundle_id: string | null
@@ -7937,6 +7970,8 @@ export type Database = {
         | "marketing"
         | "calling"
         | "operations"
+        | "vertical_manager"
+        | "executive"
       call_disposition:
         | "connected"
         | "not_connected"
@@ -8095,6 +8130,8 @@ export const Constants = {
         "marketing",
         "calling",
         "operations",
+        "vertical_manager",
+        "executive",
       ],
       call_disposition: [
         "connected",
