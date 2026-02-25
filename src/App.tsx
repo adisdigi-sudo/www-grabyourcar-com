@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { CartProvider } from "@/hooks/useCart";
 import { CompareProvider } from "@/hooks/useCompare";
@@ -31,7 +31,7 @@ import MyFavorites from "./pages/MyFavorites";
 import MyBookings from "./pages/MyBookings";
 import MyOrders from "./pages/MyOrders";
 import CarFinder from "./pages/CarFinder";
-import AdminLayout from "./pages/AdminLayout";
+
 import AdminAuth from "./pages/AdminAuth";
 import AdminResetPassword from "./pages/AdminResetPassword";
 import WorkspaceSelector from "./pages/WorkspaceSelector";
@@ -108,7 +108,7 @@ const App = () => (
                   <Route path="/my-bookings" element={<MyBookings />} />
                   <Route path="/my-orders" element={<MyOrders />} />
                   <Route path="/car-finder" element={<CarFinder />} />
-                  <Route path="/admin" element={<AdminLayout />} />
+                  <Route path="/admin" element={<Navigate to="/crm" replace />} />
                   <Route path="/admin-auth" element={<AdminAuth />} />
                   <Route path="/admin-reset-password" element={<AdminResetPassword />} />
                   <Route path="/workspace" element={<WorkspaceSelector />} />
