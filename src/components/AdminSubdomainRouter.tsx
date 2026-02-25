@@ -54,7 +54,7 @@ export const AdminSubdomainRouter = ({ children }: AdminSubdomainRouterProps) =>
 
   // If not on allowed path, redirect based on auth status
   if (user) {
-    return <Navigate to="/admin" replace />;
+    return <Navigate to="/crm" replace />;
   } else {
     return <Navigate to="/admin-auth" replace />;
   }
