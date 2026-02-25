@@ -46,6 +46,7 @@ import CrmMarketing from "./pages/crm/CrmMarketing";
 import CrmReports from "./pages/crm/CrmReports";
 import CrmTeam from "./pages/crm/CrmTeam";
 import CrmSettings from "./pages/crm/CrmSettings";
+import CrmFinance from "./pages/crm/CrmFinance";
 import { VerticalProvider } from "@/hooks/useVerticalAccess";
 import SelfDriveRentals from "./pages/SelfDriveRentals";
 import HSRP from "./pages/HSRP";
@@ -120,6 +121,7 @@ const App = () => (
                     <Route path="activities" element={<CrmActivities />} />
                     <Route path="marketing" element={<CrmMarketing />} />
                     <Route path="reports" element={<CrmReports />} />
+                    <Route path="finance" element={<CrmFinance />} />
                     <Route path="team" element={<CrmTeam />} />
                     <Route path="settings" element={<CrmSettings />} />
                   </Route>
