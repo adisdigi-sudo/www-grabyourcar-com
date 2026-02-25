@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
 
       // ─── LIST CUSTOMERS ───
       case "list": {
-        const { page = 1, limit = 50, status, vertical, search, assigned_to } = payload;
+        const { page = 1, limit = 50, status, vertical, search, assigned_to, lifecycle_stage } = payload;
         let query = supabase
           .from("master_customers")
           .select("*", { count: "exact" })
@@ -77,6 +77,7 @@ Deno.serve(async (req) => {
         if (vertical) query = query.eq("primary_vertical", vertical);
         if (assigned_to) query = query.eq("assigned_to", assigned_to);
         if (search) query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%,email.ilike.%${search}%`);
+        if (lifecycle_stage) query = query.eq("lifecycle_stage", lifecycle_stage);
 
         const { data, error, count } = await query;
         if (error) throw error;
@@ -98,6 +99,13 @@ Deno.serve(async (req) => {
           .single();
         if (error) throw error;
 
+        // Pipeline history
+        const { data: pipeline } = await supabase
+          .from("pipeline_history")
+          .select("*")
+          .eq("customer_id", customerId)
+          .order("changed_at", { ascending: false });
+
         const { data: activities } = await supabase
           .from("customer_activity_logs")
           .select("*")
@@ -105,7 +113,7 @@ Deno.serve(async (req) => {
           .order("created_at", { ascending: false })
           .limit(50);
 
-        return new Response(JSON.stringify({ success: true, customer, activities: activities || [] }), {
+        return new Response(JSON.stringify({ success: true, customer, pipeline_history: pipeline || [], activities: activities || [] }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }

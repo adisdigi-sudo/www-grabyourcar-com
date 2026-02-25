@@ -6135,6 +6135,41 @@ export type Database = {
         }
         Relationships: []
       }
+      pipeline_history: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          customer_id: string
+          id: string
+          new_status: string
+          previous_status: string | null
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          customer_id: string
+          id?: string
+          new_status: string
+          previous_status?: string | null
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          customer_id?: string
+          id?: string
+          new_status?: string
+          previous_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pipeline_history_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "master_customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rental_bookings: {
         Row: {
           created_at: string | null
