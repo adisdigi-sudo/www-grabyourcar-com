@@ -14,6 +14,16 @@ async function getAuthenticatedUser(req: Request, supabaseUrl: string, anonKey: 
   return user;
 }
 
+async function resolveTenantId(supabase: any, userId: string): Promise<string> {
+  const { data } = await supabase
+    .from("crm_users")
+    .select("tenant_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!data?.tenant_id) throw new Error("No tenant assigned to this user");
+  return data.tenant_id;
+}
+
 function daysBetween(a: string, b: string): number {
   return Math.abs(new Date(b).getTime() - new Date(a).getTime()) / (1000 * 60 * 60 * 24);
 }
@@ -30,6 +40,9 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, serviceRoleKey);
     const user = await getAuthenticatedUser(req, supabaseUrl, anonKey);
 
+    // Resolve tenant
+    const tenantId = await resolveTenantId(supabase, user.id);
+
     const body = await req.json();
     const { action, ...payload } = body;
 
@@ -43,11 +56,10 @@ Deno.serve(async (req) => {
     const verticalAccess = crmUser?.vertical_access || [];
 
     switch (action) {
-      // ─── REVENUE METRICS (per vertical + per executive) ───
+      // ─── REVENUE METRICS ───
       case "get_revenue_metrics": {
         const { vertical_name, executive_id } = payload;
 
-        // Determine verticals to process
         let targetVerticals: string[] = [];
         if (vertical_name) {
           if (!isAdmin && !verticalAccess.includes(vertical_name)) throw new Error("Access denied");
@@ -59,25 +71,22 @@ Deno.serve(async (req) => {
           targetVerticals = verticalAccess;
         }
 
-        // Effective executive filter
         const effectiveExecId = isAdmin ? (executive_id || null) : (verticalAccess.length > 0 ? executive_id : user.id);
 
         const now = new Date();
         const verticalMetrics: Record<string, any> = {};
 
         for (const vn of targetVerticals) {
-          // Stages metadata
           const { data: stages } = await supabase
             .from("vertical_pipelines").select("*").eq("vertical_name", vn).order("stage_order");
           const finalStages = (stages || []).filter((s: any) => s.is_final_stage).map((s: any) => s.stage_name);
           const lostStages = (stages || []).filter((s: any) => s.is_lost_stage).map((s: any) => s.stage_name);
-          const firstStage = (stages || []).length > 0 ? stages![0].stage_name : null;
 
-          // All customer vertical statuses
           const { data: statusRows } = await supabase
             .from("customer_vertical_status")
             .select("*, customer:master_customers(id, assigned_to, created_at)")
-            .eq("vertical_name", vn);
+            .eq("vertical_name", vn)
+            .eq("tenant_id", tenantId);
 
           let rows = (statusRows || []).filter((r: any) => r.customer);
           if (effectiveExecId) rows = rows.filter((r: any) => r.customer.assigned_to === effectiveExecId);
@@ -89,7 +98,6 @@ Deno.serve(async (req) => {
           const conversionRate = totalLeads > 0 ? Math.round((finalCount / totalLeads) * 10000) / 100 : 0;
           const lossRate = totalLeads > 0 ? Math.round((lostCount / totalLeads) * 10000) / 100 : 0;
 
-          // Avg days from New → Final (using pipeline history)
           let avgDaysToClose = 0;
           if (finalCount > 0) {
             const finalCustomerIds = rows
@@ -97,11 +105,11 @@ Deno.serve(async (req) => {
               .map((r: any) => r.customer_id);
 
             if (finalCustomerIds.length > 0) {
-              // Get earliest and latest history entries per customer
               const { data: historyRows } = await supabase
                 .from("vertical_pipeline_history")
                 .select("customer_id, changed_at, new_stage")
                 .eq("vertical_name", vn)
+                .eq("tenant_id", tenantId)
                 .in("customer_id", finalCustomerIds)
                 .order("changed_at", { ascending: true });
 
@@ -132,6 +140,7 @@ Deno.serve(async (req) => {
             .from("vertical_pipeline_history")
             .select("customer_id, previous_stage, new_stage, changed_at")
             .eq("vertical_name", vn)
+            .eq("tenant_id", tenantId)
             .order("changed_at", { ascending: true });
 
           const stagedurations: Record<string, number[]> = {};
@@ -168,23 +177,22 @@ Deno.serve(async (req) => {
         // Per-executive breakdown
         let executiveMetrics: any[] = [];
         if (isAdmin || verticalAccess.length > 0) {
-          let execQuery = supabase.from("crm_users").select("*").eq("is_active", true);
+          let execQuery = supabase.from("crm_users").select("*").eq("is_active", true).eq("tenant_id", tenantId);
           if (effectiveExecId) execQuery = execQuery.eq("user_id", effectiveExecId);
           const { data: executives } = await execQuery;
 
           for (const exec of (executives || [])) {
             let totalAssigned = 0, totalFinal = 0, totalLost = 0, totalOverdue = 0;
-            let closeDays: number[] = [];
             let totalCallsForClosed = 0;
 
             for (const vn of targetVerticals) {
               const { data: sRows } = await supabase
                 .from("customer_vertical_status")
                 .select("current_stage, customer_id, customer:master_customers(assigned_to)")
-                .eq("vertical_name", vn);
+                .eq("vertical_name", vn)
+                .eq("tenant_id", tenantId);
               const execRows = (sRows || []).filter((r: any) => r.customer?.assigned_to === exec.user_id);
 
-              const stagesMeta = verticalMetrics[vn];
               const { data: stagesData } = await supabase
                 .from("vertical_pipelines").select("stage_name, is_final_stage, is_lost_stage").eq("vertical_name", vn);
               const fStages = (stagesData || []).filter((s: any) => s.is_final_stage).map((s: any) => s.stage_name);
@@ -195,20 +203,21 @@ Deno.serve(async (req) => {
               totalFinal += finalRows.length;
               totalLost += execRows.filter((r: any) => lStages.includes(r.current_stage)).length;
 
-              // Calls for closed leads
               if (finalRows.length > 0) {
                 const closedIds = finalRows.map((r: any) => r.customer_id);
                 const { count } = await supabase
                   .from("customer_call_logs").select("id", { count: "exact" })
-                  .eq("called_by", exec.user_id).in("customer_id", closedIds);
+                  .eq("called_by", exec.user_id)
+                  .eq("tenant_id", tenantId)
+                  .in("customer_id", closedIds);
                 totalCallsForClosed += count || 0;
               }
             }
 
-            // Overdue
             const { count: overdueCount } = await supabase
               .from("master_customers").select("id", { count: "exact" })
               .eq("assigned_to", exec.user_id)
+              .eq("tenant_id", tenantId)
               .lt("next_followup_at", now.toISOString())
               .not("next_followup_at", "is", null);
 
@@ -249,10 +258,10 @@ Deno.serve(async (req) => {
 
         const effectiveAssigned = isAdmin ? filterAssigned : (!verticalAccess.length ? user.id : filterAssigned);
 
-        // Get all customer vertical statuses
         let query = supabase
           .from("customer_vertical_status")
-          .select("current_stage, updated_at, customer_id, vertical_name, customer:master_customers(id, assigned_to, created_at)");
+          .select("current_stage, updated_at, customer_id, vertical_name, customer:master_customers(id, assigned_to, created_at)")
+          .eq("tenant_id", tenantId);
         if (vertical_name) query = query.eq("vertical_name", vertical_name);
         const { data: rows, error } = await query;
         if (error) throw error;
@@ -260,7 +269,6 @@ Deno.serve(async (req) => {
         let filtered = (rows || []).filter((r: any) => r.customer);
         if (effectiveAssigned) filtered = filtered.filter((r: any) => r.customer.assigned_to === effectiveAssigned);
 
-        // Get final/lost stages to exclude from aging
         const verticalNames = [...new Set(filtered.map((r: any) => r.vertical_name))];
         const terminalStages = new Set<string>();
         for (const vn of verticalNames) {
@@ -271,7 +279,6 @@ Deno.serve(async (req) => {
           });
         }
 
-        // Exclude terminal stages from aging
         const activeRows = filtered.filter((r: any) => !terminalStages.has(`${r.vertical_name}:${r.current_stage}`));
 
         const now = new Date();

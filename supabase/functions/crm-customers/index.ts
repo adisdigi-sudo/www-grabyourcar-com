@@ -14,6 +14,16 @@ async function getAuthenticatedUser(req: Request, supabaseUrl: string, anonKey: 
   return { user, authHeader };
 }
 
+async function resolveTenantId(supabase: any, userId: string): Promise<string> {
+  const { data } = await supabase
+    .from("crm_users")
+    .select("tenant_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!data?.tenant_id) throw new Error("No tenant assigned to this user");
+  return data.tenant_id;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -30,17 +40,21 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { action, ...payload } = body;
 
+    // Resolve tenant
+    const tenantId = await resolveTenantId(supabase, user.id);
+
     switch (action) {
       // ─── CREATE CUSTOMER ───
       case "create": {
         const { name, phone, email, city, source, primary_vertical, multi_vertical_tags, assigned_to } = payload;
         if (!name || !phone) throw new Error("Name and phone are required");
 
-        // Duplicate check
+        // Duplicate check within tenant
         const { data: existing } = await supabase
           .from("master_customers")
           .select("id, name, phone")
           .eq("phone", phone)
+          .eq("tenant_id", tenantId)
           .maybeSingle();
 
         if (existing) {
@@ -55,6 +69,7 @@ Deno.serve(async (req) => {
           name, phone, email, city, source, primary_vertical,
           multi_vertical_tags: multi_vertical_tags || [],
           assigned_to: assigned_to || user.id,
+          tenant_id: tenantId,
         }).select().single();
 
         if (error) throw error;
@@ -70,6 +85,7 @@ Deno.serve(async (req) => {
         let query = supabase
           .from("master_customers")
           .select("*", { count: "exact" })
+          .eq("tenant_id", tenantId)
           .order("created_at", { ascending: false })
           .range((page - 1) * limit, page * limit - 1);
 
@@ -96,10 +112,10 @@ Deno.serve(async (req) => {
           .from("master_customers")
           .select("*")
           .eq("id", customerId)
+          .eq("tenant_id", tenantId)
           .single();
         if (error) throw error;
 
-        // Pipeline history
         const { data: pipeline } = await supabase
           .from("pipeline_history")
           .select("*")
@@ -122,14 +138,13 @@ Deno.serve(async (req) => {
       case "update": {
         const { customerId, ...updates } = payload;
         if (!customerId) throw new Error("customerId is required");
-
-        // Remove action from updates
         delete updates.action;
 
         const { data, error } = await supabase
           .from("master_customers")
           .update(updates)
           .eq("id", customerId)
+          .eq("tenant_id", tenantId)
           .select()
           .single();
 
@@ -164,13 +179,11 @@ Deno.serve(async (req) => {
         const { vertical_name, stage, assigned_to, search, is_final, is_lost } = payload;
         if (!vertical_name) throw new Error("vertical_name is required");
 
-        // Get stages metadata for this vertical
         const { data: stagesMeta } = await supabase
           .from("vertical_pipelines")
           .select("stage_name, is_final_stage, is_lost_stage")
           .eq("vertical_name", vertical_name);
 
-        // Build stage filter based on is_final / is_lost flags
         let stageFilter: string[] | null = null;
         if (is_final === true) {
           stageFilter = (stagesMeta || []).filter((s: any) => s.is_final_stage).map((s: any) => s.stage_name);
@@ -180,11 +193,11 @@ Deno.serve(async (req) => {
           stageFilter = [stage];
         }
 
-        // Query customer_vertical_status joined with master_customers
         let query = supabase
           .from("customer_vertical_status")
           .select("*, customer:master_customers(*)")
-          .eq("vertical_name", vertical_name);
+          .eq("vertical_name", vertical_name)
+          .eq("tenant_id", tenantId);
 
         if (stageFilter && stageFilter.length > 0) {
           query = query.in("current_stage", stageFilter);
@@ -193,7 +206,6 @@ Deno.serve(async (req) => {
         const { data: statusRows, error } = await query;
         if (error) throw error;
 
-        // Flatten and apply post-filters
         let customers = (statusRows || [])
           .filter((row: any) => row.customer)
           .map((row: any) => ({
@@ -214,7 +226,6 @@ Deno.serve(async (req) => {
           );
         }
 
-        // Sort by created_at desc
         customers.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
         return new Response(JSON.stringify({
@@ -249,7 +260,8 @@ Deno.serve(async (req) => {
         const { data, error } = await supabase
           .from("customer_vertical_status")
           .select("*")
-          .eq("customer_id", customerId);
+          .eq("customer_id", customerId)
+          .eq("tenant_id", tenantId);
         if (error) throw error;
         return new Response(JSON.stringify({ success: true, statuses: data }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -260,12 +272,12 @@ Deno.serve(async (req) => {
         const { customerId, vertical_name, new_stage } = payload;
         if (!customerId || !vertical_name || !new_stage) throw new Error("customerId, vertical_name, and new_stage are required");
 
-        // Upsert: insert if not exists, update if exists
         const { data: existing } = await supabase
           .from("customer_vertical_status")
           .select("*")
           .eq("customer_id", customerId)
           .eq("vertical_name", vertical_name)
+          .eq("tenant_id", tenantId)
           .maybeSingle();
 
         let data, error;
@@ -277,16 +289,15 @@ Deno.serve(async (req) => {
             .select()
             .single());
         } else {
-          // First time — also log history manually since trigger only fires on UPDATE
           ({ data, error } = await supabase
             .from("customer_vertical_status")
-            .insert({ customer_id: customerId, vertical_name, current_stage: new_stage })
+            .insert({ customer_id: customerId, vertical_name, current_stage: new_stage, tenant_id: tenantId })
             .select()
             .single());
 
           if (!error) {
             await supabase.from("vertical_pipeline_history").insert({
-              customer_id: customerId, vertical_name, previous_stage: null, new_stage, changed_by: user.id,
+              customer_id: customerId, vertical_name, previous_stage: null, new_stage, changed_by: user.id, tenant_id: tenantId,
             });
             await supabase.from("customer_activity_logs").insert({
               customer_id: customerId, activity_type: "vertical_stage_set",
@@ -308,6 +319,7 @@ Deno.serve(async (req) => {
           .from("vertical_pipeline_history")
           .select("*")
           .eq("customer_id", customerId)
+          .eq("tenant_id", tenantId)
           .order("changed_at", { ascending: false });
         if (vertical_name) query = query.eq("vertical_name", vertical_name);
         const { data, error } = await query;
@@ -326,6 +338,7 @@ Deno.serve(async (req) => {
           .from("master_customers")
           .update({ next_followup_at })
           .eq("id", customerId)
+          .eq("tenant_id", tenantId)
           .select()
           .single();
         if (error) throw error;
@@ -347,33 +360,21 @@ Deno.serve(async (req) => {
         const { customerId, call_status, call_notes, call_duration } = payload;
         if (!customerId || !call_status) throw new Error("customerId and call_status are required");
 
-        // Verify executive can only log calls for assigned customers
-        const { data: crmUser } = await supabase
-          .from("crm_users")
-          .select("vertical_access")
-          .eq("user_id", user.id)
-          .maybeSingle();
-
-        // Check if user is admin/super_admin
         const { data: roleRow } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", user.id)
-          .in("role", ["super_admin", "admin"])
-          .maybeSingle();
+          .from("user_roles").select("role").eq("user_id", user.id)
+          .in("role", ["super_admin", "admin"]).maybeSingle();
 
         if (!roleRow) {
-          // Not admin — verify customer is assigned to this user
           const { data: customerCheck } = await supabase
             .from("master_customers")
             .select("id")
             .eq("id", customerId)
             .eq("assigned_to", user.id)
+            .eq("tenant_id", tenantId)
             .maybeSingle();
           if (!customerCheck) throw new Error("You can only log calls for customers assigned to you");
         }
 
-        // Insert call log
         const { data: callLog, error: callError } = await supabase
           .from("customer_call_logs")
           .insert({
@@ -382,18 +383,18 @@ Deno.serve(async (req) => {
             call_notes,
             call_duration: call_duration || null,
             called_by: user.id,
+            tenant_id: tenantId,
           })
           .select()
           .single();
         if (callError) throw callError;
 
-        // Update last_contacted_at
         await supabase
           .from("master_customers")
           .update({ last_contacted_at: new Date().toISOString() })
-          .eq("id", customerId);
+          .eq("id", customerId)
+          .eq("tenant_id", tenantId);
 
-        // Log activity
         await supabase.from("customer_activity_logs").insert({
           customer_id: customerId,
           activity_type: "call_logged",
@@ -414,6 +415,7 @@ Deno.serve(async (req) => {
         let query = supabase
           .from("master_customers")
           .select("*")
+          .eq("tenant_id", tenantId)
           .lt("next_followup_at", now)
           .not("next_followup_at", "is", null)
           .order("next_followup_at", { ascending: true });
@@ -425,13 +427,13 @@ Deno.serve(async (req) => {
 
         let result = customers || [];
 
-        // Filter by vertical if specified
         if (vertical_name && result.length > 0) {
           const customerIds = result.map((c: any) => c.id);
           const { data: verticalRows } = await supabase
             .from("customer_vertical_status")
             .select("customer_id")
             .eq("vertical_name", vertical_name)
+            .eq("tenant_id", tenantId)
             .in("customer_id", customerIds);
           const verticalCustomerIds = new Set((verticalRows || []).map((r: any) => r.customer_id));
           result = result.filter((c: any) => verticalCustomerIds.has(c.id));
@@ -450,6 +452,7 @@ Deno.serve(async (req) => {
           .from("customer_call_logs")
           .select("*")
           .eq("customer_id", customerId)
+          .eq("tenant_id", tenantId)
           .order("called_at", { ascending: false });
         if (error) throw error;
         return new Response(JSON.stringify({ success: true, call_logs: data }), {
@@ -470,7 +473,6 @@ Deno.serve(async (req) => {
         const isAdmin = !!roleRow;
         const verticalAccess = crmUser?.vertical_access || [];
 
-        // Determine effective vertical filter
         let effectiveVerticals: string[] = [];
         if (vertical_name) {
           if (!isAdmin && !verticalAccess.includes(vertical_name)) throw new Error("Access denied to this vertical");
@@ -482,7 +484,6 @@ Deno.serve(async (req) => {
           effectiveVerticals = verticalAccess;
         }
 
-        // Effective assigned_to for executives
         const effectiveAssignedTo = isAdmin ? filterAssignedTo : (verticalAccess.length > 0 ? filterAssignedTo : user.id);
 
         const now = new Date().toISOString();
@@ -492,16 +493,15 @@ Deno.serve(async (req) => {
         const metrics: any = { verticals: {} };
 
         for (const vn of effectiveVerticals) {
-          // Get stages for this vertical
           const { data: stages } = await supabase
             .from("vertical_pipelines").select("*").eq("vertical_name", vn).order("stage_order");
           const finalStages = (stages || []).filter((s: any) => s.is_final_stage).map((s: any) => s.stage_name);
           const lostStages = (stages || []).filter((s: any) => s.is_lost_stage).map((s: any) => s.stage_name);
 
-          // Leads per stage
           let statusQuery = supabase
             .from("customer_vertical_status").select("current_stage, customer:master_customers(id, assigned_to)")
-            .eq("vertical_name", vn);
+            .eq("vertical_name", vn)
+            .eq("tenant_id", tenantId);
           const { data: statusRows } = await statusQuery;
 
           let rows = (statusRows || []).filter((r: any) => r.customer);
@@ -515,12 +515,13 @@ Deno.serve(async (req) => {
           const doneCount = rows.filter((r: any) => finalStages.includes(r.current_stage)).length;
           const lostCount = rows.filter((r: any) => lostStages.includes(r.current_stage)).length;
 
-          // Overdue followups for this vertical
           const customerIds = rows.map((r: any) => r.customer.id);
           let overdueCount = 0;
           if (customerIds.length > 0) {
             const { data: overdueRows } = await supabase
-              .from("master_customers").select("id").lt("next_followup_at", now)
+              .from("master_customers").select("id")
+              .eq("tenant_id", tenantId)
+              .lt("next_followup_at", now)
               .not("next_followup_at", "is", null).in("id", customerIds);
             overdueCount = (overdueRows || []).length;
           }
@@ -534,9 +535,11 @@ Deno.serve(async (req) => {
           };
         }
 
-        // Calls today (across all verticals)
+        // Calls today
         let callQuery = supabase
-          .from("customer_call_logs").select("called_by", { count: "exact" }).gte("called_at", todayISO);
+          .from("customer_call_logs").select("called_by", { count: "exact" })
+          .eq("tenant_id", tenantId)
+          .gte("called_at", todayISO);
         if (effectiveAssignedTo) callQuery = callQuery.eq("called_by", effectiveAssignedTo);
         const { count: totalCallsToday } = await callQuery;
 
@@ -544,6 +547,7 @@ Deno.serve(async (req) => {
         const tomorrowStart = new Date(todayStart); tomorrowStart.setUTCDate(tomorrowStart.getUTCDate() + 1);
         let fuQuery = supabase
           .from("master_customers").select("id", { count: "exact" })
+          .eq("tenant_id", tenantId)
           .gte("next_followup_at", todayISO).lt("next_followup_at", tomorrowStart.toISOString());
         if (effectiveAssignedTo) fuQuery = fuQuery.eq("assigned_to", effectiveAssignedTo);
         const { count: followupsToday } = await fuQuery;
@@ -560,7 +564,6 @@ Deno.serve(async (req) => {
       case "get_executive_performance": {
         const { vertical_name, executive_id } = payload;
 
-        // Role enforcement
         const { data: roleRow } = await supabase
           .from("user_roles").select("role").eq("user_id", user.id)
           .in("role", ["super_admin", "admin"]).maybeSingle();
@@ -568,18 +571,13 @@ Deno.serve(async (req) => {
           .from("crm_users").select("vertical_access").eq("user_id", user.id).maybeSingle();
         const isAdmin = !!roleRow;
 
-        // Executives can only see their own performance
         const targetId = isAdmin ? (executive_id || null) : user.id;
 
-        if (!isAdmin && !vertical_name) {
-          // Manager must specify vertical — executive defaults to self
-        }
         if (!isAdmin && vertical_name && !(crmUser?.vertical_access || []).includes(vertical_name)) {
           throw new Error("Access denied to this vertical");
         }
 
-        // Get all CRM users (or single if targetId)
-        let execQuery = supabase.from("crm_users").select("*").eq("is_active", true);
+        let execQuery = supabase.from("crm_users").select("*").eq("is_active", true).eq("tenant_id", tenantId);
         if (targetId) execQuery = execQuery.eq("user_id", targetId);
         if (!isAdmin && !targetId && vertical_name) {
           execQuery = execQuery.contains("vertical_access", [vertical_name]);
@@ -590,7 +588,6 @@ Deno.serve(async (req) => {
         const todayStart = new Date(); todayStart.setUTCHours(0, 0, 0, 0);
         const todayISO = todayStart.toISOString();
 
-        // Get stages metadata if vertical specified
         let finalStages: string[] = [];
         let lostStages: string[] = [];
         if (vertical_name) {
@@ -604,29 +601,30 @@ Deno.serve(async (req) => {
         const performanceData = [];
 
         for (const exec of (executives || [])) {
-          // Total assigned leads
           const { count: assignedLeads } = await supabase
-            .from("master_customers").select("id", { count: "exact" }).eq("assigned_to", exec.user_id);
+            .from("master_customers").select("id", { count: "exact" })
+            .eq("assigned_to", exec.user_id)
+            .eq("tenant_id", tenantId);
 
-          // Overdue followups
           const { count: overdueFollowups } = await supabase
             .from("master_customers").select("id", { count: "exact" })
             .eq("assigned_to", exec.user_id)
+            .eq("tenant_id", tenantId)
             .lt("next_followup_at", now).not("next_followup_at", "is", null);
 
-          // Calls today
           const { count: callsToday } = await supabase
             .from("customer_call_logs").select("id", { count: "exact" })
-            .eq("called_by", exec.user_id).gte("called_at", todayISO);
+            .eq("called_by", exec.user_id)
+            .eq("tenant_id", tenantId)
+            .gte("called_at", todayISO);
 
-          // Final & lost stage counts (if vertical specified)
           let finalCount = 0, lostCount = 0;
           if (vertical_name) {
-            // Get customers assigned to this exec in this vertical
             const { data: vertRows } = await supabase
               .from("customer_vertical_status")
               .select("current_stage, customer:master_customers(assigned_to)")
-              .eq("vertical_name", vertical_name);
+              .eq("vertical_name", vertical_name)
+              .eq("tenant_id", tenantId);
             const execRows = (vertRows || []).filter((r: any) => r.customer?.assigned_to === exec.user_id);
             finalCount = execRows.filter((r: any) => finalStages.includes(r.current_stage)).length;
             lostCount = execRows.filter((r: any) => lostStages.includes(r.current_stage)).length;
