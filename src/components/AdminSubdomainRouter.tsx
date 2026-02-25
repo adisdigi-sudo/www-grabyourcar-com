@@ -42,7 +42,7 @@ export const AdminSubdomainRouter = ({ children }: AdminSubdomainRouterProps) =>
   }
 
   // Define allowed paths on admin subdomain
-  const allowedPaths = ["/admin", "/admin-auth", "/admin-reset-password", "/workspace"];
+  const allowedPaths = ["/admin", "/admin-auth", "/admin-reset-password", "/workspace", "/crm"];
   const isAllowedPath = allowedPaths.some(
     (path) => location.pathname === path || location.pathname.startsWith(path + "/")
   );
