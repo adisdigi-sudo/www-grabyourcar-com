@@ -159,6 +159,74 @@ Deno.serve(async (req) => {
         });
       }
 
+      // ─── LIST CUSTOMERS BY VERTICAL PIPELINE STAGE ───
+      case "list_by_vertical_stage": {
+        const { vertical_name, stage, assigned_to, search, is_final, is_lost } = payload;
+        if (!vertical_name) throw new Error("vertical_name is required");
+
+        // Get stages metadata for this vertical
+        const { data: stagesMeta } = await supabase
+          .from("vertical_pipelines")
+          .select("stage_name, is_final_stage, is_lost_stage")
+          .eq("vertical_name", vertical_name);
+
+        // Build stage filter based on is_final / is_lost flags
+        let stageFilter: string[] | null = null;
+        if (is_final === true) {
+          stageFilter = (stagesMeta || []).filter((s: any) => s.is_final_stage).map((s: any) => s.stage_name);
+        } else if (is_lost === true) {
+          stageFilter = (stagesMeta || []).filter((s: any) => s.is_lost_stage).map((s: any) => s.stage_name);
+        } else if (stage) {
+          stageFilter = [stage];
+        }
+
+        // Query customer_vertical_status joined with master_customers
+        let query = supabase
+          .from("customer_vertical_status")
+          .select("*, customer:master_customers(*)")
+          .eq("vertical_name", vertical_name);
+
+        if (stageFilter && stageFilter.length > 0) {
+          query = query.in("current_stage", stageFilter);
+        }
+
+        const { data: statusRows, error } = await query;
+        if (error) throw error;
+
+        // Flatten and apply post-filters
+        let customers = (statusRows || [])
+          .filter((row: any) => row.customer)
+          .map((row: any) => ({
+            ...row.customer,
+            vertical_stage: row.current_stage,
+            vertical_status_id: row.id,
+          }));
+
+        if (assigned_to) {
+          customers = customers.filter((c: any) => c.assigned_to === assigned_to);
+        }
+        if (search) {
+          const s = search.toLowerCase();
+          customers = customers.filter((c: any) =>
+            c.name?.toLowerCase().includes(s) ||
+            c.phone?.includes(s) ||
+            c.email?.toLowerCase().includes(s)
+          );
+        }
+
+        // Sort by created_at desc
+        customers.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+        return new Response(JSON.stringify({
+          success: true,
+          customers,
+          stages: stagesMeta || [],
+          total: customers.length,
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       // ─── GET VERTICAL PIPELINE STAGES ───
       case "get_pipeline_stages": {
         const { vertical_name } = payload;
