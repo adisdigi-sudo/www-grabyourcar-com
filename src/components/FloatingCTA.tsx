@@ -624,14 +624,20 @@ export const FloatingCTA = () => {
         }
       }}>
         <DialogContent className="sm:max-w-md">
-          <WhatsAppOTPVerification
-            phone={pendingFormType === "quick" ? quickFormData.phone : scheduleFormData.phone}
-            onVerified={handleOTPVerified}
-            onCancel={() => {
-              setShowOTPVerification(false);
-              setPendingFormType(null);
-            }}
-          />
+          <DialogHeader className="sr-only">
+            <DialogTitle>Verify WhatsApp number</DialogTitle>
+            <DialogDescription>Enter the one-time code sent to your WhatsApp to continue.</DialogDescription>
+          </DialogHeader>
+          <div>
+            <WhatsAppOTPVerification
+              phone={pendingFormType === "quick" ? quickFormData.phone : scheduleFormData.phone}
+              onVerified={handleOTPVerified}
+              onCancel={() => {
+                setShowOTPVerification(false);
+                setPendingFormType(null);
+              }}
+            />
+          </div>
         </DialogContent>
       </Dialog>
     </>
