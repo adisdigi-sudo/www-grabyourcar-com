@@ -2618,7 +2618,10 @@ export type Database = {
           closed_at: string | null
           commission_amount: number | null
           commission_rule_id: string | null
+          commission_type_used: string | null
+          commission_value_used: number | null
           created_at: string
+          created_by: string | null
           customer_id: string
           deal_number: string | null
           deal_status: string
@@ -2627,8 +2630,13 @@ export type Database = {
           id: string
           metadata: Json | null
           notes: string | null
+          payment_received_amount: number | null
+          payment_status: string | null
           payout_rule_id: string | null
+          payout_type_used: string | null
+          payout_value_used: number | null
           revenue: number | null
+          revenue_margin: number | null
           tenant_id: string
           updated_at: string
           vertical_name: string
@@ -2638,7 +2646,10 @@ export type Database = {
           closed_at?: string | null
           commission_amount?: number | null
           commission_rule_id?: string | null
+          commission_type_used?: string | null
+          commission_value_used?: number | null
           created_at?: string
+          created_by?: string | null
           customer_id: string
           deal_number?: string | null
           deal_status?: string
@@ -2647,8 +2658,13 @@ export type Database = {
           id?: string
           metadata?: Json | null
           notes?: string | null
+          payment_received_amount?: number | null
+          payment_status?: string | null
           payout_rule_id?: string | null
+          payout_type_used?: string | null
+          payout_value_used?: number | null
           revenue?: number | null
+          revenue_margin?: number | null
           tenant_id: string
           updated_at?: string
           vertical_name: string
@@ -2658,7 +2674,10 @@ export type Database = {
           closed_at?: string | null
           commission_amount?: number | null
           commission_rule_id?: string | null
+          commission_type_used?: string | null
+          commission_value_used?: number | null
           created_at?: string
+          created_by?: string | null
           customer_id?: string
           deal_number?: string | null
           deal_status?: string
@@ -2667,8 +2686,13 @@ export type Database = {
           id?: string
           metadata?: Json | null
           notes?: string | null
+          payment_received_amount?: number | null
+          payment_status?: string | null
           payout_rule_id?: string | null
+          payout_type_used?: string | null
+          payout_value_used?: number | null
           revenue?: number | null
+          revenue_margin?: number | null
           tenant_id?: string
           updated_at?: string
           vertical_name?: string
