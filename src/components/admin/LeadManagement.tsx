@@ -110,12 +110,17 @@ const quickTags = [
   'Test Drive Done', 'Finance Approved', 'Insurance Quoted', 'Ready to Buy'
 ];
 
-export const LeadManagement = () => {
+export const LeadManagement = ({ verticalFilter }: { verticalFilter?: string }) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>(
+    verticalFilter === "insurance" ? "insurance" :
+    verticalFilter === "sales" ? "car_inquiry" :
+    verticalFilter === "loans" ? "finance" :
+    "all"
+  );
   const [teamFilter, setTeamFilter] = useState<string>("all");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -140,9 +145,17 @@ export const LeadManagement = () => {
     tags: [] as string[],
   });
 
+  // Map vertical to allowed service categories
+  const verticalCategoryMap: Record<string, string[]> = {
+    insurance: ['insurance'],
+    sales: ['car_inquiry'],
+    loans: ['finance'],
+  };
+  const allowedCategories = verticalFilter ? verticalCategoryMap[verticalFilter] : null;
+
   // Fetch leads with category filter
   const { data: leads, isLoading } = useQuery({
-    queryKey: ['adminLeads', statusFilter, categoryFilter, teamFilter, searchQuery],
+    queryKey: ['adminLeads', statusFilter, categoryFilter, teamFilter, searchQuery, verticalFilter],
     queryFn: async () => {
       let query = supabase
         .from('leads')
@@ -153,7 +166,12 @@ export const LeadManagement = () => {
         query = query.eq('status', statusFilter);
       }
       
-      if (categoryFilter !== 'all') {
+      // Apply vertical-level filter (enforced, can't be bypassed)
+      if (allowedCategories && allowedCategories.length === 1) {
+        query = query.eq('service_category', allowedCategories[0]);
+      } else if (allowedCategories && allowedCategories.length > 1) {
+        query = query.in('service_category', allowedCategories);
+      } else if (categoryFilter !== 'all') {
         query = query.eq('service_category', categoryFilter);
       }
       
@@ -432,9 +450,14 @@ export const LeadManagement = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Lead Management</h1>
+          <h1 className="text-3xl font-bold">
+            {verticalFilter === 'insurance' ? 'Insurance Lead Management' :
+             verticalFilter === 'sales' ? 'Sales Lead Management' :
+             verticalFilter === 'loans' ? 'Loan Lead Management' :
+             'Lead Management'}
+          </h1>
           <p className="text-muted-foreground">
-            Manage, tag, and assign leads across all services
+            {verticalFilter ? `Manage ${verticalFilter} leads` : 'Manage, tag, and assign leads across all services'}
           </p>
         </div>
         <div className="flex gap-2">
@@ -449,7 +472,8 @@ export const LeadManagement = () => {
         </div>
       </div>
 
-      {/* Category Quick Filters */}
+      {/* Category Quick Filters - hide when vertical is locked */}
+      {!verticalFilter && (
       <div className="flex gap-2 flex-wrap">
         <Button
           variant={categoryFilter === 'all' ? 'default' : 'outline'}
@@ -475,6 +499,7 @@ export const LeadManagement = () => {
           );
         })}
       </div>
+      )}
 
       {/* Filters */}
       <Card>
