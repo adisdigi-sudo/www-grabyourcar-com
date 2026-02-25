@@ -1886,6 +1886,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           name: string
+          tenant_id: string | null
           updated_at: string
           user_id: string
           vertical_access: string[] | null
@@ -1896,6 +1897,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name: string
+          tenant_id?: string | null
           updated_at?: string
           user_id: string
           vertical_access?: string[] | null
@@ -1906,11 +1908,20 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
+          tenant_id?: string | null
           updated_at?: string
           user_id?: string
           vertical_access?: string[] | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "crm_users_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cross_sell_analytics: {
         Row: {
@@ -2275,6 +2286,7 @@ export type Database = {
           called_by: string
           customer_id: string
           id: string
+          tenant_id: string | null
         }
         Insert: {
           call_duration?: number | null
@@ -2284,6 +2296,7 @@ export type Database = {
           called_by: string
           customer_id: string
           id?: string
+          tenant_id?: string | null
         }
         Update: {
           call_duration?: number | null
@@ -2293,6 +2306,7 @@ export type Database = {
           called_by?: string
           customer_id?: string
           id?: string
+          tenant_id?: string | null
         }
         Relationships: [
           {
@@ -2300,6 +2314,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "master_customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_call_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -2445,6 +2466,7 @@ export type Database = {
           current_stage: string
           customer_id: string
           id: string
+          tenant_id: string | null
           updated_at: string
           vertical_name: string
         }
@@ -2452,6 +2474,7 @@ export type Database = {
           current_stage?: string
           customer_id: string
           id?: string
+          tenant_id?: string | null
           updated_at?: string
           vertical_name: string
         }
@@ -2459,6 +2482,7 @@ export type Database = {
           current_stage?: string
           customer_id?: string
           id?: string
+          tenant_id?: string | null
           updated_at?: string
           vertical_name?: string
         }
@@ -2468,6 +2492,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "master_customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_vertical_status_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -6043,6 +6074,7 @@ export type Database = {
           primary_vertical: string | null
           source: string | null
           status: string
+          tenant_id: string | null
           updated_at: string
         }
         Insert: {
@@ -6061,6 +6093,7 @@ export type Database = {
           primary_vertical?: string | null
           source?: string | null
           status?: string
+          tenant_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -6079,9 +6112,18 @@ export type Database = {
           primary_vertical?: string | null
           source?: string | null
           status?: string
+          tenant_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "master_customers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       messaging_providers: {
         Row: {
@@ -6839,6 +6881,33 @@ export type Database = {
         }
         Relationships: []
       }
+      tenants: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          subscription_plan: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          subscription_plan?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          subscription_plan?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       testimonials: {
         Row: {
           car_purchased: string | null
@@ -7238,6 +7307,7 @@ export type Database = {
           id: string
           new_stage: string
           previous_stage: string | null
+          tenant_id: string | null
           vertical_name: string
         }
         Insert: {
@@ -7247,6 +7317,7 @@ export type Database = {
           id?: string
           new_stage: string
           previous_stage?: string | null
+          tenant_id?: string | null
           vertical_name: string
         }
         Update: {
@@ -7256,6 +7327,7 @@ export type Database = {
           id?: string
           new_stage?: string
           previous_stage?: string | null
+          tenant_id?: string | null
           vertical_name?: string
         }
         Relationships: [
@@ -7264,6 +7336,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "master_customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vertical_pipeline_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -8212,6 +8291,7 @@ export type Database = {
       }
     }
     Functions: {
+      get_user_tenant_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

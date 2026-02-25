@@ -11,6 +11,7 @@ export interface CrmUser {
   email: string;
   vertical_access: string[] | null;
   is_active: boolean;
+  tenant_id: string | null;
 }
 
 export function useCrmAccess() {
@@ -59,9 +60,12 @@ export function useCrmAccess() {
 
   const canManageTeam = isSuperAdmin || isAdmin;
 
+  const tenantId = crmUser?.tenant_id || null;
+
   return {
     roles,
     crmUser,
+    tenantId,
     isSuperAdmin,
     isAdmin,
     isManager,
