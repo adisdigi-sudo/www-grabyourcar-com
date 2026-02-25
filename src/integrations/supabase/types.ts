@@ -2402,6 +2402,38 @@ export type Database = {
           },
         ]
       }
+      customer_vertical_status: {
+        Row: {
+          current_stage: string
+          customer_id: string
+          id: string
+          updated_at: string
+          vertical_name: string
+        }
+        Insert: {
+          current_stage?: string
+          customer_id: string
+          id?: string
+          updated_at?: string
+          vertical_name: string
+        }
+        Update: {
+          current_stage?: string
+          customer_id?: string
+          id?: string
+          updated_at?: string
+          vertical_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_vertical_status_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "master_customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       delivery_stories: {
         Row: {
           buyer_type: string | null
@@ -7157,6 +7189,71 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           sort_order?: number | null
+        }
+        Relationships: []
+      }
+      vertical_pipeline_history: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          customer_id: string
+          id: string
+          new_stage: string
+          previous_stage: string | null
+          vertical_name: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          customer_id: string
+          id?: string
+          new_stage: string
+          previous_stage?: string | null
+          vertical_name: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          customer_id?: string
+          id?: string
+          new_stage?: string
+          previous_stage?: string | null
+          vertical_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vertical_pipeline_history_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "master_customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vertical_pipelines: {
+        Row: {
+          id: string
+          is_final_stage: boolean
+          is_lost_stage: boolean
+          stage_name: string
+          stage_order: number
+          vertical_name: string
+        }
+        Insert: {
+          id?: string
+          is_final_stage?: boolean
+          is_lost_stage?: boolean
+          stage_name: string
+          stage_order?: number
+          vertical_name: string
+        }
+        Update: {
+          id?: string
+          is_final_stage?: boolean
+          is_lost_stage?: boolean
+          stage_name?: string
+          stage_order?: number
+          vertical_name?: string
         }
         Relationships: []
       }
