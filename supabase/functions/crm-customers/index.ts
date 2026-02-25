@@ -317,6 +317,120 @@ Deno.serve(async (req) => {
         });
       }
 
+      // ─── SCHEDULE FOLLOW-UP ───
+      case "schedule_followup": {
+        const { customerId, next_followup_at, notes } = payload;
+        if (!customerId || !next_followup_at) throw new Error("customerId and next_followup_at are required");
+
+        const { data, error } = await supabase
+          .from("master_customers")
+          .update({ next_followup_at })
+          .eq("id", customerId)
+          .select()
+          .single();
+        if (error) throw error;
+
+        await supabase.from("customer_activity_logs").insert({
+          customer_id: customerId,
+          activity_type: "followup_scheduled",
+          notes: notes || `Follow-up scheduled for ${next_followup_at}`,
+          performed_by: user.id,
+        });
+
+        return new Response(JSON.stringify({ success: true, customer: data }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // ─── LOG CALL ───
+      case "log_call": {
+        const { customerId, call_status, call_notes, call_duration } = payload;
+        if (!customerId || !call_status) throw new Error("customerId and call_status are required");
+
+        // Insert call log
+        const { data: callLog, error: callError } = await supabase
+          .from("customer_call_logs")
+          .insert({
+            customer_id: customerId,
+            call_status,
+            call_notes,
+            call_duration: call_duration || null,
+            called_by: user.id,
+          })
+          .select()
+          .single();
+        if (callError) throw callError;
+
+        // Update last_contacted_at
+        await supabase
+          .from("master_customers")
+          .update({ last_contacted_at: new Date().toISOString() })
+          .eq("id", customerId);
+
+        // Log activity
+        await supabase.from("customer_activity_logs").insert({
+          customer_id: customerId,
+          activity_type: "call_logged",
+          notes: `Call: ${call_status}${call_notes ? ' — ' + call_notes : ''}`,
+          performed_by: user.id,
+        });
+
+        return new Response(JSON.stringify({ success: true, call_log: callLog }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // ─── GET OVERDUE FOLLOW-UPS ───
+      case "get_overdue_followups": {
+        const { vertical_name, assigned_to } = payload;
+        const now = new Date().toISOString();
+
+        let query = supabase
+          .from("master_customers")
+          .select("*")
+          .lt("next_followup_at", now)
+          .not("next_followup_at", "is", null)
+          .order("next_followup_at", { ascending: true });
+
+        if (assigned_to) query = query.eq("assigned_to", assigned_to);
+
+        const { data: customers, error } = await query;
+        if (error) throw error;
+
+        let result = customers || [];
+
+        // Filter by vertical if specified
+        if (vertical_name && result.length > 0) {
+          const customerIds = result.map((c: any) => c.id);
+          const { data: verticalRows } = await supabase
+            .from("customer_vertical_status")
+            .select("customer_id")
+            .eq("vertical_name", vertical_name)
+            .in("customer_id", customerIds);
+          const verticalCustomerIds = new Set((verticalRows || []).map((r: any) => r.customer_id));
+          result = result.filter((c: any) => verticalCustomerIds.has(c.id));
+        }
+
+        return new Response(JSON.stringify({ success: true, customers: result, total: result.length }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // ─── GET CALL LOGS ───
+      case "get_call_logs": {
+        const { customerId } = payload;
+        if (!customerId) throw new Error("customerId is required");
+        const { data, error } = await supabase
+          .from("customer_call_logs")
+          .select("*")
+          .eq("customer_id", customerId)
+          .order("called_at", { ascending: false });
+        if (error) throw error;
+        return new Response(JSON.stringify({ success: true, call_logs: data }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       default:
         throw new Error(`Unknown action: ${action}`);
     }
