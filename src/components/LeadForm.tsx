@@ -50,11 +50,19 @@ export const LeadForm = ({ prefillCarInterest }: LeadFormProps) => {
 
     try {
       const { error } = await supabase.from("leads").insert({
-        name: formData.name.trim(),
+        customer_name: formData.name.trim(),
         phone: formData.phone.trim(),
         city: formData.city.trim() || null,
+        car_model: formData.carInterest.trim() || null,
+        buying_timeline: formData.purchaseTimeline || null,
         source: "homepage_form",
+        lead_type: "car_inquiry",
         status: "new",
+        priority: formData.purchaseTimeline === "immediate" ? "high" : "medium",
+        notes: [
+          formData.budgetRange && `Budget: ${formData.budgetRange}`,
+          formData.financeRequired && `Finance: ${formData.financeRequired}`,
+        ].filter(Boolean).join(" | ") || null,
       });
 
       if (error) throw error;

@@ -67,8 +67,6 @@ const roleColors: Record<AppRole, string> = {
   marketing: "bg-pink-500 text-white",
   calling: "bg-cyan-500 text-white",
   operations: "bg-indigo-500 text-white",
-  vertical_manager: "bg-orange-500 text-white",
-  executive: "bg-teal-500 text-white",
 };
 
 const roleDescriptions: Record<AppRole, string> = {
@@ -80,8 +78,6 @@ const roleDescriptions: Record<AppRole, string> = {
   insurance: "Insurance CRM — clients, policies, renewals",
   marketing: "Campaigns, SEO, content, analytics",
   calling: "Calling team — filtered lead databases",
-  vertical_manager: "Manages a specific business vertical",
-  executive: "Executes tasks within assigned vertical",
   operations: "Day-to-day operations across verticals",
 };
 

@@ -37,13 +37,13 @@ const WorkspaceSelector = () => {
   useEffect(() => {
     if (!authLoading && !verticalLoading && user && availableVerticals.length === 1) {
       setActiveVertical(availableVerticals[0]);
-      navigate("/crm");
+      navigate("/admin");
     }
   }, [authLoading, verticalLoading, user, availableVerticals]);
 
   const handleSelectVertical = (vertical: BusinessVertical) => {
     setActiveVertical(vertical);
-    navigate("/crm");
+    navigate("/admin");
   };
 
   const handleLogout = async () => {

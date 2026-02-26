@@ -1,1 +1,0 @@
-CREATE INDEX idx_master_customers_next_followup ON public.master_customers(next_followup_at ASC NULLS LAST);

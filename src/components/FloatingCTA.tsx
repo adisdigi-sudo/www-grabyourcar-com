@@ -122,10 +122,12 @@ export const FloatingCTA = () => {
       // Submit quick form lead
       try {
         const { error } = await supabase.from("leads").insert({
-          name: quickFormData.name.trim(),
+          customer_name: quickFormData.name.trim(),
           phone: quickFormData.phone.trim(),
           source: "floating_cta",
+          lead_type: "quick_deal",
           status: "new",
+          priority: "high",
         });
 
         if (error) throw error;
@@ -622,20 +624,14 @@ export const FloatingCTA = () => {
         }
       }}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader className="sr-only">
-            <DialogTitle>Verify WhatsApp number</DialogTitle>
-            <DialogDescription>Enter the one-time code sent to your WhatsApp to continue.</DialogDescription>
-          </DialogHeader>
-          <div>
-            <WhatsAppOTPVerification
-              phone={pendingFormType === "quick" ? quickFormData.phone : scheduleFormData.phone}
-              onVerified={handleOTPVerified}
-              onCancel={() => {
-                setShowOTPVerification(false);
-                setPendingFormType(null);
-              }}
-            />
-          </div>
+          <WhatsAppOTPVerification
+            phone={pendingFormType === "quick" ? quickFormData.phone : scheduleFormData.phone}
+            onVerified={handleOTPVerified}
+            onCancel={() => {
+              setShowOTPVerification(false);
+              setPendingFormType(null);
+            }}
+          />
         </DialogContent>
       </Dialog>
     </>

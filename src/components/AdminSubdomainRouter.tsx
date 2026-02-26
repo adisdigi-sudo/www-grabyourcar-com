@@ -16,10 +16,19 @@ export const AdminSubdomainRouter = ({ children }: AdminSubdomainRouterProps) =>
   const location = useLocation();
   const { user, loading } = useAuth();
   
+  const hostname = typeof window !== "undefined" ? window.location.hostname : "";
   const isAdmin = isAdminSubdomain();
+  
+  // Debug logging - remove after fixing
+  console.log("[AdminSubdomainRouter] Hostname:", hostname);
+  console.log("[AdminSubdomainRouter] isAdminSubdomain:", isAdmin);
+  console.log("[AdminSubdomainRouter] Current path:", location.pathname);
+  console.log("[AdminSubdomainRouter] User:", user?.email || "not logged in");
+  console.log("[AdminSubdomainRouter] Loading:", loading);
 
   // Only apply special routing on admin subdomain
   if (!isAdmin) {
+    console.log("[AdminSubdomainRouter] Not admin subdomain, rendering children normally");
     return <>{children}</>;
   }
 
@@ -33,7 +42,7 @@ export const AdminSubdomainRouter = ({ children }: AdminSubdomainRouterProps) =>
   }
 
   // Define allowed paths on admin subdomain
-  const allowedPaths = ["/admin", "/admin-auth", "/admin-reset-password", "/workspace", "/crm"];
+  const allowedPaths = ["/admin", "/admin-auth", "/admin-reset-password", "/workspace"];
   const isAllowedPath = allowedPaths.some(
     (path) => location.pathname === path || location.pathname.startsWith(path + "/")
   );
@@ -45,7 +54,7 @@ export const AdminSubdomainRouter = ({ children }: AdminSubdomainRouterProps) =>
 
   // If not on allowed path, redirect based on auth status
   if (user) {
-    return <Navigate to="/crm" replace />;
+    return <Navigate to="/admin" replace />;
   } else {
     return <Navigate to="/admin-auth" replace />;
   }

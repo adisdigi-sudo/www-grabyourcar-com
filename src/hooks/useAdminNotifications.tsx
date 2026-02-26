@@ -158,21 +158,21 @@ export const useAdminNotifications = () => {
       
       const { data: overdueLeads, error: overdueError } = await supabase
         .from('leads')
-        .select('id, name, phone, next_followup_at')
-        .lt('next_followup_at', now.toISOString())
+        .select('id, customer_name, car_brand, car_model, next_follow_up_at, phone')
+        .lt('next_follow_up_at', now.toISOString())
         .not('status', 'in', '("converted","lost")')
-        .order('next_followup_at', { ascending: true })
+        .order('next_follow_up_at', { ascending: true })
         .limit(5);
 
       if (!overdueError && overdueLeads && overdueLeads.length > 0) {
         const mostUrgent = overdueLeads[0];
-        const followupTime = new Date(mostUrgent.next_followup_at!);
+        const followupTime = new Date(mostUrgent.next_follow_up_at!);
         const hoursOverdue = Math.round((now.getTime() - followupTime.getTime()) / (1000 * 60 * 60));
         
         addNotification({
           type: 'overdue_followup',
           title: `⚠️ Overdue Follow-up (${hoursOverdue}h)`,
-          message: `${mostUrgent.name} - Inquiry`,
+          message: `${mostUrgent.customer_name} - ${mostUrgent.car_brand || ''} ${mostUrgent.car_model || 'Inquiry'}`,
           data: mostUrgent,
           priority: 'high',
         });
@@ -180,22 +180,22 @@ export const useAdminNotifications = () => {
 
       const { data: upcomingLeads, error: upcomingError } = await supabase
         .from('leads')
-        .select('id, name, phone, next_followup_at')
-        .gte('next_followup_at', now.toISOString())
-        .lte('next_followup_at', oneHourFromNow.toISOString())
+        .select('id, customer_name, car_brand, car_model, next_follow_up_at, phone')
+        .gte('next_follow_up_at', now.toISOString())
+        .lte('next_follow_up_at', oneHourFromNow.toISOString())
         .not('status', 'in', '("converted","lost")')
-        .order('next_followup_at', { ascending: true })
+        .order('next_follow_up_at', { ascending: true })
         .limit(3);
 
       if (!upcomingError && upcomingLeads && upcomingLeads.length > 0) {
         upcomingLeads.forEach(lead => {
-          const followupTime = new Date(lead.next_followup_at!);
+          const followupTime = new Date(lead.next_follow_up_at!);
           const minutesUntil = Math.round((followupTime.getTime() - now.getTime()) / (1000 * 60));
           
           addNotification({
             type: 'urgent_followup',
             title: `📞 Follow-up in ${minutesUntil} min`,
-            message: `${lead.name} - Inquiry`,
+            message: `${lead.customer_name} - ${lead.car_brand || ''} ${lead.car_model || 'Inquiry'}`,
             data: lead,
             priority: 'medium',
           });

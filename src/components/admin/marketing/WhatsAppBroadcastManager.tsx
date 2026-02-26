@@ -89,7 +89,7 @@ export function WhatsAppBroadcastManager() {
       const [broadcastsRes, templatesRes, leadsRes] = await Promise.all([
         supabase.from("whatsapp_broadcasts").select("*").order("created_at", { ascending: false }),
         supabase.from("whatsapp_templates").select("id, name, category, content, variables").eq("is_active", true),
-        supabase.from("leads").select("id, status, created_at", { count: "exact" }),
+        supabase.from("leads").select("id, priority, service_category, created_at", { count: "exact" }),
       ]);
 
       if (broadcastsRes.data) setBroadcasts(broadcastsRes.data);
@@ -112,10 +112,10 @@ export function WhatsAppBroadcastManager() {
           let count = 0;
           switch (seg.value) {
             case "all": count = leads.length; break;
-            case "hot": count = 0; break;
-            case "warm": count = 0; break;
-            case "new_week": count = leads.filter((l: any) => new Date(l.created_at) >= oneWeekAgo).length; break;
-            case "finance": count = 0; break;
+            case "hot": count = leads.filter(l => l.priority === "high").length; break;
+            case "warm": count = leads.filter(l => l.priority === "medium").length; break;
+            case "new_week": count = leads.filter(l => new Date(l.created_at) >= oneWeekAgo).length; break;
+            case "finance": count = leads.filter(l => l.service_category === "finance").length; break;
             default: count = 0;
           }
           return { ...seg, count };

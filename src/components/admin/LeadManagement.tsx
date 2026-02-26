@@ -42,22 +42,31 @@ import {
   UserCheck,
 } from "lucide-react";
 
-// Legacy interface - will be rebuilt in CRM v2
 interface Lead {
   id: string;
-  name: string;
+  source: string;
+  lead_type: string;
+  status: string;
+  priority: string;
+  customer_name: string;
   phone: string;
   email: string | null;
   city: string | null;
-  source: string | null;
-  vertical_id: string | null;
+  car_brand: string | null;
+  car_model: string | null;
+  car_variant: string | null;
+  budget_min: number | null;
+  budget_max: number | null;
+  follow_up_count: number | null;
+  buying_timeline: string | null;
   assigned_to: string | null;
-  status: string;
-  next_followup_at: string | null;
+  next_follow_up_at: string | null;
+  notes: string | null;
+  tags: string[];
+  service_category: string | null;
+  team_assigned: string | null;
   created_at: string;
   updated_at: string;
-  // Legacy fields kept for backward compat (accessed via any)
-  [key: string]: any;
 }
 
 const statusOptions = [
@@ -101,17 +110,12 @@ const quickTags = [
   'Test Drive Done', 'Finance Approved', 'Insurance Quoted', 'Ready to Buy'
 ];
 
-export const LeadManagement = ({ verticalFilter }: { verticalFilter?: string }) => {
+export const LeadManagement = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [categoryFilter, setCategoryFilter] = useState<string>(
-    verticalFilter === "insurance" ? "insurance" :
-    verticalFilter === "sales" ? "car_inquiry" :
-    verticalFilter === "loans" ? "finance" :
-    "all"
-  );
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [teamFilter, setTeamFilter] = useState<string>("all");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -120,27 +124,25 @@ export const LeadManagement = ({ verticalFilter }: { verticalFilter?: string }) 
   const [isAddLeadOpen, setIsAddLeadOpen] = useState(false);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [newTag, setNewTag] = useState("");
-  const [newLeadForm, setNewLeadForm] = useState<Record<string, any>>({
+  const [newLeadForm, setNewLeadForm] = useState({
     customer_name: "",
-    name: "",
     phone: "",
     email: "",
     city: "",
+    car_brand: "",
+    car_model: "",
     source: "website",
+    lead_type: "car_inquiry",
+    service_category: "car_inquiry",
+    team_assigned: "",
     status: "new",
+    notes: "",
+    tags: [] as string[],
   });
-
-  // Map vertical to allowed service categories
-  const verticalCategoryMap: Record<string, string[]> = {
-    insurance: ['insurance'],
-    sales: ['car_inquiry'],
-    loans: ['finance'],
-  };
-  const allowedCategories = verticalFilter ? verticalCategoryMap[verticalFilter] : null;
 
   // Fetch leads with category filter
   const { data: leads, isLoading } = useQuery({
-    queryKey: ['adminLeads', statusFilter, categoryFilter, teamFilter, searchQuery, verticalFilter],
+    queryKey: ['adminLeads', statusFilter, categoryFilter, teamFilter, searchQuery],
     queryFn: async () => {
       let query = supabase
         .from('leads')
@@ -151,13 +153,21 @@ export const LeadManagement = ({ verticalFilter }: { verticalFilter?: string }) 
         query = query.eq('status', statusFilter);
       }
       
+      if (categoryFilter !== 'all') {
+        query = query.eq('service_category', categoryFilter);
+      }
+      
+      if (teamFilter !== 'all') {
+        query = query.eq('team_assigned', teamFilter);
+      }
+      
       if (searchQuery) {
-        query = query.or(`name.ilike.%${searchQuery}%,phone.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`);
+        query = query.or(`customer_name.ilike.%${searchQuery}%,phone.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`);
       }
 
       const { data, error } = await query.limit(100);
       if (error) throw error;
-      return (data || []) as any as Lead[];
+      return data as Lead[];
     },
   });
 
@@ -195,11 +205,12 @@ export const LeadManagement = ({ verticalFilter }: { verticalFilter?: string }) 
       
       if (error) throw error;
 
-      // Update lead's updated_at
+      // Update lead's follow-up count
       await supabase
         .from('leads')
         .update({ 
-          updated_at: new Date().toISOString(),
+          last_contacted_at: new Date().toISOString(),
+          follow_up_count: (selectedLead?.follow_up_count || 0) + 1,
         })
         .eq('id', leadId);
     },
@@ -221,12 +232,19 @@ export const LeadManagement = ({ verticalFilter }: { verticalFilter?: string }) 
       const { error } = await supabase
         .from('leads')
         .insert([{
-          name: leadData.customer_name || leadData.name || 'Unknown',
+          customer_name: leadData.customer_name,
           phone: leadData.phone,
           email: leadData.email || null,
           city: leadData.city || null,
+          car_brand: leadData.car_brand || null,
+          car_model: leadData.car_model || null,
           source: leadData.source,
-          status: leadData.status || 'new',
+          lead_type: leadData.lead_type,
+          service_category: leadData.service_category,
+          team_assigned: leadData.team_assigned || null,
+          status: leadData.status,
+          notes: leadData.notes || null,
+          tags: leadData.tags,
         }]);
       if (error) throw error;
     },
@@ -283,12 +301,16 @@ export const LeadManagement = ({ verticalFilter }: { verticalFilter?: string }) 
       for (const lead of leads) {
         try {
           const { error } = await supabase.from('leads').insert({
-            name: lead.customer_name || lead.name || 'Unknown',
+            customer_name: lead.customer_name || lead.name || 'Unknown',
             phone: lead.phone || lead.mobile || '',
             email: lead.email || null,
             city: lead.city || null,
+            car_brand: lead.car_brand || lead.brand || null,
+            car_model: lead.car_model || lead.model || null,
             source: lead.source || 'csv_import',
+            lead_type: lead.lead_type || 'car_inquiry',
             status: 'new',
+            notes: lead.notes || null,
           });
           
           if (error) throw error;
@@ -410,14 +432,9 @@ export const LeadManagement = ({ verticalFilter }: { verticalFilter?: string }) 
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold">
-            {verticalFilter === 'insurance' ? 'Insurance Lead Management' :
-             verticalFilter === 'sales' ? 'Sales Lead Management' :
-             verticalFilter === 'loans' ? 'Loan Lead Management' :
-             'Lead Management'}
-          </h1>
+          <h1 className="text-3xl font-bold">Lead Management</h1>
           <p className="text-muted-foreground">
-            {verticalFilter ? `Manage ${verticalFilter} leads` : 'Manage, tag, and assign leads across all services'}
+            Manage, tag, and assign leads across all services
           </p>
         </div>
         <div className="flex gap-2">
@@ -432,8 +449,7 @@ export const LeadManagement = ({ verticalFilter }: { verticalFilter?: string }) 
         </div>
       </div>
 
-      {/* Category Quick Filters - hide when vertical is locked */}
-      {!verticalFilter && (
+      {/* Category Quick Filters */}
       <div className="flex gap-2 flex-wrap">
         <Button
           variant={categoryFilter === 'all' ? 'default' : 'outline'}
@@ -459,7 +475,6 @@ export const LeadManagement = ({ verticalFilter }: { verticalFilter?: string }) 
           );
         })}
       </div>
-      )}
 
       {/* Filters */}
       <Card>

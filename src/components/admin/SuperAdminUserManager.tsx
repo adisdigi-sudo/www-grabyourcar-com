@@ -428,12 +428,10 @@ export const SuperAdminUserManager = () => {
                 onChange={e => setForm({ ...form, password: e.target.value })} />
             </div>
             
-            {/* Vertical Assignment - Auto-assigned, super admin only info */}
+            {/* Vertical Assignment */}
             <div className="space-y-2">
-              <Label className="font-semibold">Vertical Access</Label>
-              <p className="text-xs text-muted-foreground">
-                Vertical access is automatically managed based on role. Super Admins get access to all verticals. Other roles are assigned by the Super Admin after creation via Edit.
-              </p>
+              <Label className="font-semibold">Assign to Verticals *</Label>
+              <p className="text-xs text-muted-foreground">User can only access selected verticals after login</p>
               <div className="grid grid-cols-2 gap-2 mt-2">
                 {verticals.map(v => (
                   <label key={v.id} className="flex items-center gap-2 p-2 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
@@ -451,7 +449,7 @@ export const SuperAdminUserManager = () => {
             <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
             <Button
               onClick={() => createMutation.mutate()}
-              disabled={!form.username || !form.displayName || createMutation.isPending}
+              disabled={!form.username || !form.displayName || form.verticalIds.length === 0 || createMutation.isPending}
             >
               {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserPlus className="h-4 w-4 mr-2" />}
               Create User

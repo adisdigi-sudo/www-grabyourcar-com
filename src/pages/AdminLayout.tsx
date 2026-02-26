@@ -192,7 +192,7 @@ const AdminLayout = () => {
       case "leads-all":
       case "leads-hot":
       case "leads-whatsapp":
-        return <LeadManagement verticalFilter={activeVertical?.slug} />;
+        return <LeadManagement />;
       case "cars-list":
       case "cars-variants":
       case "cars-specs":

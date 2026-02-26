@@ -159,7 +159,7 @@ const AdminAuth = () => {
     if (userVerticals.length === 1) {
       setActiveVertical(userVerticals[0]);
       toast.success(`Welcome to ${userVerticals[0].name}!`);
-      navigate("/crm");
+      navigate("/admin");
       setIsSubmitting(false);
       return;
     }
@@ -174,7 +174,7 @@ const AdminAuth = () => {
   const handleSelectVertical = (vertical: BusinessVertical) => {
     setActiveVertical(vertical);
     toast.success(`Welcome to ${vertical.name}!`);
-    navigate("/crm");
+    navigate("/admin");
   };
 
   // ── Super Admin: Send OTP ──

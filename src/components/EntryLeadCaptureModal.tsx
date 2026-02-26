@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -76,11 +76,16 @@ export const EntryLeadCaptureModal = () => {
     setIsSubmitting(true);
     try {
       const { error } = await supabase.from("leads").insert({
-        name: formData.name.trim(),
+        customer_name: formData.name.trim(),
         phone: formData.phone.trim(),
         city: formData.city.trim(),
+        car_model: formData.carInterest.trim() || null,
+        buying_timeline: formData.purchaseTimeline || null,
         source: "entry_popup",
+        lead_type: "high_intent",
         status: "new",
+        priority: "high",
+        notes: formData.budgetRange ? `Budget: ${formData.budgetRange}` : null,
       });
 
       if (error) throw error;
@@ -111,10 +116,6 @@ export const EntryLeadCaptureModal = () => {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleDismiss(); }}>
       <DialogContent className="sm:max-w-lg p-0 overflow-hidden border-0 bg-transparent shadow-none [&>button]:hidden max-h-[90vh] overflow-y-auto mx-3 md:mx-auto">
-        <DialogHeader className="sr-only">
-          <DialogTitle>Lead capture offer</DialogTitle>
-          <DialogDescription>Share your details to unlock priority car deals and faster delivery options.</DialogDescription>
-        </DialogHeader>
         <motion.div
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}

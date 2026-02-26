@@ -270,7 +270,7 @@ export const AdminDashboard = () => {
         .limit(10);
       
       if (error) throw error;
-      return data as any[];
+      return data;
     },
   });
 

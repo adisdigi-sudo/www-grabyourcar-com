@@ -1,5 +1,5 @@
-import { useState, useMemo, useRef } from "react";
-import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { useState, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useVerticalAccess } from "@/hooks/useVerticalAccess";
@@ -7,21 +7,16 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { CallDispositionModal } from "./CallDispositionModal";
-import * as XLSX from "xlsx";
 import {
   Phone, MessageCircle, Search, Flame, Clock, PhoneCall,
   ArrowUpRight, CalendarClock, BarChart3, Users, PhoneOutgoing,
-  CheckCircle2, XCircle, Timer, TrendingUp, Filter, Upload,
-  FileText, ClipboardPaste, Table2, Download, Loader2, X, Database
+  CheckCircle2, XCircle, Timer, TrendingUp, Filter
 } from "lucide-react";
 import { format, formatDistanceToNow, isToday, isPast } from "date-fns";
 
@@ -253,9 +248,6 @@ export function SmartCallingQueue() {
             <TabsTrigger value="manual" className="gap-1.5">
               <Phone className="h-3.5 w-3.5" /> Quick Dial
             </TabsTrigger>
-            <TabsTrigger value="upload" className="gap-1.5">
-              <Upload className="h-3.5 w-3.5" /> Upload Data
-            </TabsTrigger>
           </TabsList>
 
           <div className="relative">
@@ -402,10 +394,6 @@ export function SmartCallingQueue() {
         <TabsContent value="manual" className="mt-4">
           <QuickDialCard onCall={handleCall} />
         </TabsContent>
-        {/* Upload Data Tab */}
-        <TabsContent value="upload" className="mt-4">
-          <CallingDataUpload verticalId={activeVertical?.id} onUploaded={() => queryClient.invalidateQueries({ queryKey: ["call-logs"] })} />
-        </TabsContent>
       </Tabs>
 
       {/* Disposition Modal */}
@@ -467,280 +455,5 @@ function QuickDialCard({ onCall }: { onCall: (phone: string, name: string, metho
         </div>
       </CardContent>
     </Card>
-  );
-}
-
-// ── Calling Data Upload Component ──
-type CallingContact = { name: string; phone: string; leadType?: string; notes?: string };
-
-function CallingDataUpload({ verticalId, onUploaded }: { verticalId?: string; onUploaded: () => void }) {
-  const { user } = useAuth();
-  const [tab, setTab] = useState("text");
-  const [parsed, setParsed] = useState<CallingContact[]>([]);
-  const [uploading, setUploading] = useState(false);
-  const [result, setResult] = useState<{ success: number; failed: number } | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  const reset = () => { setParsed([]); setResult(null); };
-
-  const doUpload = async () => {
-    if (!parsed.length || !user?.id) return;
-    setUploading(true);
-    let success = 0, failed = 0;
-
-    for (const contact of parsed) {
-      const cleanPhone = contact.phone.replace(/\D/g, "").slice(-10);
-      if (!cleanPhone || cleanPhone.length < 10) { failed++; continue; }
-
-      const { error } = await supabase.from("call_logs").insert({
-        agent_id: user.id,
-        lead_phone: cleanPhone,
-        lead_name: contact.name || "Unknown",
-        lead_type: contact.leadType || "general",
-        call_method: "upload",
-        call_type: "outbound",
-        notes: contact.notes || "Uploaded for calling",
-        follow_up_at: new Date().toISOString(),
-        follow_up_priority: "normal",
-        vertical_id: verticalId || null,
-        duration_seconds: 0,
-      });
-
-      if (error) failed++;
-      else success++;
-    }
-
-    setResult({ success, failed });
-    setUploading(false);
-    onUploaded();
-    toast.success(`${success} contacts added to calling queue${failed ? `, ${failed} failed` : ""}`);
-  };
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      let lines: string[];
-      const isExcel = file.name.match(/\.(xlsx|xls)$/i);
-
-      if (isExcel) {
-        const buffer = await file.arrayBuffer();
-        const workbook = XLSX.read(buffer, { type: "array" });
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const csvText = XLSX.utils.sheet_to_csv(sheet);
-        lines = csvText.split(/\r?\n/).filter(l => l.trim());
-      } else {
-        const text = await file.text();
-        lines = text.split(/\r?\n/).filter(l => l.trim());
-      }
-
-      if (lines.length < 2) { toast.error("Need header + at least 1 row"); return; }
-
-      const headers = lines[0].toLowerCase().split(",").map(h => h.trim().replace(/"/g, ""));
-      const nameIdx = headers.findIndex(h => h.includes("name") || h.includes("customer"));
-      const phoneIdx = headers.findIndex(h => h.includes("phone") || h.includes("mobile") || h.includes("number") || h.includes("contact"));
-      const notesIdx = headers.findIndex(h => h.includes("note") || h.includes("remark"));
-
-      if (phoneIdx === -1 && nameIdx === -1) { toast.error("Could not find Name or Phone column"); return; }
-
-      const contacts: CallingContact[] = [];
-      for (let i = 1; i < lines.length; i++) {
-        const cols = lines[i].split(",").map(c => c.trim().replace(/"/g, ""));
-        const phone = phoneIdx >= 0 ? (cols[phoneIdx] || "").replace(/[^0-9+]/g, "") : "";
-        const name = nameIdx >= 0 ? cols[nameIdx] || "" : "";
-        if (!phone && !name) continue;
-        contacts.push({ name, phone, notes: notesIdx >= 0 ? cols[notesIdx] : undefined });
-      }
-      setParsed(contacts);
-      toast.success(`Parsed ${contacts.length} contacts`);
-    } catch (err: any) {
-      toast.error(err.message || "Failed to parse file");
-    }
-    if (fileRef.current) fileRef.current.value = "";
-  };
-
-  const parseText = (text: string) => {
-    const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
-    const contacts: CallingContact[] = [];
-    for (const line of lines) {
-      const parts = line.split(/[\-\|,\t]+/).map(p => p.trim()).filter(Boolean);
-      if (parts.length === 0) continue;
-      const name = parts[0];
-      const phone = parts[1]?.replace(/[^0-9+]/g, "") || "";
-      const notes = parts[2] || "";
-      contacts.push({ name, phone, notes });
-    }
-    return contacts;
-  };
-
-  const parseSpreadsheet = (text: string) => {
-    const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
-    if (lines.length === 0) return [];
-    const firstLine = lines[0].toLowerCase();
-    const hasHeaders = firstLine.includes("name") || firstLine.includes("phone");
-    const startIdx = hasHeaders ? 1 : 0;
-    const sep = lines[startIdx]?.includes("\t") ? "\t" : ",";
-
-    let nameIdx = 0, phoneIdx = 1, notesIdx = -1;
-    if (hasHeaders) {
-      const h = lines[0].split(sep).map(c => c.trim().toLowerCase().replace(/"/g, ""));
-      nameIdx = h.findIndex(c => c.includes("name") || c.includes("customer"));
-      phoneIdx = h.findIndex(c => c.includes("phone") || c.includes("mobile"));
-      notesIdx = h.findIndex(c => c.includes("note") || c.includes("remark"));
-      if (nameIdx === -1) nameIdx = 0;
-      if (phoneIdx === -1) phoneIdx = 1;
-    }
-
-    const contacts: CallingContact[] = [];
-    for (let i = startIdx; i < lines.length; i++) {
-      const cols = lines[i].split(sep).map(c => c.trim().replace(/"/g, ""));
-      const name = cols[nameIdx] || "";
-      const phone = cols[phoneIdx]?.replace(/[^0-9+]/g, "") || "";
-      if (!name && !phone) continue;
-      contacts.push({ name, phone, notes: notesIdx >= 0 ? cols[notesIdx] : undefined });
-    }
-    return contacts;
-  };
-
-  if (result) {
-    return (
-      <Card>
-        <CardContent className="py-8 text-center space-y-4">
-          <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center mx-auto">
-            <CheckCircle2 className="h-7 w-7 text-emerald-600" />
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold">Upload Complete!</h3>
-            <p className="text-sm text-muted-foreground">
-              <span className="text-emerald-600 font-medium">{result.success} contacts</span> added to queue
-              {result.failed > 0 && <>, <span className="text-destructive font-medium">{result.failed} failed</span></>}
-            </p>
-          </div>
-          <div className="flex gap-2 justify-center">
-            <Button onClick={reset}>Upload More</Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg flex items-center gap-2">
-          <Database className="h-5 w-5" /> Upload Calling Database
-        </CardTitle>
-        <CardDescription>Add client data for calling — supports CSV, Excel, text paste, and spreadsheet copy-paste</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Tabs value={tab} onValueChange={v => { setTab(v); setParsed([]); }}>
-          <TabsList className="grid grid-cols-3 w-full">
-            <TabsTrigger value="text" className="gap-1.5 text-xs">
-              <ClipboardPaste className="h-3.5 w-3.5" /> Quick Text
-            </TabsTrigger>
-            <TabsTrigger value="file" className="gap-1.5 text-xs">
-              <FileText className="h-3.5 w-3.5" /> CSV / Excel
-            </TabsTrigger>
-            <TabsTrigger value="sheet" className="gap-1.5 text-xs">
-              <Table2 className="h-3.5 w-3.5" /> Spreadsheet Paste
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="text" className="mt-4 space-y-3">
-            <div className="p-3 rounded-lg bg-muted/30 border text-xs text-muted-foreground space-y-1">
-              <p className="font-medium text-foreground text-sm">Paste client data — one per line</p>
-              <code className="block bg-muted px-2 py-1 rounded">Name - Phone</code>
-              <code className="block bg-muted px-2 py-1 rounded">Name - Phone - Notes</code>
-              <code className="block bg-muted px-2 py-1 rounded">Name, Phone, Notes</code>
-            </div>
-            <TextPasteInput onParsed={(text) => setParsed(parseText(text))} />
-          </TabsContent>
-
-          <TabsContent value="file" className="mt-4 space-y-3">
-            <div className="p-3 rounded-lg bg-muted/30 border text-xs text-muted-foreground">
-              <p className="font-medium text-foreground text-sm mb-1">Upload CSV or Excel file</p>
-              <p>Required: <Badge variant="secondary" className="text-[10px]">Name</Badge> or <Badge variant="secondary" className="text-[10px]">Phone</Badge> column</p>
-            </div>
-            <div
-              className="border-2 border-dashed border-primary/30 rounded-xl p-8 text-center cursor-pointer hover:bg-primary/5 transition-colors"
-              onClick={() => fileRef.current?.click()}
-            >
-              <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
-              <p className="text-sm font-medium">Click to upload or drag and drop</p>
-              <p className="text-xs text-muted-foreground mt-1">Supports .csv, .xlsx, .xls</p>
-              <Button className="mt-3 gap-1.5" size="sm">Choose File</Button>
-              <Input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" onChange={handleFileUpload} className="hidden" />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="sheet" className="mt-4 space-y-3">
-            <div className="p-3 rounded-lg bg-muted/30 border text-xs text-muted-foreground space-y-1">
-              <p className="font-medium text-foreground text-sm">Paste from Excel / Google Sheets</p>
-              <p>Copy rows and paste below. Tab-separated & comma-separated both work.</p>
-            </div>
-            <TextPasteInput onParsed={(text) => setParsed(parseSpreadsheet(text))} placeholder={`Name\tPhone\nRahul Sharma\t9876543210\nPriya Singh\t8765432109`} />
-          </TabsContent>
-
-          {parsed.length > 0 && (
-            <div className="mt-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-semibold flex items-center gap-1.5">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                  {parsed.length} contacts ready
-                </h4>
-                <Button variant="ghost" size="sm" onClick={() => setParsed([])}>
-                  <X className="h-3.5 w-3.5 mr-1" /> Clear
-                </Button>
-              </div>
-              <div className="max-h-48 overflow-y-auto border rounded-lg">
-                <table className="w-full text-xs">
-                  <thead className="bg-muted/50 sticky top-0">
-                    <tr>
-                      <th className="text-left px-3 py-2 font-medium">#</th>
-                      <th className="text-left px-3 py-2 font-medium">Name</th>
-                      <th className="text-left px-3 py-2 font-medium">Phone</th>
-                      <th className="text-left px-3 py-2 font-medium">Notes</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {parsed.slice(0, 50).map((c, i) => (
-                      <tr key={i} className="border-t">
-                        <td className="px-3 py-1.5 text-muted-foreground">{i + 1}</td>
-                        <td className="px-3 py-1.5 font-medium">{c.name || "—"}</td>
-                        <td className="px-3 py-1.5">{c.phone || "—"}</td>
-                        <td className="px-3 py-1.5 text-muted-foreground">{c.notes || "—"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {parsed.length > 50 && <p className="text-xs text-muted-foreground">Showing 50 of {parsed.length}</p>}
-              <Button onClick={doUpload} disabled={uploading} className="w-full gap-2">
-                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                {uploading ? "Uploading..." : `Add ${parsed.length} Contacts to Queue`}
-              </Button>
-            </div>
-          )}
-        </Tabs>
-      </CardContent>
-    </Card>
-  );
-}
-
-function TextPasteInput({ onParsed, placeholder }: { onParsed: (text: string) => void; placeholder?: string }) {
-  const [text, setText] = useState("");
-  return (
-    <div className="space-y-3">
-      <Textarea
-        value={text}
-        onChange={e => setText(e.target.value)}
-        placeholder={placeholder || `Rahul Sharma - 9876543210\nPriya Singh - 8765432109\nAmit Kumar, 7654321098, Follow up on renewal`}
-        className="min-h-[140px] font-mono text-sm"
-      />
-      <Button onClick={() => onParsed(text)} disabled={!text.trim()} className="w-full">
-        Parse {text.split("\n").filter(l => l.trim()).length} Lines
-      </Button>
-    </div>
   );
 }
