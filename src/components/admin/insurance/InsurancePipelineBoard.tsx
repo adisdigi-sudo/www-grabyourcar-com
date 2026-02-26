@@ -550,6 +550,11 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
             </PopoverContent>
           </Popover>
 
+          {onNavigate && (
+            <Button size="sm" variant="default" className="h-9 gap-1.5 text-xs" onClick={() => onNavigate("smart-calling")}>
+              <PhoneCall className="h-3.5 w-3.5" /> Smart Calling
+            </Button>
+          )}
           <Button size="sm" variant="outline" className="h-9 gap-1.5 text-xs" onClick={() => setShowImportDialog(true)}>
             <Upload className="h-3.5 w-3.5" /> Import
           </Button>
