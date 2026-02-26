@@ -17,7 +17,7 @@ import {
   UserPlus, Phone, FileText, MessageSquare, Clock, CreditCard,
   CheckCircle2, XCircle, Bell, Search, ChevronRight, Upload,
   PhoneCall, User, Car, Shield, TrendingUp, Eye, Send, Flame,
-  MoreVertical, Share2, Plus, ArrowRight, Filter, Download, Database, SlidersHorizontal, X, CalendarIcon
+  MoreVertical, Share2, Plus, ArrowRight, Filter, Download, Database, SlidersHorizontal, X, CalendarIcon, MapPin
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator
@@ -367,26 +367,33 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
 
   return (
     <div className="space-y-5">
-      {/* KPI Header */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {[
-          { label: "Total Leads", value: totalLeads, icon: UserPlus, color: "text-blue-600" },
-          { label: "Won (Issued)", value: wonCount, icon: CheckCircle2, color: "text-emerald-600" },
-          { label: "Conversion Rate", value: `${convRate}%`, icon: TrendingUp, color: "text-violet-600" },
-          { label: "In Pipeline", value: totalLeads - wonCount - (stageCounts["lost"] || 0), icon: Clock, color: "text-orange-600" },
-        ].map(kpi => (
-          <Card key={kpi.label} className="border shadow-sm">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center">
-                <kpi.icon className={`h-5 w-5 ${kpi.color}`} />
-              </div>
-              <div>
+      {/* KPI Header - Rich Gradient Banner */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 via-emerald-700 to-emerald-900 p-5 sm:p-6 text-white">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-60" />
+        <div className="relative">
+          <h2 className="text-xl font-bold tracking-tight flex items-center gap-2.5 mb-4">
+            <div className="w-9 h-9 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center">
+              <Shield className="h-5 w-5" />
+            </div>
+            Lead Pipeline
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              { label: "Total Leads", value: totalLeads, icon: UserPlus, bgColor: "bg-blue-500/20" },
+              { label: "Won (Issued)", value: wonCount, icon: CheckCircle2, bgColor: "bg-emerald-400/20" },
+              { label: "Conversion", value: `${convRate}%`, icon: TrendingUp, bgColor: "bg-violet-400/20" },
+              { label: "In Pipeline", value: totalLeads - wonCount - (stageCounts["lost"] || 0), icon: Clock, bgColor: "bg-orange-400/20" },
+            ].map(kpi => (
+              <div key={kpi.label} className={`${kpi.bgColor} backdrop-blur-sm rounded-xl px-4 py-3 border border-white/10`}>
+                <div className="flex items-center gap-2 mb-1">
+                  <kpi.icon className="h-4 w-4 text-white/70" />
+                  <span className="text-[10px] uppercase tracking-wider text-white/70">{kpi.label}</span>
+                </div>
                 <p className="text-2xl font-bold tracking-tight">{kpi.value}</p>
-                <p className="text-[11px] text-muted-foreground">{kpi.label}</p>
               </div>
-            </CardContent>
-          </Card>
-        ))}
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Stage Tabs */}
@@ -606,7 +613,7 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
       )}
 
       {/* Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         <AnimatePresence mode="popLayout">
           {filtered.map(client => {
             const stage = PIPELINE_STAGES.find(s => s.value === (client.pipeline_stage || "new_lead")) || PIPELINE_STAGES[0];
@@ -624,20 +631,21 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.2 }}
               >
-                <Card className={`border ${stage.border} hover:shadow-md transition-all group cursor-pointer`} onClick={() => setSelectedClient(client)}>
+                <Card className={`border ${stage.border} hover:shadow-lg transition-all duration-300 group cursor-pointer hover:-translate-y-0.5 overflow-hidden`} onClick={() => setSelectedClient(client)}>
+                  <div className={`h-1 bg-gradient-to-r ${stage.color}`} />
                   <CardContent className="p-4 space-y-3">
                     {/* Header */}
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2.5">
-                        <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${stage.color} flex items-center justify-center`}>
+                        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${stage.color} flex items-center justify-center shadow-sm`}>
                           <User className="h-4 w-4 text-white" />
                         </div>
                         <div>
-                          <p className="font-semibold text-sm leading-tight">{client.customer_name || "Unknown"}</p>
+                          <p className="font-bold text-sm leading-tight">{client.customer_name || "Unknown"}</p>
                           <p className="text-[11px] text-muted-foreground">{client.city || "—"} • {format(new Date(client.created_at), "dd MMM")}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1">
+                      <div className="flex flex-col items-end gap-1">
                         {client.priority && (
                           <Badge variant="outline" className={`text-[9px] px-1.5 py-0 ${getPriorityColor(client.priority)}`}>
                             {client.priority === "hot" ? "🔥 Hot" : client.priority === "warm" ? "🟠 Warm" : "❄️ Cold"}
@@ -650,35 +658,35 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
                     </div>
 
                     {/* Info Grid */}
-                    <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px]">
                       {phone && (
-                        <div className="flex items-center gap-1 text-muted-foreground">
-                          <Phone className="h-3 w-3" /> {phone}
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                          <Phone className="h-3 w-3 shrink-0" /> <span className="font-mono">{phone}</span>
                         </div>
                       )}
                       {client.vehicle_number && (
-                        <div className="flex items-center gap-1 text-muted-foreground">
-                          <Car className="h-3 w-3" /> <span className="font-mono">{client.vehicle_number}</span>
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                          <Car className="h-3 w-3 shrink-0" /> <span className="font-mono font-medium">{client.vehicle_number}</span>
                         </div>
                       )}
                       {client.vehicle_model && (
-                        <div className="flex items-center gap-1 text-muted-foreground">
-                          <Shield className="h-3 w-3" /> {client.vehicle_make} {client.vehicle_model}
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                          <Shield className="h-3 w-3 shrink-0" /> {client.vehicle_make} {client.vehicle_model}
                         </div>
                       )}
                       {client.current_insurer && (
-                        <div className="flex items-center gap-1 text-muted-foreground">
-                          <FileText className="h-3 w-3" /> {client.current_insurer}
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                          <FileText className="h-3 w-3 shrink-0" /> {client.current_insurer}
                         </div>
                       )}
                       {daysToExpiry !== null && (
-                        <div className={`flex items-center gap-1 font-medium ${daysToExpiry <= 7 ? "text-red-600" : daysToExpiry <= 30 ? "text-orange-600" : "text-muted-foreground"}`}>
-                          <Clock className="h-3 w-3" /> {daysToExpiry < 0 ? `Expired ${Math.abs(daysToExpiry)}d ago` : `${daysToExpiry}d to expiry`}
+                        <div className={`flex items-center gap-1.5 font-semibold ${daysToExpiry <= 7 ? "text-red-600" : daysToExpiry <= 30 ? "text-orange-600" : "text-muted-foreground"}`}>
+                          <Clock className="h-3 w-3 shrink-0" /> {daysToExpiry < 0 ? `Expired ${Math.abs(daysToExpiry)}d ago` : `${daysToExpiry}d to expiry`}
                         </div>
                       )}
                       {client.current_premium && (
-                        <div className="flex items-center gap-1 text-muted-foreground">
-                          <CreditCard className="h-3 w-3" /> ₹{client.current_premium.toLocaleString("en-IN")}
+                        <div className="flex items-center gap-1.5 text-muted-foreground font-semibold">
+                          <CreditCard className="h-3 w-3 shrink-0" /> ₹{client.current_premium.toLocaleString("en-IN")}
                         </div>
                       )}
                     </div>
@@ -686,20 +694,20 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
                     {/* Progress bar */}
                     <div className="flex gap-0.5">
                       {PIPELINE_STAGES.slice(0, 7).map((s, i) => (
-                        <div key={s.value} className={`h-1 flex-1 rounded-full ${i <= stageIdx && stageIdx < 7 ? s.dot : "bg-muted"}`} />
+                        <div key={s.value} className={`h-1.5 flex-1 rounded-full transition-colors ${i <= stageIdx && stageIdx < 7 ? s.dot : "bg-muted"}`} />
                       ))}
                     </div>
 
                     {/* Quick Actions */}
-                    <div className="flex gap-1 items-center opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                    <div className="flex gap-1 items-center opacity-0 group-hover:opacity-100 transition-all duration-200 pt-1 border-t border-border/30" onClick={e => e.stopPropagation()}>
                       {phone && (
                         <>
                           <a href={`tel:${client.phone}`}>
-                            <Button size="icon" variant="ghost" className="h-7 w-7"><PhoneCall className="h-3.5 w-3.5 text-emerald-600" /></Button>
+                            <Button size="icon" variant="ghost" className="h-7 w-7"><PhoneCall className="h-3.5 w-3.5 text-primary" /></Button>
                           </a>
                           {waLink && (
                             <a href={waLink} target="_blank" rel="noopener noreferrer">
-                              <Button size="icon" variant="ghost" className="h-7 w-7"><MessageSquare className="h-3.5 w-3.5 text-emerald-600" /></Button>
+                              <Button size="icon" variant="ghost" className="h-7 w-7"><MessageSquare className="h-3.5 w-3.5 text-primary" /></Button>
                             </a>
                           )}
                         </>
