@@ -29,7 +29,7 @@ const monthOptions = Array.from({ length: 24 }, (_, i) => {
 });
 
 export default function CrmFinance() {
-  const { accessibleVerticals, isSuperAdmin, isAdmin } = useCrmAccess();
+  const { accessibleVerticals, isAdmin } = useCrmAccess();
   const [selectedVertical, setSelectedVertical] = useState<string>("");
   const [selectedMonth, setSelectedMonth] = useState<string>("");
 

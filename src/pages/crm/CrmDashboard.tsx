@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Loader2 } from "lucide-react";
 
 export default function CrmDashboard() {
-  const { crmUser, accessibleVerticals, isSuperAdmin, isAdmin, isManager, isExecutive } = useCrmAccess();
+  const { crmUser, accessibleVerticals, isAdmin, isManager, isExecutive } = useCrmAccess();
   const [selectedVertical, setSelectedVertical] = useState<string>("");
 
   const metricsFilters: any = {};
@@ -22,7 +22,7 @@ export default function CrmDashboard() {
   const verticals = metrics?.verticals || {};
   const performance = perfData?.performance || [];
 
-  const roleName = isSuperAdmin ? "Super Admin" : isAdmin ? "Admin" : isManager ? "Manager" : "Executive";
+  const roleName = isAdmin ? "Admin" : isManager ? "Manager" : "Executive";
 
   return (
     <div className="space-y-6">
@@ -117,7 +117,7 @@ export default function CrmDashboard() {
       )}
 
       {/* Executive Performance */}
-      {(isAdmin || isSuperAdmin || isManager) && (
+      {(isAdmin || isManager) && (
         <div className="space-y-3">
           <h2 className="text-lg font-semibold">Executive Performance</h2>
           {perfLoading ? (
