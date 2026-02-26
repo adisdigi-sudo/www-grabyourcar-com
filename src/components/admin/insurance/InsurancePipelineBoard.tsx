@@ -926,6 +926,29 @@ function PolicyUploadForm({ clientId, onDone }: { clientId: string; onDone: () =
     if (!form.policy_number || !clientId) { toast.error("Policy number required"); return; }
     setSaving(true);
     try {
+      // Auto-expire previous active policies (renewal replaces old policy)
+      const { data: previousPolicies } = await supabase
+        .from("insurance_policies")
+        .select("id, policy_number, insurer")
+        .eq("client_id", clientId)
+        .eq("status", "active");
+
+      if (previousPolicies && previousPolicies.length > 0) {
+        await supabase
+          .from("insurance_policies")
+          .update({ status: "renewed" })
+          .in("id", previousPolicies.map(p => p.id));
+        
+        for (const prev of previousPolicies) {
+          await supabase.from("insurance_activity_log").insert({
+            client_id: clientId,
+            activity_type: "policy_renewed",
+            title: "Previous policy replaced by renewal",
+            description: `Old policy ${prev.policy_number || prev.id} (${prev.insurer || "Unknown"}) auto-marked as renewed. New: ${form.policy_number}`,
+          });
+        }
+      }
+
       const { error } = await supabase.from("insurance_policies").insert({
         client_id: clientId,
         policy_number: form.policy_number,
@@ -945,7 +968,10 @@ function PolicyUploadForm({ clientId, onDone }: { clientId: string; onDone: () =
         title: "Policy issued & uploaded",
         description: `${form.insurer} policy ${form.policy_number} uploaded`,
       });
-      toast.success("✅ Policy uploaded! Moved to Renewal Queue.");
+      const replacedCount = previousPolicies?.length || 0;
+      toast.success(replacedCount > 0
+        ? `✅ Policy uploaded! ${replacedCount} old policy(s) auto-replaced. Moved to Renewal Queue.`
+        : "✅ Policy uploaded! Moved to Renewal Queue.");
       onDone();
     } catch (e: any) {
       toast.error(e.message || "Failed");
