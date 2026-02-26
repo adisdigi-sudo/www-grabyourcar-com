@@ -12,7 +12,23 @@ import {
 } from "lucide-react";
 import { format, subDays } from "date-fns";
 
-export const DataExportEngine = () => {
+interface DataExportEngineProps {
+  verticalSlug?: string;
+}
+
+// Map vertical slugs to allowed export types
+const verticalExportMap: Record<string, string[]> = {
+  sales: ["leads", "clients", "activity"],
+  insurance: ["insurance", "activity"],
+  loans: ["leads", "clients", "activity"],
+  hsrp: ["hsrp", "activity"],
+  rental: ["rentals", "activity"],
+  accessories: ["accessories", "activity"],
+  corporate: ["clients", "activity"],
+  marketing: ["leads", "clients", "activity"],
+};
+
+export const DataExportEngine = ({ verticalSlug }: DataExportEngineProps = {}) => {
   const [exporting, setExporting] = useState<string | null>(null);
 
   const exportData = async (type: string) => {
@@ -136,7 +152,11 @@ export const DataExportEngine = () => {
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {EXPORT_OPTIONS.map(opt => (
+        {EXPORT_OPTIONS.filter(opt => {
+          if (!verticalSlug) return true;
+          const allowed = verticalExportMap[verticalSlug];
+          return allowed ? allowed.includes(opt.type) : true;
+        }).map(opt => (
           <Card key={opt.type} className="hover:shadow-md transition-shadow">
             <CardContent className="p-4">
               <div className="flex items-start justify-between">
