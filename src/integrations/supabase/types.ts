@@ -5500,6 +5500,74 @@ export type Database = {
           },
         ]
       }
+      lead_assignment_log: {
+        Row: {
+          assigned_at: string | null
+          assigned_to: string
+          id: string
+          lead_id: string
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_to: string
+          id?: string
+          lead_id: string
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_to?: string
+          id?: string
+          lead_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_assignment_log_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "crm_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_assignment_log_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_assignment_rules: {
+        Row: {
+          assignment_type: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          vertical_id: string
+        }
+        Insert: {
+          assignment_type: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          vertical_id: string
+        }
+        Update: {
+          assignment_type?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          vertical_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_assignment_rules_vertical_id_fkey"
+            columns: ["vertical_id"]
+            isOneToOne: false
+            referencedRelation: "verticals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_imports: {
         Row: {
           completed_at: string | null
