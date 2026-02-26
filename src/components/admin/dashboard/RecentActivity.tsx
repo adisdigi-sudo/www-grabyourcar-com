@@ -15,13 +15,12 @@ import { format, formatDistanceToNow } from "date-fns";
 
 interface Lead {
   id: string;
-  customer_name: string;
+  name: string;
   phone: string;
   status: string;
-  car_brand?: string;
-  car_model?: string;
-  source: string;
+  source: string | null;
   created_at: string;
+  [key: string]: any;
 }
 
 interface HSRPBooking {
@@ -97,7 +96,7 @@ export const RecentActivity = ({ recentLeads, recentHsrp, isLoading }: RecentAct
                     className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{lead.customer_name}</p>
+                      <p className="font-medium truncate">{lead.name}</p>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Phone className="h-3 w-3 shrink-0" />
                         <span className="truncate">{lead.phone}</span>

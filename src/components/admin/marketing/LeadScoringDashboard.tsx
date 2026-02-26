@@ -75,15 +75,12 @@ export function LeadScoringDashboard() {
       // Fetch lead scores with lead details
       const { data: scores, error } = await supabase
         .from("lead_scores")
-        .select(`
-          *,
-          lead:leads(customer_name, phone, email, car_model, status)
-        `)
+        .select("*")
         .order("score", { ascending: false })
         .limit(100);
 
       if (error) throw error;
-      setLeadScores(scores || []);
+      setLeadScores((scores || []) as any);
     } catch (error) {
       console.error("Error fetching lead scores:", error);
     } finally {

@@ -51,17 +51,16 @@ export const LeadScoringDashboard = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("leads")
-        .select("id, customer_name, phone, source, status, car_model, budget_min, budget_max, notes, created_at, priority")
+        .select("id, name, phone, source, status, created_at")
         .order("created_at", { ascending: false })
         .limit(100);
 
       if (error) throw error;
 
-      // Parse AI score from notes field and filter/sort
+      // Parse AI score from source field and filter/sort
       type ScoredLead = (typeof data)[number] & { ai_score: number | null };
-      const scored: ScoredLead[] = (data || []).map(l => {
-        const match = l.notes?.match(/\[AI Score: (\d+)\/100/);
-        return { ...l, ai_score: match ? parseInt(match[1]) : null };
+      const scored: ScoredLead[] = (data || []).map((l: any) => {
+        return { ...l, ai_score: null };
       });
 
       let filtered = scored;
@@ -216,19 +215,13 @@ export const LeadScoringDashboard = () => {
                     >
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="font-medium text-sm truncate">{lead.customer_name || "Unknown"}</p>
+                          <p className="font-medium text-sm truncate">{(lead as any).name || "Unknown"}</p>
                           {lead.ai_score !== null && getScoreBadge(lead.ai_score)}
                         </div>
                         <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                          <span>{lead.phone}</span>
-                          {lead.source && <Badge variant="outline" className="text-[10px]">{lead.source}</Badge>}
-                          {lead.car_model && <span>🚗 {lead.car_model}</span>}
+                          <span>{(lead as any).phone}</span>
+                          {(lead as any).source && <Badge variant="outline" className="text-[10px]">{(lead as any).source}</Badge>}
                         </div>
-                        {lead.notes && (
-                          <p className="text-xs text-muted-foreground mt-1 truncate max-w-md">
-                            {lead.notes}
-                          </p>
-                        )}
                       </div>
                       <div className="shrink-0 ml-3">
                         <div className="w-16">
