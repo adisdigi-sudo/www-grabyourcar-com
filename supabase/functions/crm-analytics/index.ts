@@ -14,14 +14,16 @@ async function getAuthenticatedUser(req: Request, supabaseUrl: string, anonKey: 
   return user;
 }
 
-async function resolveTenantId(supabase: any, userId: string): Promise<string> {
-  const { data } = await supabase
-    .from("crm_users")
-    .select("tenant_id")
-    .eq("user_id", userId)
+async function resolveTenantId(supabase: any): Promise<string> {
+  const { data, error } = await supabase
+    .from("tenants")
+    .select("id")
+    .order("created_at", { ascending: true })
+    .limit(1)
     .maybeSingle();
-  if (!data?.tenant_id) throw new Error("No tenant assigned to this user");
-  return data.tenant_id;
+  if (error) throw error;
+  if (!data?.id) throw new Error("No tenant configured");
+  return data.id;
 }
 
 function daysBetween(a: string, b: string): number {
@@ -40,8 +42,8 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, serviceRoleKey);
     const user = await getAuthenticatedUser(req, supabaseUrl, anonKey);
 
-    // Resolve tenant
-    const tenantId = await resolveTenantId(supabase, user.id);
+    // Resolve tenant (single-tenant fallback)
+    const tenantId = await resolveTenantId(supabase);
 
     const body = await req.json();
     const { action, ...payload } = body;
@@ -51,9 +53,10 @@ Deno.serve(async (req) => {
       .from("user_roles").select("role").eq("user_id", user.id)
       .in("role", ["super_admin", "admin"]).maybeSingle();
     const { data: crmUser } = await supabase
-      .from("crm_users").select("vertical_access").eq("user_id", user.id).maybeSingle();
-    const isAdmin = !!roleRow;
-    const verticalAccess = crmUser?.vertical_access || [];
+      .from("crm_users").select("role").eq("auth_user_id", user.id).maybeSingle();
+    const { data: allVerts } = await supabase.from("vertical_pipelines").select("vertical_name");
+    const isAdmin = !!roleRow || crmUser?.role === "admin";
+    const verticalAccess = [...new Set((allVerts || []).map((v: any) => v.vertical_name))];
 
     switch (action) {
       // ─── REVENUE METRICS ───
@@ -177,8 +180,8 @@ Deno.serve(async (req) => {
         // Per-executive breakdown
         let executiveMetrics: any[] = [];
         if (isAdmin || verticalAccess.length > 0) {
-          let execQuery = supabase.from("crm_users").select("*").eq("is_active", true).eq("tenant_id", tenantId);
-          if (effectiveExecId) execQuery = execQuery.eq("user_id", effectiveExecId);
+          let execQuery = supabase.from("crm_users").select("*").eq("is_active", true);
+          if (effectiveExecId) execQuery = execQuery.eq("auth_user_id", effectiveExecId);
           const { data: executives } = await execQuery;
 
           for (const exec of (executives || [])) {
@@ -191,7 +194,7 @@ Deno.serve(async (req) => {
                 .select("current_stage, customer_id, customer:master_customers(assigned_to)")
                 .eq("vertical_name", vn)
                 .eq("tenant_id", tenantId);
-              const execRows = (sRows || []).filter((r: any) => r.customer?.assigned_to === exec.user_id);
+              const execRows = (sRows || []).filter((r: any) => r.customer?.assigned_to === exec.auth_user_id);
 
               const { data: stagesData } = await supabase
                 .from("vertical_pipelines").select("stage_name, is_final_stage, is_lost_stage").eq("vertical_name", vn);
@@ -207,7 +210,7 @@ Deno.serve(async (req) => {
                 const closedIds = finalRows.map((r: any) => r.customer_id);
                 const { count } = await supabase
                   .from("customer_call_logs").select("id", { count: "exact" })
-                  .eq("called_by", exec.user_id)
+                  .eq("called_by", exec.auth_user_id)
                   .eq("tenant_id", tenantId)
                   .in("customer_id", closedIds);
                 totalCallsForClosed += count || 0;
@@ -216,7 +219,7 @@ Deno.serve(async (req) => {
 
             const { count: overdueCount } = await supabase
               .from("master_customers").select("id", { count: "exact" })
-              .eq("assigned_to", exec.user_id)
+              .eq("assigned_to", exec.auth_user_id)
               .eq("tenant_id", tenantId)
               .lt("next_followup_at", now.toISOString())
               .not("next_followup_at", "is", null);
@@ -227,7 +230,7 @@ Deno.serve(async (req) => {
             const overdueRatio = totalAssigned > 0 ? Math.round((totalOverdue / totalAssigned) * 10000) / 100 : 0;
 
             executiveMetrics.push({
-              user_id: exec.user_id,
+              user_id: exec.auth_user_id,
               name: exec.name,
               email: exec.email,
               assigned_leads: totalAssigned,

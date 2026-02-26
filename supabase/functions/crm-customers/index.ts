@@ -14,14 +14,16 @@ async function getAuthenticatedUser(req: Request, supabaseUrl: string, anonKey: 
   return { user, authHeader };
 }
 
-async function resolveTenantId(supabase: any, userId: string): Promise<string> {
-  const { data } = await supabase
-    .from("crm_users")
-    .select("tenant_id")
-    .eq("user_id", userId)
+async function resolveTenantId(supabase: any): Promise<string> {
+  const { data, error } = await supabase
+    .from("tenants")
+    .select("id")
+    .order("created_at", { ascending: true })
+    .limit(1)
     .maybeSingle();
-  if (!data?.tenant_id) throw new Error("No tenant assigned to this user");
-  return data.tenant_id;
+  if (error) throw error;
+  if (!data?.id) throw new Error("No tenant configured");
+  return data.id;
 }
 
 Deno.serve(async (req) => {
@@ -40,8 +42,8 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { action, ...payload } = body;
 
-    // Resolve tenant
-    const tenantId = await resolveTenantId(supabase, user.id);
+    // Resolve tenant (single-tenant fallback)
+    const tenantId = await resolveTenantId(supabase);
 
     switch (action) {
       // ─── CREATE CUSTOMER ───
@@ -469,9 +471,10 @@ Deno.serve(async (req) => {
           .from("user_roles").select("role").eq("user_id", user.id)
           .in("role", ["super_admin", "admin"]).maybeSingle();
         const { data: crmUser } = await supabase
-          .from("crm_users").select("vertical_access").eq("user_id", user.id).maybeSingle();
-        const isAdmin = !!roleRow;
-        const verticalAccess = crmUser?.vertical_access || [];
+          .from("crm_users").select("role").eq("auth_user_id", user.id).maybeSingle();
+        const { data: allVerts } = await supabase.from("vertical_pipelines").select("vertical_name");
+        const isAdmin = !!roleRow || crmUser?.role === "admin";
+        const verticalAccess = [...new Set((allVerts || []).map((v: any) => v.vertical_name))];
 
         let effectiveVerticals: string[] = [];
         if (vertical_name) {
@@ -568,19 +571,21 @@ Deno.serve(async (req) => {
           .from("user_roles").select("role").eq("user_id", user.id)
           .in("role", ["super_admin", "admin"]).maybeSingle();
         const { data: crmUser } = await supabase
-          .from("crm_users").select("vertical_access").eq("user_id", user.id).maybeSingle();
-        const isAdmin = !!roleRow;
+          .from("crm_users").select("role").eq("auth_user_id", user.id).maybeSingle();
+        const { data: allVerts } = await supabase.from("vertical_pipelines").select("vertical_name");
+        const isAdmin = !!roleRow || crmUser?.role === "admin";
+        const verticalAccess = [...new Set((allVerts || []).map((v: any) => v.vertical_name))];
 
         const targetId = isAdmin ? (executive_id || null) : user.id;
 
-        if (!isAdmin && vertical_name && !(crmUser?.vertical_access || []).includes(vertical_name)) {
+        if (!isAdmin && vertical_name && !verticalAccess.includes(vertical_name)) {
           throw new Error("Access denied to this vertical");
         }
 
-        let execQuery = supabase.from("crm_users").select("*").eq("is_active", true).eq("tenant_id", tenantId);
-        if (targetId) execQuery = execQuery.eq("user_id", targetId);
+        let execQuery = supabase.from("crm_users").select("*").eq("is_active", true);
+        if (targetId) execQuery = execQuery.eq("auth_user_id", targetId);
         if (!isAdmin && !targetId && vertical_name) {
-          execQuery = execQuery.contains("vertical_access", [vertical_name]);
+          // No per-user vertical_access column in current crm_users schema.
         }
         const { data: executives } = await execQuery;
 
@@ -601,20 +606,20 @@ Deno.serve(async (req) => {
         const performanceData = [];
 
         for (const exec of (executives || [])) {
-          const { count: assignedLeads } = await supabase
-            .from("master_customers").select("id", { count: "exact" })
-            .eq("assigned_to", exec.user_id)
+            const { count: assignedLeads } = await supabase
+              .from("master_customers").select("id", { count: "exact" })
+              .eq("assigned_to", exec.auth_user_id)
             .eq("tenant_id", tenantId);
 
           const { count: overdueFollowups } = await supabase
             .from("master_customers").select("id", { count: "exact" })
-            .eq("assigned_to", exec.user_id)
+            .eq("assigned_to", exec.auth_user_id)
             .eq("tenant_id", tenantId)
             .lt("next_followup_at", now).not("next_followup_at", "is", null);
 
           const { count: callsToday } = await supabase
             .from("customer_call_logs").select("id", { count: "exact" })
-            .eq("called_by", exec.user_id)
+            .eq("called_by", exec.auth_user_id)
             .eq("tenant_id", tenantId)
             .gte("called_at", todayISO);
 
@@ -625,13 +630,13 @@ Deno.serve(async (req) => {
               .select("current_stage, customer:master_customers(assigned_to)")
               .eq("vertical_name", vertical_name)
               .eq("tenant_id", tenantId);
-            const execRows = (vertRows || []).filter((r: any) => r.customer?.assigned_to === exec.user_id);
+            const execRows = (vertRows || []).filter((r: any) => r.customer?.assigned_to === exec.auth_user_id);
             finalCount = execRows.filter((r: any) => finalStages.includes(r.current_stage)).length;
             lostCount = execRows.filter((r: any) => lostStages.includes(r.current_stage)).length;
           }
 
           performanceData.push({
-            user_id: exec.user_id,
+            user_id: exec.auth_user_id,
             name: exec.name,
             email: exec.email,
             assigned_leads: assignedLeads || 0,
