@@ -17,7 +17,7 @@ export const ErrorPrevention = () => {
       // Get leads created > 24h ago
       const { data: leads, error } = await supabase
         .from("leads")
-        .select("id, customer_name, phone, created_at, status, priority")
+        .select("id, name, phone, created_at, status")
         .lte("created_at", twentyFourHoursAgo)
         .in("status", ["new", "contacted"])
         .order("created_at", { ascending: true })

@@ -122,12 +122,10 @@ export const FloatingCTA = () => {
       // Submit quick form lead
       try {
         const { error } = await supabase.from("leads").insert({
-          customer_name: quickFormData.name.trim(),
+          name: quickFormData.name.trim(),
           phone: quickFormData.phone.trim(),
           source: "floating_cta",
-          lead_type: "quick_deal",
           status: "new",
-          priority: "high",
         });
 
         if (error) throw error;

@@ -9,9 +9,8 @@ export const SalesDashboard = () => {
   const { data: stats } = useQuery({
     queryKey: ["sales-dashboard-stats"],
     queryFn: async () => {
-      const [leads, hotLeads, cars, recentLeads] = await Promise.all([
+      const [leads, cars, recentLeads] = await Promise.all([
         supabase.from("leads").select("*", { count: "exact", head: true }),
-        supabase.from("leads").select("*", { count: "exact", head: true }).eq("priority", "hot"),
         supabase.from("cars").select("*", { count: "exact", head: true }),
         supabase.from("leads").select("status").order("created_at", { ascending: false }).limit(100),
       ]);
@@ -23,7 +22,7 @@ export const SalesDashboard = () => {
 
       return {
         totalLeads: leads.count || 0,
-        hotLeads: hotLeads.count || 0,
+        hotLeads: 0,
         totalCars: cars.count || 0,
         statusCounts,
       };

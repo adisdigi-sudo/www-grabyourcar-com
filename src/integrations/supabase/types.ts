@@ -745,13 +745,6 @@ export type Database = {
             referencedRelation: "whatsapp_broadcasts"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "broadcast_recipients_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "leads"
-            referencedColumns: ["id"]
-          },
         ]
       }
       business_verticals: {
@@ -940,13 +933,6 @@ export type Database = {
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "marketing_campaigns"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "campaign_conversions_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "leads"
             referencedColumns: ["id"]
           },
         ]
@@ -5417,13 +5403,6 @@ export type Database = {
             referencedRelation: "journey_automations"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "journey_enrollments_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "leads"
-            referencedColumns: ["id"]
-          },
         ]
       }
       journey_steps: {
@@ -5516,15 +5495,7 @@ export type Database = {
           performed_by?: string | null
           score_impact?: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "lead_activities_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "leads"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       lead_imports: {
         Row: {
@@ -5623,114 +5594,67 @@ export type Database = {
           updated_at?: string
           whatsapp_replies?: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "lead_scores_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "leads"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       leads: {
         Row: {
-          assigned_at: string | null
           assigned_to: string | null
-          budget_max: number | null
-          budget_min: number | null
-          buying_timeline: string | null
-          car_brand: string | null
-          car_model: string | null
-          car_variant: string | null
           city: string | null
           created_at: string | null
-          customer_name: string
           email: string | null
-          follow_up_count: number | null
           id: string
-          landing_page: string | null
-          last_contacted_at: string | null
-          lead_type: string
-          next_follow_up_at: string | null
-          notes: string | null
+          name: string
+          next_followup_at: string | null
           phone: string
-          priority: string | null
-          service_category: string | null
-          source: string
+          source: string | null
           status: string
-          tags: string[] | null
-          team_assigned: string | null
           updated_at: string | null
-          utm_campaign: string | null
-          utm_medium: string | null
-          utm_source: string | null
+          vertical_id: string | null
         }
         Insert: {
-          assigned_at?: string | null
           assigned_to?: string | null
-          budget_max?: number | null
-          budget_min?: number | null
-          buying_timeline?: string | null
-          car_brand?: string | null
-          car_model?: string | null
-          car_variant?: string | null
           city?: string | null
           created_at?: string | null
-          customer_name: string
           email?: string | null
-          follow_up_count?: number | null
           id?: string
-          landing_page?: string | null
-          last_contacted_at?: string | null
-          lead_type: string
-          next_follow_up_at?: string | null
-          notes?: string | null
+          name: string
+          next_followup_at?: string | null
           phone: string
-          priority?: string | null
-          service_category?: string | null
-          source: string
+          source?: string | null
           status?: string
-          tags?: string[] | null
-          team_assigned?: string | null
           updated_at?: string | null
-          utm_campaign?: string | null
-          utm_medium?: string | null
-          utm_source?: string | null
+          vertical_id?: string | null
         }
         Update: {
-          assigned_at?: string | null
           assigned_to?: string | null
-          budget_max?: number | null
-          budget_min?: number | null
-          buying_timeline?: string | null
-          car_brand?: string | null
-          car_model?: string | null
-          car_variant?: string | null
           city?: string | null
           created_at?: string | null
-          customer_name?: string
           email?: string | null
-          follow_up_count?: number | null
           id?: string
-          landing_page?: string | null
-          last_contacted_at?: string | null
-          lead_type?: string
-          next_follow_up_at?: string | null
-          notes?: string | null
+          name?: string
+          next_followup_at?: string | null
           phone?: string
-          priority?: string | null
-          service_category?: string | null
-          source?: string
+          source?: string | null
           status?: string
-          tags?: string[] | null
-          team_assigned?: string | null
           updated_at?: string | null
-          utm_campaign?: string | null
-          utm_medium?: string | null
-          utm_source?: string | null
+          vertical_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "leads_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "crm_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_vertical_id_fkey"
+            columns: ["vertical_id"]
+            isOneToOne: false
+            referencedRelation: "verticals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       loan_activity_log: {
         Row: {
@@ -7751,13 +7675,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "wa_automation_log_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "leads"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "wa_automation_log_message_id_fkey"
             columns: ["message_id"]
             isOneToOne: false
@@ -8168,13 +8085,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "wa_message_logs_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "leads"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "wa_message_logs_template_id_fkey"
             columns: ["template_id"]
             isOneToOne: false
@@ -8278,13 +8188,6 @@ export type Database = {
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "wa_campaigns"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "wa_message_queue_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "leads"
             referencedColumns: ["id"]
           },
         ]

@@ -76,16 +76,11 @@ export const EntryLeadCaptureModal = () => {
     setIsSubmitting(true);
     try {
       const { error } = await supabase.from("leads").insert({
-        customer_name: formData.name.trim(),
+        name: formData.name.trim(),
         phone: formData.phone.trim(),
         city: formData.city.trim(),
-        car_model: formData.carInterest.trim() || null,
-        buying_timeline: formData.purchaseTimeline || null,
         source: "entry_popup",
-        lead_type: "high_intent",
         status: "new",
-        priority: "high",
-        notes: formData.budgetRange ? `Budget: ${formData.budgetRange}` : null,
       });
 
       if (error) throw error;
