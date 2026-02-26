@@ -8622,6 +8622,7 @@ export type Database = {
       }
     }
     Functions: {
+      get_crm_role: { Args: { _user_id: string }; Returns: string }
       get_user_tenant_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
