@@ -22,7 +22,9 @@ import {
   Volume2,
   VolumeX,
   Mail,
-  MailX
+  MailX,
+  Shield,
+  CalendarClock,
 } from "lucide-react";
 import { useAdminNotifications, Notification } from "@/hooks/useAdminNotifications";
 import { formatDistanceToNow } from "date-fns";
@@ -44,6 +46,10 @@ const getNotificationIcon = (type: Notification['type']) => {
       return <Phone className="h-4 w-4 text-blue-500 animate-pulse" />;
     case 'overdue_followup':
       return <AlertTriangle className="h-4 w-4 text-red-500 animate-pulse" />;
+    case 'insurance_expiring':
+      return <Shield className="h-4 w-4 text-red-500 animate-pulse" />;
+    case 'insurance_renewal':
+      return <CalendarClock className="h-4 w-4 text-amber-500" />;
     default:
       return <Bell className="h-4 w-4" />;
   }
