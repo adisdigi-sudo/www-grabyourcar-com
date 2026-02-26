@@ -12,11 +12,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Phone, PhoneCall, ChevronLeft, ChevronRight, User, Car, Shield,
   FileText, Plus, Upload, SkipForward, Shuffle, Search, Clock,
   CheckCircle2, XCircle, ArrowRight, Eye, Edit, Save, Loader2, PhoneOff,
-  MapPin, Mail, Hash, CalendarDays, AlertTriangle, PhoneForwarded, Ban, HelpCircle
+  MapPin, Mail, Hash, CalendarDays, AlertTriangle, PhoneForwarded, Ban, HelpCircle,
+  Zap, Activity, Target, Headphones, BarChart3, Flame, Sparkles
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 
@@ -65,23 +67,42 @@ const IN_PROGRESS_STAGES = [
 ];
 
 const CALL_OUTCOMES = [
-  { value: "connected", label: "Connected", icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50 border-emerald-200 hover:bg-emerald-100" },
-  { value: "interested", label: "Interested", icon: PhoneForwarded, color: "text-orange-500", bg: "bg-orange-50 border-orange-200 hover:bg-orange-100" },
-  { value: "quote_requested", label: "Quote Requested", icon: FileText, color: "text-blue-600", bg: "bg-blue-50 border-blue-200 hover:bg-blue-100" },
-  { value: "follow_up", label: "Follow-up Needed", icon: Clock, color: "text-rose-500", bg: "bg-rose-50 border-rose-200 hover:bg-rose-100" },
-  { value: "no_answer", label: "No Answer", icon: PhoneOff, color: "text-amber-600", bg: "bg-amber-50 border-amber-200 hover:bg-amber-100" },
-  { value: "not_interested", label: "Not Interested", icon: XCircle, color: "text-red-600", bg: "bg-red-50 border-red-200 hover:bg-red-100" },
-  { value: "wrong_number", label: "Wrong Number", icon: AlertTriangle, color: "text-yellow-600", bg: "bg-yellow-50 border-yellow-200 hover:bg-yellow-100" },
+  { value: "connected", label: "Connected", icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800", activeBg: "bg-emerald-100 dark:bg-emerald-900/50 ring-emerald-500" },
+  { value: "interested", label: "Interested", icon: PhoneForwarded, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800", activeBg: "bg-blue-100 dark:bg-blue-900/50 ring-blue-500" },
+  { value: "quote_requested", label: "Quote Req.", icon: FileText, color: "text-violet-600", bg: "bg-violet-50 dark:bg-violet-950/40 border-violet-200 dark:border-violet-800", activeBg: "bg-violet-100 dark:bg-violet-900/50 ring-violet-500" },
+  { value: "follow_up", label: "Follow-up", icon: Clock, color: "text-orange-500", bg: "bg-orange-50 dark:bg-orange-950/40 border-orange-200 dark:border-orange-800", activeBg: "bg-orange-100 dark:bg-orange-900/50 ring-orange-500" },
+  { value: "no_answer", label: "No Answer", icon: PhoneOff, color: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800", activeBg: "bg-amber-100 dark:bg-amber-900/50 ring-amber-500" },
+  { value: "not_interested", label: "Not Interested", icon: XCircle, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800", activeBg: "bg-red-100 dark:bg-red-900/50 ring-red-500" },
+  { value: "wrong_number", label: "Wrong No.", icon: AlertTriangle, color: "text-yellow-600", bg: "bg-yellow-50 dark:bg-yellow-950/40 border-yellow-200 dark:border-yellow-800", activeBg: "bg-yellow-100 dark:bg-yellow-900/50 ring-yellow-500" },
 ];
 
-function DetailRow({ label, value, missing }: { label: string; value: string | number | null | undefined; missing?: boolean }) {
+function DetailRow({ label, value, icon: Icon, missing }: { label: string; value: string | number | null | undefined; icon?: any; missing?: boolean }) {
   const isMissing = missing !== false && !value;
   return (
-    <div className="flex justify-between items-center py-1.5 border-b border-border/30 last:border-0">
-      <span className="text-muted-foreground text-[13px]">{label}</span>
-      <span className={`font-medium text-[13px] text-right max-w-[60%] truncate ${isMissing ? "text-orange-500 italic text-xs" : ""}`}>
-        {isMissing ? "Missing" : value}
+    <div className="flex justify-between items-center py-2 border-b border-border/20 last:border-0 group">
+      <span className="text-muted-foreground text-[13px] flex items-center gap-1.5">
+        {Icon && <Icon className="h-3.5 w-3.5 opacity-50" />}
+        {label}
       </span>
+      <span className={`font-medium text-[13px] text-right max-w-[60%] truncate ${isMissing ? "text-orange-500 italic text-xs flex items-center gap-1" : ""}`}>
+        {isMissing ? (
+          <><AlertTriangle className="h-3 w-3" /> Missing</>
+        ) : value}
+      </span>
+    </div>
+  );
+}
+
+function StatChip({ label, value, icon: Icon, color }: { label: string; value: string | number; icon: any; color: string }) {
+  return (
+    <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-card border border-border/50 shadow-sm">
+      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${color}`}>
+        <Icon className="h-4 w-4 text-white" />
+      </div>
+      <div>
+        <p className="text-lg font-bold leading-tight">{value}</p>
+        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</p>
+      </div>
     </div>
   );
 }
@@ -310,76 +331,116 @@ export function InsuranceSmartCalling() {
     return stages[stage || ""] || stage || "New";
   };
 
-  const getPriorityColor = (p: string | null) => {
-    if (p === "hot") return "bg-red-100 text-red-700 border-red-300";
-    if (p === "high") return "bg-orange-100 text-orange-700 border-orange-300";
-    if (p === "medium") return "bg-yellow-100 text-yellow-700 border-yellow-300";
-    return "bg-muted text-muted-foreground";
+  const getStageColor = (stage: string | null) => {
+    const colors: Record<string, string> = {
+      new_lead: "bg-blue-500", contact_attempted: "bg-yellow-500", requirement_collected: "bg-violet-500",
+      quote_shared: "bg-cyan-500", follow_up: "bg-orange-500", payment_pending: "bg-pink-500",
+    };
+    return colors[stage || ""] || "bg-muted-foreground";
   };
+
+  const getPriorityConfig = (p: string | null) => {
+    if (p === "hot") return { label: "🔥 Hot", className: "bg-red-100 text-red-700 border-red-300 dark:bg-red-950/50 dark:text-red-400 dark:border-red-800" };
+    if (p === "high" || p === "warm") return { label: "🟠 Warm", className: "bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-950/50 dark:text-orange-400 dark:border-orange-800" };
+    if (p === "medium") return { label: "🟡 Medium", className: "bg-yellow-100 text-yellow-700 border-yellow-300 dark:bg-yellow-950/50 dark:text-yellow-400 dark:border-yellow-800" };
+    return { label: "❄️ Cold", className: "bg-muted text-muted-foreground" };
+  };
+
+  const progressPercent = callingList.length > 0 ? ((currentIndex + 1) / callingList.length) * 100 : 0;
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <div className="text-center space-y-3">
+          <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto" />
+          <p className="text-sm text-muted-foreground">Loading calling queue...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold tracking-tight flex items-center gap-2">
-            <PhoneCall className="h-5 w-5 text-emerald-600" />
-            Smart Calling
-          </h2>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {callingList.length} leads in queue • {dialedNumbers.size} dialed this session
-          </p>
+    <div className="space-y-5">
+      {/* ── Header with Stats ── */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 via-emerald-700 to-emerald-900 p-5 sm:p-6 text-white">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-60" />
+        <div className="relative flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center">
+                <Headphones className="h-5 w-5" />
+              </div>
+              Smart Calling
+            </h2>
+            <p className="text-emerald-100 text-sm mt-1.5">
+              {callingList.length} leads in queue • {dialedNumbers.size} dialed this session
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2 items-center">
+            <Select value={callMode} onValueChange={(v) => { setCallMode(v as any); setCurrentIndex(0); }}>
+              <SelectTrigger className="w-[140px] h-9 text-sm bg-white/10 border-white/20 text-white">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="in_progress">📋 In Progress</SelectItem>
+                <SelectItem value="random">🎲 Random</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/50" />
+              <Input
+                placeholder="Filter..."
+                value={searchFilter}
+                onChange={e => { setSearchFilter(e.target.value); setCurrentIndex(0); }}
+                className="pl-8 h-9 w-36 text-sm bg-white/10 border-white/20 text-white placeholder:text-white/40"
+              />
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setShowImport(true)} className="gap-1.5 h-9 bg-white/10 border-white/20 text-white hover:bg-white/20">
+              <Upload className="h-4 w-4" /> Import
+            </Button>
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2 items-center">
-          <Select value={callMode} onValueChange={(v) => { setCallMode(v as any); setCurrentIndex(0); }}>
-            <SelectTrigger className="w-[150px] h-9 text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="in_progress">📋 In Progress</SelectItem>
-              <SelectItem value="random">🎲 Random</SelectItem>
-            </SelectContent>
-          </Select>
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-            <Input
-              placeholder="Filter leads..."
-              value={searchFilter}
-              onChange={e => { setSearchFilter(e.target.value); setCurrentIndex(0); }}
-              className="pl-8 h-9 w-44 text-sm"
+
+        {/* Session Stats */}
+        <div className="relative grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
+          {[
+            { label: "Queue", value: callingList.length, icon: Target },
+            { label: "Dialed", value: dialedNumbers.size, icon: Phone },
+            { label: "Position", value: `${currentIndex + 1}`, icon: Activity },
+            { label: "Remaining", value: Math.max(0, callingList.length - currentIndex - 1), icon: BarChart3 },
+          ].map(s => (
+            <div key={s.label} className="bg-white/10 backdrop-blur-sm rounded-xl px-3 py-2.5 border border-white/10">
+              <div className="flex items-center gap-2">
+                <s.icon className="h-4 w-4 text-emerald-200" />
+                <span className="text-[10px] uppercase tracking-wider text-emerald-200">{s.label}</span>
+              </div>
+              <p className="text-xl font-bold mt-0.5">{s.value}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Progress Bar */}
+        <div className="relative mt-4 flex items-center gap-3">
+          <div className="h-2 flex-1 rounded-full bg-white/15 overflow-hidden">
+            <motion.div
+              className="h-full bg-white rounded-full"
+              initial={{ width: 0 }}
+              animate={{ width: `${progressPercent}%` }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
             />
           </div>
-          <Button variant="outline" size="sm" onClick={() => setShowImport(true)} className="gap-1.5 h-9">
-            <Upload className="h-4 w-4" /> Import
-          </Button>
+          <span className="text-xs font-bold text-emerald-100 bg-white/15 px-2.5 py-1 rounded-full">
+            {Math.round(progressPercent)}%
+          </span>
         </div>
-      </div>
-
-      {/* Progress Bar */}
-      <div className="flex items-center gap-3">
-        <div className="h-1.5 flex-1 rounded-full bg-emerald-100 overflow-hidden">
-          <div
-            className="h-full bg-emerald-500 rounded-full transition-all duration-500 ease-out"
-            style={{ width: callingList.length > 0 ? `${((currentIndex + 1) / callingList.length) * 100}%` : "0%" }}
-          />
-        </div>
-        <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
-          {currentIndex + 1} / {callingList.length}
-        </span>
       </div>
 
       {callingList.length === 0 ? (
         <Card className="border-dashed border-2">
           <CardContent className="py-16 text-center text-muted-foreground">
-            <PhoneOff className="h-12 w-12 mx-auto mb-4 opacity-30" />
+            <div className="w-20 h-20 rounded-2xl bg-muted mx-auto mb-4 flex items-center justify-center">
+              <PhoneOff className="h-10 w-10 opacity-30" />
+            </div>
             <p className="font-semibold text-lg">No leads in queue</p>
             <p className="text-sm mt-1">Import leads or wait for new in-progress leads.</p>
             <Button variant="outline" className="mt-4 gap-2" onClick={() => setShowImport(true)}>
@@ -393,71 +454,91 @@ export function InsuranceSmartCalling() {
           {/* ── LEFT COLUMN: Customer Card ── */}
           <div className="lg:col-span-4 space-y-4">
             {/* Hero Dial Card */}
-            <Card className="overflow-hidden border-0 shadow-lg">
-              <div className="bg-gradient-to-br from-emerald-500 to-emerald-700 px-6 pt-6 pb-5 text-center text-white relative">
-                <div className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm mx-auto flex items-center justify-center mb-3 ring-4 ring-white/30">
-                  <User className="h-10 w-10 text-white" />
+            <motion.div
+              key={currentClient.id}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Card className="overflow-hidden border-0 shadow-xl">
+                <div className="bg-gradient-to-br from-emerald-500 via-emerald-600 to-emerald-800 px-6 pt-6 pb-5 text-center text-white relative overflow-hidden">
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.1)_0%,_transparent_60%)]" />
+                  <div className="relative">
+                    <div className="w-20 h-20 rounded-2xl bg-white/20 backdrop-blur-sm mx-auto flex items-center justify-center mb-3 ring-4 ring-white/20 shadow-lg">
+                      <User className="h-10 w-10 text-white" />
+                    </div>
+                    <h3 className="text-xl font-bold tracking-wide uppercase">
+                      {currentClient.customer_name || "Unknown"}
+                    </h3>
+                    <p className="text-3xl font-mono font-bold mt-2 tracking-wider text-emerald-100">
+                      {formatPhone(currentClient.phone)}
+                    </p>
+                    <div className="flex gap-2 justify-center mt-3 flex-wrap">
+                      <Badge className={`text-xs border ${getStageColor(currentClient.pipeline_stage)} text-white border-white/20`}>
+                        {getStageLabel(currentClient.pipeline_stage)}
+                      </Badge>
+                      {currentClient.priority && (
+                        <Badge className={`text-xs border ${getPriorityConfig(currentClient.priority).className}`}>
+                          {getPriorityConfig(currentClient.priority).label}
+                        </Badge>
+                      )}
+                      {currentClient.contact_attempts && currentClient.contact_attempts > 0 && (
+                        <Badge className="bg-white/20 text-white border-white/20 text-xs">
+                          {currentClient.contact_attempts} attempts
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <h3 className="text-xl font-bold tracking-wide uppercase">
-                  {currentClient.customer_name || "Unknown"}
-                </h3>
-                <p className="text-3xl font-mono font-bold mt-2 tracking-wider text-emerald-100">
-                  {formatPhone(currentClient.phone)}
-                </p>
-                <div className="flex gap-2 justify-center mt-3">
-                  <Badge className="bg-white/20 text-white border-white/30 text-xs backdrop-blur-sm">
-                    {getStageLabel(currentClient.pipeline_stage)}
-                  </Badge>
-                  {currentClient.priority && (
-                    <Badge className={`text-xs border ${getPriorityColor(currentClient.priority)}`}>
-                      {currentClient.priority}
-                    </Badge>
-                  )}
-                </div>
-              </div>
-              <CardContent className="p-4 space-y-3">
-                <div className="flex gap-2">
-                  <Button
-                    className="flex-1 gap-2 h-12 text-base bg-emerald-600 hover:bg-emerald-700 text-white shadow-md"
-                    onClick={() => dialPhone(currentClient.phone)}
-                  >
-                    <Phone className="h-5 w-5" /> Dial Now
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="gap-1.5 h-12 border-2"
-                    onClick={dialAndAdvance}
-                    title="Dial & auto-advance"
-                  >
-                    <Phone className="h-4 w-4" />
-                    <SkipForward className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="flex justify-between">
-                  <Button variant="ghost" size="sm" onClick={goToPrev} disabled={currentIndex === 0} className="gap-1 text-muted-foreground">
-                    <ChevronLeft className="h-4 w-4" /> Prev
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={goToNext} disabled={currentIndex >= callingList.length - 1} className="gap-1 text-muted-foreground">
-                    Next <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex gap-2">
+                    <Button
+                      className="flex-1 gap-2 h-12 text-base bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all hover:scale-[1.02]"
+                      onClick={() => dialPhone(currentClient.phone)}
+                    >
+                      <Phone className="h-5 w-5" /> Dial Now
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="gap-1.5 h-12 border-2 hover:bg-primary/10"
+                      onClick={dialAndAdvance}
+                      title="Dial & auto-advance"
+                    >
+                      <Zap className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="flex justify-between">
+                    <Button variant="ghost" size="sm" onClick={goToPrev} disabled={currentIndex === 0} className="gap-1 text-muted-foreground">
+                      <ChevronLeft className="h-4 w-4" /> Prev
+                    </Button>
+                    <span className="text-xs font-mono text-muted-foreground self-center">
+                      {currentIndex + 1} / {callingList.length}
+                    </span>
+                    <Button variant="ghost" size="sm" onClick={goToNext} disabled={currentIndex >= callingList.length - 1} className="gap-1 text-muted-foreground">
+                      Next <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
 
             {/* Customer Details */}
-            <Card>
+            <Card className="shadow-sm">
               <CardHeader className="pb-1 pt-4 px-5">
                 <CardTitle className="text-sm font-bold flex items-center gap-2 text-foreground">
-                  <User className="h-4 w-4 text-emerald-600" /> Customer Details
+                  <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <User className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                  Customer Details
                 </CardTitle>
               </CardHeader>
               <CardContent className="px-5 pb-4">
-                <DetailRow label="City" value={currentClient.city?.toUpperCase()} />
-                <DetailRow label="Email" value={currentClient.email} />
-                <DetailRow label="Source" value={currentClient.lead_source} />
-                <DetailRow label="Executive" value={currentClient.assigned_executive} />
-                <DetailRow label="Attempts" value={currentClient.contact_attempts || 0} missing={false} />
-                <DetailRow label="Created" value={currentClient.created_at ? format(new Date(currentClient.created_at), "dd MMM yyyy") : null} missing={false} />
+                <DetailRow label="City" value={currentClient.city?.toUpperCase()} icon={MapPin} />
+                <DetailRow label="Email" value={currentClient.email} icon={Mail} />
+                <DetailRow label="Source" value={currentClient.lead_source} icon={Target} />
+                <DetailRow label="Executive" value={currentClient.assigned_executive} icon={User} />
+                <DetailRow label="Attempts" value={currentClient.contact_attempts || 0} icon={Phone} missing={false} />
+                <DetailRow label="Created" value={currentClient.created_at ? format(new Date(currentClient.created_at), "dd MMM yyyy") : null} icon={CalendarDays} missing={false} />
               </CardContent>
             </Card>
           </div>
@@ -465,78 +546,100 @@ export function InsuranceSmartCalling() {
           {/* ── MIDDLE COLUMN: Vehicle + Policy ── */}
           <div className="lg:col-span-4 space-y-4">
             {/* Vehicle Details */}
-            <Card>
-              <CardHeader className="pb-1 pt-4 px-5">
-                <CardTitle className="text-sm font-bold flex items-center gap-2 text-foreground">
-                  <Car className="h-4 w-4 text-blue-600" /> Vehicle Details
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="px-5 pb-4">
-                <DetailRow label="Vehicle" value={[currentClient.vehicle_make, currentClient.vehicle_model].filter(Boolean).join(" ").toUpperCase() || null} />
-                <DetailRow label="Reg. No" value={currentClient.vehicle_number?.toUpperCase()} />
-                <DetailRow label="Year" value={currentClient.vehicle_year} />
-                <DetailRow label="Current Insurer" value={currentClient.current_insurer} />
-                <DetailRow label="Policy Expiry" value={currentClient.policy_expiry_date ? format(new Date(currentClient.policy_expiry_date), "dd MMM yyyy") : null} />
-                <DetailRow label="Policy Type" value={currentClient.current_policy_type?.toUpperCase()} />
-                <DetailRow label="NCB %" value={currentClient.ncb_percentage != null ? `${currentClient.ncb_percentage}%` : null} />
-                <DetailRow label="Premium" value={currentClient.current_premium ? `₹${Number(currentClient.current_premium).toLocaleString("en-IN")}` : null} />
-              </CardContent>
-            </Card>
+            <motion.div
+              key={`vehicle-${currentClient.id}`}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
+            >
+              <Card className="shadow-sm">
+                <CardHeader className="pb-1 pt-4 px-5">
+                  <CardTitle className="text-sm font-bold flex items-center gap-2 text-foreground">
+                    <div className="w-6 h-6 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                      <Car className="h-3.5 w-3.5 text-blue-600" />
+                    </div>
+                    Vehicle Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-5 pb-4">
+                  <DetailRow label="Vehicle" value={[currentClient.vehicle_make, currentClient.vehicle_model].filter(Boolean).join(" ").toUpperCase() || null} icon={Car} />
+                  <DetailRow label="Reg. No" value={currentClient.vehicle_number?.toUpperCase()} icon={Hash} />
+                  <DetailRow label="Year" value={currentClient.vehicle_year} icon={CalendarDays} />
+                  <DetailRow label="Current Insurer" value={currentClient.current_insurer} icon={Shield} />
+                  <DetailRow label="Policy Expiry" value={currentClient.policy_expiry_date ? format(new Date(currentClient.policy_expiry_date), "dd MMM yyyy") : null} icon={Clock} />
+                  <DetailRow label="Policy Type" value={currentClient.current_policy_type?.toUpperCase()} icon={FileText} />
+                  <DetailRow label="NCB %" value={currentClient.ncb_percentage != null ? `${currentClient.ncb_percentage}%` : null} icon={Sparkles} />
+                  <DetailRow label="Premium" value={currentClient.current_premium ? `₹${Number(currentClient.current_premium).toLocaleString("en-IN")}` : null} icon={Target} />
+                </CardContent>
+              </Card>
+            </motion.div>
 
             {/* Policy Details */}
-            <Card>
-              <CardHeader className="pb-1 pt-4 px-5">
-                <CardTitle className="text-sm font-bold flex items-center gap-2 justify-between">
-                  <span className="flex items-center gap-2 text-foreground">
-                    <Shield className="h-4 w-4 text-purple-600" /> Policy Details
-                  </span>
-                  <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-emerald-600 hover:text-emerald-700" onClick={() => setShowAddPolicy(true)}>
-                    <Plus className="h-3 w-3" /> {activePolicy ? "Update" : "Add"}
-                  </Button>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="px-5 pb-4">
-                {activePolicy ? (
-                  <div>
-                    <DetailRow label="Policy No." value={activePolicy.policy_number ? `#${activePolicy.policy_number}` : null} />
-                    <DetailRow label="Insurer" value={activePolicy.insurer} />
-                    <DetailRow label="Type" value={activePolicy.policy_type?.toUpperCase()} />
-                    <DetailRow label="Premium" value={activePolicy.premium_amount ? `₹${Number(activePolicy.premium_amount).toLocaleString("en-IN")}` : null} />
-                    <DetailRow label="IDV" value={activePolicy.idv ? `₹${Number(activePolicy.idv).toLocaleString("en-IN")}` : null} />
-                    <DetailRow label="Start" value={activePolicy.start_date ? format(new Date(activePolicy.start_date), "dd MMM yyyy") : null} />
-                    <DetailRow label="Expiry" value={activePolicy.expiry_date ? format(new Date(activePolicy.expiry_date), "dd MMM yyyy") : null} />
-                    <DetailRow label="NCB" value={activePolicy.ncb_discount != null ? `${activePolicy.ncb_discount}%` : null} />
-                    {activePolicy.addons?.length ? (
-                      <DetailRow label="Add-ons" value={activePolicy.addons.join(", ")} missing={false} />
-                    ) : null}
-                    {activePolicy.expiry_date && (
-                      <div className="mt-3 pt-2 border-t border-border/40">
-                        {(() => {
-                          const days = differenceInDays(new Date(activePolicy.expiry_date), new Date());
-                          return (
-                            <Badge className={`text-xs ${days < 0 ? "bg-red-100 text-red-700" : days <= 7 ? "bg-red-100 text-red-700" : days <= 30 ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"}`}>
-                              {days < 0 ? `⚠ Expired ${Math.abs(days)}d ago` : `${days} days to renewal`}
-                            </Badge>
-                          );
-                        })()}
+            <motion.div
+              key={`policy-${currentClient.id}`}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.15 }}
+            >
+              <Card className="shadow-sm border-primary/20">
+                <CardHeader className="pb-1 pt-4 px-5">
+                  <CardTitle className="text-sm font-bold flex items-center gap-2 justify-between">
+                    <span className="flex items-center gap-2 text-foreground">
+                      <div className="w-6 h-6 rounded-lg bg-violet-500/10 flex items-center justify-center">
+                        <Shield className="h-3.5 w-3.5 text-violet-600" />
                       </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-center py-6 text-muted-foreground">
-                    <Shield className="h-10 w-10 mx-auto mb-2 opacity-20" />
-                    <p className="text-sm font-medium">No policy found</p>
-                    <p className="text-xs mt-1 mb-3">Add policy details for this customer</p>
-                    <Button size="sm" className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => setShowAddPolicy(true)}>
-                      <Plus className="h-3.5 w-3.5" /> Add Policy Details
+                      Policy Details
+                    </span>
+                    <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-primary hover:text-primary/80" onClick={() => setShowAddPolicy(true)}>
+                      <Plus className="h-3 w-3" /> {activePolicy ? "Update" : "Add"}
                     </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-5 pb-4">
+                  {activePolicy ? (
+                    <div>
+                      <DetailRow label="Policy No." value={activePolicy.policy_number ? `#${activePolicy.policy_number}` : null} icon={Hash} />
+                      <DetailRow label="Insurer" value={activePolicy.insurer} icon={Shield} />
+                      <DetailRow label="Type" value={activePolicy.policy_type?.toUpperCase()} icon={FileText} />
+                      <DetailRow label="Premium" value={activePolicy.premium_amount ? `₹${Number(activePolicy.premium_amount).toLocaleString("en-IN")}` : null} icon={Target} />
+                      <DetailRow label="IDV" value={activePolicy.idv ? `₹${Number(activePolicy.idv).toLocaleString("en-IN")}` : null} icon={BarChart3} />
+                      <DetailRow label="Start" value={activePolicy.start_date ? format(new Date(activePolicy.start_date), "dd MMM yyyy") : null} icon={CalendarDays} />
+                      <DetailRow label="Expiry" value={activePolicy.expiry_date ? format(new Date(activePolicy.expiry_date), "dd MMM yyyy") : null} icon={Clock} />
+                      <DetailRow label="NCB" value={activePolicy.ncb_discount != null ? `${activePolicy.ncb_discount}%` : null} icon={Sparkles} />
+                      {activePolicy.addons?.length ? (
+                        <DetailRow label="Add-ons" value={activePolicy.addons.join(", ")} missing={false} />
+                      ) : null}
+                      {activePolicy.expiry_date && (
+                        <div className="mt-3 pt-2 border-t border-border/40">
+                          {(() => {
+                            const days = differenceInDays(new Date(activePolicy.expiry_date), new Date());
+                            return (
+                              <Badge className={`text-xs ${days < 0 ? "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400" : days <= 7 ? "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400" : days <= 30 ? "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400" : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"}`}>
+                                {days < 0 ? `⚠ Expired ${Math.abs(days)}d ago` : `${days} days to renewal`}
+                              </Badge>
+                            );
+                          })()}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <div className="w-14 h-14 rounded-2xl bg-muted mx-auto mb-3 flex items-center justify-center">
+                        <Shield className="h-7 w-7 opacity-30" />
+                      </div>
+                      <p className="text-sm font-medium">No policy found</p>
+                      <p className="text-xs mt-1 mb-3">Add policy details for this customer</p>
+                      <Button size="sm" className="gap-1.5" onClick={() => setShowAddPolicy(true)}>
+                        <Plus className="h-3.5 w-3.5" /> Add Policy Details
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
 
             {clientPolicies.length > 1 && (
-              <Card>
+              <Card className="shadow-sm">
                 <CardHeader className="pb-1 pt-3 px-5">
                   <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                     Previous Policies ({clientPolicies.length - 1})
@@ -545,8 +648,8 @@ export function InsuranceSmartCalling() {
                 <CardContent className="px-5 pb-3">
                   <ScrollArea className="max-h-28">
                     {clientPolicies.slice(1).map(p => (
-                      <div key={p.id} className="flex justify-between items-center text-xs py-1.5 border-b border-border/30 last:border-0">
-                        <span className="truncate">{p.policy_number || "—"} • {p.insurer || "—"}</span>
+                      <div key={p.id} className="flex justify-between items-center text-xs py-2 border-b border-border/30 last:border-0">
+                        <span className="truncate font-medium">{p.policy_number || "—"} • {p.insurer || "—"}</span>
                         <Badge variant="outline" className="text-[10px] h-4 shrink-0">{p.status}</Badge>
                       </div>
                     ))}
@@ -559,77 +662,73 @@ export function InsuranceSmartCalling() {
           {/* ── RIGHT COLUMN: Call Outcome + Queue ── */}
           <div className="lg:col-span-4 space-y-4">
             {/* Call Outcome */}
-            <Card className="border-0 shadow-lg">
-              <CardHeader className="pb-2 pt-4 px-5">
-                <CardTitle className="text-sm font-bold flex items-center gap-2 text-foreground">
-                  <FileText className="h-4 w-4 text-amber-600" /> Call Outcome
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="px-5 pb-5 space-y-3">
-                <Select value={callOutcome} onValueChange={setCallOutcome}>
-                  <SelectTrigger className="h-10 text-sm">
-                    <SelectValue placeholder="Select outcome..." />
-                  </SelectTrigger>
-                  <SelectContent>
+            <motion.div
+              key={`outcome-${currentClient.id}`}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
+            >
+              <Card className="border-0 shadow-xl bg-card">
+                <CardHeader className="pb-2 pt-4 px-5">
+                  <CardTitle className="text-sm font-bold flex items-center gap-2 text-foreground">
+                    <div className="w-6 h-6 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                      <FileText className="h-3.5 w-3.5 text-amber-600" />
+                    </div>
+                    Call Outcome
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-5 pb-5 space-y-3">
+                  {/* Visual outcome buttons */}
+                  <div className="grid grid-cols-2 gap-1.5">
                     {CALL_OUTCOMES.map(o => (
-                      <SelectItem key={o.value} value={o.value}>
-                        <span className="flex items-center gap-2">
-                          <o.icon className={`h-4 w-4 ${o.color}`} />
-                          {o.label}
-                        </span>
-                      </SelectItem>
+                      <button
+                        key={o.value}
+                        onClick={() => setCallOutcome(o.value)}
+                        className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-[12px] font-semibold transition-all text-left ${
+                          callOutcome === o.value
+                            ? `${o.activeBg} ring-2 ring-offset-1 border-transparent shadow-sm`
+                            : `${o.bg} hover:shadow-sm`
+                        }`}
+                      >
+                        <o.icon className={`h-3.5 w-3.5 shrink-0 ${o.color}`} />
+                        {o.label}
+                      </button>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </div>
 
-                {/* Visual outcome buttons */}
-                <div className="grid grid-cols-1 gap-1.5">
-                  {CALL_OUTCOMES.map(o => (
-                    <button
-                      key={o.value}
-                      onClick={() => setCallOutcome(o.value)}
-                      className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border text-sm font-medium transition-all text-left ${
-                        callOutcome === o.value
-                          ? `${o.bg} ring-2 ring-offset-1 ring-emerald-400 border-transparent`
-                          : "border-border/50 hover:bg-muted/50"
-                      }`}
-                    >
-                      <o.icon className={`h-4 w-4 shrink-0 ${o.color}`} />
-                      {o.label}
-                    </button>
-                  ))}
-                </div>
+                  <div className="space-y-1.5 pt-1">
+                    <Label className="text-xs font-medium text-muted-foreground">Notes</Label>
+                    <Textarea
+                      value={callNote}
+                      onChange={e => setCallNote(e.target.value)}
+                      placeholder="Add call notes..."
+                      className="min-h-[60px] text-sm resize-none"
+                    />
+                  </div>
 
-                <div className="space-y-1.5 pt-1">
-                  <Label className="text-xs font-medium text-muted-foreground">Notes</Label>
-                  <Textarea
-                    value={callNote}
-                    onChange={e => setCallNote(e.target.value)}
-                    placeholder="Add call notes..."
-                    className="min-h-[70px] text-sm resize-none"
-                  />
-                </div>
+                  <Button
+                    className="w-full gap-1.5 h-11 shadow-lg hover:shadow-xl transition-all hover:scale-[1.01]"
+                    onClick={saveCallOutcome}
+                    disabled={saving || !callOutcome}
+                  >
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    Save & Next
+                  </Button>
 
-                <Button
-                  className="w-full gap-1.5 h-11 bg-emerald-600 hover:bg-emerald-700 text-white shadow-md"
-                  onClick={saveCallOutcome}
-                  disabled={saving || !callOutcome}
-                >
-                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                  Save & Next
-                </Button>
-
-                <Button variant="ghost" size="sm" className="w-full gap-1.5 text-muted-foreground" onClick={goToNext}>
-                  <SkipForward className="h-4 w-4" /> Skip to Next
-                </Button>
-              </CardContent>
-            </Card>
+                  <Button variant="ghost" size="sm" className="w-full gap-1.5 text-muted-foreground" onClick={goToNext}>
+                    <SkipForward className="h-4 w-4" /> Skip to Next
+                  </Button>
+                </CardContent>
+              </Card>
+            </motion.div>
 
             {/* Existing Notes */}
             {currentClient.notes && (
-              <Card>
+              <Card className="shadow-sm">
                 <CardHeader className="pb-1 pt-3 px-5">
-                  <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Existing Notes</CardTitle>
+                  <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                    <FileText className="h-3 w-3" /> Existing Notes
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="px-5 pb-3">
                   <p className="text-sm whitespace-pre-wrap text-foreground/80 leading-relaxed">{currentClient.notes}</p>
@@ -638,9 +737,11 @@ export function InsuranceSmartCalling() {
             )}
 
             {/* Next in Queue */}
-            <Card>
+            <Card className="shadow-sm">
               <CardHeader className="pb-1 pt-3 px-5">
-                <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Next in Queue</CardTitle>
+                <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                  <Activity className="h-3 w-3" /> Next in Queue
+                </CardTitle>
               </CardHeader>
               <CardContent className="px-5 pb-3">
                 <ScrollArea className="max-h-48">
@@ -648,18 +749,23 @@ export function InsuranceSmartCalling() {
                     {callingList.slice(currentIndex + 1, currentIndex + 8).map((c, i) => (
                       <div
                         key={c.id}
-                        className="flex items-center justify-between py-2 px-2 rounded-lg cursor-pointer hover:bg-muted/60 transition-colors border border-transparent hover:border-border/50"
+                        className="flex items-center justify-between py-2.5 px-3 rounded-xl cursor-pointer hover:bg-muted/60 transition-all border border-transparent hover:border-border/50 group"
                         onClick={() => { setCurrentIndex(currentIndex + 1 + i); setCallNote(""); setCallOutcome(""); }}
                       >
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold truncate text-foreground">{c.customer_name || "Unknown"}</p>
-                          <p className="text-xs text-muted-foreground font-mono">{formatPhone(c.phone)}</p>
+                        <div className="min-w-0 flex items-center gap-2.5">
+                          <div className={`w-7 h-7 rounded-lg ${getStageColor(c.pipeline_stage)} flex items-center justify-center shrink-0`}>
+                            <User className="h-3.5 w-3.5 text-white" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold truncate text-foreground">{c.customer_name || "Unknown"}</p>
+                            <p className="text-[11px] text-muted-foreground font-mono">{formatPhone(c.phone)}</p>
+                          </div>
                         </div>
-                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
+                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0 group-hover:text-foreground transition-colors" />
                       </div>
                     ))}
                     {callingList.length <= currentIndex + 1 && (
-                      <p className="text-xs text-muted-foreground text-center py-3">No more leads in queue</p>
+                      <p className="text-xs text-muted-foreground text-center py-4">No more leads in queue</p>
                     )}
                   </div>
                 </ScrollArea>
@@ -689,7 +795,7 @@ export function InsuranceSmartCalling() {
       <Dialog open={showAddPolicy} onOpenChange={setShowAddPolicy}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Shield className="h-5 w-5 text-emerald-600" /> Add / Update Policy</DialogTitle>
+            <DialogTitle className="flex items-center gap-2"><Shield className="h-5 w-5 text-primary" /> Add / Update Policy</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             {[
@@ -727,7 +833,7 @@ export function InsuranceSmartCalling() {
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={savePolicy} disabled={saving} className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white">
+            <Button onClick={savePolicy} disabled={saving} className="gap-1.5">
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               Save Policy
             </Button>
