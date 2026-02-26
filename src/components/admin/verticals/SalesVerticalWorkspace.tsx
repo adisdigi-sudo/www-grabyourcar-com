@@ -24,13 +24,13 @@ export function SalesVerticalWorkspace() {
 
   const renderContent = () => {
     switch (activeTab) {
-      case "leads": return <LeadManagement />;
+      case "leads": return <LeadManagement verticalCategory="car_inquiry" />;
       case "cars": return <UnifiedCarManagement />;
       case "brands": return <BrandsManagement />;
       case "colors": return <CarColorManagement />;
       case "quotes": return <ManualQuoteGenerator />;
       case "discounts": return <DiscountManagement />;
-      default: return <LeadManagement />;
+      default: return <LeadManagement verticalCategory="car_inquiry" />;
     }
   };
 
