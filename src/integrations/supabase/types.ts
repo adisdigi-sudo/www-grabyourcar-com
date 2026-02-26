@@ -7705,6 +7705,27 @@ export type Database = {
         }
         Relationships: []
       }
+      verticals: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+        }
+        Relationships: []
+      }
       wa_automation_log: {
         Row: {
           created_at: string | null
