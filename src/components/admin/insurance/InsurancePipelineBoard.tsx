@@ -255,9 +255,22 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
       toast.success(`Moved to ${stage?.label}`);
       setShowMoveDialog(false);
       setLostReason("");
-      // Auto-open upload policy on WON
+      // Auto-navigate based on new stage
       if (vars.newStage === "policy_issued") {
         setShowUploadPolicy(true);
+        // Navigate to Policy Book after a brief delay for upload
+        setTimeout(() => {
+          if (onNavigate) onNavigate("policy-book");
+        }, 2000);
+      } else if (vars.newStage === "lost") {
+        // Auto-filter to lost stage in pipeline
+        setSelectedStage("lost");
+      } else if (vars.newStage === "renewal_queue") {
+        // Navigate to Renewal Engine
+        if (onNavigate) onNavigate("renewals");
+      } else {
+        // Auto-select the new stage tab so user sees the moved lead
+        setSelectedStage(vars.newStage);
       }
     },
   });
