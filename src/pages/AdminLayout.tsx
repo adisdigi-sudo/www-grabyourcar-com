@@ -173,6 +173,8 @@ const AdminLayout = () => {
         if (slug === "loans") return <LoanCRMDashboard />;
         return <AdminDashboard />;
       }
+      case "loan-crm":
+        return <LoanCRMDashboard />;
       case "unified-crm":
         return <UnifiedCustomerProfile />;
       case "unified-intelligence":

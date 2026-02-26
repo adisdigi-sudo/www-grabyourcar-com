@@ -65,10 +65,18 @@ interface NavItem {
 const navItems: NavItem[] = [
   // ── Universal ──
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { id: "manager-dashboard", label: "📊 Manager Dashboard", icon: BarChart3, badge: "New", allowedRoles: ["super_admin", "admin"] },
-  { id: "team-engagement", label: "🏆 Team Engagement", icon: BarChart3, badge: "New", allowedRoles: ["super_admin", "admin"] },
-  { id: "error-prevention", label: "⚠️ Error Prevention", icon: BarChart3, badge: "New", allowedRoles: ["super_admin", "admin"] },
-  { id: "workflow-engine", label: "⚙️ Workflow Engine", icon: BarChart3, allowedRoles: ["super_admin", "admin"] },
+  { id: "manager-dashboard", label: "📊 Manager Dashboard", icon: BarChart3, badge: "New",
+    verticals: ["sales", "loans", "marketing"],
+    allowedRoles: ["super_admin", "admin"] },
+  { id: "team-engagement", label: "🏆 Team Engagement", icon: BarChart3, badge: "New",
+    verticals: ["sales", "loans", "marketing"],
+    allowedRoles: ["super_admin", "admin"] },
+  { id: "error-prevention", label: "⚠️ Error Prevention", icon: BarChart3, badge: "New",
+    verticals: ["sales", "loans", "marketing"],
+    allowedRoles: ["super_admin", "admin"] },
+  { id: "workflow-engine", label: "⚙️ Workflow Engine", icon: BarChart3,
+    verticals: ["sales", "loans", "marketing"],
+    allowedRoles: ["super_admin", "admin"] },
 
   // ── Calling System — operational verticals only ──
   { id: "calling-system", label: "📞 Smart Calling", icon: Users, badge: "🔥",
@@ -80,12 +88,22 @@ const navItems: NavItem[] = [
     verticals: ["loans"],
     allowedRoles: ["super_admin", "admin", "finance", "sales"] },
 
-  // ── Cross-Vertical Intelligence — super admin / admin only ──
-  { id: "unified-crm", label: "🧠 Unified Customers", icon: Users, badge: "New", allowedRoles: ["super_admin", "admin"] },
-  { id: "unified-intelligence", label: "🔗 Cross-Vertical Intel", icon: Sparkles, badge: "AI", allowedRoles: ["super_admin", "admin"] },
-  { id: "journey-automation", label: "⚡ Journey Automation", icon: Sparkles, badge: "New", allowedRoles: ["super_admin", "admin"] },
-  { id: "automation-center", label: "🤖 Automation Center", icon: Sparkles, badge: "🔥", allowedRoles: ["super_admin", "admin"] },
-  { id: "revenue-intelligence", label: "📊 Revenue Intelligence", icon: BarChart3, badge: "New", allowedRoles: ["super_admin", "admin", "finance"] },
+  // ── Cross-Vertical Intelligence — marketing/admin workspace ──
+  { id: "unified-crm", label: "🧠 Unified Customers", icon: Users, badge: "New",
+    verticals: ["marketing"],
+    allowedRoles: ["super_admin", "admin"] },
+  { id: "unified-intelligence", label: "🔗 Cross-Vertical Intel", icon: Sparkles, badge: "AI",
+    verticals: ["marketing"],
+    allowedRoles: ["super_admin", "admin"] },
+  { id: "journey-automation", label: "⚡ Journey Automation", icon: Sparkles, badge: "New",
+    verticals: ["marketing"],
+    allowedRoles: ["super_admin", "admin"] },
+  { id: "automation-center", label: "🤖 Automation Center", icon: Sparkles, badge: "🔥",
+    verticals: ["marketing"],
+    allowedRoles: ["super_admin", "admin"] },
+  { id: "revenue-intelligence", label: "📊 Revenue Intelligence", icon: BarChart3, badge: "New",
+    verticals: ["marketing", "loans"],
+    allowedRoles: ["super_admin", "admin", "finance"] },
   { id: "lead-scoring", label: "🤖 AI Lead Scoring", icon: Brain, badge: "AI",
     verticals: ["sales", "loans", "insurance"],
     allowedRoles: ["super_admin", "admin", "sales", "calling", "insurance"] },
@@ -95,7 +113,9 @@ const navItems: NavItem[] = [
   { id: "lead-import", label: "📥 Lead Import", icon: Database, badge: "New",
     verticals: ["sales", "loans", "insurance"],
     allowedRoles: ["super_admin", "admin", "operations", "calling"] },
-  { id: "data-export", label: "📤 Data Export", icon: FileText, badge: "New", allowedRoles: ["super_admin", "admin"] },
+  { id: "data-export", label: "📤 Data Export", icon: FileText, badge: "New",
+    verticals: ["sales", "loans", "insurance", "hsrp", "rental", "accessories", "marketing"],
+    allowedRoles: ["super_admin", "admin"] },
 
   // ── Lead Management — sales, loans, insurance ──
   { 
@@ -255,6 +275,7 @@ const navItems: NavItem[] = [
     id: "profile", 
     label: "⚙️ Profile & Settings", 
     icon: UserCog,
+    verticals: ["marketing"],
     allowedRoles: ["super_admin", "admin"],
     children: [
       { id: "profile-business", label: "Business Profile", icon: Settings },
@@ -264,8 +285,8 @@ const navItems: NavItem[] = [
       { id: "profile-otp", label: "OTP & Verification", icon: Shield },
     ]
   },
-  { id: "roles", label: "👥 User Roles", icon: UserCog, allowedRoles: ["super_admin", "admin"] },
-  { id: "settings", label: "⚙️ Site Settings", icon: Settings, allowedRoles: ["super_admin", "admin"] },
+  { id: "roles", label: "👥 User Roles", icon: UserCog, verticals: ["marketing"], allowedRoles: ["super_admin", "admin"] },
+  { id: "settings", label: "⚙️ Site Settings", icon: Settings, verticals: ["marketing"], allowedRoles: ["super_admin", "admin"] },
 ];
 
 export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => {
