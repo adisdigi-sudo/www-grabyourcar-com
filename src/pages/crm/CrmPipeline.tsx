@@ -21,7 +21,7 @@ export default function CrmPipeline() {
     vertical_name: selectedVertical,
     is_final: viewMode === "done" ? true : undefined,
     is_lost: viewMode === "lost" ? true : undefined,
-    assigned_to: isExecutive ? crmUser?.user_id : undefined,
+    assigned_to: isExecutive ? crmUser?.auth_user_id : undefined,
   });
 
   const customers = customersData?.customers || [];
