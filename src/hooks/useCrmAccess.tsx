@@ -47,6 +47,9 @@ export function useCrmAccess() {
     enabled: !!user?.id,
   });
 
+  console.log("[CRM Debug] Auth user:", user?.id, user?.email);
+  console.log("[CRM Debug] CRM user:", crmUser);
+
   const role = crmUser?.role;
   const isAdmin = role === "admin";
   const isManager = role === "manager";
