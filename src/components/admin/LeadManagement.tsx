@@ -48,6 +48,7 @@ interface Lead {
   lead_type: string;
   status: string;
   priority: string;
+  name: string;
   customer_name: string;
   phone: string;
   email: string | null;
@@ -60,11 +61,12 @@ interface Lead {
   follow_up_count: number | null;
   buying_timeline: string | null;
   assigned_to: string | null;
-  next_follow_up_at: string | null;
+  next_followup_at: string | null;
   notes: string | null;
   tags: string[];
   service_category: string | null;
   team_assigned: string | null;
+  last_contacted_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -232,6 +234,7 @@ export const LeadManagement = () => {
       const { error } = await supabase
         .from('leads')
         .insert([{
+          name: leadData.customer_name,
           customer_name: leadData.customer_name,
           phone: leadData.phone,
           email: leadData.email || null,
@@ -301,6 +304,7 @@ export const LeadManagement = () => {
       for (const lead of leads) {
         try {
           const { error } = await supabase.from('leads').insert({
+            name: lead.customer_name || lead.name || 'Unknown',
             customer_name: lead.customer_name || lead.name || 'Unknown',
             phone: lead.phone || lead.mobile || '',
             email: lead.email || null,
