@@ -21,7 +21,11 @@ const LEAD_FIELDS = [
   "buying_timeline", "notes",
 ];
 
-export const LeadImportManager = () => {
+interface LeadImportManagerProps {
+  verticalCategory?: string;
+}
+
+export const LeadImportManager = ({ verticalCategory }: LeadImportManagerProps = {}) => {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [csvData, setCsvData] = useState<Record<string, string>[]>([]);

@@ -185,10 +185,16 @@ const AdminLayout = () => {
         return <LeadScoringDashboard />;
       case "client-management":
         return <ClientManagement />;
-      case "lead-import":
-        return <LeadImportManager />;
+      case "lead-import": {
+        const importVerticalMap: Record<string, string> = {
+          sales: "car_inquiry", insurance: "insurance", loans: "finance",
+          hsrp: "hsrp", rental: "rental", accessories: "accessories", corporate: "corporate",
+        };
+        const importCat = activeVertical?.slug ? importVerticalMap[activeVertical.slug] : undefined;
+        return <LeadImportManager verticalCategory={importCat} />;
+      }
       case "data-export":
-        return <DataExportEngine />;
+        return <DataExportEngine verticalSlug={activeVertical?.slug} />;
       case "leads-all":
       case "leads-hot":
       case "leads-whatsapp": {
