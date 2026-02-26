@@ -5460,42 +5460,45 @@ export type Database = {
       }
       lead_activities: {
         Row: {
-          activity_source: string | null
           activity_type: string
           created_at: string | null
+          created_by: string | null
           description: string | null
           id: string
           lead_id: string
-          metadata: Json | null
-          outcome: string | null
-          performed_by: string | null
-          score_impact: number | null
         }
         Insert: {
-          activity_source?: string | null
           activity_type: string
           created_at?: string | null
+          created_by?: string | null
           description?: string | null
           id?: string
           lead_id: string
-          metadata?: Json | null
-          outcome?: string | null
-          performed_by?: string | null
-          score_impact?: number | null
         }
         Update: {
-          activity_source?: string | null
           activity_type?: string
           created_at?: string | null
+          created_by?: string | null
           description?: string | null
           id?: string
           lead_id?: string
-          metadata?: Json | null
-          outcome?: string | null
-          performed_by?: string | null
-          score_impact?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "lead_activities_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "crm_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_activities_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       lead_imports: {
         Row: {
