@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useRef } from "react";
+import { Calendar } from "@/components/ui/calendar";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,7 +17,7 @@ import {
   UserPlus, Phone, FileText, MessageSquare, Clock, CreditCard,
   CheckCircle2, XCircle, Bell, Search, ChevronRight, Upload,
   PhoneCall, User, Car, Shield, TrendingUp, Eye, Send, Flame,
-  MoreVertical, Share2, Plus, ArrowRight, Filter, Download, Database, SlidersHorizontal, X
+  MoreVertical, Share2, Plus, ArrowRight, Filter, Download, Database, SlidersHorizontal, X, CalendarIcon
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator
@@ -101,6 +102,9 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
   const [filterCity, setFilterCity] = useState<string>("all");
   const [filterExecutive, setFilterExecutive] = useState<string>("all");
   const [filterDateRange, setFilterDateRange] = useState<string>("all");
+  const [customDateFrom, setCustomDateFrom] = useState<Date | undefined>();
+  const [customDateTo, setCustomDateTo] = useState<Date | undefined>();
+  const [filterMonth, setFilterMonth] = useState<string>("all");
   const [showImportDialog, setShowImportDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -138,7 +142,7 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
   const uniqueSources = useMemo(() => [...new Set(clients.map(c => c.lead_source).filter(Boolean))].sort() as string[], [clients]);
   const uniqueExecutives = useMemo(() => [...new Set(clients.map(c => c.assigned_executive).filter(Boolean))].sort() as string[], [clients]);
 
-  const activeFilterCount = [filterPriority, filterSource, filterCity, filterExecutive, filterDateRange].filter(f => f !== "all").length;
+  const activeFilterCount = [filterPriority, filterSource, filterCity, filterExecutive, filterDateRange, filterMonth].filter(f => f !== "all").length + (customDateFrom ? 1 : 0);
 
   // Get date cutoff based on filter
   const getDateCutoff = (range: string): Date | null => {
@@ -167,13 +171,11 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
     if (filterSource !== "all") result = result.filter(c => c.lead_source === filterSource);
     if (filterCity !== "all") result = result.filter(c => c.city === filterCity);
     if (filterExecutive !== "all") result = result.filter(c => c.assigned_executive === filterExecutive);
-    if (filterDateRange !== "all") {
+    // Date range preset filter
+    if (filterDateRange !== "all" && filterDateRange !== "custom") {
       const cutoff = getDateCutoff(filterDateRange);
       if (cutoff) {
-        if (filterDateRange === "today") {
-          const endOfDay = new Date(cutoff); endOfDay.setHours(23,59,59,999);
-          result = result.filter(c => { const d = new Date(c.created_at); return d >= cutoff && d <= endOfDay; });
-        } else if (filterDateRange === "yesterday") {
+        if (filterDateRange === "today" || filterDateRange === "yesterday") {
           const endOfDay = new Date(cutoff); endOfDay.setHours(23,59,59,999);
           result = result.filter(c => { const d = new Date(c.created_at); return d >= cutoff && d <= endOfDay; });
         } else {
@@ -181,8 +183,25 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
         }
       }
     }
+    // Custom date range
+    if (filterDateRange === "custom" && customDateFrom) {
+      const from = new Date(customDateFrom); from.setHours(0,0,0,0);
+      result = result.filter(c => new Date(c.created_at) >= from);
+      if (customDateTo) {
+        const to = new Date(customDateTo); to.setHours(23,59,59,999);
+        result = result.filter(c => new Date(c.created_at) <= to);
+      }
+    }
+    // Month filter
+    if (filterMonth !== "all") {
+      const [year, month] = filterMonth.split("-").map(Number);
+      result = result.filter(c => {
+        const d = new Date(c.created_at);
+        return d.getFullYear() === year && d.getMonth() === month;
+      });
+    }
     return result;
-  }, [clients, selectedStage, search, filterPriority, filterSource, filterCity, filterExecutive, filterDateRange]);
+  }, [clients, selectedStage, search, filterPriority, filterSource, filterCity, filterExecutive, filterDateRange, customDateFrom, customDateTo, filterMonth]);
 
   const clearAllFilters = () => {
     setFilterPriority("all");
@@ -190,6 +209,9 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
     setFilterCity("all");
     setFilterExecutive("all");
     setFilterDateRange("all");
+    setFilterMonth("all");
+    setCustomDateFrom(undefined);
+    setCustomDateTo(undefined);
   };
 
   // CSV Import handler
@@ -466,7 +488,7 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Date Range</Label>
-                <Select value={filterDateRange} onValueChange={setFilterDateRange}>
+                <Select value={filterDateRange} onValueChange={(v) => { setFilterDateRange(v); if (v !== "custom") { setCustomDateFrom(undefined); setCustomDateTo(undefined); } }}>
                   <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Time</SelectItem>
@@ -475,6 +497,53 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
                     <SelectItem value="7days">Last 7 Days</SelectItem>
                     <SelectItem value="30days">Last 30 Days</SelectItem>
                     <SelectItem value="90days">Last 90 Days</SelectItem>
+                    <SelectItem value="custom">Custom Range</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {filterDateRange === "custom" && (
+                <div className="space-y-2 rounded-md border p-2">
+                  <Label className="text-xs">From</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full h-8 text-xs justify-start">
+                        <CalendarIcon className="h-3 w-3 mr-2" />
+                        {customDateFrom ? format(customDateFrom, "dd MMM yyyy") : "Start date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar mode="single" selected={customDateFrom} onSelect={setCustomDateFrom} initialFocus className="p-3 pointer-events-auto" />
+                    </PopoverContent>
+                  </Popover>
+                  <Label className="text-xs">To</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full h-8 text-xs justify-start">
+                        <CalendarIcon className="h-3 w-3 mr-2" />
+                        {customDateTo ? format(customDateTo, "dd MMM yyyy") : "End date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar mode="single" selected={customDateTo} onSelect={setCustomDateTo} initialFocus className="p-3 pointer-events-auto" />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              )}
+              <div className="space-y-1">
+                <Label className="text-xs">Month</Label>
+                <Select value={filterMonth} onValueChange={setFilterMonth}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Months</SelectItem>
+                    {(() => {
+                      const months: { value: string; label: string }[] = [];
+                      const now = new Date();
+                      for (let i = 0; i < 12; i++) {
+                        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                        months.push({ value: `${d.getFullYear()}-${d.getMonth()}`, label: format(d, "MMM yyyy") });
+                      }
+                      return months.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>);
+                    })()}
                   </SelectContent>
                 </Select>
               </div>
