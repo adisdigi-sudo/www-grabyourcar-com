@@ -112,12 +112,16 @@ const quickTags = [
   'Test Drive Done', 'Finance Approved', 'Insurance Quoted', 'Ready to Buy'
 ];
 
-export const LeadManagement = () => {
+interface LeadManagementProps {
+  verticalCategory?: string;
+}
+
+export const LeadManagement = ({ verticalCategory }: LeadManagementProps = {}) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>(verticalCategory || "all");
   const [teamFilter, setTeamFilter] = useState<string>("all");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -135,7 +139,7 @@ export const LeadManagement = () => {
     car_model: "",
     source: "website",
     lead_type: "car_inquiry",
-    service_category: "car_inquiry",
+    service_category: verticalCategory || "car_inquiry",
     team_assigned: "",
     status: "new",
     notes: "",
@@ -143,8 +147,11 @@ export const LeadManagement = () => {
   });
 
   // Fetch leads with category filter
+  // If verticalCategory is set, always enforce it as a hard filter
+  const effectiveCategoryFilter = verticalCategory || categoryFilter;
+
   const { data: leads, isLoading } = useQuery({
-    queryKey: ['adminLeads', statusFilter, categoryFilter, teamFilter, searchQuery],
+    queryKey: ['adminLeads', statusFilter, effectiveCategoryFilter, teamFilter, searchQuery],
     queryFn: async () => {
       let query = supabase
         .from('leads')
@@ -155,8 +162,8 @@ export const LeadManagement = () => {
         query = query.eq('status', statusFilter);
       }
       
-      if (categoryFilter !== 'all') {
-        query = query.eq('service_category', categoryFilter);
+      if (effectiveCategoryFilter !== 'all') {
+        query = query.eq('service_category', effectiveCategoryFilter);
       }
       
       if (teamFilter !== 'all') {
@@ -264,7 +271,7 @@ export const LeadManagement = () => {
         car_model: "",
         source: "website",
         lead_type: "car_inquiry",
-        service_category: "car_inquiry",
+        service_category: verticalCategory || "car_inquiry",
         team_assigned: "",
         status: "new",
         notes: "",
@@ -453,32 +460,34 @@ export const LeadManagement = () => {
         </div>
       </div>
 
-      {/* Category Quick Filters */}
-      <div className="flex gap-2 flex-wrap">
-        <Button
-          variant={categoryFilter === 'all' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setCategoryFilter('all')}
-        >
-          All ({leads?.length || 0})
-        </Button>
-        {serviceCategoryOptions.map((cat) => {
-          const Icon = cat.icon;
-          const count = categoryStats[cat.value] || 0;
-          return (
-            <Button
-              key={cat.value}
-              variant={categoryFilter === cat.value ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setCategoryFilter(cat.value)}
-              className="gap-1"
-            >
-              <Icon className="h-3 w-3" />
-              {cat.label} ({count})
-            </Button>
-          );
-        })}
-      </div>
+      {/* Category Quick Filters - only show when not locked to a vertical */}
+      {!verticalCategory && (
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            variant={categoryFilter === 'all' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setCategoryFilter('all')}
+          >
+            All ({leads?.length || 0})
+          </Button>
+          {serviceCategoryOptions.map((cat) => {
+            const Icon = cat.icon;
+            const count = categoryStats[cat.value] || 0;
+            return (
+              <Button
+                key={cat.value}
+                variant={categoryFilter === cat.value ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setCategoryFilter(cat.value)}
+                className="gap-1"
+              >
+                <Icon className="h-3 w-3" />
+                {cat.label} ({count})
+              </Button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Filters */}
       <Card>
