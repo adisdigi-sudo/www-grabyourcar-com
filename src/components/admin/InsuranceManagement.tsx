@@ -3,7 +3,7 @@ import {
   Shield, LayoutDashboard, Users, FileSpreadsheet,
   UserPlus, Search, Menu, RefreshCw,
   GitBranch, MessageSquare, FileUp,
-  BarChart3, Upload, Database, Bell, Clock
+  BarChart3, Upload, Database, Bell, Clock, PhoneCall
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ import { InsuranceProspectPool } from "./insurance/InsuranceProspectPool";
 import { InsuranceDataHealth } from "./insurance/InsuranceDataHealth";
 import { InsuranceTemplatesManager } from "./insurance/InsuranceTemplatesManager";
 import { InsuranceReportsModule } from "./insurance/InsuranceReportsModule";
+import { InsuranceSmartCalling } from "./insurance/InsuranceSmartCalling";
 
 type NavItem = { id: string; label: string; icon: any; badge?: string };
 type NavGroup = { group: string; items: NavItem[] };
@@ -30,6 +31,7 @@ const NAV_GROUPS: NavGroup[] = [
     group: "Pipeline",
     items: [
       { id: "pipeline", label: "Lead Pipeline", icon: GitBranch, badge: "🔥" },
+      { id: "smart-calling", label: "Smart Calling", icon: PhoneCall },
       { id: "policy-book", label: "Policy Book", icon: LayoutDashboard },
       { id: "renewals", label: "Renewal Engine", icon: RefreshCw },
     ],
@@ -62,6 +64,7 @@ const NAV_GROUPS: NavGroup[] = [
 
 const COMPONENTS: Record<string, React.FC<any>> = {
   "pipeline": InsurancePipelineBoard,
+  "smart-calling": InsuranceSmartCalling,
   "policy-book": InsuranceCRMDashboard,
   "renewals": InsuranceRenewalsEngine,
   "clients": InsuranceClientsManager,
