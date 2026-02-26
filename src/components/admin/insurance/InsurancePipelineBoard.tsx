@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,13 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   UserPlus, Phone, FileText, MessageSquare, Clock, CreditCard,
   CheckCircle2, XCircle, Bell, Search, ChevronRight, Upload,
   PhoneCall, User, Car, Shield, TrendingUp, Eye, Send, Flame,
-  MoreVertical, Share2, Plus, ArrowRight
+  MoreVertical, Share2, Plus, ArrowRight, Filter, Download, Database, SlidersHorizontal, X
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator
@@ -51,6 +52,10 @@ const NEXT_ACTIONS: Record<string, string> = {
   renewal_queue: "🔔 Auto-reminders at 90/45/15 days before expiry",
 };
 
+interface InsurancePipelineBoardProps {
+  onNavigate?: (tab: string) => void;
+}
+
 interface Client {
   id: string;
   customer_name: string | null;
@@ -80,7 +85,7 @@ interface Client {
   created_at: string;
 }
 
-export function InsurancePipelineBoard() {
+export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardProps = {}) {
   const queryClient = useQueryClient();
   const [selectedStage, setSelectedStage] = useState<string>("all");
   const [search, setSearch] = useState("");
@@ -90,6 +95,13 @@ export function InsurancePipelineBoard() {
   const [lostReason, setLostReason] = useState("");
   const [showUploadPolicy, setShowUploadPolicy] = useState(false);
   const [note, setNote] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [filterPriority, setFilterPriority] = useState<string>("all");
+  const [filterSource, setFilterSource] = useState<string>("all");
+  const [filterCity, setFilterCity] = useState<string>("all");
+  const [filterExecutive, setFilterExecutive] = useState<string>("all");
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: clients = [], isLoading } = useQuery({
     queryKey: ["insurance-pipeline-clients"],
@@ -120,6 +132,13 @@ export function InsurancePipelineBoard() {
   const wonCount = stageCounts["policy_issued"] || 0;
   const convRate = totalLeads > 0 ? ((wonCount / totalLeads) * 100).toFixed(1) : "0";
 
+  // Unique filter values
+  const uniqueCities = useMemo(() => [...new Set(clients.map(c => c.city).filter(Boolean))].sort() as string[], [clients]);
+  const uniqueSources = useMemo(() => [...new Set(clients.map(c => c.lead_source).filter(Boolean))].sort() as string[], [clients]);
+  const uniqueExecutives = useMemo(() => [...new Set(clients.map(c => c.assigned_executive).filter(Boolean))].sort() as string[], [clients]);
+
+  const activeFilterCount = [filterPriority, filterSource, filterCity, filterExecutive].filter(f => f !== "all").length;
+
   // Filter
   const filtered = useMemo(() => {
     let result = selectedStage === "all" ? clients : clients.filter(c => (c.pipeline_stage || "new_lead") === selectedStage);
@@ -132,8 +151,82 @@ export function InsurancePipelineBoard() {
         c.city?.toLowerCase().includes(s)
       );
     }
+    if (filterPriority !== "all") result = result.filter(c => c.priority === filterPriority);
+    if (filterSource !== "all") result = result.filter(c => c.lead_source === filterSource);
+    if (filterCity !== "all") result = result.filter(c => c.city === filterCity);
+    if (filterExecutive !== "all") result = result.filter(c => c.assigned_executive === filterExecutive);
     return result;
-  }, [clients, selectedStage, search]);
+  }, [clients, selectedStage, search, filterPriority, filterSource, filterCity, filterExecutive]);
+
+  const clearAllFilters = () => {
+    setFilterPriority("all");
+    setFilterSource("all");
+    setFilterCity("all");
+    setFilterExecutive("all");
+  };
+
+  // CSV Import handler
+  const handleCSVImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const lines = text.split("\n").filter(l => l.trim());
+      if (lines.length < 2) { toast.error("Empty file"); return; }
+      const headers = lines[0].split(",").map(h => h.trim().toLowerCase().replace(/[^a-z_]/g, ""));
+      const rows = lines.slice(1).map(line => {
+        const vals = line.split(",").map(v => v.trim().replace(/^"|"$/g, ""));
+        const row: Record<string, string> = {};
+        headers.forEach((h, i) => { row[h] = vals[i] || ""; });
+        return row;
+      });
+
+      const inserts = rows.filter(r => r.customer_name || r.phone).map(r => ({
+        customer_name: r.customer_name || r.name || "Unknown",
+        phone: r.phone || r.mobile || "",
+        email: r.email || null,
+        city: r.city || null,
+        vehicle_number: r.vehicle_number || r.reg_number || null,
+        vehicle_make: r.vehicle_make || r.make || null,
+        vehicle_model: r.vehicle_model || r.model || null,
+        current_insurer: r.current_insurer || r.insurer || null,
+        lead_source: r.lead_source || r.source || "csv_import",
+        pipeline_stage: "new_lead",
+        priority: r.priority || "cold",
+      }));
+
+      if (inserts.length === 0) { toast.error("No valid rows found"); return; }
+
+      const { error } = await supabase.from("insurance_clients").insert(inserts as any);
+      if (error) throw error;
+
+      toast.success(`✅ ${inserts.length} leads imported successfully!`);
+      queryClient.invalidateQueries({ queryKey: ["insurance-pipeline-clients"] });
+      setShowImportDialog(false);
+    } catch (err: any) {
+      toast.error(err.message || "Import failed");
+    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  // Export pipeline data
+  const handleExport = () => {
+    if (filtered.length === 0) { toast.error("No data to export"); return; }
+    const headers = ["Name", "Phone", "Email", "City", "Vehicle", "Make", "Model", "Insurer", "Stage", "Priority", "Source", "Created"];
+    const csvRows = filtered.map(c => [
+      c.customer_name || "", c.phone || "", c.email || "", c.city || "",
+      c.vehicle_number || "", c.vehicle_make || "", c.vehicle_model || "",
+      c.current_insurer || "", c.pipeline_stage || "new_lead", c.priority || "",
+      c.lead_source || "", format(new Date(c.created_at), "yyyy-MM-dd"),
+    ].map(v => `"${v}"`).join(","));
+    const csv = [headers.join(","), ...csvRows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `insurance_pipeline_${format(new Date(), "yyyy-MM-dd")}.csv`; a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${filtered.length} records`);
+  };
 
   // Move stage
   const moveStage = useMutation({
@@ -263,11 +356,118 @@ export function InsurancePipelineBoard() {
         })}
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Search name, phone, vehicle, city..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 h-9" />
+      {/* Toolbar: Search + Filters + Import/Export */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Search name, phone, vehicle, city..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 h-9" />
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          <Popover open={showFilters} onOpenChange={setShowFilters}>
+            <PopoverTrigger asChild>
+              <Button size="sm" variant="outline" className="h-9 gap-1.5 text-xs">
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                Filters
+                {activeFilterCount > 0 && (
+                  <Badge variant="default" className="h-4 px-1 text-[10px] ml-1">{activeFilterCount}</Badge>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-72 p-4 space-y-3" align="end">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold">Filters</p>
+                {activeFilterCount > 0 && (
+                  <Button size="sm" variant="ghost" className="h-6 text-xs text-destructive" onClick={clearAllFilters}>
+                    <X className="h-3 w-3 mr-1" /> Clear all
+                  </Button>
+                )}
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Priority</Label>
+                <Select value={filterPriority} onValueChange={setFilterPriority}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Priorities</SelectItem>
+                    <SelectItem value="hot">🔥 Hot</SelectItem>
+                    <SelectItem value="warm">🟠 Warm</SelectItem>
+                    <SelectItem value="cold">❄️ Cold</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Lead Source</Label>
+                <Select value={filterSource} onValueChange={setFilterSource}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Sources</SelectItem>
+                    {uniqueSources.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">City</Label>
+                <Select value={filterCity} onValueChange={setFilterCity}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Cities</SelectItem>
+                    {uniqueCities.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Assigned Executive</Label>
+                <Select value={filterExecutive} onValueChange={setFilterExecutive}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Executives</SelectItem>
+                    {uniqueExecutives.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          <Button size="sm" variant="outline" className="h-9 gap-1.5 text-xs" onClick={() => setShowImportDialog(true)}>
+            <Upload className="h-3.5 w-3.5" /> Import
+          </Button>
+          <Button size="sm" variant="outline" className="h-9 gap-1.5 text-xs" onClick={handleExport}>
+            <Download className="h-3.5 w-3.5" /> Export
+          </Button>
+          {onNavigate && (
+            <Button size="sm" variant="outline" className="h-9 gap-1.5 text-xs" onClick={() => onNavigate("services-insurance-import")}>
+              <Database className="h-3.5 w-3.5" /> Full Import
+            </Button>
+          )}
+        </div>
       </div>
+
+      {/* Active Filter Tags */}
+      {activeFilterCount > 0 && (
+        <div className="flex gap-2 flex-wrap items-center">
+          <span className="text-xs text-muted-foreground">Active:</span>
+          {filterPriority !== "all" && (
+            <Badge variant="secondary" className="text-xs gap-1 cursor-pointer" onClick={() => setFilterPriority("all")}>
+              Priority: {filterPriority} <X className="h-3 w-3" />
+            </Badge>
+          )}
+          {filterSource !== "all" && (
+            <Badge variant="secondary" className="text-xs gap-1 cursor-pointer" onClick={() => setFilterSource("all")}>
+              Source: {filterSource} <X className="h-3 w-3" />
+            </Badge>
+          )}
+          {filterCity !== "all" && (
+            <Badge variant="secondary" className="text-xs gap-1 cursor-pointer" onClick={() => setFilterCity("all")}>
+              City: {filterCity} <X className="h-3 w-3" />
+            </Badge>
+          )}
+          {filterExecutive !== "all" && (
+            <Badge variant="secondary" className="text-xs gap-1 cursor-pointer" onClick={() => setFilterExecutive("all")}>
+              Executive: {filterExecutive} <X className="h-3 w-3" />
+            </Badge>
+          )}
+          <span className="text-xs text-muted-foreground ml-2">{filtered.length} results</span>
+        </div>
+      )}
 
       {/* Next Action Hint */}
       {selectedStage !== "all" && (
@@ -551,6 +751,40 @@ export function InsurancePipelineBoard() {
             <DialogTitle className="flex items-center gap-2"><Upload className="h-5 w-5 text-emerald-600" /> Upload Policy</DialogTitle>
           </DialogHeader>
           <PolicyUploadForm clientId={selectedClient?.id || ""} onDone={() => { setShowUploadPolicy(false); queryClient.invalidateQueries({ queryKey: ["insurance-pipeline-clients"] }); }} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Import Dialog */}
+      <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5 text-primary" /> Import Insurance Leads
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-4 rounded-lg border border-dashed bg-muted/30 text-center space-y-3">
+              <Database className="h-10 w-10 mx-auto text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">Upload CSV File</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Required columns: <span className="font-mono text-[10px]">customer_name, phone</span>
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Optional: <span className="font-mono text-[10px]">email, city, vehicle_number, vehicle_make, vehicle_model, current_insurer, lead_source, priority</span>
+                </p>
+              </div>
+              <input ref={fileInputRef} type="file" accept=".csv" onChange={handleCSVImport} className="hidden" />
+              <Button size="sm" onClick={() => fileInputRef.current?.click()} className="gap-1.5">
+                <Upload className="h-3.5 w-3.5" /> Choose CSV File
+              </Button>
+            </div>
+            {onNavigate && (
+              <Button variant="outline" className="w-full gap-2 text-sm" onClick={() => { setShowImportDialog(false); onNavigate("services-insurance-import"); }}>
+                <Database className="h-4 w-4" /> Advanced Import (Excel/Insurance Data)
+              </Button>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
