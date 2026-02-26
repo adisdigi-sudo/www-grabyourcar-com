@@ -1937,47 +1937,33 @@ export type Database = {
       }
       crm_users: {
         Row: {
-          created_at: string
+          auth_user_id: string
+          created_at: string | null
           email: string
           id: string
           is_active: boolean | null
           name: string
-          tenant_id: string | null
-          updated_at: string
-          user_id: string
-          vertical_access: string[] | null
+          role: string
         }
         Insert: {
-          created_at?: string
+          auth_user_id: string
+          created_at?: string | null
           email: string
           id?: string
           is_active?: boolean | null
           name: string
-          tenant_id?: string | null
-          updated_at?: string
-          user_id: string
-          vertical_access?: string[] | null
+          role: string
         }
         Update: {
-          created_at?: string
+          auth_user_id?: string
+          created_at?: string | null
           email?: string
           id?: string
           is_active?: boolean | null
           name?: string
-          tenant_id?: string | null
-          updated_at?: string
-          user_id?: string
-          vertical_access?: string[] | null
+          role?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "crm_users_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       cross_sell_analytics: {
         Row: {

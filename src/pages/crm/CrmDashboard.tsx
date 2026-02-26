@@ -11,7 +11,7 @@ export default function CrmDashboard() {
 
   const metricsFilters: any = {};
   if (selectedVertical) metricsFilters.vertical_name = selectedVertical;
-  if (isExecutive && !isAdmin && !isManager) metricsFilters.assigned_to = crmUser?.user_id;
+  if (isExecutive && !isAdmin && !isManager) metricsFilters.assigned_to = crmUser?.auth_user_id;
 
   const { data: metricsData, isLoading: metricsLoading } = useDashboardMetrics(metricsFilters);
   const { data: perfData, isLoading: perfLoading } = useExecutivePerformance({

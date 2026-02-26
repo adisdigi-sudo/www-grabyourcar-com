@@ -19,7 +19,7 @@ export default function CrmCustomers() {
     search: search || undefined,
     vertical: selectedVertical || undefined,
     status: statusFilter || undefined,
-    assigned_to: isExecutive ? crmUser?.user_id : undefined,
+    assigned_to: isExecutive ? crmUser?.auth_user_id : undefined,
   });
 
   const customers = data?.customers || [];

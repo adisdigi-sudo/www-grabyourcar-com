@@ -6,12 +6,11 @@ export type CrmRole = "super_admin" | "admin" | "manager" | "executive" | "marke
 
 export interface CrmUser {
   id: string;
-  user_id: string;
+  auth_user_id: string;
   name: string;
   email: string;
-  vertical_access: string[] | null;
+  role: string;
   is_active: boolean;
-  tenant_id: string | null;
 }
 
 const ALL_VERTICALS = ["car_sales", "insurance", "loan", "corporate", "accessories", "rental"];
@@ -41,15 +40,15 @@ export function useCrmAccess() {
       const { data: crmData, error: crmError } = await supabase
         .from("crm_users")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("auth_user_id", user.id)
         .maybeSingle();
       if (crmError) throw crmError;
 
       if (crmData) {
-        return crmData as CrmUser;
+        return crmData as unknown as CrmUser;
       }
 
-      // Backward-compatible fallback for rebuilt CRM where team_members is the source of truth
+      // Backward-compatible fallback via team_members
       const { data: teamMember, error: teamMemberError } = await supabase
         .from("team_members")
         .select("id, user_id, display_name, is_active")
@@ -61,12 +60,11 @@ export function useCrmAccess() {
 
       return {
         id: teamMember.id,
-        user_id: teamMember.user_id,
+        auth_user_id: teamMember.user_id,
         name: teamMember.display_name || user.email?.split("@")[0] || "CRM User",
         email: user.email || "",
-        vertical_access: null,
+        role: roles?.[0] || "executive",
         is_active: teamMember.is_active ?? true,
-        tenant_id: null,
       } as CrmUser;
     },
     enabled: !!user?.id,
@@ -93,9 +91,7 @@ export function useCrmAccess() {
 
   const accessibleVerticals = isSuperAdmin
     ? ALL_VERTICALS
-    : crmUser?.vertical_access?.length
-      ? crmUser.vertical_access
-      : userVerticalAccess;
+    : userVerticalAccess;
 
   const hasRoleAccess = roles.length > 0;
   const hasActiveProfile = !!crmUser && crmUser.is_active !== false;
@@ -105,12 +101,11 @@ export function useCrmAccess() {
     isSuperAdmin || accessibleVerticals.includes(vertical);
 
   const canManageTeam = isSuperAdmin || isAdmin;
-  const tenantId = crmUser?.tenant_id || null;
 
   return {
     roles,
     crmUser,
-    tenantId,
+    tenantId: null,
     hasCrmAccess,
     isSuperAdmin,
     isAdmin,
@@ -122,4 +117,3 @@ export function useCrmAccess() {
     isLoading: rolesLoading || crmLoading || verticalAccessLoading,
   };
 }
-
