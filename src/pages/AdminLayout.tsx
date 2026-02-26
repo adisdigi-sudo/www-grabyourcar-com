@@ -164,7 +164,7 @@ const AdminLayout = () => {
     switch (activeTab) {
       case "dashboard": {
         const slug = activeVertical?.slug;
-        if (slug === "insurance") return <InsuranceDashboard />;
+        if (slug === "insurance") return <InsuranceDashboard onNavigate={setActiveTab} />;
         if (slug === "sales") return <SalesDashboard />;
         if (slug === "rental") return <RentalDashboard />;
         if (slug === "hsrp") return <HSRPDashboard />;

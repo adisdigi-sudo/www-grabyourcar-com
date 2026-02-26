@@ -1,10 +1,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Shield, Users, FileText, AlertTriangle, TrendingUp, Clock, CheckCircle, IndianRupee } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-export const InsuranceDashboard = () => {
+interface InsuranceDashboardProps {
+  onNavigate?: (tab: string) => void;
+}
+
+export const InsuranceDashboard = ({ onNavigate }: InsuranceDashboardProps) => {
   const { data: stats } = useQuery({
     queryKey: ["insurance-dashboard-stats"],
     queryFn: async () => {
@@ -83,10 +88,16 @@ export const InsuranceDashboard = () => {
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3">
           {quickActions.map((action) => (
-            <Badge key={action.tab} variant="outline" className="px-4 py-2 text-sm cursor-pointer hover:bg-accent">
-              <action.icon className="h-4 w-4 mr-2" />
+            <Button
+              key={action.tab}
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => onNavigate?.(action.tab)}
+            >
+              <action.icon className="h-4 w-4" />
               {action.label}
-            </Badge>
+            </Button>
           ))}
         </CardContent>
       </Card>

@@ -5,7 +5,7 @@ import { useAdminAuth } from "./useAdminAuth";
 
 export interface Notification {
   id: string;
-  type: 'hot_lead' | 'new_lead' | 'pending_order' | 'payment_received' | 'booking_confirmed' | 'urgent_followup' | 'overdue_followup';
+  type: 'hot_lead' | 'new_lead' | 'pending_order' | 'payment_received' | 'booking_confirmed' | 'urgent_followup' | 'overdue_followup' | 'insurance_renewal' | 'insurance_expiring';
   title: string;
   message: string;
   timestamp: Date;
@@ -206,11 +206,70 @@ export const useAdminNotifications = () => {
     }
   }, [addNotification]);
 
+  // Check for insurance renewals/expiring policies
+  const checkInsuranceRenewals = useCallback(async () => {
+    try {
+      const now = new Date();
+      const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const in30Days = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+      // Policies expiring in next 7 days (urgent)
+      const { data: urgentRenewals, error: urgentErr } = await supabase
+        .from('client_profiles')
+        .select('id, customer_name, phone, insurance_expiry, insurance_provider, vehicle_number')
+        .not('insurance_expiry', 'is', null)
+        .gte('insurance_expiry', now.toISOString())
+        .lte('insurance_expiry', in7Days.toISOString())
+        .order('insurance_expiry', { ascending: true })
+        .limit(5);
+
+      if (!urgentErr && urgentRenewals && urgentRenewals.length > 0) {
+        urgentRenewals.forEach(client => {
+          const expiryDate = new Date(client.insurance_expiry!);
+          const daysLeft = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+          addNotification({
+            type: 'insurance_expiring',
+            title: `🚨 Policy Expiring in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}!`,
+            message: `${client.customer_name} - ${client.vehicle_number || client.insurance_provider || 'Policy'}`,
+            data: client,
+            priority: 'high',
+          });
+        });
+      }
+
+      // Policies expiring in 7-30 days (reminder)
+      const { data: upcomingRenewals, error: upcomingErr } = await supabase
+        .from('client_profiles')
+        .select('id, customer_name, phone, insurance_expiry, insurance_provider, vehicle_number')
+        .not('insurance_expiry', 'is', null)
+        .gt('insurance_expiry', in7Days.toISOString())
+        .lte('insurance_expiry', in30Days.toISOString())
+        .order('insurance_expiry', { ascending: true })
+        .limit(5);
+
+      if (!upcomingErr && upcomingRenewals && upcomingRenewals.length > 0) {
+        addNotification({
+          type: 'insurance_renewal',
+          title: `🔔 ${upcomingRenewals.length} Renewal${upcomingRenewals.length > 1 ? 's' : ''} Due This Month`,
+          message: upcomingRenewals.map(c => c.customer_name).slice(0, 3).join(', ') + (upcomingRenewals.length > 3 ? '...' : ''),
+          data: upcomingRenewals,
+          priority: 'medium',
+        });
+      }
+    } catch (error) {
+      console.error('Error checking insurance renewals:', error);
+    }
+  }, [addNotification]);
+
   useEffect(() => {
     if (!isAdmin()) return;
 
     checkUrgentFollowups();
-    followupCheckRef.current = setInterval(checkUrgentFollowups, 15 * 60 * 1000);
+    checkInsuranceRenewals();
+    followupCheckRef.current = setInterval(() => {
+      checkUrgentFollowups();
+      checkInsuranceRenewals();
+    }, 15 * 60 * 1000);
 
     // Subscribe to leads changes
     const leadsChannel = supabase
@@ -356,7 +415,7 @@ export const useAdminNotifications = () => {
         clearInterval(followupCheckRef.current);
       }
     };
-  }, [isAdmin, addNotification, checkUrgentFollowups, emailAlertsEnabled]);
+  }, [isAdmin, addNotification, checkUrgentFollowups, checkInsuranceRenewals, emailAlertsEnabled]);
 
   return {
     notifications,
