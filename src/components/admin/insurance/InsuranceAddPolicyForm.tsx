@@ -134,7 +134,32 @@ export function InsuranceAddPolicyForm({ onSuccess }: { onSuccess?: () => void }
         return;
       }
 
-      // Insert policy
+      // Auto-expire previous active policies for this client (renewal replaces old policy)
+      const { data: previousPolicies } = await supabase
+        .from("insurance_policies")
+        .select("id, policy_number, insurer, expiry_date")
+        .eq("client_id", finalClientId)
+        .eq("status", "active");
+
+      if (previousPolicies && previousPolicies.length > 0) {
+        const prevIds = previousPolicies.map(p => p.id);
+        await supabase
+          .from("insurance_policies")
+          .update({ status: "renewed" })
+          .in("id", prevIds);
+
+        // Log the replacement
+        for (const prev of previousPolicies) {
+          await supabase.from("insurance_activity_log").insert({
+            client_id: finalClientId,
+            activity_type: "policy_renewed",
+            title: "Previous policy replaced by renewal",
+            description: `Old policy ${prev.policy_number || prev.id} (${prev.insurer || "Unknown"}) auto-marked as renewed. New policy: ${form.policy_number}`,
+          });
+        }
+      }
+
+      // Insert new policy
       const { error: policyErr } = await supabase.from("insurance_policies").insert({
         client_id: finalClientId,
         policy_number: form.policy_number,
@@ -157,7 +182,10 @@ export function InsuranceAddPolicyForm({ onSuccess }: { onSuccess?: () => void }
         description: `${form.insurer || "Unknown"} policy ${form.policy_number} added`,
       });
 
-      toast.success("✅ Policy added successfully!");
+      const replacedCount = previousPolicies?.length || 0;
+      toast.success(replacedCount > 0 
+        ? `✅ New policy added! ${replacedCount} previous policy(s) auto-marked as renewed.`
+        : "✅ Policy added successfully!");
       
       // Reset form
       setForm({
