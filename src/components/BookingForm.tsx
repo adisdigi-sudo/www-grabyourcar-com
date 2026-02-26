@@ -77,18 +77,19 @@
    const submitLead = async () => {
      setIsSubmitting(true);
      try {
-       const { error } = await supabase.from("leads").insert({
-         customer_name: bookingForm.name.trim(),
-         phone: bookingForm.phone.trim(),
-         email: bookingForm.email.trim() || null,
-         car_brand: carBrand,
-         car_model: carName,
-         source: "car_detail_booking_form",
-         lead_type: "booking",
-         status: "new",
-         priority: "high",
-         notes: bookingForm.preferredDate ? `Preferred visit date: ${bookingForm.preferredDate}` : null,
-       });
+        const { error } = await supabase.from("leads").insert({
+          name: bookingForm.name.trim(),
+          customer_name: bookingForm.name.trim(),
+          phone: bookingForm.phone.trim(),
+          email: bookingForm.email.trim() || null,
+          car_brand: carBrand,
+          car_model: carName,
+          source: "car_detail_booking_form",
+          lead_type: "booking",
+          status: "new",
+          priority: "high",
+          notes: bookingForm.preferredDate ? `Preferred visit date: ${bookingForm.preferredDate}` : null,
+        });
 
        if (error) throw error;
 

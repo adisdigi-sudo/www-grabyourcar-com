@@ -72,18 +72,32 @@ export function LeadScoringDashboard() {
   const fetchLeadScores = async () => {
     setIsLoading(true);
     try {
-      // Fetch lead scores with lead details
+      // Fetch lead scores (no FK to leads, so fetch separately)
       const { data: scores, error } = await supabase
         .from("lead_scores")
-        .select(`
-          *,
-          lead:leads(customer_name, phone, email, car_model, status)
-        `)
+        .select("*")
         .order("score", { ascending: false })
         .limit(100);
 
       if (error) throw error;
-      setLeadScores(scores || []);
+      
+      // Fetch associated leads
+      const leadIds = (scores || []).map(s => s.lead_id).filter(Boolean);
+      let leadsMap: Record<string, any> = {};
+      if (leadIds.length > 0) {
+        const { data: leads } = await supabase
+          .from("leads")
+          .select("id, customer_name, phone, email, car_model, status")
+          .in("id", leadIds);
+        (leads || []).forEach(l => { leadsMap[l.id] = l; });
+      }
+      
+      const enriched = (scores || []).map(s => ({
+        ...s,
+        lead: leadsMap[s.lead_id] || undefined,
+      }));
+      
+      setLeadScores(enriched as any);
     } catch (error) {
       console.error("Error fetching lead scores:", error);
     } finally {
@@ -96,7 +110,7 @@ export function LeadScoringDashboard() {
       // Fetch all activities for the lead
       const { data: activities, error } = await supabase
         .from("lead_activities")
-        .select("activity_type, score_impact")
+        .select("activity_type")
         .eq("lead_id", leadId);
 
       if (error) throw error;
@@ -104,9 +118,9 @@ export function LeadScoringDashboard() {
       let totalScore = 0;
       let breakdown: Record<string, number> = {};
 
-      activities?.forEach(activity => {
+      activities?.forEach((activity: any) => {
         const rule = scoringRules.find(r => r.action === activity.activity_type);
-        const points = activity.score_impact || rule?.points || 0;
+        const points = rule?.points || 0;
         totalScore += points;
         breakdown[activity.activity_type] = (breakdown[activity.activity_type] || 0) + points;
       });

@@ -74,6 +74,7 @@ export const ExitIntentPopup = () => {
     setIsSubmitting(true);
     try {
       const { error } = await supabase.from("leads").insert({
+        name: formData.name.trim(),
         customer_name: formData.name.trim(),
         phone: formData.phone.trim(),
         source: "exit_intent",

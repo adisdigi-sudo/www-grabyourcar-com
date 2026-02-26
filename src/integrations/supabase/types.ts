@@ -5670,43 +5670,88 @@ export type Database = {
       leads: {
         Row: {
           assigned_to: string | null
+          budget_max: number | null
+          budget_min: number | null
+          buying_timeline: string | null
+          car_brand: string | null
+          car_model: string | null
+          car_variant: string | null
           city: string | null
           created_at: string | null
+          customer_name: string | null
           email: string | null
+          follow_up_count: number | null
           id: string
+          last_contacted_at: string | null
+          lead_type: string | null
           name: string
           next_followup_at: string | null
+          notes: string | null
           phone: string
+          priority: string | null
+          service_category: string | null
           source: string | null
           status: string
+          tags: string[] | null
+          team_assigned: string | null
           updated_at: string | null
           vertical_id: string | null
         }
         Insert: {
           assigned_to?: string | null
+          budget_max?: number | null
+          budget_min?: number | null
+          buying_timeline?: string | null
+          car_brand?: string | null
+          car_model?: string | null
+          car_variant?: string | null
           city?: string | null
           created_at?: string | null
+          customer_name?: string | null
           email?: string | null
+          follow_up_count?: number | null
           id?: string
+          last_contacted_at?: string | null
+          lead_type?: string | null
           name: string
           next_followup_at?: string | null
+          notes?: string | null
           phone: string
+          priority?: string | null
+          service_category?: string | null
           source?: string | null
           status?: string
+          tags?: string[] | null
+          team_assigned?: string | null
           updated_at?: string | null
           vertical_id?: string | null
         }
         Update: {
           assigned_to?: string | null
+          budget_max?: number | null
+          budget_min?: number | null
+          buying_timeline?: string | null
+          car_brand?: string | null
+          car_model?: string | null
+          car_variant?: string | null
           city?: string | null
           created_at?: string | null
+          customer_name?: string | null
           email?: string | null
+          follow_up_count?: number | null
           id?: string
+          last_contacted_at?: string | null
+          lead_type?: string | null
           name?: string
           next_followup_at?: string | null
+          notes?: string | null
           phone?: string
+          priority?: string | null
+          service_category?: string | null
           source?: string | null
           status?: string
+          tags?: string[] | null
+          team_assigned?: string | null
           updated_at?: string | null
           vertical_id?: string | null
         }
