@@ -8,15 +8,10 @@ export default function CrmLayout() {
   const { user, loading: authLoading } = useAuth();
   const { isLoading: crmLoading, hasCrmAccess } = useCrmAccess();
 
-  console.log("[CrmLayout] authLoading:", authLoading, "crmLoading:", crmLoading, "user:", user?.id, "hasCrmAccess:", hasCrmAccess);
-
   if (authLoading || crmLoading) {
     return (
       <div className="h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        <span className="ml-2 text-sm text-muted-foreground">
-          Auth: {authLoading ? "loading" : "done"} | CRM: {crmLoading ? "loading" : "done"}
-        </span>
       </div>
     );
   }
@@ -33,3 +28,4 @@ export default function CrmLayout() {
     </div>
   );
 }
+

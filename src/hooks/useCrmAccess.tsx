@@ -13,56 +13,109 @@ export interface CrmUser {
   is_active: boolean;
 }
 
-const ALL_VERTICALS = ["car_sales", "insurance", "loan", "corporate", "accessories", "rental"];
+const ROLE_PRIORITY: Record<CrmRole, number> = {
+  admin: 3,
+  manager: 2,
+  executive: 1,
+};
+
+const ROLE_MAP: Record<string, CrmRole | undefined> = {
+  super_admin: "admin",
+  admin: "admin",
+  vertical_manager: "manager",
+  executive: "executive",
+};
 
 export function useCrmAccess() {
-  console.log("==== CRM ACCESS HOOK START ====");
   const { user } = useAuth();
 
-  const { data: crmUser, isLoading: crmLoading, error: crmError } = useQuery({
+  const { data: crmUser, isLoading: crmLoading } = useQuery({
     queryKey: ["crm-user", user?.id],
     queryFn: async () => {
-      console.log("[CRM] queryFn called, auth user ID:", user?.id);
       if (!user?.id) return null;
       const { data, error } = await supabase
         .from("crm_users")
         .select("*")
         .eq("auth_user_id", user.id)
         .maybeSingle();
-      console.log("[CRM] crm_users query result:", { data, error });
       if (error) throw error;
       return data as unknown as CrmUser | null;
     },
     enabled: !!user?.id,
   });
 
-  const { data: userVerticalAccess = [], isLoading: verticalAccessLoading } = useQuery({
-    queryKey: ["crm-vertical-access", user?.id],
+  const { data: userRoles = [], isLoading: rolesLoading } = useQuery({
+    queryKey: ["crm-user-roles", user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
       const { data, error } = await supabase
-        .from("user_vertical_access")
-        .select("vertical_id")
+        .from("user_roles")
+        .select("role")
         .eq("user_id", user.id);
       if (error) throw error;
-      return data.map((d) => d.vertical_id);
+      return (data || []).map((r) => r.role);
     },
     enabled: !!user?.id,
   });
 
-  console.log("[CRM Debug] Auth user:", user?.id, user?.email);
-  console.log("[CRM Debug] CRM user:", crmUser, "error:", crmError);
-  console.log("[CRM Debug] crmLoading:", crmLoading, "verticalAccessLoading:", verticalAccessLoading);
+  const { data: allVerticalSlugs = [], isLoading: allVerticalsLoading } = useQuery({
+    queryKey: ["crm-all-verticals"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("business_verticals")
+        .select("slug")
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true });
+      if (error) throw error;
+      return (data || []).map((v) => v.slug);
+    },
+    enabled: !!user?.id,
+  });
 
-  const role = crmUser?.role;
+  const { data: userVerticalSlugs = [], isLoading: verticalAccessLoading } = useQuery({
+    queryKey: ["crm-vertical-access", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+
+      const { data: accessRows, error: accessError } = await supabase
+        .from("user_vertical_access")
+        .select("vertical_id")
+        .eq("user_id", user.id);
+      if (accessError) throw accessError;
+
+      const verticalIds = (accessRows || []).map((row) => row.vertical_id).filter(Boolean);
+      if (verticalIds.length === 0) return [];
+
+      const { data: verticalRows, error: verticalError } = await supabase
+        .from("business_verticals")
+        .select("id, slug")
+        .in("id", verticalIds)
+        .eq("is_active", true);
+      if (verticalError) throw verticalError;
+
+      return (verticalRows || []).map((row) => row.slug);
+    },
+    enabled: !!user?.id,
+  });
+
+  const roleFromUserRoles = userRoles
+    .map((role) => ROLE_MAP[role])
+    .filter((role): role is CrmRole => !!role)
+    .sort((a, b) => ROLE_PRIORITY[b] - ROLE_PRIORITY[a])[0];
+
+  const normalizedCrmRole: CrmRole | undefined =
+    crmUser?.role === "admin" || crmUser?.role === "manager" || crmUser?.role === "executive"
+      ? crmUser.role
+      : undefined;
+
+  const role: CrmRole | undefined = roleFromUserRoles || normalizedCrmRole;
+
   const isAdmin = role === "admin";
   const isManager = role === "manager";
   const isExecutive = role === "executive";
 
-  const accessibleVerticals = isAdmin ? ALL_VERTICALS : userVerticalAccess;
-
-  const hasCrmAccess = !!crmUser && crmUser.is_active !== false;
-  console.log("[CRM Debug] hasCrmAccess:", hasCrmAccess, "role:", role);
+  const accessibleVerticals = isAdmin ? allVerticalSlugs : userVerticalSlugs;
+  const hasCrmAccess = !!role && (roleFromUserRoles !== undefined || (!!crmUser && crmUser.is_active !== false));
 
   const canAccessVertical = (vertical: string) =>
     isAdmin || accessibleVerticals.includes(vertical);
@@ -78,6 +131,7 @@ export function useCrmAccess() {
     accessibleVerticals,
     canAccessVertical,
     canManageTeam,
-    isLoading: crmLoading || verticalAccessLoading,
+    isLoading: crmLoading || rolesLoading || verticalAccessLoading || allVerticalsLoading,
   };
 }
+
