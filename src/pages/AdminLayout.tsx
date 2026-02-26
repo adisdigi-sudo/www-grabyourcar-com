@@ -191,8 +191,19 @@ const AdminLayout = () => {
         return <DataExportEngine />;
       case "leads-all":
       case "leads-hot":
-      case "leads-whatsapp":
-        return <LeadManagement />;
+      case "leads-whatsapp": {
+        const verticalSlugMap: Record<string, string> = {
+          sales: "car_inquiry",
+          insurance: "insurance",
+          loans: "finance",
+          hsrp: "hsrp",
+          rental: "rental",
+          accessories: "accessories",
+          corporate: "corporate",
+        };
+        const verticalCat = activeVertical?.slug ? verticalSlugMap[activeVertical.slug] : undefined;
+        return <LeadManagement verticalCategory={verticalCat} />;
+      }
       case "cars-list":
       case "cars-variants":
       case "cars-specs":
