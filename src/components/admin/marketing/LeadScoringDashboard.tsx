@@ -93,7 +93,7 @@ export function LeadScoringDashboard() {
       // Fetch all activities for the lead
       const { data: activities, error } = await supabase
         .from("lead_activities")
-        .select("activity_type, score_impact")
+        .select("activity_type")
         .eq("lead_id", leadId);
 
       if (error) throw error;
@@ -103,7 +103,7 @@ export function LeadScoringDashboard() {
 
       activities?.forEach(activity => {
         const rule = scoringRules.find(r => r.action === activity.activity_type);
-        const points = activity.score_impact || rule?.points || 0;
+        const points = rule?.points || 0;
         totalScore += points;
         breakdown[activity.activity_type] = (breakdown[activity.activity_type] || 0) + points;
       });
