@@ -60,7 +60,7 @@ const NAV_GROUPS: NavGroup[] = [
   },
 ];
 
-const COMPONENTS: Record<string, React.FC> = {
+const COMPONENTS: Record<string, React.FC<any>> = {
   "pipeline": InsurancePipelineBoard,
   "policy-book": InsuranceCRMDashboard,
   "renewals": InsuranceRenewalsEngine,
@@ -163,7 +163,7 @@ export function InsuranceManagement() {
 
         {/* Main Content */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">
-          <ActiveComponent />
+          <ActiveComponent onNavigate={handleSelect} />
         </main>
       </div>
     </div>
