@@ -37,6 +37,7 @@ import {
   Rocket,
   Mail,
   LogOut,
+  Building2,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AdminGlobalSearch } from "./AdminGlobalSearch";
@@ -154,6 +155,21 @@ const navItems: NavItem[] = [
       { id: "cars-migration", label: "Data Migration", icon: Database, allowedRoles: ["super_admin", "admin"] },
       { id: "cars-ai", label: "AI Enhancement", icon: Brain, allowedRoles: ["super_admin", "admin"] },
       { id: "cars-url-scraper", label: "🌐 URL Scraper", icon: Globe, allowedRoles: ["super_admin", "admin"] },
+    ]
+  },
+
+  // ── Dealer Network — dedicated vertical ──
+  { 
+    id: "dealer", 
+    label: "🏢 Dealer Network", 
+    icon: Building2,
+    verticals: ["dealer-network"],
+    allowedRoles: ["super_admin", "admin", "dealer"],
+    children: [
+      { id: "dealer-companies", label: "Companies", icon: Building2 },
+      { id: "dealer-reps", label: "Representatives", icon: Users },
+      { id: "dealer-inventory", label: "Inventory", icon: Car },
+      { id: "dealer-broadcast", label: "Broadcast", icon: Mail },
     ]
   },
 

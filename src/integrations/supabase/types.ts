@@ -2531,6 +2531,164 @@ export type Database = {
           },
         ]
       }
+      dealer_broadcast_logs: {
+        Row: {
+          broadcast_type: string
+          created_at: string | null
+          details: Json | null
+          id: string
+          message_template: string | null
+          recipient_count: number | null
+          sent_by: string | null
+          status: string | null
+        }
+        Insert: {
+          broadcast_type?: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          message_template?: string | null
+          recipient_count?: number | null
+          sent_by?: string | null
+          status?: string | null
+        }
+        Update: {
+          broadcast_type?: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          message_template?: string | null
+          recipient_count?: number | null
+          sent_by?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
+      dealer_companies: {
+        Row: {
+          address: string | null
+          city: string | null
+          company_name: string
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string | null
+          dealer_type: string
+          id: string
+          is_active: boolean | null
+          notes: string | null
+          priority_level: number | null
+          state: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          company_name: string
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          dealer_type?: string
+          id?: string
+          is_active?: boolean | null
+          notes?: string | null
+          priority_level?: number | null
+          state?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          company_name?: string
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          dealer_type?: string
+          id?: string
+          is_active?: boolean | null
+          notes?: string | null
+          priority_level?: number | null
+          state?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      dealer_inventory: {
+        Row: {
+          brand: string
+          car_name: string
+          color: string | null
+          created_at: string | null
+          dealer_rep_id: string | null
+          discount: string | null
+          ex_showroom_price: number | null
+          fuel_type: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          notes: string | null
+          offer_details: string | null
+          on_road_price: number | null
+          quantity: number | null
+          stock_status: string
+          transmission: string | null
+          updated_at: string | null
+          variant: string | null
+          year: number | null
+        }
+        Insert: {
+          brand: string
+          car_name: string
+          color?: string | null
+          created_at?: string | null
+          dealer_rep_id?: string | null
+          discount?: string | null
+          ex_showroom_price?: number | null
+          fuel_type?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          notes?: string | null
+          offer_details?: string | null
+          on_road_price?: number | null
+          quantity?: number | null
+          stock_status?: string
+          transmission?: string | null
+          updated_at?: string | null
+          variant?: string | null
+          year?: number | null
+        }
+        Update: {
+          brand?: string
+          car_name?: string
+          color?: string | null
+          created_at?: string | null
+          dealer_rep_id?: string | null
+          discount?: string | null
+          ex_showroom_price?: number | null
+          fuel_type?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          notes?: string | null
+          offer_details?: string | null
+          on_road_price?: number | null
+          quantity?: number | null
+          stock_status?: string
+          transmission?: string | null
+          updated_at?: string | null
+          variant?: string | null
+          year?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dealer_inventory_dealer_rep_id_fkey"
+            columns: ["dealer_rep_id"]
+            isOneToOne: false
+            referencedRelation: "dealer_representatives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dealer_payout_rules: {
         Row: {
           base_amount: number | null
@@ -2580,6 +2738,62 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dealer_representatives: {
+        Row: {
+          brand: string
+          commission_type: string | null
+          commission_value: number | null
+          created_at: string | null
+          dealer_company_id: string | null
+          email: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          phone: string | null
+          role: string
+          updated_at: string | null
+          whatsapp_number: string | null
+        }
+        Insert: {
+          brand: string
+          commission_type?: string | null
+          commission_value?: number | null
+          created_at?: string | null
+          dealer_company_id?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          phone?: string | null
+          role?: string
+          updated_at?: string | null
+          whatsapp_number?: string | null
+        }
+        Update: {
+          brand?: string
+          commission_type?: string | null
+          commission_value?: number | null
+          created_at?: string | null
+          dealer_company_id?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          phone?: string | null
+          role?: string
+          updated_at?: string | null
+          whatsapp_number?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dealer_representatives_dealer_company_id_fkey"
+            columns: ["dealer_company_id"]
+            isOneToOne: false
+            referencedRelation: "dealer_companies"
             referencedColumns: ["id"]
           },
         ]
