@@ -346,6 +346,8 @@ const AdminLayout = () => {
         return <WorkflowEngine />;
       case "automation-center":
         return <AutomationCommandCenter />;
+      case "dealer-inquiry":
+        return <DealerManagement initialTab="inquiry" />;
       case "dealer-companies":
         return <DealerManagement initialTab="companies" />;
       case "dealer-reps":

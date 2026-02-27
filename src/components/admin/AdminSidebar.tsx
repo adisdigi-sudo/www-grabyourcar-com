@@ -38,6 +38,7 @@ import {
   Mail,
   LogOut,
   Building2,
+  MessageCircle,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AdminGlobalSearch } from "./AdminGlobalSearch";
@@ -166,6 +167,7 @@ const navItems: NavItem[] = [
     verticals: ["dealer-network"],
     allowedRoles: ["super_admin", "admin", "dealer"],
     children: [
+      { id: "dealer-inquiry", label: "Inquiry Hub", icon: MessageCircle },
       { id: "dealer-companies", label: "Companies", icon: Building2 },
       { id: "dealer-reps", label: "Representatives", icon: Users },
       { id: "dealer-inventory", label: "Inventory", icon: Car },
