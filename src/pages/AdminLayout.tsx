@@ -54,6 +54,7 @@ import { MarketingCommandCenter } from "@/components/admin/marketing";
 import VehicleAttributesManager from "@/components/admin/VehicleAttributesManager";
 import DriverBookingsManagement from "@/components/admin/DriverBookingsManagement";
 import APIPartnersManagement from "@/components/admin/APIPartnersManagement";
+import { DealerManagement } from "@/components/admin/DealerManagement";
 import BrandsManagement from "@/components/admin/BrandsManagement";
 import QuickTextImporter from "@/components/admin/QuickTextImporter";
 import URLDataScraper from "@/components/admin/URLDataScraper";
@@ -345,6 +346,14 @@ const AdminLayout = () => {
         return <WorkflowEngine />;
       case "automation-center":
         return <AutomationCommandCenter />;
+      case "dealer-companies":
+        return <DealerManagement initialTab="companies" />;
+      case "dealer-reps":
+        return <DealerManagement initialTab="reps" />;
+      case "dealer-inventory":
+        return <DealerManagement initialTab="inventory" />;
+      case "dealer-broadcast":
+        return <DealerManagement initialTab="broadcast" />;
       default:
         return <AdminDashboard />;
     }
