@@ -2625,10 +2625,14 @@ export type Database = {
           id: string
           image_url: string | null
           is_active: boolean | null
+          manufacturing_year: number | null
+          model: string | null
           notes: string | null
           offer_details: string | null
           on_road_price: number | null
           quantity: number | null
+          source_date: string | null
+          source_message: string | null
           stock_status: string
           transmission: string | null
           updated_at: string | null
@@ -2647,10 +2651,14 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean | null
+          manufacturing_year?: number | null
+          model?: string | null
           notes?: string | null
           offer_details?: string | null
           on_road_price?: number | null
           quantity?: number | null
+          source_date?: string | null
+          source_message?: string | null
           stock_status?: string
           transmission?: string | null
           updated_at?: string | null
@@ -2669,10 +2677,14 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean | null
+          manufacturing_year?: number | null
+          model?: string | null
           notes?: string | null
           offer_details?: string | null
           on_road_price?: number | null
           quantity?: number | null
+          source_date?: string | null
+          source_message?: string | null
           stock_status?: string
           transmission?: string | null
           updated_at?: string | null
@@ -5522,6 +5534,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      inventory_broadcast_logs: {
+        Row: {
+          channel: string
+          id: string
+          inventory_ids: string[]
+          message_preview: string | null
+          sent_at: string
+          sent_by: string | null
+          sent_to_count: number
+        }
+        Insert: {
+          channel?: string
+          id?: string
+          inventory_ids?: string[]
+          message_preview?: string | null
+          sent_at?: string
+          sent_by?: string | null
+          sent_to_count?: number
+        }
+        Update: {
+          channel?: string
+          id?: string
+          inventory_ids?: string[]
+          message_preview?: string | null
+          sent_at?: string
+          sent_by?: string | null
+          sent_to_count?: number
+        }
+        Relationships: []
       }
       journey_automations: {
         Row: {
@@ -8891,6 +8933,30 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      search_inventory: {
+        Args: { p_brand?: string; p_city?: string; p_model?: string }
+        Returns: {
+          brand: string
+          car_name: string
+          color: string
+          dealer_city: string
+          dealer_company: string
+          discount: string
+          ex_showroom_price: number
+          fuel_type: string
+          id: string
+          manufacturing_year: number
+          model: string
+          offer_details: string
+          on_road_price: number
+          quantity: number
+          rep_name: string
+          rep_phone: string
+          stock_status: string
+          transmission: string
+          variant: string
+        }[]
+      }
     }
     Enums: {
       app_role:
