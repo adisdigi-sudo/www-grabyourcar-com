@@ -1,204 +1,95 @@
 
 
-## Car Data API Integration Plan
+## Dealer Inquiry & Broadcast System — Plan
 
-### Current Situation
+### What We're Building
+A **Brand-wise Dealer Contact Manager** with one-click bulk WhatsApp inquiry capability. You select a brand → see all registered dealers for that brand → type one message → it reaches all of them instantly.
 
-Your Grabyourcar project currently uses **hardcoded static data** stored in TypeScript files (`src/data/cars/`) for 10 car brands (Maruti, Hyundai, Tata, Mahindra, Kia, Toyota, Honda, MG, Skoda, Volkswagen) with 75+ models. This data includes:
-- Car specifications (engine, dimensions, performance)
-- Images (mix of local assets and external URLs)
-- Prices, variants, colors
-- Features and offers
+### Current State
+- `dealer_companies` and `dealer_representatives` tables exist but only have 1 test record
+- `dealer_broadcast_logs` table exists for history tracking
+- `car_brands` table has 36+ active brands already registered
+- Existing `DealerBroadcastManager` component exists but lacks brand-wise inquiry focus, state/city filtering, and actual WhatsApp send integration
+- WhatsApp API is already configured (Meta Cloud API with access token)
 
-### Challenge
+### Database Changes
 
-There is **no single comprehensive API for Indian car data** that covers all your needs (specifications, images, upcoming cars, colors, real-time prices). The available options have trade-offs:
+**1. Add `state` column to `dealer_representatives`** (currently only company has city/state):
+- Add `state TEXT` and `city TEXT` to `dealer_representatives` for direct filtering
+- This avoids always joining to company table for location filters
 
-| API/Service | Coverage | Pros | Cons |
-|------------|----------|------|------|
-| **CarAPI.app** | US/Global | Easy to use, good specs | Not India-specific, no Indian pricing |
-| **CarsXE** | Global VIN-based | Detailed specs | VIN-based, no Indian models |
-| **CarQuery API** | Global | Free tier available | Outdated, limited Indian data |
-| **Auto-Data.net** | Global | Images + specs | Expensive, subscription-based |
-| **Web Scraping (CardDekho/CarWale)** | India-specific | Complete Indian data | Legal/TOS issues, maintenance heavy |
-| **Firecrawl (via connector)** | Any website | Can scrape car portals | Requires building extraction logic |
+**2. Create a `dealer_contacts` table** — a simplified, purpose-built table for this use case:
+No — we already have `dealer_representatives` with all needed fields (name, phone, whatsapp_number, brand, dealer_company_id). We'll add `state` and `city` columns to it and use it directly.
 
-### Recommended Approach: Hybrid Solution
+### UI Implementation — New Component: `DealerInquiryHub`
 
-Since no single API perfectly fits Indian car marketplace needs, I recommend a **hybrid approach**:
+**Location**: New tab in Dealer Network management or standalone page
 
-1. **Use Firecrawl** (available as a connector) to periodically scrape car data from Indian sources
-2. **Store data in your database** for fast access
-3. **Use AI to enrich/validate** data using Lovable AI
-4. **Keep manual data as fallback** for reliability
-
----
-
-### Implementation Plan
-
-#### Phase 1: Database Setup for Dynamic Car Data
-
-Create database tables to store car data that can be updated automatically:
-
-**Tables to create:**
-- `cars` - Main car information (name, brand, slug, overview, prices)
-- `car_specifications` - Engine, dimensions, performance specs
-- `car_variants` - Variant-wise pricing and features
-- `car_colors` - Available colors with hex codes
-- `car_images` - Gallery images
-- `car_offers` - Current offers and discounts
-
-This allows:
-- Data updates without code deployments
-- Easy addition of new cars
-- Historical price tracking
-- Upcoming cars with launch dates
-
-#### Phase 2: Firecrawl Integration for Data Collection
-
-Connect Firecrawl to scrape car data from public sources:
-
-**Edge function: `scrape-car-data`**
-- Scrapes car specifications from car information websites
-- Extracts images, prices, features
-- Parses data into structured format
-- Updates database with new/changed data
-
-**Edge function: `sync-upcoming-cars`**
-- Monitors for new car launches
-- Updates upcoming cars section automatically
-
-#### Phase 3: AI-Powered Data Enhancement
-
-Use Lovable AI to:
-- **Generate missing data** - Fill gaps in specifications
-- **Normalize data** - Standardize formats across sources
-- **Validate data** - Check for inconsistencies
-- **Generate descriptions** - Create compelling car overviews
-- **Match images** - Find appropriate images for cars
-
-**Edge function: `enhance-car-data`**
-- Takes raw scraped data
-- Uses AI to clean and enhance
-- Returns production-ready car data
-
-#### Phase 4: Admin Dashboard for Data Management
-
-Create an admin interface to:
-- View/edit car data manually
-- Trigger data sync operations
-- Review AI-generated content before publishing
-- Monitor data freshness
-- Add new cars manually when needed
-
----
-
-### Alternative: Third-Party API Integration
-
-If you prefer a direct API approach (simpler but less comprehensive):
-
-**Option A: CarAPI.app + Manual India Data**
-- Use CarAPI for base specifications (global data)
-- Manually maintain Indian pricing and availability
-- Cost: ~$50-100/month for production tier
-
-**Option B: Auto-Data.net API**
-- Comprehensive specifications and images
-- Better global coverage
-- Cost: ~$200-500/month depending on usage
-
-These would require:
-1. Adding API key as a secret
-2. Creating edge functions to fetch data
-3. Mapping API data to your existing format
-4. Fallback to static data for India-specific info
-
----
-
-### Technical Details
-
-#### New Files to Create
+**Layout**:
 
 ```text
-supabase/
-  functions/
-    scrape-car-data/index.ts      - Firecrawl integration
-    enhance-car-data/index.ts     - AI data enhancement
-    sync-car-database/index.ts    - Database sync logic
-
-src/
-  pages/
-    Admin.tsx                     - Admin dashboard
-    AdminCars.tsx                 - Car data management
-  hooks/
-    useCars.ts                    - Database-backed car data hook
-  lib/
-    carDataService.ts             - Car data fetching/caching
+┌─────────────────────────────────────────────────────┐
+│  DEALER INQUIRY HUB                                 │
+│  [Brand: ▼ Maruti Suzuki] [State: ▼] [City: ▼]     │
+│  [+ Add Dealer] [Bulk Import]                       │
+├─────────────────────────────────────────────────────┤
+│  ☐ Select All (15 dealers)                          │
+│  ┌──────────────────────────────────────────────┐   │
+│  │ ☐ Name    │ Dealer   │ WhatsApp  │ City │ St │   │
+│  │ ☐ Rajesh  │ Arena DL │ 98xxxxx   │ Delhi│ DL │   │
+│  │ ☐ Suresh  │ Nexa MH  │ 97xxxxx   │ Pune │ MH │   │
+│  └──────────────────────────────────────────────┘   │
+├─────────────────────────────────────────────────────┤
+│  MESSAGE COMPOSER                                   │
+│  [Stock Inquiry ▼] [Auto-fill brand name]           │
+│  ┌─────────────────────────────────────────────┐    │
+│  │ Hi, do you have Maruti Swift available?     │    │
+│  │ Please share best offer with stock details. │    │
+│  └─────────────────────────────────────────────┘    │
+│  [Send to All 15 ▶] [Send One-by-One ▶]            │
+└─────────────────────────────────────────────────────┘
 ```
 
-#### Database Schema (simplified)
+### Implementation Steps
 
-```sql
--- Main cars table
-CREATE TABLE cars (
-  id UUID PRIMARY KEY,
-  slug TEXT UNIQUE NOT NULL,
-  name TEXT NOT NULL,
-  brand TEXT NOT NULL,
-  body_type TEXT,
-  price_range TEXT,
-  price_numeric INTEGER,
-  overview TEXT,
-  is_upcoming BOOLEAN DEFAULT false,
-  launch_date DATE,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
+**Step 1 — Database Migration**
+- Add `state TEXT`, `city TEXT` columns to `dealer_representatives`
+- These allow direct state/city filtering without joins
 
--- Specifications
-CREATE TABLE car_specifications (
-  id UUID PRIMARY KEY,
-  car_id UUID REFERENCES cars(id),
-  category TEXT, -- 'engine', 'dimensions', 'performance', 'features', 'safety'
-  label TEXT,
-  value TEXT
-);
+**Step 2 — Build `DealerInquiryHub` Component**
+- Brand selector: Pulls from `car_brands` table (36+ brands)
+- State/City filters on `dealer_representatives`
+- Contact table: Checkbox select, Name, Dealer Name (from company), WhatsApp number, City, State
+- Select All / Deselect All
+- Message composer with pre-filled templates:
+  - "Stock Inquiry" — auto-fills brand name
+  - "Best Deal Request"
+  - "Daily Offer Update"
+  - Custom message
+- **Send modes**:
+  - "Shoot All" — calls edge function to send WhatsApp to all selected via Meta API
+  - "Send One-by-One" — opens WhatsApp web links sequentially
 
--- Images
-CREATE TABLE car_images (
-  id UUID PRIMARY KEY,
-  car_id UUID REFERENCES cars(id),
-  url TEXT NOT NULL,
-  is_primary BOOLEAN DEFAULT false,
-  alt_text TEXT
-);
-```
+**Step 3 — Bulk Add Feature**
+- Dialog with a simple form: paste multiple rows (Name, WhatsApp, Dealer Name, City, State)
+- Or CSV upload
+- Auto-assigns the selected brand
+- Inserts into `dealer_representatives` (creating company if needed)
 
-#### Data Flow
+**Step 4 — Edge Function for Bulk WhatsApp Send**
+- Update existing `broadcast-send` or create `dealer-inquiry-broadcast` edge function
+- Loops through selected WhatsApp numbers
+- Sends text message via Meta WhatsApp Cloud API
+- Logs results to `dealer_broadcast_logs`
 
-```text
-[Firecrawl Scraper] --> [AI Enhancement] --> [Database] --> [Frontend]
-        |                      |                  ^
-        v                      v                  |
-   [Raw HTML]           [Clean JSON]      [Manual Admin Updates]
-```
+**Step 5 — Integration**
+- Add "Inquiry Hub" tab to `DealerManagement.tsx`
+- Wire up navigation from admin sidebar
 
----
-
-### Recommended Next Steps
-
-1. **Start with Firecrawl** - Connect the Firecrawl connector to enable web scraping
-2. **Create database tables** - Set up the schema for dynamic car data
-3. **Build sync edge function** - Create the scraping and parsing logic
-4. **Add AI enhancement** - Use Lovable AI to clean and enrich data
-5. **Create admin interface** - Build UI for data management
-6. **Migrate existing data** - Move static data to database
-7. **Update frontend** - Fetch from database instead of static files
-
-This approach gives you:
-- Automatic data updates
-- Flexibility to add any car
-- Indian market-specific data
-- AI-powered data quality
-- Manual override capability
+### Key Features
+- Brands pulled from existing `car_brands` database (no hardcoding)
+- State/city filters for regional targeting
+- One-click "Send to All" via WhatsApp API
+- Bulk import for adding dealers per brand quickly
+- Broadcast history with delivery tracking
 
