@@ -2757,6 +2757,7 @@ export type Database = {
       dealer_representatives: {
         Row: {
           brand: string
+          city: string | null
           commission_type: string | null
           commission_value: number | null
           created_at: string | null
@@ -2767,11 +2768,13 @@ export type Database = {
           name: string
           phone: string | null
           role: string
+          state: string | null
           updated_at: string | null
           whatsapp_number: string | null
         }
         Insert: {
           brand: string
+          city?: string | null
           commission_type?: string | null
           commission_value?: number | null
           created_at?: string | null
@@ -2782,11 +2785,13 @@ export type Database = {
           name: string
           phone?: string | null
           role?: string
+          state?: string | null
           updated_at?: string | null
           whatsapp_number?: string | null
         }
         Update: {
           brand?: string
+          city?: string | null
           commission_type?: string | null
           commission_value?: number | null
           created_at?: string | null
@@ -2797,6 +2802,7 @@ export type Database = {
           name?: string
           phone?: string | null
           role?: string
+          state?: string | null
           updated_at?: string | null
           whatsapp_number?: string | null
         }
