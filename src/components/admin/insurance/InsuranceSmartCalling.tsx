@@ -61,9 +61,25 @@ interface PolicyData {
   addons: string[] | null;
 }
 
+const ALL_CALLABLE_STAGES = [
+  "new_lead", "contact_attempted", "requirement_collected",
+  "quote_shared", "follow_up", "payment_pending", "lost"
+];
+
 const IN_PROGRESS_STAGES = [
   "new_lead", "contact_attempted", "requirement_collected",
   "quote_shared", "follow_up", "payment_pending"
+];
+
+const STAGE_FILTER_TAGS = [
+  { value: "all_active", label: "All Active", icon: Target, color: "bg-emerald-500" },
+  { value: "new_lead", label: "New Leads", icon: Sparkles, color: "bg-blue-500" },
+  { value: "contact_attempted", label: "Contacted", icon: Phone, color: "bg-yellow-500" },
+  { value: "requirement_collected", label: "Interested", icon: PhoneForwarded, color: "bg-violet-500" },
+  { value: "quote_shared", label: "Quote Shared", icon: FileText, color: "bg-cyan-500" },
+  { value: "follow_up", label: "Follow-up", icon: Clock, color: "bg-orange-500" },
+  { value: "payment_pending", label: "Payment Pending", icon: Zap, color: "bg-pink-500" },
+  { value: "lost", label: "Lost / Not Interested", icon: XCircle, color: "bg-red-500" },
 ];
 
 const CALL_OUTCOMES = [
@@ -120,13 +136,17 @@ export function InsuranceSmartCalling() {
   const [dialedNumbers, setDialedNumbers] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [stageFilter, setStageFilter] = useState<string>("all_active");
+
   const { data: allClients = [], isLoading } = useQuery({
-    queryKey: ["smart-calling-clients"],
+    queryKey: ["smart-calling-clients", stageFilter],
     queryFn: async () => {
+      const stages = stageFilter === "all_active" ? IN_PROGRESS_STAGES :
+                     stageFilter === "lost" ? ["lost"] : [stageFilter];
       const { data, error } = await supabase
         .from("insurance_clients")
         .select("id, customer_name, phone, email, city, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_insurer, policy_expiry_date, current_policy_type, ncb_percentage, previous_claim, lead_source, assigned_executive, priority, pipeline_stage, contact_attempts, current_premium, notes, created_at")
-        .in("pipeline_stage", IN_PROGRESS_STAGES)
+        .in("pipeline_stage", stages)
         .order("created_at", { ascending: false })
         .limit(500);
       if (error) throw error;
@@ -325,8 +345,9 @@ export function InsuranceSmartCalling() {
 
   const getStageLabel = (stage: string | null) => {
     const stages: Record<string, string> = {
-      new_lead: "New Lead", contact_attempted: "Contacted", requirement_collected: "Req. Collected",
+      new_lead: "New Lead", contact_attempted: "Contacted", requirement_collected: "Interested",
       quote_shared: "Quote Shared", follow_up: "Follow-up", payment_pending: "Payment Pending",
+      lost: "Lost",
     };
     return stages[stage || ""] || stage || "New";
   };
@@ -335,6 +356,7 @@ export function InsuranceSmartCalling() {
     const colors: Record<string, string> = {
       new_lead: "bg-blue-500", contact_attempted: "bg-yellow-500", requirement_collected: "bg-violet-500",
       quote_shared: "bg-cyan-500", follow_up: "bg-orange-500", payment_pending: "bg-pink-500",
+      lost: "bg-red-500",
     };
     return colors[stage || ""] || "bg-muted-foreground";
   };
@@ -377,12 +399,27 @@ export function InsuranceSmartCalling() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2 items-center">
+            <Select value={stageFilter} onValueChange={(v) => { setStageFilter(v); setCurrentIndex(0); }}>
+              <SelectTrigger className="w-[180px] h-9 text-sm bg-white/10 border-white/20 text-white">
+                <SelectValue placeholder="Filter by tag" />
+              </SelectTrigger>
+              <SelectContent>
+                {STAGE_FILTER_TAGS.map(t => (
+                  <SelectItem key={t.value} value={t.value}>
+                    <span className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${t.color}`} />
+                      {t.label}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Select value={callMode} onValueChange={(v) => { setCallMode(v as any); setCurrentIndex(0); }}>
-              <SelectTrigger className="w-[140px] h-9 text-sm bg-white/10 border-white/20 text-white">
+              <SelectTrigger className="w-[120px] h-9 text-sm bg-white/10 border-white/20 text-white">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="in_progress">📋 In Progress</SelectItem>
+                <SelectItem value="in_progress">📋 Sequential</SelectItem>
                 <SelectItem value="random">🎲 Random</SelectItem>
               </SelectContent>
             </Select>
