@@ -22,6 +22,7 @@ import {
 import { stateRates, calculateStatePriceBreakup } from "@/data/statePricing";
 import { invalidateCarQueries } from "@/lib/queryInvalidation";
 import { CarImageUploader } from "./CarImageUploader";
+import { ExcelCarEntry } from "./car-database/ExcelCarEntry";
 
 interface CarData {
   id: string;
@@ -648,9 +649,9 @@ export const UnifiedCarManagement = () => {
             <Upload className="h-4 w-4 mr-2" />
             Bulk Import
           </Button>
-          <Button onClick={() => setIsAddCarOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Car
+          <Button onClick={() => setIsAddCarOpen(true)} className="bg-green-600 hover:bg-green-700 text-white">
+            <FileText className="h-4 w-4 mr-2" />
+            Excel Entry
           </Button>
         </div>
       </div>
@@ -1568,126 +1569,10 @@ export const UnifiedCarManagement = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Add New Car Dialog */}
+      {/* Excel-Style Add Car Dialog */}
       <Dialog open={isAddCarOpen} onOpenChange={setIsAddCarOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Add New Car</DialogTitle>
-            <DialogDescription>
-              Add a new car to your inventory
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Car Name *</Label>
-                <Input
-                  value={newCarForm.name}
-                  onChange={(e) => setNewCarForm({ ...newCarForm, name: e.target.value })}
-                  placeholder="e.g., Swift, Creta, Nexon"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Brand *</Label>
-                <Select 
-                  value={newCarForm.brand} 
-                  onValueChange={(v) => setNewCarForm({ ...newCarForm, brand: v })}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {['Maruti', 'Hyundai', 'Tata', 'Mahindra', 'Kia', 'Toyota', 'Honda', 'MG', 'Skoda', 'Volkswagen', 'Audi', 'BMW', 'Mercedes'].map(b => (
-                      <SelectItem key={b} value={b}>{b}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Body Type</Label>
-                <Select 
-                  value={newCarForm.body_type} 
-                  onValueChange={(v) => setNewCarForm({ ...newCarForm, body_type: v })}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Hatchback">Hatchback</SelectItem>
-                    <SelectItem value="Sedan">Sedan</SelectItem>
-                    <SelectItem value="SUV">SUV</SelectItem>
-                    <SelectItem value="MUV">MUV</SelectItem>
-                    <SelectItem value="Crossover">Crossover</SelectItem>
-                    <SelectItem value="Coupe">Coupe</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Price Range</Label>
-                <Input
-                  value={newCarForm.price_range}
-                  onChange={(e) => setNewCarForm({ ...newCarForm, price_range: e.target.value })}
-                  placeholder="e.g., ₹6.5L - ₹9.8L"
-                />
-              </div>
-              <div className="space-y-2 col-span-2">
-                <Label>Tagline</Label>
-                <Input
-                  value={newCarForm.tagline}
-                  onChange={(e) => setNewCarForm({ ...newCarForm, tagline: e.target.value })}
-                  placeholder="e.g., The All-New Bold Design"
-                />
-              </div>
-              <div className="space-y-2 col-span-2">
-                <Label>Overview</Label>
-                <Textarea
-                  value={newCarForm.overview}
-                  onChange={(e) => setNewCarForm({ ...newCarForm, overview: e.target.value })}
-                  placeholder="Brief description of the car..."
-                  rows={3}
-                />
-              </div>
-            </div>
-
-            <div className="border-t pt-4">
-              <Label className="text-base font-semibold">Display Flags</Label>
-              <div className="grid grid-cols-2 gap-4 mt-4">
-                <div className="flex items-center justify-between">
-                  <Label className="cursor-pointer">🔥 Hot Deal</Label>
-                  <Switch
-                    checked={newCarForm.is_hot}
-                    onCheckedChange={(v) => setNewCarForm({ ...newCarForm, is_hot: v })}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label className="cursor-pointer">✨ New Arrival</Label>
-                  <Switch
-                    checked={newCarForm.is_new}
-                    onCheckedChange={(v) => setNewCarForm({ ...newCarForm, is_new: v })}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label className="cursor-pointer">🚀 Upcoming</Label>
-                  <Switch
-                    checked={newCarForm.is_upcoming}
-                    onCheckedChange={(v) => setNewCarForm({ ...newCarForm, is_upcoming: v })}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label className="cursor-pointer">⭐ Bestseller</Label>
-                  <Switch
-                    checked={newCarForm.is_bestseller}
-                    onCheckedChange={(v) => setNewCarForm({ ...newCarForm, is_bestseller: v })}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddCarOpen(false)}>Cancel</Button>
-            <Button onClick={handleAddCar} disabled={addCarMutation.isPending}>
-              <Plus className="h-4 w-4 mr-2" />
-              {addCarMutation.isPending ? 'Adding...' : 'Add Car'}
-            </Button>
-          </DialogFooter>
+        <DialogContent className="max-w-[95vw] w-full h-[85vh] p-0 overflow-hidden">
+          <ExcelCarEntry onClose={() => setIsAddCarOpen(false)} />
         </DialogContent>
       </Dialog>
     </div>
