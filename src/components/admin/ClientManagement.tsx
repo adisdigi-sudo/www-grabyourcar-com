@@ -18,7 +18,7 @@ import {
   ExternalLink, Upload, Download, Hash, Building2,
 } from "lucide-react";
 
-const LIFECYCLE_STAGES = [
+const SALES_LIFECYCLE_STAGES = [
   { value: "inquiry", label: "📋 Inquiry", color: "bg-blue-500/20 text-blue-600 border-blue-300", dot: "bg-blue-500" },
   { value: "test_drive", label: "🚗 Test Drive", color: "bg-purple-500/20 text-purple-600 border-purple-300", dot: "bg-purple-500" },
   { value: "negotiation", label: "💬 Negotiation", color: "bg-orange-500/20 text-orange-600 border-orange-300", dot: "bg-orange-500" },
@@ -29,7 +29,23 @@ const LIFECYCLE_STAGES = [
   { value: "renewal", label: "🔄 Renewal", color: "bg-red-500/20 text-red-600 border-red-300", dot: "bg-red-500" },
 ];
 
-export const ClientManagement = () => {
+const INSURANCE_LIFECYCLE_STAGES = [
+  { value: "inquiry", label: "📋 Inquiry", color: "bg-blue-500/20 text-blue-600 border-blue-300", dot: "bg-blue-500" },
+  { value: "contacted", label: "📞 Contacted", color: "bg-cyan-500/20 text-cyan-600 border-cyan-300", dot: "bg-cyan-500" },
+  { value: "quote_shared", label: "💰 Quote Shared", color: "bg-violet-500/20 text-violet-600 border-violet-300", dot: "bg-violet-500" },
+  { value: "follow_up", label: "🔄 Follow-up", color: "bg-orange-500/20 text-orange-600 border-orange-300", dot: "bg-orange-500" },
+  { value: "payment_pending", label: "⏳ Payment Pending", color: "bg-yellow-500/20 text-yellow-600 border-yellow-300", dot: "bg-yellow-500" },
+  { value: "policy_issued", label: "✅ Policy Issued", color: "bg-green-500/20 text-green-600 border-green-300", dot: "bg-green-500" },
+  { value: "renewal", label: "🔄 Renewal", color: "bg-teal-500/20 text-teal-600 border-teal-300", dot: "bg-teal-500" },
+  { value: "lost", label: "❌ Lost", color: "bg-red-500/20 text-red-600 border-red-300", dot: "bg-red-500" },
+];
+
+interface ClientManagementProps {
+  verticalSlug?: string;
+}
+
+export const ClientManagement = ({ verticalSlug }: ClientManagementProps) => {
+  const LIFECYCLE_STAGES = verticalSlug === "insurance" ? INSURANCE_LIFECYCLE_STAGES : SALES_LIFECYCLE_STAGES;
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [stageFilter, setStageFilter] = useState<string>("all");
