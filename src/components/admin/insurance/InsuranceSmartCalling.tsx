@@ -137,6 +137,12 @@ export function InsuranceSmartCalling() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [stageFilter, setStageFilter] = useState<string>("all_active");
+  const [editingVehicle, setEditingVehicle] = useState(false);
+  const [vehicleForm, setVehicleForm] = useState({
+    vehicle_make: "", vehicle_model: "", vehicle_number: "", vehicle_year: "",
+    current_insurer: "", policy_expiry_date: "", current_policy_type: "", ncb_percentage: "", current_premium: "",
+  });
+  const [savingVehicle, setSavingVehicle] = useState(false);
 
   const { data: allClients = [], isLoading } = useQuery({
     queryKey: ["smart-calling-clients", stageFilter],
@@ -270,6 +276,48 @@ export function InsuranceSmartCalling() {
       setSaving(false);
     }
   }, [currentClient, callOutcome, callNote, queryClient, goToNext]);
+
+  const startEditingVehicle = useCallback(() => {
+    if (!currentClient) return;
+    setVehicleForm({
+      vehicle_make: currentClient.vehicle_make || "",
+      vehicle_model: currentClient.vehicle_model || "",
+      vehicle_number: currentClient.vehicle_number || "",
+      vehicle_year: currentClient.vehicle_year?.toString() || "",
+      current_insurer: currentClient.current_insurer || "",
+      policy_expiry_date: currentClient.policy_expiry_date || "",
+      current_policy_type: currentClient.current_policy_type || "",
+      ncb_percentage: currentClient.ncb_percentage?.toString() || "",
+      current_premium: currentClient.current_premium?.toString() || "",
+    });
+    setEditingVehicle(true);
+  }, [currentClient]);
+
+  const saveVehicleDetails = useCallback(async () => {
+    if (!currentClient) return;
+    setSavingVehicle(true);
+    try {
+      const { error } = await supabase.from("insurance_clients").update({
+        vehicle_make: vehicleForm.vehicle_make || null,
+        vehicle_model: vehicleForm.vehicle_model || null,
+        vehicle_number: vehicleForm.vehicle_number || null,
+        vehicle_year: vehicleForm.vehicle_year ? Number(vehicleForm.vehicle_year) : null,
+        current_insurer: vehicleForm.current_insurer || null,
+        policy_expiry_date: vehicleForm.policy_expiry_date || null,
+        current_policy_type: vehicleForm.current_policy_type || null,
+        ncb_percentage: vehicleForm.ncb_percentage ? Number(vehicleForm.ncb_percentage) : null,
+        current_premium: vehicleForm.current_premium ? Number(vehicleForm.current_premium) : null,
+      }).eq("id", currentClient.id);
+      if (error) throw error;
+      toast.success("✅ Vehicle details updated!");
+      setEditingVehicle(false);
+      queryClient.invalidateQueries({ queryKey: ["smart-calling-clients"] });
+    } catch (e: any) {
+      toast.error(e.message || "Failed to save");
+    } finally {
+      setSavingVehicle(false);
+    }
+  }, [currentClient, vehicleForm, queryClient]);
 
   const handleImport = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -591,22 +639,95 @@ export function InsuranceSmartCalling() {
             >
               <Card className="shadow-sm">
                 <CardHeader className="pb-1 pt-4 px-5">
-                  <CardTitle className="text-sm font-bold flex items-center gap-2 text-foreground">
-                    <div className="w-6 h-6 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                      <Car className="h-3.5 w-3.5 text-blue-600" />
-                    </div>
-                    Vehicle Details
+                  <CardTitle className="text-sm font-bold flex items-center gap-2 justify-between">
+                    <span className="flex items-center gap-2 text-foreground">
+                      <div className="w-6 h-6 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                        <Car className="h-3.5 w-3.5 text-blue-600" />
+                      </div>
+                      Vehicle Details
+                    </span>
+                    {!editingVehicle ? (
+                      <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-primary hover:text-primary/80" onClick={startEditingVehicle}>
+                        <Edit className="h-3 w-3" /> Edit
+                      </Button>
+                    ) : (
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setEditingVehicle(false)}>Cancel</Button>
+                        <Button size="sm" className="h-7 text-xs gap-1" onClick={saveVehicleDetails} disabled={savingVehicle}>
+                          {savingVehicle ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />} Save
+                        </Button>
+                      </div>
+                    )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="px-5 pb-4">
-                  <DetailRow label="Vehicle" value={[currentClient.vehicle_make, currentClient.vehicle_model].filter(Boolean).join(" ").toUpperCase() || null} icon={Car} />
-                  <DetailRow label="Reg. No" value={currentClient.vehicle_number?.toUpperCase()} icon={Hash} />
-                  <DetailRow label="Year" value={currentClient.vehicle_year} icon={CalendarDays} />
-                  <DetailRow label="Current Insurer" value={currentClient.current_insurer} icon={Shield} />
-                  <DetailRow label="Policy Expiry" value={currentClient.policy_expiry_date ? format(new Date(currentClient.policy_expiry_date), "dd MMM yyyy") : null} icon={Clock} />
-                  <DetailRow label="Policy Type" value={currentClient.current_policy_type?.toUpperCase()} icon={FileText} />
-                  <DetailRow label="NCB %" value={currentClient.ncb_percentage != null ? `${currentClient.ncb_percentage}%` : null} icon={Sparkles} />
-                  <DetailRow label="Premium" value={currentClient.current_premium ? `₹${Number(currentClient.current_premium).toLocaleString("en-IN")}` : null} icon={Target} />
+                  {editingVehicle ? (
+                    <div className="space-y-2.5">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-[11px] text-muted-foreground">Make</Label>
+                          <Input className="h-8 text-xs" value={vehicleForm.vehicle_make} onChange={e => setVehicleForm(f => ({ ...f, vehicle_make: e.target.value }))} placeholder="e.g. MG" />
+                        </div>
+                        <div>
+                          <Label className="text-[11px] text-muted-foreground">Model</Label>
+                          <Input className="h-8 text-xs" value={vehicleForm.vehicle_model} onChange={e => setVehicleForm(f => ({ ...f, vehicle_model: e.target.value }))} placeholder="e.g. ZS EV" />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-[11px] text-muted-foreground">Reg. No</Label>
+                          <Input className="h-8 text-xs" value={vehicleForm.vehicle_number} onChange={e => setVehicleForm(f => ({ ...f, vehicle_number: e.target.value }))} placeholder="DL12CS3792" />
+                        </div>
+                        <div>
+                          <Label className="text-[11px] text-muted-foreground">Year</Label>
+                          <Input className="h-8 text-xs" type="number" value={vehicleForm.vehicle_year} onChange={e => setVehicleForm(f => ({ ...f, vehicle_year: e.target.value }))} placeholder="2024" />
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-[11px] text-muted-foreground">Current Insurer</Label>
+                        <Input className="h-8 text-xs" value={vehicleForm.current_insurer} onChange={e => setVehicleForm(f => ({ ...f, current_insurer: e.target.value }))} placeholder="e.g. ICICI Lombard" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-[11px] text-muted-foreground">Policy Expiry</Label>
+                          <Input className="h-8 text-xs" type="date" value={vehicleForm.policy_expiry_date} onChange={e => setVehicleForm(f => ({ ...f, policy_expiry_date: e.target.value }))} />
+                        </div>
+                        <div>
+                          <Label className="text-[11px] text-muted-foreground">Policy Type</Label>
+                          <Select value={vehicleForm.current_policy_type} onValueChange={v => setVehicleForm(f => ({ ...f, current_policy_type: v }))}>
+                            <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="comprehensive">Comprehensive</SelectItem>
+                              <SelectItem value="third_party">Third Party</SelectItem>
+                              <SelectItem value="own_damage">Own Damage</SelectItem>
+                              <SelectItem value="bundled">Bundled</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-[11px] text-muted-foreground">NCB %</Label>
+                          <Input className="h-8 text-xs" type="number" value={vehicleForm.ncb_percentage} onChange={e => setVehicleForm(f => ({ ...f, ncb_percentage: e.target.value }))} placeholder="0-65" />
+                        </div>
+                        <div>
+                          <Label className="text-[11px] text-muted-foreground">Premium ₹</Label>
+                          <Input className="h-8 text-xs" type="number" value={vehicleForm.current_premium} onChange={e => setVehicleForm(f => ({ ...f, current_premium: e.target.value }))} placeholder="Amount" />
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <DetailRow label="Vehicle" value={[currentClient.vehicle_make, currentClient.vehicle_model].filter(Boolean).join(" ").toUpperCase() || null} icon={Car} />
+                      <DetailRow label="Reg. No" value={currentClient.vehicle_number?.toUpperCase()} icon={Hash} />
+                      <DetailRow label="Year" value={currentClient.vehicle_year} icon={CalendarDays} />
+                      <DetailRow label="Current Insurer" value={currentClient.current_insurer} icon={Shield} />
+                      <DetailRow label="Policy Expiry" value={currentClient.policy_expiry_date ? format(new Date(currentClient.policy_expiry_date), "dd MMM yyyy") : null} icon={Clock} />
+                      <DetailRow label="Policy Type" value={currentClient.current_policy_type?.toUpperCase()} icon={FileText} />
+                      <DetailRow label="NCB %" value={currentClient.ncb_percentage != null ? `${currentClient.ncb_percentage}%` : null} icon={Sparkles} />
+                      <DetailRow label="Premium" value={currentClient.current_premium ? `₹${Number(currentClient.current_premium).toLocaleString("en-IN")}` : null} icon={Target} />
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </motion.div>
