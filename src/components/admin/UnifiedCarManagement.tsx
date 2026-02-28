@@ -1571,7 +1571,11 @@ export const UnifiedCarManagement = () => {
 
       {/* Excel-Style Add Car Dialog */}
       <Dialog open={isAddCarOpen} onOpenChange={setIsAddCarOpen}>
-        <DialogContent className="max-w-[95vw] w-full h-[85vh] p-0 overflow-hidden">
+        <DialogContent className="max-w-[95vw] w-full h-[90vh] p-0 overflow-hidden [&>button.absolute]:hidden">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Excel Car Data Entry</DialogTitle>
+            <DialogDescription>Add cars using spreadsheet-style data entry</DialogDescription>
+          </DialogHeader>
           <ExcelCarEntry onClose={() => setIsAddCarOpen(false)} />
         </DialogContent>
       </Dialog>
