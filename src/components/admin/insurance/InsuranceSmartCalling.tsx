@@ -139,6 +139,11 @@ export function InsuranceSmartCalling() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [stageFilter, setStageFilter] = useState<string>("all_active");
+  const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const [sourceFilter, setSourceFilter] = useState<string>("all");
+  const [cityFilter, setCityFilter] = useState<string>("all");
+  const [executiveFilter, setExecutiveFilter] = useState<string>("all");
+  const [outcomeMarked, setOutcomeMarked] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState(false);
   const [vehicleForm, setVehicleForm] = useState({
     vehicle_make: "", vehicle_model: "", vehicle_number: "", vehicle_year: "",
@@ -162,8 +167,37 @@ export function InsuranceSmartCalling() {
     },
   });
 
+  // Derive unique filter options from data
+  const filterOptions = useMemo(() => {
+    const sources = new Set<string>();
+    const cities = new Set<string>();
+    const executives = new Set<string>();
+    allClients.forEach(c => {
+      if (c.lead_source) sources.add(c.lead_source);
+      if (c.city) cities.add(c.city);
+      if (c.assigned_executive) executives.add(c.assigned_executive);
+    });
+    return {
+      sources: Array.from(sources).sort(),
+      cities: Array.from(cities).sort(),
+      executives: Array.from(executives).sort(),
+    };
+  }, [allClients]);
+
   const callingList = useMemo(() => {
     let list = [...allClients].filter(c => c.phone && !c.phone.startsWith("IB_"));
+    if (priorityFilter !== "all") {
+      list = list.filter(c => c.priority === priorityFilter);
+    }
+    if (sourceFilter !== "all") {
+      list = list.filter(c => c.lead_source === sourceFilter);
+    }
+    if (cityFilter !== "all") {
+      list = list.filter(c => c.city?.toLowerCase() === cityFilter.toLowerCase());
+    }
+    if (executiveFilter !== "all") {
+      list = list.filter(c => c.assigned_executive === executiveFilter);
+    }
     if (searchFilter.trim()) {
       const s = searchFilter.toLowerCase();
       list = list.filter(c =>
@@ -179,7 +213,7 @@ export function InsuranceSmartCalling() {
       }
     }
     return list;
-  }, [allClients, callMode, searchFilter]);
+  }, [allClients, callMode, searchFilter, priorityFilter, sourceFilter, cityFilter, executiveFilter]);
 
   const currentClient = callingList[currentIndex] || null;
 
@@ -222,6 +256,7 @@ export function InsuranceSmartCalling() {
       setCurrentIndex(prev => prev + 1);
       setCallNote("");
       setCallOutcome("");
+      setOutcomeMarked(false);
     } else {
       toast.info("🎉 You've reached the end of the calling list!");
     }
@@ -232,14 +267,15 @@ export function InsuranceSmartCalling() {
       setCurrentIndex(prev => prev - 1);
       setCallNote("");
       setCallOutcome("");
+      setOutcomeMarked(false);
     }
   }, [currentIndex]);
 
-  const dialAndAdvance = useCallback(() => {
+  // Dial only - no auto-advance. Lead moves to next only after outcome is marked.
+  const dialOnly = useCallback(() => {
     if (!currentClient) return;
     dialPhone(currentClient.phone);
-    setTimeout(() => goToNext(), 1500);
-  }, [currentClient, dialPhone, goToNext]);
+  }, [currentClient, dialPhone]);
 
   const saveCallOutcome = useCallback(async () => {
     if (!currentClient || !callOutcome) {
@@ -271,6 +307,7 @@ export function InsuranceSmartCalling() {
           .eq("id", currentClient.id);
       }
       toast.success("✅ Outcome saved!");
+      setOutcomeMarked(true);
       queryClient.invalidateQueries({ queryKey: ["smart-calling-clients"] });
       goToNext();
     } catch (e: any) {
@@ -489,7 +526,67 @@ export function InsuranceSmartCalling() {
           </div>
         </div>
 
-        {/* Session Stats */}
+        {/* Pipeline-style Filters */}
+        <div className="relative flex flex-wrap gap-2 mt-4">
+          <Select value={priorityFilter} onValueChange={(v) => { setPriorityFilter(v); setCurrentIndex(0); }}>
+            <SelectTrigger className="w-[130px] h-8 text-xs bg-white/10 border-white/20 text-white">
+              <SelectValue placeholder="Priority" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Priorities</SelectItem>
+              <SelectItem value="hot">🔥 Hot</SelectItem>
+              <SelectItem value="warm">🟠 Warm</SelectItem>
+              <SelectItem value="medium">🟡 Medium</SelectItem>
+              <SelectItem value="cold">❄️ Cold</SelectItem>
+            </SelectContent>
+          </Select>
+          {filterOptions.sources.length > 0 && (
+            <Select value={sourceFilter} onValueChange={(v) => { setSourceFilter(v); setCurrentIndex(0); }}>
+              <SelectTrigger className="w-[140px] h-8 text-xs bg-white/10 border-white/20 text-white">
+                <SelectValue placeholder="Source" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Sources</SelectItem>
+                {filterOptions.sources.map(s => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          {filterOptions.cities.length > 0 && (
+            <Select value={cityFilter} onValueChange={(v) => { setCityFilter(v); setCurrentIndex(0); }}>
+              <SelectTrigger className="w-[130px] h-8 text-xs bg-white/10 border-white/20 text-white">
+                <SelectValue placeholder="City" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Cities</SelectItem>
+                {filterOptions.cities.map(c => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          {filterOptions.executives.length > 0 && (
+            <Select value={executiveFilter} onValueChange={(v) => { setExecutiveFilter(v); setCurrentIndex(0); }}>
+              <SelectTrigger className="w-[140px] h-8 text-xs bg-white/10 border-white/20 text-white">
+                <SelectValue placeholder="Executive" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Executives</SelectItem>
+                {filterOptions.executives.map(e => (
+                  <SelectItem key={e} value={e}>{e}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          {(priorityFilter !== "all" || sourceFilter !== "all" || cityFilter !== "all" || executiveFilter !== "all") && (
+            <Button variant="ghost" size="sm" className="h-8 text-xs text-white/70 hover:text-white hover:bg-white/10" onClick={() => { setPriorityFilter("all"); setSourceFilter("all"); setCityFilter("all"); setExecutiveFilter("all"); setCurrentIndex(0); }}>
+              ✕ Clear Filters
+            </Button>
+          )}
+        </div>
+
+
         <div className="relative grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
           {[
             { label: "Queue", value: callingList.length, icon: Target },
@@ -589,8 +686,8 @@ export function InsuranceSmartCalling() {
                     <Button
                       variant="outline"
                       className="gap-1.5 h-12 border-2 hover:bg-primary/10"
-                      onClick={dialAndAdvance}
-                      title="Dial & auto-advance"
+                      onClick={dialOnly}
+                      title="Dial again"
                     >
                       <Zap className="h-4 w-4" />
                     </Button>
@@ -602,7 +699,7 @@ export function InsuranceSmartCalling() {
                     <span className="text-xs font-mono text-muted-foreground self-center">
                       {currentIndex + 1} / {callingList.length}
                     </span>
-                    <Button variant="ghost" size="sm" onClick={goToNext} disabled={currentIndex >= callingList.length - 1} className="gap-1 text-muted-foreground">
+                    <Button variant="ghost" size="sm" onClick={goToNext} disabled={!outcomeMarked || currentIndex >= callingList.length - 1} className="gap-1 text-muted-foreground" title={!outcomeMarked ? "Mark an outcome first" : ""}>
                       Next <ChevronRight className="h-4 w-4" />
                     </Button>
                   </div>
