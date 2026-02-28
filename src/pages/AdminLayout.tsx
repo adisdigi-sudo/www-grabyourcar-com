@@ -187,7 +187,7 @@ const AdminLayout = () => {
       case "lead-scoring":
         return <LeadScoringDashboard />;
       case "client-management":
-        return <ClientManagement />;
+        return <ClientManagement verticalSlug={activeVertical?.slug} />;
       case "lead-import": {
         const importVerticalMap: Record<string, string> = {
           sales: "car_inquiry", insurance: "insurance", loans: "finance",
