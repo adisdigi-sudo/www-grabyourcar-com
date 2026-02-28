@@ -936,20 +936,20 @@ export function InsuranceSmartCalling() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="px-5 pb-5 space-y-3">
-                  {/* Visual outcome buttons */}
-                  <div className="grid grid-cols-3 gap-1.5">
+                  {/* Visual outcome buttons - all 9 visible */}
+                  <div className="grid grid-cols-3 gap-1.5 max-h-[280px] overflow-y-auto">
                     {CALL_OUTCOMES.map(o => (
                       <button
                         key={o.value}
                         onClick={() => setCallOutcome(o.value)}
-                        className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-[12px] font-semibold transition-all text-left ${
+                        className={`flex items-center gap-1.5 px-2.5 py-2 rounded-xl border text-[11px] font-semibold transition-all text-left ${
                           callOutcome === o.value
                             ? `${o.activeBg} ring-2 ring-offset-1 border-transparent shadow-sm`
                             : `${o.bg} hover:shadow-sm`
                         }`}
                       >
-                        <o.icon className={`h-3.5 w-3.5 shrink-0 ${o.color}`} />
-                        {o.label}
+                        <o.icon className={`h-3 w-3 shrink-0 ${o.color}`} />
+                        <span className="truncate">{o.label}</span>
                       </button>
                     ))}
                   </div>
