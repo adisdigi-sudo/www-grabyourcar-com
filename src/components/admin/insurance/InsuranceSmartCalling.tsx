@@ -18,7 +18,8 @@ import {
   FileText, Plus, Upload, SkipForward, Shuffle, Search, Clock,
   CheckCircle2, XCircle, ArrowRight, Eye, Edit, Save, Loader2, PhoneOff,
   MapPin, Mail, Hash, CalendarDays, AlertTriangle, PhoneForwarded, Ban, HelpCircle,
-  Zap, Activity, Target, Headphones, BarChart3, Flame, Sparkles, Send, RefreshCw
+  Zap, Activity, Target, Headphones, BarChart3, Flame, Sparkles, Send, RefreshCw,
+  MessageCircle, Copy, ExternalLink
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 
@@ -937,22 +938,79 @@ export function InsuranceSmartCalling() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="px-5 pb-5 space-y-3">
-                  {/* Prominent outcome buttons - Quote Shared & Renewal Shared */}
-                  <div className="grid grid-cols-2 gap-2">
-                    {CALL_OUTCOMES.filter(o => o.prominent).map(o => (
-                      <button
-                        key={o.value}
-                        onClick={() => setCallOutcome(o.value)}
-                        className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 text-sm font-bold transition-all ${
-                          callOutcome === o.value
-                            ? `${o.activeBg} ring-2 ring-offset-1 border-transparent shadow-md`
-                            : `${o.bg} hover:shadow-md border-current/20`
-                        }`}
-                      >
-                        <o.icon className={`h-5 w-5 shrink-0 ${o.color}`} />
-                        <span>{o.label}</span>
-                      </button>
-                    ))}
+                  {/* Prominent outcome buttons - Quote Shared & Renewal Shared with share actions */}
+                  <div className="space-y-2">
+                    {CALL_OUTCOMES.filter(o => o.prominent).map(o => {
+                      const isSelected = callOutcome === o.value;
+                      const shareMsg = o.value === "quote_shared"
+                        ? `Hi ${currentClient.customer_name || ""}! Here is your insurance quote for your ${currentClient.vehicle_make || ""} ${currentClient.vehicle_model || ""}.\n\nVehicle: ${currentClient.vehicle_number || "N/A"}\nPolicy Type: ${currentClient.current_policy_type || "Comprehensive"}\nInsurer: ${currentClient.current_insurer || "Best Available"}\n\nPlease review and let us know if you'd like to proceed. Thank you!`
+                        : `Hi ${currentClient.customer_name || ""}! Your insurance renewal is due${currentClient.policy_expiry_date ? ` on ${currentClient.policy_expiry_date}` : " soon"} for your ${currentClient.vehicle_make || ""} ${currentClient.vehicle_model || ""}.\n\nVehicle: ${currentClient.vehicle_number || "N/A"}\nCurrent Insurer: ${currentClient.current_insurer || "N/A"}\nNCB: ${currentClient.ncb_percentage ?? "N/A"}%\n\nWe have the best renewal offers for you. Let's connect!`;
+
+                      const handleWhatsApp = () => {
+                        const cleanPhone = (currentClient.phone || "").replace(/\D/g, "");
+                        const fullPhone = cleanPhone.startsWith("91") ? cleanPhone : `91${cleanPhone}`;
+                        window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(shareMsg)}`, "_blank");
+                        setCallOutcome(o.value);
+                        toast.success(`📱 Opened WhatsApp for ${o.label}`);
+                      };
+
+                      const handleEmail = () => {
+                        const subject = o.value === "quote_shared"
+                          ? `Insurance Quote - ${currentClient.vehicle_make || ""} ${currentClient.vehicle_model || ""}`
+                          : `Insurance Renewal Reminder - ${currentClient.vehicle_make || ""} ${currentClient.vehicle_model || ""}`;
+                        const mailto = `mailto:${currentClient.email || ""}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(shareMsg)}`;
+                        window.open(mailto, "_blank");
+                        setCallOutcome(o.value);
+                        toast.success(`📧 Opened Email for ${o.label}`);
+                      };
+
+                      const handleCopy = () => {
+                        navigator.clipboard.writeText(shareMsg);
+                        setCallOutcome(o.value);
+                        toast.success(`📋 ${o.label} message copied to clipboard!`);
+                      };
+
+                      return (
+                        <div key={o.value} className="space-y-1.5">
+                          <button
+                            onClick={() => setCallOutcome(o.value)}
+                            className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 text-sm font-bold transition-all ${
+                              isSelected
+                                ? `${o.activeBg} ring-2 ring-offset-1 border-transparent shadow-md`
+                                : `${o.bg} hover:shadow-md border-current/20`
+                            }`}
+                          >
+                            <o.icon className={`h-5 w-5 shrink-0 ${o.color}`} />
+                            <span>{o.label}</span>
+                          </button>
+
+                          {/* Share actions row - always visible */}
+                          <div className="flex gap-1.5">
+                            <button
+                              onClick={handleWhatsApp}
+                              className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-[11px] font-semibold hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-all hover:shadow-sm"
+                            >
+                              <MessageCircle className="h-3.5 w-3.5" />
+                              WhatsApp
+                            </button>
+                            <button
+                              onClick={handleEmail}
+                              className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-[11px] font-semibold hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-all hover:shadow-sm"
+                            >
+                              <Mail className="h-3.5 w-3.5" />
+                              Email
+                            </button>
+                            <button
+                              onClick={handleCopy}
+                              className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg bg-gray-50 dark:bg-gray-950/40 border border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 text-[11px] font-semibold hover:bg-gray-100 dark:hover:bg-gray-900/50 transition-all hover:shadow-sm"
+                            >
+                              <Copy className="h-3.5 w-3.5" />
+                              Copy
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
 
                   {/* Regular outcome buttons */}
