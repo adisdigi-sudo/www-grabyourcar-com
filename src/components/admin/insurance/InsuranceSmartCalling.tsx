@@ -86,8 +86,8 @@ const CALL_OUTCOMES = [
   { value: "connected", label: "Connected", icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800", activeBg: "bg-emerald-100 dark:bg-emerald-900/50 ring-emerald-500" },
   { value: "interested", label: "Interested", icon: PhoneForwarded, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800", activeBg: "bg-blue-100 dark:bg-blue-900/50 ring-blue-500" },
   { value: "quote_requested", label: "Quote Req.", icon: FileText, color: "text-violet-600", bg: "bg-violet-50 dark:bg-violet-950/40 border-violet-200 dark:border-violet-800", activeBg: "bg-violet-100 dark:bg-violet-900/50 ring-violet-500" },
-  { value: "quote_shared", label: "Quote Shared", icon: Send, color: "text-cyan-600", bg: "bg-cyan-50 dark:bg-cyan-950/40 border-cyan-200 dark:border-cyan-800", activeBg: "bg-cyan-100 dark:bg-cyan-900/50 ring-cyan-500" },
-  { value: "renewal_shared", label: "Renewal Shared", icon: RefreshCw, color: "text-teal-600", bg: "bg-teal-50 dark:bg-teal-950/40 border-teal-200 dark:border-teal-800", activeBg: "bg-teal-100 dark:bg-teal-900/50 ring-teal-500" },
+  { value: "quote_shared", label: "Quote Shared", icon: Send, color: "text-cyan-600", bg: "bg-cyan-50 dark:bg-cyan-950/40 border-cyan-200 dark:border-cyan-800", activeBg: "bg-cyan-100 dark:bg-cyan-900/50 ring-cyan-500", prominent: true },
+  { value: "renewal_shared", label: "Renewal Shared", icon: RefreshCw, color: "text-teal-600", bg: "bg-teal-50 dark:bg-teal-950/40 border-teal-200 dark:border-teal-800", activeBg: "bg-teal-100 dark:bg-teal-900/50 ring-teal-500", prominent: true },
   { value: "follow_up", label: "Follow-up", icon: Clock, color: "text-orange-500", bg: "bg-orange-50 dark:bg-orange-950/40 border-orange-200 dark:border-orange-800", activeBg: "bg-orange-100 dark:bg-orange-900/50 ring-orange-500" },
   { value: "no_answer", label: "No Answer", icon: PhoneOff, color: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800", activeBg: "bg-amber-100 dark:bg-amber-900/50 ring-amber-500" },
   { value: "not_interested", label: "Not Interested", icon: XCircle, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800", activeBg: "bg-red-100 dark:bg-red-900/50 ring-red-500" },
@@ -936,9 +936,27 @@ export function InsuranceSmartCalling() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="px-5 pb-5 space-y-3">
-                  {/* Visual outcome buttons - all 9 visible */}
-                  <div className="grid grid-cols-3 gap-1.5 max-h-[280px] overflow-y-auto">
-                    {CALL_OUTCOMES.map(o => (
+                  {/* Prominent outcome buttons - Quote Shared & Renewal Shared */}
+                  <div className="grid grid-cols-2 gap-2">
+                    {CALL_OUTCOMES.filter(o => o.prominent).map(o => (
+                      <button
+                        key={o.value}
+                        onClick={() => setCallOutcome(o.value)}
+                        className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 text-sm font-bold transition-all ${
+                          callOutcome === o.value
+                            ? `${o.activeBg} ring-2 ring-offset-1 border-transparent shadow-md`
+                            : `${o.bg} hover:shadow-md border-current/20`
+                        }`}
+                      >
+                        <o.icon className={`h-5 w-5 shrink-0 ${o.color}`} />
+                        <span>{o.label}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Regular outcome buttons */}
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {CALL_OUTCOMES.filter(o => !o.prominent).map(o => (
                       <button
                         key={o.value}
                         onClick={() => setCallOutcome(o.value)}
