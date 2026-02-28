@@ -273,7 +273,7 @@ export const ExcelCarEntry = ({ onClose }: { onClose?: () => void }) => {
   const cellClass = "h-10 border-0 rounded-none bg-transparent text-sm focus:bg-accent/40 focus:ring-1 focus:ring-primary/60 transition-colors";
 
   return (
-    <div className="flex flex-col h-[85vh] bg-background rounded-xl overflow-hidden border border-border/60 shadow-2xl">
+    <div className="flex flex-col h-full bg-background overflow-hidden">
       {/* ─── Toolbar ─── */}
       <div className="flex items-center justify-between px-5 py-3 border-b bg-gradient-to-r from-muted/60 to-muted/30 backdrop-blur-sm">
         <div className="flex items-center gap-4">
