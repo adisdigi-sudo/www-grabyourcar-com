@@ -63,12 +63,12 @@ interface PolicyData {
 
 const ALL_CALLABLE_STAGES = [
   "new_lead", "contact_attempted", "requirement_collected",
-  "quote_shared", "follow_up", "payment_pending", "lost"
+  "quote_shared", "renewal_shared", "follow_up", "payment_pending", "lost"
 ];
 
 const IN_PROGRESS_STAGES = [
   "new_lead", "contact_attempted", "requirement_collected",
-  "quote_shared", "follow_up", "payment_pending"
+  "quote_shared", "renewal_shared", "follow_up", "payment_pending"
 ];
 
 const STAGE_FILTER_TAGS = [
@@ -77,6 +77,7 @@ const STAGE_FILTER_TAGS = [
   { value: "contact_attempted", label: "Contacted", icon: Phone, color: "bg-yellow-500" },
   { value: "requirement_collected", label: "Interested", icon: PhoneForwarded, color: "bg-violet-500" },
   { value: "quote_shared", label: "Quote Shared", icon: FileText, color: "bg-cyan-500" },
+  { value: "renewal_shared", label: "Renewal Shared", icon: RefreshCw, color: "bg-teal-500" },
   { value: "follow_up", label: "Follow-up", icon: Clock, color: "bg-orange-500" },
   { value: "payment_pending", label: "Payment Pending", icon: Zap, color: "bg-pink-500" },
   { value: "lost", label: "Lost / Not Interested", icon: XCircle, color: "bg-red-500" },
@@ -293,7 +294,7 @@ export function InsuranceSmartCalling() {
       const stageUpdate: Record<string, string> = {
         "connected": "contact_attempted", "interested": "requirement_collected",
         "quote_requested": "quote_shared", "quote_shared": "quote_shared",
-        "renewal_shared": "quote_shared", "follow_up": "follow_up",
+        "renewal_shared": "renewal_shared", "follow_up": "follow_up",
         "not_interested": "lost", "no_answer": currentClient.pipeline_stage || "contact_attempted",
         "wrong_number": "lost",
       };
@@ -434,7 +435,7 @@ export function InsuranceSmartCalling() {
   const getStageLabel = (stage: string | null) => {
     const stages: Record<string, string> = {
       new_lead: "New Lead", contact_attempted: "Contacted", requirement_collected: "Interested",
-      quote_shared: "Quote Shared", follow_up: "Follow-up", payment_pending: "Payment Pending",
+      quote_shared: "Quote Shared", renewal_shared: "Renewal Shared", follow_up: "Follow-up", payment_pending: "Payment Pending",
       lost: "Lost",
     };
     return stages[stage || ""] || stage || "New";
@@ -443,7 +444,7 @@ export function InsuranceSmartCalling() {
   const getStageColor = (stage: string | null) => {
     const colors: Record<string, string> = {
       new_lead: "bg-blue-500", contact_attempted: "bg-yellow-500", requirement_collected: "bg-violet-500",
-      quote_shared: "bg-cyan-500", follow_up: "bg-orange-500", payment_pending: "bg-pink-500",
+      quote_shared: "bg-cyan-500", renewal_shared: "bg-teal-500", follow_up: "bg-orange-500", payment_pending: "bg-pink-500",
       lost: "bg-red-500",
     };
     return colors[stage || ""] || "bg-muted-foreground";
@@ -955,7 +956,7 @@ export function InsuranceSmartCalling() {
                   </div>
 
                   {/* Regular outcome buttons */}
-                  <div className="grid grid-cols-3 gap-1.5">
+                  <div className="grid grid-cols-3 gap-1.5 max-h-[220px] overflow-y-auto">
                     {CALL_OUTCOMES.filter(o => !o.prominent).map(o => (
                       <button
                         key={o.value}
