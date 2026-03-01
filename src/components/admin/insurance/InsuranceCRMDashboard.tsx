@@ -82,6 +82,8 @@ export function InsuranceCRMDashboard() {
   const [activeTab, setActiveTab] = useState("policies");
   const [renewalView, setRenewalView] = useState<RenewalViewMode>("all");
   const [selectedRenewalDate, setSelectedRenewalDate] = useState<string>("");
+  const [searchField, setSearchField] = useState<"all" | "policy" | "phone" | "vehicle" | "insurer">("all");
+  const [showPendingDocs, setShowPendingDocs] = useState(false);
   const pageSize = 12;
   const queryClient = useQueryClient();
 
@@ -222,20 +224,35 @@ export function InsuranceCRMDashboard() {
       }
     }
 
+    // Pending docs filter
+    if (showPendingDocs) {
+      result = result.filter(r => !r.policy_number || r.policy_number === "N/A" || r.status === "pending");
+    }
+
     if (search.trim()) {
       const s = search.toLowerCase();
-      result = result.filter(r =>
-        r.customer_name?.toLowerCase().includes(s) ||
-        r.policy_number?.toLowerCase().includes(s) ||
-        r.phone?.includes(s) ||
-        r.vehicle_number?.toLowerCase().includes(s) ||
-        r.insurer?.toLowerCase().includes(s) ||
-        r.agent_name?.toLowerCase().includes(s)
-      );
+      if (searchField === "policy") {
+        result = result.filter(r => r.policy_number?.toLowerCase().includes(s));
+      } else if (searchField === "phone") {
+        result = result.filter(r => r.phone?.includes(s));
+      } else if (searchField === "vehicle") {
+        result = result.filter(r => r.vehicle_number?.toLowerCase().includes(s));
+      } else if (searchField === "insurer") {
+        result = result.filter(r => r.insurer?.toLowerCase().includes(s));
+      } else {
+        result = result.filter(r =>
+          r.customer_name?.toLowerCase().includes(s) ||
+          r.policy_number?.toLowerCase().includes(s) ||
+          r.phone?.includes(s) ||
+          r.vehicle_number?.toLowerCase().includes(s) ||
+          r.insurer?.toLowerCase().includes(s) ||
+          r.agent_name?.toLowerCase().includes(s)
+        );
+      }
     }
 
     return result;
-  }, [rows, filter, statusFilterVal, search]);
+  }, [rows, filter, statusFilterVal, search, searchField, showPendingDocs]);
 
   // Upcoming renewals (expiring within 60 days)
   const upcomingRenewals = useMemo(() => {
@@ -473,170 +490,251 @@ export function InsuranceCRMDashboard() {
     return `${days} days left`;
   };
 
+  const pendingDocsCount = useMemo(() => {
+    return rows.filter(r => !r.policy_number || r.policy_number === "N/A" || r.status === "pending").length;
+  }, [rows]);
+
   return (
-    <div className="space-y-5">
-      {/* Header */}
+    <div className="space-y-4">
+      {/* ── PBPartners-style Header ── */}
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold tracking-tight flex items-center gap-2">
-            <Shield className="h-5 w-5 text-primary" />
-            Insurance Dashboard
-          </h2>
-          <p className="text-sm text-muted-foreground">Manage policies, renewals & follow-ups</p>
+          <h2 className="text-2xl font-bold tracking-tight text-foreground">Booking Data</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">Insurance Policy Book — All booked policies & documents</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="default" size="sm" onClick={() => setShowUploadPolicy(true)} className="gap-1.5">
-            <Upload className="h-4 w-4" /> Upload Policy
+        <div className="flex flex-wrap gap-2 items-center">
+          <Button variant="outline" size="sm" onClick={exportCSV} className="gap-1.5 h-8 text-xs border-primary/30 text-primary hover:bg-primary/5">
+            <Download className="h-3.5 w-3.5" /> Download Report
           </Button>
-          <Button variant="secondary" size="sm" onClick={handleBulkSendMessage} disabled={bulkSending} className="gap-1.5">
-            {bulkSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            Send All Messages
+          <Button variant="default" size="sm" onClick={() => setShowUploadPolicy(true)} className="gap-1.5 h-8 text-xs">
+            <Upload className="h-3.5 w-3.5" /> Upload Policy
           </Button>
-          <Button variant="secondary" size="sm" onClick={handleBulkSendNotification} disabled={bulkSending} className="gap-1.5">
-            {bulkSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bell className="h-4 w-4" />}
-            Send All Notifications
-          </Button>
-          <Button variant="outline" size="sm" onClick={exportCSV} className="gap-1.5">
-            <Download className="h-4 w-4" /> Export
-          </Button>
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 rounded-md px-2.5 py-1.5 border">
+            <CalendarDays className="h-3.5 w-3.5" />
+            <span className="font-medium">{format(new Date(new Date().getFullYear(), 0, 1), "dd MMM yyyy")} - {format(now, "dd MMM yyyy")}</span>
+          </div>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      {/* ── Stats Banner (compact) ── */}
+      <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
         {[
-          { label: "Total Policies", value: stats.total, icon: FileText, color: "text-primary", bg: "bg-primary/10" },
-          { label: "Active", value: stats.active, icon: CheckCircle2, color: "text-chart-2", bg: "bg-chart-2/10" },
-          { label: "Due 7 Days", value: stats.due7, icon: AlertTriangle, color: "text-destructive", bg: "bg-destructive/10" },
-          { label: "Won", value: stats.won, icon: Trophy, color: "text-emerald-600", bg: "bg-emerald-100" },
-          { label: "Lost", value: stats.lost, icon: XCircle, color: "text-destructive", bg: "bg-red-100" },
-          { label: "Total Premium", value: `₹${(stats.totalPremium / 1000).toFixed(0)}K`, icon: TrendingUp, color: "text-primary", bg: "bg-primary/10" },
+          { label: "Total Policies", value: stats.total, icon: FileText, gradient: "from-blue-500/10 to-blue-600/5", iconColor: "text-blue-600" },
+          { label: "Active", value: stats.active, icon: CheckCircle2, gradient: "from-emerald-500/10 to-emerald-600/5", iconColor: "text-emerald-600" },
+          { label: "Due 7 Days", value: stats.due7, icon: AlertTriangle, gradient: "from-red-500/10 to-red-600/5", iconColor: "text-red-600" },
+          { label: "Won", value: stats.won, icon: Trophy, gradient: "from-emerald-500/10 to-emerald-600/5", iconColor: "text-emerald-600" },
+          { label: "Lost", value: stats.lost, icon: XCircle, gradient: "from-red-500/10 to-red-600/5", iconColor: "text-red-600" },
+          { label: "Premium", value: `₹${(stats.totalPremium / 1000).toFixed(0)}K`, icon: TrendingUp, gradient: "from-primary/10 to-primary/5", iconColor: "text-primary" },
         ].map(s => (
-          <Card key={s.label} className="border shadow-sm hover:shadow-md transition-all cursor-pointer group">
-            <CardContent className="pt-3 pb-3 px-3">
-              <div className="flex items-center gap-2 mb-1">
-                <div className={`w-7 h-7 rounded-lg ${s.bg} flex items-center justify-center shrink-0`}>
-                  <s.icon className={`h-3.5 w-3.5 ${s.color}`} />
-                </div>
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wide">{s.label}</span>
-              </div>
-              <p className="text-xl font-bold pl-9">{s.value}</p>
-            </CardContent>
-          </Card>
+          <div key={s.label} className={`rounded-xl border bg-gradient-to-br ${s.gradient} p-3 hover:shadow-sm transition-all`}>
+            <div className="flex items-center gap-1.5 mb-1">
+              <s.icon className={`h-3.5 w-3.5 ${s.iconColor}`} />
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">{s.label}</span>
+            </div>
+            <p className="text-lg font-bold tracking-tight">{s.value}</p>
+          </div>
         ))}
       </div>
 
-      {/* Tabs */}
+      {/* ── Tabs (PBPartners style) ── */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-          <TabsList className="bg-muted/50 flex-wrap">
-            <TabsTrigger value="policies" className="gap-1.5 text-xs">
-              <FileText className="h-3.5 w-3.5" /> All Policies
-            </TabsTrigger>
-            <TabsTrigger value="renewals" className="gap-1.5 text-xs">
-              <CalendarDays className="h-3.5 w-3.5" /> Upcoming
-              {upcomingRenewals.length > 0 && (
-                <Badge variant="destructive" className="ml-1 h-4 text-[10px] px-1">{upcomingRenewals.length}</Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="running" className="gap-1.5 text-xs">
-              <Play className="h-3.5 w-3.5" /> Running
-              {runningPolicies.length > 0 && (
-                <Badge variant="secondary" className="ml-1 h-4 text-[10px] px-1">{runningPolicies.length}</Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="expired" className="gap-1.5 text-xs">
-              <XCircle className="h-3.5 w-3.5" /> Expired/Closed
-              {expiredPolicies.length > 0 && (
-                <Badge variant="destructive" className="ml-1 h-4 text-[10px] px-1">{expiredPolicies.length}</Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="followups" className="gap-1.5 text-xs">
-              <Bell className="h-3.5 w-3.5" /> Follow-ups
-              {followUps.length > 0 && (
-                <Badge variant="destructive" className="ml-1 h-4 text-[10px] px-1">{followUps.length}</Badge>
-              )}
-            </TabsTrigger>
-          </TabsList>
-
-          {activeTab === "policies" && (
-            <div className="flex gap-2 items-center w-full sm:w-auto flex-wrap">
-              <div className="relative flex-1 sm:w-56">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search name, policy, vehicle..."
-                  value={search}
-                  onChange={e => { setSearch(e.target.value); setPage(0); }}
-                  className="pl-10 h-9"
-                />
-              </div>
-              <Select value={filter} onValueChange={(v) => { setFilter(v as ViewFilter); setPage(0); }}>
-                <SelectTrigger className="w-[130px] h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Policies</SelectItem>
-                  <SelectItem value="7">Due in 7 Days</SelectItem>
-                  <SelectItem value="15">Due in 15 Days</SelectItem>
-                  <SelectItem value="30">Due in 30 Days</SelectItem>
-                  <SelectItem value="60">Due in 60 Days</SelectItem>
-                  <SelectItem value="expired">Expired</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={statusFilterVal} onValueChange={(v) => { setStatusFilterVal(v as StatusFilter); setPage(0); }}>
-                <SelectTrigger className="w-[140px] h-9">
-                  <SelectValue placeholder="Lead Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Leads</SelectItem>
-                  <SelectItem value="won">✅ Won</SelectItem>
-                  <SelectItem value="lost">❌ Lost</SelectItem>
-                  <SelectItem value="running">🔄 Running</SelectItem>
-                  <SelectItem value="new">🆕 New</SelectItem>
-                  <SelectItem value="grabyourcar">🚗 GrabYourCar</SelectItem>
-                </SelectContent>
-              </Select>
+        <div className="border-b">
+          <div className="flex items-center justify-between">
+            <div className="flex">
+              <button
+                onClick={() => { setActiveTab("policies"); setShowPendingDocs(false); }}
+                className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === "policies" && !showPendingDocs
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                All
+              </button>
+              <button
+                onClick={() => { setActiveTab("policies"); setShowPendingDocs(true); }}
+                className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
+                  showPendingDocs
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Pending Documents
+                {pendingDocsCount > 0 && (
+                  <span className="bg-destructive text-destructive-foreground text-[10px] rounded-full h-4 min-w-[16px] flex items-center justify-center px-1 font-bold">
+                    {pendingDocsCount}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={() => setActiveTab("renewals")}
+                className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
+                  activeTab === "renewals"
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <CalendarDays className="h-3.5 w-3.5" /> Upcoming
+                {upcomingRenewals.length > 0 && (
+                  <Badge variant="destructive" className="h-4 text-[10px] px-1">{upcomingRenewals.length}</Badge>
+                )}
+              </button>
+              <button
+                onClick={() => setActiveTab("running")}
+                className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
+                  activeTab === "running"
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Play className="h-3.5 w-3.5" /> Running
+              </button>
+              <button
+                onClick={() => setActiveTab("expired")}
+                className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
+                  activeTab === "expired"
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <XCircle className="h-3.5 w-3.5" /> Expired
+              </button>
+              <button
+                onClick={() => setActiveTab("followups")}
+                className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
+                  activeTab === "followups"
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Bell className="h-3.5 w-3.5" /> Follow-ups
+                {followUps.length > 0 && (
+                  <Badge variant="destructive" className="h-4 text-[10px] px-1">{followUps.length}</Badge>
+                )}
+              </button>
             </div>
-          )}
+          </div>
         </div>
 
-        {/* All Policies Tab - PBPartners Style Card List */}
-        <TabsContent value="policies" className="mt-4">
-          <Card className="border shadow-sm">
+        {/* ── Search & Filters Bar (PBPartners style) ── */}
+        {activeTab === "policies" && (
+          <div className="flex flex-wrap items-center gap-2 mt-3">
+            {/* Product filter */}
+            <Select value={statusFilterVal} onValueChange={(v) => { setStatusFilterVal(v as StatusFilter); setPage(0); }}>
+              <SelectTrigger className="w-[130px] h-8 text-xs">
+                <SelectValue placeholder="Products" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Products</SelectItem>
+                <SelectItem value="won">✅ Won</SelectItem>
+                <SelectItem value="lost">❌ Lost</SelectItem>
+                <SelectItem value="running">🔄 Running</SelectItem>
+                <SelectItem value="new">🆕 New</SelectItem>
+                <SelectItem value="grabyourcar">🚗 GrabYourCar</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={filter} onValueChange={(v) => { setFilter(v as ViewFilter); setPage(0); }}>
+              <SelectTrigger className="w-[130px] h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Policies</SelectItem>
+                <SelectItem value="7">Due in 7 Days</SelectItem>
+                <SelectItem value="15">Due in 15 Days</SelectItem>
+                <SelectItem value="30">Due in 30 Days</SelectItem>
+                <SelectItem value="60">Due in 60 Days</SelectItem>
+                <SelectItem value="expired">Expired</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="flex-1" />
+
+            {/* Search field selector + input (PBPartners style) */}
+            <Select value={searchField} onValueChange={(v: any) => setSearchField(v)}>
+              <SelectTrigger className="w-[110px] h-8 text-xs rounded-r-none border-r-0">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Fields</SelectItem>
+                <SelectItem value="policy">Policy No</SelectItem>
+                <SelectItem value="phone">Phone</SelectItem>
+                <SelectItem value="vehicle">Vehicle No</SelectItem>
+                <SelectItem value="insurer">Insurer</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="relative">
+              <Input
+                placeholder="Search..."
+                value={search}
+                onChange={e => { setSearch(e.target.value); setPage(0); }}
+                className="h-8 w-48 text-xs rounded-l-none pl-3"
+              />
+            </div>
+            <Button size="sm" className="h-8 px-3 text-xs gap-1" onClick={() => setPage(0)}>
+              <Search className="h-3 w-3" /> Search
+            </Button>
+
+            {/* Bulk actions */}
+            <div className="border-l pl-2 ml-1 flex gap-1">
+              <Button variant="secondary" size="sm" onClick={handleBulkSendMessage} disabled={bulkSending} className="gap-1 h-8 text-[10px] px-2">
+                {bulkSending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                Bulk WA
+              </Button>
+              <Button variant="secondary" size="sm" onClick={handleBulkSendNotification} disabled={bulkSending} className="gap-1 h-8 text-[10px] px-2">
+                {bulkSending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Bell className="h-3 w-3" />}
+                Notify All
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* ── All Policies Tab — PBPartners Style Row List ── */}
+        <TabsContent value="policies" className="mt-3">
+          <Card className="border-0 shadow-sm rounded-xl overflow-hidden">
             <CardContent className="p-0">
-              <div className="divide-y">
+              {/* Policy Rows */}
+              <div className="divide-y divide-border/60">
                 {paged.length === 0 ? (
-                  <div className="text-center text-muted-foreground py-12">
-                    {filter !== "all" || statusFilterVal !== "all" ? "No policies match this filter" : "No policies found"}
+                  <div className="text-center text-muted-foreground py-16">
+                    <FileText className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                    <p className="font-medium">No policies found</p>
+                    <p className="text-xs mt-1">Try adjusting your filters or search</p>
                   </div>
                 ) : (
                   paged.map((r) => {
-                    const statusLabel = r.status === "active" ? "Sale Complete" : r.status === "cancelled" ? "Rejected(Post Issuance)" : r.status || "—";
-                    const statusColor = r.status === "active"
-                      ? "bg-emerald-100 text-emerald-700 border-emerald-200"
+                    const isSaleComplete = r.status === "active";
+                    const statusLabel = isSaleComplete ? "Sale Complete" : r.status === "cancelled" ? "Rejected" : r.status === "pending" ? "Pending" : r.status || "—";
+                    const statusColor = isSaleComplete
+                      ? "text-emerald-600"
                       : r.status === "cancelled"
-                        ? "bg-red-100 text-red-700 border-red-200"
-                        : "bg-muted text-muted-foreground";
+                        ? "text-red-600"
+                        : "text-amber-600";
+                    const borderColor = isSaleComplete
+                      ? "border-l-emerald-500"
+                      : r.status === "cancelled"
+                        ? "border-l-red-500"
+                        : "border-l-amber-500";
 
                     return (
-                      <div key={r.id} className="px-5 py-4 hover:bg-muted/30 transition-colors group">
-                        {/* Row 1: Customer Name + Status + Created Date */}
+                      <div key={r.id} className={`px-4 py-3.5 hover:bg-muted/20 transition-colors group border-l-[3px] ${borderColor}`}>
+                        {/* Row 1: Customer Name + Lead Status + Sale Status + Created Date */}
                         <div className="flex items-start justify-between gap-3">
-                          <div className="flex items-center gap-2.5 flex-wrap min-w-0">
-                            <h4 className="font-bold text-sm text-foreground tracking-tight">{r.customer_name}</h4>
-                            <Badge variant="outline" className={`text-[10px] px-2 py-0.5 border font-semibold ${statusColor}`}>
-                              {statusLabel}
-                            </Badge>
-                            {r.policy_type?.toLowerCase().includes("renewal") || r.start_date ? null : null}
+                          <div className="flex items-center gap-2 flex-wrap min-w-0">
+                            <h4 className="font-bold text-[13px] text-foreground tracking-tight uppercase">{r.customer_name}</h4>
+                            {r.policy_number && (
+                              <span className="text-[10px] text-muted-foreground font-mono">LEAD ID:{r.policy_number.replace(/[^0-9]/g, '').slice(0, 10)}</span>
+                            )}
+                            <span className={`text-[11px] font-semibold ${statusColor}`}>{statusLabel}</span>
                             {getStatusBadge(r.lead_status)}
                           </div>
-                          <p className="text-xs text-muted-foreground shrink-0 whitespace-nowrap">
-                            Created On - {r.created_at ? format(new Date(r.created_at), "yyyy-MM-dd HH:mm:ss") : r.start_date ? format(new Date(r.start_date), "yyyy-MM-dd") : "—"}
+                          <p className="text-[11px] text-muted-foreground shrink-0 whitespace-nowrap">
+                            Created On - {r.created_at ? format(new Date(r.created_at), "yyyy-MM-dd HH:mm:ss") : "—"}
                           </p>
                         </div>
 
                         {/* Row 2: Insurer • Policy • Agent • Product(Plan) • More Info */}
-                        <div className="mt-1 flex flex-wrap items-center gap-x-1 text-xs text-muted-foreground leading-relaxed">
+                        <div className="mt-1 flex flex-wrap items-center gap-x-1 text-[11px] text-muted-foreground leading-relaxed">
                           <span>{r.insurer || "—"}</span>
                           <span className="text-muted-foreground/30 mx-0.5">•</span>
                           <span>Policy: {r.policy_number || "N/A"}</span>
@@ -646,55 +744,54 @@ export function InsuranceCRMDashboard() {
                           <span>{r.product_type || "Car"}({r.plan_name || r.policy_type || "—"})</span>
                           <button
                             onClick={() => setSelectedPolicy(r)}
-                            className="text-primary hover:underline font-medium ml-1"
+                            className="text-primary hover:underline font-medium ml-1 text-[11px]"
                           >
                             More Info
                           </button>
                         </div>
 
-                        {/* Row 3: Vehicle + Premium + Expiry + Actions */}
+                        {/* Row 3: Vehicle + Premium + Expiry + Action buttons */}
                         <div className="mt-2 flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-3 text-xs flex-wrap">
+                          <div className="flex items-center gap-2.5 text-[11px] flex-wrap">
                             {r.vehicle_number && (
-                              <span className="flex items-center gap-1 font-mono bg-muted/60 px-1.5 py-0.5 rounded text-[10px]">
-                                <Car className="h-3 w-3" /> {r.vehicle_number}
+                              <span className="flex items-center gap-1 font-mono bg-muted/60 px-1.5 py-0.5 rounded text-[10px] font-medium">
+                                <Car className="h-3 w-3 text-muted-foreground" /> {r.vehicle_number}
                               </span>
                             )}
                             {r.vehicle_make && r.vehicle_model && (
-                              <span className="text-muted-foreground">{r.vehicle_make} {r.vehicle_model}</span>
+                              <span className="text-muted-foreground text-[10px]">{r.vehicle_make} {r.vehicle_model}</span>
                             )}
-                            <span className="font-semibold text-foreground">₹{r.premium?.toLocaleString("en-IN") || "—"}</span>
+                            <span className="font-bold text-foreground text-xs">₹{r.premium?.toLocaleString("en-IN") || "—"}</span>
                             {r.renewal_date && (
-                              <span className={`font-medium ${getUrgencyColor(r.daysUntilRenewal)}`}>
-                                Expiry: {format(new Date(r.renewal_date), "dd MMM yyyy")}
+                              <span className={`font-medium text-[10px] ${getUrgencyColor(r.daysUntilRenewal)}`}>
+                                Exp: {format(new Date(r.renewal_date), "dd MMM yyyy")}
                                 {r.daysUntilRenewal !== null && ` (${getUrgencyLabel(r.daysUntilRenewal)})`}
                               </span>
                             )}
-                            {!r.renewal_date && (
-                              <span className="text-amber-600 text-[10px] italic">Expiry: Not set</span>
-                            )}
                           </div>
 
-                          <div className="flex gap-1 shrink-0 opacity-60 group-hover:opacity-100 transition-opacity">
-                            {r.phone && (
-                              <a href={`tel:${r.phone}`} onClick={e => e.stopPropagation()}>
-                                <Button size="icon" className="h-7 w-7 bg-emerald-600 hover:bg-emerald-700 text-white" title="Call">
-                                  <PhoneCall className="h-3.5 w-3.5" />
-                                </Button>
-                              </a>
-                            )}
+                          {/* PBPartners-style action icons */}
+                          <div className="flex items-center gap-1.5 shrink-0 opacity-50 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 gap-1.5 text-[10px] text-primary hover:text-primary hover:bg-primary/5 px-2"
+                              onClick={() => setShowUploadPolicy(true)}
+                            >
+                              <Upload className="h-3 w-3" /> Upload Docs
+                            </Button>
                             {r.phone && (
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                  <Button size="sm" className="h-7 gap-1 text-xs px-2 bg-emerald-600 hover:bg-emerald-700 text-white" title="Remind">
+                                  <Button size="sm" className="h-7 gap-1 text-[10px] px-2 bg-emerald-600 hover:bg-emerald-700 text-white">
                                     <Send className="h-3 w-3" /> Remind
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="w-52">
-                                  <DropdownMenuItem onClick={() => openReminderPreview(r, "notice")} className="cursor-pointer gap-2">
+                                  <DropdownMenuItem onClick={() => openReminderPreview(r, "notice")} className="cursor-pointer gap-2 text-xs">
                                     <Bell className="h-3.5 w-3.5" /> Renewal Notice
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => openReminderPreview(r, "quote")} className="cursor-pointer gap-2">
+                                  <DropdownMenuItem onClick={() => openReminderPreview(r, "quote")} className="cursor-pointer gap-2 text-xs">
                                     <FileText className="h-3.5 w-3.5" /> Renewal Quote
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
@@ -714,13 +811,20 @@ export function InsuranceCRMDashboard() {
                                 ))}
                               </DropdownMenuContent>
                             </DropdownMenu>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" title="Share"
-                              onClick={(e) => { e.stopPropagation(); setShareDialogPolicy(r); }}>
+                            {/* View icon */}
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-primary hover:bg-primary/5" title="View Details"
+                              onClick={() => setSelectedPolicy(r)}>
+                              <Eye className="h-3.5 w-3.5" />
+                            </Button>
+                            {/* Share/Download icon */}
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-emerald-600 hover:bg-emerald-50" title="Share"
+                              onClick={() => setShareDialogPolicy(r)}>
                               <Share2 className="h-3.5 w-3.5" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" title="Details"
-                              onClick={() => setSelectedPolicy(r)}>
-                              <ExternalLink className="h-3.5 w-3.5" />
+                            {/* Download icon */}
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" title="Download"
+                              onClick={() => downloadPolicyPDF(r)}>
+                              <Download className="h-3.5 w-3.5" />
                             </Button>
                           </div>
                         </div>
@@ -731,14 +835,26 @@ export function InsuranceCRMDashboard() {
               </div>
 
               {/* Pagination */}
-              <div className="flex items-center justify-between px-4 py-3 border-t text-xs text-muted-foreground">
+              <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/20 text-xs text-muted-foreground">
                 <span>
-                  {filtered.length === 0 ? "No entries" : `${page * pageSize + 1}–${Math.min((page + 1) * pageSize, filtered.length)} of ${filtered.length}`}
+                  {filtered.length === 0 ? "No entries" : `Showing ${page * pageSize + 1}–${Math.min((page + 1) * pageSize, filtered.length)} of ${filtered.length} policies`}
                 </span>
                 <div className="flex gap-1">
                   <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(p => p - 1)} className="h-7 text-xs">
                     <ChevronLeft className="h-3 w-3 mr-1" /> Prev
                   </Button>
+                  {/* Page numbers */}
+                  {totalPages <= 7 && Array.from({ length: totalPages }, (_, i) => (
+                    <Button
+                      key={i}
+                      variant={page === i ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setPage(i)}
+                      className="h-7 w-7 text-xs p-0"
+                    >
+                      {i + 1}
+                    </Button>
+                  ))}
                   <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)} className="h-7 text-xs">
                     Next <ChevronRight className="h-3 w-3 ml-1" />
                   </Button>
