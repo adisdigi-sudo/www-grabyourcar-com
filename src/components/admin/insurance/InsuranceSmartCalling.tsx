@@ -26,6 +26,7 @@ import InsuranceQuoteModal from "./InsuranceQuoteModal";
 import { generateRenewalReminderPdf } from "@/lib/generateRenewalReminderPdf";
 import { generateInsuranceQuotePdf } from "@/lib/generateInsuranceQuotePdf";
 import { Checkbox } from "@/components/ui/checkbox";
+import { SharePdfDialog } from "./SharePdfDialog";
 
 interface SmartCallingClient {
   id: string;
@@ -160,6 +161,8 @@ export function InsuranceSmartCalling() {
   const [bulkMode, setBulkMode] = useState(false);
   const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
   const [bulkSending, setBulkSending] = useState(false);
+  const [showShareQuote, setShowShareQuote] = useState(false);
+  const [showShareRenewal, setShowShareRenewal] = useState(false);
 
   const { data: allClients = [], isLoading } = useQuery({
     queryKey: ["smart-calling-clients", stageFilter],
@@ -1190,42 +1193,20 @@ export function InsuranceSmartCalling() {
                     })}
                   </div>
 
-                  {/* Send Quote PDF Button */}
+                  {/* Share Quote PDF Button */}
                   <Button
                     variant="outline"
                     className="w-full gap-2 h-10 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 font-bold"
-                    onClick={() => setShowQuoteModal(true)}
+                    onClick={() => setShowShareQuote(true)}
                   >
-                    <FileText className="h-4 w-4" /> 📄 Send Quote PDF
+                    <Send className="h-4 w-4" /> Share Quote PDF
                   </Button>
                   <Button
                     variant="outline"
                     className="w-full gap-2 h-10 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40 font-bold"
-                    onClick={() => {
-                      const d = currentClient;
-                      generateRenewalReminderPdf({
-                        customerName: d.customer_name || "Customer",
-                        phone: d.phone,
-                        email: d.email || undefined,
-                        city: d.city || undefined,
-                        vehicleMake: d.vehicle_make || "N/A",
-                        vehicleModel: d.vehicle_model || "N/A",
-                        vehicleNumber: d.vehicle_number || "N/A",
-                        vehicleYear: d.vehicle_year || new Date().getFullYear(),
-                        currentInsurer: d.current_insurer || activePolicy?.insurer || "N/A",
-                        policyNumber: activePolicy?.policy_number || undefined,
-                        policyType: d.current_policy_type || activePolicy?.policy_type || "comprehensive",
-                        policyExpiry: d.policy_expiry_date || activePolicy?.expiry_date || new Date().toISOString(),
-                        currentPremium: d.current_premium || activePolicy?.premium_amount || 0,
-                        ncbPercentage: d.ncb_percentage || activePolicy?.ncb_discount || 0,
-                        idv: activePolicy?.idv || undefined,
-                        addons: activePolicy?.addons || undefined,
-                      });
-                      setCallOutcome("renewal_shared");
-                      toast.success("📄 Renewal Reminder PDF downloaded!");
-                    }}
+                    onClick={() => setShowShareRenewal(true)}
                   >
-                    <RefreshCw className="h-4 w-4" /> 🔔 Renewal Reminder PDF
+                    <Send className="h-4 w-4" /> Share Renewal Reminder
                   </Button>
 
                   {/* Regular outcome buttons */}
@@ -1402,6 +1383,77 @@ export function InsuranceSmartCalling() {
           onQuoteSent={() => {
             setCallOutcome("quote_shared");
             toast.success("Quote sent! Outcome marked as Quote Shared.");
+          }}
+        />
+      )}
+
+      {/* Share Quote PDF Dialog */}
+      {currentClient && (
+        <SharePdfDialog
+          open={showShareQuote}
+          onOpenChange={setShowShareQuote}
+          title="Insurance Quote"
+          defaultPhone={currentClient.phone || ""}
+          defaultEmail={currentClient.email || ""}
+          customerName={currentClient.customer_name || "Customer"}
+          shareMessage={`Hi ${currentClient.customer_name || ""}! Here is your insurance quote for your ${currentClient.vehicle_make || ""} ${currentClient.vehicle_model || ""}.\n\nVehicle: ${currentClient.vehicle_number || "N/A"}\nPolicy Type: ${currentClient.current_policy_type || "Comprehensive"}\nInsurer: ${currentClient.current_insurer || "Best Available"}\n\nPlease review and let us know if you'd like to proceed.\n\nPhone: +91 98559 24442\nwww.grabyourcar.com\n- Grabyourcar Insurance`}
+          generatePdf={() => generateInsuranceQuotePdf({
+            customerName: currentClient.customer_name || "Customer",
+            phone: currentClient.phone,
+            email: currentClient.email || undefined,
+            city: currentClient.city || undefined,
+            vehicleMake: currentClient.vehicle_make || "N/A",
+            vehicleModel: currentClient.vehicle_model || "N/A",
+            vehicleNumber: currentClient.vehicle_number || "N/A",
+            vehicleYear: currentClient.vehicle_year || new Date().getFullYear(),
+            fuelType: "Petrol",
+            insuranceCompany: currentClient.current_insurer || "Best Available",
+            policyType: currentClient.current_policy_type || "Comprehensive",
+            idv: 500000,
+            basicOD: 8000,
+            odDiscount: 1500,
+            ncbDiscount: Math.round((currentClient.ncb_percentage || 0) * 80),
+            thirdParty: 6521,
+            securePremium: 500,
+            addonPremium: 3500,
+            addons: ["Zero Depreciation", "Engine Protection", "Roadside Assistance"],
+          })}
+          onShared={() => {
+            setCallOutcome("quote_shared");
+          }}
+        />
+      )}
+
+      {/* Share Renewal Reminder Dialog */}
+      {currentClient && (
+        <SharePdfDialog
+          open={showShareRenewal}
+          onOpenChange={setShowShareRenewal}
+          title="Renewal Reminder"
+          defaultPhone={currentClient.phone || ""}
+          defaultEmail={currentClient.email || ""}
+          customerName={currentClient.customer_name || "Customer"}
+          shareMessage={`Hi ${currentClient.customer_name || ""}! Your insurance renewal is due${currentClient.policy_expiry_date ? ` on ${currentClient.policy_expiry_date}` : " soon"} for your ${currentClient.vehicle_make || ""} ${currentClient.vehicle_model || ""}.\n\nVehicle: ${currentClient.vehicle_number || "N/A"}\nCurrent Insurer: ${currentClient.current_insurer || "N/A"}\nNCB: ${currentClient.ncb_percentage ?? 0}%\n\nWe have the best renewal offers for you.\n\nPhone: +91 98559 24442\nwww.grabyourcar.com\n- Grabyourcar Insurance`}
+          generatePdf={() => generateRenewalReminderPdf({
+            customerName: currentClient.customer_name || "Customer",
+            phone: currentClient.phone,
+            email: currentClient.email || undefined,
+            city: currentClient.city || undefined,
+            vehicleMake: currentClient.vehicle_make || "N/A",
+            vehicleModel: currentClient.vehicle_model || "N/A",
+            vehicleNumber: currentClient.vehicle_number || "N/A",
+            vehicleYear: currentClient.vehicle_year || new Date().getFullYear(),
+            currentInsurer: currentClient.current_insurer || activePolicy?.insurer || "N/A",
+            policyNumber: activePolicy?.policy_number || undefined,
+            policyType: currentClient.current_policy_type || activePolicy?.policy_type || "comprehensive",
+            policyExpiry: currentClient.policy_expiry_date || activePolicy?.expiry_date || new Date().toISOString(),
+            currentPremium: currentClient.current_premium || activePolicy?.premium_amount || 0,
+            ncbPercentage: currentClient.ncb_percentage || activePolicy?.ncb_discount || 0,
+            idv: activePolicy?.idv || undefined,
+            addons: activePolicy?.addons || undefined,
+          })}
+          onShared={() => {
+            setCallOutcome("renewal_shared");
           }}
         />
       )}
