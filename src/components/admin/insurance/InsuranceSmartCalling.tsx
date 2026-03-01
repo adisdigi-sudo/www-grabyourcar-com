@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import InsuranceQuoteModal from "./InsuranceQuoteModal";
+import { generateRenewalReminderPdf } from "@/lib/generateRenewalReminderPdf";
 
 interface SmartCallingClient {
   id: string;
@@ -1022,6 +1023,35 @@ export function InsuranceSmartCalling() {
                     onClick={() => setShowQuoteModal(true)}
                   >
                     <FileText className="h-4 w-4" /> 📄 Send Quote PDF
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2 h-10 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40 font-bold"
+                    onClick={() => {
+                      const d = currentClient;
+                      generateRenewalReminderPdf({
+                        customerName: d.customer_name || "Customer",
+                        phone: d.phone,
+                        email: d.email || undefined,
+                        city: d.city || undefined,
+                        vehicleMake: d.vehicle_make || "N/A",
+                        vehicleModel: d.vehicle_model || "N/A",
+                        vehicleNumber: d.vehicle_number || "N/A",
+                        vehicleYear: d.vehicle_year || new Date().getFullYear(),
+                        currentInsurer: d.current_insurer || activePolicy?.insurer || "N/A",
+                        policyNumber: activePolicy?.policy_number || undefined,
+                        policyType: d.current_policy_type || activePolicy?.policy_type || "comprehensive",
+                        policyExpiry: d.policy_expiry_date || activePolicy?.expiry_date || new Date().toISOString(),
+                        currentPremium: d.current_premium || activePolicy?.premium_amount || 0,
+                        ncbPercentage: d.ncb_percentage || activePolicy?.ncb_discount || 0,
+                        idv: activePolicy?.idv || undefined,
+                        addons: activePolicy?.addons || undefined,
+                      });
+                      setCallOutcome("renewal_shared");
+                      toast.success("📄 Renewal Reminder PDF downloaded!");
+                    }}
+                  >
+                    <RefreshCw className="h-4 w-4" /> 🔔 Renewal Reminder PDF
                   </Button>
 
                   {/* Regular outcome buttons */}
