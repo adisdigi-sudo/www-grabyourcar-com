@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/table";
 import { format, addDays, differenceInDays, isBefore, isAfter, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isSameDay, getWeek, getMonth, getYear } from "date-fns";
 import { InsuranceAddPolicyForm } from "./InsuranceAddPolicyForm";
+import { BulkQuoteSharePanel, BulkLeadItem } from "./BulkQuoteSharePanel";
+import { FileSpreadsheet } from "lucide-react";
 
 type ViewFilter = "all" | "7" | "15" | "30" | "60" | "expired";
 type StatusFilter = "all" | "won" | "lost" | "running" | "new" | "grabyourcar";
@@ -370,6 +372,7 @@ export function InsuranceCRMDashboard() {
   const [reminderPreview, setReminderPreview] = useState<{ policy: PolicyRow; type: "notice" | "quote" } | null>(null);
   const [showUploadPolicy, setShowUploadPolicy] = useState(false);
   const [bulkSending, setBulkSending] = useState(false);
+  const [showBulkPanel, setShowBulkPanel] = useState(false);
 
   const handleBulkSendMessage = useCallback(async () => {
     const phonePolicies = filtered.filter(p => p.rawPhone && p.rawPhone.length >= 10);
@@ -685,12 +688,44 @@ export function InsuranceCRMDashboard() {
                 {bulkSending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Bell className="h-3 w-3" />}
                 Notify All
               </Button>
+              <Button
+                variant={showBulkPanel ? "default" : "secondary"}
+                size="sm"
+                onClick={() => setShowBulkPanel(!showBulkPanel)}
+                className="gap-1 h-8 text-[10px] px-2"
+              >
+                <FileSpreadsheet className="h-3 w-3" />
+                {showBulkPanel ? "Hide Bulk" : "Bulk Quote/Share"}
+              </Button>
             </div>
           </div>
         )}
 
         {/* ── All Policies Tab — PBPartners Style Row List ── */}
-        <TabsContent value="policies" className="mt-3">
+        <TabsContent value="policies" className="mt-3 space-y-3">
+          {/* Bulk Quote/Share Panel */}
+          {showBulkPanel && (
+            <BulkQuoteSharePanel
+              leads={filtered.map(r => ({
+                id: r.client_id,
+                customer_name: r.customer_name,
+                phone: r.phone,
+                email: r.email,
+                vehicle_number: r.vehicle_number,
+                vehicle_make: r.vehicle_make,
+                vehicle_model: r.vehicle_model,
+                current_insurer: r.insurer,
+                policy_expiry_date: r.renewal_date,
+                current_policy_type: r.policy_type,
+                current_premium: r.premium,
+                policy_number: r.policy_number,
+                premium: r.premium,
+                renewal_date: r.renewal_date,
+              } as BulkLeadItem))}
+              source="policy_book"
+              onDone={() => setShowBulkPanel(false)}
+            />
+          )}
           <Card className="border-0 shadow-sm rounded-xl overflow-hidden">
             <CardContent className="p-0">
               {/* Policy Rows */}
