@@ -26,7 +26,7 @@ export interface InsuranceQuoteData {
 }
 
 const formatINR = (amount: number): string => {
-  return `₹${Math.round(amount).toLocaleString("en-IN")}`;
+  return `Rs. ${Math.round(amount).toLocaleString("en-IN")}`;
 };
 
 const hexToRgb = (hex: string): [number, number, number] => {
@@ -83,7 +83,7 @@ export const generateInsuranceQuotePdf = (data: InsuranceQuoteData) => {
   doc.setTextColor(245, 245, 245);
   doc.setFont("helvetica", "bold");
   doc.text("GRABYOURCAR", pw / 2, ph / 2.5, { align: "center", angle: 35 });
-  doc.text("GRABYOURCAR", pw / 2, ph / 1.4, { align: "center", angle: 35 });
+  doc.text("INSURANCE", pw / 2, ph / 1.4, { align: "center", angle: 35 });
 
   // ── HEADER BANNER ──
   doc.setFillColor(...green);
@@ -297,10 +297,10 @@ export const generateInsuranceQuotePdf = (data: InsuranceQuoteData) => {
 
   doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
-  doc.text("📞 +91 98559 24442  |  📧 hello@grabyourcar.com  |  🌐 www.grabyourcar.com", m, fY + 14);
+  doc.text("Phone: +91 98559 24442  |  Email: hello@grabyourcar.com  |  Web: www.grabyourcar.com", m, fY + 14);
 
   doc.setFontSize(7);
-  doc.text("MS 228, 2nd Floor, DT Mega Mall, Sector 28, Gurugram, Haryana – 122001", pw - m, fY + 14, { align: "right" });
+  doc.text("MS 228, 2nd Floor, DT Mega Mall, Sector 28, Gurugram, Haryana - 122001", pw - m, fY + 14, { align: "right" });
 
   // Save
   const fileName = `${(data.customerName || "Customer").replace(/\s+/g, "_")}_${data.vehicleMake || "Vehicle"}_Insurance_Quote.pdf`;

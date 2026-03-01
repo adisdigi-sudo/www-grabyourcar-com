@@ -21,7 +21,7 @@ export interface RenewalReminderData {
 }
 
 const formatINR = (amount: number): string =>
-  `₹${Math.round(amount).toLocaleString("en-IN")}`;
+  `Rs. ${Math.round(amount).toLocaleString("en-IN")}`;
 
 export const generateRenewalReminderPdf = (data: RenewalReminderData) => {
   const doc = new jsPDF();
@@ -103,10 +103,10 @@ export const generateRenewalReminderPdf = (data: RenewalReminderData) => {
   // ── URGENCY BADGE ──
   const badgeColor: [number, number, number] = isExpired ? red : isUrgent ? red : amber;
   const badgeText = isExpired
-    ? `⚠ POLICY EXPIRED ${Math.abs(daysLeft)} DAYS AGO`
+    ? `POLICY EXPIRED ${Math.abs(daysLeft)} DAYS AGO`
     : isUrgent
-      ? `⚠ URGENT: ${daysLeft} DAYS LEFT TO RENEW`
-      : `🔔 ${daysLeft} DAYS LEFT TO RENEW`;
+      ? `URGENT: ${daysLeft} DAYS LEFT TO RENEW`
+      : `${daysLeft} DAYS LEFT TO RENEW`;
 
   doc.setFillColor(...badgeColor);
   const badgeW = 130;
@@ -206,11 +206,11 @@ export const generateRenewalReminderPdf = (data: RenewalReminderData) => {
   y = drawHeader("WHY RENEW WITH GRABYOURCAR?", y, [34, 197, 94]);
   y += 3;
   const benefits = [
-    "✅ Best Premium Rates — We compare 15+ insurers for you",
-    "✅ Protect Your NCB — Don't lose years of No Claim Bonus",
-    "✅ Hassle-Free Claims — Dedicated support for claim settlement",
-    "✅ Zero Paperwork — Digital policy issuance in minutes",
-    "✅ Free Add-on Advisory — Expert guidance on coverage needs",
+    ">> Best Premium Rates - We compare 15+ insurers for you",
+    ">> Protect Your NCB - Don't lose years of No Claim Bonus",
+    ">> Hassle-Free Claims - Dedicated support for claim settlement",
+    ">> Zero Paperwork - Digital policy issuance in minutes",
+    ">> Free Add-on Advisory - Expert guidance on coverage needs",
   ];
   doc.setFontSize(8.5);
   doc.setFont("helvetica", "normal");
@@ -229,7 +229,7 @@ export const generateRenewalReminderPdf = (data: RenewalReminderData) => {
   doc.setFontSize(9);
   doc.setTextColor(...darkAmber);
   doc.setFont("helvetica", "bold");
-  doc.text(`💡 Your NCB: ${data.ncbPercentage || 0}%`, m + 5, y + 6);
+  doc.text(`Your NCB: ${data.ncbPercentage || 0}%`, m + 5, y + 6);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   doc.setTextColor(...dark);
@@ -258,9 +258,9 @@ export const generateRenewalReminderPdf = (data: RenewalReminderData) => {
 
   doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
-  doc.text("📞 +91 98559 24442  |  📧 hello@grabyourcar.com  |  🌐 www.grabyourcar.com", m, fY + 14);
+  doc.text("Phone: +91 98559 24442  |  Email: hello@grabyourcar.com  |  Web: www.grabyourcar.com", m, fY + 14);
   doc.setFontSize(7);
-  doc.text("MS 228, 2nd Floor, DT Mega Mall, Sector 28, Gurugram, Haryana – 122001", pw - m, fY + 14, { align: "right" });
+  doc.text("MS 228, 2nd Floor, DT Mega Mall, Sector 28, Gurugram, Haryana - 122001", pw - m, fY + 14, { align: "right" });
 
   const fileName = `${(data.customerName || "Customer").replace(/\s+/g, "_")}_Renewal_Reminder.pdf`;
   doc.save(fileName);
