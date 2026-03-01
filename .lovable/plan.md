@@ -1,81 +1,37 @@
 
 
-## Plan: Premium Insurance Quote PDF Generator with One-Click Sharing
+## Plan: Import CSV Booking Data with Correct Expiry Dates
 
-### What We're Building
-A beautiful, branded PDF quotation (matching the reference image style) that agents can generate and share with a single click from the Smart Calling workspace. The PDF will include full premium breakup, coverage highlights, vehicle/client details, and Grabyourcar branding.
+### Understanding
+Your CSV has 47 policies. The old policy expired **7 days before** the booking date. So for each record:
+- `policy_expiry_date` on `insurance_clients` = `Booking Date - 7 days` (this is when the old policy expired, triggering the renewal)
+- `insurance_policies.expiry_date` = `start_date + 1 year - 1 day` (the new policy's expiry, already set correctly)
 
-### Architecture
+### Data Updates
 
-**1. New file: `src/lib/generateInsuranceQuotePdf.ts`**
-- A standalone PDF generator using jsPDF (already installed), following the same pattern as `generateEMIPdf.ts`
-- Accepts client data (from `SmartCallingClient`), policy data, and optional quote overrides
-- Generates a premium-designed PDF with:
+**Step 1 — Update `insurance_clients` with correct data from CSV**
 
-  **Header**: Green gradient banner with "GRABYOURCAR" branding + website
-  
-  **Title**: "PREMIUM MOTOR INSURANCE QUOTATION"
-  
-  **Greeting**: Personalized thank-you message
-  
-  **Vehicle & Policy Table**:
-  - Insurance Provider, Vehicle (Make + Model), Registration Number, IDV, Year, Fuel Type
-  
-  **Coverage Highlights** (bullet list):
-  - Zero Depreciation, Consumables Cover, Engine Protection, Tyre Protection, RSA, Key Replacement, Personal Belongings Cover (from addons array)
-  
-  **Premium Breakup Table** (green header row):
-  - Basic OD, OD Discount, NCB Discount, Net OD Premium, Third Party, Secure Premium, Add-on Premium, Net Premium, GST (18%), Total Premium Payable
-  
-  **Summary Box**: Net Premium + Total Premium Payable (bold)
-  
-  **Footer**: Grabyourcar Insurance Desk contact info, phone, email
-  
-  **Decorative**: Green corner borders (matching reference image)
+For each of the 47 rows, match by `vehicle_number` (Registration Number) and update:
+- `policy_expiry_date` = Booking Date minus 7 days
+- `current_insurer` = Insurer from CSV
+- `current_premium` = Premium (total) from CSV
+- `current_policy_number` = Policy No from CSV
+- `current_policy_type` = Policy Type from CSV
+- `city` / `state` / `pincode` where missing
 
-**2. New file: `src/components/admin/insurance/InsuranceQuoteModal.tsx`**
-- A dialog modal that opens when agent clicks "Send Quote PDF"
-- Pre-fills all fields from current client + policy data
-- Editable fields for quote customization:
-  - Insurance Company (dropdown of common insurers)
-  - IDV amount, Basic OD, OD Discount, NCB amount
-  - Third Party premium, Add-on premium
-  - GST auto-calculated at 18%
-  - Coverage add-ons (checkboxes)
-- Live preview of Net Premium and Total Premium
-- Action buttons:
-  - **Download PDF** - generates and downloads locally
-  - **Send via WhatsApp** - generates PDF, opens WhatsApp with message + prompts to attach
-  - **Send via Email** - generates PDF, sends via edge function with PDF attachment
-  - **Copy Quote Summary** - copies text summary to clipboard
+This will be done via individual UPDATE statements matched on `vehicle_number`.
 
-**3. Modify: `src/components/admin/insurance/InsuranceSmartCalling.tsx`**
-- Add a "📄 Send Quote PDF" button in the Call Outcome section (next to Quote Shared / Renewal Shared share actions)
-- When clicked, opens `InsuranceQuoteModal` pre-filled with current client data
-- After sending, auto-marks outcome as "quote_shared"
+**Step 2 — Verify `insurance_policies` table alignment**
 
-### Data Flow
-```text
-SmartCallingClient + PolicyData
-        ↓
-  InsuranceQuoteModal (editable form)
-        ↓
-  generateInsuranceQuotePdf()
-        ↓
-  jsPDF → Download / WhatsApp / Email
-```
+The `insurance_policies` records already have `start_date` derived from the CSV's issuance date and `expiry_date` = start + 1 year. These should now be correct. I'll cross-check and fix any mismatches.
 
-### Premium Breakup Calculation Logic
-- Net OD = Basic OD - OD Discount - NCB Discount
-- Net Premium = Net OD + Third Party + Add-on Premium
-- GST = Net Premium × 18%
-- Total Premium Payable = Net Premium + GST
+**Step 3 — Handle the "Rejected" entries**
+
+Two CSV rows have status "Rejected(Post Issuance)" (rows 13 and 20 — SEWA E CLASS and RAJAT SURI Hector). These will be marked with appropriate status in both tables.
 
 ### Technical Details
-- Uses jsPDF drawing primitives for the green decorative border corners (matching reference)
-- Table rendering uses manual coordinate-based drawing (same approach as `generateEMIPdf.ts`)
-- Currency formatting follows Indian numbering (₹XX,XX,XXX)
-- PDF filename: `{CustomerName}_{Vehicle}_Insurance_Quote.pdf`
-- WhatsApp sharing: opens `wa.me` link with summary text; user manually attaches downloaded PDF
-- Email sharing: invokes existing `send-email` or `send-automated-email` edge function with HTML version
+
+- All 47 vehicle numbers from the CSV already exist in `insurance_clients` (matched previously during import)
+- Updates will be done using the data insert tool with UPDATE SQL
+- No schema changes needed — all required columns already exist
 
