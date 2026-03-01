@@ -9,7 +9,7 @@ import { useState, useMemo, useRef } from "react";
 import {
   RefreshCw, AlertTriangle, Clock, CheckCircle2, XCircle,
   Bell, Calendar, Phone, Loader2, Zap, MessageSquare,
-  Share2, Mail, Search, TrendingUp, Star, PhoneCall,
+  Share2, Mail, Search, TrendingUp, Star, PhoneCall, FileSpreadsheet as FileSpreadsheetIcon,
   Megaphone, Send, Upload, FileText
 } from "lucide-react";
 import {
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { format, differenceInDays } from "date-fns";
+import { InsuranceBulkQuoteImport } from "./InsuranceBulkQuoteImport";
 
 // === TEMPLATES ===
 function buildRenewalNotice(p: any): string {
@@ -437,6 +438,7 @@ export function InsuranceRenewalsEngine() {
             {bulkUploading ? "Uploading..." : "Bulk Upload CSV"}
           </Button>
           <input ref={fileInputRef} type="file" accept=".csv" onChange={handleBulkUpload} className="hidden" />
+          <InsuranceBulkQuoteImport />
         </div>
       </div>
 
