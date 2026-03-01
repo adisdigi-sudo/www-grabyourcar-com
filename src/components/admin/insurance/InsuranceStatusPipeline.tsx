@@ -15,8 +15,9 @@ import {
   XCircle, ThumbsUp, ThumbsDown, Zap, TrendingUp,
   UserPlus, Target, Eye, ChevronRight, BarChart3,
   FileText, Plus, Send, ShieldCheck, Loader2, Save, Upload,
-  Bell, Users, Megaphone
+  Bell, Users, Megaphone, FileSpreadsheet
 } from "lucide-react";
+import { BulkQuoteSharePanel, BulkLeadItem } from "./BulkQuoteSharePanel";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
@@ -85,6 +86,7 @@ export function InsuranceStatusPipeline() {
   const [renewalPreviewClient, setRenewalPreviewClient] = useState<Client | null>(null);
   const [renewalPreviewMsg, setRenewalPreviewMsg] = useState("");
   const [sendingRenewal, setSendingRenewal] = useState(false);
+  const [showBulkPanel, setShowBulkPanel] = useState(false);
 
   useEffect(() => { fetchClients(); }, []);
 
@@ -366,14 +368,24 @@ export function InsuranceStatusPipeline() {
           </h2>
           <p className="text-sm text-muted-foreground">Track & convert insurance leads through the journey</p>
         </div>
-        <Button
-          onClick={sendBulkRenewalReminders}
-          disabled={bulkSending || filteredClients.length === 0}
-          className="gap-2 bg-amber-600 hover:bg-amber-700 text-white shadow-md"
-        >
-          {bulkSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Megaphone className="h-4 w-4" />}
-          {bulkSending ? "Sending..." : `Bulk Reminder (${filteredClients.filter(c => getWhatsAppPhone(c)).length})`}
-        </Button>
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            onClick={sendBulkRenewalReminders}
+            disabled={bulkSending || filteredClients.length === 0}
+            className="gap-2 bg-amber-600 hover:bg-amber-700 text-white shadow-md"
+          >
+            {bulkSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Megaphone className="h-4 w-4" />}
+            {bulkSending ? "Sending..." : `Bulk Reminder (${filteredClients.filter(c => getWhatsAppPhone(c)).length})`}
+          </Button>
+          <Button
+            variant={showBulkPanel ? "default" : "outline"}
+            onClick={() => setShowBulkPanel(!showBulkPanel)}
+            className="gap-2"
+          >
+            <FileSpreadsheet className="h-4 w-4" />
+            {showBulkPanel ? "Hide Bulk Panel" : "Bulk Quote/Share"}
+          </Button>
+        </div>
         <div className="flex gap-3 flex-wrap">
           {[
             { label: "Total", value: totalLeads, icon: Target, color: "text-primary", bg: "bg-primary/10" },
@@ -435,6 +447,25 @@ export function InsuranceStatusPipeline() {
           </button>
         ))}
       </div>
+
+      {/* Bulk Quote/Share Panel */}
+      {showBulkPanel && (
+        <BulkQuoteSharePanel
+          leads={filteredClients.map(c => ({
+            id: c.id,
+            customer_name: c.customer_name,
+            phone: c.phone,
+            email: c.email,
+            vehicle_number: c.vehicle_number,
+            vehicle_make: c.vehicle_make,
+            vehicle_model: c.vehicle_model,
+            current_insurer: c.current_insurer,
+            current_premium: c.current_premium,
+          } as BulkLeadItem))}
+          source="pipeline"
+          onDone={() => setShowBulkPanel(false)}
+        />
+      )}
 
       {/* Client Cards */}
       <AnimatePresence mode="popLayout">
