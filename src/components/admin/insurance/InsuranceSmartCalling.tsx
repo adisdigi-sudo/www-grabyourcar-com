@@ -14,16 +14,18 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Phone, PhoneCall, ChevronLeft, ChevronRight, User, Car, Shield,
+  Phone, PhoneCall, ChevronLeft, ChevronRight, User, Car, Shield, Download,
   FileText, Plus, Upload, SkipForward, Shuffle, Search, Clock,
   CheckCircle2, XCircle, ArrowRight, Eye, Edit, Save, Loader2, PhoneOff,
   MapPin, Mail, Hash, CalendarDays, AlertTriangle, PhoneForwarded, Ban, HelpCircle,
   Zap, Activity, Target, Headphones, BarChart3, Flame, Sparkles, Send, RefreshCw,
-  MessageCircle, Copy, ExternalLink
+  MessageCircle, Copy, ExternalLink, CheckSquare, Square, Users
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import InsuranceQuoteModal from "./InsuranceQuoteModal";
 import { generateRenewalReminderPdf } from "@/lib/generateRenewalReminderPdf";
+import { generateInsuranceQuotePdf } from "@/lib/generateInsuranceQuotePdf";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface SmartCallingClient {
   id: string;
@@ -155,6 +157,9 @@ export function InsuranceSmartCalling() {
   });
   const [savingVehicle, setSavingVehicle] = useState(false);
   const [showQuoteModal, setShowQuoteModal] = useState(false);
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
+  const [bulkSending, setBulkSending] = useState(false);
 
   const { data: allClients = [], isLoading } = useQuery({
     queryKey: ["smart-calling-clients", stageFilter],
@@ -589,6 +594,14 @@ export function InsuranceSmartCalling() {
               ✕ Clear Filters
             </Button>
           )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className={`h-8 text-xs gap-1.5 ml-auto ${bulkMode ? "bg-white/20 text-white" : "text-white/70 hover:text-white hover:bg-white/10"}`}
+            onClick={() => { setBulkMode(!bulkMode); setSelectedLeads(new Set()); }}
+          >
+            <Users className="h-3.5 w-3.5" /> {bulkMode ? "Exit Bulk" : "Bulk Send"}
+          </Button>
         </div>
 
 
@@ -624,6 +637,167 @@ export function InsuranceSmartCalling() {
           </span>
         </div>
       </div>
+
+      {/* ── BULK SEND PANEL ── */}
+      {bulkMode && callingList.length > 0 && (
+        <Card className="border-2 border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-950/20 shadow-lg">
+          <CardContent className="py-4 px-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                  <Users className="h-4 w-4 text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-foreground">Bulk Quote Sender</h3>
+                  <p className="text-xs text-muted-foreground">{selectedLeads.size} of {callingList.length} leads selected</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline" size="sm" className="h-8 text-xs gap-1"
+                  onClick={() => {
+                    if (selectedLeads.size === callingList.length) {
+                      setSelectedLeads(new Set());
+                    } else {
+                      setSelectedLeads(new Set(callingList.map(c => c.id)));
+                    }
+                  }}
+                >
+                  {selectedLeads.size === callingList.length ? <Square className="h-3 w-3" /> : <CheckSquare className="h-3 w-3" />}
+                  {selectedLeads.size === callingList.length ? "Deselect All" : "Select All"}
+                </Button>
+                <Button
+                  size="sm" className="h-8 text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                  disabled={selectedLeads.size === 0 || bulkSending}
+                  onClick={async () => {
+                    setBulkSending(true);
+                    const selected = callingList.filter(c => selectedLeads.has(c.id));
+                    let count = 0;
+                    for (const client of selected) {
+                      try {
+                        generateInsuranceQuotePdf({
+                          customerName: client.customer_name || "Customer",
+                          phone: client.phone,
+                          email: client.email || undefined,
+                          city: client.city || undefined,
+                          vehicleMake: client.vehicle_make || "N/A",
+                          vehicleModel: client.vehicle_model || "N/A",
+                          vehicleNumber: client.vehicle_number || "N/A",
+                          vehicleYear: client.vehicle_year || new Date().getFullYear(),
+                          fuelType: "Petrol",
+                          insuranceCompany: client.current_insurer || "Best Available",
+                          policyType: client.current_policy_type || "comprehensive",
+                          idv: 500000,
+                          basicOD: 8000,
+                          odDiscount: 1500,
+                          ncbDiscount: Math.round((client.ncb_percentage || 0) * 80),
+                          thirdParty: 6521,
+                          securePremium: 500,
+                          addonPremium: 3500,
+                          addons: ["Zero Depreciation", "Engine Protection", "Roadside Assistance (RSA)"],
+                        });
+                        count++;
+                        // Small delay between downloads to prevent browser blocking
+                        await new Promise(r => setTimeout(r, 300));
+                      } catch (e) {
+                        console.error(`Failed PDF for ${client.customer_name}:`, e);
+                      }
+                    }
+                    // Update pipeline stages to quote_shared
+                    const ids = selected.map(c => c.id);
+                    await supabase.from("insurance_clients").update({ pipeline_stage: "quote_shared" }).in("id", ids);
+                    queryClient.invalidateQueries({ queryKey: ["smart-calling-clients"] });
+                    setBulkSending(false);
+                    setSelectedLeads(new Set());
+                    toast.success(`📄 ${count} Quote PDFs generated & downloaded!`);
+                  }}
+                >
+                  {bulkSending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                  Download {selectedLeads.size} Quotes
+                </Button>
+                <Button
+                  size="sm" variant="outline" className="h-8 text-xs gap-1.5 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300"
+                  disabled={selectedLeads.size === 0 || bulkSending}
+                  onClick={async () => {
+                    setBulkSending(true);
+                    const selected = callingList.filter(c => selectedLeads.has(c.id));
+                    let count = 0;
+                    for (const client of selected) {
+                      try {
+                        generateRenewalReminderPdf({
+                          customerName: client.customer_name || "Customer",
+                          phone: client.phone,
+                          email: client.email || undefined,
+                          city: client.city || undefined,
+                          vehicleMake: client.vehicle_make || "N/A",
+                          vehicleModel: client.vehicle_model || "N/A",
+                          vehicleNumber: client.vehicle_number || "N/A",
+                          vehicleYear: client.vehicle_year || new Date().getFullYear(),
+                          currentInsurer: client.current_insurer || "N/A",
+                          policyType: client.current_policy_type || "comprehensive",
+                          policyExpiry: client.policy_expiry_date || new Date().toISOString(),
+                          currentPremium: client.current_premium || 0,
+                          ncbPercentage: client.ncb_percentage || 0,
+                        });
+                        count++;
+                        await new Promise(r => setTimeout(r, 300));
+                      } catch (e) {
+                        console.error(`Failed PDF for ${client.customer_name}:`, e);
+                      }
+                    }
+                    const ids = selected.map(c => c.id);
+                    await supabase.from("insurance_clients").update({ pipeline_stage: "renewal_shared" }).in("id", ids);
+                    queryClient.invalidateQueries({ queryKey: ["smart-calling-clients"] });
+                    setBulkSending(false);
+                    setSelectedLeads(new Set());
+                    toast.success(`🔔 ${count} Renewal PDFs generated & downloaded!`);
+                  }}
+                >
+                  {bulkSending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                  Renewal {selectedLeads.size}
+                </Button>
+              </div>
+            </div>
+            {/* Selectable lead list */}
+            <ScrollArea className="max-h-[280px]">
+              <div className="space-y-1">
+                {callingList.map(c => {
+                  const isSelected = selectedLeads.has(c.id);
+                  return (
+                    <div
+                      key={c.id}
+                      className={`flex items-center gap-3 py-2.5 px-3 rounded-xl cursor-pointer transition-all border ${
+                        isSelected
+                          ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-700"
+                          : "border-transparent hover:bg-muted/50 hover:border-border/50"
+                      }`}
+                      onClick={() => {
+                        const next = new Set(selectedLeads);
+                        if (next.has(c.id)) next.delete(c.id); else next.add(c.id);
+                        setSelectedLeads(next);
+                      }}
+                    >
+                      <Checkbox checked={isSelected} className="pointer-events-none" />
+                      <div className={`w-7 h-7 rounded-lg ${getStageColor(c.pipeline_stage)} flex items-center justify-center shrink-0`}>
+                        <User className="h-3.5 w-3.5 text-white" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold truncate text-foreground">{c.customer_name || "Unknown"}</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {c.vehicle_make} {c.vehicle_model} • {c.vehicle_number || "No Reg"} • {c.current_insurer || "No Insurer"}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="text-[10px] h-5 shrink-0">
+                        {getStageLabel(c.pipeline_stage)}
+                      </Badge>
+                    </div>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      )}
 
       {callingList.length === 0 ? (
         <Card className="border-dashed border-2">
