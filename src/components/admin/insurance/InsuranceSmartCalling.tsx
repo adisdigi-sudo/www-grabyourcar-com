@@ -22,6 +22,7 @@ import {
   MessageCircle, Copy, ExternalLink
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
+import InsuranceQuoteModal from "./InsuranceQuoteModal";
 
 interface SmartCallingClient {
   id: string;
@@ -152,6 +153,7 @@ export function InsuranceSmartCalling() {
     current_insurer: "", policy_expiry_date: "", current_policy_type: "", ncb_percentage: "", current_premium: "",
   });
   const [savingVehicle, setSavingVehicle] = useState(false);
+  const [showQuoteModal, setShowQuoteModal] = useState(false);
 
   const { data: allClients = [], isLoading } = useQuery({
     queryKey: ["smart-calling-clients", stageFilter],
@@ -1013,6 +1015,15 @@ export function InsuranceSmartCalling() {
                     })}
                   </div>
 
+                  {/* Send Quote PDF Button */}
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2 h-10 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 font-bold"
+                    onClick={() => setShowQuoteModal(true)}
+                  >
+                    <FileText className="h-4 w-4" /> 📄 Send Quote PDF
+                  </Button>
+
                   {/* Regular outcome buttons */}
                   <div className="grid grid-cols-3 gap-1.5 max-h-[220px] overflow-y-auto">
                     {CALL_OUTCOMES.filter(o => !o.prominent).map(o => (
@@ -1177,6 +1188,19 @@ export function InsuranceSmartCalling() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Insurance Quote Modal */}
+      {currentClient && (
+        <InsuranceQuoteModal
+          open={showQuoteModal}
+          onOpenChange={setShowQuoteModal}
+          client={currentClient}
+          policy={activePolicy}
+          onQuoteSent={() => {
+            setCallOutcome("quote_shared");
+            toast.success("Quote sent! Outcome marked as Quote Shared.");
+          }}
+        />
+      )}
     </div>
   );
 }
