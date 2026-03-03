@@ -23,6 +23,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { format, differenceInDays } from "date-fns";
+import { InsurancePolicyDocumentUploader } from "./InsurancePolicyDocumentUploader";
 
 // ── 9-Stage Pipeline (STRICT) ──
 const PIPELINE_STAGES = [
@@ -116,7 +117,7 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
         .from("insurance_clients")
         .select("id, customer_name, phone, email, city, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_insurer, policy_expiry_date, current_policy_type, ncb_percentage, previous_claim, lead_source, lead_status, assigned_executive, priority, pipeline_stage, contact_attempts, quote_amount, quote_insurer, lost_reason, follow_up_date, current_premium, notes, created_at")
         .not("pipeline_stage", "is", null)
-        .or("pipeline_stage.neq.policy_issued,lead_status.eq.running")
+        .neq("pipeline_stage", "policy_issued")
         .order("created_at", { ascending: false })
         .limit(1000);
       if (error) throw error;
@@ -883,13 +884,13 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
         </DialogContent>
       </Dialog>
 
-      {/* Upload Policy Dialog */}
+      {/* Upload Policy Document Dialog */}
       <Dialog open={showUploadPolicy} onOpenChange={setShowUploadPolicy}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Upload className="h-5 w-5 text-emerald-600" /> Upload Policy</DialogTitle>
+            <DialogTitle className="flex items-center gap-2"><Upload className="h-5 w-5 text-primary" /> Upload Policy Document</DialogTitle>
           </DialogHeader>
-          <PolicyUploadForm clientId={selectedClient?.id || ""} onDone={() => { setShowUploadPolicy(false); queryClient.invalidateQueries({ queryKey: ["insurance-pipeline-clients"] }); }} />
+          <InsurancePolicyDocumentUploader defaultClientId={selectedClient?.id || undefined} onDone={() => { setShowUploadPolicy(false); queryClient.invalidateQueries({ queryKey: ["insurance-pipeline-clients"] }); }} />
         </DialogContent>
       </Dialog>
 
@@ -926,168 +927,6 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
           </div>
         </DialogContent>
       </Dialog>
-    </div>
-  );
-}
-
-// ── Policy Upload Form ──
-function PolicyUploadForm({ clientId, onDone }: { clientId: string; onDone: () => void }) {
-  const [form, setForm] = useState({
-    policy_number: "", policy_type: "comprehensive", insurer: "",
-    premium_amount: "", start_date: "", expiry_date: "", status: "active",
-  });
-  const [saving, setSaving] = useState(false);
-  const [docFile, setDocFile] = useState<File | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  const save = async () => {
-    if (!form.policy_number || !clientId) { toast.error("Policy number required"); return; }
-    setSaving(true);
-    try {
-      // Auto-expire previous active policies
-      const { data: previousPolicies } = await supabase
-        .from("insurance_policies")
-        .select("id, policy_number, insurer")
-        .eq("client_id", clientId)
-        .eq("status", "active");
-
-      if (previousPolicies && previousPolicies.length > 0) {
-        await supabase
-          .from("insurance_policies")
-          .update({ status: "renewed" })
-          .in("id", previousPolicies.map(p => p.id));
-        
-        for (const prev of previousPolicies) {
-          await supabase.from("insurance_activity_log").insert({
-            client_id: clientId,
-            activity_type: "policy_renewed",
-            title: "Previous policy replaced by renewal",
-            description: `Old policy ${prev.policy_number || prev.id} (${prev.insurer || "Unknown"}) auto-marked as renewed. New: ${form.policy_number}`,
-          });
-        }
-      }
-
-      const { data: newPolicy, error } = await supabase.from("insurance_policies").insert({
-        client_id: clientId,
-        policy_number: form.policy_number,
-        policy_type: form.policy_type,
-        insurer: form.insurer || "Unknown",
-        premium_amount: form.premium_amount ? Number(form.premium_amount) : null,
-        start_date: form.start_date || new Date().toISOString().split("T")[0],
-        expiry_date: form.expiry_date || null,
-        status: form.status,
-      }).select("id").single();
-      if (error) throw error;
-
-      // Upload document
-      if (docFile && newPolicy) {
-        const ext = docFile.name.split(".").pop() || "pdf";
-        const filePath = `${newPolicy.id}/${Date.now()}.${ext}`;
-        const { error: uploadErr } = await supabase.storage
-          .from("policy-documents")
-          .upload(filePath, docFile, { cacheControl: "3600", upsert: true });
-        if (!uploadErr) {
-          const { data: urlData } = supabase.storage
-            .from("policy-documents")
-            .getPublicUrl(filePath);
-          await supabase.from("insurance_policies")
-            .update({ policy_document_url: urlData.publicUrl })
-            .eq("id", newPolicy.id);
-        }
-      }
-
-      // Move to renewal queue
-      await supabase.from("insurance_clients").update({ pipeline_stage: "renewal_queue" }).eq("id", clientId);
-      await supabase.from("insurance_activity_log").insert({
-        client_id: clientId,
-        activity_type: "policy_uploaded",
-        title: "Policy issued & uploaded",
-        description: `${form.insurer} policy ${form.policy_number} uploaded${docFile ? " with document" : ""}`,
-      });
-      const replacedCount = previousPolicies?.length || 0;
-      toast.success(replacedCount > 0
-        ? `✅ Policy uploaded! ${replacedCount} old policy(s) auto-replaced. Moved to Renewal Queue.`
-        : "✅ Policy uploaded! Moved to Renewal Queue.");
-      onDone();
-    } catch (e: any) {
-      toast.error(e.message || "Failed");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="space-y-3">
-      {[
-        { key: "policy_number", label: "Policy Number *", placeholder: "POL-123456" },
-        { key: "insurer", label: "Insurance Company", placeholder: "ICICI Lombard, HDFC Ergo..." },
-        { key: "premium_amount", label: "Premium (₹)", placeholder: "15000", type: "number" },
-        { key: "start_date", label: "Start Date", type: "date" },
-        { key: "expiry_date", label: "Expiry Date", type: "date" },
-      ].map(f => (
-        <div key={f.key} className="space-y-1">
-          <Label className="text-xs">{f.label}</Label>
-          <Input
-            type={f.type || "text"}
-            value={(form as any)[f.key]}
-            onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
-            placeholder={f.placeholder}
-            className="h-9"
-          />
-        </div>
-      ))}
-      <div className="space-y-1">
-        <Label className="text-xs">Policy Type</Label>
-        <Select value={form.policy_type} onValueChange={v => setForm(p => ({ ...p, policy_type: v }))}>
-          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="comprehensive">Comprehensive</SelectItem>
-            <SelectItem value="third_party">Third Party</SelectItem>
-            <SelectItem value="own_damage">Own Damage</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Document Upload */}
-      <div className="space-y-1">
-        <Label className="text-xs font-semibold">Policy Document (PDF/Image)</Label>
-        <div className="border-2 border-dashed border-primary/30 rounded-lg p-3 bg-primary/5 text-center">
-          {docFile ? (
-            <div className="flex items-center justify-center gap-2">
-              <FileText className="h-4 w-4 text-primary" />
-              <span className="text-xs font-medium truncate max-w-[180px]">{docFile.name}</span>
-              <Button type="button" variant="ghost" size="icon" className="h-5 w-5" onClick={() => setDocFile(null)}>
-                <X className="h-3 w-3" />
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-1">
-              <Upload className="h-6 w-6 mx-auto text-muted-foreground" />
-              <p className="text-xs text-muted-foreground">Upload policy PDF or image</p>
-            </div>
-          )}
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".pdf,.jpg,.jpeg,.png,.webp"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file && file.size <= 20 * 1024 * 1024) setDocFile(file);
-              else if (file) toast.error("File too large. Max 20MB.");
-            }}
-          />
-          {!docFile && (
-            <Button type="button" variant="outline" size="sm" className="mt-1.5 gap-1 text-xs h-7" onClick={() => fileRef.current?.click()}>
-              <Upload className="h-3 w-3" /> Choose File
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <Button onClick={save} disabled={saving} className="w-full bg-emerald-600 hover:bg-emerald-700">
-        {saving ? "Saving..." : "Upload Policy"}
-      </Button>
     </div>
   );
 }
