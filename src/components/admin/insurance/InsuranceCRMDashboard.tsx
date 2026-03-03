@@ -9,6 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -86,6 +88,9 @@ export function InsuranceCRMDashboard() {
   const [selectedRenewalDate, setSelectedRenewalDate] = useState<string>("");
   const [searchField, setSearchField] = useState<"all" | "policy" | "phone" | "vehicle" | "insurer">("all");
   const [showPendingDocs, setShowPendingDocs] = useState(false);
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const pageSize = 12;
   const queryClient = useQueryClient();
 
@@ -156,13 +161,8 @@ export function InsuranceCRMDashboard() {
   const rows: PolicyRow[] = useMemo(() => {
     if (!clients || !policies) return [];
     const clientMap = new Map(clients.map(c => [c.id, c]));
-    const allowedLeadStatuses = new Set(["won", "running"]);
     return policies
-      .filter(p => {
-        if (!p.client_id || !clientMap.has(p.client_id)) return false;
-        const client = clientMap.get(p.client_id);
-        return allowedLeadStatuses.has((client?.lead_status || "").toLowerCase());
-      })
+      .filter(p => !!p.client_id && clientMap.has(p.client_id))
       .map(p => {
         const c = clientMap.get(p.client_id || "");
         const rawPhone = c?.phone || "";
@@ -214,6 +214,22 @@ export function InsuranceCRMDashboard() {
   const filtered = useMemo(() => {
     let result = [...rows];
 
+    // Calendar date range filter (by created_at)
+    if (dateFrom) {
+      result = result.filter(r => {
+        if (!r.created_at) return false;
+        return new Date(r.created_at) >= dateFrom;
+      });
+    }
+    if (dateTo) {
+      const toEnd = new Date(dateTo);
+      toEnd.setHours(23, 59, 59, 999);
+      result = result.filter(r => {
+        if (!r.created_at) return false;
+        return new Date(r.created_at) <= toEnd;
+      });
+    }
+
     // Days filter
     if (filter !== "all") {
       result = result.filter(r => {
@@ -261,7 +277,7 @@ export function InsuranceCRMDashboard() {
     }
 
     return result;
-  }, [rows, filter, statusFilterVal, search, searchField, showPendingDocs]);
+  }, [rows, filter, statusFilterVal, search, searchField, showPendingDocs, dateFrom, dateTo]);
 
   // Upcoming renewals (expiring within 60 days)
   const upcomingRenewals = useMemo(() => {
@@ -519,10 +535,50 @@ export function InsuranceCRMDashboard() {
           <Button variant="default" size="sm" onClick={() => setShowUploadPolicy(true)} className="gap-1.5 h-8 text-xs">
             <Upload className="h-3.5 w-3.5" /> Upload Policy
           </Button>
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 rounded-md px-2.5 py-1.5 border">
-            <CalendarDays className="h-3.5 w-3.5" />
-            <span className="font-medium">{format(new Date(new Date().getFullYear(), 0, 1), "dd MMM yyyy")} - {format(now, "dd MMM yyyy")}</span>
-          </div>
+          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs cursor-pointer">
+                <CalendarDays className="h-3.5 w-3.5" />
+                <span className="font-medium">
+                  {dateFrom ? format(dateFrom, "dd MMM yyyy") : "Start"} - {dateTo ? format(dateTo, "dd MMM yyyy") : format(now, "dd MMM yyyy")}
+                </span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <div className="p-3 space-y-3">
+                <div className="text-xs font-medium text-muted-foreground">Filter by Policy Created Date</div>
+                <div className="flex gap-2">
+                  <div>
+                    <p className="text-[10px] text-muted-foreground mb-1">From</p>
+                    <Calendar
+                      mode="single"
+                      selected={dateFrom}
+                      onSelect={(d) => { setDateFrom(d); setPage(0); }}
+                      initialFocus
+                      className="rounded-md border"
+                    />
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground mb-1">To</p>
+                    <Calendar
+                      mode="single"
+                      selected={dateTo}
+                      onSelect={(d) => { setDateTo(d); setPage(0); }}
+                      className="rounded-md border"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => { setDateFrom(undefined); setDateTo(undefined); setPage(0); setCalendarOpen(false); }}>
+                    Clear
+                  </Button>
+                  <Button size="sm" className="text-xs h-7" onClick={() => setCalendarOpen(false)}>
+                    Apply
+                  </Button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 
