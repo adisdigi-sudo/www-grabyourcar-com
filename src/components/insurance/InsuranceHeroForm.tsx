@@ -6,13 +6,13 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { captureInsuranceLead } from "@/lib/insuranceLeadCapture";
-import { WhatsAppOTPVerification } from "@/components/WhatsAppOTPVerification";
+
 import { useQuery } from "@tanstack/react-query";
 import { InsuranceBrandedRedirect } from "./InsuranceBrandedRedirect";
 
 const PARTNER_URL = "https://www.pbpartners.com/v1/partner-dashboard";
 
-type FlowStep = "vehicle" | "brand" | "model" | "phone" | "otp" | "quotes" | "finalize";
+type FlowStep = "vehicle" | "brand" | "model" | "phone" | "quotes" | "finalize";
 
 interface QuotePlan {
   id: string;
@@ -143,12 +143,8 @@ export function InsuranceHeroForm({ policyType = "comprehensive", vehicleLabel =
       });
     } catch { /* Don't block flow */ }
     setIsLoading(false);
-    setStep("otp");
-  };
-
-  const handleOTPVerified = () => {
     setStep("quotes");
-    toast.success("Verified! Here are your personalized quotes 🎉");
+    toast.success("Here are your personalized quotes 🎉");
   };
 
   const handleSelectQuote = (quoteId: string) => setSelectedQuote(quoteId);
@@ -160,8 +156,7 @@ export function InsuranceHeroForm({ policyType = "comprehensive", vehicleLabel =
   const handleBack = () => {
     if (step === "model") setStep("brand");
     else if (step === "phone") setStep(isNewVehicle ? (policyType === "bike" ? "brand" : (selectedModel ? "model" : "brand")) : "vehicle");
-    else if (step === "otp") setStep("phone");
-    else if (step === "quotes") setStep("otp");
+    else if (step === "quotes") setStep("phone");
   };
 
   const vehicleDisplayName = isNewVehicle
@@ -387,16 +382,8 @@ export function InsuranceHeroForm({ policyType = "comprehensive", vehicleLabel =
           </motion.div>
         )}
 
-        {/* ===== STEP: OTP Verification ===== */}
-        {step === "otp" && (
-          <motion.div key="otp" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.35 }}>
-            <WhatsAppOTPVerification
-              phone={`+91${phone}`}
-              onVerified={handleOTPVerified}
-              onCancel={() => setStep("phone")}
-            />
-          </motion.div>
-        )}
+
+
 
         {/* ===== STEP: Quotes Display ===== */}
         {step === "quotes" && (
