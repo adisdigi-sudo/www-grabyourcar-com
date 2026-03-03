@@ -368,7 +368,7 @@ export function InsuranceHeroForm({ policyType = "comprehensive", vehicleLabel =
                     />
                   </div>
                   <Button onClick={handlePhoneSubmit} disabled={isLoading} className="rounded-xl h-12 px-6 shrink-0 gap-2 font-bold w-full sm:w-auto">
-                    {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Get OTP"}
+                    {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Get Quotes"}
                     <ArrowRight className="h-4 w-4" />
                   </Button>
                 </div>
