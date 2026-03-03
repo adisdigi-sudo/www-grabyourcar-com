@@ -26,7 +26,7 @@ import { InsuranceGrabCTA } from "@/components/insurance/InsuranceGrabCTA";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-const PB_PARTNERS_URL = "https://www.pbpartners.com/v1/partner-dashboard";
+
 
 const iconMap: Record<string, React.ComponentType<any>> = {
   Shield, TrendingUp, Zap, Wallet, Star, Award, Sparkles, CheckCircle2,
@@ -111,7 +111,7 @@ const CarInsurance = () => {
             >
               <div className="inline-flex items-center gap-1.5 bg-primary/10 rounded-full px-4 py-1.5 mb-5">
                 <Shield className="h-3.5 w-3.5 text-primary" />
-                <span className="text-xs font-bold text-primary uppercase tracking-wider">Authorised Channel Partner • PolicyBazaar</span>
+                <span className="text-xs font-bold text-primary uppercase tracking-wider">IRDAI Authorised • Trusted by 50,000+ Customers</span>
               </div>
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-heading font-bold text-foreground leading-tight mb-3">
                 Your trusted <span className="text-primary">insurer</span> by your side
