@@ -1333,6 +1333,27 @@ export function InsuranceCRMDashboard() {
           />
         </DialogContent>
       </Dialog>
+      {/* Quote Modal for Policy Book */}
+      {quoteModalPolicy && (
+        <InsuranceQuoteModal
+          open={!!quoteModalPolicy}
+          onOpenChange={() => setQuoteModalPolicy(null)}
+          client={{
+            customer_name: quoteModalPolicy.customer_name,
+            phone: quoteModalPolicy.phone || "",
+            email: quoteModalPolicy.email,
+            city: null,
+            vehicle_make: quoteModalPolicy.vehicle_make,
+            vehicle_model: quoteModalPolicy.vehicle_model,
+            vehicle_number: quoteModalPolicy.vehicle_number,
+            vehicle_year: null,
+            current_insurer: quoteModalPolicy.insurer,
+            current_policy_type: quoteModalPolicy.policy_type,
+            ncb_percentage: null,
+            current_premium: quoteModalPolicy.premium,
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -2130,32 +2151,5 @@ Thank you for choosing Grabyourcar for your motor insurance needs! Here's your p
       </DialogContent>
     </Dialog>
   );
-
-  return (
-    <>
-      {mainContent}
-
-      {/* Quote Modal for Policy Book */}
-      {quoteModalPolicy && (
-        <InsuranceQuoteModal
-          open={!!quoteModalPolicy}
-          onOpenChange={() => setQuoteModalPolicy(null)}
-          client={{
-            customer_name: quoteModalPolicy.customer_name,
-            phone: quoteModalPolicy.phone || "",
-            email: quoteModalPolicy.email,
-            city: null,
-            vehicle_make: quoteModalPolicy.vehicle_make,
-            vehicle_model: quoteModalPolicy.vehicle_model,
-            vehicle_number: quoteModalPolicy.vehicle_number,
-            vehicle_year: null,
-            current_insurer: quoteModalPolicy.insurer,
-            current_policy_type: quoteModalPolicy.policy_type,
-            ncb_percentage: null,
-            current_premium: quoteModalPolicy.premium,
-          }}
-        />
-      )}
-    </>
-  );
 }
+
