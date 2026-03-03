@@ -5881,6 +5881,59 @@ export type Database = {
         }
         Relationships: []
       }
+      lead_routing_rules: {
+        Row: {
+          auto_assign_team: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          priority_override: string | null
+          rule_name: string
+          service_category: string | null
+          source_pattern: string | null
+          source_type: string
+          target_vertical_id: string | null
+          target_vertical_slug: string
+          updated_at: string | null
+        }
+        Insert: {
+          auto_assign_team?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          priority_override?: string | null
+          rule_name: string
+          service_category?: string | null
+          source_pattern?: string | null
+          source_type?: string
+          target_vertical_id?: string | null
+          target_vertical_slug: string
+          updated_at?: string | null
+        }
+        Update: {
+          auto_assign_team?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          priority_override?: string | null
+          rule_name?: string
+          service_category?: string | null
+          source_pattern?: string | null
+          source_type?: string
+          target_vertical_id?: string | null
+          target_vertical_slug?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_routing_rules_target_vertical_id_fkey"
+            columns: ["target_vertical_id"]
+            isOneToOne: false
+            referencedRelation: "business_verticals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_scores: {
         Row: {
           created_at: string
