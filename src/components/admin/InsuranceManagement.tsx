@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   Shield, LayoutDashboard, FileSpreadsheet,
   UserPlus, Menu, RefreshCw,
-  GitBranch, FileUp, PhoneCall
+  GitBranch, FileUp, PhoneCall, FileText
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import { InsuranceAddLeadForm } from "./insurance/InsuranceAddLeadForm";
 import { InsuranceRenewalsEngine } from "./insurance/InsuranceRenewalsEngine";
 import { InsuranceSmartExtractor } from "./insurance/InsuranceSmartExtractor";
 import { InsuranceSmartCalling } from "./insurance/InsuranceSmartCalling";
+import { InsuranceQuoteHub } from "./insurance/InsuranceQuoteHub";
 
 type NavItem = { id: string; label: string; icon: any; badge?: string };
 type NavGroup = { group: string; items: NavItem[] };
@@ -25,6 +26,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { id: "pipeline", label: "Lead Pipeline", icon: GitBranch, badge: "🔥" },
       { id: "smart-calling", label: "Smart Calling", icon: PhoneCall, badge: "⚡" },
+      { id: "quote-hub", label: "Quote Hub", icon: FileText, badge: "📄" },
       { id: "policy-book", label: "Policy Book", icon: LayoutDashboard },
       { id: "renewals", label: "Renewal Engine", icon: RefreshCw },
     ],
@@ -42,6 +44,7 @@ const NAV_GROUPS: NavGroup[] = [
 const COMPONENTS: Record<string, React.FC<any>> = {
   "pipeline": InsurancePipelineBoard,
   "smart-calling": InsuranceSmartCalling,
+  "quote-hub": InsuranceQuoteHub,
   "policy-book": InsuranceCRMDashboard,
   "renewals": InsuranceRenewalsEngine,
   "add-lead": InsuranceAddLeadForm,

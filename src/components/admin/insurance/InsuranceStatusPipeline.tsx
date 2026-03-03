@@ -15,7 +15,7 @@ import {
   XCircle, ThumbsUp, ThumbsDown, Zap, TrendingUp,
   UserPlus, Target, Eye, ChevronRight, BarChart3,
   FileText, Plus, Send, ShieldCheck, Loader2, Save, Upload,
-  Bell, Users, Megaphone, FileSpreadsheet
+  Bell, Users, Megaphone, FileSpreadsheet, Download
 } from "lucide-react";
 import { BulkQuoteSharePanel, BulkLeadItem } from "./BulkQuoteSharePanel";
 import {
@@ -24,6 +24,9 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import InsuranceQuoteModal from "./InsuranceQuoteModal";
+import { SharePdfDialog } from "./SharePdfDialog";
+import { generateInsuranceQuotePdf } from "@/lib/generateInsuranceQuotePdf";
 
 const PIPELINE_STAGES = [
   { value: "new", label: "New Lead", icon: UserPlus, color: "bg-blue-500", lightBg: "bg-blue-50 dark:bg-blue-950/40", border: "border-blue-200 dark:border-blue-800", textColor: "text-blue-700 dark:text-blue-300", emoji: "🆕" },
@@ -528,6 +531,14 @@ export function InsuranceStatusPipeline() {
                         {client.current_premium && (
                           <Badge variant="secondary" className="text-[10px] h-5">₹{client.current_premium.toLocaleString("en-IN")}</Badge>
                         )}
+                        {/* Prepare Quote Button */}
+                        <Button
+                          size="sm"
+                          className="h-7 gap-1 text-[10px] px-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+                          onClick={(e) => { e.stopPropagation(); setSelectedClient(client); setDialogTab("quote"); }}
+                        >
+                          <FileText className="h-3 w-3" /> Quote
+                        </Button>
                         {phone && (
                           <>
                             <a href={`tel:${phone}`}>
@@ -657,11 +668,14 @@ export function InsuranceStatusPipeline() {
                 </div>
               </div>
 
-              {/* Tabs: Journey / Policies / Notes */}
+              {/* Tabs: Journey / Quote / Policies / Notes */}
               <Tabs value={dialogTab} onValueChange={(v) => { setDialogTab(v); if (v === "policies") fetchClientPolicies(selectedClient.id); }}>
                 <TabsList className="w-full bg-muted/50">
                   <TabsTrigger value="journey" className="flex-1 gap-1.5 text-xs">
                     <GitBranch className="h-3.5 w-3.5" /> Journey
+                  </TabsTrigger>
+                  <TabsTrigger value="quote" className="flex-1 gap-1.5 text-xs">
+                    <FileText className="h-3.5 w-3.5" /> Prepare Quote
                   </TabsTrigger>
                   <TabsTrigger value="policies" className="flex-1 gap-1.5 text-xs">
                     <ShieldCheck className="h-3.5 w-3.5" /> Policies
@@ -742,6 +756,81 @@ export function InsuranceStatusPipeline() {
                       </div>
                     </CardContent>
                   </Card>
+                </TabsContent>
+
+                {/* Quote Tab */}
+                <TabsContent value="quote" className="mt-3">
+                  <div className="text-center space-y-4">
+                    <div className="bg-emerald-50 dark:bg-emerald-950/30 rounded-xl border border-emerald-200 dark:border-emerald-800 p-4">
+                      <FileText className="h-8 w-8 text-emerald-600 mx-auto mb-2" />
+                      <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">Prepare Insurance Quote</p>
+                      <p className="text-xs text-muted-foreground mt-1">Generate a branded PDF quote for {selectedClient.customer_name}</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white h-11"
+                        onClick={() => {
+                          const quoteData = {
+                            customerName: selectedClient.customer_name || "Customer",
+                            phone: selectedClient.phone,
+                            email: selectedClient.email || undefined,
+                            city: undefined,
+                            vehicleMake: selectedClient.vehicle_make || "N/A",
+                            vehicleModel: selectedClient.vehicle_model || "N/A",
+                            vehicleNumber: selectedClient.vehicle_number || "N/A",
+                            vehicleYear: new Date().getFullYear(),
+                            fuelType: "Petrol",
+                            insuranceCompany: selectedClient.current_insurer || "Best Available",
+                            policyType: "Comprehensive",
+                            idv: 500000,
+                            basicOD: 8000,
+                            odDiscount: 1500,
+                            ncbDiscount: 2000,
+                            thirdParty: 6521,
+                            securePremium: 500,
+                            addonPremium: 3500,
+                            addons: ["Zero Depreciation", "Engine Protection", "Roadside Assistance (RSA)"],
+                          };
+                          generateInsuranceQuotePdf(quoteData);
+                          toast.success("📄 Quote PDF downloaded!");
+                        }}
+                      >
+                        <Download className="h-4 w-4" /> Download PDF
+                      </Button>
+                      <Button
+                        className="gap-2 bg-green-600 hover:bg-green-700 text-white h-11"
+                        onClick={() => {
+                          const phone = (selectedClient.phone || "").replace(/\D/g, "");
+                          const fullPhone = phone.startsWith("91") ? phone : `91${phone}`;
+                          generateInsuranceQuotePdf({
+                            customerName: selectedClient.customer_name || "Customer",
+                            phone: selectedClient.phone,
+                            vehicleMake: selectedClient.vehicle_make || "N/A",
+                            vehicleModel: selectedClient.vehicle_model || "N/A",
+                            vehicleNumber: selectedClient.vehicle_number || "N/A",
+                            vehicleYear: new Date().getFullYear(),
+                            fuelType: "Petrol",
+                            insuranceCompany: selectedClient.current_insurer || "Best Available",
+                            policyType: "Comprehensive",
+                            idv: 500000,
+                            basicOD: 8000,
+                            odDiscount: 1500,
+                            ncbDiscount: 2000,
+                            thirdParty: 6521,
+                            securePremium: 500,
+                            addonPremium: 3500,
+                            addons: ["Zero Depreciation", "Engine Protection", "Roadside Assistance (RSA)"],
+                          });
+                          const msg = encodeURIComponent(`Hi ${selectedClient.customer_name}! Here is your insurance quote. Please find the PDF attached.\n\n— Grabyourcar Insurance\n📞 +91 98559 24442`);
+                          window.open(`https://wa.me/${fullPhone}?text=${msg}`, "_blank");
+                          toast.success("📱 PDF downloaded & WhatsApp opened!");
+                        }}
+                      >
+                        <MessageSquare className="h-4 w-4" /> WhatsApp
+                      </Button>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">For detailed quote customization, use the Quote Hub from the sidebar</p>
+                  </div>
                 </TabsContent>
 
                 {/* Policies Tab */}
