@@ -301,28 +301,97 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
         description: reason ? `Moved to ${stage?.label}. Reason: ${reason}` : `Moved to ${stage?.label}`,
         metadata: { new_stage: newStage, reason } as any,
       });
+
+      // ── Auto-create policy in Policy Book when Won ──
+      if (newStage === "policy_issued") {
+        try {
+          const { data: client } = await supabase
+            .from("insurance_clients")
+            .select("*")
+            .eq("id", clientId)
+            .single();
+
+          if (client) {
+            // If same vehicle_number exists, mark old active policies as "renewed"
+            if (client.vehicle_number) {
+              // Find all clients with same vehicle number
+              const { data: sameVehicleClients } = await supabase
+                .from("insurance_clients")
+                .select("id")
+                .eq("vehicle_number", client.vehicle_number);
+
+              if (sameVehicleClients && sameVehicleClients.length > 0) {
+                const clientIds = sameVehicleClients.map(c => c.id);
+                await supabase
+                  .from("insurance_policies")
+                  .update({ status: "renewed", renewal_status: "renewed" })
+                  .in("client_id", clientIds)
+                  .eq("status", "active");
+              }
+            }
+
+            // Calculate dates
+            const today = new Date();
+            const startDate = client.policy_start_date || today.toISOString().split("T")[0];
+            const expiryDate = client.policy_expiry_date || new Date(today.getFullYear() + 1, today.getMonth(), today.getDate()).toISOString().split("T")[0];
+
+            // Create new policy
+            await supabase.from("insurance_policies").insert({
+              client_id: clientId,
+              policy_number: client.current_policy_number || null,
+              policy_type: client.current_policy_type || "comprehensive",
+              insurer: client.current_insurer || client.quote_insurer || "Unknown",
+              premium_amount: client.quote_amount || client.current_premium || null,
+              start_date: startDate,
+              expiry_date: expiryDate,
+              status: "active",
+              is_renewal: false,
+              issued_date: today.toISOString().split("T")[0],
+            });
+
+            // Also mark client as active (won)
+            await supabase.from("insurance_clients").update({
+              is_active: true,
+              lead_status: "won",
+            }).eq("id", clientId);
+
+            // Log policy creation
+            await supabase.from("insurance_activity_log").insert({
+              client_id: clientId,
+              activity_type: "policy_created",
+              title: "📋 Policy Auto-Created in Policy Book",
+              description: `Policy for ${client.vehicle_number || client.vehicle_model || "vehicle"} created. Start: ${startDate}, Expiry: ${expiryDate}`,
+              metadata: { start_date: startDate, expiry_date: expiryDate, insurer: client.current_insurer || client.quote_insurer } as any,
+            });
+          }
+        } catch (e) {
+          console.error("Auto-policy creation failed:", e);
+        }
+      }
     },
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ["insurance-pipeline-clients"] });
+      queryClient.invalidateQueries({ queryKey: ["ins-dash-policies"] });
+      queryClient.invalidateQueries({ queryKey: ["ins-dash-clients-policy-book"] });
       const stage = PIPELINE_STAGES.find(s => s.value === vars.newStage);
-      toast.success(`Moved to ${stage?.label}`);
+      if (vars.newStage === "policy_issued") {
+        toast.success("🎉 Policy issued & added to Policy Book!", { duration: 5000 });
+      } else {
+        toast.success(`Moved to ${stage?.label}`);
+      }
       setShowMoveDialog(false);
       setLostReason("");
       // Auto-navigate based on new stage
       if (vars.newStage === "policy_issued") {
         setShowUploadPolicy(true);
-        // Navigate to Policy Book after a brief delay for upload
         setTimeout(() => {
           if (onNavigate) onNavigate("policy-book");
         }, 2000);
       } else if (vars.newStage === "lost") {
-        // Auto-filter to lost stage in pipeline
         setSelectedStage("lost");
       } else if (vars.newStage === "renewal_queue") {
-        // Navigate to Renewal Engine
         if (onNavigate) onNavigate("renewals");
       } else {
-        // Auto-select the new stage tab so user sees the moved lead
         setSelectedStage(vars.newStage);
       }
     },
