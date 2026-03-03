@@ -94,9 +94,11 @@ export function InsuranceStatusPipeline() {
   useEffect(() => { fetchClients(); }, []);
 
   const fetchClients = async () => {
+    // Only fetch leads that have been worked on (have a lead_status set)
     const { data } = await supabase
       .from("insurance_clients")
       .select("id, customer_name, phone, email, vehicle_model, vehicle_number, vehicle_make, current_insurer, lead_status, current_premium, lead_source, created_at")
+      .not("lead_status", "is", null)
       .order("created_at", { ascending: false })
       .limit(500);
     setClients((data || []) as Client[]);
@@ -179,8 +181,77 @@ export function InsuranceStatusPipeline() {
         metadata: { conversion_date: new Date().toISOString(), source: client.lead_source },
       } as any);
 
-      toast.success("🎉 Lead converted to Grabyourcar customer!", {
-        description: `${client.customer_name} is now in your customer database.`,
+      // ── Auto-create policy in Policy Book ──
+      // If same vehicle_number exists, mark old policies as "renewed"
+      if (client.vehicle_number) {
+        // Find existing active policies for this vehicle
+        const { data: existingPolicies } = await supabase
+          .from("insurance_policies")
+          .select("id")
+          .eq("client_id", clientId)
+          .eq("status", "active");
+
+        if (existingPolicies && existingPolicies.length > 0) {
+          // Mark all existing active policies as "renewed"
+          await supabase
+            .from("insurance_policies")
+            .update({ status: "renewed", renewal_status: "renewed" })
+            .in("id", existingPolicies.map(p => p.id));
+        }
+
+        // Also check if another client has same vehicle_number with active policy
+        const { data: otherVehiclePolicies } = await supabase
+          .from("insurance_clients")
+          .select("id")
+          .eq("vehicle_number", client.vehicle_number)
+          .neq("id", clientId);
+
+        if (otherVehiclePolicies && otherVehiclePolicies.length > 0) {
+          for (const otherClient of otherVehiclePolicies) {
+            await supabase
+              .from("insurance_policies")
+              .update({ status: "renewed", renewal_status: "renewed" })
+              .eq("client_id", otherClient.id)
+              .eq("status", "active");
+          }
+        }
+      }
+
+      // Calculate policy dates
+      const today = new Date();
+      const startDate = client.policy_start_date || today.toISOString().split("T")[0];
+      const expiryDate = client.policy_expiry_date || new Date(today.getFullYear() + 1, today.getMonth(), today.getDate()).toISOString().split("T")[0];
+
+      // Create new policy in policy book
+      const { error: policyError } = await supabase.from("insurance_policies").insert({
+        client_id: clientId,
+        policy_number: client.current_policy_number || null,
+        policy_type: client.current_policy_type || "comprehensive",
+        insurer: client.current_insurer || client.quote_insurer || "Unknown",
+        premium_amount: client.quote_amount || client.current_premium || null,
+        start_date: startDate,
+        expiry_date: expiryDate,
+        status: "active",
+        is_renewal: false,
+        issued_date: today.toISOString().split("T")[0],
+      });
+
+      if (policyError) {
+        console.error("Policy creation failed:", policyError);
+        toast.error("Lead won but policy creation failed. Please add manually.");
+      } else {
+        // Log policy creation
+        await supabase.from("insurance_activity_log").insert({
+          client_id: clientId,
+          activity_type: "policy_created",
+          title: "📋 Policy Auto-Created in Policy Book",
+          description: `Policy for ${client.vehicle_number || client.vehicle_model || "vehicle"} created. Start: ${startDate}, Expiry: ${expiryDate}`,
+          metadata: { start_date: startDate, expiry_date: expiryDate, insurer: client.current_insurer || client.quote_insurer },
+        } as any);
+      }
+
+      toast.success("🎉 Lead converted & policy added to Policy Book!", {
+        description: `${client.customer_name} — Policy: ${startDate} → ${expiryDate}`,
         duration: 5000,
       });
     } catch (e) {
