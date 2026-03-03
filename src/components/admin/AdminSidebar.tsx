@@ -67,65 +67,19 @@ interface NavItem {
 const navItems: NavItem[] = [
   // ── Universal ──
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { id: "manager-dashboard", label: "📊 Manager Dashboard", icon: BarChart3, badge: "New",
-    verticals: ["sales", "loans", "marketing"],
-    allowedRoles: ["super_admin", "admin"] },
-  { id: "team-engagement", label: "🏆 Team Engagement", icon: BarChart3, badge: "New",
-    verticals: ["sales", "loans", "marketing"],
-    allowedRoles: ["super_admin", "admin"] },
-  { id: "error-prevention", label: "⚠️ Error Prevention", icon: BarChart3, badge: "New",
-    verticals: ["sales", "loans", "marketing"],
-    allowedRoles: ["super_admin", "admin"] },
-  { id: "workflow-engine", label: "⚙️ Workflow Engine", icon: BarChart3,
-    verticals: ["sales", "loans", "marketing"],
-    allowedRoles: ["super_admin", "admin"] },
 
-  // ── Calling System — operational verticals only ──
+  // ── Smart Calling — ALL operational verticals ──
   { id: "calling-system", label: "📞 Smart Calling", icon: Users, badge: "🔥",
-    verticals: ["sales", "loans", "insurance"],
-    allowedRoles: ["super_admin", "admin", "sales", "calling", "insurance", "finance"] },
+    verticals: ["sales", "loans", "insurance", "rental", "hsrp"],
+    allowedRoles: ["super_admin", "admin", "sales", "calling", "insurance", "finance", "operations"] },
 
-  // ── Loan CRM — loans vertical ──
-  { id: "loan-crm", label: "💰 Loan CRM", icon: CreditCard, badge: "New",
-    verticals: ["loans"],
-    allowedRoles: ["super_admin", "admin", "finance", "sales"] },
-
-  // ── Cross-Vertical Intelligence — marketing/admin workspace ──
-  { id: "unified-crm", label: "🧠 Unified Customers", icon: Users, badge: "New",
-    verticals: ["marketing"],
-    allowedRoles: ["super_admin", "admin"] },
-  { id: "unified-intelligence", label: "🔗 Cross-Vertical Intel", icon: Sparkles, badge: "AI",
-    verticals: ["marketing"],
-    allowedRoles: ["super_admin", "admin"] },
-  { id: "journey-automation", label: "⚡ Journey Automation", icon: Sparkles, badge: "New",
-    verticals: ["marketing"],
-    allowedRoles: ["super_admin", "admin"] },
-  { id: "automation-center", label: "🤖 Automation Center", icon: Sparkles, badge: "🔥",
-    verticals: ["marketing"],
-    allowedRoles: ["super_admin", "admin"] },
-  { id: "revenue-intelligence", label: "📊 Revenue Intelligence", icon: BarChart3, badge: "New",
-    verticals: ["marketing", "loans"],
-    allowedRoles: ["super_admin", "admin", "finance"] },
-  { id: "lead-scoring", label: "🤖 AI Lead Scoring", icon: Brain, badge: "AI",
-    verticals: ["sales", "loans", "insurance"],
-    allowedRoles: ["super_admin", "admin", "sales", "calling", "insurance"] },
-  { id: "client-management", label: "👤 Client Management", icon: UserCog, badge: "New",
-    verticals: ["sales", "insurance", "loans"],
-    allowedRoles: ["super_admin", "admin", "insurance", "sales", "finance"] },
-  { id: "lead-import", label: "📥 Lead Import", icon: Database, badge: "New",
-    verticals: ["sales", "loans", "insurance"],
-    allowedRoles: ["super_admin", "admin", "operations", "calling"] },
-  { id: "data-export", label: "📤 Data Export", icon: FileText, badge: "New",
-    verticals: ["sales", "loans", "insurance", "hsrp", "rental", "accessories", "marketing"],
-    allowedRoles: ["super_admin", "admin"] },
-
-  // ── Lead Management — sales, loans, insurance ──
+  // ── Lead Management — ALL operational verticals ──
   { 
     id: "leads", 
     label: "Lead Management", 
     icon: Users,
-    verticals: ["sales", "loans", "insurance"],
-    allowedRoles: ["super_admin", "admin", "sales", "calling", "insurance", "finance"],
+    verticals: ["sales", "loans", "insurance", "rental", "hsrp", "accessories", "corporate"],
+    allowedRoles: ["super_admin", "admin", "sales", "calling", "insurance", "finance", "operations"],
     children: [
       { id: "leads-all", label: "All Leads", icon: Users },
       { id: "leads-hot", label: "Hot Leads", icon: Users, badge: "Hot" },
@@ -133,49 +87,30 @@ const navItems: NavItem[] = [
     ]
   },
 
-  // ── Car Database — dedicated vertical only, NOT inside other verticals ──
-  { 
-    id: "cars", 
-    label: "🚗 Car Database", 
-    icon: Car,
-    verticals: ["car-database"],
-    allowedRoles: ["super_admin", "admin"],
-    children: [
-      { id: "cars-list", label: "Cars & Details", icon: Car },
-      { id: "cars-brands", label: "🏭 Brands", icon: Database },
-      { id: "cars-variants", label: "Variants & Specs", icon: Tags },
-      { id: "cars-pricing", label: "Pricing & Breakup", icon: CreditCard },
-      { id: "cars-city-pricing", label: "📍 State/City Pricing", icon: CreditCard },
-      { id: "cars-colors", label: "Colors & Images", icon: Palette },
-      { id: "cars-images", label: "Gallery", icon: Image },
-      { id: "cars-attributes", label: "🏷️ Vehicle Attributes", icon: Tags },
-      { id: "cars-ai-entry", label: "🤖 AI Car Entry", icon: Sparkles, badge: "AI", allowedRoles: ["super_admin", "admin"] },
-      { id: "cars-bulk-import", label: "📊 Bulk Import", icon: Database, allowedRoles: ["super_admin", "admin"] },
-      { id: "cars-quick-import", label: "💬 Quick Text Import", icon: MessageSquare, allowedRoles: ["super_admin", "admin"] },
-      { id: "cars-image-sync", label: "🤖 AI Image Sync", icon: Sparkles, badge: "AI", allowedRoles: ["super_admin", "admin"] },
-      { id: "cars-migration", label: "Data Migration", icon: Database, allowedRoles: ["super_admin", "admin"] },
-      { id: "cars-ai", label: "AI Enhancement", icon: Brain, allowedRoles: ["super_admin", "admin"] },
-      { id: "cars-url-scraper", label: "🌐 URL Scraper", icon: Globe, allowedRoles: ["super_admin", "admin"] },
-    ]
-  },
+  // ── Client Management — operational verticals ──
+  { id: "client-management", label: "👤 Client Management", icon: UserCog, badge: "New",
+    verticals: ["sales", "insurance", "loans", "rental", "hsrp"],
+    allowedRoles: ["super_admin", "admin", "insurance", "sales", "finance", "operations"] },
 
-  // ── Dealer Network — dedicated vertical ──
-  { 
-    id: "dealer", 
-    label: "🏢 Dealer Network", 
-    icon: Building2,
-    verticals: ["dealer-network"],
-    allowedRoles: ["super_admin", "admin", "dealer"],
-    children: [
-      { id: "dealer-inquiry", label: "Inquiry Hub", icon: MessageCircle },
-      { id: "dealer-companies", label: "Companies", icon: Building2 },
-      { id: "dealer-reps", label: "Representatives", icon: Users },
-      { id: "dealer-inventory", label: "Inventory", icon: Car },
-      { id: "dealer-broadcast", label: "Broadcast", icon: Mail },
-    ]
-  },
+  // ── AI Lead Scoring — operational verticals ──
+  { id: "lead-scoring", label: "🤖 AI Lead Scoring", icon: Brain, badge: "AI",
+    verticals: ["sales", "loans", "insurance"],
+    allowedRoles: ["super_admin", "admin", "sales", "calling", "insurance"] },
 
-  // ── Services — vertical-specific children ──
+  // ── Lead Import/Export — operational verticals ──
+  { id: "lead-import", label: "📥 Lead Import", icon: Database, badge: "New",
+    verticals: ["sales", "loans", "insurance", "rental", "hsrp", "accessories"],
+    allowedRoles: ["super_admin", "admin", "operations", "calling"] },
+  { id: "data-export", label: "📤 Data Export", icon: FileText, badge: "New",
+    verticals: ["sales", "loans", "insurance", "hsrp", "rental", "accessories"],
+    allowedRoles: ["super_admin", "admin"] },
+
+  // ── Loan CRM — loans vertical ──
+  { id: "loan-crm", label: "💰 Loan CRM", icon: CreditCard, badge: "New",
+    verticals: ["loans"],
+    allowedRoles: ["super_admin", "admin", "finance", "sales"] },
+
+  // ── Services — vertical-specific children (sales/support only) ──
   { 
     id: "services", 
     label: "Services", 
@@ -207,6 +142,83 @@ const navItems: NavItem[] = [
       { id: "ecommerce-accessories", label: "Accessories", icon: Package },
       { id: "ecommerce-orders", label: "Orders", icon: FileText },
       { id: "ecommerce-crosssell", label: "Cross-Sell", icon: Tags },
+    ]
+  },
+
+  // ── Dealer Network — dedicated vertical ──
+  { 
+    id: "dealer", 
+    label: "🏢 Dealer Network", 
+    icon: Building2,
+    verticals: ["dealer-network"],
+    allowedRoles: ["super_admin", "admin", "dealer"],
+    children: [
+      { id: "dealer-inquiry", label: "Inquiry Hub", icon: MessageCircle },
+      { id: "dealer-companies", label: "Companies", icon: Building2 },
+      { id: "dealer-reps", label: "Representatives", icon: Users },
+      { id: "dealer-inventory", label: "Inventory", icon: Car },
+      { id: "dealer-broadcast", label: "Broadcast", icon: Mail },
+    ]
+  },
+
+  // ══════════════════════════════════════════════════
+  // MARKETING & TECH WORKSPACE — comprehensive hub
+  // ══════════════════════════════════════════════════
+
+  // ── Manager Tools ──
+  { id: "manager-dashboard", label: "📊 Manager Dashboard", icon: BarChart3, badge: "New",
+    verticals: ["marketing"],
+    allowedRoles: ["super_admin", "admin"] },
+  { id: "team-engagement", label: "🏆 Team Engagement", icon: BarChart3, badge: "New",
+    verticals: ["marketing"],
+    allowedRoles: ["super_admin", "admin"] },
+  { id: "error-prevention", label: "⚠️ Error Prevention", icon: BarChart3,
+    verticals: ["marketing"],
+    allowedRoles: ["super_admin", "admin"] },
+  { id: "workflow-engine", label: "⚙️ Workflow Engine", icon: BarChart3,
+    verticals: ["marketing"],
+    allowedRoles: ["super_admin", "admin"] },
+
+  // ── Cross-Vertical Intelligence ──
+  { id: "unified-crm", label: "🧠 Unified Customers", icon: Users, badge: "New",
+    verticals: ["marketing"],
+    allowedRoles: ["super_admin", "admin"] },
+  { id: "unified-intelligence", label: "🔗 Cross-Vertical Intel", icon: Sparkles, badge: "AI",
+    verticals: ["marketing"],
+    allowedRoles: ["super_admin", "admin"] },
+  { id: "journey-automation", label: "⚡ Journey Automation", icon: Sparkles, badge: "New",
+    verticals: ["marketing"],
+    allowedRoles: ["super_admin", "admin"] },
+  { id: "automation-center", label: "🤖 Automation Center", icon: Sparkles, badge: "🔥",
+    verticals: ["marketing"],
+    allowedRoles: ["super_admin", "admin"] },
+  { id: "revenue-intelligence", label: "📊 Revenue Intelligence", icon: BarChart3, badge: "New",
+    verticals: ["marketing"],
+    allowedRoles: ["super_admin", "admin", "finance"] },
+
+  // ── Car Database — marketing workspace ──
+  { 
+    id: "cars", 
+    label: "🚗 Car Database", 
+    icon: Car,
+    verticals: ["car-database", "marketing"],
+    allowedRoles: ["super_admin", "admin"],
+    children: [
+      { id: "cars-list", label: "Cars & Details", icon: Car },
+      { id: "cars-brands", label: "🏭 Brands", icon: Database },
+      { id: "cars-variants", label: "Variants & Specs", icon: Tags },
+      { id: "cars-pricing", label: "Pricing & Breakup", icon: CreditCard },
+      { id: "cars-city-pricing", label: "📍 State/City Pricing", icon: CreditCard },
+      { id: "cars-colors", label: "Colors & Images", icon: Palette },
+      { id: "cars-images", label: "Gallery", icon: Image },
+      { id: "cars-attributes", label: "🏷️ Vehicle Attributes", icon: Tags },
+      { id: "cars-ai-entry", label: "🤖 AI Car Entry", icon: Sparkles, badge: "AI" },
+      { id: "cars-bulk-import", label: "📊 Bulk Import", icon: Database },
+      { id: "cars-quick-import", label: "💬 Quick Text Import", icon: MessageSquare },
+      { id: "cars-image-sync", label: "🤖 AI Image Sync", icon: Sparkles, badge: "AI" },
+      { id: "cars-migration", label: "Data Migration", icon: Database },
+      { id: "cars-ai", label: "AI Enhancement", icon: Brain },
+      { id: "cars-url-scraper", label: "🌐 URL Scraper", icon: Globe },
     ]
   },
 
@@ -266,6 +278,7 @@ const navItems: NavItem[] = [
     verticals: ["marketing"],
     allowedRoles: ["super_admin", "admin", "marketing"],
     children: [
+      { id: "marketing-command", label: "🎯 Command Center", icon: Rocket },
       { id: "marketing-templates", label: "📱 WhatsApp Templates", icon: MessageSquare },
       { id: "marketing-automation", label: "📧 Email Automation", icon: Mail },
       { id: "marketing-email", label: "Email Campaigns", icon: MessageSquare },

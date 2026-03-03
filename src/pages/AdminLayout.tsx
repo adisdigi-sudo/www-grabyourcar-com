@@ -166,11 +166,11 @@ const AdminLayout = () => {
       case "dashboard": {
         const slug = activeVertical?.slug;
         if (slug === "insurance") return <InsuranceDashboard onNavigate={setActiveTab} />;
-        if (slug === "sales") return <SalesDashboard />;
-        if (slug === "rental") return <RentalDashboard />;
-        if (slug === "hsrp") return <HSRPDashboard />;
+        if (slug === "sales") return <SalesDashboard onNavigate={setActiveTab} />;
+        if (slug === "rental") return <RentalDashboard onNavigate={setActiveTab} />;
+        if (slug === "hsrp") return <HSRPDashboard onNavigate={setActiveTab} />;
         if (slug === "accessories") return <AccessoriesDashboard />;
-        if (slug === "marketing") return <MarketingDashboard />;
+        if (slug === "marketing") return <MarketingDashboard onNavigate={setActiveTab} />;
         if (slug === "loans") return <LoanCRMDashboard />;
         return <AdminDashboard />;
       }
