@@ -1,37 +1,37 @@
 
 
-## Plan: Import CSV Booking Data with Correct Expiry Dates
+## Plan: Full GrabYourCar Branding & Branded Redirect Transition
 
-### Understanding
-Your CSV has 47 policies. The old policy expired **7 days before** the booking date. So for each record:
-- `policy_expiry_date` on `insurance_clients` = `Booking Date - 7 days` (this is when the old policy expired, triggering the renewal)
-- `insurance_policies.expiry_date` = `start_date + 1 year - 1 day` (the new policy's expiry, already set correctly)
+### Goal
+Remove all PolicyBazaar/PB Partners mentions from the insurance page and hero form. Add a branded interstitial transition page that shows GrabYourCar credentials and security assurance before auto-redirecting the client to the partner URL after ~5 seconds.
 
-### Data Updates
+### Changes
 
-**Step 1 — Update `insurance_clients` with correct data from CSV**
+**1. Remove all PolicyBazaar references (`CarInsurance.tsx`, `InsuranceHeroForm.tsx`)**
+- Remove `PB_PARTNERS_URL` constant from both files
+- Remove the hero badge text "Authorised Channel Partner • PolicyBazaar" — replace with "IRDAI Authorised • Trusted by 50,000+ Customers"
+- Remove the "Check prices" button that links to PB Partners URL
+- All CTAs will now go through the branded transition flow
 
-For each of the 47 rows, match by `vehicle_number` (Registration Number) and update:
-- `policy_expiry_date` = Booking Date minus 7 days
-- `current_insurer` = Insurer from CSV
-- `current_premium` = Premium (total) from CSV
-- `current_policy_number` = Policy No from CSV
-- `current_policy_type` = Policy Type from CSV
-- `city` / `state` / `pincode` where missing
+**2. Create Branded Redirect Transition Component (`src/components/insurance/InsuranceBrandedRedirect.tsx`)**
+- Full-screen modal/overlay with GrabYourCar logo, green branding
+- Shows: "You're being securely redirected via GrabYourCar"
+- Trust elements: IRDAI badge, encryption icon, "Your data is protected" text
+- Animated progress bar / countdown (5 seconds)
+- Auto-redirects to the partner URL after countdown
+- Cancel button to go back
 
-This will be done via individual UPDATE statements matched on `vehicle_number`.
+**3. Update InsuranceHeroForm flow (`InsuranceHeroForm.tsx`)**
+- Replace `handleFinalize` to open the branded redirect overlay instead of direct `window.open`
+- Store the redirect URL internally (not shown to user)
+- The "Buy This Policy" button triggers the branded transition component
+- Remove UID/ARN regulatory footer referencing PB
 
-**Step 2 — Verify `insurance_policies` table alignment**
+**4. Update InsuranceCTA and other components**
+- Scan and remove any remaining "PolicyBazaar" or "pbpartners" references across insurance components
 
-The `insurance_policies` records already have `start_date` derived from the CSV's issuance date and `expiry_date` = start + 1 year. These should now be correct. I'll cross-check and fix any mismatches.
-
-**Step 3 — Handle the "Rejected" entries**
-
-Two CSV rows have status "Rejected(Post Issuance)" (rows 13 and 20 — SEWA E CLASS and RAJAT SURI Hector). These will be marked with appropriate status in both tables.
-
-### Technical Details
-
-- All 47 vehicle numbers from the CSV already exist in `insurance_clients` (matched previously during import)
-- Updates will be done using the data insert tool with UPDATE SQL
-- No schema changes needed — all required columns already exist
+### Files to Create/Edit
+- **Create**: `src/components/insurance/InsuranceBrandedRedirect.tsx`
+- **Edit**: `src/components/insurance/InsuranceHeroForm.tsx`
+- **Edit**: `src/pages/CarInsurance.tsx`
 
