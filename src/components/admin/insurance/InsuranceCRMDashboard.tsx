@@ -92,12 +92,11 @@ export function InsuranceCRMDashboard() {
   const now = useMemo(() => new Date(), []);
 
   const { data: clients } = useQuery({
-    queryKey: ["ins-dash-clients-booked"],
+    queryKey: ["ins-dash-clients-policy-book"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("insurance_clients")
         .select("id, customer_name, phone, email, vehicle_number, vehicle_make, vehicle_model, advisor_name, lead_status, lead_source")
-        .eq("lead_status", "won")
         .order("created_at", { ascending: false })
         .limit(1000);
       if (error) throw error;
@@ -129,7 +128,7 @@ export function InsuranceCRMDashboard() {
       if (error) throw error;
     },
     onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({ queryKey: ["ins-dash-clients-booked"] });
+      queryClient.invalidateQueries({ queryKey: ["ins-dash-clients-policy-book"] });
       toast.success(`Client marked as ${vars.status.toUpperCase()}`);
     },
     onError: () => toast.error("Failed to update status"),
@@ -143,7 +142,7 @@ export function InsuranceCRMDashboard() {
         .eq("id", clientId)
         .then(({ error }) => {
           if (error) { toast.error("Failed to update status"); return; }
-          queryClient.invalidateQueries({ queryKey: ["ins-dash-clients-booked"] });
+          queryClient.invalidateQueries({ queryKey: ["ins-dash-clients-policy-book"] });
           toast.success("🎉 Client marked as WON! Upload their policy now.");
           setWonClientForUpload(clientId);
           setShowUploadPolicy(true);
@@ -157,8 +156,13 @@ export function InsuranceCRMDashboard() {
   const rows: PolicyRow[] = useMemo(() => {
     if (!clients || !policies) return [];
     const clientMap = new Map(clients.map(c => [c.id, c]));
+    const allowedLeadStatuses = new Set(["won", "running"]);
     return policies
-      .filter(p => !!p.client_id && clientMap.has(p.client_id))
+      .filter(p => {
+        if (!p.client_id || !clientMap.has(p.client_id)) return false;
+        const client = clientMap.get(p.client_id);
+        return allowedLeadStatuses.has((client?.lead_status || "").toLowerCase());
+      })
       .map(p => {
         const c = clientMap.get(p.client_id || "");
         const rawPhone = c?.phone || "";
