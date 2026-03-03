@@ -234,29 +234,34 @@ export const generateInsuranceQuotePdf = (data: InsuranceQuoteData) => {
   doc.text(formatINR(totalPremium), pw - m - 5, y + 7.5, { align: "right" });
   y += 15;
 
-  // ── QUOTE SUMMARY BOX ──
-  doc.setFillColor(...lightGreen);
-  doc.roundedRect(m, y, contentW, 14, 2, 2, "F");
-  doc.setDrawColor(...green);
-  doc.setLineWidth(0.4);
-  doc.roundedRect(m, y, contentW, 14, 2, 2, "S");
-  doc.setFontSize(8.5);
-  doc.setTextColor(...darkGreen);
-  doc.setFont("helvetica", "bold");
-  doc.text("Quote Summary", m + 5, y + 5.5);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
-  doc.setTextColor(...dark);
-  doc.text(`Net Premium: ${formatINR(netPremium)}  |  GST: ${formatINR(gst)}  |  Total: ${formatINR(totalPremium)}`, m + 5, y + 11);
-  y += 18;
+  // ── QUOTE SUMMARY BOX & TERMS (only if space available) ──
+  const spaceNeeded = 30;
+  if (y + spaceNeeded < footerY) {
+    doc.setFillColor(...lightGreen);
+    doc.roundedRect(m, y, contentW, 12, 2, 2, "F");
+    doc.setDrawColor(...green);
+    doc.setLineWidth(0.4);
+    doc.roundedRect(m, y, contentW, 12, 2, 2, "S");
+    doc.setFontSize(8);
+    doc.setTextColor(...darkGreen);
+    doc.setFont("helvetica", "bold");
+    doc.text("Quote Summary", m + 5, y + 5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...dark);
+    doc.text(`Net Premium: ${formatINR(netPremium)}  |  GST: ${formatINR(gst)}  |  Total: ${formatINR(totalPremium)}`, m + 5, y + 10);
+    y += 15;
+  }
 
-  // ── TERMS ──
-  doc.setFontSize(7);
-  doc.setTextColor(...gray);
-  doc.setFont("helvetica", "italic");
-  doc.text("* This is an indicative quotation. Actual premium may vary based on insurer underwriting guidelines.", m, y);
-  y += 3.5;
-  doc.text(`* Quote valid for 7 days from ${format(new Date(), "dd MMM yyyy")}.`, m, y);
+  if (y + 8 < footerY) {
+    doc.setFontSize(7);
+    doc.setTextColor(...gray);
+    doc.setFont("helvetica", "italic");
+    doc.text("* This is an indicative quotation. Actual premium may vary based on insurer underwriting guidelines.", m, y);
+    y += 3.5;
+    if (y + 4 < footerY) {
+      doc.text(`* Quote valid for 7 days from ${format(new Date(), "dd MMM yyyy")}.`, m, y);
+    }
+  }
 
   // ── FOOTER ──
   doc.setFillColor(...green);
