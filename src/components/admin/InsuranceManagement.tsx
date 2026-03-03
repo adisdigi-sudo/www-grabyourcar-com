@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   Shield, LayoutDashboard, FileSpreadsheet,
   UserPlus, Menu, RefreshCw,
-  GitBranch, FileUp
+  GitBranch, FileUp, PhoneCall
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { InsuranceImportExport } from "./insurance/InsuranceImportExport";
 import { InsuranceAddLeadForm } from "./insurance/InsuranceAddLeadForm";
 import { InsuranceRenewalsEngine } from "./insurance/InsuranceRenewalsEngine";
 import { InsuranceSmartExtractor } from "./insurance/InsuranceSmartExtractor";
+import { InsuranceSmartCalling } from "./insurance/InsuranceSmartCalling";
 
 type NavItem = { id: string; label: string; icon: any; badge?: string };
 type NavGroup = { group: string; items: NavItem[] };
@@ -23,6 +24,7 @@ const NAV_GROUPS: NavGroup[] = [
     group: "Pipeline",
     items: [
       { id: "pipeline", label: "Lead Pipeline", icon: GitBranch, badge: "🔥" },
+      { id: "smart-calling", label: "Smart Calling", icon: PhoneCall, badge: "⚡" },
       { id: "policy-book", label: "Policy Book", icon: LayoutDashboard },
       { id: "renewals", label: "Renewal Engine", icon: RefreshCw },
     ],
@@ -39,6 +41,7 @@ const NAV_GROUPS: NavGroup[] = [
 
 const COMPONENTS: Record<string, React.FC<any>> = {
   "pipeline": InsurancePipelineBoard,
+  "smart-calling": InsuranceSmartCalling,
   "policy-book": InsuranceCRMDashboard,
   "renewals": InsuranceRenewalsEngine,
   "add-lead": InsuranceAddLeadForm,

@@ -361,11 +361,11 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
       });
     }
 
-    // Insurance workspace should stay focused: keep only Dashboard + Insurance CRM tools
+    // Insurance workspace should stay focused: keep Dashboard + Smart Calling + Insurance CRM tools
     if (normalizedActiveSlug === "insurance") {
       items = items
         .map(item => {
-          if (item.id === "dashboard") return item;
+          if (item.id === "dashboard" || item.id === "calling-system") return item;
           if (item.id === "services" && item.children) {
             const allowedInsuranceChildren = item.children.filter(
               child => child.id === "services-insurance" || child.id === "services-insurance-import"
