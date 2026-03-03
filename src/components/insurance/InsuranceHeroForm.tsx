@@ -8,8 +8,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { captureInsuranceLead } from "@/lib/insuranceLeadCapture";
 import { WhatsAppOTPVerification } from "@/components/WhatsAppOTPVerification";
 import { useQuery } from "@tanstack/react-query";
+import { InsuranceBrandedRedirect } from "./InsuranceBrandedRedirect";
 
-const PB_PARTNERS_URL = "https://www.pbpartners.com/v1/partner-dashboard";
+const PARTNER_URL = "https://www.pbpartners.com/v1/partner-dashboard";
 
 type FlowStep = "vehicle" | "brand" | "model" | "phone" | "otp" | "quotes" | "finalize";
 
@@ -64,6 +65,7 @@ export function InsuranceHeroForm({ policyType = "comprehensive", vehicleLabel =
   const [selectedBrand, setSelectedBrand] = useState("");
   const [selectedModel, setSelectedModel] = useState("");
   const [brandSearch, setBrandSearch] = useState("");
+  const [showRedirect, setShowRedirect] = useState(false);
 
   // Fetch car brands from DB
   const { data: carBrands } = useQuery({
@@ -152,7 +154,7 @@ export function InsuranceHeroForm({ policyType = "comprehensive", vehicleLabel =
   const handleSelectQuote = (quoteId: string) => setSelectedQuote(quoteId);
 
   const handleFinalize = () => {
-    window.open(PB_PARTNERS_URL, "_blank", "noopener,noreferrer");
+    setShowRedirect(true);
   };
 
   const handleBack = () => {
@@ -238,7 +240,7 @@ export function InsuranceHeroForm({ policyType = "comprehensive", vehicleLabel =
                     </div>
                   </div>
                   <Button variant="outline" size="sm" className="rounded-full text-xs shrink-0"
-                    onClick={() => window.open(PB_PARTNERS_URL, "_blank", "noopener,noreferrer")}>
+                    onClick={() => setShowRedirect(true)}>
                     Check prices
                   </Button>
                 </motion.div>
@@ -489,6 +491,14 @@ export function InsuranceHeroForm({ policyType = "comprehensive", vehicleLabel =
           </motion.div>
         )}
       </AnimatePresence>
+
+      <InsuranceBrandedRedirect
+        open={showRedirect}
+        onClose={() => setShowRedirect(false)}
+        redirectUrl={PARTNER_URL}
+        planName={selectedQuote ? sampleQuotes.find((q) => q.id === selectedQuote)?.insurer : undefined}
+        premium={selectedQuote ? sampleQuotes.find((q) => q.id === selectedQuote)?.premium : undefined}
+      />
     </div>
   );
 }
