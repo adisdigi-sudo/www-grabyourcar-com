@@ -128,7 +128,7 @@ const AdminLayout = () => {
 
   // Redirect if not authenticated
   if (!isLoading && !user) {
-    navigate('/admin-auth');
+    navigate('/crm-auth');
     return null;
   }
 
