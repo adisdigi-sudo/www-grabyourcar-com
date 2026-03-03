@@ -340,29 +340,29 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
 
   // Filter nav items based on role AND active vertical
   const activeSlug = activeVertical?.slug;
+  const normalizedActiveSlug = (activeSlug || "").trim().toLowerCase();
   
   const filteredNavItems = useMemo(() => {
     const filterByVertical = (item: NavItem) => {
       // Items without verticals tag show everywhere
       if (!item.verticals) return true;
       // If no vertical is active, hide vertical-specific items
-      if (!activeSlug) return false;
+      if (!normalizedActiveSlug) return false;
       // Only show if item belongs to active vertical
-      return item.verticals.includes(activeSlug);
+      return item.verticals.map(v => v.trim().toLowerCase()).includes(normalizedActiveSlug);
     };
 
     let items = navItems.filter(filterByVertical);
 
     if (!hasFullAccess) {
-      items = items
-        .filter(item => {
-          if (!item.allowedRoles) return true;
-          return item.allowedRoles.some(r => userRoles.includes(r));
-        });
+      items = items.filter(item => {
+        if (!item.allowedRoles) return true;
+        return item.allowedRoles.some(r => userRoles.includes(r));
+      });
     }
 
     // Insurance workspace should stay focused: keep only Dashboard + Insurance CRM tools
-    if (activeSlug === "insurance") {
+    if (normalizedActiveSlug === "insurance") {
       items = items
         .map(item => {
           if (item.id === "dashboard") return item;
@@ -382,8 +382,11 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
     return items
       .map(item => {
         if (!item.children) return item;
-        let filteredChildren = item.children.filter(child => {
-          if (child.verticals && activeSlug && !child.verticals.includes(activeSlug)) return false;
+        const filteredChildren = item.children.filter(child => {
+          if (child.verticals && normalizedActiveSlug) {
+            const normalizedChildVerticals = child.verticals.map(v => v.trim().toLowerCase());
+            if (!normalizedChildVerticals.includes(normalizedActiveSlug)) return false;
+          }
           if (!hasFullAccess && child.allowedRoles) {
             return child.allowedRoles.some(r => userRoles.includes(r));
           }
@@ -392,7 +395,7 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
         return filteredChildren.length > 0 ? { ...item, children: filteredChildren } : null;
       })
       .filter(Boolean) as NavItem[];
-  }, [hasFullAccess, userRoles, activeSlug]);
+  }, [hasFullAccess, userRoles, normalizedActiveSlug]);
 
   // Handle responsive breakpoints
   useEffect(() => {
