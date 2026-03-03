@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { CartProvider } from "@/hooks/useCart";
 import { CompareProvider } from "@/hooks/useCompare";
@@ -105,9 +105,12 @@ const App = () => (
                     <Route path="/my-bookings" element={<MyBookings />} />
                     <Route path="/my-orders" element={<MyOrders />} />
                     <Route path="/car-finder" element={<CarFinder />} />
-                    <Route path="/admin" element={<AdminLayout />} />
-                    <Route path="/admin-auth" element={<AdminAuth />} />
-                    <Route path="/admin-reset-password" element={<AdminResetPassword />} />
+                    <Route path="/crm" element={<AdminLayout />} />
+                    <Route path="/crm-auth" element={<AdminAuth />} />
+                    <Route path="/crm-reset-password" element={<AdminResetPassword />} />
+                    <Route path="/admin" element={<Navigate to="/crm" replace />} />
+                    <Route path="/admin-auth" element={<Navigate to="/crm-auth" replace />} />
+                    <Route path="/admin-reset-password" element={<Navigate to="/crm-reset-password" replace />} />
                     <Route path="/workspace" element={<WorkspaceSelector />} />
                     <Route path="/self-drive" element={<SelfDriveRentals />} />
                     <Route path="/hsrp" element={<HSRP />} />

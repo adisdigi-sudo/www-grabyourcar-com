@@ -618,7 +618,7 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
               )}
               onClick={async () => {
                 await signOut();
-                navigate('/admin-auth');
+                navigate('/crm-auth');
               }}
               title={collapsed ? "Sign Out" : undefined}
             >
