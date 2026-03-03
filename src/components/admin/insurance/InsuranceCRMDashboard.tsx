@@ -25,7 +25,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { format, addDays, differenceInDays, isBefore, isAfter, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isSameDay, getWeek, getMonth, getYear } from "date-fns";
-import { InsuranceAddPolicyForm } from "./InsuranceAddPolicyForm";
+import { InsurancePolicyDocumentUploader } from "./InsurancePolicyDocumentUploader";
 import { BulkQuoteSharePanel, BulkLeadItem } from "./BulkQuoteSharePanel";
 import { FileSpreadsheet } from "lucide-react";
 
@@ -396,6 +396,7 @@ export function InsuranceCRMDashboard() {
   // Reminder preview state
   const [reminderPreview, setReminderPreview] = useState<{ policy: PolicyRow; type: "notice" | "quote" } | null>(null);
   const [showUploadPolicy, setShowUploadPolicy] = useState(false);
+  const [uploadTargetPolicyId, setUploadTargetPolicyId] = useState<string | null>(null);
   const [bulkSending, setBulkSending] = useState(false);
   const [showBulkPanel, setShowBulkPanel] = useState(false);
 
@@ -534,8 +535,8 @@ export function InsuranceCRMDashboard() {
           <Button variant="outline" size="sm" onClick={exportCSV} className="gap-1.5 h-8 text-xs border-primary/30 text-primary hover:bg-primary/5">
             <Download className="h-3.5 w-3.5" /> Download Report
           </Button>
-          <Button variant="default" size="sm" onClick={() => setShowUploadPolicy(true)} className="gap-1.5 h-8 text-xs">
-            <Upload className="h-3.5 w-3.5" /> Upload Policy
+          <Button variant="default" size="sm" onClick={() => { setUploadTargetPolicyId(null); setShowUploadPolicy(true); }} className="gap-1.5 h-8 text-xs">
+            <Upload className="h-3.5 w-3.5" /> Upload Policy Doc
           </Button>
           <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
             <PopoverTrigger asChild>
@@ -546,7 +547,7 @@ export function InsuranceCRMDashboard() {
                 </span>
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="end">
+            <PopoverContent className="w-auto p-0 z-50 pointer-events-auto" align="end">
               <div className="p-3 space-y-3">
                 <div className="text-xs font-medium text-muted-foreground">Filter by Policy Created Date</div>
                 <div className="flex gap-2">
@@ -880,6 +881,7 @@ export function InsuranceCRMDashboard() {
                                 if (r.policy_document_url) {
                                   window.open(r.policy_document_url, "_blank");
                                 } else {
+                                  setUploadTargetPolicyId(r.id);
                                   setShowUploadPolicy(true);
                                 }
                               }}
@@ -1303,19 +1305,22 @@ export function InsuranceCRMDashboard() {
       )}
 
       {/* Upload Policy Dialog */}
-      <Dialog open={showUploadPolicy} onOpenChange={(open) => { setShowUploadPolicy(open); if (!open) setWonClientForUpload(null); }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <Dialog open={showUploadPolicy} onOpenChange={(open) => { setShowUploadPolicy(open); if (!open) { setWonClientForUpload(null); setUploadTargetPolicyId(null); } }}>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Upload className="h-5 w-5 text-primary" /> 
-              {wonClientForUpload ? "🎉 Won! Upload Policy for this Client" : "Upload New Policy"}
+              <Upload className="h-5 w-5 text-primary" /> Upload Policy Document
             </DialogTitle>
           </DialogHeader>
-          <InsuranceAddPolicyForm onSuccess={() => {
-            setShowUploadPolicy(false);
-            queryClient.invalidateQueries({ queryKey: ["ins-dash-policies"] });
-            queryClient.invalidateQueries({ queryKey: ["ins-dash-clients"] });
-          }} />
+          <InsurancePolicyDocumentUploader
+            defaultPolicyId={uploadTargetPolicyId || undefined}
+            defaultClientId={wonClientForUpload || undefined}
+            onDone={() => {
+              setShowUploadPolicy(false);
+              queryClient.invalidateQueries({ queryKey: ["ins-dash-policies"] });
+              queryClient.invalidateQueries({ queryKey: ["ins-dash-clients-policy-book"] });
+            }}
+          />
         </DialogContent>
       </Dialog>
     </div>
