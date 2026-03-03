@@ -11,3 +11,4 @@ export { InsuranceServiceExpansion } from "./InsuranceServiceExpansion";
 export { InsuranceFAQ } from "./InsuranceFAQ";
 export { InsuranceCTA } from "./InsuranceCTA";
 export { InsuranceContentSection } from "./InsuranceContentSection";
+export { InsuranceTrustStrip } from "./InsuranceTrustStrip";

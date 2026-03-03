@@ -19,14 +19,13 @@ import {
   InsuranceServiceExpansion,
   InsuranceFAQ,
   InsuranceCTA,
+  InsuranceTrustStrip,
 } from "@/components/insurance";
 import { InsuranceContentSection } from "@/components/insurance/InsuranceContentSection";
 import { InsuranceOfferBanners } from "@/components/insurance/InsuranceOfferBanners";
 import { InsuranceGrabCTA } from "@/components/insurance/InsuranceGrabCTA";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-
-
 
 const iconMap: Record<string, React.ComponentType<any>> = {
   Shield, TrendingUp, Zap, Wallet, Star, Award, Sparkles, CheckCircle2,
@@ -191,11 +190,14 @@ const CarInsurance = () => {
             {/* Regulatory footer */}
             <div className="mt-8 text-center">
               <p className="text-xs text-muted-foreground">
-                UID: GYC001 | ARN: L0110 | T&C apply
+                GrabYourCar • Adis Makethemoney Services Pvt Ltd • IRDAI Authorised
               </p>
             </div>
           </div>
         </section>
+
+        {/* ═══ TRUST STRIP — After Hero ═══ */}
+        <InsuranceTrustStrip variant="full" />
 
         {/* Partner Company Cards */}
         <InsurancePartnerLogos />
@@ -205,6 +207,9 @@ const CarInsurance = () => {
 
         {/* Stats Section */}
         <InsuranceStats />
+
+        {/* ═══ TRUST WATERMARK — After Stats ═══ */}
+        <InsuranceTrustStrip variant="watermark" />
 
         {/* Grab CTA after stats */}
         <div className="container mx-auto px-4">
@@ -223,6 +228,9 @@ const CarInsurance = () => {
         {/* Process Steps */}
         <InsuranceProcess />
 
+        {/* ═══ TRUST STRIP — After Process ═══ */}
+        <InsuranceTrustStrip variant="compact" />
+
         {/* Coverage Types */}
         <InsuranceCoverageCards />
 
@@ -233,6 +241,9 @@ const CarInsurance = () => {
 
         {/* Provider Comparison */}
         <InsuranceComparison />
+
+        {/* ═══ TRUST WATERMARK — After Comparison ═══ */}
+        <InsuranceTrustStrip variant="watermark" />
 
         {/* Inline CTA */}
         <InsuranceGrabCTA variant="inline" source="after_comparison" />
@@ -250,6 +261,9 @@ const CarInsurance = () => {
 
         {/* Trust Architecture */}
         <InsuranceTrustArchitecture />
+
+        {/* ═══ TRUST STRIP — Before FAQ ═══ */}
+        <InsuranceTrustStrip variant="full" />
 
         {/* FAQ Section */}
         <InsuranceFAQ />
