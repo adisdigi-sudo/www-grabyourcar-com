@@ -937,12 +937,14 @@ function PolicyUploadForm({ clientId, onDone }: { clientId: string; onDone: () =
     premium_amount: "", start_date: "", expiry_date: "", status: "active",
   });
   const [saving, setSaving] = useState(false);
+  const [docFile, setDocFile] = useState<File | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const save = async () => {
     if (!form.policy_number || !clientId) { toast.error("Policy number required"); return; }
     setSaving(true);
     try {
-      // Auto-expire previous active policies (renewal replaces old policy)
+      // Auto-expire previous active policies
       const { data: previousPolicies } = await supabase
         .from("insurance_policies")
         .select("id, policy_number, insurer")
@@ -965,7 +967,7 @@ function PolicyUploadForm({ clientId, onDone }: { clientId: string; onDone: () =
         }
       }
 
-      const { error } = await supabase.from("insurance_policies").insert({
+      const { data: newPolicy, error } = await supabase.from("insurance_policies").insert({
         client_id: clientId,
         policy_number: form.policy_number,
         policy_type: form.policy_type,
@@ -974,15 +976,33 @@ function PolicyUploadForm({ clientId, onDone }: { clientId: string; onDone: () =
         start_date: form.start_date || new Date().toISOString().split("T")[0],
         expiry_date: form.expiry_date || null,
         status: form.status,
-      });
+      }).select("id").single();
       if (error) throw error;
+
+      // Upload document
+      if (docFile && newPolicy) {
+        const ext = docFile.name.split(".").pop() || "pdf";
+        const filePath = `${newPolicy.id}/${Date.now()}.${ext}`;
+        const { error: uploadErr } = await supabase.storage
+          .from("policy-documents")
+          .upload(filePath, docFile, { cacheControl: "3600", upsert: true });
+        if (!uploadErr) {
+          const { data: urlData } = supabase.storage
+            .from("policy-documents")
+            .getPublicUrl(filePath);
+          await supabase.from("insurance_policies")
+            .update({ policy_document_url: urlData.publicUrl })
+            .eq("id", newPolicy.id);
+        }
+      }
+
       // Move to renewal queue
       await supabase.from("insurance_clients").update({ pipeline_stage: "renewal_queue" }).eq("id", clientId);
       await supabase.from("insurance_activity_log").insert({
         client_id: clientId,
         activity_type: "policy_uploaded",
         title: "Policy issued & uploaded",
-        description: `${form.insurer} policy ${form.policy_number} uploaded`,
+        description: `${form.insurer} policy ${form.policy_number} uploaded${docFile ? " with document" : ""}`,
       });
       const replacedCount = previousPolicies?.length || 0;
       toast.success(replacedCount > 0
@@ -1027,9 +1047,48 @@ function PolicyUploadForm({ clientId, onDone }: { clientId: string; onDone: () =
           </SelectContent>
         </Select>
       </div>
+
+      {/* Document Upload */}
+      <div className="space-y-1">
+        <Label className="text-xs font-semibold">Policy Document (PDF/Image)</Label>
+        <div className="border-2 border-dashed border-primary/30 rounded-lg p-3 bg-primary/5 text-center">
+          {docFile ? (
+            <div className="flex items-center justify-center gap-2">
+              <FileText className="h-4 w-4 text-primary" />
+              <span className="text-xs font-medium truncate max-w-[180px]">{docFile.name}</span>
+              <Button type="button" variant="ghost" size="icon" className="h-5 w-5" onClick={() => setDocFile(null)}>
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              <Upload className="h-6 w-6 mx-auto text-muted-foreground" />
+              <p className="text-xs text-muted-foreground">Upload policy PDF or image</p>
+            </div>
+          )}
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png,.webp"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file && file.size <= 20 * 1024 * 1024) setDocFile(file);
+              else if (file) toast.error("File too large. Max 20MB.");
+            }}
+          />
+          {!docFile && (
+            <Button type="button" variant="outline" size="sm" className="mt-1.5 gap-1 text-xs h-7" onClick={() => fileRef.current?.click()}>
+              <Upload className="h-3 w-3" /> Choose File
+            </Button>
+          )}
+        </div>
+      </div>
+
       <Button onClick={save} disabled={saving} className="w-full bg-emerald-600 hover:bg-emerald-700">
         {saving ? "Saving..." : "Upload Policy"}
       </Button>
     </div>
   );
 }
+

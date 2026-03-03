@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ShieldCheck, Loader2, Save, Search, UserPlus } from "lucide-react";
+import { ShieldCheck, Loader2, Save, Search, UserPlus, Upload, FileText, X } from "lucide-react";
 
 export function InsuranceAddPolicyForm({ onSuccess }: { onSuccess?: () => void }) {
   const [saving, setSaving] = useState(false);
@@ -42,6 +42,11 @@ export function InsuranceAddPolicyForm({ onSuccess }: { onSuccess?: () => void }
     status: "active",
   });
 
+  // Document upload
+  const [docFile, setDocFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const update = (key: string, value: string) => setForm(prev => ({ ...prev, [key]: value }));
   const updateNewClient = (key: string, value: string) => setNewClient(prev => ({ ...prev, [key]: value }));
 
@@ -74,6 +79,29 @@ export function InsuranceAddPolicyForm({ onSuccess }: { onSuccess?: () => void }
     }
   };
 
+  const uploadDocument = async (policyId: string): Promise<string | null> => {
+    if (!docFile) return null;
+    setUploading(true);
+    try {
+      const ext = docFile.name.split(".").pop() || "pdf";
+      const filePath = `${policyId}/${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("policy-documents")
+        .upload(filePath, docFile, { cacheControl: "3600", upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage
+        .from("policy-documents")
+        .getPublicUrl(filePath);
+      return urlData.publicUrl;
+    } catch (e: any) {
+      console.error("Document upload failed:", e);
+      toast.error("Document upload failed: " + (e.message || "Unknown error"));
+      return null;
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -95,7 +123,6 @@ export function InsuranceAddPolicyForm({ onSuccess }: { onSuccess?: () => void }
           return;
         }
 
-        // Check if client already exists by phone
         const { data: existing } = await supabase
           .from("insurance_clients")
           .select("id, customer_name")
@@ -104,7 +131,6 @@ export function InsuranceAddPolicyForm({ onSuccess }: { onSuccess?: () => void }
 
         if (existing && existing.length > 0) {
           finalClientId = existing[0].id;
-          // Update existing client with new details
           await supabase.from("insurance_clients").update({
             customer_name: newClient.customer_name || undefined,
             email: newClient.email || undefined,
@@ -134,7 +160,7 @@ export function InsuranceAddPolicyForm({ onSuccess }: { onSuccess?: () => void }
         return;
       }
 
-      // Auto-expire previous active policies for this client (renewal replaces old policy)
+      // Auto-expire previous active policies
       const { data: previousPolicies } = await supabase
         .from("insurance_policies")
         .select("id, policy_number, insurer, expiry_date")
@@ -148,7 +174,6 @@ export function InsuranceAddPolicyForm({ onSuccess }: { onSuccess?: () => void }
           .update({ status: "renewed" })
           .in("id", prevIds);
 
-        // Log the replacement
         for (const prev of previousPolicies) {
           await supabase.from("insurance_activity_log").insert({
             client_id: finalClientId,
@@ -160,26 +185,36 @@ export function InsuranceAddPolicyForm({ onSuccess }: { onSuccess?: () => void }
       }
 
       // Insert new policy
-      const { error: policyErr } = await supabase.from("insurance_policies").insert({
+      const { data: newPolicy, error: policyErr } = await supabase.from("insurance_policies").insert({
         client_id: finalClientId,
         policy_number: form.policy_number,
         policy_type: form.policy_type,
-        insurer: form.insurer || null,
+        insurer: form.insurer || "Unknown",
         premium_amount: form.premium_amount ? Number(form.premium_amount) : null,
         idv: form.idv ? Number(form.idv) : null,
-        start_date: form.start_date || null,
+        start_date: form.start_date || new Date().toISOString().split("T")[0],
         expiry_date: form.expiry_date || null,
         ncb_discount: form.ncb_percentage ? Number(form.ncb_percentage) : null,
         addons: form.add_ons ? form.add_ons.split(",").map(s => s.trim()).filter(Boolean) : [],
         status: form.status,
-      });
+      }).select("id").single();
       if (policyErr) throw policyErr;
+
+      // Upload document if provided
+      if (docFile && newPolicy) {
+        const docUrl = await uploadDocument(newPolicy.id);
+        if (docUrl) {
+          await supabase.from("insurance_policies")
+            .update({ policy_document_url: docUrl })
+            .eq("id", newPolicy.id);
+        }
+      }
 
       await supabase.from("insurance_activity_log").insert({
         client_id: finalClientId,
         activity_type: "policy_uploaded",
         title: "Policy added manually",
-        description: `${form.insurer || "Unknown"} policy ${form.policy_number} added`,
+        description: `${form.insurer || "Unknown"} policy ${form.policy_number} added${docFile ? " with document" : ""}`,
       });
 
       const replacedCount = previousPolicies?.length || 0;
@@ -197,6 +232,7 @@ export function InsuranceAddPolicyForm({ onSuccess }: { onSuccess?: () => void }
       setClientId(null);
       setClientName("");
       setSearchPhone("");
+      setDocFile(null);
       onSuccess?.();
     } catch (e: any) {
       toast.error(e.message || "Failed to save policy");
@@ -211,7 +247,7 @@ export function InsuranceAddPolicyForm({ onSuccess }: { onSuccess?: () => void }
         <CardTitle className="text-base flex items-center gap-2">
           <ShieldCheck className="h-4 w-4 text-primary" /> Add Policy Details
         </CardTitle>
-        <CardDescription>Add a new client or link to existing, then add policy</CardDescription>
+        <CardDescription>Add a new client or link to existing, then add policy with document</CardDescription>
       </CardHeader>
       <CardContent>
         {/* Client Selection Mode */}
@@ -341,12 +377,57 @@ export function InsuranceAddPolicyForm({ onSuccess }: { onSuccess?: () => void }
             <Label className="text-xs">Add-ons (comma separated)</Label>
             <Input value={form.add_ons} onChange={e => update("add_ons", e.target.value)} placeholder="Zero Dep, RSA, Engine Protect" className="h-9 text-sm" />
           </div>
+
+          {/* Policy Document Upload */}
+          <div className="space-y-2">
+            <Label className="text-xs font-semibold">Policy Document (PDF/Image)</Label>
+            <div className="border-2 border-dashed border-primary/30 rounded-lg p-4 bg-primary/5 text-center">
+              {docFile ? (
+                <div className="flex items-center justify-center gap-3">
+                  <FileText className="h-5 w-5 text-primary" />
+                  <span className="text-sm font-medium truncate max-w-[200px]">{docFile.name}</span>
+                  <span className="text-xs text-muted-foreground">({(docFile.size / 1024).toFixed(0)} KB)</span>
+                  <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => setDocFile(null)}>
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Upload className="h-8 w-8 mx-auto text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">Drop policy document here or click to browse</p>
+                  <p className="text-xs text-muted-foreground">PDF, JPG, PNG up to 20MB</p>
+                </div>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.webp"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    if (file.size > 20 * 1024 * 1024) {
+                      toast.error("File too large. Max 20MB.");
+                      return;
+                    }
+                    setDocFile(file);
+                  }
+                }}
+              />
+              {!docFile && (
+                <Button type="button" variant="outline" size="sm" className="mt-2 gap-1.5" onClick={() => fileInputRef.current?.click()}>
+                  <Upload className="h-3.5 w-3.5" /> Choose File
+                </Button>
+              )}
+            </div>
+          </div>
+
           <Button
             type="submit"
-            disabled={saving || (clientMode === "existing" && !clientId)}
+            disabled={saving || uploading || (clientMode === "existing" && !clientId)}
             className="gap-1.5 bg-success text-success-foreground hover:bg-success/90"
           >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {saving || uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             {clientMode === "new" ? "Create Client & Save Policy" : "Save Policy"}
           </Button>
         </form>
