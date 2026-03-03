@@ -90,6 +90,7 @@ import TeamEngagement from "@/components/admin/TeamEngagement";
 import ErrorPrevention from "@/components/admin/ErrorPrevention";
 import WorkflowEngine from "@/components/admin/WorkflowEngine";
 import AutomationCommandCenter from "@/components/admin/AutomationCommandCenter";
+import { LeadRoutingManager } from "@/components/admin/LeadRoutingManager";
 
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
@@ -346,6 +347,8 @@ const AdminLayout = () => {
         return <WorkflowEngine />;
       case "automation-center":
         return <AutomationCommandCenter />;
+      case "lead-routing":
+        return <LeadRoutingManager />;
       case "dealer-inquiry":
         return <DealerManagement initialTab="inquiry" />;
       case "dealer-companies":
