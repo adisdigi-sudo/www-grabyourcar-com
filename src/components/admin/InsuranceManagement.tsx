@@ -1,9 +1,8 @@
 import { useState } from "react";
 import {
-  Shield, LayoutDashboard, Users, FileSpreadsheet,
-  UserPlus, Search, Menu, RefreshCw,
-  GitBranch, MessageSquare, FileUp,
-  BarChart3, Upload, Database, Bell, Clock, PhoneCall
+  Shield, LayoutDashboard, FileSpreadsheet,
+  UserPlus, Menu, RefreshCw,
+  GitBranch, FileUp
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -11,17 +10,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { InsurancePipelineBoard } from "./insurance/InsurancePipelineBoard";
 import { InsuranceCRMDashboard } from "./insurance/InsuranceCRMDashboard";
-import { InsuranceClientsManager } from "./insurance/InsuranceClientsManager";
 import { InsuranceImportExport } from "./insurance/InsuranceImportExport";
 import { InsuranceAddLeadForm } from "./insurance/InsuranceAddLeadForm";
-import { InsuranceClientSearch } from "./insurance/InsuranceClientSearch";
 import { InsuranceRenewalsEngine } from "./insurance/InsuranceRenewalsEngine";
 import { InsuranceSmartExtractor } from "./insurance/InsuranceSmartExtractor";
-import { InsuranceProspectPool } from "./insurance/InsuranceProspectPool";
-import { InsuranceDataHealth } from "./insurance/InsuranceDataHealth";
-import { InsuranceTemplatesManager } from "./insurance/InsuranceTemplatesManager";
-import { InsuranceReportsModule } from "./insurance/InsuranceReportsModule";
-import { InsuranceSmartCalling } from "./insurance/InsuranceSmartCalling";
 
 type NavItem = { id: string; label: string; icon: any; badge?: string };
 type NavGroup = { group: string; items: NavItem[] };
@@ -31,17 +23,8 @@ const NAV_GROUPS: NavGroup[] = [
     group: "Pipeline",
     items: [
       { id: "pipeline", label: "Lead Pipeline", icon: GitBranch, badge: "🔥" },
-      { id: "smart-calling", label: "Smart Calling", icon: PhoneCall },
       { id: "policy-book", label: "Policy Book", icon: LayoutDashboard },
       { id: "renewals", label: "Renewal Engine", icon: RefreshCw },
-    ],
-  },
-  {
-    group: "CRM",
-    items: [
-      { id: "clients", label: "All Clients", icon: Users },
-      { id: "prospects", label: "Prospect Pool", icon: Database },
-      { id: "search", label: "Search", icon: Search },
     ],
   },
   {
@@ -49,33 +32,18 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { id: "add-lead", label: "Add Lead", icon: UserPlus },
       { id: "extract", label: "Extract Policy", icon: FileUp },
-    ],
-  },
-  {
-    group: "Tools",
-    items: [
-      { id: "templates", label: "Message Templates", icon: MessageSquare },
       { id: "import-export", label: "Import / Export", icon: FileSpreadsheet },
-      { id: "data-health", label: "Data Health", icon: BarChart3 },
-      { id: "reports", label: "Reports", icon: BarChart3 },
     ],
   },
 ];
 
 const COMPONENTS: Record<string, React.FC<any>> = {
   "pipeline": InsurancePipelineBoard,
-  "smart-calling": InsuranceSmartCalling,
   "policy-book": InsuranceCRMDashboard,
   "renewals": InsuranceRenewalsEngine,
-  "clients": InsuranceClientsManager,
-  "prospects": InsuranceProspectPool,
-  "search": InsuranceClientSearch,
   "add-lead": InsuranceAddLeadForm,
   "extract": InsuranceSmartExtractor,
-  "templates": InsuranceTemplatesManager,
   "import-export": InsuranceImportExport,
-  "data-health": InsuranceDataHealth,
-  "reports": InsuranceReportsModule,
 };
 
 function SidebarNav({ active, onSelect }: { active: string; onSelect: (id: string) => void }) {

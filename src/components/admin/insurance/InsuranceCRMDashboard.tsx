@@ -92,11 +92,12 @@ export function InsuranceCRMDashboard() {
   const now = useMemo(() => new Date(), []);
 
   const { data: clients } = useQuery({
-    queryKey: ["ins-dash-clients"],
+    queryKey: ["ins-dash-clients-booked"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("insurance_clients")
         .select("id, customer_name, phone, email, vehicle_number, vehicle_make, vehicle_model, advisor_name, lead_status, lead_source")
+        .in("lead_status", ["won", "running"])
         .order("created_at", { ascending: false })
         .limit(1000);
       if (error) throw error;
