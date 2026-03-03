@@ -10,28 +10,9 @@ import { captureInsuranceLead } from "@/lib/insuranceLeadCapture";
 import { useQuery } from "@tanstack/react-query";
 import { InsuranceBrandedRedirect } from "./InsuranceBrandedRedirect";
 
-const PARTNER_URL = "https://www.pbpartners.com/v1/partner-dashboard";
+const PARTNER_URL = "https://pbpci.policybazaar.com/?token=o5aMAq6qZ1tLXTODNpDyVbk4MP6pWDnq6hhpN5u%2BmyJLH9wHcj81JpXwkmKwLPBcDQlOpmql%2FtQgJKjQaQBk%2F6h5%2Bh6wxuKCTAtXRNQ1WBN7m6J2EwinhUfoywZ8E%2B%2BJFZQlcTcGh6a4upMh26MliMAXl%2FqWXTt%2B579hIW3zzfAGZ7aSNJ3WTeVCdfy%2FjJGe%2BQa3M6xdyWiN9%2FuvLVHo9A%3D%3D";
 
-type FlowStep = "vehicle" | "brand" | "model" | "phone" | "quotes" | "finalize";
-
-interface QuotePlan {
-  id: string;
-  insurer: string;
-  type: string;
-  premium: string;
-  premiumValue: number;
-  idv: string;
-  claimRatio: string;
-  features: string[];
-  popular?: boolean;
-}
-
-const sampleQuotes: QuotePlan[] = [
-  { id: "1", insurer: "HDFC ERGO", type: "Comprehensive", premium: "₹4,999", premiumValue: 4999, idv: "₹6,50,000", claimRatio: "98.3%", features: ["Zero Depreciation", "24/7 RSA", "NCB Protection", "Engine Cover"], popular: true },
-  { id: "2", insurer: "ICICI Lombard", type: "Comprehensive", premium: "₹5,199", premiumValue: 5199, idv: "₹6,45,000", claimRatio: "97.8%", features: ["Personal Accident", "Engine Protection", "Key Replacement"] },
-  { id: "3", insurer: "Bajaj Allianz", type: "Comprehensive", premium: "₹4,799", premiumValue: 4799, idv: "₹6,40,000", claimRatio: "98.1%", features: ["Consumables Cover", "Return to Invoice", "Tyre Cover"] },
-  { id: "4", insurer: "Tata AIG", type: "Third Party + OD", premium: "₹5,399", premiumValue: 5399, idv: "₹6,55,000", claimRatio: "95.0%", features: ["Tyre Protection", "EMI Protection", "Daily Allowance"] },
-];
+type FlowStep = "vehicle" | "brand" | "model" | "phone";
 
 const bikeBrands = [
   "Hero", "Honda", "TVS", "Bajaj", "Royal Enfield", "Yamaha",
@@ -61,7 +42,7 @@ export function InsuranceHeroForm({ policyType = "comprehensive", vehicleLabel =
   const [vehicleNumber, setVehicleNumber] = useState("");
   const [phone, setPhone] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedQuote, setSelectedQuote] = useState<string | null>(null);
+  
   const [selectedBrand, setSelectedBrand] = useState("");
   const [selectedModel, setSelectedModel] = useState("");
   const [brandSearch, setBrandSearch] = useState("");
@@ -143,20 +124,15 @@ export function InsuranceHeroForm({ policyType = "comprehensive", vehicleLabel =
       });
     } catch { /* Don't block flow */ }
     setIsLoading(false);
-    setStep("quotes");
-    toast.success("Here are your personalized quotes 🎉");
-  };
-
-  const handleSelectQuote = (quoteId: string) => setSelectedQuote(quoteId);
-
-  const handleFinalize = () => {
     setShowRedirect(true);
+    toast.success("Redirecting you to get your quotes 🎉");
   };
+
+
 
   const handleBack = () => {
     if (step === "model") setStep("brand");
     else if (step === "phone") setStep(isNewVehicle ? (policyType === "bike" ? "brand" : (selectedModel ? "model" : "brand")) : "vehicle");
-    else if (step === "quotes") setStep("phone");
   };
 
   const vehicleDisplayName = isNewVehicle
@@ -383,108 +359,14 @@ export function InsuranceHeroForm({ policyType = "comprehensive", vehicleLabel =
         )}
 
 
-
-
-        {/* ===== STEP: Quotes Display ===== */}
-        {step === "quotes" && (
-          <motion.div key="quotes" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.35 }} className="space-y-4">
-            <div className="bg-card rounded-2xl shadow-xl border border-border/50 p-4 md:p-6">
-              <div className="flex items-center justify-between mb-5">
-                <div>
-                  <h3 className="font-heading font-bold text-lg text-foreground">Your Insurance Quotes</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {isNewVehicle ? `${vehicleDisplayName}` : `Vehicle: ${vehicleNumber}`} • Best plans for you
-                  </p>
-                </div>
-                <div className="text-xs bg-primary/10 text-primary px-3 py-1 rounded-full font-bold">
-                  {sampleQuotes.length} plans found
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                {sampleQuotes.map((quote, index) => (
-                  <motion.div
-                    key={quote.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    onClick={() => handleSelectQuote(quote.id)}
-                    className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
-                      selectedQuote === quote.id
-                        ? "border-primary bg-primary/5 shadow-md"
-                        : "border-border/50 hover:border-primary/40 hover:shadow-sm"
-                    }`}
-                  >
-                    {quote.popular && (
-                      <div className="absolute -top-2.5 right-4 bg-primary text-primary-foreground text-[10px] px-3 py-0.5 rounded-full font-bold">
-                        BEST VALUE
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-bold text-foreground">{quote.insurer}</h4>
-                          <span className="text-xs bg-muted px-2 py-0.5 rounded text-muted-foreground">{quote.type}</span>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5 mb-2">
-                          {quote.features.slice(0, 3).map((f) => (
-                            <span key={f} className="text-[10px] bg-muted/50 px-2 py-0.5 rounded-full text-muted-foreground flex items-center gap-1">
-                              <CheckCircle2 className="h-2.5 w-2.5 text-primary" />
-                              {f}
-                            </span>
-                          ))}
-                        </div>
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                          <span>IDV: {quote.idv}</span>
-                          <span>•</span>
-                          <span>Claim: {quote.claimRatio}</span>
-                        </div>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-2xl font-bold text-primary">{quote.premium}</p>
-                        <p className="text-xs text-muted-foreground">/year</p>
-                      </div>
-                    </div>
-
-                    {selectedQuote === quote.id && (
-                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} className="mt-3 pt-3 border-t border-border/50">
-                        <div className="flex flex-wrap gap-2">
-                          {quote.features.map((f) => (
-                            <span key={f} className="text-xs bg-primary/10 text-primary px-2.5 py-1 rounded-full flex items-center gap-1">
-                              <CheckCircle2 className="h-3 w-3" />
-                              {f}
-                            </span>
-                          ))}
-                        </div>
-                      </motion.div>
-                    )}
-                  </motion.div>
-                ))}
-              </div>
-
-              {selectedQuote && (
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-5">
-                  <Button onClick={handleFinalize} size="lg" className="w-full h-14 text-base font-bold rounded-xl gap-2 shadow-lg">
-                    <Shield className="h-5 w-5" />
-                    Buy This Policy — {sampleQuotes.find((q) => q.id === selectedQuote)?.premium}/yr
-                    <ArrowRight className="h-5 w-5" />
-                  </Button>
-                  <p className="text-xs text-center text-muted-foreground mt-2">
-                    You'll be securely redirected to complete the purchase
-                  </p>
-                </motion.div>
-              )}
-            </div>
-          </motion.div>
-        )}
       </AnimatePresence>
 
       <InsuranceBrandedRedirect
         open={showRedirect}
         onClose={() => setShowRedirect(false)}
         redirectUrl={PARTNER_URL}
-        planName={selectedQuote ? sampleQuotes.find((q) => q.id === selectedQuote)?.insurer : undefined}
-        premium={selectedQuote ? sampleQuotes.find((q) => q.id === selectedQuote)?.premium : undefined}
+        planName={isNewVehicle ? vehicleDisplayName : vehicleNumber}
+        premium={policyType === "comprehensive" ? "Best Price Guaranteed" : undefined}
       />
     </div>
   );
