@@ -28,6 +28,7 @@ import { format, addDays, differenceInDays, isBefore, isAfter, startOfWeek, endO
 import { InsurancePolicyDocumentUploader } from "./InsurancePolicyDocumentUploader";
 import { BulkQuoteSharePanel, BulkLeadItem } from "./BulkQuoteSharePanel";
 import { FileSpreadsheet } from "lucide-react";
+import InsuranceQuoteModal from "./InsuranceQuoteModal";
 
 type ViewFilter = "all" | "7" | "15" | "30" | "60" | "expired";
 type StatusFilter = "all" | "won" | "lost" | "running" | "new" | "grabyourcar";
@@ -399,6 +400,7 @@ export function InsuranceCRMDashboard() {
   const [uploadTargetPolicyId, setUploadTargetPolicyId] = useState<string | null>(null);
   const [bulkSending, setBulkSending] = useState(false);
   const [showBulkPanel, setShowBulkPanel] = useState(false);
+  const [quoteModalPolicy, setQuoteModalPolicy] = useState<PolicyRow | null>(null);
 
   const handleBulkSendMessage = useCallback(async () => {
     const phonePolicies = filtered.filter(p => p.rawPhone && p.rawPhone.length >= 10);
@@ -891,6 +893,14 @@ export function InsuranceCRMDashboard() {
                               ) : (
                                 <><Upload className="h-3 w-3" /> Upload Doc</>
                               )}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 gap-1 text-[10px] px-2 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                              onClick={() => setQuoteModalPolicy(r)}
+                            >
+                              <FileText className="h-3 w-3" /> Quote
                             </Button>
                             {r.phone && (
                               <DropdownMenu>
@@ -2119,5 +2129,33 @@ Thank you for choosing Grabyourcar for your motor insurance needs! Here's your p
         </div>
       </DialogContent>
     </Dialog>
+  );
+
+  return (
+    <>
+      {mainContent}
+
+      {/* Quote Modal for Policy Book */}
+      {quoteModalPolicy && (
+        <InsuranceQuoteModal
+          open={!!quoteModalPolicy}
+          onOpenChange={() => setQuoteModalPolicy(null)}
+          client={{
+            customer_name: quoteModalPolicy.customer_name,
+            phone: quoteModalPolicy.phone || "",
+            email: quoteModalPolicy.email,
+            city: null,
+            vehicle_make: quoteModalPolicy.vehicle_make,
+            vehicle_model: quoteModalPolicy.vehicle_model,
+            vehicle_number: quoteModalPolicy.vehicle_number,
+            vehicle_year: null,
+            current_insurer: quoteModalPolicy.insurer,
+            current_policy_type: quoteModalPolicy.policy_type,
+            ncb_percentage: null,
+            current_premium: quoteModalPolicy.premium,
+          }}
+        />
+      )}
+    </>
   );
 }
