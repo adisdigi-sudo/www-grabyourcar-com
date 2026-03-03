@@ -1,11 +1,16 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Shield, FileText, Clock, CheckCircle, IndianRupee, Truck, AlertTriangle, BarChart3, Car } from "lucide-react";
+import { Shield, FileText, Clock, CheckCircle, BarChart3, Car, Phone, Users, Truck, Zap, ArrowRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { motion } from "framer-motion";
 
-export const HSRPDashboard = () => {
+interface HSRPDashboardProps {
+  onNavigate?: (tab: string) => void;
+}
+
+export const HSRPDashboard = ({ onNavigate }: HSRPDashboardProps) => {
   const { data: stats } = useQuery({
     queryKey: ["hsrp-dashboard-stats"],
     queryFn: async () => {
@@ -23,37 +28,49 @@ export const HSRPDashboard = () => {
   });
 
   const kpis = [
-    { label: "Total Applications", value: stats?.total || 0, icon: FileText, color: "text-blue-500" },
-    { label: "Pending", value: stats?.pending || 0, icon: Clock, color: "text-amber-500" },
-    { label: "Completed", value: stats?.delivered || 0, icon: CheckCircle, color: "text-green-500" },
-    { label: "Completion Rate", value: stats?.total ? `${Math.round((stats.delivered / stats.total) * 100)}%` : "0%", icon: BarChart3, color: "text-primary" },
+    { label: "Total Applications", value: stats?.total || 0, icon: FileText, gradient: "from-blue-500 to-cyan-500" },
+    { label: "Pending", value: stats?.pending || 0, icon: Clock, gradient: "from-amber-500 to-orange-500" },
+    { label: "Completed", value: stats?.delivered || 0, icon: CheckCircle, gradient: "from-green-500 to-emerald-500" },
+    { label: "Completion Rate", value: stats?.total ? `${Math.round((stats.delivered / stats.total) * 100)}%` : "0%", icon: BarChart3, gradient: "from-purple-500 to-violet-500" },
+  ];
+
+  const quickActions = [
+    { label: "Smart Calling", icon: Phone, desc: "Follow-up queue", id: "calling-system", badge: "🔥" },
+    { label: "All Leads", icon: Users, desc: "Manage inquiries", id: "leads-all" },
+    { label: "HSRP Management", icon: Shield, desc: "All applications", id: "services-hsrp" },
+    { label: "Order Tracking", icon: Truck, desc: "Track deliveries", id: "services-hsrp" },
   ];
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Shield className="h-7 w-7 text-primary" />
-          HSRP & FASTag Dashboard
-        </h1>
-        <p className="text-muted-foreground mt-1">Manage HSRP plates, FASTag issuance & delivery tracking</p>
-      </div>
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-500/10 via-primary/5 to-background border p-6">
+        <div className="absolute top-0 right-0 w-48 h-48 bg-amber-500/5 rounded-full blur-3xl" />
+        <div className="relative z-10 flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 text-white">
+            <Shield className="h-6 w-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">HSRP & FASTag</h1>
+            <p className="text-muted-foreground text-sm">Application management, tracking & delivery</p>
+          </div>
+        </div>
+      </motion.div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {kpis.map((kpi) => (
-          <Card key={kpi.label}>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
-                  <kpi.icon className={`h-5 w-5 ${kpi.color}`} />
+        {kpis.map((kpi, i) => (
+          <motion.div key={kpi.label} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}>
+            <Card className="relative overflow-hidden">
+              <div className={`absolute inset-0 bg-gradient-to-br ${kpi.gradient} opacity-[0.04]`} />
+              <CardContent className="p-4 relative">
+                <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${kpi.gradient} flex items-center justify-center mb-3`}>
+                  <kpi.icon className="h-5 w-5 text-white" />
                 </div>
-                <div>
-                  <p className="text-2xl font-bold">{kpi.value}</p>
-                  <p className="text-xs text-muted-foreground">{kpi.label}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                <p className="text-2xl font-bold">{kpi.value}</p>
+                <p className="text-xs text-muted-foreground">{kpi.label}</p>
+              </CardContent>
+            </Card>
+          </motion.div>
         ))}
       </div>
 
@@ -80,17 +97,19 @@ export const HSRPDashboard = () => {
         </Card>
 
         <Card>
-          <CardHeader><CardTitle className="text-lg">Quick Actions</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Zap className="h-5 w-5" /> Quick Actions</CardTitle></CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-3">
-              {[
-                { label: "HSRP Management", icon: Shield, desc: "View all applications" },
-                { label: "Order Tracking", icon: Truck, desc: "Track deliveries" },
-                { label: "Vehicle Lookup", icon: Car, desc: "Search vehicles" },
-                { label: "Reports", icon: FileText, desc: "Generate reports" },
-              ].map((a) => (
-                <div key={a.label} className="p-3 rounded-lg border hover:bg-accent cursor-pointer transition-colors">
-                  <a.icon className="h-5 w-5 text-primary mb-2" />
+              {quickActions.map((a) => (
+                <div
+                  key={a.label}
+                  className="p-3 rounded-lg border hover:bg-accent hover:border-primary/20 cursor-pointer transition-all group"
+                  onClick={() => onNavigate?.(a.id)}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <a.icon className="h-5 w-5 text-primary" />
+                    {a.badge && <Badge variant="secondary" className="text-[10px]">{a.badge}</Badge>}
+                  </div>
                   <p className="text-sm font-medium">{a.label}</p>
                   <p className="text-[11px] text-muted-foreground">{a.desc}</p>
                 </div>
