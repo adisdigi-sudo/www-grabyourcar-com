@@ -364,7 +364,7 @@ export function InsuranceHeroForm({ policyType = "comprehensive", vehicleLabel =
       <InsuranceBrandedRedirect
         open={showRedirect}
         onClose={() => setShowRedirect(false)}
-        redirectUrl={PARTNER_URL}
+        redirectUrl={`${PARTNER_URL}&reg_no=${encodeURIComponent(isNewVehicle ? `${selectedBrand} ${selectedModel}`.trim() : vehicleNumber)}&mobile=${encodeURIComponent(phone)}`}
         planName={isNewVehicle ? vehicleDisplayName : vehicleNumber}
         premium={policyType === "comprehensive" ? "Best Price Guaranteed" : undefined}
       />
