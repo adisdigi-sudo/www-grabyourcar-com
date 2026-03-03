@@ -7,7 +7,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { InsurancePipelineBoard } from "./insurance/InsurancePipelineBoard";
 import { InsuranceCRMDashboard } from "./insurance/InsuranceCRMDashboard";
 import { InsuranceImportExport } from "./insurance/InsuranceImportExport";
@@ -121,10 +121,11 @@ export function InsuranceManagement() {
             </SheetTrigger>
             <SheetContent side="left" className="w-56 p-0">
               <div className="px-4 py-3 border-b">
-                <h1 className="text-sm font-bold flex items-center gap-2">
+                <SheetTitle className="text-sm font-bold flex items-center gap-2">
                   <Shield className="h-4 w-4 text-emerald-600" />
                   Insurance OS
-                </h1>
+                </SheetTitle>
+                <SheetDescription className="sr-only">Insurance workspace navigation</SheetDescription>
               </div>
               <SidebarNav active={active} onSelect={handleSelect} />
             </SheetContent>

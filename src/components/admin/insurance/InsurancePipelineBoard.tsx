@@ -73,6 +73,7 @@ interface Client {
   ncb_percentage: number | null;
   previous_claim: boolean | null;
   lead_source: string | null;
+  lead_status: string | null;
   assigned_executive: string | null;
   priority: string | null;
   pipeline_stage: string | null;
@@ -113,8 +114,9 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
     queryFn: async () => {
       const { data, error } = await supabase
         .from("insurance_clients")
-        .select("id, customer_name, phone, email, city, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_insurer, policy_expiry_date, current_policy_type, ncb_percentage, previous_claim, lead_source, assigned_executive, priority, pipeline_stage, contact_attempts, quote_amount, quote_insurer, lost_reason, follow_up_date, current_premium, notes, created_at")
-        .not("pipeline_stage", "eq", "policy_issued")
+        .select("id, customer_name, phone, email, city, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_insurer, policy_expiry_date, current_policy_type, ncb_percentage, previous_claim, lead_source, lead_status, assigned_executive, priority, pipeline_stage, contact_attempts, quote_amount, quote_insurer, lost_reason, follow_up_date, current_premium, notes, created_at")
+        .not("pipeline_stage", "is", null)
+        .or("pipeline_stage.neq.policy_issued,lead_status.eq.running")
         .order("created_at", { ascending: false })
         .limit(1000);
       if (error) throw error;

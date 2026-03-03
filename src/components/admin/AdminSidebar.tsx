@@ -361,6 +361,24 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
         });
     }
 
+    // Insurance workspace should stay focused: keep only Dashboard + Insurance CRM tools
+    if (activeSlug === "insurance") {
+      items = items
+        .map(item => {
+          if (item.id === "dashboard") return item;
+          if (item.id === "services" && item.children) {
+            const allowedInsuranceChildren = item.children.filter(
+              child => child.id === "services-insurance" || child.id === "services-insurance-import"
+            );
+            return allowedInsuranceChildren.length > 0
+              ? { ...item, children: allowedInsuranceChildren }
+              : null;
+          }
+          return null;
+        })
+        .filter(Boolean) as NavItem[];
+    }
+
     return items
       .map(item => {
         if (!item.children) return item;

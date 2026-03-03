@@ -97,7 +97,7 @@ export function InsuranceCRMDashboard() {
       const { data, error } = await supabase
         .from("insurance_clients")
         .select("id, customer_name, phone, email, vehicle_number, vehicle_make, vehicle_model, advisor_name, lead_status, lead_source")
-        .in("lead_status", ["won", "running"])
+        .eq("lead_status", "won")
         .order("created_at", { ascending: false })
         .limit(1000);
       if (error) throw error;
@@ -129,7 +129,7 @@ export function InsuranceCRMDashboard() {
       if (error) throw error;
     },
     onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({ queryKey: ["ins-dash-clients"] });
+      queryClient.invalidateQueries({ queryKey: ["ins-dash-clients-booked"] });
       toast.success(`Client marked as ${vars.status.toUpperCase()}`);
     },
     onError: () => toast.error("Failed to update status"),
@@ -143,7 +143,7 @@ export function InsuranceCRMDashboard() {
         .eq("id", clientId)
         .then(({ error }) => {
           if (error) { toast.error("Failed to update status"); return; }
-          queryClient.invalidateQueries({ queryKey: ["ins-dash-clients"] });
+          queryClient.invalidateQueries({ queryKey: ["ins-dash-clients-booked"] });
           toast.success("🎉 Client marked as WON! Upload their policy now.");
           setWonClientForUpload(clientId);
           setShowUploadPolicy(true);
@@ -157,37 +157,39 @@ export function InsuranceCRMDashboard() {
   const rows: PolicyRow[] = useMemo(() => {
     if (!clients || !policies) return [];
     const clientMap = new Map(clients.map(c => [c.id, c]));
-    return policies.map(p => {
-      const c = clientMap.get(p.client_id || "");
-      const rawPhone = c?.phone || "";
-      const displayPhone = rawPhone.startsWith("IB_") ? null : rawPhone;
-      const daysUntil = p.expiry_date ? differenceInDays(new Date(p.expiry_date), now) : null;
-      return {
-        id: p.id,
-        client_id: p.client_id || "",
-        policy_number: p.policy_number,
-        customer_name: c?.customer_name || "—",
-        agent_name: c?.advisor_name || "—",
-        insurer: p.insurer,
-        renewal_date: p.expiry_date,
-        start_date: p.start_date,
-        phone: displayPhone,
-        rawPhone: rawPhone,
-        email: c?.email || null,
-        vehicle_number: c?.vehicle_number || null,
-        vehicle_make: c?.vehicle_make || null,
-        vehicle_model: c?.vehicle_model || null,
-        premium: p.premium_amount ? Number(p.premium_amount) : null,
-        status: p.status,
-        policy_type: p.policy_type,
-        plan_name: p.plan_name || null,
-        product_type: c?.vehicle_make ? (c.vehicle_model?.toLowerCase().includes("activa") || c.vehicle_model?.toLowerCase().includes("splendor") || c.vehicle_model?.toLowerCase().includes("passion") || c.vehicle_model?.toLowerCase().includes("meteor") ? "Two Wheeler" : "Car") : null,
-        daysUntilRenewal: daysUntil,
-        lead_status: c?.lead_status || null,
-        lead_source: c?.lead_source || null,
-        created_at: p.created_at || null,
-      };
-    });
+    return policies
+      .filter(p => !!p.client_id && clientMap.has(p.client_id))
+      .map(p => {
+        const c = clientMap.get(p.client_id || "");
+        const rawPhone = c?.phone || "";
+        const displayPhone = rawPhone.startsWith("IB_") ? null : rawPhone;
+        const daysUntil = p.expiry_date ? differenceInDays(new Date(p.expiry_date), now) : null;
+        return {
+          id: p.id,
+          client_id: p.client_id || "",
+          policy_number: p.policy_number,
+          customer_name: c?.customer_name || "—",
+          agent_name: c?.advisor_name || "—",
+          insurer: p.insurer,
+          renewal_date: p.expiry_date,
+          start_date: p.start_date,
+          phone: displayPhone,
+          rawPhone: rawPhone,
+          email: c?.email || null,
+          vehicle_number: c?.vehicle_number || null,
+          vehicle_make: c?.vehicle_make || null,
+          vehicle_model: c?.vehicle_model || null,
+          premium: p.premium_amount ? Number(p.premium_amount) : null,
+          status: p.status,
+          policy_type: p.policy_type,
+          plan_name: p.plan_name || null,
+          product_type: c?.vehicle_make ? (c.vehicle_model?.toLowerCase().includes("activa") || c.vehicle_model?.toLowerCase().includes("splendor") || c.vehicle_model?.toLowerCase().includes("passion") || c.vehicle_model?.toLowerCase().includes("meteor") ? "Two Wheeler" : "Car") : null,
+          daysUntilRenewal: daysUntil,
+          lead_status: c?.lead_status || null,
+          lead_source: c?.lead_source || null,
+          created_at: p.created_at || null,
+        };
+      });
   }, [clients, policies, now]);
 
   // Stats
