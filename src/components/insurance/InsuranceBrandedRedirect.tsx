@@ -25,9 +25,8 @@ export function InsuranceBrandedRedirect({
   const [progress, setProgress] = useState(0);
 
   const doRedirect = useCallback(() => {
-    window.open(redirectUrl, "_blank", "noopener,noreferrer");
-    onClose();
-  }, [redirectUrl, onClose]);
+    window.location.href = redirectUrl;
+  }, [redirectUrl]);
 
   useEffect(() => {
     if (!open) {
