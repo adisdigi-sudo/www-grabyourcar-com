@@ -98,7 +98,12 @@ export function InsuranceManagement() {
   const activeLabel = NAV_GROUPS.flatMap(g => g.items).find(i => i.id === active)?.label || "Pipeline";
 
   const handleSelect = (id: string) => {
-    setActive(id);
+    const aliasMap: Record<string, string> = {
+      "services-insurance-import": "import-export",
+      "services-insurance": "pipeline",
+    };
+    const resolvedId = aliasMap[id] || id;
+    setActive(resolvedId);
     setMobileOpen(false);
   };
 

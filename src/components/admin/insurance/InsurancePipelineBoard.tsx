@@ -117,7 +117,7 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
         .from("insurance_clients")
         .select("id, customer_name, phone, email, city, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_insurer, policy_expiry_date, current_policy_type, ncb_percentage, previous_claim, lead_source, lead_status, assigned_executive, priority, pipeline_stage, contact_attempts, quote_amount, quote_insurer, lost_reason, follow_up_date, current_premium, notes, created_at")
         .not("pipeline_stage", "is", null)
-        .neq("pipeline_stage", "policy_issued")
+        .not("pipeline_stage", "in", '("new_lead","policy_issued")')
         .order("created_at", { ascending: false })
         .limit(1000);
       if (error) throw error;
@@ -302,43 +302,77 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
         metadata: { new_stage: newStage, reason } as any,
       });
 
-      // ── Auto-create policy in Policy Book when Won ──
+      // ── Auto-create/replace policy in Policy Book when Won ──
       if (newStage === "policy_issued") {
         try {
-          const { data: client } = await supabase
+          const { data: client, error: clientError } = await supabase
             .from("insurance_clients")
             .select("*")
             .eq("id", clientId)
             .single();
 
-          if (client) {
-            // If same vehicle_number exists, mark old active policies as "renewed"
-            if (client.vehicle_number) {
-              // Find all clients with same vehicle number
-              const { data: sameVehicleClients } = await supabase
-                .from("insurance_clients")
-                .select("id")
-                .eq("vehicle_number", client.vehicle_number);
+          if (clientError) throw clientError;
+          if (!client) throw new Error("Client not found for policy issuance");
 
-              if (sameVehicleClients && sameVehicleClients.length > 0) {
-                const clientIds = sameVehicleClients.map(c => c.id);
-                await supabase
-                  .from("insurance_policies")
-                  .update({ status: "renewed", renewal_status: "renewed" })
-                  .in("client_id", clientIds)
-                  .eq("status", "active");
-              }
+          // If same vehicle_number exists, mark old active policies as "renewed"
+          if (client.vehicle_number) {
+            const normalizedVehicle = client.vehicle_number.trim().toUpperCase();
+            const { data: sameVehicleClients, error: vehicleClientErr } = await supabase
+              .from("insurance_clients")
+              .select("id, vehicle_number")
+              .not("vehicle_number", "is", null);
+
+            if (vehicleClientErr) throw vehicleClientErr;
+
+            const sameClientIds = (sameVehicleClients || [])
+              .filter(c => (c.vehicle_number || "").trim().toUpperCase() === normalizedVehicle)
+              .map(c => c.id);
+
+            if (sameClientIds.length > 0) {
+              const { error: renewErr } = await supabase
+                .from("insurance_policies")
+                .update({ status: "renewed", renewal_status: "renewed" })
+                .in("client_id", sameClientIds)
+                .eq("status", "active");
+              if (renewErr) throw renewErr;
             }
+          }
 
-            // Calculate dates
-            const today = new Date();
-            const startDate = client.policy_start_date || today.toISOString().split("T")[0];
-            const expiryDate = client.policy_expiry_date || new Date(today.getFullYear() + 1, today.getMonth(), today.getDate()).toISOString().split("T")[0];
+          // Calculate dates
+          const today = new Date();
+          const startDate = client.policy_start_date || today.toISOString().split("T")[0];
+          const expiryDate = client.policy_expiry_date || new Date(today.getFullYear() + 1, today.getMonth(), today.getDate()).toISOString().split("T")[0];
 
-            // Create new policy
-            await supabase.from("insurance_policies").insert({
+          // Avoid duplicate active policy record for same client + policy number + start date
+          if (client.current_policy_number) {
+            const { data: dup } = await supabase
+              .from("insurance_policies")
+              .select("id")
+              .eq("client_id", clientId)
+              .eq("policy_number", client.current_policy_number)
+              .eq("start_date", startDate)
+              .eq("status", "active")
+              .maybeSingle();
+
+            if (!dup) {
+              const { error: createErr } = await supabase.from("insurance_policies").insert({
+                client_id: clientId,
+                policy_number: client.current_policy_number,
+                policy_type: client.current_policy_type || "comprehensive",
+                insurer: client.current_insurer || client.quote_insurer || "Unknown",
+                premium_amount: client.quote_amount || client.current_premium || null,
+                start_date: startDate,
+                expiry_date: expiryDate,
+                status: "active",
+                is_renewal: false,
+                issued_date: today.toISOString().split("T")[0],
+              });
+              if (createErr) throw createErr;
+            }
+          } else {
+            const { error: createErr } = await supabase.from("insurance_policies").insert({
               client_id: clientId,
-              policy_number: client.current_policy_number || null,
+              policy_number: null,
               policy_type: client.current_policy_type || "comprehensive",
               insurer: client.current_insurer || client.quote_insurer || "Unknown",
               premium_amount: client.quote_amount || client.current_premium || null,
@@ -348,24 +382,26 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
               is_renewal: false,
               issued_date: today.toISOString().split("T")[0],
             });
-
-            // Also mark client as active (won)
-            await supabase.from("insurance_clients").update({
-              is_active: true,
-              lead_status: "won",
-            }).eq("id", clientId);
-
-            // Log policy creation
-            await supabase.from("insurance_activity_log").insert({
-              client_id: clientId,
-              activity_type: "policy_created",
-              title: "📋 Policy Auto-Created in Policy Book",
-              description: `Policy for ${client.vehicle_number || client.vehicle_model || "vehicle"} created. Start: ${startDate}, Expiry: ${expiryDate}`,
-              metadata: { start_date: startDate, expiry_date: expiryDate, insurer: client.current_insurer || client.quote_insurer } as any,
-            });
+            if (createErr) throw createErr;
           }
+
+          const { error: markClientErr } = await supabase.from("insurance_clients").update({
+            is_active: true,
+            lead_status: "won",
+          }).eq("id", clientId);
+          if (markClientErr) throw markClientErr;
+
+          const { error: logErr } = await supabase.from("insurance_activity_log").insert({
+            client_id: clientId,
+            activity_type: "policy_created",
+            title: "📋 Policy Auto-Created in Policy Book",
+            description: `Policy for ${client.vehicle_number || client.vehicle_model || "vehicle"} created. Start: ${startDate}, Expiry: ${expiryDate}`,
+            metadata: { start_date: startDate, expiry_date: expiryDate, insurer: client.current_insurer || client.quote_insurer } as any,
+          });
+          if (logErr) throw logErr;
         } catch (e) {
           console.error("Auto-policy creation failed:", e);
+          throw e;
         }
       }
     },
@@ -394,6 +430,10 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
       } else {
         setSelectedStage(vars.newStage);
       }
+    },
+    onError: (error: any) => {
+      console.error("Stage update failed:", error);
+      toast.error(error?.message || "Failed to update stage / create policy");
     },
   });
 
