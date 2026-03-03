@@ -25,8 +25,13 @@ export function InsuranceBrandedRedirect({
   const [progress, setProgress] = useState(0);
 
   const doRedirect = useCallback(() => {
-    window.location.href = redirectUrl;
-  }, [redirectUrl]);
+    // Copy vehicle number to clipboard so user can paste on partner page
+    if (planName) {
+      navigator.clipboard.writeText(planName).catch(() => {});
+    }
+    window.open(redirectUrl, "_blank", "noopener,noreferrer");
+    onClose();
+  }, [redirectUrl, onClose, planName]);
 
   useEffect(() => {
     if (!open) {
@@ -90,6 +95,11 @@ export function InsuranceBrandedRedirect({
               You're being securely redirected via{" "}
               <span className="font-bold text-primary">GrabYourCar</span> to
               complete your purchase.
+              {planName && (
+                <span className="block mt-2 text-xs text-foreground/70">
+                  📋 Your vehicle number <strong className="text-primary">{planName}</strong> has been copied — just paste it on the next page.
+                </span>
+              )}
             </p>
           </div>
 
