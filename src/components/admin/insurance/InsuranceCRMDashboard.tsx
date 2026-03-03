@@ -58,6 +58,7 @@ type PolicyRow = {
   lead_status: string | null;
   lead_source: string | null;
   created_at: string | null;
+  policy_document_url: string | null;
 };
 
 const LEAD_STATUS_OPTIONS = [
@@ -114,7 +115,7 @@ export function InsuranceCRMDashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("insurance_policies")
-        .select("id, client_id, policy_number, insurer, premium_amount, expiry_date, status, start_date, policy_type, plan_name, created_at")
+        .select("id, client_id, policy_number, insurer, premium_amount, expiry_date, status, start_date, policy_type, plan_name, created_at, policy_document_url")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -192,6 +193,7 @@ export function InsuranceCRMDashboard() {
           lead_status: c?.lead_status || null,
           lead_source: c?.lead_source || null,
           created_at: p.created_at || null,
+          policy_document_url: (p as any).policy_document_url || null,
         };
       });
   }, [clients, policies, now]);
@@ -874,9 +876,19 @@ export function InsuranceCRMDashboard() {
                               variant="ghost"
                               size="sm"
                               className="h-7 gap-1.5 text-[10px] text-primary hover:text-primary hover:bg-primary/5 px-2"
-                              onClick={() => setShowUploadPolicy(true)}
+                              onClick={() => {
+                                if (r.policy_document_url) {
+                                  window.open(r.policy_document_url, "_blank");
+                                } else {
+                                  setShowUploadPolicy(true);
+                                }
+                              }}
                             >
-                              <Upload className="h-3 w-3" /> Upload Docs
+                              {r.policy_document_url ? (
+                                <><Eye className="h-3 w-3" /> View Doc</>
+                              ) : (
+                                <><Upload className="h-3 w-3" /> Upload Doc</>
+                              )}
                             </Button>
                             {r.phone && (
                               <DropdownMenu>
