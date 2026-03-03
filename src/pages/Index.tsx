@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { GlobalSEO } from "@/components/seo/GlobalSEO";
 import { Header } from "@/components/Header";
 import { PromoBanner } from "@/components/PromoBanner";
@@ -12,8 +12,8 @@ import { TrustBadges } from "@/components/TrustBadges";
 import { Footer } from "@/components/Footer";
 import { FloatingCTA } from "@/components/FloatingCTA";
 import { CustomerStories } from "@/components/CustomerStories";
-import { DealerLocatorWidget } from "@/components/DealerLocatorWidget";
-import { CrossSellWidget } from "@/components/CrossSellWidget";
+const DealerLocatorWidget = lazy(() => import("@/components/DealerLocatorWidget").then((m) => ({ default: m.DealerLocatorWidget })));
+const CrossSellWidget = lazy(() => import("@/components/CrossSellWidget").then((m) => ({ default: m.CrossSellWidget })));
 import { HomepageSEOContent } from "@/components/HomepageSEOContent";
 import { EntryLeadCaptureModal } from "@/components/EntryLeadCaptureModal";
 import { ExitIntentPopup } from "@/components/ExitIntentPopup";
@@ -80,11 +80,15 @@ const Index = () => {
 
         {/* Cross-Sell Services */}
         <div className="container mx-auto px-4">
-          <CrossSellWidget context="home" title="Complete Your Car Buying Journey" maxItems={4} />
+          <Suspense fallback={<div className="h-16" />}>
+            <CrossSellWidget context="home" title="Complete Your Car Buying Journey" maxItems={4} />
+          </Suspense>
         </div>
         
         {/* Nearby Dealer Locator */}
-        <DealerLocatorWidget />
+        <Suspense fallback={<div className="h-16" />}>
+          <DealerLocatorWidget />
+        </Suspense>
          
         {/* EMI Calculator */}
         <EMICalculator onGetQuote={handleGetLoanQuote} />
