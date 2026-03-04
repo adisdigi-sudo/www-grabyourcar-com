@@ -1,17 +1,17 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { MessageSquare, Send, RotateCcw, CheckCircle2, Copy, Image, Zap } from "lucide-react";
+import { MessageSquare, Send, RotateCcw, CheckCircle2, Copy, Upload, X, FileVideo, ImageIcon, FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const SAMPLE_TEMPLATES = [
   {
     name: "🎨 Holi Greeting",
-    message: `🎨 *Wishing you a Colorful & Joyful Holi!* 🎉\n\nMay your journeys be filled with vibrant colors & happy memories.\n\n*Happy Holi from Team GrabYourCar!* 🚗✨\n\n👉 https://grabyourcar.lovable.app/holi`,
+    message: `🎨 *Wishing you a Colorful & Joyful Holi!* 🎉\n\nMay your journeys be filled with vibrant colors & happy memories.\n\n*Happy Holi from Team GrabYourCar!* 🚗✨`,
   },
   {
     name: "🚗 New Car Offer",
@@ -35,42 +35,108 @@ const parseNumbers = (raw: string): string[] => {
     .map((n) => (n.length === 10 ? `91${n}` : n));
 };
 
+const getFileIcon = (type: string) => {
+  if (type.startsWith("video/")) return FileVideo;
+  if (type.startsWith("image/")) return ImageIcon;
+  return FileText;
+};
+
+const formatSize = (bytes: number) => {
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
 export const HoliBulkShare = () => {
   const [numbersRaw, setNumbersRaw] = useState("");
   const [message, setMessage] = useState(SAMPLE_TEMPLATES[0].message);
-  const [imageUrl, setImageUrl] = useState("");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [started, setStarted] = useState(false);
-  const [autoMode, setAutoMode] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [mediaUrl, setMediaUrl] = useState<string | null>(null);
+  const [mediaName, setMediaName] = useState("");
+  const [mediaType, setMediaType] = useState("");
+  const [mediaSize, setMediaSize] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const numbers = useMemo(() => parseNumbers(numbersRaw), [numbersRaw]);
   const progress = numbers.length > 0 ? Math.round((currentIndex / numbers.length) * 100) : 0;
   const isDone = started && currentIndex >= numbers.length;
 
-  const buildUrl = (phone: string) => {
-    const fullMsg = imageUrl
-      ? `${message}\n\n📷 ${imageUrl}`
-      : message;
-    return `https://wa.me/${phone}?text=${encodeURIComponent(fullMsg)}`;
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate size (50MB max)
+    if (file.size > 52428800) {
+      toast.error("File too large. Max 50MB allowed.");
+      return;
+    }
+
+    // Validate type
+    const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif", "video/mp4", "video/quicktime", "video/webm", "application/pdf"];
+    if (!allowed.includes(file.type)) {
+      toast.error("Unsupported file type. Use JPG, PNG, GIF, MP4, WebM, or PDF.");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "bin";
+      const fileName = `broadcast_${Date.now()}.${ext}`;
+
+      const { error } = await supabase.storage
+        .from("broadcast-media")
+        .upload(fileName, file, { cacheControl: "3600", upsert: true });
+
+      if (error) throw error;
+
+      const { data: urlData } = supabase.storage
+        .from("broadcast-media")
+        .getPublicUrl(fileName);
+
+      setMediaUrl(urlData.publicUrl);
+      setMediaName(file.name);
+      setMediaType(file.type);
+      setMediaSize(file.size);
+      toast.success("Media uploaded!");
+    } catch (err: any) {
+      toast.error("Upload failed: " + (err.message || "Unknown error"));
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const removeMedia = () => {
+    setMediaUrl(null);
+    setMediaName("");
+    setMediaType("");
+    setMediaSize(0);
+  };
+
+  const buildFullMessage = () => {
+    if (mediaUrl) {
+      return `${message}\n\n👉 ${mediaUrl}`;
+    }
+    return message;
   };
 
   const sendNext = () => {
     if (currentIndex >= numbers.length) return;
     if (!started) setStarted(true);
     const phone = numbers[currentIndex];
-    window.open(buildUrl(phone), "_blank");
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(buildFullMessage())}`;
+    window.open(url, "_blank");
     setCurrentIndex((i) => i + 1);
   };
 
   const reset = () => {
     setCurrentIndex(0);
     setStarted(false);
-    setAutoMode(false);
   };
 
   const copyMessage = () => {
-    const fullMsg = imageUrl ? `${message}\n\n📷 ${imageUrl}` : message;
-    navigator.clipboard.writeText(fullMsg);
+    navigator.clipboard.writeText(buildFullMessage());
     toast.success("Message copied!");
   };
 
@@ -79,6 +145,8 @@ export const HoliBulkShare = () => {
     reset();
     toast.success(`"${tpl.name}" template loaded`);
   };
+
+  const FileIcon = mediaType ? getFileIcon(mediaType) : ImageIcon;
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
@@ -89,9 +157,9 @@ export const HoliBulkShare = () => {
         </div>
         <div>
           <h2 className="text-xl font-bold">WhatsApp Bulk Broadcaster</h2>
-          <p className="text-sm text-muted-foreground">Send offers, posts & messages from your personal WhatsApp — no API needed</p>
+          <p className="text-sm text-muted-foreground">Send offers, posts & media from your personal WhatsApp — no API needed</p>
         </div>
-        <Badge variant="secondary" className="ml-auto">Personal Number</Badge>
+        <Badge variant="secondary" className="ml-auto hidden sm:block">Personal Number</Badge>
       </div>
 
       {/* Templates */}
@@ -102,13 +170,7 @@ export const HoliBulkShare = () => {
         <CardContent>
           <div className="flex flex-wrap gap-2">
             {SAMPLE_TEMPLATES.map((tpl) => (
-              <Button
-                key={tpl.name}
-                variant="outline"
-                size="sm"
-                className="text-xs"
-                onClick={() => applyTemplate(tpl)}
-              >
+              <Button key={tpl.name} variant="outline" size="sm" className="text-xs" onClick={() => applyTemplate(tpl)}>
                 {tpl.name}
               </Button>
             ))}
@@ -117,11 +179,11 @@ export const HoliBulkShare = () => {
       </Card>
 
       <div className="grid md:grid-cols-2 gap-4">
-        {/* Message Composer */}
+        {/* Message + Media */}
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium">Message</CardTitle>
+              <CardTitle className="text-sm font-medium">Message & Media</CardTitle>
               <Button variant="ghost" size="sm" onClick={copyMessage} className="h-7 text-xs gap-1">
                 <Copy className="h-3 w-3" /> Copy
               </Button>
@@ -131,19 +193,59 @@ export const HoliBulkShare = () => {
             <Textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              rows={8}
+              rows={6}
               placeholder="Type your broadcast message here..."
               className="text-sm"
             />
-            <div>
-              <label className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-1">
-                <Image className="h-3 w-3" /> Image/Link URL (optional)
-              </label>
-              <Input
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-                placeholder="https://grabyourcar.lovable.app/images/offer.png"
-                className="text-sm"
+
+            {/* Media Upload */}
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground">Attach Media (Image / Video / PDF)</label>
+
+              {mediaUrl ? (
+                <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
+                  {mediaType.startsWith("image/") ? (
+                    <img src={mediaUrl} alt="Preview" className="h-16 w-16 rounded-lg object-cover border" />
+                  ) : (
+                    <div className="h-16 w-16 rounded-lg bg-muted flex items-center justify-center border">
+                      <FileIcon className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{mediaName}</p>
+                    <p className="text-xs text-muted-foreground">{formatSize(mediaSize)}</p>
+                    <p className="text-[10px] text-primary truncate mt-0.5">{mediaUrl}</p>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={removeMedia}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div
+                  className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-colors"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {uploading ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                      <p className="text-sm text-muted-foreground">Uploading...</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2">
+                      <Upload className="h-8 w-8 text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">Click to upload</p>
+                      <p className="text-[10px] text-muted-foreground">JPG, PNG, GIF, MP4, WebM, PDF — Max 50MB</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/webm,application/pdf"
+                className="hidden"
+                onChange={handleFileUpload}
               />
             </div>
           </CardContent>
@@ -177,7 +279,6 @@ export const HoliBulkShare = () => {
       {/* Send Controls */}
       <Card>
         <CardContent className="py-4 space-y-3">
-          {/* Progress */}
           {started && (
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
@@ -212,10 +313,10 @@ export const HoliBulkShare = () => {
             )}
           </div>
 
-          <div className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-3">
-            <strong>How it works:</strong> Each click opens WhatsApp Web/App with the message pre-filled for one contact.
-            Hit send in WhatsApp → come back here → click "Send Next" for the next contact.
-            Your message is sent from your number <strong>9855924442</strong>.
+          <div className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-3 space-y-1">
+            <p><strong>How it works:</strong> Each click opens WhatsApp with your message + media link pre-filled for one contact.</p>
+            <p>Hit send in WhatsApp → come back → click "Send Next" for the next contact.</p>
+            {mediaUrl && <p className="text-primary">📎 Your uploaded media link will be included in every message.</p>}
           </div>
         </CardContent>
       </Card>
