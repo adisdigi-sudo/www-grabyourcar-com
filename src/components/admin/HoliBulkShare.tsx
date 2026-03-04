@@ -161,7 +161,6 @@ export const HoliBulkShare = () => {
   const [csvImported, setCsvImported] = useState(false);
 
   // Bulk wa.me state
-  const [sending, setSending] = useState(false);
   const [sentCount, setSentCount] = useState(0);
   const [currentBatch, setCurrentBatch] = useState(0);
   const [done, setDone] = useState(false);
@@ -197,7 +196,6 @@ export const HoliBulkShare = () => {
     setSentCount(0);
     setCurrentBatch(0);
     setDone(false);
-    setSending(false);
   };
 
   const handleCsvImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -281,12 +279,9 @@ export const HoliBulkShare = () => {
 
     if (batch.length === 0) {
       setDone(true);
-      setSending(false);
       toast.success(`🎉 All ${allContacts.length} messages opened!`);
       return;
     }
-
-    setSending(true);
 
     for (const contact of batch) {
       const personalizedMsg = buildMessageForContact(contact);
@@ -301,7 +296,6 @@ export const HoliBulkShare = () => {
 
     if (newSent >= allContacts.length) {
       setDone(true);
-      setSending(false);
       toast.success(`🎉 All ${allContacts.length} WhatsApp tabs opened!`);
     } else {
       toast.success(`✅ Opened ${batch.length} tabs (${newSent}/${allContacts.length}). Click "Send Next Batch" to continue.`);
@@ -381,13 +375,13 @@ export const HoliBulkShare = () => {
 
               {/* Live Preview (WhatsApp-style bubble) */}
               <div className="rounded-lg border overflow-hidden flex flex-col">
-                <div className="bg-[#075e54] text-white px-3 py-2 text-xs font-medium flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-[10px]">
+                <div className="bg-primary text-primary-foreground px-3 py-2 text-xs font-medium flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-primary-foreground/20 flex items-center justify-center text-[10px]">
                     {previewContact.name.charAt(0)}
                   </div>
                   <span className="truncate">{previewContact.name}</span>
                 </div>
-                <div className="flex-1 bg-[#ece5dd] p-3 overflow-y-auto min-h-[200px] max-h-[300px]">
+                <div className="flex-1 bg-muted/40 p-3 overflow-y-auto min-h-[200px] max-h-[300px]">
                   {/* Media preview in bubble */}
                   {mediaUrl && mediaType.startsWith("image/") && (
                     <div className="mb-1">
@@ -395,15 +389,15 @@ export const HoliBulkShare = () => {
                     </div>
                   )}
                   {mediaUrl && !mediaType.startsWith("image/") && (
-                    <div className="mb-1 p-2 bg-white/80 rounded-lg flex items-center gap-2 text-xs">
+                    <div className="mb-1 p-2 bg-card/90 rounded-lg flex items-center gap-2 text-xs">
                       <FileIcon className="h-4 w-4 text-muted-foreground" />
                       <span className="truncate">{mediaName}</span>
                     </div>
                   )}
-                  <div className="bg-[#dcf8c6] rounded-lg rounded-tr-none p-2.5 text-sm leading-relaxed whitespace-pre-wrap shadow-sm max-w-[95%] ml-auto">
+                  <div className="bg-accent rounded-lg rounded-tr-none p-2.5 text-sm leading-relaxed whitespace-pre-wrap shadow-sm max-w-[95%] ml-auto">
                     {livePreviewText || "Your message preview..."}
                     <div className="text-right mt-1">
-                      <span className="text-[10px] text-gray-500">
+                      <span className="text-[10px] text-muted-foreground">
                         {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} ✓✓
                       </span>
                     </div>
