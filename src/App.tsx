@@ -46,6 +46,7 @@ const DealerLocator = lazy(() => import("./pages/DealerLocator"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const About = lazy(() => import("./pages/About"));
 const AutoIntelligence = lazy(() => import("./pages/AutoIntelligence"));
+const HoliGreeting = lazy(() => import("./pages/HoliGreeting"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -119,6 +120,7 @@ const App = () => (
                     <Route path="/dealers" element={<DealerLocator />} />
                     <Route path="/about" element={<About />} />
                     <Route path="/auto-intelligence" element={<AutoIntelligence />} />
+                    <Route path="/holi" element={<HoliGreeting />} />
                     {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                     <Route path="*" element={<NotFound />} />
                   </Routes>
