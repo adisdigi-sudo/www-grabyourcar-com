@@ -1,31 +1,43 @@
 
 
-## Plan: Connect GrabYourCar Form to PB Partners Quote Journey
+## Plan: Holi WhatsApp Share Tool (No API Needed)
 
-### What the user wants
-- User enters car number and mobile number on the GrabYourCar website
-- Lead is saved to the backend for team follow-up
-- After submission, user is redirected (via the branded redirect screen) to the PB Partners quote page where they continue their journey
-- The sample quotes step is removed -- the real quotes come from the PB Partners page
+### Approach
+Since no WhatsApp API is involved, we'll build a **personal share tool** that works directly from your phone's WhatsApp app using deep links.
 
-### Changes
+**How it works:**
+1. Upload your Holi image to the project and host it on a **public shareable page** (e.g., `/holi`)
+2. Create an **admin share tool** where you paste/enter contact numbers and tap "Send" — each tap opens WhatsApp with a pre-filled greeting message + link to the hosted image page
+3. The message will include a link to `grabyourcar.lovable.app/holi` where the recipient sees the full branded Holi poster
 
-**1. Update `PARTNER_URL` in `InsuranceHeroForm.tsx`**
-- Replace the old generic URL with the actual PB Partners tokenized URL the user provided
-- Remove the fake `sampleQuotes` array and the entire "quotes" step since real quotes will be shown on the PB Partners page
+### What gets built
 
-**2. Simplify the flow to: Vehicle → Phone → Branded Redirect**
-- After phone submission and lead capture, go directly to the branded redirect overlay (skip the "quotes" step entirely)
-- The branded redirect shows the GrabYourCar security screen for 5 seconds, then opens the PB Partners URL
-- Remove `FlowStep` values `"quotes"` and `"finalize"` since they're no longer needed
-- Remove `selectedQuote`, `sampleQuotes`, and all quote-related UI
+**1. Public Holi Greeting Page (`/pages/HoliGreeting.tsx`)**
+- Displays the uploaded Holi image full-screen with GrabYourCar branding
+- Mobile-optimized, shareable URL: `grabyourcar.lovable.app/holi`
 
-**3. Flow summary**
+**2. Admin Bulk Share Tool (`/components/admin/HoliBulkShare.tsx`)**
+- Textarea to paste phone numbers (one per line or comma-separated)
+- Pre-written Holi message with the image page link
+- "Send Next" button that opens `wa.me/{number}?text=...` one at a time
+- Progress tracker showing how many sent
+
+**3. Files to create/edit**
+- Copy uploaded image to `public/images/holi-2026.png`
+- Create `src/pages/HoliGreeting.tsx` — public greeting page
+- Create `src/components/admin/HoliBulkShare.tsx` — bulk share tool
+- Edit `src/App.tsx` — add `/holi` route
+- Edit `src/pages/AdminLayout.tsx` — add access to the share tool
+
+### Flow
 ```text
-User enters car number → enters phone → lead saved to DB → 
-branded GrabYourCar redirect screen (5s) → opens PB Partners quote page
+Admin pastes numbers → clicks "Send Next" → WhatsApp opens with message →
+admin hits send in WhatsApp → comes back → clicks "Send Next" for next number
 ```
 
-### Files to edit
-- `src/components/insurance/InsuranceHeroForm.tsx` -- update URL, remove quotes step, redirect after phone submit
+**Message template:**
+> 🎨 Wishing you a Colorful & Joyful Holi! 🎉
+> May your journeys be filled with vibrant colors & happy memories.
+> Happy Holi from Team GrabYourCar! 🚗
+> 👉 grabyourcar.lovable.app/holi
 
