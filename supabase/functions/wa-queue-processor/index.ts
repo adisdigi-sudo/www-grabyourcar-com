@@ -14,6 +14,7 @@ const corsHeaders = {
 
 const FINBITE_V2_URL = "https://app.finbite.in/api/v2/whatsapp-business/messages";
 const FINBITE_V1_URL = "https://wbiztool.com/api/v1/send_msg/";
+const META_GRAPH_BASE = "https://graph.facebook.com/v21.0";
 
 function normalizePhone(phone: string): { full: string; short: string; valid: boolean } {
   const clean = phone.replace(/\D/g, "").replace(/^0+/, "");
@@ -22,16 +23,51 @@ function normalizePhone(phone: string): { full: string; short: string; valid: bo
   return { full: `91${short}`, short, valid: /^[6-9]\d{9}$/.test(short) };
 }
 
+async function sendViaMeta(
+  token: string,
+  phoneNumberId: string,
+  to: string,
+  payload: Record<string, unknown>
+): Promise<{ success: boolean; provider_message_id?: string; error?: string }> {
+  const url = `${META_GRAPH_BASE}/${phoneNumberId}/messages`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to,
+      ...payload,
+    }),
+  });
+
+  const result = await response.json().catch(() => ({}));
+  if (response.ok && result?.messages?.[0]?.id) {
+    return { success: true, provider_message_id: result.messages[0].id };
+  }
+
+  return {
+    success: false,
+    error: result?.error?.message || JSON.stringify(result),
+  };
+}
+
 async function sendMessage(
   apiKey: string,
   phoneId: string,
   clientId: string | undefined,
+  v1ApiKey: string | undefined,
   phone: { full: string; short: string },
   content: string,
   templateName?: string,
   variables?: Record<string, string>,
   mediaUrl?: string,
-  mediaType?: string
+  mediaType?: string,
+  whatsappToken?: string,
+  whatsappPhoneNumberId?: string
 ): Promise<{ success: boolean; provider_message_id?: string; error?: string }> {
   // Try v2 first
   let body: Record<string, unknown>;
@@ -66,6 +102,48 @@ async function sendMessage(
     };
   }
 
+  // Prefer direct Meta API when configured (ensures media appears as true attachment, not clickable link text)
+  if (whatsappToken && whatsappPhoneNumberId) {
+    if (templateName) {
+      const components: Array<Record<string, unknown>> = [];
+      if (variables && Object.keys(variables).length > 0) {
+        components.push({
+          type: "body",
+          parameters: Object.values(variables).map((v) => ({ type: "text", text: v })),
+        });
+      }
+
+      const metaTemplate = await sendViaMeta(whatsappToken, whatsappPhoneNumberId, phone.full, {
+        type: "template",
+        template: {
+          name: templateName,
+          language: { code: "en_US" },
+          ...(components.length > 0 ? { components } : {}),
+        },
+      });
+      if (metaTemplate.success) return metaTemplate;
+    } else if (mediaUrl && mediaType) {
+      const normalizedMediaType = ["image", "video", "audio", "document"].includes(mediaType)
+        ? mediaType
+        : "document";
+
+      const metaMedia = await sendViaMeta(whatsappToken, whatsappPhoneNumberId, phone.full, {
+        type: normalizedMediaType,
+        [normalizedMediaType]: {
+          link: mediaUrl,
+          ...(normalizedMediaType === "image" || normalizedMediaType === "document" ? { caption: content || "" } : {}),
+        },
+      });
+      if (metaMedia.success) return metaMedia;
+    } else {
+      const metaText = await sendViaMeta(whatsappToken, whatsappPhoneNumberId, phone.full, {
+        type: "text",
+        text: { preview_url: false, body: content },
+      });
+      if (metaText.success) return metaText;
+    }
+  }
+
   const v2Resp = await fetch(FINBITE_V2_URL, {
     method: "POST",
     headers: {
@@ -90,10 +168,10 @@ async function sendMessage(
   }
 
   // Fallback to v1 for text messages
-  if (!templateName && clientId) {
+  if (!templateName && clientId && v1ApiKey) {
     const formData = new URLSearchParams();
     formData.append("client_id", clientId);
-    formData.append("api_key", apiKey);
+    formData.append("api_key", v1ApiKey);
     formData.append("whatsapp_client", phoneId);
     formData.append("phone", phone.short);
     formData.append("country_code", "91");
@@ -126,13 +204,19 @@ serve(async (req) => {
   }
 
   const FINBITE_API_KEY = Deno.env.get("FINBITE_API_KEY");
+  const FINBITE_BEARER_TOKEN = Deno.env.get("FINBITE_BEARER_TOKEN");
   const FINBITE_WHATSAPP_CLIENT = Deno.env.get("FINBITE_WHATSAPP_CLIENT");
   const FINBITE_CLIENT_ID = Deno.env.get("FINBITE_CLIENT_ID");
+  const WHATSAPP_ACCESS_TOKEN = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
+  const WHATSAPP_PHONE_NUMBER_ID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-  if (!FINBITE_API_KEY || !FINBITE_WHATSAPP_CLIENT || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    return new Response(JSON.stringify({ error: "Missing configuration" }), {
+  const hasFinbite = Boolean((FINBITE_BEARER_TOKEN || FINBITE_API_KEY) && FINBITE_WHATSAPP_CLIENT);
+  const hasMeta = Boolean(WHATSAPP_ACCESS_TOKEN && WHATSAPP_PHONE_NUMBER_ID);
+
+  if ((!hasFinbite && !hasMeta) || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    return new Response(JSON.stringify({ error: "Missing configuration (need WhatsApp provider + database credentials)" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
@@ -194,10 +278,16 @@ serve(async (req) => {
       }
 
       const result = await sendMessage(
-        FINBITE_API_KEY, FINBITE_WHATSAPP_CLIENT, FINBITE_CLIENT_ID,
-        phone, msg.message_content,
+        FINBITE_BEARER_TOKEN || FINBITE_API_KEY || "",
+        FINBITE_WHATSAPP_CLIENT || "",
+        FINBITE_CLIENT_ID,
+        FINBITE_API_KEY || undefined,
+        phone,
+        msg.message_content,
         msg.template_name, msg.variables_data,
-        msg.media_url, msg.media_type
+        msg.media_url, msg.media_type,
+        WHATSAPP_ACCESS_TOKEN || undefined,
+        WHATSAPP_PHONE_NUMBER_ID || undefined
       );
 
       if (result.success) {
