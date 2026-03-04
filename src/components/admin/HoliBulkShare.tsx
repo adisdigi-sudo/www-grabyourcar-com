@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { MessageSquare, Send, RotateCcw, CheckCircle2, Copy, Upload, X, FileVideo, ImageIcon, FileText, Loader2, Users, Trash2 } from "lucide-react";
+import { MessageSquare, Send, RotateCcw, CheckCircle2, Copy, Upload, X, FileVideo, ImageIcon, FileText, Loader2, Users, Trash2, Zap, MousePointer } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -37,17 +37,13 @@ const ALLOWED_TYPES = [
 
 interface Contact {
   name: string;
-  phone: string; // normalized with country code
+  phone: string;
 }
 
-/** Parse CSV text into contacts with name & phone */
 const parseContactsCsv = (csvText: string): Contact[] => {
   const lines = csvText.split("\n");
   if (lines.length < 2) return [];
-
-  // Parse header
   const header = lines[0].split(",").map((h) => h.trim().toLowerCase());
-
   const firstNameIdx = header.indexOf("first name");
   const middleNameIdx = header.indexOf("middle name");
   const lastNameIdx = header.indexOf("last name");
@@ -63,10 +59,7 @@ const parseContactsCsv = (csvText: string): Contact[] => {
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
-
-    // Simple CSV split (handles most cases)
     const cols = line.split(",");
-
     const getName = () => {
       const parts = [
         firstNameIdx >= 0 ? cols[firstNameIdx]?.trim() : "",
@@ -75,43 +68,35 @@ const parseContactsCsv = (csvText: string): Contact[] => {
       ].filter(Boolean);
       return parts.join(" ") || "Friend";
     };
-
-    // Try each phone column in priority order
     const rawPhones = [mobileIdx, primaryIdx, homeIdx, businessIdx, otherIdx]
       .filter((idx) => idx >= 0)
       .map((idx) => (cols[idx] || "").trim())
       .filter(Boolean);
-
     for (const raw of rawPhones) {
       const digits = raw.replace(/[^0-9]/g, "");
       let phone = "";
       if (digits.length === 12 && digits.startsWith("91")) phone = digits;
       else if (digits.length === 10) phone = `91${digits}`;
       else if (digits.length > 10) phone = digits.slice(-10).length === 10 ? `91${digits.slice(-10)}` : "";
-
       if (phone && phone.length === 12 && !seen.has(phone)) {
         seen.add(phone);
         contacts.push({ name: getName(), phone });
-        break; // one phone per contact
+        break;
       }
     }
   }
-
   return contacts;
 };
 
-/** Parse raw text (manual paste) into contacts */
 const parseManualNumbers = (raw: string): Contact[] => {
   const lines = raw.split(/[\n,;]+/).map((n) => n.trim()).filter(Boolean);
   const contacts: Contact[] = [];
   const seen = new Set<string>();
-
   for (const line of lines) {
     const digits = line.replace(/[^0-9]/g, "");
     let phone = "";
     if (digits.length === 10) phone = `91${digits}`;
     else if (digits.length === 12 && digits.startsWith("91")) phone = digits;
-
     if (phone && !seen.has(phone)) {
       seen.add(phone);
       contacts.push({ name: "Friend", phone });
@@ -141,6 +126,13 @@ const getVideoDuration = (file: File): Promise<number> =>
     video.src = url;
   });
 
+const getMediaTypeForApi = (mimeType: string): string => {
+  if (mimeType.startsWith("image/")) return "image";
+  if (mimeType.startsWith("video/")) return "video";
+  if (mimeType === "application/pdf") return "document";
+  return "document";
+};
+
 export const HoliBulkShare = () => {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [numbersRaw, setNumbersRaw] = useState("");
@@ -154,19 +146,18 @@ export const HoliBulkShare = () => {
   const [mediaSize, setMediaSize] = useState(0);
   const [mediaDuration, setMediaDuration] = useState<number | null>(null);
   const [csvImported, setCsvImported] = useState(false);
+  const [sendMode, setSendMode] = useState<"manual" | "api">("api");
+  const [apiSending, setApiSending] = useState(false);
+  const [apiResult, setApiResult] = useState<{ queued: number; failed: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
 
-  // Merge CSV contacts + manually typed numbers
   const allContacts = useMemo(() => {
     const manual = parseManualNumbers(numbersRaw);
     const seen = new Set(contacts.map((c) => c.phone));
     const merged = [...contacts];
     for (const m of manual) {
-      if (!seen.has(m.phone)) {
-        merged.push(m);
-        seen.add(m.phone);
-      }
+      if (!seen.has(m.phone)) { merged.push(m); seen.add(m.phone); }
     }
     return merged;
   }, [contacts, numbersRaw]);
@@ -174,40 +165,31 @@ export const HoliBulkShare = () => {
   const progress = allContacts.length > 0 ? Math.round((currentIndex / allContacts.length) * 100) : 0;
   const isDone = started && currentIndex >= allContacts.length;
 
-  // ── CSV Import ──
   const handleCsvImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = (ev) => {
       const text = ev.target?.result as string;
       const parsed = parseContactsCsv(text);
-      if (parsed.length === 0) {
-        toast.error("No valid contacts found in CSV. Ensure it has phone numbers.");
-        return;
-      }
+      if (parsed.length === 0) { toast.error("No valid contacts found in CSV."); return; }
       setContacts(parsed);
       setCsvImported(true);
       reset();
-      toast.success(`✅ Imported ${parsed.length} contacts with names from CSV!`);
+      toast.success(`✅ Imported ${parsed.length} contacts with names!`);
     };
     reader.readAsText(file);
     if (csvInputRef.current) csvInputRef.current.value = "";
   };
 
   const clearCsvContacts = () => {
-    setContacts([]);
-    setCsvImported(false);
-    reset();
+    setContacts([]); setCsvImported(false); reset();
     toast.success("CSV contacts cleared.");
   };
 
-  // ── Media Upload ──
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     if (file.size > MAX_FILE_SIZE) { toast.error("File too large. Max 50MB."); return; }
     if (!ALLOWED_TYPES.includes(file.type)) { toast.error("Unsupported file type."); return; }
 
@@ -247,19 +229,76 @@ export const HoliBulkShare = () => {
   const buildMessageForContact = (contact: Contact) => {
     let text = message.trim().slice(0, 2000);
     text = text.replace(/\{name\}/gi, contact.name);
-    return mediaUrl ? `${text}\n\n👉 ${mediaUrl}` : text;
+    return text;
   };
 
-  const sendNext = () => {
+  // ── Manual mode: wa.me links ──
+  const sendNextManual = () => {
     if (currentIndex >= allContacts.length) return;
     if (!started) setStarted(true);
     const contact = allContacts[currentIndex];
-    const url = `https://wa.me/${contact.phone}?text=${encodeURIComponent(buildMessageForContact(contact))}`;
+    let fullMsg = buildMessageForContact(contact);
+    if (mediaUrl) fullMsg += `\n\n👉 ${mediaUrl}`;
+    const url = `https://wa.me/${contact.phone}?text=${encodeURIComponent(fullMsg)}`;
     window.open(url, "_blank", "noopener,noreferrer");
     setCurrentIndex((i) => i + 1);
   };
 
-  const reset = () => { setCurrentIndex(0); setStarted(false); };
+  // ── API mode: queue all messages with media directly attached ──
+  const sendViaApi = async () => {
+    if (allContacts.length === 0 || !message.trim()) return;
+    setApiSending(true);
+    setApiResult(null);
+
+    try {
+      const BATCH_SIZE = 100;
+      let queued = 0;
+      let failed = 0;
+
+      for (let i = 0; i < allContacts.length; i += BATCH_SIZE) {
+        const batch = allContacts.slice(i, i + BATCH_SIZE);
+        const rows = batch.map((contact) => ({
+          phone: contact.phone,
+          message_content: buildMessageForContact(contact),
+          media_url: mediaUrl || null,
+          media_type: mediaUrl ? getMediaTypeForApi(mediaType) : null,
+          status: "queued",
+          priority: 5,
+        }));
+
+        const { error } = await supabase.from("wa_message_queue").insert(rows);
+        if (error) {
+          console.error("Queue insert error:", error);
+          failed += batch.length;
+        } else {
+          queued += batch.length;
+        }
+      }
+
+      setApiResult({ queued, failed });
+
+      if (queued > 0) {
+        // Trigger the queue processor
+        try {
+          await supabase.functions.invoke("wa-queue-processor", {
+            body: { batchSize: Math.min(queued, 50) },
+          });
+        } catch (e) {
+          console.warn("Queue processor trigger failed, messages will process on next cycle:", e);
+        }
+        toast.success(`🚀 ${queued} messages queued! Media will be sent directly attached.`);
+      }
+      if (failed > 0) {
+        toast.error(`${failed} messages failed to queue.`);
+      }
+    } catch (err: any) {
+      toast.error("Failed to queue messages: " + (err.message || "Unknown error"));
+    } finally {
+      setApiSending(false);
+    }
+  };
+
+  const reset = () => { setCurrentIndex(0); setStarted(false); setApiResult(null); };
 
   const copyMessage = () => {
     const sample = allContacts.length > 0 ? buildMessageForContact(allContacts[0]) : message;
@@ -268,8 +307,7 @@ export const HoliBulkShare = () => {
   };
 
   const applyTemplate = (tpl: typeof SAMPLE_TEMPLATES[0]) => {
-    setMessage(tpl.message);
-    reset();
+    setMessage(tpl.message); reset();
     toast.success(`Loaded: ${tpl.name}`);
   };
 
@@ -283,10 +321,41 @@ export const HoliBulkShare = () => {
         </div>
         <div>
           <h2 className="text-xl font-bold text-foreground">WhatsApp Bulk Broadcaster</h2>
-          <p className="text-sm text-muted-foreground">Send personalized messages with <code className="bg-muted px-1 rounded">{"{name}"}</code> to all contacts.</p>
+          <p className="text-sm text-muted-foreground">Send messages with media directly attached to all contacts.</p>
         </div>
-        <Badge variant="secondary" className="ml-auto hidden sm:block">Personal Number</Badge>
       </div>
+
+      {/* Send Mode Toggle */}
+      <Card>
+        <CardContent className="py-3">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-muted-foreground mr-2">Send Mode:</span>
+            <Button
+              variant={sendMode === "api" ? "default" : "outline"}
+              size="sm"
+              className="gap-1.5"
+              onClick={() => { setSendMode("api"); reset(); }}
+            >
+              <Zap className="h-3.5 w-3.5" />
+              API Send (Direct Media)
+            </Button>
+            <Button
+              variant={sendMode === "manual" ? "default" : "outline"}
+              size="sm"
+              className="gap-1.5"
+              onClick={() => { setSendMode("manual"); reset(); }}
+            >
+              <MousePointer className="h-3.5 w-3.5" />
+              Manual (wa.me links)
+            </Button>
+          </div>
+          <p className="text-[10px] text-muted-foreground mt-2">
+            {sendMode === "api"
+              ? "✅ API Send: Media (image/video/PDF) will be directly attached in WhatsApp — no links! Sends via your business WhatsApp API."
+              : "Manual: Opens wa.me links one-by-one. Media is sent as a URL link in the message."}
+          </p>
+        </CardContent>
+      </Card>
 
       {/* Templates */}
       <Card>
@@ -317,10 +386,12 @@ export const HoliBulkShare = () => {
           </CardHeader>
           <CardContent className="space-y-3">
             <Textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={6} placeholder="Type your message... Use {name} for personalization" className="text-sm" />
-            <p className="text-[10px] text-muted-foreground">Use <code className="bg-muted px-1 rounded">{"{name}"}</code> to insert each contact's name automatically.</p>
+            <p className="text-[10px] text-muted-foreground">Use <code className="bg-muted px-1 rounded">{"{name}"}</code> for personalization.</p>
 
             <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground">Attach Media (Image / Video ≤45s / PDF)</label>
+              <label className="text-xs font-medium text-muted-foreground">
+                Attach Media {sendMode === "api" ? "(Directly attached in WhatsApp ✅)" : "(Sent as link)"}
+              </label>
               {mediaUrl ? (
                 <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
                   {mediaType.startsWith("image/") ? (
@@ -333,6 +404,9 @@ export const HoliBulkShare = () => {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{mediaName}</p>
                     <p className="text-xs text-muted-foreground">{formatSize(mediaSize)}{mediaDuration ? ` • ${Math.round(mediaDuration)}s` : ""}</p>
+                    {sendMode === "api" && (
+                      <Badge variant="secondary" className="text-[9px] mt-1">Will be attached directly</Badge>
+                    )}
                   </div>
                   <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={removeMedia}><X className="h-4 w-4" /></Button>
                 </div>
@@ -359,13 +433,12 @@ export const HoliBulkShare = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {/* CSV Import */}
             <div className="space-y-2">
               {csvImported ? (
                 <div className="flex items-center justify-between p-3 rounded-lg border bg-primary/5">
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-medium">{contacts.length} contacts imported from CSV</span>
+                    <span className="text-sm font-medium">{contacts.length} contacts imported</span>
                   </div>
                   <Button variant="ghost" size="sm" onClick={clearCsvContacts} className="h-7 text-xs gap-1 text-destructive hover:text-destructive">
                     <Trash2 className="h-3 w-3" /> Clear
@@ -379,7 +452,6 @@ export const HoliBulkShare = () => {
               <input ref={csvInputRef} type="file" accept=".csv" className="hidden" onChange={handleCsvImport} />
             </div>
 
-            {/* Show imported contacts preview */}
             {csvImported && contacts.length > 0 && (
               <div className="max-h-40 overflow-y-auto rounded-lg border bg-muted/20 p-2 space-y-0.5">
                 {contacts.slice(0, 50).map((c, i) => (
@@ -388,13 +460,10 @@ export const HoliBulkShare = () => {
                     <span className="text-muted-foreground font-mono">{c.phone.slice(2)}</span>
                   </div>
                 ))}
-                {contacts.length > 50 && (
-                  <p className="text-[10px] text-center text-muted-foreground pt-1">...and {contacts.length - 50} more</p>
-                )}
+                {contacts.length > 50 && <p className="text-[10px] text-center text-muted-foreground pt-1">...and {contacts.length - 50} more</p>}
               </div>
             )}
 
-            {/* Manual entry */}
             <Textarea
               placeholder={"Or paste numbers manually:\n9855924442\n9876543210"}
               value={numbersRaw}
@@ -402,7 +471,7 @@ export const HoliBulkShare = () => {
               rows={csvImported ? 3 : 8}
               className="text-sm font-mono"
             />
-            <p className="text-xs text-muted-foreground">One per line, comma, or semicolon. Duplicates auto-removed.</p>
+            <p className="text-xs text-muted-foreground">One per line, comma, or semicolon.</p>
           </CardContent>
         </Card>
       </div>
@@ -410,43 +479,86 @@ export const HoliBulkShare = () => {
       {/* Send Controls */}
       <Card>
         <CardContent className="py-4 space-y-3">
-          {started && (
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">
-                  Sending to: <strong>{currentIndex > 0 ? allContacts[currentIndex - 1]?.name : "—"}</strong>
-                </span>
-                <span className="font-semibold text-foreground">{currentIndex} / {allContacts.length}</span>
+          {/* API Mode */}
+          {sendMode === "api" && (
+            <>
+              {apiResult ? (
+                <div className="flex items-center gap-3 p-3 rounded-lg border bg-primary/5">
+                  <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold">🚀 {apiResult.queued} messages queued for delivery!</p>
+                    <p className="text-xs text-muted-foreground">Media is being sent directly attached via WhatsApp API. Messages will be delivered automatically.</p>
+                    {apiResult.failed > 0 && <p className="text-xs text-destructive">{apiResult.failed} failed to queue.</p>}
+                  </div>
+                  <Button variant="outline" size="sm" onClick={reset} className="shrink-0 gap-1">
+                    <RotateCcw className="h-3 w-3" /> New Broadcast
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <Button
+                    onClick={sendViaApi}
+                    disabled={allContacts.length === 0 || !message.trim() || apiSending}
+                    size="lg"
+                    className="gap-2"
+                  >
+                    {apiSending ? (
+                      <><Loader2 className="h-4 w-4 animate-spin" /> Queuing {allContacts.length} messages...</>
+                    ) : (
+                      <><Zap className="h-4 w-4" /> Send to All {allContacts.length} Contacts</>
+                    )}
+                  </Button>
+                </div>
+              )}
+
+              <div className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-3 space-y-1">
+                <p><strong>✅ API Send:</strong> All messages are queued and sent automatically via your WhatsApp Business API.</p>
+                <p>Images, videos, and PDFs are <strong>directly attached</strong> in WhatsApp — not as links!</p>
+                <p>Use <code className="bg-muted px-1 rounded">{"{name}"}</code> for personalization.</p>
               </div>
-              <Progress value={progress} className="h-2.5" />
-            </div>
+            </>
           )}
 
-          <div className="flex items-center gap-3">
-            {isDone ? (
-              <div className="flex items-center gap-2 text-sm font-medium text-primary">
-                <CheckCircle2 className="h-5 w-5" />
-                All {allContacts.length} chats opened! 🎉
-              </div>
-            ) : (
-              <Button onClick={sendNext} disabled={allContacts.length === 0 || !message.trim()} size="lg" className="gap-2">
-                <Send className="h-4 w-4" />
-                {started
-                  ? `Send Next → ${allContacts[currentIndex]?.name || ""} (${currentIndex + 1}/${allContacts.length})`
-                  : `Start Sending to ${allContacts.length || 0} contacts`}
-              </Button>
-            )}
-            {started && (
-              <Button variant="outline" onClick={reset} className="gap-1">
-                <RotateCcw className="h-4 w-4" /> Reset
-              </Button>
-            )}
-          </div>
+          {/* Manual Mode */}
+          {sendMode === "manual" && (
+            <>
+              {started && (
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      Sending to: <strong>{currentIndex > 0 ? allContacts[currentIndex - 1]?.name : "—"}</strong>
+                    </span>
+                    <span className="font-semibold text-foreground">{currentIndex} / {allContacts.length}</span>
+                  </div>
+                  <Progress value={progress} className="h-2.5" />
+                </div>
+              )}
 
-          <div className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-3 space-y-1">
-            <p><strong>How it works:</strong> Each click opens WhatsApp with a personalized message using the contact's name. Hit send in WhatsApp, come back, click Send Next.</p>
-            <p><strong>Tip:</strong> Use <code className="bg-muted px-1 rounded">{"{name}"}</code> in your message to auto-insert each contact's name.</p>
-          </div>
+              <div className="flex items-center gap-3">
+                {isDone ? (
+                  <div className="flex items-center gap-2 text-sm font-medium text-primary">
+                    <CheckCircle2 className="h-5 w-5" />
+                    All {allContacts.length} chats opened! 🎉
+                  </div>
+                ) : (
+                  <Button onClick={sendNextManual} disabled={allContacts.length === 0 || !message.trim()} size="lg" className="gap-2">
+                    <Send className="h-4 w-4" />
+                    {started
+                      ? `Send Next → ${allContacts[currentIndex]?.name || ""} (${currentIndex + 1}/${allContacts.length})`
+                      : `Start Sending to ${allContacts.length || 0} contacts`}
+                  </Button>
+                )}
+                {started && (
+                  <Button variant="outline" onClick={reset} className="gap-1"><RotateCcw className="h-4 w-4" /> Reset</Button>
+                )}
+              </div>
+
+              <div className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-3 space-y-1">
+                <p><strong>Manual mode:</strong> Opens wa.me links. Media is sent as a URL link.</p>
+                <p>For <strong>direct media attachment</strong>, switch to API Send mode above.</p>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>
