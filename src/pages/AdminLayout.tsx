@@ -51,6 +51,7 @@ import WhatsAppTemplateManager from "@/components/admin/WhatsAppTemplateManager"
 import EmailAutomationManager from "@/components/admin/EmailAutomationManager";
 import StateCityPricingManager from "@/components/admin/StateCityPricingManager";
 import { MarketingCommandCenter } from "@/components/admin/marketing";
+import { HoliBulkShare } from "@/components/admin/HoliBulkShare";
 import VehicleAttributesManager from "@/components/admin/VehicleAttributesManager";
 import DriverBookingsManagement from "@/components/admin/DriverBookingsManagement";
 import APIPartnersManagement from "@/components/admin/APIPartnersManagement";
@@ -305,6 +306,8 @@ const AdminLayout = () => {
         return <AutoIntelligenceSettings />;
       case "marketing-command":
         return <MarketingCommandCenter />;
+      case "holi-share":
+        return <HoliBulkShare />;
       case "marketing-email":
         return <EmailMarketingManagement />;
       case "marketing-bulk":
