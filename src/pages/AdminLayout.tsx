@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { useVerticalAccess } from "@/hooks/useVerticalAccess";
 import { useSessionTimeout } from "@/hooks/useSessionTimeout";
@@ -129,14 +129,12 @@ const AdminLayout = () => {
 
   // Redirect if not authenticated
   if (!isLoading && !user) {
-    navigate('/crm-auth');
-    return null;
+    return <Navigate to="/crm-auth" replace />;
   }
 
   // Redirect to workspace selector if no vertical selected
   if (!isLoading && user && !activeVertical) {
-    navigate('/workspace');
-    return null;
+    return <Navigate to="/workspace" replace />;
   }
 
   // Show loading state
