@@ -275,8 +275,8 @@ export const HoliBulkShare = () => {
   // Open a batch of wa.me tabs
   const [batchSending, setBatchSending] = useState(false);
 
-  const sendNextBatch = useCallback(async () => {
-    const start = currentBatch * TABS_PER_BATCH;
+  const sendNextBatch = useCallback(() => {
+    const start = sentCount;
     const batch = allContacts.slice(start, start + TABS_PER_BATCH);
 
     if (batch.length === 0) {
@@ -287,36 +287,45 @@ export const HoliBulkShare = () => {
 
     setBatchSending(true);
 
-    // Open tabs with 800ms delay between each to avoid popup blocker
+    // Open placeholder tabs synchronously in the click event (best chance to avoid popup blocking)
+    const openedTabs: Window[] = [];
     for (let i = 0; i < batch.length; i++) {
+      const tab = window.open("about:blank", "_blank");
+      if (tab) openedTabs.push(tab);
+    }
+
+    if (openedTabs.length === 0) {
+      setBatchSending(false);
+      toast.error("⚠️ Popups blocked. Please allow popups for this site.");
+      return;
+    }
+
+    // Navigate each opened tab to wa.me URL
+    for (let i = 0; i < openedTabs.length; i++) {
       const contact = batch[i];
       const personalizedMsg = buildMessageForContact(contact);
       const encoded = encodeURIComponent(personalizedMsg);
-      const url = `https://wa.me/${contact.phone}?text=${encoded}`;
-      const win = window.open(url, "_blank");
-      if (!win) {
-        toast.error(`⚠️ Popup blocked! Please allow popups for this site, then try again.`);
-        setBatchSending(false);
-        return;
-      }
-      // Wait 800ms before opening next tab to avoid browser blocking
-      if (i < batch.length - 1) {
-        await new Promise((r) => setTimeout(r, 800));
-      }
+      openedTabs[i].location.href = `https://wa.me/${contact.phone}?text=${encoded}`;
     }
 
-    const newSent = Math.min(start + batch.length, allContacts.length);
+    const openedCount = openedTabs.length;
+    const newSent = Math.min(start + openedCount, allContacts.length);
     setSentCount(newSent);
-    setCurrentBatch((prev) => prev + 1);
+    setCurrentBatch(Math.ceil(newSent / TABS_PER_BATCH));
     setBatchSending(false);
+
+    if (openedCount < batch.length) {
+      toast.error(`⚠️ Only ${openedCount}/${batch.length} tabs opened. Enable popups, then click again.`);
+      return;
+    }
 
     if (newSent >= allContacts.length) {
       setDone(true);
       toast.success(`🎉 All ${allContacts.length} WhatsApp tabs opened!`);
     } else {
-      toast.success(`✅ Opened ${batch.length} tabs (${newSent}/${allContacts.length}). Click "Send Next Batch" to continue.`);
+      toast.success(`✅ Opened ${openedCount} tabs (${newSent}/${allContacts.length}). Click "Send Next Batch" to continue.`);
     }
-  }, [currentBatch, allContacts, message, mediaUrl]);
+  }, [sentCount, allContacts, message, mediaUrl]);
 
   const FileIcon = mediaType ? getFileIcon(mediaType) : ImageIcon;
 
