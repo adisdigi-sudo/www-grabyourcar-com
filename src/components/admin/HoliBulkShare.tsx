@@ -273,7 +273,9 @@ export const HoliBulkShare = () => {
   };
 
   // Open a batch of wa.me tabs
-  const sendNextBatch = useCallback(() => {
+  const [batchSending, setBatchSending] = useState(false);
+
+  const sendNextBatch = useCallback(async () => {
     const start = currentBatch * TABS_PER_BATCH;
     const batch = allContacts.slice(start, start + TABS_PER_BATCH);
 
@@ -283,16 +285,30 @@ export const HoliBulkShare = () => {
       return;
     }
 
-    for (const contact of batch) {
+    setBatchSending(true);
+
+    // Open tabs with 800ms delay between each to avoid popup blocker
+    for (let i = 0; i < batch.length; i++) {
+      const contact = batch[i];
       const personalizedMsg = buildMessageForContact(contact);
       const encoded = encodeURIComponent(personalizedMsg);
       const url = `https://wa.me/${contact.phone}?text=${encoded}`;
-      window.open(url, "_blank");
+      const win = window.open(url, "_blank");
+      if (!win) {
+        toast.error(`⚠️ Popup blocked! Please allow popups for this site, then try again.`);
+        setBatchSending(false);
+        return;
+      }
+      // Wait 800ms before opening next tab to avoid browser blocking
+      if (i < batch.length - 1) {
+        await new Promise((r) => setTimeout(r, 800));
+      }
     }
 
     const newSent = Math.min(start + batch.length, allContacts.length);
     setSentCount(newSent);
     setCurrentBatch((prev) => prev + 1);
+    setBatchSending(false);
 
     if (newSent >= allContacts.length) {
       setDone(true);
@@ -554,11 +570,19 @@ export const HoliBulkShare = () => {
               <div className="flex items-center gap-3">
                 <Button
                   onClick={sendNextBatch}
-                  disabled={allContacts.length === 0 || !message.trim()}
+                  disabled={allContacts.length === 0 || !message.trim() || batchSending || done}
                   size="lg"
                   className="gap-2"
                 >
-                  {sentCount === 0 ? (
+                  {batchSending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" /> Opening tabs...
+                    </>
+                  ) : done ? (
+                    <>
+                      <CheckCircle2 className="h-4 w-4" /> All Done!
+                    </>
+                  ) : sentCount === 0 ? (
                     <>
                       <Send className="h-4 w-4" /> Open First {Math.min(TABS_PER_BATCH, allContacts.length)} Tabs
                     </>
