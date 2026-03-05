@@ -65,6 +65,19 @@ export const LoanCallingWorkspace = ({ applications }: Props) => {
 
   // Get today's call stats
   const { data: todayCalls = [] } = useQuery({
+    queryKey: ['loan-calls-today'],
+    queryFn: async () => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const { data, error } = await supabase
+        .from('call_logs')
+        .select('id, disposition, lead_type, duration_seconds, created_at')
+        .eq('lead_type', 'loan')
+        .gte('created_at', today.toISOString());
+      if (error) throw error;
+      return data;
+    },
+  });
 
   // Create lead mutation
   const createMutation = useMutation({
@@ -84,6 +97,7 @@ export const LoanCallingWorkspace = ({ applications }: Props) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['loan-applications'] });
+      queryClient.invalidateQueries({ queryKey: ['loan-applications-calling'] });
       toast.success("Lead added to calling queue");
       setShowAddLead(false);
       setNewLead({ customer_name: '', phone: '', loan_amount: '', car_model: '', priority: 'medium', source: 'Manual', remarks: '' });
@@ -126,6 +140,7 @@ export const LoanCallingWorkspace = ({ applications }: Props) => {
     },
     onSuccess: (count) => {
       queryClient.invalidateQueries({ queryKey: ['loan-applications'] });
+      queryClient.invalidateQueries({ queryKey: ['loan-applications-calling'] });
       toast.success(`${count} leads imported to calling queue`);
       setShowImport(false);
       setImportText('');
@@ -135,7 +150,7 @@ export const LoanCallingWorkspace = ({ applications }: Props) => {
 
   // Filter callable applications
   const callableApps = useMemo(() => {
-    let filtered = applications.filter(a => !['converted', 'lost'].includes(a.stage));
+    let filtered = resolvedApplications.filter(a => !['converted', 'lost'].includes(a.stage));
 
     if (stageFilter !== "all") filtered = filtered.filter(a => a.stage === stageFilter);
     if (priorityFilter !== "all") filtered = filtered.filter(a => a.priority === priorityFilter);
@@ -162,21 +177,21 @@ export const LoanCallingWorkspace = ({ applications }: Props) => {
 
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
-  }, [applications, stageFilter, priorityFilter, search]);
+  }, [resolvedApplications, stageFilter, priorityFilter, search]);
 
   // Fresh leads (new_lead stage, never contacted)
   const freshLeads = useMemo(() => {
-    return applications
+    return resolvedApplications
       .filter(a => a.stage === 'new_lead')
       .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  }, [applications]);
+  }, [resolvedApplications]);
 
   // Stats
   const connectedToday = todayCalls.filter((c: any) => c.disposition === 'connected').length;
   const totalDuration = todayCalls.reduce((s: number, c: any) => s + (c.duration_seconds || 0), 0);
   const avgDuration = todayCalls.length > 0 ? Math.round(totalDuration / todayCalls.length / 60 * 10) / 10 : 0;
-  const overdueCount = applications.filter(a => a.follow_up_at && isPast(new Date(a.follow_up_at)) && !['converted', 'lost'].includes(a.stage)).length;
-  const pendingFollowUps = applications.filter(a => a.follow_up_at && !isPast(new Date(a.follow_up_at)) && !['converted', 'lost'].includes(a.stage)).length;
+  const overdueCount = resolvedApplications.filter(a => a.follow_up_at && isPast(new Date(a.follow_up_at)) && !['converted', 'lost'].includes(a.stage)).length;
+  const pendingFollowUps = resolvedApplications.filter(a => a.follow_up_at && !isPast(new Date(a.follow_up_at)) && !['converted', 'lost'].includes(a.stage)).length;
 
   const handleDial = (app: any) => {
     // Open phone dialer
@@ -519,7 +534,7 @@ export const LoanCallingWorkspace = ({ applications }: Props) => {
           )}
 
           <p className="text-xs text-muted-foreground text-center mt-2">
-            Showing {callableApps.length} of {applications.filter(a => !['converted', 'lost'].includes(a.stage)).length} active leads
+            Showing {callableApps.length} of {resolvedApplications.filter(a => !['converted', 'lost'].includes(a.stage)).length} active leads
           </p>
         </TabsContent>
 
