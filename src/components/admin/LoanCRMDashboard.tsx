@@ -13,7 +13,7 @@ import { LoanLeadsList } from "./loans/LoanLeadsList";
 import { LoanBankPartners } from "./loans/LoanBankPartners";
 import { LoanAnalytics } from "./loans/LoanAnalytics";
 import { LoanBulkImport } from "./loans/LoanBulkImport";
-import { LoanCallingWorkspace } from "./loans/LoanCallingWorkspace";
+import { CallingDashboard } from "./calling/CallingDashboard";
 import { LoanAutomationPanel } from "./loans/LoanAutomationPanel";
 import { LOAN_STAGES, STAGE_LABELS } from "./loans/LoanStageConfig";
 
@@ -176,7 +176,7 @@ export const LoanCRMDashboard = () => {
           <LoanLeadsList />
         </TabsContent>
         <TabsContent value="calling">
-          <LoanCallingWorkspace applications={applications} />
+          <CallingDashboard />
         </TabsContent>
         <TabsContent value="banks">
           <LoanBankPartners />
