@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -176,10 +176,14 @@ export const LoanPipelineBoard = ({ applications }: Props) => {
   });
 
   // Auto-execute pending drop
-  if (pendingDrop && !quickMoveMutation.isPending) {
-    const { app, targetStage } = pendingDrop;
-    quickMoveMutation.mutate({ appId: app.id, fromStage: app.stage, toStage: targetStage });
-  }
+  useEffect(() => {
+    if (!pendingDrop || quickMoveMutation.isPending) return;
+    quickMoveMutation.mutate({
+      appId: pendingDrop.app.id,
+      fromStage: pendingDrop.app.stage,
+      toStage: pendingDrop.targetStage,
+    });
+  }, [pendingDrop, quickMoveMutation]);
 
   const isDropAllowed = (targetStage: LoanStage) => {
     if (!draggingApp) return false;

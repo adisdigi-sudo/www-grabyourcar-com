@@ -23,8 +23,9 @@ export function CallingDashboard() {
   const { activeVertical } = useVerticalAccess();
   const [activeTab, setActiveTab] = useState("smart-queue");
   const slug = activeVertical?.slug || "sales";
-  const isLoansVertical = slug === "loans";
-  const meta = VERTICAL_META[slug] || VERTICAL_META.sales;
+  const normalizedVertical = `${activeVertical?.slug || ""} ${activeVertical?.name || ""}`.toLowerCase();
+  const isLoansVertical = normalizedVertical.includes("loan") || normalizedVertical.includes("finance");
+  const meta = VERTICAL_META[slug] || (isLoansVertical ? VERTICAL_META.loans : VERTICAL_META.sales);
   const Icon = meta.icon;
 
   const { data: loanApplications = [] } = useQuery({
