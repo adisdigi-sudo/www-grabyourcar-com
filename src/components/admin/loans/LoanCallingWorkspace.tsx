@@ -48,21 +48,23 @@ export const LoanCallingWorkspace = ({ applications }: Props) => {
   // Quick import state
   const [importText, setImportText] = useState('');
 
+  // Fetch latest loan applications (fallback + sync for all entry points)
+  const { data: resolvedApplications = applications } = useQuery({
+    queryKey: ['loan-applications-calling'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('loan_applications')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1000);
+      if (error) throw error;
+      return data || [];
+    },
+    initialData: applications,
+  });
+
   // Get today's call stats
   const { data: todayCalls = [] } = useQuery({
-    queryKey: ['loan-calls-today'],
-    queryFn: async () => {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const { data, error } = await supabase
-        .from('call_logs')
-        .select('id, disposition, lead_type, duration_seconds, created_at')
-        .eq('lead_type', 'loan')
-        .gte('created_at', today.toISOString());
-      if (error) throw error;
-      return data;
-    },
-  });
 
   // Create lead mutation
   const createMutation = useMutation({
