@@ -6,13 +6,15 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Banknote, TrendingUp, Users, Clock, CheckCircle2, XCircle, 
-  ArrowRight, IndianRupee, Building2, BarChart3, Upload
+  ArrowRight, IndianRupee, Building2, BarChart3, Upload, PhoneCall, Zap
 } from "lucide-react";
 import { LoanPipelineBoard } from "./loans/LoanPipelineBoard";
 import { LoanLeadsList } from "./loans/LoanLeadsList";
 import { LoanBankPartners } from "./loans/LoanBankPartners";
 import { LoanAnalytics } from "./loans/LoanAnalytics";
 import { LoanBulkImport } from "./loans/LoanBulkImport";
+import { LoanCallingWorkspace } from "./loans/LoanCallingWorkspace";
+import { LoanAutomationPanel } from "./loans/LoanAutomationPanel";
 import { LOAN_STAGES, STAGE_LABELS } from "./loans/LoanStageConfig";
 
 export const LoanCRMDashboard = () => {
@@ -146,18 +148,24 @@ export const LoanCRMDashboard = () => {
 
       {/* Main Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="pipeline" className="gap-2">
             <ArrowRight className="h-4 w-4" /> Pipeline
           </TabsTrigger>
           <TabsTrigger value="leads" className="gap-2">
-            <Users className="h-4 w-4" /> All Applications
+            <Users className="h-4 w-4" /> Applications
+          </TabsTrigger>
+          <TabsTrigger value="calling" className="gap-2">
+            <PhoneCall className="h-4 w-4" /> Calling
           </TabsTrigger>
           <TabsTrigger value="banks" className="gap-2">
-            <Building2 className="h-4 w-4" /> Bank Partners
+            <Building2 className="h-4 w-4" /> Banks
           </TabsTrigger>
           <TabsTrigger value="analytics" className="gap-2">
             <BarChart3 className="h-4 w-4" /> Analytics
+          </TabsTrigger>
+          <TabsTrigger value="automation" className="gap-2">
+            <Zap className="h-4 w-4" /> Automation
           </TabsTrigger>
         </TabsList>
 
@@ -167,11 +175,17 @@ export const LoanCRMDashboard = () => {
         <TabsContent value="leads">
           <LoanLeadsList />
         </TabsContent>
+        <TabsContent value="calling">
+          <LoanCallingWorkspace applications={applications} />
+        </TabsContent>
         <TabsContent value="banks">
           <LoanBankPartners />
         </TabsContent>
         <TabsContent value="analytics">
           <LoanAnalytics applications={applications} leads={leads} />
+        </TabsContent>
+        <TabsContent value="automation">
+          <LoanAutomationPanel />
         </TabsContent>
       </Tabs>
     </div>
