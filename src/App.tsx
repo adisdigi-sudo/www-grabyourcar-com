@@ -47,6 +47,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const About = lazy(() => import("./pages/About"));
 const AutoIntelligence = lazy(() => import("./pages/AutoIntelligence"));
 const HoliGreeting = lazy(() => import("./pages/HoliGreeting"));
+const VehicleLookup = lazy(() => import("./pages/VehicleLookup"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -121,6 +122,7 @@ const App = () => (
                     <Route path="/about" element={<About />} />
                     <Route path="/auto-intelligence" element={<AutoIntelligence />} />
                     <Route path="/holi" element={<HoliGreeting />} />
+                    <Route path="/vehicle-lookup" element={<VehicleLookup />} />
                     {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                     <Route path="*" element={<NotFound />} />
                   </Routes>
