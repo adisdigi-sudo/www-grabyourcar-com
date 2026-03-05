@@ -190,6 +190,49 @@ export const LoanCallingWorkspace = ({ applications }: Props) => {
     window.open(`https://wa.me/91${phone.replace(/\D/g, '').slice(-10)}?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
+  const downloadQueueCSV = () => {
+    const rows = callableApps.map((lead: any) => ({
+      customer_name: lead.customer_name || '',
+      phone: lead.phone || '',
+      stage: lead.stage || '',
+      priority: lead.priority || '',
+      loan_amount: lead.loan_amount || '',
+      car_model: lead.car_model || '',
+      source: lead.source || '',
+      follow_up_at: lead.follow_up_at || '',
+      remarks: lead.remarks || '',
+      created_at: lead.created_at || '',
+    }));
+
+    if (rows.length === 0) {
+      toast.error('No queue data to export');
+      return;
+    }
+
+    const headers = Object.keys(rows[0]);
+    const csv = [
+      headers.join(','),
+      ...rows.map((row) =>
+        headers
+          .map((key) => {
+            const value = String(row[key as keyof typeof row] ?? '');
+            return `"${value.replace(/"/g, '""')}"`;
+          })
+          .join(',')
+      ),
+    ].join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `loan_smart_queue_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const renderLeadCard = (app: any, showStage = true) => {
     const isOverdue = app.follow_up_at && isPast(new Date(app.follow_up_at));
     return (
@@ -284,6 +327,9 @@ export const LoanCallingWorkspace = ({ applications }: Props) => {
             </div>
           </div>
           <div className="flex gap-2">
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={downloadQueueCSV}>
+              <Download className="h-4 w-4" /> Export Queue
+            </Button>
             <Dialog open={showAddLead} onOpenChange={setShowAddLead}>
               <DialogTrigger asChild>
                 <Button size="sm" variant="outline" className="gap-1.5">

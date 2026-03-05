@@ -1,9 +1,12 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PhoneCall, CheckCircle2, Users, Inbox, Zap, ArrowRight, Shield, Car, CreditCard, CalendarDays, Wrench } from "lucide-react";
+import { PhoneCall, CheckCircle2, Inbox, Zap, Shield, Car, CreditCard, CalendarDays, Wrench } from "lucide-react";
 import { SmartCallingQueue } from "./SmartCallingQueue";
 import { FreshLeadsQueue } from "./FreshLeadsQueue";
+import { LoanCallingWorkspace } from "../loans/LoanCallingWorkspace";
 import { useVerticalAccess } from "@/hooks/useVerticalAccess";
 import { motion } from "framer-motion";
 import { useState } from "react";
@@ -20,14 +23,31 @@ export function CallingDashboard() {
   const { activeVertical } = useVerticalAccess();
   const [activeTab, setActiveTab] = useState("smart-queue");
   const slug = activeVertical?.slug || "sales";
+  const isLoansVertical = slug === "loans";
   const meta = VERTICAL_META[slug] || VERTICAL_META.sales;
   const Icon = meta.icon;
 
+  const { data: loanApplications = [] } = useQuery({
+    queryKey: ["loan-applications-calling"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("loan_applications")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(1000);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: isLoansVertical,
+  });
+
+  if (isLoansVertical) {
+    return <LoanCallingWorkspace applications={loanApplications} />;
+  }
+
   return (
     <div className="space-y-4">
-      {/* Vertical-Specific Hero */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-2xl border p-5">
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="relative overflow-hidden rounded-2xl border p-5">
         <div className={`absolute inset-0 bg-gradient-to-br ${meta.gradient} opacity-[0.06]`} />
         <div className="absolute top-0 right-0 w-40 h-40 bg-primary/5 rounded-full blur-3xl" />
         <div className="relative z-10 flex items-center justify-between">
@@ -53,7 +73,6 @@ export function CallingDashboard() {
         </div>
       </motion.div>
 
-      {/* Tabs: Smart Queue + Fresh Leads */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid grid-cols-2 w-full max-w-md">
           <TabsTrigger value="smart-queue" className="gap-1.5">
