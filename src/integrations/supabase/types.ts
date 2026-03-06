@@ -565,6 +565,57 @@ export type Database = {
         }
         Relationships: []
       }
+      attendance_records: {
+        Row: {
+          attendance_date: string
+          check_in: string | null
+          check_out: string | null
+          created_at: string | null
+          id: string
+          location: string | null
+          marked_by: string | null
+          notes: string | null
+          overtime_hours: number | null
+          status: string | null
+          team_member_name: string
+          team_member_phone: string | null
+          user_id: string | null
+          work_hours: number | null
+        }
+        Insert: {
+          attendance_date?: string
+          check_in?: string | null
+          check_out?: string | null
+          created_at?: string | null
+          id?: string
+          location?: string | null
+          marked_by?: string | null
+          notes?: string | null
+          overtime_hours?: number | null
+          status?: string | null
+          team_member_name: string
+          team_member_phone?: string | null
+          user_id?: string | null
+          work_hours?: number | null
+        }
+        Update: {
+          attendance_date?: string
+          check_in?: string | null
+          check_out?: string | null
+          created_at?: string | null
+          id?: string
+          location?: string | null
+          marked_by?: string | null
+          notes?: string | null
+          overtime_hours?: number | null
+          status?: string | null
+          team_member_name?: string
+          team_member_phone?: string | null
+          user_id?: string | null
+          work_hours?: number | null
+        }
+        Relationships: []
+      }
       automation_lead_tracking: {
         Row: {
           assigned_at: string | null
@@ -1829,6 +1880,60 @@ export type Database = {
           total_spend?: number | null
           updated_at?: string
           vehicle_number?: string | null
+        }
+        Relationships: []
+      }
+      commission_ledger: {
+        Row: {
+          approved_by: string | null
+          commission_amount: number
+          commission_percentage: number | null
+          created_at: string | null
+          deal_reference: string | null
+          deal_value: number | null
+          id: string
+          month_year: string | null
+          notes: string | null
+          paid_at: string | null
+          status: string | null
+          team_member_name: string
+          team_member_phone: string | null
+          updated_at: string | null
+          vertical_name: string
+        }
+        Insert: {
+          approved_by?: string | null
+          commission_amount?: number
+          commission_percentage?: number | null
+          created_at?: string | null
+          deal_reference?: string | null
+          deal_value?: number | null
+          id?: string
+          month_year?: string | null
+          notes?: string | null
+          paid_at?: string | null
+          status?: string | null
+          team_member_name: string
+          team_member_phone?: string | null
+          updated_at?: string | null
+          vertical_name: string
+        }
+        Update: {
+          approved_by?: string | null
+          commission_amount?: number
+          commission_percentage?: number | null
+          created_at?: string | null
+          deal_reference?: string | null
+          deal_value?: number | null
+          id?: string
+          month_year?: string | null
+          notes?: string | null
+          paid_at?: string | null
+          status?: string | null
+          team_member_name?: string
+          team_member_phone?: string | null
+          updated_at?: string | null
+          vertical_name?: string
         }
         Relationships: []
       }
@@ -3486,6 +3591,75 @@ export type Database = {
         }
         Relationships: []
       }
+      expense_entries: {
+        Row: {
+          amount: number
+          approved_by: string | null
+          category: string
+          created_at: string | null
+          description: string
+          expense_date: string
+          id: string
+          is_recurring: boolean | null
+          month_year: string | null
+          notes: string | null
+          paid_to: string | null
+          payment_mode: string | null
+          receipt_url: string | null
+          recorded_by: string | null
+          recurrence_interval: string | null
+          reference_number: string | null
+          status: string | null
+          sub_category: string | null
+          updated_at: string | null
+          vertical_name: string
+        }
+        Insert: {
+          amount?: number
+          approved_by?: string | null
+          category?: string
+          created_at?: string | null
+          description: string
+          expense_date?: string
+          id?: string
+          is_recurring?: boolean | null
+          month_year?: string | null
+          notes?: string | null
+          paid_to?: string | null
+          payment_mode?: string | null
+          receipt_url?: string | null
+          recorded_by?: string | null
+          recurrence_interval?: string | null
+          reference_number?: string | null
+          status?: string | null
+          sub_category?: string | null
+          updated_at?: string | null
+          vertical_name?: string
+        }
+        Update: {
+          amount?: number
+          approved_by?: string | null
+          category?: string
+          created_at?: string | null
+          description?: string
+          expense_date?: string
+          id?: string
+          is_recurring?: boolean | null
+          month_year?: string | null
+          notes?: string | null
+          paid_to?: string | null
+          payment_mode?: string | null
+          receipt_url?: string | null
+          recorded_by?: string | null
+          recurrence_interval?: string | null
+          reference_number?: string | null
+          status?: string | null
+          sub_category?: string | null
+          updated_at?: string | null
+          vertical_name?: string
+        }
+        Relationships: []
+      }
       expenses: {
         Row: {
           amount: number
@@ -3949,6 +4123,138 @@ export type Database = {
           subtitle?: string | null
           title?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      hr_announcements: {
+        Row: {
+          category: string | null
+          content: string
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          is_pinned: boolean | null
+          posted_by: string | null
+          priority: string | null
+          title: string
+        }
+        Insert: {
+          category?: string | null
+          content: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_pinned?: boolean | null
+          posted_by?: string | null
+          priority?: string | null
+          title: string
+        }
+        Update: {
+          category?: string | null
+          content?: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_pinned?: boolean | null
+          posted_by?: string | null
+          priority?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
+      hr_team_directory: {
+        Row: {
+          aadhar_number: string | null
+          address: string | null
+          bank_account_number: string | null
+          bank_name: string | null
+          blood_group: string | null
+          city: string | null
+          created_at: string | null
+          date_of_birth: string | null
+          date_of_joining: string | null
+          department: string | null
+          designation: string | null
+          documents: Json | null
+          email: string | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          employment_type: string | null
+          exit_date: string | null
+          exit_reason: string | null
+          full_name: string
+          id: string
+          ifsc_code: string | null
+          is_active: boolean | null
+          pan_number: string | null
+          phone: string
+          profile_photo_url: string | null
+          salary_ctc: number | null
+          updated_at: string | null
+          user_id: string | null
+          vertical_name: string | null
+        }
+        Insert: {
+          aadhar_number?: string | null
+          address?: string | null
+          bank_account_number?: string | null
+          bank_name?: string | null
+          blood_group?: string | null
+          city?: string | null
+          created_at?: string | null
+          date_of_birth?: string | null
+          date_of_joining?: string | null
+          department?: string | null
+          designation?: string | null
+          documents?: Json | null
+          email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          employment_type?: string | null
+          exit_date?: string | null
+          exit_reason?: string | null
+          full_name: string
+          id?: string
+          ifsc_code?: string | null
+          is_active?: boolean | null
+          pan_number?: string | null
+          phone: string
+          profile_photo_url?: string | null
+          salary_ctc?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+          vertical_name?: string | null
+        }
+        Update: {
+          aadhar_number?: string | null
+          address?: string | null
+          bank_account_number?: string | null
+          bank_name?: string | null
+          blood_group?: string | null
+          city?: string | null
+          created_at?: string | null
+          date_of_birth?: string | null
+          date_of_joining?: string | null
+          department?: string | null
+          designation?: string | null
+          documents?: Json | null
+          email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          employment_type?: string | null
+          exit_date?: string | null
+          exit_reason?: string | null
+          full_name?: string
+          id?: string
+          ifsc_code?: string | null
+          is_active?: boolean | null
+          pan_number?: string | null
+          phone?: string
+          profile_photo_url?: string | null
+          salary_ctc?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+          vertical_name?: string | null
         }
         Relationships: []
       }
@@ -6185,6 +6491,117 @@ export type Database = {
           },
         ]
       }
+      leave_balances: {
+        Row: {
+          casual_leave_total: number | null
+          casual_leave_used: number | null
+          comp_off_total: number | null
+          comp_off_used: number | null
+          created_at: string | null
+          earned_leave_total: number | null
+          earned_leave_used: number | null
+          id: string
+          sick_leave_total: number | null
+          sick_leave_used: number | null
+          team_member_name: string
+          team_member_phone: string | null
+          updated_at: string | null
+          user_id: string | null
+          year: number
+        }
+        Insert: {
+          casual_leave_total?: number | null
+          casual_leave_used?: number | null
+          comp_off_total?: number | null
+          comp_off_used?: number | null
+          created_at?: string | null
+          earned_leave_total?: number | null
+          earned_leave_used?: number | null
+          id?: string
+          sick_leave_total?: number | null
+          sick_leave_used?: number | null
+          team_member_name: string
+          team_member_phone?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          year?: number
+        }
+        Update: {
+          casual_leave_total?: number | null
+          casual_leave_used?: number | null
+          comp_off_total?: number | null
+          comp_off_used?: number | null
+          created_at?: string | null
+          earned_leave_total?: number | null
+          earned_leave_used?: number | null
+          id?: string
+          sick_leave_total?: number | null
+          sick_leave_used?: number | null
+          team_member_name?: string
+          team_member_phone?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          year?: number
+        }
+        Relationships: []
+      }
+      leave_requests: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string | null
+          end_date: string
+          id: string
+          leave_type: string
+          notes: string | null
+          reason: string
+          rejection_reason: string | null
+          start_date: string
+          status: string | null
+          team_member_name: string
+          team_member_phone: string | null
+          total_days: number | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          end_date: string
+          id?: string
+          leave_type?: string
+          notes?: string | null
+          reason: string
+          rejection_reason?: string | null
+          start_date: string
+          status?: string | null
+          team_member_name: string
+          team_member_phone?: string | null
+          total_days?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          end_date?: string
+          id?: string
+          leave_type?: string
+          notes?: string | null
+          reason?: string
+          rejection_reason?: string | null
+          start_date?: string
+          status?: string | null
+          team_member_name?: string
+          team_member_phone?: string | null
+          total_days?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       loan_activity_log: {
         Row: {
           action: string
@@ -7029,6 +7446,69 @@ export type Database = {
         }
         Relationships: []
       }
+      payout_records: {
+        Row: {
+          approved_by: string | null
+          base_amount: number | null
+          bonus_amount: number | null
+          created_at: string | null
+          deductions: number | null
+          id: string
+          net_amount: number | null
+          notes: string | null
+          paid_at: string | null
+          payment_mode: string | null
+          payout_month: string
+          payout_type: string | null
+          reference_number: string | null
+          status: string | null
+          team_member_name: string
+          team_member_phone: string | null
+          updated_at: string | null
+          vertical_name: string | null
+        }
+        Insert: {
+          approved_by?: string | null
+          base_amount?: number | null
+          bonus_amount?: number | null
+          created_at?: string | null
+          deductions?: number | null
+          id?: string
+          net_amount?: number | null
+          notes?: string | null
+          paid_at?: string | null
+          payment_mode?: string | null
+          payout_month: string
+          payout_type?: string | null
+          reference_number?: string | null
+          status?: string | null
+          team_member_name: string
+          team_member_phone?: string | null
+          updated_at?: string | null
+          vertical_name?: string | null
+        }
+        Update: {
+          approved_by?: string | null
+          base_amount?: number | null
+          bonus_amount?: number | null
+          created_at?: string | null
+          deductions?: number | null
+          id?: string
+          net_amount?: number | null
+          notes?: string | null
+          paid_at?: string | null
+          payment_mode?: string | null
+          payout_month?: string
+          payout_type?: string | null
+          reference_number?: string | null
+          status?: string | null
+          team_member_name?: string
+          team_member_phone?: string | null
+          updated_at?: string | null
+          vertical_name?: string | null
+        }
+        Relationships: []
+      }
       pipeline_history: {
         Row: {
           changed_at: string
@@ -7331,6 +7811,69 @@ export type Database = {
           updated_at?: string | null
           vehicle_type?: string
           year?: number | null
+        }
+        Relationships: []
+      }
+      revenue_entries: {
+        Row: {
+          amount: number
+          category: string
+          client_name: string | null
+          client_phone: string | null
+          created_at: string | null
+          description: string
+          id: string
+          invoice_number: string | null
+          invoice_url: string | null
+          month_year: string | null
+          notes: string | null
+          payment_mode: string | null
+          receipt_url: string | null
+          recorded_by: string | null
+          reference_number: string | null
+          revenue_date: string
+          updated_at: string | null
+          vertical_name: string
+        }
+        Insert: {
+          amount?: number
+          category?: string
+          client_name?: string | null
+          client_phone?: string | null
+          created_at?: string | null
+          description: string
+          id?: string
+          invoice_number?: string | null
+          invoice_url?: string | null
+          month_year?: string | null
+          notes?: string | null
+          payment_mode?: string | null
+          receipt_url?: string | null
+          recorded_by?: string | null
+          reference_number?: string | null
+          revenue_date?: string
+          updated_at?: string | null
+          vertical_name?: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          client_name?: string | null
+          client_phone?: string | null
+          created_at?: string | null
+          description?: string
+          id?: string
+          invoice_number?: string | null
+          invoice_url?: string | null
+          month_year?: string | null
+          notes?: string | null
+          payment_mode?: string | null
+          receipt_url?: string | null
+          recorded_by?: string | null
+          reference_number?: string | null
+          revenue_date?: string
+          updated_at?: string | null
+          vertical_name?: string
         }
         Relationships: []
       }
