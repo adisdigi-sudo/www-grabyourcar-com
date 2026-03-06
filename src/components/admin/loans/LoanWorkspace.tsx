@@ -17,8 +17,11 @@ import { motion } from "framer-motion";
 import {
   Banknote, Plus, Phone, IndianRupee, Car, GripVertical, Calculator,
   Share2, PhoneCall, MessageCircle, CheckCircle2, XCircle, Building2,
-  FileText, Upload, AlertTriangle, Clock, TrendingUp, Users, Download, Flame
+  FileText, Upload, AlertTriangle, Clock, TrendingUp, Users, Download, Flame, FileSpreadsheet
 } from "lucide-react";
+import jsPDF from "jspdf";
+import { LeadImportDialog } from "../shared/LeadImportDialog";
+import { StageNotificationBanner, buildLoanNotifications } from "../shared/StageNotificationBanner";
 import {
   LOAN_STAGES, STAGE_LABELS, STAGE_COLORS, LEAD_SOURCES, PRIORITY_OPTIONS,
   CALL_STATUSES, LOST_REASONS, normalizeStage, type LoanStage
@@ -49,6 +52,86 @@ const EMICalculator = () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
+  const handleDownloadPDF = () => {
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const w = doc.internal.pageSize.getWidth();
+
+    // Header gradient
+    doc.setFillColor(16, 185, 129);
+    doc.rect(0, 0, w, 50, "F");
+    doc.setFillColor(13, 148, 103);
+    doc.rect(0, 45, w, 5, "F");
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(22);
+    doc.setFont("helvetica", "bold");
+    doc.text("Car Loan EMI Plan", w / 2, 22, { align: "center" });
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text("GrabYourCar - Your Trusted Auto Finance Partner", w / 2, 32, { align: "center" });
+    doc.text("www.grabyourcar.com", w / 2, 40, { align: "center" });
+
+    let y = 65;
+    doc.setTextColor(60, 60, 60);
+
+    // Summary box
+    const boxX = 20; const boxW = w - 40;
+    doc.setFillColor(240, 253, 244);
+    doc.roundedRect(boxX, y, boxW, 40, 4, 4, "F");
+    doc.setDrawColor(16, 185, 129);
+    doc.roundedRect(boxX, y, boxW, 40, 4, 4, "S");
+
+    doc.setFontSize(28);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(16, 185, 129);
+    doc.text(formatAmt(emi), w / 2, y + 20, { align: "center" });
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text("Monthly EMI", w / 2, y + 30, { align: "center" });
+
+    y += 55;
+
+    // Details table
+    const rows = [
+      ["Loan Amount", formatAmt(amount)],
+      ["Interest Rate (p.a.)", `${rate}%`],
+      ["Tenure", `${tenure} months (${(tenure / 12).toFixed(1)} years)`],
+      ["Monthly EMI", formatAmt(emi)],
+      ["Total Interest Payable", formatAmt(totalInterest)],
+      ["Total Amount Payable", formatAmt(totalPayable)],
+    ];
+
+    rows.forEach(([label, value], i) => {
+      const rowY = y + i * 14;
+      if (i % 2 === 0) {
+        doc.setFillColor(248, 250, 252);
+        doc.rect(boxX, rowY - 4, boxW, 14, "F");
+      }
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(80, 80, 80);
+      doc.text(label, boxX + 8, rowY + 4);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(30, 30, 30);
+      doc.text(value, boxX + boxW - 8, rowY + 4, { align: "right" });
+    });
+
+    y += rows.length * 14 + 15;
+
+    // Footer
+    doc.setDrawColor(200, 200, 200);
+    doc.line(boxX, y, boxX + boxW, y);
+    y += 10;
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(150, 150, 150);
+    doc.text("* This is an indicative EMI calculation. Actual EMI may vary based on bank/NBFC terms.", boxX, y);
+    doc.text(`Generated on ${format(new Date(), "dd MMM yyyy, hh:mm a")} | GrabYourCar`, boxX, y + 6);
+
+    doc.save(`EMI_Plan_Rs${Math.round(amount / 100000)}L_${tenure}m.pdf`);
+    toast.success("EMI Plan PDF downloaded!");
+  };
+
   return (
     <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
       className="relative overflow-hidden rounded-2xl border bg-card">
@@ -65,9 +148,14 @@ const EMICalculator = () => {
               <p className="text-xs text-muted-foreground">Calculate & share beautiful EMI plans instantly</p>
             </div>
           </div>
-          <Button size="sm" variant="outline" className="gap-1.5 border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10" onClick={handleShareWhatsApp}>
-            <Share2 className="h-4 w-4" /> Share via WhatsApp
-          </Button>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" className="gap-1.5 border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10" onClick={handleDownloadPDF}>
+              <Download className="h-4 w-4" /> Download PDF
+            </Button>
+            <Button size="sm" variant="outline" className="gap-1.5 border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10" onClick={handleShareWhatsApp}>
+              <Share2 className="h-4 w-4" /> Share WhatsApp
+            </Button>
+          </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
@@ -119,6 +207,8 @@ export const LoanWorkspace = () => {
     priority: 'medium', source: 'Manual', remarks: '',
   });
 
+  const [showImport, setShowImport] = useState(false);
+
   // Fetch data
   const { data: rawApplications = [] } = useQuery({
     queryKey: ['loan-applications'],
@@ -162,6 +252,9 @@ export const LoanWorkspace = () => {
   const totalValue = applications
     .filter((a: any) => a.stage === 'disbursed')
     .reduce((s: number, a: any) => s + (Number(a.disbursement_amount) || Number(a.loan_amount) || 0), 0);
+
+  // Notifications
+  const loanNotifications = useMemo(() => buildLoanNotifications(applications), [applications]);
 
   // Create lead
   const createMutation = useMutation({
@@ -288,6 +381,9 @@ export const LoanWorkspace = () => {
         ))}
       </div>
 
+      {/* Notifications Banner */}
+      {loanNotifications.length > 0 && <StageNotificationBanner items={loanNotifications} />}
+
       {/* Pipeline Header */}
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-3">
@@ -299,47 +395,75 @@ export const LoanWorkspace = () => {
             {lost} Lost
           </Badge>
         </div>
-        <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-          <DialogTrigger asChild>
-            <Button size="sm" className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white">
-              <Plus className="h-4 w-4" /> New Lead
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle className="flex items-center gap-2"><Banknote className="h-5 w-5 text-emerald-600" /> New Car Loan Lead</DialogTitle></DialogHeader>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div><Label>Name *</Label><Input value={newApp.customer_name} onChange={e => setNewApp(p => ({ ...p, customer_name: e.target.value }))} /></div>
-                <div><Label>Phone *</Label><Input value={newApp.phone} onChange={e => setNewApp(p => ({ ...p, phone: e.target.value }))} placeholder="10-digit" /></div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><Label>Loan Amount</Label><Input type="number" value={newApp.loan_amount} onChange={e => setNewApp(p => ({ ...p, loan_amount: e.target.value }))} /></div>
-                <div><Label>Car Model</Label><Input value={newApp.car_model} onChange={e => setNewApp(p => ({ ...p, car_model: e.target.value }))} /></div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Priority</Label>
-                  <Select value={newApp.priority} onValueChange={v => setNewApp(p => ({ ...p, priority: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{PRIORITY_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Source</Label>
-                  <Select value={newApp.source} onValueChange={v => setNewApp(p => ({ ...p, source: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{LEAD_SOURCES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div><Label>Remarks</Label><Textarea value={newApp.remarks} onChange={e => setNewApp(p => ({ ...p, remarks: e.target.value }))} rows={2} /></div>
-              <Button onClick={() => createMutation.mutate(newApp)} disabled={!newApp.customer_name || !newApp.phone || createMutation.isPending} className="w-full bg-emerald-600 hover:bg-emerald-700">
-                Create Lead
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowImport(true)}>
+            <FileSpreadsheet className="h-4 w-4" /> Import
+          </Button>
+          <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white">
+                <Plus className="h-4 w-4" /> New Lead
               </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle className="flex items-center gap-2"><Banknote className="h-5 w-5 text-emerald-600" /> New Car Loan Lead</DialogTitle></DialogHeader>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div><Label>Name *</Label><Input value={newApp.customer_name} onChange={e => setNewApp(p => ({ ...p, customer_name: e.target.value }))} /></div>
+                  <div><Label>Phone *</Label><Input value={newApp.phone} onChange={e => setNewApp(p => ({ ...p, phone: e.target.value }))} placeholder="10-digit" /></div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div><Label>Loan Amount</Label><Input type="number" value={newApp.loan_amount} onChange={e => setNewApp(p => ({ ...p, loan_amount: e.target.value }))} /></div>
+                  <div><Label>Car Model</Label><Input value={newApp.car_model} onChange={e => setNewApp(p => ({ ...p, car_model: e.target.value }))} /></div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Priority</Label>
+                    <Select value={newApp.priority} onValueChange={v => setNewApp(p => ({ ...p, priority: v }))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>{PRIORITY_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Source</Label>
+                    <Select value={newApp.source} onValueChange={v => setNewApp(p => ({ ...p, source: v }))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>{LEAD_SOURCES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div><Label>Remarks</Label><Textarea value={newApp.remarks} onChange={e => setNewApp(p => ({ ...p, remarks: e.target.value }))} rows={2} /></div>
+                <Button onClick={() => createMutation.mutate(newApp)} disabled={!newApp.customer_name || !newApp.phone || createMutation.isPending} className="w-full bg-emerald-600 hover:bg-emerald-700">
+                  Create Lead
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
+
+      {/* Import Dialog */}
+      <LeadImportDialog
+        open={showImport}
+        onOpenChange={setShowImport}
+        title="Import Loan Leads"
+        templateColumns={["name", "phone", "loan_amount", "car_model", "source"]}
+        onImport={async (leads) => {
+          const rows = leads.map(l => ({
+            customer_name: l.name || l.customer_name || "Unknown",
+            phone: (l.phone || l.mobile || "").replace(/\D/g, ""),
+            loan_amount: l.loan_amount ? Number(l.loan_amount) : null,
+            car_model: l.car_model || null,
+            source: l.source || "CSV Import",
+            lead_source_tag: "csv_import",
+            stage: "new_lead" as const,
+            priority: "medium",
+          }));
+          const { error } = await supabase.from("loan_applications").insert(rows);
+          if (error) throw error;
+          queryClient.invalidateQueries({ queryKey: ["loan-applications"] });
+        }}
+      />
 
       {/* Drag hint */}
       {draggingApp && (
