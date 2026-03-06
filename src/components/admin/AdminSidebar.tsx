@@ -305,8 +305,7 @@ const navItems: NavItem[] = [
   { 
     id: "finance-hub", 
     label: "💰 Accounts & Finance", 
-    icon: CreditCard, 
-    verticals: ["accounts", "marketing"], 
+    icon: CreditCard,
     allowedRoles: ["super_admin", "admin", "finance"],
     children: [
       { id: "accounts-finance", label: "📊 Finance Dashboard", icon: BarChart3 },
@@ -317,8 +316,7 @@ const navItems: NavItem[] = [
   { 
     id: "hr-hub", 
     label: "👥 HR & Office", 
-    icon: Users, 
-    verticals: ["hr", "marketing"], 
+    icon: Users,
     allowedRoles: ["super_admin", "admin"],
     children: [
       { id: "hr-workspace", label: "📊 HR Dashboard", icon: BarChart3 },

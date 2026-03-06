@@ -18,14 +18,42 @@ export const useAdminAuth = () => {
     queryKey: ['userRoles', user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
-      
-      const { data, error } = await supabase
+
+      const { data: directRoles, error: directError } = await supabase
         .from('user_roles')
         .select('*')
         .eq('user_id', user.id);
-      
-      if (error) throw error;
-      return data as UserRole[];
+
+      if (directError) throw directError;
+      if ((directRoles?.length ?? 0) > 0) {
+        return directRoles as UserRole[];
+      }
+
+      // Fallback: CRM role mapping for legacy/admin accounts
+      const { data: crmUser } = await supabase
+        .from('crm_users')
+        .select('role')
+        .eq('auth_user_id', user.id)
+        .maybeSingle();
+
+      if (!crmUser?.role) return [];
+
+      const mappedRole: AppRole | null = crmUser.role === 'admin'
+        ? 'admin'
+        : crmUser.role === 'manager'
+          ? 'operations'
+          : crmUser.role === 'executive'
+            ? 'sales'
+            : null;
+
+      if (!mappedRole) return [];
+
+      return [{
+        id: `crm-${user.id}`,
+        user_id: user.id,
+        role: mappedRole,
+        created_at: new Date().toISOString(),
+      }];
     },
     enabled: !!user?.id,
   });
