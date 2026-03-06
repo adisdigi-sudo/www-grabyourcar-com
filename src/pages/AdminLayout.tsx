@@ -12,11 +12,13 @@ import { AdminDashboard } from "@/components/admin/AdminDashboard";
 import { LeadManagement } from "@/components/admin/LeadManagement";
 import { HomepageManagement } from "@/components/admin/HomepageManagement";
 import { HSRPManagement } from "@/components/admin/HSRPManagement";
+import { HSRPWorkspace } from "@/components/admin/hsrp/HSRPWorkspace";
 import { CarDataManagement } from "@/components/admin/CarDataManagement";
 import { RoleManagement } from "@/components/admin/RoleManagement";
 import { AIContentManagement } from "@/components/admin/AIContentManagement";
 import { UnifiedCarManagement } from "@/components/admin/UnifiedCarManagement";
 import { RentalManagement } from "@/components/admin/RentalManagement";
+import { SelfDriveWorkspace } from "@/components/admin/rentals/SelfDriveWorkspace";
 import { AccessoriesManagement } from "@/components/admin/AccessoriesManagement";
 import { WebsiteSettings } from "@/components/admin/WebsiteSettings";
 import { WhatsAppManagement } from "@/components/admin/WhatsAppManagement";
@@ -268,9 +270,9 @@ const AdminLayout = () => {
       case "socialproof-stories":
         return <SocialProofManagement />;
       case "services-hsrp":
-        return <HSRPManagement />;
+        return <HSRPWorkspace />;
       case "services-rentals":
-        return <RentalManagement />;
+        return <SelfDriveWorkspace />;
       case "services-driver-bookings":
         return <DriverBookingsManagement />;
       case "services-api-partners":
