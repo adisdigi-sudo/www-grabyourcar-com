@@ -550,7 +550,7 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
   const [disbAmount, setDisbAmount] = useState(application?.disbursement_amount?.toString() || '');
   const [disbDate, setDisbDate] = useState(application?.disbursement_date || '');
   const [disbBank, setDisbBank] = useState(application?.lender_name || '');
-  const fileRef = useState<HTMLInputElement | null>([null])[0] as any;
+  // Removed unused fileRef
 
   const currentStage = application?.stage || 'new_lead';
 

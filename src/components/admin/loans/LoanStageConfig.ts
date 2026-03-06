@@ -79,3 +79,24 @@ export const LOST_REASONS = [
   'Credit score too low',
   'Other',
 ];
+
+// Legacy exports for backward compatibility with old components
+export const ALLOWED_TRANSITIONS: Record<LoanStage, LoanStage[]> = {
+  new_lead: ['smart_calling', 'interested', 'offer_shared', 'loan_application', 'disbursed', 'lost'],
+  smart_calling: ['new_lead', 'interested', 'offer_shared', 'loan_application', 'disbursed', 'lost'],
+  interested: ['new_lead', 'smart_calling', 'offer_shared', 'loan_application', 'disbursed', 'lost'],
+  offer_shared: ['new_lead', 'smart_calling', 'interested', 'loan_application', 'disbursed', 'lost'],
+  loan_application: ['new_lead', 'smart_calling', 'interested', 'offer_shared', 'disbursed', 'lost'],
+  disbursed: ['new_lead', 'smart_calling', 'interested', 'offer_shared', 'loan_application', 'lost'],
+  lost: ['new_lead', 'smart_calling', 'interested', 'offer_shared', 'loan_application', 'disbursed'],
+};
+
+export const REQUIRED_DOCUMENTS = [
+  { key: 'pan_card', label: 'PAN Card' },
+  { key: 'aadhaar', label: 'Aadhaar Card' },
+  { key: 'income_proof', label: 'Income Proof / Salary Slip' },
+  { key: 'bank_statement', label: 'Bank Statements (6 months)' },
+  { key: 'address_proof', label: 'Address Proof' },
+  { key: 'itr', label: 'ITR (if applicable)' },
+  { key: 'photo', label: 'Passport Photo' },
+];
