@@ -634,7 +634,7 @@ function RentalDetailModal({ open, onOpenChange, booking, vehicles, partners, on
             </div>
             <Button size="sm" className="w-full gap-2 bg-yellow-600 hover:bg-yellow-700 text-white" onClick={() => {
               if (paymentStatus !== "paid") { toast.error("Complete payment first"); return; }
-              setSelected && onUpdate({ pipeline_stage: "trip_complete" });
+              onUpdate({ pipeline_stage: "trip_complete" });
               toast.success("Moved to Trip Complete");
             }}>
               <CheckCircle2 className="h-4 w-4" /> Complete Trip
