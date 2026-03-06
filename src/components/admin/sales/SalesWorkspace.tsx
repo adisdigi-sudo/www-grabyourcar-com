@@ -240,6 +240,32 @@ export function SalesWorkspace() {
         ))}
       </div>
 
+      {/* Notifications */}
+      {salesNotifications.length > 0 && <StageNotificationBanner items={salesNotifications} />}
+
+      {/* Import Dialog */}
+      <LeadImportDialog
+        open={showImport}
+        onOpenChange={setShowImport}
+        title="Import Sales Leads"
+        templateColumns={["name", "phone", "city", "car_brand", "car_model", "source"]}
+        onImport={async (importedLeads) => {
+          const rows = importedLeads.map(l => ({
+            customer_name: l.name || l.customer_name || "Unknown",
+            phone: (l.phone || l.mobile || "").replace(/\D/g, ""),
+            city: l.city || null,
+            car_brand: l.car_brand || null,
+            car_model: l.car_model || null,
+            source: l.source || "CSV Import",
+            pipeline_stage: "smart_calling",
+            client_id: `SC-${Date.now().toString(36).toUpperCase()}`,
+          }));
+          const { error } = await supabase.from("sales_pipeline").insert(rows);
+          if (error) throw error;
+          queryClient.invalidateQueries({ queryKey: ["sales-pipeline"] });
+        }}
+      />
+
       {/* Stage Tabs */}
       <div className="flex items-center gap-2">
         <div className="flex-1 overflow-x-auto">
@@ -267,9 +293,14 @@ export function SalesWorkspace() {
             })}
           </div>
         </div>
-        <Button size="sm" onClick={() => setShowAddLead(true)} className="gap-1.5 shrink-0">
-          <Plus className="h-3.5 w-3.5" /> Add Lead
-        </Button>
+        <div className="flex gap-2 shrink-0">
+          <Button size="sm" variant="outline" onClick={() => setShowImport(true)} className="gap-1.5">
+            <FileSpreadsheet className="h-3.5 w-3.5" /> Import
+          </Button>
+          <Button size="sm" onClick={() => setShowAddLead(true)} className="gap-1.5">
+            <Plus className="h-3.5 w-3.5" /> Add Lead
+          </Button>
+        </div>
       </div>
 
       {/* Search */}
