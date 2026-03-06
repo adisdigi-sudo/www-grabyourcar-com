@@ -223,9 +223,9 @@ export function SalesWorkspace() {
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {[
           { label: "Total Leads", value: totalLeads, icon: Users, color: "text-blue-600" },
-          { label: "In Pipeline", value: totalLeads - won - lost, icon: TrendingUp, color: "text-cyan-600" },
+          { label: "In Pipeline", value: totalLeads - won - lostCount, icon: TrendingUp, color: "text-cyan-600" },
           { label: "Won / Delivered", value: won, icon: CheckCircle2, color: "text-emerald-600" },
-          { label: "Lost", value: lost, icon: XCircle, color: "text-red-600" },
+          { label: "Lost", value: lostCount, icon: XCircle, color: "text-red-600" },
           { label: "Conversion", value: `${conversion}%`, icon: BarChart3, color: "text-violet-600" },
         ].map(kpi => (
           <Card key={kpi.label} className="border">
