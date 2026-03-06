@@ -454,6 +454,23 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
     moveStage.mutate({ clientId: selectedClient.id, newStage: "lost", reason: lostReason });
   };
 
+  const handleCardDragStart = (client: Client) => setDraggingClient(client);
+  const handleCardDragEnd = () => {
+    setDraggingClient(null);
+    setDragOverStage(null);
+  };
+  const handleStageDragOver = (e: React.DragEvent, stage: string) => {
+    e.preventDefault();
+    setDragOverStage(stage);
+  };
+  const handleStageDrop = (e: React.DragEvent, stage: string) => {
+    e.preventDefault();
+    if (!draggingClient || (draggingClient.pipeline_stage || "new_lead") === stage) return;
+    handleMove(draggingClient, stage);
+    setDragOverStage(null);
+    setDraggingClient(null);
+  };
+
   const addNote = async () => {
     if (!selectedClient || !note.trim()) return;
     await supabase.from("insurance_activity_log").insert({
@@ -530,7 +547,9 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
               size="sm"
               variant={selectedStage === stage.value ? "default" : "outline"}
               onClick={() => setSelectedStage(stage.value)}
-              className={`shrink-0 h-8 text-xs gap-1.5 ${selectedStage === stage.value ? "" : stage.text}`}
+              onDragOver={(e) => handleStageDragOver(e, stage.value)}
+              onDrop={(e) => handleStageDrop(e, stage.value)}
+              className={`shrink-0 h-8 text-xs gap-1.5 ${selectedStage === stage.value ? "" : stage.text} ${dragOverStage === stage.value ? 'ring-2 ring-primary/40' : ''}`}
             >
               <Icon className="h-3.5 w-3.5" />
               {stage.label}
@@ -677,17 +696,6 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
               <PhoneCall className="h-3.5 w-3.5" /> Smart Calling
             </Button>
           )}
-          <Button size="sm" variant="outline" className="h-9 gap-1.5 text-xs" onClick={() => setShowImportDialog(true)}>
-            <Upload className="h-3.5 w-3.5" /> Import
-          </Button>
-          <Button size="sm" variant="outline" className="h-9 gap-1.5 text-xs" onClick={handleExport}>
-            <Download className="h-3.5 w-3.5" /> Export
-          </Button>
-          {onNavigate && (
-            <Button size="sm" variant="outline" className="h-9 gap-1.5 text-xs" onClick={() => onNavigate("services-insurance-import")}>
-              <Database className="h-3.5 w-3.5" /> Full Import
-            </Button>
-          )}
         </div>
       </div>
 
@@ -741,6 +749,9 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
               <motion.div
                 key={client.id}
                 layout
+                draggable
+                onDragStart={() => handleCardDragStart(client)}
+                onDragEnd={handleCardDragEnd}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }}
