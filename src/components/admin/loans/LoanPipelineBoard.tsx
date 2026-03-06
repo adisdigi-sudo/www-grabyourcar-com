@@ -385,14 +385,6 @@ export const LoanPipelineBoard = ({ applications }: Props) => {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-6 text-[10px] flex-1 text-green-600 hover:text-green-700 hover:bg-green-500/10"
-                              onClick={e => { e.stopPropagation(); handleWhatsApp(app.phone, app.customer_name); }}
-                            >
-                              <MessageCircle className="h-3 w-3 mr-1" /> WhatsApp
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
                               className="h-6 text-[10px] flex-1"
                               onClick={e => { e.stopPropagation(); handleCardClick(app); }}
                             >

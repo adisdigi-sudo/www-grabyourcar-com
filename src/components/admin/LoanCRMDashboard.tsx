@@ -67,7 +67,7 @@ export const LoanCRMDashboard = () => {
           </h1>
           <p className="text-muted-foreground mt-1">12-stage pipeline with forced workflows & document guardrails</p>
         </div>
-        <LoanBulkImport />
+        
       </div>
 
       {/* KPI Cards */}
