@@ -1000,7 +1000,8 @@ function SalesDetailModal({ open, onOpenChange, lead, activities, onUpdate }: an
                 <Button key={s.value} variant="outline" size="sm" className={`text-[10px] h-7 ${s.color}`}
                   onClick={() => {
                     if (s.value === "status" || s.value === "after_sales") {
-                      setSelectedLead && void 0;
+                      // These require modal interaction, handled via drag/drop
+                      return;
                     } else {
                       onUpdate({ pipeline_stage: s.value }, "stage_change", `Moved to ${s.label}`);
                       toast.success(`Moved to ${s.label}`);
