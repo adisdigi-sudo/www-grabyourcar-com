@@ -207,6 +207,8 @@ export const LoanWorkspace = () => {
     priority: 'medium', source: 'Manual', remarks: '',
   });
 
+  const [showImport, setShowImport] = useState(false);
+
   // Fetch data
   const { data: rawApplications = [] } = useQuery({
     queryKey: ['loan-applications'],
