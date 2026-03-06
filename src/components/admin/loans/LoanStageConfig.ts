@@ -1,70 +1,70 @@
-// 12-Stage Car Loans Workflow Configuration
+// 6-Stage Car Loan Unified Workspace Configuration
 
 export const LOAN_STAGES = [
-  'new_lead', 'contacted', 'qualified', 'eligibility_check',
-  'lender_match', 'offer_shared', 'documents_requested',
-  'documents_received', 'approval', 'disbursement', 'converted', 'lost'
+  'new_lead', 'smart_calling', 'interested', 'offer_shared',
+  'loan_application', 'disbursed', 'lost'
 ] as const;
 
 export type LoanStage = typeof LOAN_STAGES[number];
 
 export const STAGE_LABELS: Record<LoanStage, string> = {
   new_lead: 'New Lead',
-  contacted: 'Contacted',
-  qualified: 'Qualified',
-  eligibility_check: 'Eligibility Check',
-  lender_match: 'Lender Match',
+  smart_calling: 'Smart Calling',
+  interested: 'Interested',
   offer_shared: 'Offer Shared',
-  documents_requested: 'Docs Requested',
-  documents_received: 'Docs Received',
-  approval: 'Approval',
-  disbursement: 'Disbursement',
-  converted: 'Converted',
+  loan_application: 'Loan Application',
+  disbursed: 'Disbursed',
   lost: 'Lost',
 };
 
 export const STAGE_COLORS: Record<LoanStage, string> = {
   new_lead: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
-  contacted: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
-  qualified: 'bg-cyan-500/10 text-cyan-600 border-cyan-500/20',
-  eligibility_check: 'bg-violet-500/10 text-violet-600 border-violet-500/20',
-  lender_match: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20',
-  offer_shared: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
-  documents_requested: 'bg-orange-500/10 text-orange-600 border-orange-500/20',
-  documents_received: 'bg-teal-500/10 text-teal-600 border-teal-500/20',
-  approval: 'bg-lime-500/10 text-lime-600 border-lime-500/20',
-  disbursement: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
-  converted: 'bg-green-500/10 text-green-700 border-green-500/20',
+  smart_calling: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
+  interested: 'bg-cyan-500/10 text-cyan-600 border-cyan-500/20',
+  offer_shared: 'bg-violet-500/10 text-violet-600 border-violet-500/20',
+  loan_application: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20',
+  disbursed: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
   lost: 'bg-red-500/10 text-red-600 border-red-500/20',
 };
 
-// Defines which stages a given stage can move to — fully open movement to any stage
-const ALL_STAGES_EXCEPT = (exclude: LoanStage): LoanStage[] =>
-  LOAN_STAGES.filter(s => s !== exclude);
-
-export const ALLOWED_TRANSITIONS: Record<LoanStage, LoanStage[]> = {
-  new_lead: ALL_STAGES_EXCEPT('new_lead'),
-  contacted: ALL_STAGES_EXCEPT('contacted'),
-  qualified: ALL_STAGES_EXCEPT('qualified'),
-  eligibility_check: ALL_STAGES_EXCEPT('eligibility_check'),
-  lender_match: ALL_STAGES_EXCEPT('lender_match'),
-  offer_shared: ALL_STAGES_EXCEPT('offer_shared'),
-  documents_requested: ALL_STAGES_EXCEPT('documents_requested'),
-  documents_received: ALL_STAGES_EXCEPT('documents_received'),
-  approval: ALL_STAGES_EXCEPT('approval'),
-  disbursement: ALL_STAGES_EXCEPT('disbursement'),
-  converted: ALL_STAGES_EXCEPT('converted'),
-  lost: ALL_STAGES_EXCEPT('lost'),
+// Map legacy stages to new 6-stage pipeline
+export const LEGACY_STAGE_MAP: Record<string, LoanStage> = {
+  new_lead: 'new_lead',
+  contacted: 'smart_calling',
+  qualified: 'interested',
+  eligibility_check: 'interested',
+  lender_match: 'offer_shared',
+  offer_shared: 'offer_shared',
+  documents_requested: 'loan_application',
+  documents_received: 'loan_application',
+  approval: 'loan_application',
+  disbursement: 'disbursed',
+  converted: 'disbursed',
+  lost: 'lost',
+  smart_calling: 'smart_calling',
+  interested: 'interested',
+  loan_application: 'loan_application',
+  disbursed: 'disbursed',
 };
 
-export const REQUIRED_DOCUMENTS = [
-  { key: 'pan_card', label: 'PAN Card' },
-  { key: 'aadhaar', label: 'Aadhaar Card' },
-  { key: 'income_proof', label: 'Income Proof / Salary Slip' },
-  { key: 'bank_statement', label: 'Bank Statements (6 months)' },
-  { key: 'address_proof', label: 'Address Proof' },
-  { key: 'itr', label: 'ITR (if applicable)' },
-  { key: 'photo', label: 'Passport Photo' },
+export const normalizeStage = (stage: string | null): LoanStage => {
+  return LEGACY_STAGE_MAP[stage || 'new_lead'] || 'new_lead';
+};
+
+export const LEAD_SOURCES = [
+  'Meta', 'Google Ads', 'Referral', 'Walk-in', 'WhatsApp Broadcast',
+  'Website', 'Social Media', 'Partner', 'Manual',
+];
+
+export const PRIORITY_OPTIONS = [
+  { value: 'hot', label: '🔥 Hot', color: 'bg-red-500/10 text-red-500' },
+  { value: 'high', label: 'High', color: 'bg-orange-500/10 text-orange-500' },
+  { value: 'medium', label: 'Medium', color: 'bg-blue-500/10 text-blue-500' },
+  { value: 'low', label: 'Low', color: 'bg-gray-500/10 text-gray-500' },
+];
+
+export const CALL_STATUSES = [
+  'Interested', 'Not Interested', 'Call Back', 'No Answer', 'Wrong Number', 'Busy',
 ];
 
 export const LOST_REASONS = [
@@ -78,16 +78,4 @@ export const LOST_REASONS = [
   'Bought from another dealer',
   'Credit score too low',
   'Other',
-];
-
-export const LEAD_SOURCES = [
-  'Website', 'WhatsApp', 'Walk-in', 'Referral', 'Social Media',
-  'Google Ads', 'Facebook Ads', 'Partner', 'Bulk Import', 'Manual',
-];
-
-export const PRIORITY_OPTIONS = [
-  { value: 'hot', label: '🔥 Hot', color: 'bg-red-500/10 text-red-500' },
-  { value: 'high', label: 'High', color: 'bg-orange-500/10 text-orange-500' },
-  { value: 'medium', label: 'Medium', color: 'bg-blue-500/10 text-blue-500' },
-  { value: 'low', label: 'Low', color: 'bg-gray-500/10 text-gray-500' },
 ];
