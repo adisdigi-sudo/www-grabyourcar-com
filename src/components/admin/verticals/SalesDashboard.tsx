@@ -49,8 +49,6 @@ export const SalesDashboard = ({ onNavigate }: SalesDashboardProps) => {
   const quickActions = [
     { label: "Smart Calling", icon: Phone, desc: "Auto-prioritized queue", id: "calling-system", badge: "🔥" },
     { label: "All Leads", icon: Users, desc: "Browse & manage leads", id: "leads-all" },
-    { label: "Hot Leads", icon: Target, desc: "High-priority prospects", id: "leads-hot", badge: "Hot" },
-    { label: "AI Lead Scoring", icon: Zap, desc: "Prioritize automatically", id: "lead-scoring", badge: "AI" },
     { label: "Quote Generator", icon: IndianRupee, desc: "Create customer quotes", id: "services-quote-generator" },
     { label: "Discount Presets", icon: ShoppingCart, desc: "Manage offers", id: "services-discounts" },
   ];
