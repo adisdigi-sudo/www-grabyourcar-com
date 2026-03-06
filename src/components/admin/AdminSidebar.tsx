@@ -68,34 +68,6 @@ const navItems: NavItem[] = [
   // ── Universal ──
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
 
-  // ── Smart Calling — ALL operational verticals ──
-  { id: "calling-system", label: "📞 Smart Calling", icon: Users, badge: "🔥",
-    verticals: ["sales", "loans", "insurance", "rental", "hsrp"],
-    allowedRoles: ["super_admin", "admin", "sales", "calling", "insurance", "finance", "operations"] },
-
-  // ── Lead Management — ALL operational verticals ──
-  { 
-    id: "leads", 
-    label: "Lead Management", 
-    icon: Users,
-    verticals: ["sales", "loans", "insurance", "rental", "hsrp", "accessories", "corporate"],
-    allowedRoles: ["super_admin", "admin", "sales", "calling", "insurance", "finance", "operations"],
-    children: [
-      { id: "leads-all", label: "All Leads", icon: Users },
-    ]
-  },
-
-  // ── Client Management — operational verticals ──
-  { id: "client-management", label: "👤 Client Management", icon: UserCog, badge: "New",
-    verticals: ["sales", "insurance", "loans", "rental", "hsrp"],
-    allowedRoles: ["super_admin", "admin", "insurance", "sales", "finance", "operations"] },
-
-
-  // ── Loan CRM — loans vertical ──
-  { id: "loan-crm", label: "💰 Loan CRM", icon: CreditCard, badge: "New",
-    verticals: ["loans"],
-    allowedRoles: ["super_admin", "admin", "finance", "sales"] },
-
   // ── Services — vertical-specific children (sales/support only) ──
   { 
     id: "services", 
