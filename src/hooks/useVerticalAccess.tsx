@@ -90,12 +90,26 @@ export const VerticalProvider = ({ children }: { children: ReactNode }) => {
     queryKey: ['userRoles-vertical', user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
+
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', user.id);
+
       if (error) throw error;
-      return data.map(d => d.role);
+      if ((data?.length ?? 0) > 0) return data.map(d => d.role);
+
+      // Fallback to CRM role for legacy/admin accounts
+      const { data: crmUser } = await supabase
+        .from('crm_users')
+        .select('role')
+        .eq('auth_user_id', user.id)
+        .maybeSingle();
+
+      if (crmUser?.role === 'admin') return ['admin'];
+      if (crmUser?.role === 'manager') return ['operations'];
+      if (crmUser?.role === 'executive') return ['sales'];
+      return [];
     },
     enabled: !!user?.id,
   });
