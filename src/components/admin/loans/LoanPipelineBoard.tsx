@@ -178,12 +178,14 @@ export const LoanPipelineBoard = ({ applications }: Props) => {
   // Auto-execute pending drop
   useEffect(() => {
     if (!pendingDrop || quickMoveMutation.isPending) return;
+    const { app, targetStage } = pendingDrop;
     quickMoveMutation.mutate({
-      appId: pendingDrop.app.id,
-      fromStage: pendingDrop.app.stage,
-      toStage: pendingDrop.targetStage,
+      appId: app.id,
+      fromStage: app.stage,
+      toStage: targetStage,
     });
-  }, [pendingDrop, quickMoveMutation]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingDrop]);
 
   const isDropAllowed = (targetStage: LoanStage) => {
     if (!draggingApp) return false;
@@ -380,14 +382,6 @@ export const LoanPipelineBoard = ({ applications }: Props) => {
 
                           {/* Quick Actions */}
                           <div className="flex gap-1 pt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 text-[10px] flex-1 text-green-600 hover:text-green-700 hover:bg-green-500/10"
-                              onClick={e => { e.stopPropagation(); handleWhatsApp(app.phone, app.customer_name); }}
-                            >
-                              <MessageCircle className="h-3 w-3 mr-1" /> WhatsApp
-                            </Button>
                             <Button
                               variant="ghost"
                               size="sm"
