@@ -301,6 +301,12 @@ export function InsuranceWorkspace() {
     const currentStage = normalizeStage(client.pipeline_stage);
     if (currentStage === targetStage) return;
 
+    // Guard: Can't move to policy_issued unless renewal_reminder_set
+    if (targetStage === "policy_issued" && !client.renewal_reminder_set) {
+      toast.error("⚠️ Set renewal reminder first! Client must have renewal set before moving to Policy Issued.", { duration: 5000 });
+      return;
+    }
+
     if (targetStage === "lost") {
       setPendingMoveClient(client); setLostReason(""); setLostRemarks(""); setShowLostDialog(true);
     } else if (targetStage === "smart_calling") {
