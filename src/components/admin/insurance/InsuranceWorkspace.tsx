@@ -758,7 +758,6 @@ export function InsuranceWorkspace() {
           open={showQuoteModal}
           onOpenChange={(o) => { setShowQuoteModal(o); if (!o) setSelectedClient(null); }}
           client={{
-            id: selectedClient.id,
             customer_name: selectedClient.customer_name || "Customer",
             phone: selectedClient.phone,
             email: selectedClient.email,
