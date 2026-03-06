@@ -4456,6 +4456,8 @@ export type Database = {
           anniversary_date: string | null
           assigned_advisor_id: string | null
           assigned_executive: string | null
+          call_remarks: string | null
+          call_status: string | null
           chassis_number: string | null
           city: string | null
           contact_attempts: number | null
@@ -4470,8 +4472,10 @@ export type Database = {
           engine_number: string | null
           fitness_expiry: string | null
           follow_up_date: string | null
+          follow_up_time: string | null
           gender: string | null
           id: string
+          incentive_eligible: boolean | null
           is_active: boolean | null
           is_otp_verified: boolean | null
           last_contacted_at: string | null
@@ -4494,6 +4498,8 @@ export type Database = {
           quote_insurer: string | null
           rc_expiry: string | null
           relationship: string | null
+          renewal_reminder_date: string | null
+          renewal_reminder_set: boolean | null
           rto_tax_expiry: string | null
           state: string | null
           state_permit_expiry: string | null
@@ -4516,6 +4522,8 @@ export type Database = {
           anniversary_date?: string | null
           assigned_advisor_id?: string | null
           assigned_executive?: string | null
+          call_remarks?: string | null
+          call_status?: string | null
           chassis_number?: string | null
           city?: string | null
           contact_attempts?: number | null
@@ -4530,8 +4538,10 @@ export type Database = {
           engine_number?: string | null
           fitness_expiry?: string | null
           follow_up_date?: string | null
+          follow_up_time?: string | null
           gender?: string | null
           id?: string
+          incentive_eligible?: boolean | null
           is_active?: boolean | null
           is_otp_verified?: boolean | null
           last_contacted_at?: string | null
@@ -4554,6 +4564,8 @@ export type Database = {
           quote_insurer?: string | null
           rc_expiry?: string | null
           relationship?: string | null
+          renewal_reminder_date?: string | null
+          renewal_reminder_set?: boolean | null
           rto_tax_expiry?: string | null
           state?: string | null
           state_permit_expiry?: string | null
@@ -4576,6 +4588,8 @@ export type Database = {
           anniversary_date?: string | null
           assigned_advisor_id?: string | null
           assigned_executive?: string | null
+          call_remarks?: string | null
+          call_status?: string | null
           chassis_number?: string | null
           city?: string | null
           contact_attempts?: number | null
@@ -4590,8 +4604,10 @@ export type Database = {
           engine_number?: string | null
           fitness_expiry?: string | null
           follow_up_date?: string | null
+          follow_up_time?: string | null
           gender?: string | null
           id?: string
+          incentive_eligible?: boolean | null
           is_active?: boolean | null
           is_otp_verified?: boolean | null
           last_contacted_at?: string | null
@@ -4614,6 +4630,8 @@ export type Database = {
           quote_insurer?: string | null
           rc_expiry?: string | null
           relationship?: string | null
+          renewal_reminder_date?: string | null
+          renewal_reminder_set?: boolean | null
           rto_tax_expiry?: string | null
           state?: string | null
           state_permit_expiry?: string | null
@@ -5288,6 +5306,38 @@ export type Database = {
           vehicle_number?: string | null
         }
         Relationships: []
+      }
+      insurance_quote_history: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          quote_data: Json
+          shared_via: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          quote_data?: Json
+          shared_via?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          quote_data?: Json
+          shared_via?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insurance_quote_history_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "insurance_clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       insurance_renewal_settings: {
         Row: {
