@@ -38,20 +38,23 @@ export const STAGE_COLORS: Record<LoanStage, string> = {
   lost: 'bg-red-500/10 text-red-600 border-red-500/20',
 };
 
-// Defines which stages a given stage can move to (forward + backward + terminal)
+// Defines which stages a given stage can move to — fully open movement to any stage
+const ALL_STAGES_EXCEPT = (exclude: LoanStage): LoanStage[] =>
+  LOAN_STAGES.filter(s => s !== exclude);
+
 export const ALLOWED_TRANSITIONS: Record<LoanStage, LoanStage[]> = {
-  new_lead: ['contacted', 'lost'],
-  contacted: ['new_lead', 'qualified', 'lost'],
-  qualified: ['contacted', 'eligibility_check', 'lost'],
-  eligibility_check: ['qualified', 'lender_match', 'lost'],
-  lender_match: ['eligibility_check', 'offer_shared', 'lost'],
-  offer_shared: ['lender_match', 'documents_requested', 'lost'],
-  documents_requested: ['offer_shared', 'documents_received', 'lost'],
-  documents_received: ['documents_requested', 'approval', 'lost'],
-  approval: ['documents_received', 'disbursement', 'lost'],
-  disbursement: ['approval', 'converted', 'lost'],
-  converted: [],
-  lost: ['new_lead'],
+  new_lead: ALL_STAGES_EXCEPT('new_lead'),
+  contacted: ALL_STAGES_EXCEPT('contacted'),
+  qualified: ALL_STAGES_EXCEPT('qualified'),
+  eligibility_check: ALL_STAGES_EXCEPT('eligibility_check'),
+  lender_match: ALL_STAGES_EXCEPT('lender_match'),
+  offer_shared: ALL_STAGES_EXCEPT('offer_shared'),
+  documents_requested: ALL_STAGES_EXCEPT('documents_requested'),
+  documents_received: ALL_STAGES_EXCEPT('documents_received'),
+  approval: ALL_STAGES_EXCEPT('approval'),
+  disbursement: ALL_STAGES_EXCEPT('disbursement'),
+  converted: ALL_STAGES_EXCEPT('converted'),
+  lost: ALL_STAGES_EXCEPT('lost'),
 };
 
 export const REQUIRED_DOCUMENTS = [
