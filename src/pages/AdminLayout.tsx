@@ -13,6 +13,7 @@ import { LeadManagement } from "@/components/admin/LeadManagement";
 import { HomepageManagement } from "@/components/admin/HomepageManagement";
 import { HSRPManagement } from "@/components/admin/HSRPManagement";
 import { HSRPWorkspace } from "@/components/admin/hsrp/HSRPWorkspace";
+import { SalesWorkspace } from "@/components/admin/sales/SalesWorkspace";
 import { CarDataManagement } from "@/components/admin/CarDataManagement";
 import { RoleManagement } from "@/components/admin/RoleManagement";
 import { AIContentManagement } from "@/components/admin/AIContentManagement";
@@ -176,6 +177,8 @@ const AdminLayout = () => {
         if (slug === "loans") return <LoanCRMDashboard />;
         return <AdminDashboard />;
       }
+      case "sales-crm":
+        return <SalesWorkspace />;
       case "loan-crm":
         return <LoanCRMDashboard />;
       case "unified-crm":
@@ -282,7 +285,7 @@ const AdminLayout = () => {
       case "services-insurance-import":
         return <InsuranceImportExport />;
       case "services-loans":
-        return <WebsiteSettings />;
+        return <LoanCRMDashboard />;
       case "services-emi-pdf":
         return <EMIPDFSettings />;
       case "services-discounts":

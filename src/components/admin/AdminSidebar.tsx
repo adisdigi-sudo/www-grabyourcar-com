@@ -68,7 +68,10 @@ const navItems: NavItem[] = [
   // ── Universal ──
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
 
-  // ── Services — vertical-specific children (sales/support only) ──
+  // ── Sales CRM — sales vertical ──
+  { id: "sales-crm", label: "🚗 Sales CRM", icon: Car, verticals: ["sales"], allowedRoles: ["super_admin", "admin", "sales"] },
+
+  // ── Services — vertical-specific children ──
   { 
     id: "services", 
     label: "Services", 
@@ -80,7 +83,7 @@ const navItems: NavItem[] = [
       { id: "services-api-partners", label: "🔗 API Partners", icon: Globe, verticals: ["rental"], allowedRoles: ["super_admin", "admin"] },
       { id: "services-insurance", label: "🛡️ Insurance CRM", icon: FileText, verticals: ["insurance"], allowedRoles: ["super_admin", "admin", "insurance"] },
       { id: "services-insurance-import", label: "📥 Insurance Import", icon: Database, verticals: ["insurance"], allowedRoles: ["super_admin", "admin", "insurance"] },
-      { id: "services-loans", label: "Car Loans", icon: CreditCard, verticals: ["loans"], allowedRoles: ["super_admin", "admin", "finance"] },
+      { id: "services-loans", label: "💰 Car Loans CRM", icon: CreditCard, verticals: ["loans"], allowedRoles: ["super_admin", "admin", "finance"] },
       { id: "services-emi-pdf", label: "EMI PDF Settings", icon: FileText, verticals: ["loans"], allowedRoles: ["super_admin", "admin", "finance"] },
       { id: "services-discounts", label: "Discount Presets", icon: Tags, verticals: ["sales"], allowedRoles: ["super_admin", "admin", "sales"] },
       { id: "services-quote-generator", label: "Manual Quote", icon: FileSignature, verticals: ["sales"], allowedRoles: ["super_admin", "admin", "sales"] },

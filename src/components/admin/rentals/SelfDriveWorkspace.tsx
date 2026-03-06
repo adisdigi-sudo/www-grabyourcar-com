@@ -69,7 +69,7 @@ export function SelfDriveWorkspace() {
       if (error) throw error;
       return (data || []).map((b: any) => ({
         ...b,
-        pipeline_stage: normalizeStage(b.status),
+        pipeline_stage: b.pipeline_stage || normalizeStage(b.status),
       }));
     },
   });
@@ -140,9 +140,10 @@ export function SelfDriveWorkspace() {
         new_inquiry: "pending", smart_calling: "contacted", offer_shared: "quoted",
         partner_escalation: "escalated", booking_payment: "confirmed", trip_complete: "completed",
       };
-      const dbUpdates = { ...updates, updated_at: new Date().toISOString() };
-      if (updates.pipeline_stage) dbUpdates.status = statusMap[updates.pipeline_stage] || updates.pipeline_stage;
-      delete dbUpdates.pipeline_stage;
+      const dbUpdates = { ...updates, updated_at: new Date().toISOString(), last_activity_at: new Date().toISOString() };
+      if (updates.pipeline_stage) {
+        dbUpdates.status = statusMap[updates.pipeline_stage] || updates.pipeline_stage;
+      }
       const { error } = await supabase.from("rental_bookings").update(dbUpdates).eq("id", id);
       if (error) throw error;
     },

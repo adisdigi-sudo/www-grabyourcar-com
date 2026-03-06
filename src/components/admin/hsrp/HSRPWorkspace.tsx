@@ -64,7 +64,7 @@ export function HSRPWorkspace() {
       const { data, error } = await supabase.from("hsrp_bookings")
         .select("*").order("created_at", { ascending: false });
       if (error) throw error;
-      return (data || []).map((b: any) => ({ ...b, pipeline_stage: normalizeStage(b.order_status) }));
+      return (data || []).map((b: any) => ({ ...b, pipeline_stage: b.pipeline_stage || normalizeStage(b.order_status) }));
     },
   });
 
@@ -114,9 +114,10 @@ export function HSRPWorkspace() {
         new_booking: "pending", verification: "verifying", payment: "payment_pending",
         scheduled: "confirmed", installation: "in_progress", completed: "completed",
       };
-      const dbUpdates = { ...updates, updated_at: new Date().toISOString() };
-      if (updates.pipeline_stage) dbUpdates.order_status = statusMap[updates.pipeline_stage] || updates.pipeline_stage;
-      delete dbUpdates.pipeline_stage;
+      const dbUpdates = { ...updates, updated_at: new Date().toISOString(), last_activity_at: new Date().toISOString() };
+      if (updates.pipeline_stage) {
+        dbUpdates.order_status = statusMap[updates.pipeline_stage] || updates.pipeline_stage;
+      }
       const { error } = await supabase.from("hsrp_bookings").update(dbUpdates).eq("id", id);
       if (error) throw error;
     },
