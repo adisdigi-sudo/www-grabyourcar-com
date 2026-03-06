@@ -17,8 +17,11 @@ import { motion } from "framer-motion";
 import {
   Banknote, Plus, Phone, IndianRupee, Car, GripVertical, Calculator,
   Share2, PhoneCall, MessageCircle, CheckCircle2, XCircle, Building2,
-  FileText, Upload, AlertTriangle, Clock, TrendingUp, Users, Download, Flame
+  FileText, Upload, AlertTriangle, Clock, TrendingUp, Users, Download, Flame, FileSpreadsheet
 } from "lucide-react";
+import jsPDF from "jspdf";
+import { LeadImportDialog } from "../shared/LeadImportDialog";
+import { StageNotificationBanner, buildLoanNotifications } from "../shared/StageNotificationBanner";
 import {
   LOAN_STAGES, STAGE_LABELS, STAGE_COLORS, LEAD_SOURCES, PRIORITY_OPTIONS,
   CALL_STATUSES, LOST_REASONS, normalizeStage, type LoanStage
@@ -49,6 +52,86 @@ const EMICalculator = () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
+  const handleDownloadPDF = () => {
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const w = doc.internal.pageSize.getWidth();
+
+    // Header gradient
+    doc.setFillColor(16, 185, 129);
+    doc.rect(0, 0, w, 50, "F");
+    doc.setFillColor(13, 148, 103);
+    doc.rect(0, 45, w, 5, "F");
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(22);
+    doc.setFont("helvetica", "bold");
+    doc.text("Car Loan EMI Plan", w / 2, 22, { align: "center" });
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text("GrabYourCar - Your Trusted Auto Finance Partner", w / 2, 32, { align: "center" });
+    doc.text("www.grabyourcar.com", w / 2, 40, { align: "center" });
+
+    let y = 65;
+    doc.setTextColor(60, 60, 60);
+
+    // Summary box
+    const boxX = 20; const boxW = w - 40;
+    doc.setFillColor(240, 253, 244);
+    doc.roundedRect(boxX, y, boxW, 40, 4, 4, "F");
+    doc.setDrawColor(16, 185, 129);
+    doc.roundedRect(boxX, y, boxW, 40, 4, 4, "S");
+
+    doc.setFontSize(28);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(16, 185, 129);
+    doc.text(formatAmt(emi), w / 2, y + 20, { align: "center" });
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text("Monthly EMI", w / 2, y + 30, { align: "center" });
+
+    y += 55;
+
+    // Details table
+    const rows = [
+      ["Loan Amount", formatAmt(amount)],
+      ["Interest Rate (p.a.)", `${rate}%`],
+      ["Tenure", `${tenure} months (${(tenure / 12).toFixed(1)} years)`],
+      ["Monthly EMI", formatAmt(emi)],
+      ["Total Interest Payable", formatAmt(totalInterest)],
+      ["Total Amount Payable", formatAmt(totalPayable)],
+    ];
+
+    rows.forEach(([label, value], i) => {
+      const rowY = y + i * 14;
+      if (i % 2 === 0) {
+        doc.setFillColor(248, 250, 252);
+        doc.rect(boxX, rowY - 4, boxW, 14, "F");
+      }
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(80, 80, 80);
+      doc.text(label, boxX + 8, rowY + 4);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(30, 30, 30);
+      doc.text(value, boxX + boxW - 8, rowY + 4, { align: "right" });
+    });
+
+    y += rows.length * 14 + 15;
+
+    // Footer
+    doc.setDrawColor(200, 200, 200);
+    doc.line(boxX, y, boxX + boxW, y);
+    y += 10;
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(150, 150, 150);
+    doc.text("* This is an indicative EMI calculation. Actual EMI may vary based on bank/NBFC terms.", boxX, y);
+    doc.text(`Generated on ${format(new Date(), "dd MMM yyyy, hh:mm a")} | GrabYourCar`, boxX, y + 6);
+
+    doc.save(`EMI_Plan_Rs${Math.round(amount / 100000)}L_${tenure}m.pdf`);
+    toast.success("EMI Plan PDF downloaded!");
+  };
+
   return (
     <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
       className="relative overflow-hidden rounded-2xl border bg-card">
@@ -65,9 +148,14 @@ const EMICalculator = () => {
               <p className="text-xs text-muted-foreground">Calculate & share beautiful EMI plans instantly</p>
             </div>
           </div>
-          <Button size="sm" variant="outline" className="gap-1.5 border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10" onClick={handleShareWhatsApp}>
-            <Share2 className="h-4 w-4" /> Share via WhatsApp
-          </Button>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" className="gap-1.5 border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10" onClick={handleDownloadPDF}>
+              <Download className="h-4 w-4" /> Download PDF
+            </Button>
+            <Button size="sm" variant="outline" className="gap-1.5 border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10" onClick={handleShareWhatsApp}>
+              <Share2 className="h-4 w-4" /> Share WhatsApp
+            </Button>
+          </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
