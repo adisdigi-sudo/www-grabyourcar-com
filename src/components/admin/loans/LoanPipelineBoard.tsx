@@ -130,7 +130,7 @@ export const LoanPipelineBoard = ({ applications }: Props) => {
       }
 
       // For lost/converted or stages needing docs, open the modal
-      if (targetStage === 'lost' || targetStage === 'converted' || targetStage === 'documents_received') {
+      if (targetStage === 'lost' || (targetStage as string) === 'converted' || (targetStage as string) === 'documents_received') {
         setSelectedApp(app);
         setShowStageModal(true);
         return;
@@ -199,8 +199,8 @@ export const LoanPipelineBoard = ({ applications }: Props) => {
     window.open(`https://wa.me/91${phone.replace(/\D/g, '').slice(-10)}?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
-  const pipelineStages = LOAN_STAGES.filter(s => s !== 'converted' && s !== 'lost');
-  const convertedCount = applications.filter(a => a.stage === 'converted').length;
+  const pipelineStages = LOAN_STAGES.filter(s => (s as string) !== 'converted' && s !== 'lost');
+  const convertedCount = applications.filter(a => (a.stage as string) === 'converted').length;
   const lostCount = applications.filter(a => a.stage === 'lost').length;
   const totalValue = applications
     .filter(a => !['converted', 'lost'].includes(a.stage))

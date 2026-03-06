@@ -81,9 +81,9 @@ export const LoanCallDispositionModal = ({ open, onOpenChange, application }: Pr
   const currentStage = (application?.stage || 'new_lead') as LoanStage;
   const allowedNext = ALLOWED_TRANSITIONS[currentStage] || [];
   const isLost = targetStage === 'lost';
-  const isDocStage = ['documents_requested', 'documents_received'].includes(targetStage);
-  const isApproval = targetStage === 'approval';
-  const isDisbursement = ['disbursement', 'converted'].includes(targetStage);
+  const isDocStage = ['documents_requested', 'documents_received'].includes(targetStage as string);
+  const isApproval = (targetStage as string) === 'approval';
+  const isDisbursement = ['disbursement', 'converted'].includes(targetStage as string);
 
   // File upload handler
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -186,7 +186,7 @@ export const LoanCallDispositionModal = ({ open, onOpenChange, application }: Pr
           updates.disbursement_reference = disbursementRef || null;
           updates.disbursement_date = disbursementDate || null;
           updates.lender_name = bankName || null;
-          if (targetStage === 'converted') {
+          if ((targetStage as string) === 'converted') {
             updates.converted_at = new Date().toISOString();
             updates.documents_uploaded = uploadedDocs.map(d => d.type);
 
