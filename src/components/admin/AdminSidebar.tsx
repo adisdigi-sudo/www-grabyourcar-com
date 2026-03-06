@@ -300,6 +300,12 @@ const navItems: NavItem[] = [
   },
   { id: "roles", label: "👥 User Roles", icon: UserCog, verticals: ["marketing"], allowedRoles: ["super_admin", "admin"] },
   { id: "settings", label: "⚙️ Site Settings", icon: Settings, verticals: ["marketing"], allowedRoles: ["super_admin", "admin"] },
+
+  // ── Accounts & Finance ──
+  { id: "accounts-finance", label: "💰 Accounts & Finance", icon: CreditCard, verticals: ["accounts"], allowedRoles: ["super_admin", "admin", "finance"] },
+
+  // ── HR & Office Culture ──
+  { id: "hr-workspace", label: "👥 HR & Office", icon: Users, verticals: ["hr"], allowedRoles: ["super_admin", "admin"] },
 ];
 
 export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => {
