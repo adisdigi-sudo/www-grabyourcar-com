@@ -25,8 +25,7 @@ import {
   DynamicTestimonials,
   DynamicCTABanners,
 } from "@/components/DynamicHomepageContent";
-// OffersStrip removed for Rivian-style clean layout
-// Force fresh module build
+// Clean Rivian layout — fresh build v2
 
 const Index = () => {
   const [loanPrefill, setLoanPrefill] = useState<string>("");
