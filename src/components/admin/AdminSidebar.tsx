@@ -82,8 +82,6 @@ const navItems: NavItem[] = [
     allowedRoles: ["super_admin", "admin", "sales", "calling", "insurance", "finance", "operations"],
     children: [
       { id: "leads-all", label: "All Leads", icon: Users },
-      { id: "leads-hot", label: "Hot Leads", icon: Users, badge: "Hot" },
-      { id: "leads-whatsapp", label: "WhatsApp Leads", icon: MessageSquare },
     ]
   },
 
@@ -92,18 +90,6 @@ const navItems: NavItem[] = [
     verticals: ["sales", "insurance", "loans", "rental", "hsrp"],
     allowedRoles: ["super_admin", "admin", "insurance", "sales", "finance", "operations"] },
 
-  // ── AI Lead Scoring — operational verticals ──
-  { id: "lead-scoring", label: "🤖 AI Lead Scoring", icon: Brain, badge: "AI",
-    verticals: ["sales", "loans", "insurance"],
-    allowedRoles: ["super_admin", "admin", "sales", "calling", "insurance"] },
-
-  // ── Lead Import/Export — operational verticals ──
-  { id: "lead-import", label: "📥 Lead Import", icon: Database, badge: "New",
-    verticals: ["sales", "loans", "insurance", "rental", "hsrp", "accessories"],
-    allowedRoles: ["super_admin", "admin", "operations", "calling"] },
-  { id: "data-export", label: "📤 Data Export", icon: FileText, badge: "New",
-    verticals: ["sales", "loans", "insurance", "hsrp", "rental", "accessories"],
-    allowedRoles: ["super_admin", "admin"] },
 
   // ── Loan CRM — loans vertical ──
   { id: "loan-crm", label: "💰 Loan CRM", icon: CreditCard, badge: "New",
