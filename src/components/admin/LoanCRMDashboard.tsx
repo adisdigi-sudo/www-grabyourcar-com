@@ -12,7 +12,7 @@ import { LoanPipelineBoard } from "./loans/LoanPipelineBoard";
 import { LoanLeadsList } from "./loans/LoanLeadsList";
 import { LoanBankPartners } from "./loans/LoanBankPartners";
 import { LoanAnalytics } from "./loans/LoanAnalytics";
-import { LoanBulkImport } from "./loans/LoanBulkImport";
+
 import { LoanCallingWorkspace } from "./loans/LoanCallingWorkspace";
 import { LoanAutomationPanel } from "./loans/LoanAutomationPanel";
 import { LOAN_STAGES, STAGE_LABELS } from "./loans/LoanStageConfig";
