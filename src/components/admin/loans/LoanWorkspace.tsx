@@ -42,13 +42,13 @@ const EMICalculator = () => {
   const totalInterest = totalPayable - amount;
 
   const formatAmt = (v: number) => {
-    if (v >= 100000) return `₹${(v / 100000).toFixed(2)}L`;
-    if (v >= 1000) return `₹${(v / 1000).toFixed(0)}K`;
-    return `₹${Math.round(v)}`;
+    if (v >= 100000) return `Rs.${(v / 100000).toFixed(2)}L`;
+    if (v >= 1000) return `Rs.${(v / 1000).toFixed(0)}K`;
+    return `Rs.${Math.round(v)}`;
   };
 
   const handleShareWhatsApp = () => {
-    const msg = `🚗 *Car Loan EMI Plan*\n\n💰 Loan Amount: ${formatAmt(amount)}\n📊 Interest Rate: ${rate}%\n📅 Tenure: ${tenure} months\n\n💵 *Monthly EMI: ${formatAmt(emi)}*\n📈 Total Interest: ${formatAmt(totalInterest)}\n💳 Total Payable: ${formatAmt(totalPayable)}\n\n_Powered by GrabYourCar_\n🌐 www.grabyourcar.com`;
+    const msg = `*Car Loan EMI Plan*\n\nLoan Amount: ${formatAmt(amount)}\nInterest Rate: ${rate}%\nTenure: ${tenure} months\n\n*Monthly EMI: ${formatAmt(emi)}*\nTotal Interest: ${formatAmt(totalInterest)}\nTotal Payable: ${formatAmt(totalPayable)}\n\n_Powered by GrabYourCar_\nwww.grabyourcar.com`;
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
@@ -343,9 +343,9 @@ export const LoanWorkspace = () => {
   };
 
   const formatAmount = (amt: number | null) => {
-    if (!amt) return '—';
-    if (amt >= 100000) return `₹${(amt / 100000).toFixed(1)}L`;
-    return `₹${(amt / 1000).toFixed(0)}K`;
+    if (!amt) return '-';
+    if (amt >= 100000) return `Rs.${(amt / 100000).toFixed(1)}L`;
+    return `Rs.${(amt / 1000).toFixed(0)}K`;
   };
 
   const pipelineStages = LOAN_STAGES.filter(s => s !== 'lost');
@@ -495,7 +495,7 @@ export const LoanWorkspace = () => {
                     <Badge variant="secondary" className="text-[10px] h-5">{stageApps.length}</Badge>
                   </div>
                   {stageValue > 0 && (
-                    <p className="text-[10px] mt-1 opacity-70">₹{(stageValue / 100000).toFixed(1)}L</p>
+                    <p className="text-[10px] mt-1 opacity-70">Rs.{(stageValue / 100000).toFixed(1)}L</p>
                   )}
                 </div>
 
@@ -639,7 +639,7 @@ const LoanCard = ({ app, stage, onDragStart, onDragEnd, onClick, onWhatsApp, isD
         )}
         {stage === 'loan_application' && (
           <Badge variant="outline" className={`text-[9px] ${app.sanction_amount ? 'border-green-500/30 text-green-600' : 'border-amber-500/30 text-amber-600'}`}>
-            {app.sanction_amount ? `Approved ₹${(app.sanction_amount / 100000).toFixed(1)}L` : 'Pending'}
+            {app.sanction_amount ? `Approved Rs.${(app.sanction_amount / 100000).toFixed(1)}L` : 'Pending'}
           </Badge>
         )}
         {stage === 'disbursed' && (
@@ -738,7 +738,7 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
     if (loanStatus === 'approved' && !sanctionAmount) { toast.error("Sanction amount required"); return; }
     const updates: any = {
       stage: loanStatus === 'approved' ? 'loan_application' : 'lost',
-      remarks: remarks || (loanStatus === 'approved' ? `Approved: ₹${sanctionAmount}` : `Rejected: ${rejectionReason}`),
+      remarks: remarks || (loanStatus === 'approved' ? `Approved: Rs.${sanctionAmount}` : `Rejected: ${rejectionReason}`),
     };
     if (loanStatus === 'approved') {
       updates.sanction_amount = Number(sanctionAmount);
@@ -760,7 +760,7 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
       lender_name: disbBank,
       incentive_eligible: true,
       converted_at: new Date().toISOString(),
-      remarks: `Disbursed: ₹${disbAmount} via ${disbBank}`,
+      remarks: `Disbursed: Rs.${disbAmount} via ${disbBank}`,
     });
   };
 
@@ -955,7 +955,7 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
                 </div>
                 <div className="p-2 rounded bg-background border">
                   <p className="text-muted-foreground">Sanction Amount</p>
-                  <p className="font-medium">{application.sanction_amount ? `₹${(application.sanction_amount / 100000).toFixed(1)}L` : '—'}</p>
+                  <p className="font-medium">{application.sanction_amount ? `Rs.${(application.sanction_amount / 100000).toFixed(1)}L` : '-'}</p>
                 </div>
               </div>
               <div><Label>Remarks</Label><Textarea value={remarks} onChange={e => setRemarks(e.target.value)} rows={2} /></div>
@@ -1019,7 +1019,7 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
 };
 
 const formatAmount = (amt: number | null) => {
-  if (!amt) return '—';
-  if (amt >= 100000) return `₹${(amt / 100000).toFixed(1)}L`;
-  return `₹${(amt / 1000).toFixed(0)}K`;
+  if (!amt) return '-';
+  if (amt >= 100000) return `Rs.${(amt / 100000).toFixed(1)}L`;
+  return `Rs.${(amt / 1000).toFixed(0)}K`;
 };

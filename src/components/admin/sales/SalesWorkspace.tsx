@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,13 +13,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { format, formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow, differenceInHours, differenceInDays } from "date-fns";
 import {
   UserPlus, PhoneCall, Car, Send, FileText, Star, CheckCircle2, XCircle,
   Phone, MessageSquare, Plus, Search, GripVertical, Clock, AlertTriangle,
   Upload, Image, Video, ArrowRight, Banknote, Users, TrendingUp, X,
-  ChevronDown, Calendar, Trophy, BarChart3,
+  ChevronDown, Calendar, Trophy, BarChart3, FileSpreadsheet,
 } from "lucide-react";
+import { LeadImportDialog } from "../shared/LeadImportDialog";
+import { StageNotificationBanner } from "../shared/StageNotificationBanner";
 
 // ─── Pipeline Stage Config ──────────────────────────────────────────────
 const PIPELINE_STAGES = [
@@ -55,6 +57,7 @@ export function SalesWorkspace() {
   const [activeStage, setActiveStage] = useState("new_lead");
   const [search, setSearch] = useState("");
   const [showAddLead, setShowAddLead] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [selectedLead, setSelectedLead] = useState<any>(null);
   const [dragId, setDragId] = useState<string | null>(null);
 
@@ -62,7 +65,7 @@ export function SalesWorkspace() {
   const { data: leads = [], isLoading } = useQuery({
     queryKey: ["sales-pipeline"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any).from("sales_pipeline")
+      const { data, error } = await supabase.from("sales_pipeline")
         .select("*").order("created_at", { ascending: false });
       if (error) throw error;
       return (data || []).map((l: any) => ({ ...l, pipeline_stage: normalizeStage(l.pipeline_stage) }));
@@ -74,7 +77,7 @@ export function SalesWorkspace() {
     queryKey: ["sales-activity", selectedLead?.id],
     enabled: !!selectedLead,
     queryFn: async () => {
-      const { data } = await (supabase as any).from("sales_activity_log")
+      const { data } = await supabase.from("sales_activity_log")
         .select("*").eq("pipeline_id", selectedLead.id).order("created_at", { ascending: false });
       return data || [];
     },
@@ -88,8 +91,54 @@ export function SalesWorkspace() {
 
   const totalLeads = leads.length;
   const won = stageCounts["after_sales"] || 0;
-  const lost = stageCounts["lost"] || 0;
+  const lostCount = stageCounts["lost"] || 0;
   const conversion = totalLeads > 0 ? ((won / totalLeads) * 100).toFixed(1) : "0";
+
+  // Build notifications
+  const salesNotifications = useMemo(() => {
+    const items: any[] = [];
+    const now = new Date();
+    leads.forEach((l: any) => {
+      if (l.follow_up_date) {
+        const fuDate = new Date(l.follow_up_date);
+        const hours = differenceInHours(fuDate, now);
+        if (hours <= 24 && hours >= -48) {
+          items.push({
+            id: `followup-${l.id}`,
+            type: hours < 0 ? "overdue" : "followup",
+            title: `${l.customer_name || "Lead"} - follow-up ${hours < 0 ? "overdue" : "today"}`,
+            subtitle: l.follow_up_time ? `at ${l.follow_up_time}` : l.phone,
+          });
+        }
+      }
+      if (l.last_activity_at) {
+        const hours = differenceInHours(now, new Date(l.last_activity_at));
+        if (hours > 48 && !["after_sales", "lost"].includes(l.pipeline_stage)) {
+          items.push({
+            id: `stale-${l.id}`,
+            type: "followup",
+            title: `${l.customer_name || "Lead"} - no activity ${Math.floor(hours / 24)}d`,
+            subtitle: l.phone,
+          });
+        }
+      }
+      if (l.pipeline_stage === "booking" && l.last_activity_at) {
+        const days = differenceInDays(now, new Date(l.last_activity_at));
+        if (days > 3) {
+          items.push({
+            id: `booking-stale-${l.id}`,
+            type: "urgent",
+            title: `${l.customer_name} - booking pending ${days}d`,
+            subtitle: l.car_brand ? `${l.car_brand} ${l.car_model}` : l.phone,
+          });
+        }
+      }
+    });
+    return items.sort((a: any, b: any) => {
+      const priority: Record<string, number> = { overdue: 0, urgent: 1, followup: 2, renewal: 3 };
+      return (priority[a.type] || 3) - (priority[b.type] || 3);
+    });
+  }, [leads]);
 
   // Filter leads for active stage
   const stageLeads = leads.filter((l: any) =>
@@ -100,7 +149,7 @@ export function SalesWorkspace() {
   // ─── Mutations ──────────────────────────────────────────────────────
   const addLeadMutation = useMutation({
     mutationFn: async (data: any) => {
-      const { error } = await (supabase as any).from("sales_pipeline").insert({
+      const { error } = await supabase.from("sales_pipeline").insert({
         ...data,
         pipeline_stage: "new_lead",
         client_id: `SC-${Date.now().toString(36).toUpperCase()}`,
@@ -117,12 +166,12 @@ export function SalesWorkspace() {
 
   const updateLeadMutation = useMutation({
     mutationFn: async ({ id, updates, logAction, logRemarks }: any) => {
-      const { error } = await (supabase as any).from("sales_pipeline")
+      const { error } = await supabase.from("sales_pipeline")
         .update({ ...updates, updated_at: new Date().toISOString(), last_activity_at: new Date().toISOString() })
         .eq("id", id);
       if (error) throw error;
       if (logAction) {
-        await (supabase as any).from("sales_activity_log").insert({
+        await supabase.from("sales_activity_log").insert({
           pipeline_id: id,
           action: logAction,
           remarks: logRemarks || null,
@@ -174,9 +223,9 @@ export function SalesWorkspace() {
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {[
           { label: "Total Leads", value: totalLeads, icon: Users, color: "text-blue-600" },
-          { label: "In Pipeline", value: totalLeads - won - lost, icon: TrendingUp, color: "text-cyan-600" },
+          { label: "In Pipeline", value: totalLeads - won - lostCount, icon: TrendingUp, color: "text-cyan-600" },
           { label: "Won / Delivered", value: won, icon: CheckCircle2, color: "text-emerald-600" },
-          { label: "Lost", value: lost, icon: XCircle, color: "text-red-600" },
+          { label: "Lost", value: lostCount, icon: XCircle, color: "text-red-600" },
           { label: "Conversion", value: `${conversion}%`, icon: BarChart3, color: "text-violet-600" },
         ].map(kpi => (
           <Card key={kpi.label} className="border">
@@ -190,6 +239,32 @@ export function SalesWorkspace() {
           </Card>
         ))}
       </div>
+
+      {/* Notifications */}
+      {salesNotifications.length > 0 && <StageNotificationBanner items={salesNotifications} />}
+
+      {/* Import Dialog */}
+      <LeadImportDialog
+        open={showImport}
+        onOpenChange={setShowImport}
+        title="Import Sales Leads"
+        templateColumns={["name", "phone", "city", "car_brand", "car_model", "source"]}
+        onImport={async (importedLeads) => {
+          const rows = importedLeads.map(l => ({
+            customer_name: l.name || l.customer_name || "Unknown",
+            phone: (l.phone || l.mobile || "").replace(/\D/g, ""),
+            city: l.city || null,
+            car_brand: l.car_brand || null,
+            car_model: l.car_model || null,
+            source: l.source || "CSV Import",
+            pipeline_stage: "smart_calling",
+            client_id: `SC-${Date.now().toString(36).toUpperCase()}`,
+          }));
+          const { error } = await supabase.from("sales_pipeline").insert(rows);
+          if (error) throw error;
+          queryClient.invalidateQueries({ queryKey: ["sales-pipeline"] });
+        }}
+      />
 
       {/* Stage Tabs */}
       <div className="flex items-center gap-2">
@@ -218,9 +293,14 @@ export function SalesWorkspace() {
             })}
           </div>
         </div>
-        <Button size="sm" onClick={() => setShowAddLead(true)} className="gap-1.5 shrink-0">
-          <Plus className="h-3.5 w-3.5" /> Add Lead
-        </Button>
+        <div className="flex gap-2 shrink-0">
+          <Button size="sm" variant="outline" onClick={() => setShowImport(true)} className="gap-1.5">
+            <FileSpreadsheet className="h-3.5 w-3.5" /> Import
+          </Button>
+          <Button size="sm" onClick={() => setShowAddLead(true)} className="gap-1.5">
+            <Plus className="h-3.5 w-3.5" /> Add Lead
+          </Button>
+        </div>
       </div>
 
       {/* Search */}
