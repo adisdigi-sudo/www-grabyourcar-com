@@ -108,6 +108,8 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
   const [customDateTo, setCustomDateTo] = useState<Date | undefined>();
   const [filterMonth, setFilterMonth] = useState<string>("all");
   const [showImportDialog, setShowImportDialog] = useState(false);
+  const [draggingClient, setDraggingClient] = useState<Client | null>(null);
+  const [dragOverStage, setDragOverStage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: clients = [], isLoading } = useQuery({

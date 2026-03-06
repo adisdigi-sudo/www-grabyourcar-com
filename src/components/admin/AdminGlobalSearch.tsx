@@ -16,10 +16,7 @@ const allSearchItems: SearchResult[] = [
   // Dashboard
   { id: "dashboard", label: "Dashboard", category: "Navigation", icon: Settings, keywords: ["home", "overview", "stats", "analytics", "revenue"] },
   
-  // Lead Management
   { id: "leads-all", label: "All Leads", category: "Leads", icon: Users, keywords: ["leads", "customers", "inquiries", "prospects"] },
-  { id: "leads-hot", label: "Hot Leads", category: "Leads", icon: Users, keywords: ["hot", "priority", "urgent", "leads"] },
-  { id: "leads-whatsapp", label: "WhatsApp Leads", category: "Leads", icon: MessageSquare, keywords: ["whatsapp", "chat", "messaging"] },
   
   // Car Management
   { id: "cars-list", label: "Cars & Details", category: "Cars", icon: Car, keywords: ["cars", "models", "catalog", "vehicles", "edit", "add", "delete"] },
