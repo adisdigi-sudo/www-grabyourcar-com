@@ -18,8 +18,8 @@ import { format, differenceInDays } from "date-fns";
 import {
   UserPlus, Phone, FileText, Clock, CheckCircle2, XCircle,
   Search, PhoneCall, User, Car, Shield, TrendingUp, Send,
-  MessageSquare, CalendarIcon, Bell, SlidersHorizontal, X,
-  ChevronRight, CreditCard, Upload, Eye
+  MessageSquare, CalendarIcon, Bell, Plus, X,
+  ChevronRight, CreditCard, Upload, RefreshCw
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
@@ -27,7 +27,7 @@ import {
 import InsuranceQuoteModal from "./InsuranceQuoteModal";
 import { InsurancePolicyDocumentUploader } from "./InsurancePolicyDocumentUploader";
 
-// ── 6 Pipeline Stages ──
+// ── 6+1 Pipeline Stages ──
 const PIPELINE_STAGES = [
   { value: "new_lead", label: "New Lead", icon: UserPlus, color: "from-blue-500 to-blue-600", bg: "bg-blue-50 dark:bg-blue-950/30", border: "border-blue-200 dark:border-blue-800", text: "text-blue-700 dark:text-blue-300", dot: "bg-blue-500" },
   { value: "smart_calling", label: "Smart Calling", icon: PhoneCall, color: "from-amber-500 to-amber-600", bg: "bg-amber-50 dark:bg-amber-950/30", border: "border-amber-200 dark:border-amber-800", text: "text-amber-700 dark:text-amber-300", dot: "bg-amber-500" },
@@ -37,6 +37,21 @@ const PIPELINE_STAGES = [
   { value: "lost", label: "Lost", icon: XCircle, color: "from-slate-400 to-slate-500", bg: "bg-slate-50 dark:bg-slate-900/30", border: "border-slate-200 dark:border-slate-700", text: "text-slate-500 dark:text-slate-400", dot: "bg-slate-400" },
   { value: "policy_issued", label: "Policy Issued", icon: Shield, color: "from-emerald-600 to-emerald-800", bg: "bg-emerald-50 dark:bg-emerald-950/30", border: "border-emerald-200 dark:border-emerald-800", text: "text-emerald-700 dark:text-emerald-300", dot: "bg-emerald-600" },
 ];
+
+// Map old stages to new ones
+const STAGE_MAP: Record<string, string> = {
+  new_lead: "new_lead",
+  contact_attempted: "smart_calling",
+  requirement_collected: "smart_calling",
+  quote_shared: "quote_shared",
+  follow_up: "follow_up",
+  won: "won",
+  lost: "lost",
+  policy_issued: "policy_issued",
+  smart_calling: "smart_calling",
+};
+
+const normalizeStage = (stage: string | null): string => STAGE_MAP[stage || "new_lead"] || "new_lead";
 
 const CALL_STATUSES = ["Interested", "Not Interested", "Call Back", "No Answer", "Wrong Number"];
 const LOST_REASONS = ["Too expensive", "Existing agent", "No response", "Not renewing", "Competitor offer", "Other"];
@@ -115,9 +130,12 @@ export function InsuranceWorkspace() {
 
   const [showQuoteModal, setShowQuoteModal] = useState(false);
   const [showUploadPolicy, setShowUploadPolicy] = useState(false);
-
   const [showRenewalDialog, setShowRenewalDialog] = useState(false);
   const [renewalDate, setRenewalDate] = useState<Date | undefined>();
+
+  // Add Lead
+  const [showAddLead, setShowAddLead] = useState(false);
+  const [newLead, setNewLead] = useState({ customer_name: "", phone: "", email: "", city: "", vehicle_number: "", vehicle_make: "", vehicle_model: "", lead_source: "Manual", notes: "" });
 
   // Data
   const { data: clients = [], isLoading } = useQuery({
@@ -133,12 +151,12 @@ export function InsuranceWorkspace() {
     },
   });
 
-  // Counts
+  // Counts using normalized stages
   const stageCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     PIPELINE_STAGES.forEach(s => { counts[s.value] = 0; });
     clients.forEach(c => {
-      const stage = c.pipeline_stage || "new_lead";
+      const stage = normalizeStage(c.pipeline_stage);
       if (counts[stage] !== undefined) counts[stage]++;
     });
     return counts;
@@ -150,9 +168,9 @@ export function InsuranceWorkspace() {
   const lostCount = stageCounts["lost"] || 0;
   const convRate = totalLeads > 0 ? (((wonCount + policyCount) / totalLeads) * 100).toFixed(1) : "0";
 
-  // Filter
+  // Filter using normalized stages
   const filtered = useMemo(() => {
-    let result = selectedStage === "all" ? clients : clients.filter(c => (c.pipeline_stage || "new_lead") === selectedStage);
+    let result = selectedStage === "all" ? clients : clients.filter(c => normalizeStage(c.pipeline_stage) === selectedStage);
     if (search.trim()) {
       const s = search.toLowerCase();
       result = result.filter(c =>
@@ -165,7 +183,6 @@ export function InsuranceWorkspace() {
     return result;
   }, [clients, selectedStage, search]);
 
-  // Helpers
   const displayPhone = (phone: string | null) => (!phone || phone.startsWith("IB_")) ? null : phone;
   const getWhatsAppLink = (phone: string | null) => {
     if (!phone || phone.startsWith("IB_")) return null;
@@ -177,13 +194,11 @@ export function InsuranceWorkspace() {
   const moveStage = useMutation({
     mutationFn: async ({ clientId, newStage, extras }: { clientId: string; newStage: string; extras?: Record<string, any> }) => {
       const update: any = { pipeline_stage: newStage, ...extras };
-
       if (newStage === "smart_calling") {
         const client = clients.find(c => c.id === clientId);
         update.contact_attempts = (client?.contact_attempts || 0) + 1;
         update.last_contacted_at = new Date().toISOString();
       }
-
       const { error } = await supabase.from("insurance_clients").update(update).eq("id", clientId);
       if (error) throw error;
 
@@ -196,21 +211,18 @@ export function InsuranceWorkspace() {
         metadata: { new_stage: newStage, ...extras } as any,
       });
 
-      // Auto-create policy on "won"
       if (newStage === "won") {
         const { data: client } = await supabase.from("insurance_clients").select("*").eq("id", clientId).single();
         if (client) {
           const today = new Date();
-          const startDate = client.policy_start_date || today.toISOString().split("T")[0];
-          const expiryDate = client.policy_expiry_date || new Date(today.getFullYear() + 1, today.getMonth(), today.getDate()).toISOString().split("T")[0];
           await supabase.from("insurance_policies").insert({
             client_id: clientId,
-            policy_number: client.current_policy_number || null,
-            policy_type: client.current_policy_type || "comprehensive",
-            insurer: client.current_insurer || client.quote_insurer || "Unknown",
-            premium_amount: client.quote_amount || client.current_premium || null,
-            start_date: startDate,
-            expiry_date: expiryDate,
+            policy_number: (client as any).current_policy_number || null,
+            policy_type: (client as any).current_policy_type || "comprehensive",
+            insurer: (client as any).current_insurer || (client as any).quote_insurer || "Unknown",
+            premium_amount: (client as any).quote_amount || (client as any).current_premium || null,
+            start_date: (client as any).policy_start_date || today.toISOString().split("T")[0],
+            expiry_date: (client as any).policy_expiry_date || new Date(today.getFullYear() + 1, today.getMonth(), today.getDate()).toISOString().split("T")[0],
             status: "active",
             is_renewal: false,
             issued_date: today.toISOString().split("T")[0],
@@ -235,27 +247,46 @@ export function InsuranceWorkspace() {
     onError: (err: any) => toast.error(err?.message || "Failed to update"),
   });
 
-  // Handlers
+  // Add Lead mutation
+  const addLeadMutation = useMutation({
+    mutationFn: async () => {
+      if (!newLead.phone.trim()) throw new Error("Phone is required");
+      if (!newLead.customer_name.trim()) throw new Error("Name is required");
+      const { error } = await supabase.from("insurance_clients").insert({
+        customer_name: newLead.customer_name.trim(),
+        phone: newLead.phone.trim(),
+        email: newLead.email.trim() || null,
+        city: newLead.city.trim() || null,
+        vehicle_number: newLead.vehicle_number.trim() || null,
+        vehicle_make: newLead.vehicle_make.trim() || null,
+        vehicle_model: newLead.vehicle_model.trim() || null,
+        lead_source: newLead.lead_source || "Manual",
+        notes: newLead.notes.trim() || null,
+        pipeline_stage: "new_lead",
+        lead_status: "new",
+        priority: "medium",
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("✅ New lead added!");
+      queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
+      setShowAddLead(false);
+      setNewLead({ customer_name: "", phone: "", email: "", city: "", vehicle_number: "", vehicle_make: "", vehicle_model: "", lead_source: "Manual", notes: "" });
+    },
+    onError: (err: any) => toast.error(err?.message || "Failed to add lead"),
+  });
+
   const handleMove = useCallback((client: Client, targetStage: string) => {
-    const currentStage = client.pipeline_stage || "new_lead";
+    const currentStage = normalizeStage(client.pipeline_stage);
     if (currentStage === targetStage) return;
 
     if (targetStage === "lost") {
-      setPendingMoveClient(client);
-      setLostReason("");
-      setLostRemarks("");
-      setShowLostDialog(true);
+      setPendingMoveClient(client); setLostReason(""); setLostRemarks(""); setShowLostDialog(true);
     } else if (targetStage === "smart_calling") {
-      setPendingMoveClient(client);
-      setCallStatus("");
-      setCallRemarks("");
-      setShowCallingDialog(true);
+      setPendingMoveClient(client); setCallStatus(""); setCallRemarks(""); setShowCallingDialog(true);
     } else if (targetStage === "follow_up") {
-      setPendingMoveClient(client);
-      setFollowUpDate(undefined);
-      setFollowUpTime("10:00");
-      setFollowUpRemarks("");
-      setShowFollowUpDialog(true);
+      setPendingMoveClient(client); setFollowUpDate(undefined); setFollowUpTime("10:00"); setFollowUpRemarks(""); setShowFollowUpDialog(true);
     } else {
       moveStage.mutate({ clientId: client.id, newStage: targetStage });
     }
@@ -263,34 +294,18 @@ export function InsuranceWorkspace() {
 
   const confirmLost = () => {
     if (!pendingMoveClient || !lostReason) { toast.error("Select a reason"); return; }
-    moveStage.mutate({
-      clientId: pendingMoveClient.id,
-      newStage: "lost",
-      extras: { lost_reason: lostReason, notes: lostRemarks || undefined },
-    });
+    moveStage.mutate({ clientId: pendingMoveClient.id, newStage: "lost", extras: { lost_reason: lostReason, notes: lostRemarks || undefined } });
   };
 
   const confirmCalling = () => {
     if (!pendingMoveClient || !callStatus) { toast.error("Select call status"); return; }
     if (!callRemarks.trim()) { toast.error("Add remarks"); return; }
-    moveStage.mutate({
-      clientId: pendingMoveClient.id,
-      newStage: "smart_calling",
-      extras: { call_status: callStatus, call_remarks: callRemarks },
-    });
+    moveStage.mutate({ clientId: pendingMoveClient.id, newStage: "smart_calling", extras: { call_status: callStatus, call_remarks: callRemarks } });
   };
 
   const confirmFollowUp = () => {
     if (!pendingMoveClient || !followUpDate) { toast.error("Pick a date"); return; }
-    moveStage.mutate({
-      clientId: pendingMoveClient.id,
-      newStage: "follow_up",
-      extras: {
-        follow_up_date: format(followUpDate, "yyyy-MM-dd"),
-        follow_up_time: followUpTime,
-        notes: followUpRemarks || undefined,
-      },
-    });
+    moveStage.mutate({ clientId: pendingMoveClient.id, newStage: "follow_up", extras: { follow_up_date: format(followUpDate, "yyyy-MM-dd"), follow_up_time: followUpTime, notes: followUpRemarks || undefined } });
   };
 
   const setRenewalReminder = async () => {
@@ -314,7 +329,7 @@ export function InsuranceWorkspace() {
   const handleDragOver = (e: React.DragEvent, stage: string) => { e.preventDefault(); setDragOverStage(stage); };
   const handleDrop = (e: React.DragEvent, stage: string) => {
     e.preventDefault();
-    if (draggingClient && (draggingClient.pipeline_stage || "new_lead") !== stage) {
+    if (draggingClient && normalizeStage(draggingClient.pipeline_stage) !== stage) {
       handleMove(draggingClient, stage);
     }
     setDragOverStage(null);
@@ -329,12 +344,17 @@ export function InsuranceWorkspace() {
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 via-emerald-700 to-emerald-900 p-5 sm:p-6 text-white">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-60" />
         <div className="relative">
-          <h2 className="text-xl font-bold tracking-tight flex items-center gap-2.5 mb-4">
-            <div className="w-9 h-9 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center">
-              <Shield className="h-5 w-5" />
-            </div>
-            Insurance Workspace
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold tracking-tight flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center">
+                <Shield className="h-5 w-5" />
+              </div>
+              Insurance Workspace
+            </h2>
+            <Button size="sm" onClick={() => setShowAddLead(true)} className="gap-1.5 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border border-white/20">
+              <Plus className="h-4 w-4" /> Add Lead
+            </Button>
+          </div>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {[
               { label: "Total Leads", value: totalLeads, icon: UserPlus, bgc: "bg-blue-500/20" },
@@ -374,7 +394,7 @@ export function InsuranceWorkspace() {
               className={cn(
                 "shrink-0 h-8 text-xs gap-1.5",
                 selectedStage !== stage.value && stage.text,
-                dragOverStage === stage.value && "ring-2 ring-primary/40"
+                dragOverStage === stage.value && "ring-2 ring-primary/40 scale-105"
               )}
             >
               <Icon className="h-3.5 w-3.5" />
@@ -395,7 +415,8 @@ export function InsuranceWorkspace() {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         <AnimatePresence mode="popLayout">
           {filtered.map(client => {
-            const stage = PIPELINE_STAGES.find(s => s.value === (client.pipeline_stage || "new_lead")) || PIPELINE_STAGES[0];
+            const normStage = normalizeStage(client.pipeline_stage);
+            const stage = PIPELINE_STAGES.find(s => s.value === normStage) || PIPELINE_STAGES[0];
             const stageIdx = PIPELINE_STAGES.findIndex(s => s.value === stage.value);
             const phone = displayPhone(client.phone);
             const waLink = getWhatsAppLink(client.phone);
@@ -466,7 +487,7 @@ export function InsuranceWorkspace() {
                       )}
                       {client.current_premium && (
                         <div className="flex items-center gap-1.5 text-muted-foreground font-semibold">
-                          <CreditCard className="h-3 w-3 shrink-0" /> ₹{client.current_premium.toLocaleString("en-IN")}
+                          <CreditCard className="h-3 w-3 shrink-0" /> Rs.{client.current_premium.toLocaleString("en-IN")}
                         </div>
                       )}
                       {client.call_status && (
@@ -504,7 +525,7 @@ export function InsuranceWorkspace() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
-                          {PIPELINE_STAGES.filter(s => s.value !== (client.pipeline_stage || "new_lead")).map(s => {
+                          {PIPELINE_STAGES.filter(s => s.value !== normStage).map(s => {
                             const SIcon = s.icon;
                             return (
                               <DropdownMenuItem key={s.value} onClick={() => handleMove(client, s.value)} className="gap-2 text-xs">
@@ -526,7 +547,10 @@ export function InsuranceWorkspace() {
       {filtered.length === 0 && !isLoading && (
         <div className="text-center py-16 text-muted-foreground">
           <Shield className="h-12 w-12 mx-auto mb-3 opacity-30" />
-          <p className="text-sm">No leads found</p>
+          <p className="text-sm font-medium">No leads found</p>
+          <Button size="sm" variant="outline" className="mt-3 gap-1.5" onClick={() => setShowAddLead(true)}>
+            <Plus className="h-3.5 w-3.5" /> Add First Lead
+          </Button>
         </div>
       )}
 
@@ -534,7 +558,8 @@ export function InsuranceWorkspace() {
       <Dialog open={!!selectedClient && !showLostDialog && !showCallingDialog && !showFollowUpDialog && !showQuoteModal && !showUploadPolicy && !showRenewalDialog} onOpenChange={(o) => { if (!o) setSelectedClient(null); }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           {selectedClient && (() => {
-            const stage = PIPELINE_STAGES.find(s => s.value === (selectedClient.pipeline_stage || "new_lead")) || PIPELINE_STAGES[0];
+            const normStage = normalizeStage(selectedClient.pipeline_stage);
+            const stage = PIPELINE_STAGES.find(s => s.value === normStage) || PIPELINE_STAGES[0];
             const phone = displayPhone(selectedClient.phone);
             return (
               <>
@@ -547,7 +572,7 @@ export function InsuranceWorkspace() {
                   </DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
-                  {/* Stage + Source */}
+                  {/* Badges */}
                   <div className="flex gap-2 flex-wrap">
                     <Badge className={cn(stage.bg, stage.text, "border", stage.border)}>{stage.label}</Badge>
                     {selectedClient.lead_source && <Badge variant="outline" className={getSourceColor(selectedClient.lead_source)}>{selectedClient.lead_source}</Badge>}
@@ -555,7 +580,7 @@ export function InsuranceWorkspace() {
                     {selectedClient.incentive_eligible && <Badge className="bg-amber-100 text-amber-700 border-amber-200">⭐ Incentive Eligible</Badge>}
                   </div>
 
-                  {/* Customer Details */}
+                  {/* Customer */}
                   <div className="space-y-2">
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Customer</p>
                     <div className="grid grid-cols-2 gap-2 text-sm">
@@ -571,25 +596,26 @@ export function InsuranceWorkspace() {
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Vehicle</p>
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div><span className="text-muted-foreground">Number:</span> {selectedClient.vehicle_number || "—"}</div>
-                      <div><span className="text-muted-foreground">Model:</span> {selectedClient.vehicle_make} {selectedClient.vehicle_model || "—"}</div>
+                      <div><span className="text-muted-foreground">Model:</span> {[selectedClient.vehicle_make, selectedClient.vehicle_model].filter(Boolean).join(" ") || "—"}</div>
                       <div><span className="text-muted-foreground">Year:</span> {selectedClient.vehicle_year || "—"}</div>
                       <div><span className="text-muted-foreground">Insurer:</span> {selectedClient.current_insurer || "—"}</div>
                     </div>
                   </div>
 
-                  {/* Call / Follow-up info */}
-                  {(selectedClient.call_status || selectedClient.follow_up_date) && (
+                  {/* Activity */}
+                  {(selectedClient.call_status || selectedClient.follow_up_date || selectedClient.lost_reason) && (
                     <div className="space-y-2">
                       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Activity</p>
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         {selectedClient.call_status && <div><span className="text-muted-foreground">Call:</span> {selectedClient.call_status}</div>}
                         {selectedClient.call_remarks && <div className="col-span-2"><span className="text-muted-foreground">Remarks:</span> {selectedClient.call_remarks}</div>}
                         {selectedClient.follow_up_date && <div><span className="text-muted-foreground">Follow-up:</span> {format(new Date(selectedClient.follow_up_date), "dd MMM yyyy")} {selectedClient.follow_up_time || ""}</div>}
+                        {selectedClient.lost_reason && <div className="col-span-2"><span className="text-muted-foreground">Lost Reason:</span> {selectedClient.lost_reason}</div>}
                       </div>
                     </div>
                   )}
 
-                  {/* Stage Actions */}
+                  {/* Actions */}
                   <div className="space-y-2 pt-2 border-t">
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</p>
                     <div className="flex flex-wrap gap-2">
@@ -609,7 +635,7 @@ export function InsuranceWorkspace() {
                       <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowUploadPolicy(true)}>
                         <Upload className="h-3.5 w-3.5" /> Upload Policy
                       </Button>
-                      {(selectedClient.pipeline_stage === "won" || selectedClient.pipeline_stage === "policy_issued") && (
+                      {(normStage === "won" || normStage === "policy_issued") && (
                         <Button size="sm" className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => { setRenewalDate(undefined); setShowRenewalDialog(true); }}>
                           <Bell className="h-3.5 w-3.5" /> Set Renewal Reminder
                         </Button>
@@ -617,11 +643,11 @@ export function InsuranceWorkspace() {
                     </div>
                   </div>
 
-                  {/* Move Stage */}
+                  {/* Move to Stage */}
                   <div className="space-y-2">
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Move to Stage</p>
                     <div className="flex flex-wrap gap-1.5">
-                      {PIPELINE_STAGES.filter(s => s.value !== (selectedClient.pipeline_stage || "new_lead")).map(s => {
+                      {PIPELINE_STAGES.filter(s => s.value !== normStage).map(s => {
                         const SIcon = s.icon;
                         return (
                           <Button key={s.value} size="sm" variant="outline" className={cn("text-xs gap-1", s.text, "border", s.border)}
@@ -636,6 +662,71 @@ export function InsuranceWorkspace() {
               </>
             );
           })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* ── ADD LEAD DIALOG ── */}
+      <Dialog open={showAddLead} onOpenChange={setShowAddLead}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><UserPlus className="h-5 w-5 text-primary" /> Add New Lead</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Name *</Label>
+                <Input placeholder="Customer name" value={newLead.customer_name} onChange={e => setNewLead(p => ({ ...p, customer_name: e.target.value }))} className="h-9" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Phone *</Label>
+                <Input placeholder="Mobile number" value={newLead.phone} onChange={e => setNewLead(p => ({ ...p, phone: e.target.value }))} className="h-9" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Email</Label>
+                <Input placeholder="Email" value={newLead.email} onChange={e => setNewLead(p => ({ ...p, email: e.target.value }))} className="h-9" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">City</Label>
+                <Input placeholder="City" value={newLead.city} onChange={e => setNewLead(p => ({ ...p, city: e.target.value }))} className="h-9" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Vehicle Number</Label>
+                <Input placeholder="e.g. PB10AB1234" value={newLead.vehicle_number} onChange={e => setNewLead(p => ({ ...p, vehicle_number: e.target.value }))} className="h-9" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Lead Source *</Label>
+                <Select value={newLead.lead_source} onValueChange={v => setNewLead(p => ({ ...p, lead_source: v }))}>
+                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {LEAD_SOURCES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Vehicle Make</Label>
+                <Input placeholder="e.g. Maruti" value={newLead.vehicle_make} onChange={e => setNewLead(p => ({ ...p, vehicle_make: e.target.value }))} className="h-9" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Vehicle Model</Label>
+                <Input placeholder="e.g. Swift" value={newLead.vehicle_model} onChange={e => setNewLead(p => ({ ...p, vehicle_model: e.target.value }))} className="h-9" />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Notes</Label>
+              <Textarea placeholder="Any additional notes..." value={newLead.notes} onChange={e => setNewLead(p => ({ ...p, notes: e.target.value }))} className="h-16" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddLead(false)}>Cancel</Button>
+            <Button onClick={() => addLeadMutation.mutate()} disabled={addLeadMutation.isPending || !newLead.customer_name.trim() || !newLead.phone.trim()} className="gap-1.5">
+              {addLeadMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              Add Lead
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
