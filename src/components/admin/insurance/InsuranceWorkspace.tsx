@@ -172,6 +172,22 @@ export function InsuranceWorkspace() {
   const lostCount = stageCounts["lost"] || 0;
   const convRate = totalLeads > 0 ? (((wonCount + policyCount) / totalLeads) * 100).toFixed(1) : "0";
 
+  // Notifications
+  const insNotifications = useMemo(() => buildInsuranceNotifications(clients), [clients]);
+
+  // Policy book data
+  const policyBookClients = useMemo(() => clients.filter(c => {
+    const s = normalizeStage(c.pipeline_stage);
+    return s === "won" || s === "policy_issued";
+  }), [clients]);
+
+  // Renewal data
+  const renewalClients = useMemo(() => clients.filter(c => {
+    if (!c.policy_expiry_date) return false;
+    const days = differenceInDays(new Date(c.policy_expiry_date), new Date());
+    return days <= 90 && days >= -30;
+  }).sort((a, b) => new Date(a.policy_expiry_date!).getTime() - new Date(b.policy_expiry_date!).getTime()), [clients]);
+
   // Filter using normalized stages
   const filtered = useMemo(() => {
     let result = selectedStage === "all" ? clients : clients.filter(c => normalizeStage(c.pipeline_stage) === selectedStage);
