@@ -377,9 +377,14 @@ export function InsuranceWorkspace() {
               </div>
               Insurance Workspace
             </h2>
-            <Button size="sm" onClick={() => setShowAddLead(true)} className="gap-1.5 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border border-white/20">
-              <Plus className="h-4 w-4" /> Add Lead
-            </Button>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={() => setShowImport(true)} className="gap-1.5 bg-white/15 hover:bg-white/25 backdrop-blur-sm text-white border border-white/20">
+                <FileSpreadsheet className="h-4 w-4" /> Import
+              </Button>
+              <Button size="sm" onClick={() => setShowAddLead(true)} className="gap-1.5 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border border-white/20">
+                <Plus className="h-4 w-4" /> Add Lead
+              </Button>
+            </div>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {[
@@ -401,6 +406,179 @@ export function InsuranceWorkspace() {
         </div>
       </div>
 
+      {/* 3 View Tabs */}
+      <div className="flex gap-2 bg-muted/50 p-1 rounded-xl border">
+        {[
+          { key: "crm" as const, label: "Insurance CRM", icon: Shield, count: totalLeads },
+          { key: "policy_book" as const, label: "Policy Book", icon: BookOpen, count: policyBookClients.length },
+          { key: "renewals" as const, label: "Renewal Data", icon: CalendarClock, count: renewalClients.length },
+        ].map(tab => (
+          <Button
+            key={tab.key}
+            variant={activeView === tab.key ? "default" : "ghost"}
+            size="sm"
+            className={cn("flex-1 gap-1.5 text-xs", activeView === tab.key && "shadow-sm")}
+            onClick={() => setActiveView(tab.key)}
+          >
+            <tab.icon className="h-3.5 w-3.5" />
+            {tab.label}
+            {tab.count > 0 && <Badge variant={activeView === tab.key ? "secondary" : "outline"} className="text-[9px] h-4 px-1">{tab.count}</Badge>}
+            {tab.key === "renewals" && renewalClients.filter(c => {
+              const d = differenceInDays(new Date(c.policy_expiry_date!), new Date());
+              return d <= 7;
+            }).length > 0 && (
+              <span className="relative flex h-2 w-2 ml-1">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+              </span>
+            )}
+          </Button>
+        ))}
+      </div>
+
+      {/* Notifications */}
+      {insNotifications.length > 0 && <StageNotificationBanner items={insNotifications} />}
+
+      {/* Import Dialog */}
+      <LeadImportDialog
+        open={showImport}
+        onOpenChange={setShowImport}
+        title="Import Insurance Leads"
+        templateColumns={["name", "phone", "city", "vehicle_number", "vehicle_make", "vehicle_model", "source"]}
+        onImport={async (leads) => {
+          const rows = leads.map(l => ({
+            customer_name: l.name || l.customer_name || "Unknown",
+            phone: (l.phone || l.mobile || "").replace(/\D/g, ""),
+            city: l.city || null,
+            vehicle_number: l.vehicle_number || null,
+            vehicle_make: l.vehicle_make || null,
+            vehicle_model: l.vehicle_model || null,
+            lead_source: l.source || "CSV Import",
+            pipeline_stage: "smart_calling",
+            lead_status: "new",
+            priority: "medium",
+          }));
+          const { error } = await supabase.from("insurance_clients").insert(rows);
+          if (error) throw error;
+          queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
+        }}
+      />
+
+      {/* ── POLICY BOOK VIEW ── */}
+      {activeView === "policy_book" && (
+        <div className="space-y-3">
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Search policy book..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 h-9" />
+          </div>
+          <div className="grid gap-3">
+            {policyBookClients.filter(c => {
+              if (!search.trim()) return true;
+              const s = search.toLowerCase();
+              return c.customer_name?.toLowerCase().includes(s) || c.phone?.includes(s) || c.vehicle_number?.toLowerCase().includes(s);
+            }).map(client => (
+              <Card key={client.id} className="border-emerald-200/50 hover:shadow-md transition-all cursor-pointer" onClick={() => setSelectedClient(client)}>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-sm">
+                        <Shield className="h-4 w-4 text-white" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-sm">{client.customer_name || "Unknown"}</p>
+                        <p className="text-[11px] text-muted-foreground">{client.vehicle_number || "—"} • {client.current_insurer || "—"}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {client.current_premium && (
+                        <Badge variant="outline" className="text-xs">Rs.{client.current_premium.toLocaleString("en-IN")}</Badge>
+                      )}
+                      {client.renewal_reminder_set && <Badge className="bg-emerald-100 text-emerald-700 text-[9px]">✅ Renewal Set</Badge>}
+                      {client.incentive_eligible && <Badge className="bg-amber-100 text-amber-700 text-[9px]">⭐ Incentive</Badge>}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+            {policyBookClients.length === 0 && (
+              <div className="text-center py-12 text-muted-foreground">
+                <BookOpen className="h-10 w-10 mx-auto mb-2 opacity-30" />
+                <p className="text-sm">No policies yet</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── RENEWAL VIEW ── */}
+      {activeView === "renewals" && (
+        <div className="space-y-3">
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Search renewals..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 h-9" />
+          </div>
+          <div className="grid gap-3">
+            {renewalClients.filter(c => {
+              if (!search.trim()) return true;
+              const s = search.toLowerCase();
+              return c.customer_name?.toLowerCase().includes(s) || c.phone?.includes(s) || c.vehicle_number?.toLowerCase().includes(s);
+            }).map(client => {
+              const days = differenceInDays(new Date(client.policy_expiry_date!), new Date());
+              const isUrgent = days <= 7;
+              const isExpired = days < 0;
+              return (
+                <Card key={client.id} className={cn(
+                  "hover:shadow-md transition-all cursor-pointer",
+                  isExpired ? "border-red-300 bg-red-50/30 dark:bg-red-950/10" :
+                  isUrgent ? "border-amber-300 bg-amber-50/30 dark:bg-amber-950/10" :
+                  "border-border/50"
+                )} onClick={() => setSelectedClient(client)}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shadow-sm",
+                          isExpired ? "bg-gradient-to-br from-red-500 to-red-600" :
+                          isUrgent ? "bg-gradient-to-br from-amber-500 to-amber-600" :
+                          "bg-gradient-to-br from-blue-500 to-blue-600"
+                        )}>
+                          <CalendarClock className="h-4 w-4 text-white" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-sm">{client.customer_name || "Unknown"}</p>
+                          <p className="text-[11px] text-muted-foreground">{client.vehicle_number || "—"} • {client.current_insurer || "—"}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <Badge variant={isExpired ? "destructive" : isUrgent ? "default" : "outline"} className={cn("text-xs", isUrgent && !isExpired && "bg-amber-500")}>
+                          {isExpired ? `Expired ${Math.abs(days)}d ago` : `${days} days left`}
+                        </Badge>
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          Expiry: {format(new Date(client.policy_expiry_date!), "dd MMM yyyy")}
+                        </p>
+                        {isUrgent && (
+                          <span className="relative flex h-2 w-2 ml-auto mt-1">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+            {renewalClients.length === 0 && (
+              <div className="text-center py-12 text-muted-foreground">
+                <CalendarClock className="h-10 w-10 mx-auto mb-2 opacity-30" />
+                <p className="text-sm">No upcoming renewals</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── CRM VIEW ── */}
+      {activeView === "crm" && (<>
       {/* Stage Tabs */}
       <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
         <Button size="sm" variant={selectedStage === "all" ? "default" : "outline"} onClick={() => setSelectedStage("all")} className="shrink-0 h-8 text-xs">
