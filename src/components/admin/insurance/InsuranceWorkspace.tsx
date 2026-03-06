@@ -757,6 +757,7 @@ export function InsuranceWorkspace() {
           </Button>
         </div>
       )}
+      </>)}
 
       {/* ── CLIENT DETAIL DIALOG ── */}
       <Dialog open={!!selectedClient && !showLostDialog && !showCallingDialog && !showFollowUpDialog && !showQuoteModal && !showUploadPolicy && !showRenewalDialog} onOpenChange={(o) => { if (!o) setSelectedClient(null); }}>
