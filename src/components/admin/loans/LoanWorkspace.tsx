@@ -253,6 +253,9 @@ export const LoanWorkspace = () => {
     .filter((a: any) => a.stage === 'disbursed')
     .reduce((s: number, a: any) => s + (Number(a.disbursement_amount) || Number(a.loan_amount) || 0), 0);
 
+  // Notifications
+  const loanNotifications = useMemo(() => buildLoanNotifications(applications), [applications]);
+
   // Create lead
   const createMutation = useMutation({
     mutationFn: async (app: typeof newApp) => {
@@ -378,6 +381,9 @@ export const LoanWorkspace = () => {
         ))}
       </div>
 
+      {/* Notifications Banner */}
+      {loanNotifications.length > 0 && <StageNotificationBanner items={loanNotifications} />}
+
       {/* Pipeline Header */}
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-3">
@@ -389,47 +395,75 @@ export const LoanWorkspace = () => {
             {lost} Lost
           </Badge>
         </div>
-        <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-          <DialogTrigger asChild>
-            <Button size="sm" className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white">
-              <Plus className="h-4 w-4" /> New Lead
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle className="flex items-center gap-2"><Banknote className="h-5 w-5 text-emerald-600" /> New Car Loan Lead</DialogTitle></DialogHeader>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div><Label>Name *</Label><Input value={newApp.customer_name} onChange={e => setNewApp(p => ({ ...p, customer_name: e.target.value }))} /></div>
-                <div><Label>Phone *</Label><Input value={newApp.phone} onChange={e => setNewApp(p => ({ ...p, phone: e.target.value }))} placeholder="10-digit" /></div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><Label>Loan Amount</Label><Input type="number" value={newApp.loan_amount} onChange={e => setNewApp(p => ({ ...p, loan_amount: e.target.value }))} /></div>
-                <div><Label>Car Model</Label><Input value={newApp.car_model} onChange={e => setNewApp(p => ({ ...p, car_model: e.target.value }))} /></div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Priority</Label>
-                  <Select value={newApp.priority} onValueChange={v => setNewApp(p => ({ ...p, priority: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{PRIORITY_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Source</Label>
-                  <Select value={newApp.source} onValueChange={v => setNewApp(p => ({ ...p, source: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{LEAD_SOURCES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div><Label>Remarks</Label><Textarea value={newApp.remarks} onChange={e => setNewApp(p => ({ ...p, remarks: e.target.value }))} rows={2} /></div>
-              <Button onClick={() => createMutation.mutate(newApp)} disabled={!newApp.customer_name || !newApp.phone || createMutation.isPending} className="w-full bg-emerald-600 hover:bg-emerald-700">
-                Create Lead
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowImport(true)}>
+            <FileSpreadsheet className="h-4 w-4" /> Import
+          </Button>
+          <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white">
+                <Plus className="h-4 w-4" /> New Lead
               </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle className="flex items-center gap-2"><Banknote className="h-5 w-5 text-emerald-600" /> New Car Loan Lead</DialogTitle></DialogHeader>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div><Label>Name *</Label><Input value={newApp.customer_name} onChange={e => setNewApp(p => ({ ...p, customer_name: e.target.value }))} /></div>
+                  <div><Label>Phone *</Label><Input value={newApp.phone} onChange={e => setNewApp(p => ({ ...p, phone: e.target.value }))} placeholder="10-digit" /></div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div><Label>Loan Amount</Label><Input type="number" value={newApp.loan_amount} onChange={e => setNewApp(p => ({ ...p, loan_amount: e.target.value }))} /></div>
+                  <div><Label>Car Model</Label><Input value={newApp.car_model} onChange={e => setNewApp(p => ({ ...p, car_model: e.target.value }))} /></div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Priority</Label>
+                    <Select value={newApp.priority} onValueChange={v => setNewApp(p => ({ ...p, priority: v }))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>{PRIORITY_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Source</Label>
+                    <Select value={newApp.source} onValueChange={v => setNewApp(p => ({ ...p, source: v }))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>{LEAD_SOURCES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div><Label>Remarks</Label><Textarea value={newApp.remarks} onChange={e => setNewApp(p => ({ ...p, remarks: e.target.value }))} rows={2} /></div>
+                <Button onClick={() => createMutation.mutate(newApp)} disabled={!newApp.customer_name || !newApp.phone || createMutation.isPending} className="w-full bg-emerald-600 hover:bg-emerald-700">
+                  Create Lead
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
+
+      {/* Import Dialog */}
+      <LeadImportDialog
+        open={showImport}
+        onOpenChange={setShowImport}
+        title="Import Loan Leads"
+        templateColumns={["name", "phone", "loan_amount", "car_model", "source"]}
+        onImport={async (leads) => {
+          const rows = leads.map(l => ({
+            customer_name: l.name || l.customer_name || "Unknown",
+            phone: (l.phone || l.mobile || "").replace(/\D/g, ""),
+            loan_amount: l.loan_amount ? Number(l.loan_amount) : null,
+            car_model: l.car_model || null,
+            source: l.source || "CSV Import",
+            lead_source_tag: "csv_import",
+            stage: "new_lead" as const,
+            priority: "medium",
+          }));
+          const { error } = await supabase.from("loan_applications").insert(rows);
+          if (error) throw error;
+          queryClient.invalidateQueries({ queryKey: ["loan-applications"] });
+        }}
+      />
 
       {/* Drag hint */}
       {draggingApp && (
