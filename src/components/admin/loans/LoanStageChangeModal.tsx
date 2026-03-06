@@ -35,7 +35,7 @@ export const LoanStageChangeModal = ({ open, onOpenChange, application }: Props)
   const allowedNext = ALLOWED_TRANSITIONS[currentStage] || [];
 
   const isLost = targetStage === 'lost';
-  const isConverted = targetStage === 'converted';
+  const isConverted = (targetStage as string) === 'converted';
 
   // Validation
   const canSubmit = (() => {

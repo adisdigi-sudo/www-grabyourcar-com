@@ -258,7 +258,7 @@ export const LoanCallingWorkspace = ({ applications }: Props) => {
 
           {/* Stage Pipeline Mini-Bar */}
           <div className="mt-5 flex gap-1 items-end overflow-x-auto pb-1">
-            {LOAN_STAGES.filter(s => s !== 'converted' && s !== 'lost').map(stage => {
+            {LOAN_STAGES.filter(s => (s as string) !== 'converted' && s !== 'lost').map(stage => {
               const count = stageBreakdown[stage] || 0;
               const maxCount = Math.max(...Object.values(stageBreakdown), 1);
               return (

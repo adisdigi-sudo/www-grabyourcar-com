@@ -6183,6 +6183,8 @@ export type Database = {
           activity_count: number | null
           assigned_to: string | null
           bank_partner_id: string | null
+          call_remarks: string | null
+          call_status: string | null
           car_model: string | null
           car_variant: string | null
           client_profile_id: string | null
@@ -6192,6 +6194,7 @@ export type Database = {
           dealer_name: string | null
           disbursement_amount: number | null
           disbursement_date: string | null
+          disbursement_letter_url: string | null
           disbursement_reference: string | null
           documents_collected: string[] | null
           documents_required: string[] | null
@@ -6203,6 +6206,7 @@ export type Database = {
           follow_up_at: string | null
           follow_up_notes: string | null
           id: string
+          incentive_eligible: boolean | null
           interest_rate: number | null
           last_activity_at: string | null
           lead_id: string | null
@@ -6229,6 +6233,8 @@ export type Database = {
           activity_count?: number | null
           assigned_to?: string | null
           bank_partner_id?: string | null
+          call_remarks?: string | null
+          call_status?: string | null
           car_model?: string | null
           car_variant?: string | null
           client_profile_id?: string | null
@@ -6238,6 +6244,7 @@ export type Database = {
           dealer_name?: string | null
           disbursement_amount?: number | null
           disbursement_date?: string | null
+          disbursement_letter_url?: string | null
           disbursement_reference?: string | null
           documents_collected?: string[] | null
           documents_required?: string[] | null
@@ -6249,6 +6256,7 @@ export type Database = {
           follow_up_at?: string | null
           follow_up_notes?: string | null
           id?: string
+          incentive_eligible?: boolean | null
           interest_rate?: number | null
           last_activity_at?: string | null
           lead_id?: string | null
@@ -6275,6 +6283,8 @@ export type Database = {
           activity_count?: number | null
           assigned_to?: string | null
           bank_partner_id?: string | null
+          call_remarks?: string | null
+          call_status?: string | null
           car_model?: string | null
           car_variant?: string | null
           client_profile_id?: string | null
@@ -6284,6 +6294,7 @@ export type Database = {
           dealer_name?: string | null
           disbursement_amount?: number | null
           disbursement_date?: string | null
+          disbursement_letter_url?: string | null
           disbursement_reference?: string | null
           documents_collected?: string[] | null
           documents_required?: string[] | null
@@ -6295,6 +6306,7 @@ export type Database = {
           follow_up_at?: string | null
           follow_up_notes?: string | null
           id?: string
+          incentive_eligible?: boolean | null
           interest_rate?: number | null
           last_activity_at?: string | null
           lead_id?: string | null
