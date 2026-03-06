@@ -19,13 +19,15 @@ import {
   UserPlus, Phone, FileText, Clock, CheckCircle2, XCircle,
   Search, PhoneCall, User, Car, Shield, TrendingUp, Send,
   MessageSquare, CalendarIcon, Bell, Plus, X,
-  ChevronRight, CreditCard, Upload, RefreshCw
+  ChevronRight, CreditCard, Upload, RefreshCw, FileSpreadsheet, BookOpen, CalendarClock
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import InsuranceQuoteModal from "./InsuranceQuoteModal";
 import { InsurancePolicyDocumentUploader } from "./InsurancePolicyDocumentUploader";
+import { LeadImportDialog } from "../shared/LeadImportDialog";
+import { StageNotificationBanner, buildInsuranceNotifications } from "../shared/StageNotificationBanner";
 
 // ── 6+1 Pipeline Stages ──
 const PIPELINE_STAGES = [
