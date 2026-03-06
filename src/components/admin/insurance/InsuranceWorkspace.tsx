@@ -114,6 +114,8 @@ export function InsuranceWorkspace() {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [draggingClient, setDraggingClient] = useState<Client | null>(null);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
+  const [activeView, setActiveView] = useState<"crm" | "policy_book" | "renewals">("crm");
+  const [showImport, setShowImport] = useState(false);
 
   // Modals
   const [showLostDialog, setShowLostDialog] = useState(false);
