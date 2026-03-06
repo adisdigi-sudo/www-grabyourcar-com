@@ -302,10 +302,28 @@ const navItems: NavItem[] = [
   { id: "settings", label: "⚙️ Site Settings", icon: Settings, verticals: ["marketing"], allowedRoles: ["super_admin", "admin"] },
 
   // ── Accounts & Finance ──
-  { id: "accounts-finance", label: "💰 Accounts & Finance", icon: CreditCard, verticals: ["accounts"], allowedRoles: ["super_admin", "admin", "finance"] },
+  { 
+    id: "finance-hub", 
+    label: "💰 Accounts & Finance", 
+    icon: CreditCard, 
+    verticals: ["accounts", "marketing"], 
+    allowedRoles: ["super_admin", "admin", "finance"],
+    children: [
+      { id: "accounts-finance", label: "📊 Finance Dashboard", icon: BarChart3 },
+    ]
+  },
 
   // ── HR & Office Culture ──
-  { id: "hr-workspace", label: "👥 HR & Office", icon: Users, verticals: ["hr"], allowedRoles: ["super_admin", "admin"] },
+  { 
+    id: "hr-hub", 
+    label: "👥 HR & Office", 
+    icon: Users, 
+    verticals: ["hr", "marketing"], 
+    allowedRoles: ["super_admin", "admin"],
+    children: [
+      { id: "hr-workspace", label: "📊 HR Dashboard", icon: BarChart3 },
+    ]
+  },
 ];
 
 export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => {

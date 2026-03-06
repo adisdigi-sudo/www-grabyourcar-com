@@ -177,6 +177,8 @@ const AdminLayout = () => {
         if (slug === "accessories") return <AccessoriesDashboard />;
         if (slug === "marketing") return <MarketingDashboard onNavigate={setActiveTab} />;
         if (slug === "loans") return <LoanCRMDashboard />;
+        if (slug === "accounts") return <AccountsFinanceWorkspace />;
+        if (slug === "hr") return <HRWorkspace />;
         return <AdminDashboard />;
       }
       case "sales-crm":
