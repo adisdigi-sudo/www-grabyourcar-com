@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Banknote, TrendingUp, Users, Clock, CheckCircle2, XCircle, 
-  ArrowRight, IndianRupee, Building2, BarChart3, Upload, PhoneCall, Zap
+  ArrowRight, IndianRupee, Building2, BarChart3, PhoneCall, Zap
 } from "lucide-react";
 import { LoanPipelineBoard } from "./loans/LoanPipelineBoard";
 import { LoanLeadsList } from "./loans/LoanLeadsList";
@@ -54,7 +54,7 @@ export const LoanCRMDashboard = () => {
   const totalDisbursed = applications
     .filter(a => ['disbursement', 'converted'].includes(a.stage))
     .reduce((sum, a) => sum + (Number(a.disbursement_amount) || Number(a.loan_amount) || 0), 0);
-  const hotLeads = applications.filter(a => a.priority === 'hot').length;
+  
 
   return (
     <div className="space-y-6">
@@ -79,7 +79,7 @@ export const LoanCRMDashboard = () => {
               <Users className="h-3.5 w-3.5 text-blue-500" />
             </div>
             <p className="text-xl font-bold mt-0.5">{totalApps}</p>
-            <p className="text-[10px] text-muted-foreground">{hotLeads} hot</p>
+            <p className="text-[10px] text-muted-foreground">all leads</p>
           </CardContent>
         </Card>
         <Card className="border-border/50">
