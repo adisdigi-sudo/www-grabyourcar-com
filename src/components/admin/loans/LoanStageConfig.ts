@@ -41,17 +41,17 @@ export const STAGE_COLORS: Record<LoanStage, string> = {
 // Defines which stages a given stage can move to (forward + backward + terminal)
 export const ALLOWED_TRANSITIONS: Record<LoanStage, LoanStage[]> = {
   new_lead: ['contacted', 'lost'],
-  contacted: ['qualified', 'lost'],
-  qualified: ['eligibility_check', 'lost'],
-  eligibility_check: ['lender_match', 'lost'],
-  lender_match: ['offer_shared', 'lost'],
-  offer_shared: ['documents_requested', 'lost'],
-  documents_requested: ['documents_received', 'lost'],
-  documents_received: ['approval', 'documents_requested', 'lost'],
-  approval: ['disbursement', 'lost'],
-  disbursement: ['converted', 'lost'],
+  contacted: ['new_lead', 'qualified', 'lost'],
+  qualified: ['contacted', 'eligibility_check', 'lost'],
+  eligibility_check: ['qualified', 'lender_match', 'lost'],
+  lender_match: ['eligibility_check', 'offer_shared', 'lost'],
+  offer_shared: ['lender_match', 'documents_requested', 'lost'],
+  documents_requested: ['offer_shared', 'documents_received', 'lost'],
+  documents_received: ['documents_requested', 'approval', 'lost'],
+  approval: ['documents_received', 'disbursement', 'lost'],
+  disbursement: ['approval', 'converted', 'lost'],
   converted: [],
-  lost: [],
+  lost: ['new_lead'],
 };
 
 export const REQUIRED_DOCUMENTS = [
