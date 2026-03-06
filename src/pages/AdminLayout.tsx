@@ -282,7 +282,7 @@ const AdminLayout = () => {
       case "services-insurance-import":
         return <InsuranceImportExport />;
       case "services-loans":
-        return <WebsiteSettings />;
+        return <LoanCRMDashboard />;
       case "services-emi-pdf":
         return <EMIPDFSettings />;
       case "services-discounts":

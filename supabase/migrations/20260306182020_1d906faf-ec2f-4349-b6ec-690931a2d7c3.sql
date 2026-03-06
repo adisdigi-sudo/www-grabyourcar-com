@@ -1,0 +1,43 @@
+-- Add missing columns to rental_bookings for complete journey
+ALTER TABLE public.rental_bookings
+  ADD COLUMN IF NOT EXISTS customer_name text,
+  ADD COLUMN IF NOT EXISTS phone text,
+  ADD COLUMN IF NOT EXISTS email text,
+  ADD COLUMN IF NOT EXISTS partner_name text,
+  ADD COLUMN IF NOT EXISTS partner_address text,
+  ADD COLUMN IF NOT EXISTS partner_phone text,
+  ADD COLUMN IF NOT EXISTS call_status text,
+  ADD COLUMN IF NOT EXISTS call_remarks text,
+  ADD COLUMN IF NOT EXISTS call_attempts int DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS follow_up_date date,
+  ADD COLUMN IF NOT EXISTS follow_up_time text,
+  ADD COLUMN IF NOT EXISTS agreement_url text,
+  ADD COLUMN IF NOT EXISTS payment_history jsonb DEFAULT '[]'::jsonb,
+  ADD COLUMN IF NOT EXISTS feedback_rating int,
+  ADD COLUMN IF NOT EXISTS feedback_text text,
+  ADD COLUMN IF NOT EXISTS incentive_eligible boolean DEFAULT false,
+  ADD COLUMN IF NOT EXISTS source text,
+  ADD COLUMN IF NOT EXISTS remarks_history jsonb DEFAULT '[]'::jsonb,
+  ADD COLUMN IF NOT EXISTS lost_reason text,
+  ADD COLUMN IF NOT EXISTS lost_remarks text,
+  ADD COLUMN IF NOT EXISTS last_activity_at timestamptz DEFAULT now(),
+  ADD COLUMN IF NOT EXISTS pipeline_stage text DEFAULT 'new_inquiry';
+
+-- Add missing columns to hsrp_bookings for complete journey
+ALTER TABLE public.hsrp_bookings
+  ADD COLUMN IF NOT EXISTS call_status text,
+  ADD COLUMN IF NOT EXISTS call_remarks text,
+  ADD COLUMN IF NOT EXISTS call_attempts int DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS follow_up_date date,
+  ADD COLUMN IF NOT EXISTS follow_up_time text,
+  ADD COLUMN IF NOT EXISTS feedback_rating int,
+  ADD COLUMN IF NOT EXISTS feedback_text text,
+  ADD COLUMN IF NOT EXISTS incentive_eligible boolean DEFAULT false,
+  ADD COLUMN IF NOT EXISTS source text,
+  ADD COLUMN IF NOT EXISTS remarks_history jsonb DEFAULT '[]'::jsonb,
+  ADD COLUMN IF NOT EXISTS lost_reason text,
+  ADD COLUMN IF NOT EXISTS lost_remarks text,
+  ADD COLUMN IF NOT EXISTS last_activity_at timestamptz DEFAULT now(),
+  ADD COLUMN IF NOT EXISTS pipeline_stage text DEFAULT 'new_booking',
+  ADD COLUMN IF NOT EXISTS installation_images jsonb DEFAULT '[]'::jsonb,
+  ADD COLUMN IF NOT EXISTS installation_notes text;

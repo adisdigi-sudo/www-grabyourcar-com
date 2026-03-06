@@ -3955,6 +3955,9 @@ export type Database = {
       hsrp_bookings: {
         Row: {
           address: string | null
+          call_attempts: number | null
+          call_remarks: string | null
+          call_status: string | null
           chassis_number: string | null
           completed_at: string | null
           created_at: string
@@ -3963,9 +3966,19 @@ export type Database = {
           discount_reason: string | null
           email: string
           engine_number: string | null
+          feedback_rating: number | null
+          feedback_text: string | null
+          follow_up_date: string | null
+          follow_up_time: string | null
           home_installation: boolean | null
           home_installation_fee: number | null
           id: string
+          incentive_eligible: boolean | null
+          installation_images: Json | null
+          installation_notes: string | null
+          last_activity_at: string | null
+          lost_reason: string | null
+          lost_remarks: string | null
           mobile: string
           order_id: string | null
           order_status: string
@@ -3974,10 +3987,13 @@ export type Database = {
           payment_id: string | null
           payment_status: string
           pincode: string
+          pipeline_stage: string | null
           registration_number: string
+          remarks_history: Json | null
           scheduled_date: string | null
           service_price: number
           service_type: string
+          source: string | null
           state: string
           tracking_id: string | null
           updated_at: string
@@ -3986,6 +4002,9 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          call_attempts?: number | null
+          call_remarks?: string | null
+          call_status?: string | null
           chassis_number?: string | null
           completed_at?: string | null
           created_at?: string
@@ -3994,9 +4013,19 @@ export type Database = {
           discount_reason?: string | null
           email: string
           engine_number?: string | null
+          feedback_rating?: number | null
+          feedback_text?: string | null
+          follow_up_date?: string | null
+          follow_up_time?: string | null
           home_installation?: boolean | null
           home_installation_fee?: number | null
           id?: string
+          incentive_eligible?: boolean | null
+          installation_images?: Json | null
+          installation_notes?: string | null
+          last_activity_at?: string | null
+          lost_reason?: string | null
+          lost_remarks?: string | null
           mobile: string
           order_id?: string | null
           order_status?: string
@@ -4005,10 +4034,13 @@ export type Database = {
           payment_id?: string | null
           payment_status?: string
           pincode: string
+          pipeline_stage?: string | null
           registration_number: string
+          remarks_history?: Json | null
           scheduled_date?: string | null
           service_price: number
           service_type: string
+          source?: string | null
           state: string
           tracking_id?: string | null
           updated_at?: string
@@ -4017,6 +4049,9 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          call_attempts?: number | null
+          call_remarks?: string | null
+          call_status?: string | null
           chassis_number?: string | null
           completed_at?: string | null
           created_at?: string
@@ -4025,9 +4060,19 @@ export type Database = {
           discount_reason?: string | null
           email?: string
           engine_number?: string | null
+          feedback_rating?: number | null
+          feedback_text?: string | null
+          follow_up_date?: string | null
+          follow_up_time?: string | null
           home_installation?: boolean | null
           home_installation_fee?: number | null
           id?: string
+          incentive_eligible?: boolean | null
+          installation_images?: Json | null
+          installation_notes?: string | null
+          last_activity_at?: string | null
+          lost_reason?: string | null
+          lost_remarks?: string | null
           mobile?: string
           order_id?: string | null
           order_status?: string
@@ -4036,10 +4081,13 @@ export type Database = {
           payment_id?: string | null
           payment_status?: string
           pincode?: string
+          pipeline_stage?: string | null
           registration_number?: string
+          remarks_history?: Json | null
           scheduled_date?: string | null
           service_price?: number
           service_type?: string
+          source?: string | null
           state?: string
           tracking_id?: string | null
           updated_at?: string
@@ -7018,7 +7066,12 @@ export type Database = {
       }
       rental_bookings: {
         Row: {
+          agreement_url: string | null
+          call_attempts: number | null
+          call_remarks: string | null
+          call_status: string | null
           created_at: string | null
+          customer_name: string | null
           daily_rate: number
           discount_amount: number | null
           discount_applied_by: string | null
@@ -7027,14 +7080,31 @@ export type Database = {
           dropoff_date: string
           dropoff_location: string
           dropoff_time: string
+          email: string | null
+          feedback_rating: number | null
+          feedback_text: string | null
+          follow_up_date: string | null
+          follow_up_time: string | null
           id: string
+          incentive_eligible: boolean | null
+          last_activity_at: string | null
+          lost_reason: string | null
+          lost_remarks: string | null
           notes: string | null
+          partner_address: string | null
+          partner_name: string | null
+          partner_phone: string | null
+          payment_history: Json | null
           payment_id: string | null
           payment_status: string
+          phone: string | null
           pickup_date: string
           pickup_location: string
           pickup_time: string
+          pipeline_stage: string | null
+          remarks_history: Json | null
           security_deposit: number | null
+          source: string | null
           status: string
           subtotal: number
           total_amount: number
@@ -7046,7 +7116,12 @@ export type Database = {
           vehicle_type: string
         }
         Insert: {
+          agreement_url?: string | null
+          call_attempts?: number | null
+          call_remarks?: string | null
+          call_status?: string | null
           created_at?: string | null
+          customer_name?: string | null
           daily_rate: number
           discount_amount?: number | null
           discount_applied_by?: string | null
@@ -7055,14 +7130,31 @@ export type Database = {
           dropoff_date: string
           dropoff_location: string
           dropoff_time: string
+          email?: string | null
+          feedback_rating?: number | null
+          feedback_text?: string | null
+          follow_up_date?: string | null
+          follow_up_time?: string | null
           id?: string
+          incentive_eligible?: boolean | null
+          last_activity_at?: string | null
+          lost_reason?: string | null
+          lost_remarks?: string | null
           notes?: string | null
+          partner_address?: string | null
+          partner_name?: string | null
+          partner_phone?: string | null
+          payment_history?: Json | null
           payment_id?: string | null
           payment_status?: string
+          phone?: string | null
           pickup_date: string
           pickup_location: string
           pickup_time: string
+          pipeline_stage?: string | null
+          remarks_history?: Json | null
           security_deposit?: number | null
+          source?: string | null
           status?: string
           subtotal: number
           total_amount: number
@@ -7074,7 +7166,12 @@ export type Database = {
           vehicle_type: string
         }
         Update: {
+          agreement_url?: string | null
+          call_attempts?: number | null
+          call_remarks?: string | null
+          call_status?: string | null
           created_at?: string | null
+          customer_name?: string | null
           daily_rate?: number
           discount_amount?: number | null
           discount_applied_by?: string | null
@@ -7083,14 +7180,31 @@ export type Database = {
           dropoff_date?: string
           dropoff_location?: string
           dropoff_time?: string
+          email?: string | null
+          feedback_rating?: number | null
+          feedback_text?: string | null
+          follow_up_date?: string | null
+          follow_up_time?: string | null
           id?: string
+          incentive_eligible?: boolean | null
+          last_activity_at?: string | null
+          lost_reason?: string | null
+          lost_remarks?: string | null
           notes?: string | null
+          partner_address?: string | null
+          partner_name?: string | null
+          partner_phone?: string | null
+          payment_history?: Json | null
           payment_id?: string | null
           payment_status?: string
+          phone?: string | null
           pickup_date?: string
           pickup_location?: string
           pickup_time?: string
+          pipeline_stage?: string | null
+          remarks_history?: Json | null
           security_deposit?: number | null
+          source?: string | null
           status?: string
           subtotal?: number
           total_amount?: number
