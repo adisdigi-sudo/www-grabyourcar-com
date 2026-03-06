@@ -265,8 +265,9 @@ export const LoanCallingWorkspace = ({ applications }: Props) => {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap mb-1">
               <span className="font-semibold truncate">{app.customer_name}</span>
-              {app.priority === 'hot' && <Badge className="bg-orange-500 text-white text-[10px] px-1.5 py-0 border-0">🔥 Hot</Badge>}
-              {app.priority === 'high' && <Badge className="bg-amber-500 text-white text-[10px] px-1.5 py-0 border-0">⚡ High</Badge>}
+              {app.priority && app.priority !== 'medium' && app.priority !== 'low' && (
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0">{app.priority}</Badge>
+              )}
               {showStage && (
                 <Badge className={`${STAGE_COLORS[app.stage as LoanStage] || 'bg-muted text-muted-foreground'} text-[10px] px-1.5 border-0`}>
                   {STAGE_LABELS[app.stage as LoanStage] || app.stage}
@@ -298,15 +299,6 @@ export const LoanCallingWorkspace = ({ applications }: Props) => {
             {app.remarks && <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">💬 {app.remarks}</p>}
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-emerald-600 border-emerald-200 hover:bg-emerald-50 dark:hover:bg-emerald-950"
-              onClick={() => handleWhatsApp(app.phone, app.customer_name)}
-            >
-              <MessageCircle className="h-4 w-4 mr-1" />
-              <span className="hidden sm:inline">WhatsApp</span>
-            </Button>
             <Button size="sm" className="shadow-sm" onClick={() => handleDial(app)}>
               <Phone className="h-4 w-4 mr-1" /> Call
             </Button>
@@ -344,9 +336,6 @@ export const LoanCallingWorkspace = ({ applications }: Props) => {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={downloadQueueCSV}>
-              <Download className="h-4 w-4" /> Export Queue
-            </Button>
             <Dialog open={showAddLead} onOpenChange={setShowAddLead}>
               <DialogTrigger asChild>
                 <Button size="sm" variant="outline" className="gap-1.5">
@@ -387,45 +376,6 @@ export const LoanCallingWorkspace = ({ applications }: Props) => {
                   <div><Label>Remarks</Label><Textarea value={newLead.remarks} onChange={e => setNewLead(p => ({ ...p, remarks: e.target.value }))} placeholder="Any notes..." rows={2} /></div>
                   <Button onClick={() => createMutation.mutate(newLead)} disabled={!newLead.customer_name || !newLead.phone || createMutation.isPending} className="w-full">
                     {createMutation.isPending ? "Adding..." : "Add to Queue"}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-
-            <Dialog open={showImport} onOpenChange={setShowImport}>
-              <DialogTrigger asChild>
-                <Button size="sm" variant="outline" className="gap-1.5">
-                  <Upload className="h-4 w-4" /> Quick Import
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader><DialogTitle className="flex items-center gap-2"><Upload className="h-5 w-5" /> Quick Paste Import</DialogTitle></DialogHeader>
-                <div className="space-y-4">
-                  <div className="p-3 rounded-lg bg-muted/50 text-xs space-y-1">
-                    <p className="font-medium">Paste leads in any of these formats:</p>
-                    <code className="block text-muted-foreground">Name, Phone</code>
-                    <code className="block text-muted-foreground">Name, Phone, LoanAmount</code>
-                    <code className="block text-muted-foreground">Name, Phone, LoanAmount, CarModel</code>
-                    <p className="text-muted-foreground mt-1">One lead per line. Copy from Excel/Sheets works too!</p>
-                  </div>
-                  <Textarea
-                    value={importText}
-                    onChange={e => setImportText(e.target.value)}
-                    placeholder={`Rahul Sharma, 9876543210, 800000, Hyundai Creta\nPriya Singh, 9876543211, 1200000, Toyota Fortuner\nAmit Kumar, 9876543212`}
-                    rows={8}
-                    className="font-mono text-sm"
-                  />
-                  {importText.trim() && (
-                    <div className="text-xs text-muted-foreground">
-                      {importText.trim().split('\n').filter(l => l.trim()).length} lines detected
-                    </div>
-                  )}
-                  <Button
-                    onClick={() => quickImportMutation.mutate(importText)}
-                    disabled={!importText.trim() || quickImportMutation.isPending}
-                    className="w-full"
-                  >
-                    {quickImportMutation.isPending ? "Importing..." : "Import Leads"}
                   </Button>
                 </div>
               </DialogContent>

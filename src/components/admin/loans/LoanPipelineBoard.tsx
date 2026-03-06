@@ -178,12 +178,14 @@ export const LoanPipelineBoard = ({ applications }: Props) => {
   // Auto-execute pending drop
   useEffect(() => {
     if (!pendingDrop || quickMoveMutation.isPending) return;
+    const { app, targetStage } = pendingDrop;
     quickMoveMutation.mutate({
-      appId: pendingDrop.app.id,
-      fromStage: pendingDrop.app.stage,
-      toStage: pendingDrop.targetStage,
+      appId: app.id,
+      fromStage: app.stage,
+      toStage: targetStage,
     });
-  }, [pendingDrop, quickMoveMutation]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingDrop]);
 
   const isDropAllowed = (targetStage: LoanStage) => {
     if (!draggingApp) return false;
