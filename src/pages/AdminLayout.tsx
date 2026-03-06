@@ -95,6 +95,8 @@ import ErrorPrevention from "@/components/admin/ErrorPrevention";
 import WorkflowEngine from "@/components/admin/WorkflowEngine";
 import AutomationCommandCenter from "@/components/admin/AutomationCommandCenter";
 import { LeadRoutingManager } from "@/components/admin/LeadRoutingManager";
+import { AccountsFinanceWorkspace } from "@/components/admin/finance/AccountsFinanceWorkspace";
+import { HRWorkspace } from "@/components/admin/hr/HRWorkspace";
 
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
@@ -365,6 +367,10 @@ const AdminLayout = () => {
         return <DealerManagement initialTab="inventory" />;
       case "dealer-broadcast":
         return <DealerManagement initialTab="broadcast" />;
+      case "accounts-finance":
+        return <AccountsFinanceWorkspace />;
+      case "hr-workspace":
+        return <HRWorkspace />;
       default:
         return <AdminDashboard />;
     }
