@@ -7357,6 +7357,164 @@ export type Database = {
         }
         Relationships: []
       }
+      sales_activity_log: {
+        Row: {
+          action: string
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          performed_by: string | null
+          pipeline_id: string
+          remarks: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          performed_by?: string | null
+          pipeline_id: string
+          remarks?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          performed_by?: string | null
+          pipeline_id?: string
+          remarks?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_activity_log_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "sales_pipeline"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_pipeline: {
+        Row: {
+          assigned_to: string | null
+          booking_remarks: string | null
+          booking_status: string | null
+          buying_intent: string | null
+          call_attempts: number | null
+          call_remarks: string | null
+          call_status: string | null
+          car_brand: string | null
+          car_model: string | null
+          car_variant: string | null
+          city: string | null
+          client_id: string | null
+          created_at: string | null
+          customer_name: string
+          delivery_date: string | null
+          delivery_documents: string[] | null
+          delivery_images: string[] | null
+          email: string | null
+          feedback_images: string[] | null
+          feedback_rating: number | null
+          feedback_text: string | null
+          feedback_videos: string[] | null
+          follow_up_date: string | null
+          follow_up_time: string | null
+          id: string
+          incentive_eligible: boolean | null
+          inquiry_remarks: string | null
+          last_activity_at: string | null
+          loan_status: string | null
+          lost_reason: string | null
+          lost_remarks: string | null
+          phone: string
+          pipeline_stage: string
+          quote_history: Json | null
+          remarks_history: Json | null
+          source: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          booking_remarks?: string | null
+          booking_status?: string | null
+          buying_intent?: string | null
+          call_attempts?: number | null
+          call_remarks?: string | null
+          call_status?: string | null
+          car_brand?: string | null
+          car_model?: string | null
+          car_variant?: string | null
+          city?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          customer_name: string
+          delivery_date?: string | null
+          delivery_documents?: string[] | null
+          delivery_images?: string[] | null
+          email?: string | null
+          feedback_images?: string[] | null
+          feedback_rating?: number | null
+          feedback_text?: string | null
+          feedback_videos?: string[] | null
+          follow_up_date?: string | null
+          follow_up_time?: string | null
+          id?: string
+          incentive_eligible?: boolean | null
+          inquiry_remarks?: string | null
+          last_activity_at?: string | null
+          loan_status?: string | null
+          lost_reason?: string | null
+          lost_remarks?: string | null
+          phone: string
+          pipeline_stage?: string
+          quote_history?: Json | null
+          remarks_history?: Json | null
+          source?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          booking_remarks?: string | null
+          booking_status?: string | null
+          buying_intent?: string | null
+          call_attempts?: number | null
+          call_remarks?: string | null
+          call_status?: string | null
+          car_brand?: string | null
+          car_model?: string | null
+          car_variant?: string | null
+          city?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          customer_name?: string
+          delivery_date?: string | null
+          delivery_documents?: string[] | null
+          delivery_images?: string[] | null
+          email?: string | null
+          feedback_images?: string[] | null
+          feedback_rating?: number | null
+          feedback_text?: string | null
+          feedback_videos?: string[] | null
+          follow_up_date?: string | null
+          follow_up_time?: string | null
+          id?: string
+          incentive_eligible?: boolean | null
+          inquiry_remarks?: string | null
+          last_activity_at?: string | null
+          loan_status?: string | null
+          lost_reason?: string | null
+          lost_remarks?: string | null
+          phone?: string
+          pipeline_stage?: string
+          quote_history?: Json | null
+          remarks_history?: Json | null
+          source?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       scheduled_reports: {
         Row: {
           created_at: string
