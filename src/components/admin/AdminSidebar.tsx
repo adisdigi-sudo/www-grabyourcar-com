@@ -119,6 +119,23 @@ const navItems: NavItem[] = [
     ]
   },
 
+  // ── Services — marketing workspace ──
+  { 
+    id: "mkt-services", 
+    label: "🛠️ Services", 
+    icon: Wrench,
+    verticals: ["marketing"],
+    allowedRoles: ["super_admin", "admin"],
+    children: [
+      { id: "services-insurance", label: "🛡️ Insurance CRM", icon: FileText },
+      { id: "services-loans", label: "💰 Car Loans", icon: CreditCard },
+      { id: "services-hsrp", label: "HSRP & FASTag", icon: Shield },
+      { id: "services-rentals", label: "Self-Drive Rentals", icon: CalendarDays },
+      { id: "services-pricing", label: "Service Pricing", icon: CreditCard },
+      { id: "services-partners", label: "Partners", icon: Users },
+    ]
+  },
+
   // ══════════════════════════════════════════════════
   // MARKETING & TECH WORKSPACE — comprehensive hub
   // ══════════════════════════════════════════════════
