@@ -371,7 +371,23 @@ const AdminLayout = () => {
         return <DealerManagement initialTab="broadcast" />;
       case "accounts-finance":
         return <AccountsFinanceWorkspace />;
+      case "accounts-revenue":
+        return <AccountsFinanceWorkspace />;
+      case "accounts-expenses":
+        return <AccountsFinanceWorkspace />;
+      case "accounts-commissions":
+        return <AccountsFinanceWorkspace />;
+      case "accounts-payouts":
+        return <AccountsFinanceWorkspace />;
       case "hr-workspace":
+        return <HRWorkspace />;
+      case "hr-directory":
+        return <HRWorkspace />;
+      case "hr-attendance":
+        return <HRWorkspace />;
+      case "hr-leaves":
+        return <HRWorkspace />;
+      case "hr-announcements":
         return <HRWorkspace />;
       default:
         return <AdminDashboard />;

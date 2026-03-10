@@ -379,6 +379,7 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
       items = items
         .map(item => {
           if (item.id === "dashboard" || item.id === "calling-system") return item;
+          if (item.id === "finance-hub" || item.id === "hr-hub") return item;
           if (item.id === "services" && item.children) {
             const allowedInsuranceChildren = item.children.filter(
               child => child.id === "services-insurance" || child.id === "services-insurance-import"
