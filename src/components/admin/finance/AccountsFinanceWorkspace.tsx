@@ -25,9 +25,9 @@ const EXPENSE_CATEGORIES = ["operational", "salary", "rent", "utilities", "marke
 const PAYMENT_MODES = ["cash", "bank_transfer", "upi", "cheque", "card", "other"];
 const MONTHS = ["2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06", "2026-07", "2026-08", "2026-09", "2026-10", "2026-11", "2026-12"];
 
-export const AccountsFinanceWorkspace = () => {
+export const AccountsFinanceWorkspace = ({ initialTab = "overview" }: { initialTab?: string }) => {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [showAddDialog, setShowAddDialog] = useState<"revenue" | "expense" | "payout" | "commission" | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterMonth, setFilterMonth] = useState(format(new Date(), "yyyy-MM"));
