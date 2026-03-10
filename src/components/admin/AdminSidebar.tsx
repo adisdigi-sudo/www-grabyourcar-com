@@ -301,25 +301,35 @@ const navItems: NavItem[] = [
   { id: "roles", label: "👥 User Roles", icon: UserCog, verticals: ["marketing"], allowedRoles: ["super_admin", "admin"] },
   { id: "settings", label: "⚙️ Site Settings", icon: Settings, verticals: ["marketing"], allowedRoles: ["super_admin", "admin"] },
 
-  // ── Accounts & Finance ──
+  // ── Accounts & Finance — shows in accounts vertical + always for admins ──
   { 
     id: "finance-hub", 
     label: "💰 Accounts & Finance", 
     icon: CreditCard,
+    verticals: ["accounts"],
     allowedRoles: ["super_admin", "admin", "finance"],
     children: [
-      { id: "accounts-finance", label: "📊 Finance Dashboard", icon: BarChart3 },
+      { id: "accounts-finance", label: "📊 Finance Overview", icon: BarChart3 },
+      { id: "accounts-revenue", label: "💵 Revenue Entries", icon: CreditCard },
+      { id: "accounts-expenses", label: "📤 Expenses", icon: CreditCard },
+      { id: "accounts-commissions", label: "🏆 Commissions", icon: CreditCard },
+      { id: "accounts-payouts", label: "💳 Payouts", icon: CreditCard },
     ]
   },
 
-  // ── HR & Office Culture ──
+  // ── HR & Office Culture — shows in hr vertical + always for admins ──
   { 
     id: "hr-hub", 
     label: "👥 HR & Office", 
     icon: Users,
+    verticals: ["hr"],
     allowedRoles: ["super_admin", "admin"],
     children: [
-      { id: "hr-workspace", label: "📊 HR Dashboard", icon: BarChart3 },
+      { id: "hr-workspace", label: "📊 HR Overview", icon: BarChart3 },
+      { id: "hr-directory", label: "👥 Team Directory", icon: Users },
+      { id: "hr-attendance", label: "📋 Attendance", icon: CalendarDays },
+      { id: "hr-leaves", label: "🏖️ Leave Management", icon: CalendarDays },
+      { id: "hr-announcements", label: "📢 Announcements", icon: FileText },
     ]
   },
 ];
