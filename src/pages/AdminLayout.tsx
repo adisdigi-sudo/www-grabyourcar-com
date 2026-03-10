@@ -370,25 +370,25 @@ const AdminLayout = () => {
       case "dealer-broadcast":
         return <DealerManagement initialTab="broadcast" />;
       case "accounts-finance":
-        return <AccountsFinanceWorkspace />;
+        return <AccountsFinanceWorkspace initialTab="overview" />;
       case "accounts-revenue":
-        return <AccountsFinanceWorkspace />;
+        return <AccountsFinanceWorkspace initialTab="revenue" />;
       case "accounts-expenses":
-        return <AccountsFinanceWorkspace />;
+        return <AccountsFinanceWorkspace initialTab="expenses" />;
       case "accounts-commissions":
-        return <AccountsFinanceWorkspace />;
+        return <AccountsFinanceWorkspace initialTab="commissions" />;
       case "accounts-payouts":
-        return <AccountsFinanceWorkspace />;
+        return <AccountsFinanceWorkspace initialTab="payouts" />;
       case "hr-workspace":
-        return <HRWorkspace />;
+        return <HRWorkspace initialTab="overview" />;
       case "hr-directory":
-        return <HRWorkspace />;
+        return <HRWorkspace initialTab="directory" />;
       case "hr-attendance":
-        return <HRWorkspace />;
+        return <HRWorkspace initialTab="attendance" />;
       case "hr-leaves":
-        return <HRWorkspace />;
+        return <HRWorkspace initialTab="leaves" />;
       case "hr-announcements":
-        return <HRWorkspace />;
+        return <HRWorkspace initialTab="culture" />;
       default:
         return <AdminDashboard />;
     }
