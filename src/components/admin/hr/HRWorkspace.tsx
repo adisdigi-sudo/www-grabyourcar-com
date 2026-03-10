@@ -27,9 +27,9 @@ const ATTENDANCE_STATUS = ["present", "absent", "half_day", "late", "work_from_h
 const DEPARTMENTS = ["sales", "insurance", "rental", "hsrp", "marketing", "finance", "operations", "hr", "management"];
 const EMPLOYMENT_TYPES = ["full_time", "part_time", "contract", "intern"];
 
-export const HRWorkspace = () => {
+export const HRWorkspace = ({ initialTab = "overview" }: { initialTab?: string }) => {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [showDialog, setShowDialog] = useState<"member" | "attendance" | "leave" | "announcement" | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMember, setSelectedMember] = useState<any>(null);
