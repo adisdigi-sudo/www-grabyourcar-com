@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { FileText, Shield, Loader2, CheckCircle, Download } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { WhatsAppOTPVerification } from "@/components/WhatsAppOTPVerification";
+
 import { z } from "zod";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
