@@ -85,7 +85,7 @@ interface FormData {
 }
 
 export function HSRPUnifiedBookingForm() {
-  const { user } = useAuth();
+  const { user, signInWithPhone } = useAuth();
   const navigate = useNavigate();
   const { initiatePayment, isLoading: isPaymentLoading } = useRazorpay();
   const { data: pricing } = useHSRPPricing();
@@ -214,10 +214,26 @@ export function HSRPUnifiedBookingForm() {
       if (!validateStep(i)) return;
     }
 
-    if (!user) {
-      toast.error("Please login to continue");
-      navigate("/auth");
-      return;
+    // Auto-login silently using the phone number from the form
+    let currentUser = user;
+    if (!currentUser) {
+      try {
+        const { error } = await signInWithPhone(formData.mobile);
+        if (error) {
+          toast.error("Could not verify your phone number. Please try again.");
+          return;
+        }
+        // Get the session after sign-in
+        const { data: { session } } = await supabase.auth.getSession();
+        currentUser = session?.user ?? null;
+        if (!currentUser) {
+          toast.error("Authentication failed. Please try again.");
+          return;
+        }
+      } catch {
+        toast.error("Login failed. Please try again.");
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -226,7 +242,7 @@ export function HSRPUnifiedBookingForm() {
       const trackingId = generateTrackingId();
       
       const bookingData = {
-        user_id: user.id,
+        user_id: currentUser.id,
         registration_number: formData.registrationNumber.toUpperCase(),
         chassis_number: formData.chassisLast6 || null,
         engine_number: formData.engineLast6 || null,
