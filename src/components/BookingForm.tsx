@@ -36,7 +36,6 @@
  export const BookingForm = ({ carName, carBrand }: BookingFormProps) => {
    const [isSubmitting, setIsSubmitting] = useState(false);
    const [showOTPVerification, setShowOTPVerification] = useState(false);
-   const [isVerified, setIsVerified] = useState(false);
    const [bookingForm, setBookingForm] = useState<BookingFormData>({
      name: "",
      phone: "",
