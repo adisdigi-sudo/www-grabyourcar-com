@@ -21,7 +21,7 @@ const Auth = () => {
   const navigate = useNavigate();
   const { user, loading, signInWithPhone } = useAuth();
   const [phone, setPhone] = useState("");
-  const [showOTP, setShowOTP] = useState(false);
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
