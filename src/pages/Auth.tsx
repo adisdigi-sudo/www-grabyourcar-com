@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { Loader2, Car, Phone, Shield, Bot } from "lucide-react";
 import { z } from "zod";
 import { AnimatePresence, motion } from "framer-motion";
-import { WhatsAppOTPVerification } from "@/components/WhatsAppOTPVerification";
+
 import { supabase } from "@/integrations/supabase/client";
 
 const phoneSchema = z.string().regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit mobile number");
