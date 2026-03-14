@@ -486,17 +486,22 @@ export function HSRPUnifiedBookingForm() {
                         onClick={() => {
                           rcLookup.lookup(formData.registrationNumber).then((result) => {
                             if (result) {
-                              const makerParts = result.maker_model?.split(" ") || [];
+                              const maker = result.maker || result.maker_model?.split(" ")[0] || "";
+                              const model = result.maker ? (result.maker_model?.replace(result.maker, "").trim() || "") : (result.maker_model?.split(" ").slice(1).join(" ") || "");
                               setFormData(prev => ({
                                 ...prev,
-                                chassisLast6: result.chassis_number?.slice(-6) || prev.chassisLast6,
-                                engineLast6: result.engine_number?.slice(-6) || prev.engineLast6,
-                                vehicleMake: makerParts[0] || prev.vehicleMake,
-                                vehicleModel: makerParts.slice(1).join(" ") || prev.vehicleModel,
+                                chassisLast6: (result.chassis_number && result.chassis_number !== "N/A") ? result.chassis_number.slice(-6) : prev.chassisLast6,
+                                engineLast6: (result.engine_number && result.engine_number !== "N/A") ? result.engine_number.slice(-6) : prev.engineLast6,
+                                vehicleMake: maker || prev.vehicleMake,
+                                vehicleModel: model || prev.vehicleModel,
                                 ownerName: (result.owner_name && result.owner_name !== "N/A") ? result.owner_name : prev.ownerName,
+                                mobile: result.mobile_number || prev.mobile,
+                                email: prev.email,
+                                address: result.present_address || prev.address,
                                 manufacturingYear: result.registration_date ? result.registration_date.substring(0, 4) : prev.manufacturingYear,
                               }));
                               toast.success("Vehicle details auto-filled!");
+                            }
                             }
                           });
                         }}
