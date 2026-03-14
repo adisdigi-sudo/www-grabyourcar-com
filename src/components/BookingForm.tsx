@@ -154,10 +154,9 @@
                id="booking-phone"
               placeholder="10-digit WhatsApp number"
                value={bookingForm.phone}
-              onChange={(e) => {
-                setBookingForm(prev => ({ ...prev, phone: e.target.value.replace(/\D/g, '').slice(0, 10) }));
-                setIsVerified(false); // Reset verification if phone changes
-              }}
+               onChange={(e) => {
+                 setBookingForm(prev => ({ ...prev, phone: e.target.value.replace(/\D/g, '').slice(0, 10) }));
+               }}
                className="h-11 bg-background/80 border-border/60 focus:border-success focus:ring-success/20"
                required
              />
