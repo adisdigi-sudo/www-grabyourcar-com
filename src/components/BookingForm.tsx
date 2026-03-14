@@ -121,20 +121,7 @@
        </CardHeader>
        <CardContent className="pt-5 pb-5">
         <AnimatePresence mode="wait">
-          {showOTPVerification ? (
-            <motion.div
-              key="otp"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-            >
-              <WhatsAppOTPVerification
-                phone={bookingForm.phone}
-                onVerified={handleOTPVerified}
-                onCancel={() => setShowOTPVerification(false)}
-              />
-            </motion.div>
-          ) : (
+          {(
             <motion.form
               key="form"
               initial={{ opacity: 0, x: -20 }}
