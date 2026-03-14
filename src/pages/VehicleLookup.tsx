@@ -16,12 +16,17 @@ import { format, differenceInDays } from "date-fns";
 interface VehicleData {
   registration_number: string;
   owner_name: string;
+  father_name?: string | null;
+  mobile_number?: string | null;
+  present_address?: string | null;
   vehicle_class: string;
   fuel_type: string;
   maker_model: string;
+  maker?: string | null;
   registration_date: string;
   insurance_expiry: string | null;
   insurance_company: string | null;
+  insurance_policy_number?: string | null;
   puc_expiry: string | null;
   fitness_expiry: string | null;
   rto: string;
@@ -29,8 +34,9 @@ interface VehicleData {
   engine_number: string;
   vehicle_age_years: number;
   hypothecation: string | null;
+  vehicle_color?: string | null;
+  norms_type?: string | null;
   source?: "surepass" | "mock";
-  // Cross-sell triggers
   triggers: {
     insurance_renewal: boolean;
     insurance_days_left: number | null;
