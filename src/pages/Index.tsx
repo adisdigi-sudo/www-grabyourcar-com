@@ -122,7 +122,7 @@ const Index = () => {
       <FloatingCTA />
       
       {/* Lead Capture Modals */}
-      <WelcomeOTPGate />
+      
       <EntryLeadCaptureModal />
       <ExitIntentPopup />
       </div>

@@ -607,24 +607,6 @@ export const FloatingCTA = () => {
         </DialogContent>
       </Dialog>
 
-      {/* OTP Verification Dialog */}
-      <Dialog open={showOTPVerification} onOpenChange={(open) => {
-        if (!open) {
-          setShowOTPVerification(false);
-          setPendingFormType(null);
-        }
-      }}>
-        <DialogContent className="sm:max-w-md">
-          <WhatsAppOTPVerification
-            phone={pendingFormType === "quick" ? quickFormData.phone : scheduleFormData.phone}
-            onVerified={handleOTPVerified}
-            onCancel={() => {
-              setShowOTPVerification(false);
-              setPendingFormType(null);
-            }}
-          />
-        </DialogContent>
-      </Dialog>
     </>
   );
 };

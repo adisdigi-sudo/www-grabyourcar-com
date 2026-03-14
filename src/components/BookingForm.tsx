@@ -89,8 +89,7 @@
        });
 
        toast.success("🎉 Booking request submitted! Our team will contact you within 30 minutes.");
-       setBookingForm({ name: "", phone: "", email: "", preferredDate: "" });
-       setIsVerified(false);
+     setBookingForm({ name: "", phone: "", email: "", preferredDate: "" });
      } catch (error) {
        console.error("Error submitting booking:", error);
        toast.error("Something went wrong. Please try again.");
