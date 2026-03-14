@@ -16,12 +16,17 @@ import { format, differenceInDays } from "date-fns";
 interface VehicleData {
   registration_number: string;
   owner_name: string;
+  father_name?: string | null;
+  mobile_number?: string | null;
+  present_address?: string | null;
   vehicle_class: string;
   fuel_type: string;
   maker_model: string;
+  maker?: string | null;
   registration_date: string;
   insurance_expiry: string | null;
   insurance_company: string | null;
+  insurance_policy_number?: string | null;
   puc_expiry: string | null;
   fitness_expiry: string | null;
   rto: string;
@@ -29,8 +34,9 @@ interface VehicleData {
   engine_number: string;
   vehicle_age_years: number;
   hypothecation: string | null;
+  vehicle_color?: string | null;
+  norms_type?: string | null;
   source?: "surepass" | "mock";
-  // Cross-sell triggers
   triggers: {
     insurance_renewal: boolean;
     insurance_days_left: number | null;
@@ -232,6 +238,9 @@ export default function VehicleLookup() {
               <CardContent className="space-y-3">
                 <DetailRow label="Reg. Number" value={result.registration_number} bold />
                 <DetailRow label="Owner" value={result.owner_name} />
+                {result.father_name && <DetailRow label="Father's Name" value={result.father_name} />}
+                {result.mobile_number && <DetailRow label="Mobile" value={result.mobile_number} />}
+                {result.present_address && <DetailRow label="Address" value={result.present_address} />}
                 <DetailRow label="RTO" value={result.rto} />
                 <DetailRow label="Reg. Date" value={result.registration_date ? format(new Date(result.registration_date), "dd MMM yyyy") : "—"} />
                 <DetailRow label="Vehicle Age" value={`${result.vehicle_age_years} years`} />
@@ -249,6 +258,8 @@ export default function VehicleLookup() {
                 <DetailRow label="Make & Model" value={result.maker_model} bold />
                 <DetailRow label="Vehicle Class" value={result.vehicle_class} />
                 <DetailRow label="Fuel Type" value={result.fuel_type} />
+                {result.vehicle_color && <DetailRow label="Color" value={result.vehicle_color} />}
+                {result.norms_type && <DetailRow label="Emission Norms" value={result.norms_type} />}
                 <DetailRow label="Hypothecation" value={result.hypothecation || "None"} />
               </CardContent>
             </Card>
