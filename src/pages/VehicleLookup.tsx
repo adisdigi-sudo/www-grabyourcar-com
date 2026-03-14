@@ -258,6 +258,8 @@ export default function VehicleLookup() {
                 <DetailRow label="Make & Model" value={result.maker_model} bold />
                 <DetailRow label="Vehicle Class" value={result.vehicle_class} />
                 <DetailRow label="Fuel Type" value={result.fuel_type} />
+                {result.vehicle_color && <DetailRow label="Color" value={result.vehicle_color} />}
+                {result.norms_type && <DetailRow label="Emission Norms" value={result.norms_type} />}
                 <DetailRow label="Hypothecation" value={result.hypothecation || "None"} />
               </CardContent>
             </Card>
