@@ -25,7 +25,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { WhatsAppOTPVerification } from "@/components/WhatsAppOTPVerification";
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { triggerWhatsApp } from "@/lib/whatsappTrigger";
