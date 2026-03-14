@@ -148,13 +148,7 @@
            <div className="space-y-1.5">
              <Label htmlFor="booking-phone" className="text-xs font-medium flex items-center gap-1.5">
                <Phone className="h-3.5 w-3.5 text-primary" />
-              WhatsApp Number <span className="text-destructive">*</span>
-              {isVerified && (
-                <Badge variant="outline" className="text-[10px] ml-1 border-success/50 text-success py-0">
-                  <CheckCircle className="h-2.5 w-2.5 mr-0.5" />
-                  Verified
-                </Badge>
-              )}
+               WhatsApp Number <span className="text-destructive">*</span>
              </Label>
              <Input
                id="booking-phone"
