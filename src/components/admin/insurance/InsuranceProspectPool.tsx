@@ -90,7 +90,7 @@ export function InsuranceProspectPool() {
   const [duplicateAlert, setDuplicateAlert] = useState<{ prospect: any; existingClient: any } | null>(null);
   const [page, setPage] = useState(0);
   const pageSize = 20;
-
+  const rcLookup = useRCLookup({ showToast: false });
   const [form, setForm] = useState({
     phone: "", customer_name: "", email: "", vehicle_number: "",
     vehicle_make: "", vehicle_model: "", policy_type: "comprehensive",
