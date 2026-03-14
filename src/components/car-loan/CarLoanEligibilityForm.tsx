@@ -25,7 +25,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { WhatsAppOTPVerification } from "@/components/WhatsAppOTPVerification";
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { triggerWhatsApp } from "@/lib/whatsappTrigger";
@@ -230,7 +230,7 @@ export const CarLoanEligibilityForm = ({ onEligibilityResult }: Props) => {
                         <Phone className="w-7 h-7 text-primary" />
                       </div>
                       <h3 className="text-xl font-bold text-foreground mb-1">Enter Your Mobile Number</h3>
-                      <p className="text-sm text-muted-foreground">We'll verify via WhatsApp OTP</p>
+                      <p className="text-sm text-muted-foreground">Enter your mobile number to check eligibility</p>
                     </div>
 
                     <div className="space-y-4 max-w-sm mx-auto">

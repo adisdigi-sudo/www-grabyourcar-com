@@ -17,7 +17,7 @@
  import { useState, FormEvent } from "react";
  import { toast } from "sonner";
  import { AnimatePresence, motion } from "framer-motion";
- import { WhatsAppOTPVerification } from "@/components/WhatsAppOTPVerification";
+ 
  import { supabase } from "@/integrations/supabase/client";
  import confetti from "canvas-confetti";
  
@@ -36,7 +36,6 @@
  export const BookingForm = ({ carName, carBrand }: BookingFormProps) => {
    const [isSubmitting, setIsSubmitting] = useState(false);
    const [showOTPVerification, setShowOTPVerification] = useState(false);
-   const [isVerified, setIsVerified] = useState(false);
    const [bookingForm, setBookingForm] = useState<BookingFormData>({
      name: "",
      phone: "",
@@ -57,22 +56,10 @@
        return;
      }
  
-    // If not verified, show OTP verification
-    if (!isVerified) {
-      setShowOTPVerification(true);
-      return;
-    }
-
-    // Submit the lead
-    await submitLead();
-   };
-
-   const handleOTPVerified = async () => {
-     setIsVerified(true);
-     setShowOTPVerification(false);
-     // Auto-submit after verification
+     // Submit the lead directly
      await submitLead();
    };
+
 
    const submitLead = async () => {
      setIsSubmitting(true);
@@ -102,8 +89,7 @@
        });
 
        toast.success("🎉 Booking request submitted! Our team will contact you within 30 minutes.");
-       setBookingForm({ name: "", phone: "", email: "", preferredDate: "" });
-       setIsVerified(false);
+     setBookingForm({ name: "", phone: "", email: "", preferredDate: "" });
      } catch (error) {
        console.error("Error submitting booking:", error);
        toast.error("Something went wrong. Please try again.");
@@ -134,20 +120,7 @@
        </CardHeader>
        <CardContent className="pt-5 pb-5">
         <AnimatePresence mode="wait">
-          {showOTPVerification ? (
-            <motion.div
-              key="otp"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-            >
-              <WhatsAppOTPVerification
-                phone={bookingForm.phone}
-                onVerified={handleOTPVerified}
-                onCancel={() => setShowOTPVerification(false)}
-              />
-            </motion.div>
-          ) : (
+          {(
             <motion.form
               key="form"
               initial={{ opacity: 0, x: -20 }}
@@ -174,22 +147,15 @@
            <div className="space-y-1.5">
              <Label htmlFor="booking-phone" className="text-xs font-medium flex items-center gap-1.5">
                <Phone className="h-3.5 w-3.5 text-primary" />
-              WhatsApp Number <span className="text-destructive">*</span>
-              {isVerified && (
-                <Badge variant="outline" className="text-[10px] ml-1 border-success/50 text-success py-0">
-                  <CheckCircle className="h-2.5 w-2.5 mr-0.5" />
-                  Verified
-                </Badge>
-              )}
+               WhatsApp Number <span className="text-destructive">*</span>
              </Label>
              <Input
                id="booking-phone"
               placeholder="10-digit WhatsApp number"
                value={bookingForm.phone}
-              onChange={(e) => {
-                setBookingForm(prev => ({ ...prev, phone: e.target.value.replace(/\D/g, '').slice(0, 10) }));
-                setIsVerified(false); // Reset verification if phone changes
-              }}
+               onChange={(e) => {
+                 setBookingForm(prev => ({ ...prev, phone: e.target.value.replace(/\D/g, '').slice(0, 10) }));
+               }}
                className="h-11 bg-background/80 border-border/60 focus:border-success focus:ring-success/20"
                required
              />
@@ -240,7 +206,7 @@
              ) : (
                <>
                 <Shield className="h-5 w-5 mr-2" />
-                Verify & Book Now
+                Book Now
                </>
              )}
            </Button>
@@ -249,7 +215,7 @@
            <div className="flex flex-col gap-2 pt-3 border-t border-border/50">
              <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Shield className="h-3.5 w-3.5 text-success" />
-              <span>WhatsApp OTP verified • <strong className="text-foreground">100% Secure</strong></span>
+              <span><strong className="text-foreground">100% Secure</strong></span>
              </div>
              <div className="flex items-center gap-2 text-xs text-muted-foreground">
                <CheckCircle className="h-3.5 w-3.5 text-success" />

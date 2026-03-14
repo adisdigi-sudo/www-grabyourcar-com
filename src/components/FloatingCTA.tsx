@@ -17,7 +17,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { LeadForm } from "@/components/LeadForm";
-import { WhatsAppOTPVerification } from "@/components/WhatsAppOTPVerification";
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -67,8 +67,6 @@ export const FloatingCTA = () => {
     date?: string;
     time?: string;
   }>({});
-  const [showOTPVerification, setShowOTPVerification] = useState(false);
-  const [pendingFormType, setPendingFormType] = useState<"quick" | "schedule" | null>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -115,69 +113,63 @@ export const FloatingCTA = () => {
     setIsExpanded(false);
   };
 
-  const handleOTPVerified = async () => {
-    setShowOTPVerification(false);
-    
-    if (pendingFormType === "quick") {
-      // Submit quick form lead
-      try {
-        const { error } = await supabase.from("leads").insert({
-          name: quickFormData.name.trim(),
-          customer_name: quickFormData.name.trim(),
-          phone: quickFormData.phone.trim(),
-          source: "floating_cta",
-          lead_type: "quick_deal",
-          status: "new",
-          priority: "high",
-        });
+  const submitQuickForm = async () => {
+    try {
+      const { error } = await supabase.from("leads").insert({
+        name: quickFormData.name.trim(),
+        customer_name: quickFormData.name.trim(),
+        phone: quickFormData.phone.trim(),
+        source: "floating_cta",
+        lead_type: "quick_deal",
+        status: "new",
+        priority: "high",
+      });
 
-        if (error) throw error;
+      if (error) throw error;
 
-        confetti({
-          particleCount: 100,
-          spread: 70,
-          origin: { y: 0.6 },
-          colors: ['#22c55e', '#16a34a', '#15803d', '#ffffff', '#fbbf24'],
-        });
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#22c55e', '#16a34a', '#15803d', '#ffffff', '#fbbf24'],
+      });
 
-        toast.success("🎉 Thanks! We'll call you with the best deal shortly.");
-        setShowQuickDealForm(false);
-        setQuickFormData({ name: "", phone: "" });
-      } catch (error) {
-        console.error("Error submitting quick form:", error);
-        toast.error("Something went wrong. Please try again.");
-      }
-    } else if (pendingFormType === "schedule") {
-      // Submit schedule form
-      try {
-        const { error } = await supabase.from("call_bookings").insert({
-          customer_name: scheduleFormData.name.trim(),
-          phone: scheduleFormData.phone.trim(),
-          preferred_date: format(scheduleFormData.date!, "yyyy-MM-dd"),
-          preferred_time: scheduleFormData.time,
-          source: "floating_cta",
-          status: "pending",
-        });
-
-        if (error) throw error;
-
-        confetti({
-          particleCount: 100,
-          spread: 70,
-          origin: { y: 0.6 },
-          colors: ['#22c55e', '#16a34a', '#15803d', '#ffffff', '#3b82f6'],
-        });
-
-        toast.success(`🎉 Call scheduled for ${format(scheduleFormData.date!, "PPP")} at ${scheduleFormData.time}!`);
-        setShowScheduleForm(false);
-        setScheduleFormData({ name: "", phone: "", date: undefined, time: "" });
-      } catch (error) {
-        console.error("Error scheduling call:", error);
-        toast.error("Something went wrong. Please try again.");
-      }
+      toast.success("🎉 Thanks! We'll call you with the best deal shortly.");
+      setShowQuickDealForm(false);
+      setQuickFormData({ name: "", phone: "" });
+    } catch (error) {
+      console.error("Error submitting quick form:", error);
+      toast.error("Something went wrong. Please try again.");
     }
-    
-    setPendingFormType(null);
+  };
+
+  const submitScheduleForm = async () => {
+    try {
+      const { error } = await supabase.from("call_bookings").insert({
+        customer_name: scheduleFormData.name.trim(),
+        phone: scheduleFormData.phone.trim(),
+        preferred_date: format(scheduleFormData.date!, "yyyy-MM-dd"),
+        preferred_time: scheduleFormData.time,
+        source: "floating_cta",
+        status: "pending",
+      });
+
+      if (error) throw error;
+
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#22c55e', '#16a34a', '#15803d', '#ffffff', '#3b82f6'],
+      });
+
+      toast.success(`🎉 Call scheduled for ${format(scheduleFormData.date!, "PPP")} at ${scheduleFormData.time}!`);
+      setShowScheduleForm(false);
+      setScheduleFormData({ name: "", phone: "", date: undefined, time: "" });
+    } catch (error) {
+      console.error("Error scheduling call:", error);
+      toast.error("Something went wrong. Please try again.");
+    }
   };
 
   const handleQuickFormSubmit = async (e: React.FormEvent) => {
@@ -195,9 +187,8 @@ export const FloatingCTA = () => {
       return;
     }
 
-    // Show OTP verification
-    setPendingFormType("quick");
-    setShowOTPVerification(true);
+    // Submit directly
+    await submitQuickForm();
   };
 
   const handleScheduleFormSubmit = async (e: React.FormEvent) => {
@@ -215,9 +206,8 @@ export const FloatingCTA = () => {
       return;
     }
 
-    // Show OTP verification
-    setPendingFormType("schedule");
-    setShowOTPVerification(true);
+    // Submit directly
+    await submitScheduleForm();
   };
 
   return (
@@ -617,24 +607,6 @@ export const FloatingCTA = () => {
         </DialogContent>
       </Dialog>
 
-      {/* OTP Verification Dialog */}
-      <Dialog open={showOTPVerification} onOpenChange={(open) => {
-        if (!open) {
-          setShowOTPVerification(false);
-          setPendingFormType(null);
-        }
-      }}>
-        <DialogContent className="sm:max-w-md">
-          <WhatsAppOTPVerification
-            phone={pendingFormType === "quick" ? quickFormData.phone : scheduleFormData.phone}
-            onVerified={handleOTPVerified}
-            onCancel={() => {
-              setShowOTPVerification(false);
-              setPendingFormType(null);
-            }}
-          />
-        </DialogContent>
-      </Dialog>
     </>
   );
 };

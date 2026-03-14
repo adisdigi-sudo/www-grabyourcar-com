@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { FileText, Shield, Loader2, CheckCircle, Download } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { WhatsAppOTPVerification } from "@/components/WhatsAppOTPVerification";
+
 import { z } from "zod";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
@@ -58,7 +58,7 @@ export const BrochureLeadGate = ({ brochureUrl, carName, carSlug, children }: Br
     toast.success("Downloading brochure...");
   }, [brochureUrl, carSlug, carName]);
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
     const result = formSchema.safeParse(formData);
@@ -70,10 +70,7 @@ export const BrochureLeadGate = ({ brochureUrl, carName, carSlug, children }: Br
       setErrors(fieldErrors);
       return;
     }
-    setStep("otp");
-  };
-
-  const handleOTPVerified = async () => {
+    // Submit directly without OTP
     setIsSubmitting(true);
     try {
       const { error } = await supabase.from("leads").insert({
@@ -90,7 +87,6 @@ export const BrochureLeadGate = ({ brochureUrl, carName, carSlug, children }: Br
 
       if (error) throw error;
 
-      // Trigger WhatsApp confirmation
       try {
         await supabase.functions.invoke("whatsapp-send", {
           body: {
@@ -153,29 +149,14 @@ export const BrochureLeadGate = ({ brochureUrl, carName, carSlug, children }: Br
                     <Input placeholder="e.g., Delhi, Mumbai" className="mt-1" maxLength={50} value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })} />
                     {errors.city && <p className="text-xs text-destructive mt-1">{errors.city}</p>}
                   </div>
-                  <Button type="submit" className="w-full">
-                    <Shield className="h-4 w-4 mr-2" /> Verify & Download
+                  <Button type="submit" className="w-full" disabled={isSubmitting}>
+                    {isSubmitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+                    {isSubmitting ? "Processing..." : "Download Brochure"}
                   </Button>
                 </form>
               </motion.div>
             )}
 
-            {step === "otp" && (
-              <motion.div key="otp" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}>
-                {isSubmitting ? (
-                  <div className="flex flex-col items-center gap-3 py-8">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    <p className="text-sm text-muted-foreground">Processing your request...</p>
-                  </div>
-                ) : (
-                  <WhatsAppOTPVerification
-                    phone={formData.phone}
-                    onVerified={handleOTPVerified}
-                    onCancel={() => setStep("form")}
-                  />
-                )}
-              </motion.div>
-            )}
 
             {step === "success" && (
               <motion.div key="success" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-8">
