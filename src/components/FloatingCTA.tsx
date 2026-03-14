@@ -212,9 +212,8 @@ export const FloatingCTA = () => {
       return;
     }
 
-    // Show OTP verification
-    setPendingFormType("schedule");
-    setShowOTPVerification(true);
+    // Submit directly
+    await submitScheduleForm();
   };
 
   return (
