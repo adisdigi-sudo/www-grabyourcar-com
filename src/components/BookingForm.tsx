@@ -216,7 +216,7 @@
            <div className="flex flex-col gap-2 pt-3 border-t border-border/50">
              <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Shield className="h-3.5 w-3.5 text-success" />
-              <span>WhatsApp OTP verified • <strong className="text-foreground">100% Secure</strong></span>
+              <span><strong className="text-foreground">100% Secure</strong></span>
              </div>
              <div className="flex items-center gap-2 text-xs text-muted-foreground">
                <CheckCircle className="h-3.5 w-3.5 text-success" />
