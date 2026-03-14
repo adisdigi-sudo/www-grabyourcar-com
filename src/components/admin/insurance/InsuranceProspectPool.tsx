@@ -18,7 +18,7 @@ import {
   PhoneCall, MessageSquare, Mail, Clock, Plus, Filter,
   Database, UserCheck, UserX, PhoneOff, CalendarClock, RotateCcw,
   Trophy, XCircle, StickyNote, Eye, Trash2, Upload,
-  TrendingUp, Target, Flame, ChevronLeft, ChevronRight
+  TrendingUp, Target, Flame, ChevronLeft, ChevronRight, Loader2, Car
 } from "lucide-react";
 import { BulkProspectImportButton } from "./BulkProspectImport";
 
