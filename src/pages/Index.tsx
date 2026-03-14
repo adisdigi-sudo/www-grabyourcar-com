@@ -17,7 +17,7 @@ const CrossSellWidget = lazy(() => import("@/components/CrossSellWidget").then((
 import { HomepageSEOContent } from "@/components/HomepageSEOContent";
 import { EntryLeadCaptureModal } from "@/components/EntryLeadCaptureModal";
 import { ExitIntentPopup } from "@/components/ExitIntentPopup";
-import { WelcomeOTPGate } from "@/components/WelcomeOTPGate";
+
 import {
   DynamicHeroBanners,
   DynamicPromoBanners,
