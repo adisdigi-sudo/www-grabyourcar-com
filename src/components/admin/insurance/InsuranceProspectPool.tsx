@@ -650,7 +650,35 @@ export function InsuranceProspectPool() {
               <div><Label className="text-xs">City</Label><Input value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} /></div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div><Label className="text-xs">Vehicle Number</Label><Input value={form.vehicle_number} onChange={e => setForm(f => ({ ...f, vehicle_number: e.target.value }))} /></div>
+              <div>
+                <Label className="text-xs">Vehicle Number</Label>
+                <div className="flex gap-1">
+                  <Input value={form.vehicle_number} onChange={e => setForm(f => ({ ...f, vehicle_number: e.target.value.toUpperCase() }))} placeholder="DL01AB1234" />
+                  <Button
+                    type="button" variant="outline" size="sm"
+                    disabled={rcLookup.loading || !form.vehicle_number.trim()}
+                    className="shrink-0 h-9 px-2"
+                    onClick={() => {
+                      rcLookup.lookup(form.vehicle_number).then((result) => {
+                        if (result) {
+                          setForm(f => ({
+                            ...f,
+                            customer_name: (result.owner_name && result.owner_name !== "N/A") ? result.owner_name : f.customer_name,
+                            vehicle_make: result.maker_model?.split(" ")[0] || f.vehicle_make,
+                            vehicle_model: result.maker_model?.split(" ").slice(1).join(" ") || f.vehicle_model,
+                            insurer: result.insurance_company || f.insurer,
+                            expiry_date: result.insurance_expiry || f.expiry_date,
+                          }));
+                          toast.success("Vehicle details auto-filled!");
+                        }
+                      });
+                    }}
+                  >
+                    {rcLookup.loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Car className="h-3 w-3" />}
+                  </Button>
+                </div>
+                {rcLookup.error && <p className="text-[10px] text-destructive mt-0.5">{rcLookup.error}</p>}
+              </div>
               <div><Label className="text-xs">Insurer</Label><Input value={form.insurer} onChange={e => setForm(f => ({ ...f, insurer: e.target.value }))} /></div>
             </div>
             <div className="grid grid-cols-2 gap-3">
