@@ -464,18 +464,55 @@ export function HSRPUnifiedBookingForm() {
                 <div className="text-center mb-6">
                   <Car className="w-12 h-12 mx-auto text-primary mb-2" />
                   <h3 className="text-xl font-semibold">Vehicle Details</h3>
-                  <p className="text-muted-foreground">Enter your vehicle information</p>
+                  <p className="text-muted-foreground">Enter registration number to auto-fill details</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
                     <Label>Registration Number *</Label>
-                    <Input
-                      placeholder="e.g., DL 01 AB 1234"
-                      value={formData.registrationNumber}
-                      onChange={(e) => handleInputChange("registrationNumber", e.target.value.toUpperCase())}
-                      className="text-lg font-mono uppercase"
-                    />
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="e.g., DL 01 AB 1234"
+                        value={formData.registrationNumber}
+                        onChange={(e) => handleInputChange("registrationNumber", e.target.value.toUpperCase())}
+                        className="text-lg font-mono uppercase"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={rcLookup.loading || !formData.registrationNumber.trim()}
+                        onClick={() => {
+                          rcLookup.lookup(formData.registrationNumber).then((result) => {
+                            if (result) {
+                              const makerParts = result.maker_model?.split(" ") || [];
+                              setFormData(prev => ({
+                                ...prev,
+                                chassisLast6: result.chassis_number?.slice(-6) || prev.chassisLast6,
+                                engineLast6: result.engine_number?.slice(-6) || prev.engineLast6,
+                                vehicleMake: makerParts[0] || prev.vehicleMake,
+                                vehicleModel: makerParts.slice(1).join(" ") || prev.vehicleModel,
+                                ownerName: (result.owner_name && result.owner_name !== "N/A") ? result.owner_name : prev.ownerName,
+                                manufacturingYear: result.registration_date ? result.registration_date.substring(0, 4) : prev.manufacturingYear,
+                              }));
+                              toast.success("Vehicle details auto-filled!");
+                            }
+                          });
+                        }}
+                        className="shrink-0 h-10 px-4"
+                      >
+                        {rcLookup.loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileCheck className="h-4 w-4" />}
+                        <span className="ml-1 hidden sm:inline">Verify RC</span>
+                      </Button>
+                    </div>
+                    {rcLookup.data?.source === "surepass" && (
+                      <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                        <CheckCircle2 className="h-3 w-3" /> Verified from RC database
+                      </p>
+                    )}
+                    {rcLookup.error && (
+                      <p className="text-xs text-destructive mt-1">{rcLookup.error}</p>
+                    )}
                   </div>
                   
                   <div>

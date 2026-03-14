@@ -29,6 +29,7 @@ interface VehicleData {
   engine_number: string;
   vehicle_age_years: number;
   hypothecation: string | null;
+  source?: "surepass" | "mock";
   // Cross-sell triggers
   triggers: {
     insurance_renewal: boolean;
