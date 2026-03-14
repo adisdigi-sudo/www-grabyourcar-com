@@ -502,7 +502,6 @@ export function HSRPUnifiedBookingForm() {
                               }));
                               toast.success("Vehicle details auto-filled!");
                             }
-                            }
                           });
                         }}
                         className="shrink-0 h-10 px-4"
