@@ -77,7 +77,7 @@ export const useAdminNotifications = () => {
   });
   const { toast } = useToast();
   const { isAdmin } = useAdminAuth();
-  const followupCheckRef = useRef<NodeJS.Timeout | null>(null);
+  const followupCheckRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const toggleSound = useCallback(() => {
     setSoundEnabled(prev => {
