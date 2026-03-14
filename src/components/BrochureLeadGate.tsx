@@ -58,7 +58,7 @@ export const BrochureLeadGate = ({ brochureUrl, carName, carSlug, children }: Br
     toast.success("Downloading brochure...");
   }, [brochureUrl, carSlug, carName]);
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
     const result = formSchema.safeParse(formData);
@@ -70,10 +70,7 @@ export const BrochureLeadGate = ({ brochureUrl, carName, carSlug, children }: Br
       setErrors(fieldErrors);
       return;
     }
-    setStep("otp");
-  };
-
-  const handleOTPVerified = async () => {
+    // Submit directly without OTP
     setIsSubmitting(true);
     try {
       const { error } = await supabase.from("leads").insert({
@@ -90,7 +87,6 @@ export const BrochureLeadGate = ({ brochureUrl, carName, carSlug, children }: Br
 
       if (error) throw error;
 
-      // Trigger WhatsApp confirmation
       try {
         await supabase.functions.invoke("whatsapp-send", {
           body: {
