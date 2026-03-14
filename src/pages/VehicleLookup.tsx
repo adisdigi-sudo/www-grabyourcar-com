@@ -29,6 +29,7 @@ interface VehicleData {
   engine_number: string;
   vehicle_age_years: number;
   hypothecation: string | null;
+  source?: "surepass" | "mock";
   // Cross-sell triggers
   triggers: {
     insurance_renewal: boolean;
@@ -129,15 +130,28 @@ export default function VehicleLookup() {
                 </p>
               )}
 
-              {/* API Setu integration placeholder notice */}
-              <div className="mt-4 p-3 rounded-lg bg-muted/50 border border-dashed border-muted-foreground/30">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Info className="h-3.5 w-3.5 shrink-0" />
-                  <span>
-                    <strong>Integration Status:</strong> Using mock data. API Setu (VAHAN/Parivahan) integration will be connected once credentials are configured.
-                  </span>
+              {/* Data source indicator */}
+              {result && (
+                <div className={`mt-4 p-3 rounded-lg border ${result.source === 'surepass' ? 'bg-green-50 dark:bg-green-950/20 border-green-200' : 'bg-muted/50 border-dashed border-muted-foreground/30'}`}>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    {result.source === 'surepass' ? (
+                      <>
+                        <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-600" />
+                        <span className="text-green-700 dark:text-green-400">
+                          <strong>Live Data:</strong> Verified from RC database via Surepass
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <Info className="h-3.5 w-3.5 shrink-0" />
+                        <span>
+                          <strong>Demo Data:</strong> Showing sample data. Live RC verification active.
+                        </span>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </div>
