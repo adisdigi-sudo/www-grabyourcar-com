@@ -17,7 +17,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { LeadForm } from "@/components/LeadForm";
-import { WhatsAppOTPVerification } from "@/components/WhatsAppOTPVerification";
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { z } from "zod";
