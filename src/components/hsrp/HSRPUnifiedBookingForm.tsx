@@ -24,6 +24,7 @@ import { useRazorpay } from "@/hooks/useRazorpay";
 import { useHSRPPricing, formatPrice, useHSRPBanners } from "@/hooks/useHSRPPricing";
 import { PincodeChecker } from "./PincodeChecker";
 import { cn } from "@/lib/utils";
+import { useRCLookup } from "@/hooks/useRCLookup";
 
 const states = [
   "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh",
