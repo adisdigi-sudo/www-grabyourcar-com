@@ -30,7 +30,7 @@ const Auth = () => {
     }
   }, [user, loading, navigate]);
 
-  const handleSendOTP = (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       phoneSchema.parse(phone);
@@ -40,7 +40,21 @@ const Auth = () => {
         return;
       }
     }
-    setShowOTP(true);
+    setIsSubmitting(true);
+    const { error } = await signInWithPhone(phone);
+    if (error) {
+      toast.error(error.message || "Login failed. Please try again.");
+    } else {
+      try {
+        await supabase.functions.invoke("welcome-sync", {
+          body: { phone: `91${phone}`, source: "auth_page" },
+        });
+      } catch { /* best effort */ }
+      localStorage.setItem("gyc_otp_verified", "true");
+      toast.success("Welcome to Grabyourcar! 🚗");
+      navigate("/");
+    }
+    setIsSubmitting(false);
   };
 
   const handleVerified = async () => {
