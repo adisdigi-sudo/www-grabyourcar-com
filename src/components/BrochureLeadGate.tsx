@@ -161,22 +161,6 @@ export const BrochureLeadGate = ({ brochureUrl, carName, carSlug, children }: Br
               </motion.div>
             )}
 
-            {step === "otp" && (
-              <motion.div key="otp" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}>
-                {isSubmitting ? (
-                  <div className="flex flex-col items-center gap-3 py-8">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    <p className="text-sm text-muted-foreground">Processing your request...</p>
-                  </div>
-                ) : (
-                  <WhatsAppOTPVerification
-                    phone={formData.phone}
-                    onVerified={handleOTPVerified}
-                    onCancel={() => setStep("form")}
-                  />
-                )}
-              </motion.div>
-            )}
 
             {step === "success" && (
               <motion.div key="success" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-8">
