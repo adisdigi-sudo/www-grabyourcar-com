@@ -214,10 +214,26 @@ export function HSRPUnifiedBookingForm() {
       if (!validateStep(i)) return;
     }
 
-    if (!user) {
-      toast.error("Please login to continue");
-      navigate("/auth");
-      return;
+    // Auto-login silently using the phone number from the form
+    let currentUser = user;
+    if (!currentUser) {
+      try {
+        const { error } = await signInWithPhone(formData.mobile);
+        if (error) {
+          toast.error("Could not verify your phone number. Please try again.");
+          return;
+        }
+        // Get the session after sign-in
+        const { data: { session } } = await supabase.auth.getSession();
+        currentUser = session?.user ?? null;
+        if (!currentUser) {
+          toast.error("Authentication failed. Please try again.");
+          return;
+        }
+      } catch {
+        toast.error("Login failed. Please try again.");
+        return;
+      }
     }
 
     setIsSubmitting(true);
