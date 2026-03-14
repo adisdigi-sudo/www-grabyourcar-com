@@ -60,12 +60,6 @@
      await submitLead();
    };
 
-   const handleOTPVerified = async () => {
-     setIsVerified(true);
-     setShowOTPVerification(false);
-     // Auto-submit after verification
-     await submitLead();
-   };
 
    const submitLead = async () => {
      setIsSubmitting(true);
