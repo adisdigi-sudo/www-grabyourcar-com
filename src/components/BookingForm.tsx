@@ -17,7 +17,7 @@
  import { useState, FormEvent } from "react";
  import { toast } from "sonner";
  import { AnimatePresence, motion } from "framer-motion";
- import { WhatsAppOTPVerification } from "@/components/WhatsAppOTPVerification";
+ 
  import { supabase } from "@/integrations/supabase/client";
  import confetti from "canvas-confetti";
  
