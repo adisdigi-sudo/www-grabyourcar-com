@@ -67,8 +67,6 @@ export const FloatingCTA = () => {
     date?: string;
     time?: string;
   }>({});
-  const [showOTPVerification, setShowOTPVerification] = useState(false);
-  const [pendingFormType, setPendingFormType] = useState<"quick" | "schedule" | null>(null);
 
   useEffect(() => {
     const handleScroll = () => {
