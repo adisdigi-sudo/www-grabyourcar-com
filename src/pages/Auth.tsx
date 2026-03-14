@@ -57,24 +57,6 @@ const Auth = () => {
     setIsSubmitting(false);
   };
 
-  const handleVerified = async () => {
-    setIsSubmitting(true);
-    const { error } = await signInWithPhone(phone);
-    if (error) {
-      toast.error(error.message || "Login failed. Please try again.");
-    } else {
-      // Sync to unified CRM
-      try {
-        await supabase.functions.invoke("welcome-sync", {
-          body: { phone: `91${phone}`, source: "auth_page" },
-        });
-      } catch { /* best effort */ }
-      localStorage.setItem("gyc_otp_verified", "true");
-      toast.success("Welcome to Grabyourcar! 🚗");
-      navigate("/");
-    }
-    setIsSubmitting(false);
-  };
 
   if (loading) {
     return (
