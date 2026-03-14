@@ -5,12 +5,17 @@ import { toast } from "sonner";
 export interface RCData {
   registration_number: string;
   owner_name: string;
+  father_name: string | null;
+  mobile_number: string | null;
+  present_address: string | null;
   vehicle_class: string;
   fuel_type: string;
   maker_model: string;
+  maker: string | null;
   registration_date: string | null;
   insurance_expiry: string | null;
   insurance_company: string | null;
+  insurance_policy_number: string | null;
   puc_expiry: string | null;
   fitness_expiry: string | null;
   rto: string;
@@ -18,6 +23,9 @@ export interface RCData {
   engine_number: string;
   vehicle_age_years: number | null;
   hypothecation: string | null;
+  vehicle_color: string | null;
+  vehicle_category: string | null;
+  norms_type: string | null;
   source: "surepass" | "mock";
   triggers: {
     insurance_renewal: boolean;
