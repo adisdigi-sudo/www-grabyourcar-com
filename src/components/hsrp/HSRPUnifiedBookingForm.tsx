@@ -85,7 +85,7 @@ interface FormData {
 }
 
 export function HSRPUnifiedBookingForm() {
-  const { user } = useAuth();
+  const { user, signInWithPhone } = useAuth();
   const navigate = useNavigate();
   const { initiatePayment, isLoading: isPaymentLoading } = useRazorpay();
   const { data: pricing } = useHSRPPricing();
