@@ -56,14 +56,8 @@
        return;
      }
  
-    // If not verified, show OTP verification
-    if (!isVerified) {
-      setShowOTPVerification(true);
-      return;
-    }
-
-    // Submit the lead
-    await submitLead();
+     // Submit the lead directly
+     await submitLead();
    };
 
    const handleOTPVerified = async () => {
