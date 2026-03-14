@@ -193,9 +193,8 @@ export const FloatingCTA = () => {
       return;
     }
 
-    // Show OTP verification
-    setPendingFormType("quick");
-    setShowOTPVerification(true);
+    // Submit directly
+    await submitQuickForm();
   };
 
   const handleScheduleFormSubmit = async (e: React.FormEvent) => {
