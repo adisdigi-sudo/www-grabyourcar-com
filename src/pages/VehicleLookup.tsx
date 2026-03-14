@@ -238,6 +238,9 @@ export default function VehicleLookup() {
               <CardContent className="space-y-3">
                 <DetailRow label="Reg. Number" value={result.registration_number} bold />
                 <DetailRow label="Owner" value={result.owner_name} />
+                {result.father_name && <DetailRow label="Father's Name" value={result.father_name} />}
+                {result.mobile_number && <DetailRow label="Mobile" value={result.mobile_number} />}
+                {result.present_address && <DetailRow label="Address" value={result.present_address} />}
                 <DetailRow label="RTO" value={result.rto} />
                 <DetailRow label="Reg. Date" value={result.registration_date ? format(new Date(result.registration_date), "dd MMM yyyy") : "—"} />
                 <DetailRow label="Vehicle Age" value={`${result.vehicle_age_years} years`} />
