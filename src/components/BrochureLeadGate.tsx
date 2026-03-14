@@ -153,8 +153,9 @@ export const BrochureLeadGate = ({ brochureUrl, carName, carSlug, children }: Br
                     <Input placeholder="e.g., Delhi, Mumbai" className="mt-1" maxLength={50} value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })} />
                     {errors.city && <p className="text-xs text-destructive mt-1">{errors.city}</p>}
                   </div>
-                  <Button type="submit" className="w-full">
-                    <Shield className="h-4 w-4 mr-2" /> Verify & Download
+                  <Button type="submit" className="w-full" disabled={isSubmitting}>
+                    {isSubmitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+                    {isSubmitting ? "Processing..." : "Download Brochure"}
                   </Button>
                 </form>
               </motion.div>
