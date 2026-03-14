@@ -242,7 +242,7 @@ export function HSRPUnifiedBookingForm() {
       const trackingId = generateTrackingId();
       
       const bookingData = {
-        user_id: user.id,
+        user_id: currentUser.id,
         registration_number: formData.registrationNumber.toUpperCase(),
         chassis_number: formData.chassisLast6 || null,
         engine_number: formData.engineLast6 || null,
