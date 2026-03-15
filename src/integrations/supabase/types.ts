@@ -6678,6 +6678,7 @@ export type Database = {
           lead_source_tag: string | null
           lender_name: string | null
           loan_amount: number | null
+          loan_type: string | null
           lost_reason: string | null
           lost_remarks: string | null
           offer_details: Json | null
@@ -6728,6 +6729,7 @@ export type Database = {
           lead_source_tag?: string | null
           lender_name?: string | null
           loan_amount?: number | null
+          loan_type?: string | null
           lost_reason?: string | null
           lost_remarks?: string | null
           offer_details?: Json | null
@@ -6778,6 +6780,7 @@ export type Database = {
           lead_source_tag?: string | null
           lender_name?: string | null
           loan_amount?: number | null
+          loan_type?: string | null
           lost_reason?: string | null
           lost_remarks?: string | null
           offer_details?: Json | null

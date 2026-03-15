@@ -56,6 +56,20 @@ export const LEAD_SOURCES = [
   'Website', 'Social Media', 'Partner', 'Manual',
 ];
 
+export const LOAN_TYPES = [
+  { value: 'new_car_loan', label: 'New Car Loan', color: 'bg-blue-500/10 text-blue-600 border-blue-500/20' },
+  { value: 'used_car_loan', label: 'Used Car Loan', color: 'bg-amber-500/10 text-amber-600 border-amber-500/20' },
+  { value: 'topup_loan', label: 'Top-up Loan', color: 'bg-violet-500/10 text-violet-600 border-violet-500/20' },
+  { value: 'balance_transfer', label: 'Balance Transfer', color: 'bg-cyan-500/10 text-cyan-600 border-cyan-500/20' },
+  { value: 'commercial_vehicle', label: 'Commercial Vehicle', color: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20' },
+];
+
+export const EMPLOYMENT_TYPES = [
+  { value: 'salaried', label: 'Salaried' },
+  { value: 'self_employed', label: 'Self-Employed' },
+  { value: 'business', label: 'Business Owner' },
+];
+
 export const PRIORITY_OPTIONS = [
   { value: 'hot', label: '🔥 Hot', color: 'bg-red-500/10 text-red-500' },
   { value: 'high', label: 'High', color: 'bg-orange-500/10 text-orange-500' },
