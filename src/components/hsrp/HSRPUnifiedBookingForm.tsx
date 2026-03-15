@@ -199,7 +199,7 @@ export function HSRPUnifiedBookingForm() {
             
             // Auto-detect vehicle category
             const detected = detectVehicleCategory(result);
-            setDetectedCategory(detected);
+            
 
             setFormData(prev => ({
               ...prev,
