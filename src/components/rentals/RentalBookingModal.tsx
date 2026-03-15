@@ -154,7 +154,7 @@ export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalP
     try {
       // Create booking in database first
       const bookingData = {
-        user_id: user.id,
+        user_id: currentUser.id,
         vehicle_name: car.name,
         vehicle_type: car.vehicleType,
         vehicle_image: car.image,
