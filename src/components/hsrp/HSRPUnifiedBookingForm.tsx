@@ -612,12 +612,12 @@ export function HSRPUnifiedBookingForm() {
                   </p>
                 )}
 
-                {/* Manual vehicle category selection if no RC data */}
-                {!rcLookup.data && !rcLookup.loading && formData.registrationNumber.length < 6 && (
+                {/* Manual category selection only if RC lookup fails on a valid vehicle number */}
+                {!rcLookup.data && !rcLookup.loading && rcLookup.error && hasValidRegistration && (
                   <>
                     <Separator />
                     <div>
-                      <Label className="text-base font-semibold mb-3 block">Or select vehicle type manually</Label>
+                      <Label className="text-base font-semibold mb-3 block">Couldn’t auto-detect vehicle type. Select manually:</Label>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         {vehicleCategories.map((cat) => {
                           const CatIcon = cat.icon;
@@ -643,15 +643,6 @@ export function HSRPUnifiedBookingForm() {
                       </div>
                     </div>
                   </>
-                )}
-
-                {/* Manual continue if RC lookup failed or user skipped */}
-                {!rcLookup.data && !rcLookup.loading && formData.vehicleCategory && formData.serviceType && (
-                  <div className="flex justify-end">
-                    <Button type="button" onClick={() => { setStep(2); saveAbandonedCart(2); }} className="gap-2">
-                      Continue <ChevronLeft className="w-4 h-4 rotate-180" />
-                    </Button>
-                  </div>
                 )}
               </CardContent>
             </Card>
