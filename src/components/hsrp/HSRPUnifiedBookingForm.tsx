@@ -132,7 +132,7 @@ export function HSRPUnifiedBookingForm() {
   const hasSavedCartRef = useRef(false);
   const rcLookupTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastLookedUp = useRef<string>("");
-  const [detectedCategory, setDetectedCategory] = useState<string | null>(null);
+  
   
   const [formData, setFormData] = useState<FormData>({
     serviceType: "",

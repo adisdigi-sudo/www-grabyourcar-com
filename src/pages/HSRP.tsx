@@ -66,7 +66,7 @@ const faqs = [
   },
   {
     question: "What is the cost of HSRP?",
-    answer: "HSRP costs vary by vehicle type: Two-wheelers: ₹450, Four-wheelers: ₹1,100, Commercial vehicles: ₹1,100. Additional charges may apply for home installation."
+    answer: "HSRP costs vary by vehicle type: Two-wheelers: ₹850, Four-wheelers: ₹1,500, EV: ₹1,500, Tractor: ₹600. FASTag is ₹500. Additional charges may apply for home installation."
   },
   {
     question: "How long does installation take?",
