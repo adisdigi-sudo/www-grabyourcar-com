@@ -1,7 +1,18 @@
 const DYNAMIC_IMPORT_ERROR_PATTERNS = [
   "Failed to fetch dynamically imported module",
   "Importing a module script failed",
-  "Failed to fetch module",
+  "Failed to fetch module script",
+  "error loading dynamically imported module",
+];
+
+// Patterns that should NOT trigger recovery (API/fetch errors)
+const FALSE_POSITIVE_PATTERNS = [
+  "FetchError",
+  "supabase",
+  "postgrest",
+  "edge-function",
+  "rest/v1",
+  "auth/v1",
 ];
 
 const DEFAULT_MAX_ATTEMPTS = 3;
