@@ -21,7 +21,7 @@ export const GlobalSEO = ({
   title: propTitle,
   description: propDescription,
   path = "/",
-  image = "/og-image.png",
+  image = "/og-image.png?v=3",
   type = "website",
   noindex = false,
   keywords: propKeywords,
