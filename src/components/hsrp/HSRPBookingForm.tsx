@@ -237,6 +237,18 @@ export function HSRPBookingForm({
           vehicleModel: formData.vehicleModel,
         },
         onSuccess: () => {
+          // Trigger WhatsApp booking confirmation
+          triggerWhatsApp({
+            event: "hsrp_booking_confirmed",
+            phone: formData.mobile,
+            name: formData.ownerName,
+            data: {
+              tracking_id: trackingId,
+              registration_number: formData.registrationNumber.toUpperCase(),
+              service_type: selectedService?.title || "HSRP",
+              amount: totalAmount.toString(),
+            },
+          });
           toast.success(
             <div className="space-y-2">
               <p className="font-semibold">Payment Successful!</p>
