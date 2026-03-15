@@ -61,7 +61,7 @@ Our team has already prepared renewal assistance for you to make the process qui
 
 👉 Simply *reply to this message* or click below to get your renewal quote instantly.
 
-🔗 Renew Now: https://grabyourcar.lovable.app/insurance
+🔗 Renew Now: https://www.grabyourcar.com/insurance
 ${policySection}
 If you need any help, feel free to contact your dedicated advisor.
 
@@ -343,7 +343,7 @@ export function InsuranceRenewalsEngine() {
         const name = nameIdx >= 0 ? cols[nameIdx] : "Valued Customer";
         const expiry = expiryIdx >= 0 ? cols[expiryIdx] : "";
 
-        const message = `🚗 *Grabyourcar Policy Renewal Reminder*\n━━━━━━━━━━━━━━━━━━━━━\n\nHello *${name}*,\n\nThis is a friendly reminder from *Grabyourcar Insurance Desk* that your motor insurance policy is${expiry ? ` set to expire on *${expiry}*` : " due for renewal"}.\n\nRenewing your policy before the expiry helps you:\n\n✅ Avoid inspection hassles\n✅ Maintain your No Claim Bonus\n✅ Stay financially protected\n✅ Ensure uninterrupted coverage\n\n👉 Simply *reply to this message* or click below to renew.\n\n🔗 https://grabyourcar.lovable.app/insurance\n\n📞 +91 98559 24442\n🌐 www.grabyourcar.com\n\nDrive safe! 🚘`;
+        const message = `🚗 *Grabyourcar Policy Renewal Reminder*\n━━━━━━━━━━━━━━━━━━━━━\n\nHello *${name}*,\n\nThis is a friendly reminder from *Grabyourcar Insurance Desk* that your motor insurance policy is${expiry ? ` set to expire on *${expiry}*` : " due for renewal"}.\n\nRenewing your policy before the expiry helps you:\n\n✅ Avoid inspection hassles\n✅ Maintain your No Claim Bonus\n✅ Stay financially protected\n✅ Ensure uninterrupted coverage\n\n👉 Simply *reply to this message* or click below to renew.\n\n🔗 https://www.grabyourcar.com/insurance\n\n📞 +91 98559 24442\n🌐 www.grabyourcar.com\n\nDrive safe! 🚘`;
 
         try {
           await fetch(

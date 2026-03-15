@@ -188,7 +188,7 @@ KNOWLEDGE:
 - Brands available: Maruti Suzuki, Hyundai, Tata, Mahindra, Kia, Toyota, Honda, MG, Skoda, Volkswagen
 - Services: New car sales, car loans (8.5% onwards), insurance (up to 70% discount), HSRP, accessories
 - We have 20+ verified dealers across major Indian cities
-- Website: grabyourcar.lovable.app
+- Website: www.grabyourcar.com
 
 CAPABILITIES:
 - Recommend cars based on budget, preferences, family size
@@ -248,8 +248,8 @@ function getStaticResponse(message: string): string {
 Thank you for your interest! For the best on-road price in your city, our car expert will call you within 5 minutes.
 
 Quick links:
-• Browse cars: grabyourcar.lovable.app/cars
-• EMI Calculator: grabyourcar.lovable.app/car-loans
+• Browse cars: www.grabyourcar.com/cars
+• EMI Calculator: www.grabyourcar.com/car-loans
 
 Which car model are you interested in?`;
   }
@@ -265,7 +265,7 @@ We offer:
 
 Our finance expert will call you shortly!
 
-Calculate EMI: grabyourcar.lovable.app/car-loans`;
+Calculate EMI: www.grabyourcar.com/car-loans`;
   }
 
   if (message.includes("hi") || message.includes("hello") || message.includes("hey")) {
@@ -286,7 +286,7 @@ Just type your preference or ask any question!`;
 
 Our car expert will connect with you shortly to assist you better.
 
-Meanwhile, explore: grabyourcar.lovable.app
+Meanwhile, explore: www.grabyourcar.com
 
 What specific car or query can I help you with?`;
 }

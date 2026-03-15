@@ -220,7 +220,7 @@ function generateFallbackSVG(
   <rect x="60" y="490" width="160" height="40" rx="20" fill="#0ea5e9" opacity="0.2"/>
   <text x="140" y="517" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="600" fill="#0ea5e9" text-anchor="middle">${safeBodyType}</text>
   <text x="60" y="590" font-family="system-ui, -apple-system, sans-serif" font-size="32" font-weight="700" fill="#ffffff">Grabyourcar</text>
-  <text x="1140" y="590" font-family="system-ui, -apple-system, sans-serif" font-size="20" fill="#64748b" text-anchor="end">grabyourcar.lovable.app</text>
+  <text x="1140" y="590" font-family="system-ui, -apple-system, sans-serif" font-size="20" fill="#64748b" text-anchor="end">www.grabyourcar.com</text>
   <g transform="translate(750, 150)">
     <rect width="380" height="280" rx="20" fill="#ffffff" opacity="0.05"/>
     <text x="190" y="155" font-family="system-ui, -apple-system, sans-serif" font-size="100" text-anchor="middle">🚗</text>

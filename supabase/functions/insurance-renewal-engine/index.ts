@@ -37,7 +37,7 @@ Our team has already prepared renewal assistance for you to make the process qui
 
 👉 Simply *reply to this message* or click below to get your renewal quote instantly.
 
-🔗 Renew Now: https://grabyourcar.lovable.app/insurance
+🔗 Renew Now: https://www.grabyourcar.com/insurance
 
 {{policy_details_section}}
 
@@ -353,7 +353,7 @@ serve(async (req) => {
             .eq("id", policy.id);
 
           // Send recovery message
-          const recoveryMsg = `⚠️ *Urgent: Policy Expired*\n━━━━━━━━━━━━━━━━━━━━━\n\nDear *${client.customer_name || "Valued Customer"}*,\n\nYour motor insurance for *${client.vehicle_model || "your vehicle"}* ${client.vehicle_number ? `(${client.vehicle_number}) ` : ""}expired on *${formatDate(policy.expiry_date)}*.\n\n🚨 *Without active insurance:*\n❌ You cannot file claims\n❌ Legal penalties may apply\n❌ NCB discount may be lost\n❌ Vehicle inspection may be required\n\n💡 *Renew now to avoid complications!*\nOur team can help you get the best rates even after expiry.\n\n📞 Call us: ${advisorNumber}\n🔗 https://grabyourcar.lovable.app/insurance\n\n— *Grabyourcar Insurance* 🚗`;
+          const recoveryMsg = `⚠️ *Urgent: Policy Expired*\n━━━━━━━━━━━━━━━━━━━━━\n\nDear *${client.customer_name || "Valued Customer"}*,\n\nYour motor insurance for *${client.vehicle_model || "your vehicle"}* ${client.vehicle_number ? `(${client.vehicle_number}) ` : ""}expired on *${formatDate(policy.expiry_date)}*.\n\n🚨 *Without active insurance:*\n❌ You cannot file claims\n❌ Legal penalties may apply\n❌ NCB discount may be lost\n❌ Vehicle inspection may be required\n\n💡 *Renew now to avoid complications!*\nOur team can help you get the best rates even after expiry.\n\n📞 Call us: ${advisorNumber}\n🔗 https://www.grabyourcar.com/insurance\n\n— *Grabyourcar Insurance* 🚗`;
 
           try {
             await fetch(`${SUPABASE_URL}/functions/v1/whatsapp-send`, {

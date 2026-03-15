@@ -8,8 +8,8 @@ const HoliGreeting = () => {
         <meta name="description" content="Wishing you a Colorful & Joyful Holi from Team GrabYourCar! 🎨🚗" />
         <meta property="og:title" content="Happy Holi 2026 — GrabYourCar" />
         <meta property="og:description" content="Wishing you a Colorful & Joyful Holi! May your journeys be filled with vibrant colors & happy memories. 🎉" />
-        <meta property="og:image" content="https://grabyourcar.lovable.app/images/holi-2026.png" />
-        <meta property="og:url" content="https://grabyourcar.lovable.app/holi" />
+        <meta property="og:image" content="https://www.grabyourcar.com/images/holi-2026.png" />
+        <meta property="og:url" content="https://www.grabyourcar.com/holi" />
         <meta property="og:type" content="website" />
       </Helmet>
       <div className="min-h-screen bg-gradient-to-br from-pink-500 via-purple-500 to-yellow-400 flex flex-col items-center justify-center p-4">
