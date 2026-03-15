@@ -325,47 +325,46 @@ export const Header = () => {
                 </Link>
               ))}
               
-              <div className="border-t border-border/50 my-3" />
-              <p className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Quick Links</p>
+              <div className="border-t border-border/50 my-2" />
+              <p className="px-3 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Quick Links</p>
               {quickLinks.map((link) => (
                 <Link
                   key={link.label}
                   to={link.href}
-                  className="px-4 py-3 text-base font-medium text-foreground hover:bg-muted rounded-xl transition-colors"
+                  className="px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted rounded-lg transition-colors"
                   onClick={() => setMenuOpen(false)}
                 >
                   {link.label}
                 </Link>
               ))}
               
-              <div className="border-t border-border/50 my-4" />
+              <div className="border-t border-border/50 my-2" />
               
               {user ? (
                 <>
                   <Link
                     to="/favorites"
-                    className="px-4 py-4 text-lg font-medium text-foreground hover:bg-muted rounded-xl transition-colors flex items-center gap-3"
+                    className="px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted rounded-lg transition-colors flex items-center gap-3"
                     onClick={() => setMenuOpen(false)}
                   >
-                    <Heart className="h-5 w-5" />
+                    <Heart className="h-4 w-4" />
                     My Favorites
                   </Link>
-                  {/* Admin link removed from mobile menu for security - access via /admin directly */}
-                  <div className="px-4 py-2 text-sm text-muted-foreground">
+                  <div className="px-3 py-1.5 text-xs text-muted-foreground">
                     {user.email}
                   </div>
                   <button
-                    className="px-4 py-4 text-lg font-medium text-destructive hover:bg-muted rounded-xl transition-colors flex items-center gap-3 text-left"
+                    className="px-3 py-2.5 text-sm font-medium text-destructive hover:bg-muted rounded-lg transition-colors flex items-center gap-3 text-left"
                     onClick={handleSignOut}
                   >
-                    <LogOut className="h-5 w-5" />
+                    <LogOut className="h-4 w-4" />
                     Sign Out
                   </button>
                 </>
               ) : (
                 <Link
                   to="/auth"
-                  className="px-4 py-4 text-lg font-medium text-primary hover:bg-muted rounded-xl transition-colors flex items-center gap-3"
+                  className="px-3 py-2.5 text-sm font-medium text-primary hover:bg-muted rounded-lg transition-colors flex items-center gap-3"
                   onClick={() => setMenuOpen(false)}
                 >
                   <User className="h-5 w-5" />
