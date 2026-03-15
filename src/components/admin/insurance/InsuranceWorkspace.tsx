@@ -226,13 +226,9 @@ export function InsuranceWorkspace() {
     return result;
   }, [policyBookClients, pbPartnerFilter, pbSearch]);
 
-  // Renewal data (upcoming + recently expired)
+  // Renewal data — show ALL records with expiry dates (no artificial window cutoff)
   const renewalClients = useMemo(() => {
-    const all = clients.filter(c => {
-      if (!c.policy_expiry_date) return false;
-      const days = differenceInDays(new Date(c.policy_expiry_date), new Date());
-      return days <= 90 && days >= -30;
-    });
+    const all = clients.filter(c => !!c.policy_expiry_date);
 
     let result = all;
     if (renewalWindow === "expired") result = all.filter(c => differenceInDays(new Date(c.policy_expiry_date!), new Date()) < 0);
@@ -240,6 +236,7 @@ export function InsuranceWorkspace() {
     else if (renewalWindow === "15") result = all.filter(c => { const d = differenceInDays(new Date(c.policy_expiry_date!), new Date()); return d >= 0 && d <= 15; });
     else if (renewalWindow === "30") result = all.filter(c => { const d = differenceInDays(new Date(c.policy_expiry_date!), new Date()); return d >= 0 && d <= 30; });
     else if (renewalWindow === "60") result = all.filter(c => { const d = differenceInDays(new Date(c.policy_expiry_date!), new Date()); return d >= 0 && d <= 60; });
+    else if (renewalWindow === "upcoming") result = all.filter(c => differenceInDays(new Date(c.policy_expiry_date!), new Date()) >= 0);
 
     if (renewalSearch.trim()) {
       const s = renewalSearch.toLowerCase();
