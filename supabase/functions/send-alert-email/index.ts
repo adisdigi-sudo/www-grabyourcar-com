@@ -168,7 +168,7 @@ const generateAlertEmailHtml = (alert: AlertEmailRequest): string => {
           <!-- CTA -->
           <tr>
             <td style="padding: 0 24px 24px 24px; text-align: center;">
-              <a href="https://grabyourcar.lovable.app/admin" style="display: inline-block; background-color: ${color}; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: 600; font-size: 14px;">View in Dashboard →</a>
+              <a href="https://www.grabyourcar.com/admin" style="display: inline-block; background-color: ${color}; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: 600; font-size: 14px;">View in Dashboard →</a>
             </td>
           </tr>
 
