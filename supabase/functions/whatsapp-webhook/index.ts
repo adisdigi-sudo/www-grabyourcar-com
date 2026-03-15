@@ -188,7 +188,7 @@ KNOWLEDGE:
 - Brands available: Maruti Suzuki, Hyundai, Tata, Mahindra, Kia, Toyota, Honda, MG, Skoda, Volkswagen
 - Services: New car sales, car loans (8.5% onwards), insurance (up to 70% discount), HSRP, accessories
 - We have 20+ verified dealers across major Indian cities
-- Website: grabyourcar.lovable.app
+- Website: www.grabyourcar.com
 
 CAPABILITIES:
 - Recommend cars based on budget, preferences, family size
