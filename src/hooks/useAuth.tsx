@@ -57,8 +57,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const tryPasswordSignIn = async () => {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) return error as Error;
-      return await waitForSession();
+      return await waitForSession(16, 250);
     };
+
+    // Always provision/reset shadow account first so credentials are deterministic
+    const { error: ensureError } = await supabase.functions.invoke("ensure-shadow-account", {
+      body: { phone: cleanPhone },
+    });
+
+    if (ensureError) {
+      console.error("ensure-shadow-account failed:", ensureError.message);
+    }
 
     const initialSignInError = await tryPasswordSignIn();
     if (!initialSignInError) {
@@ -68,22 +77,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const recoverable =
       initialSignInError.message.toLowerCase().includes("invalid login credentials") ||
       initialSignInError.message.toLowerCase().includes("email not confirmed") ||
-      initialSignInError.message.toLowerCase().includes("already registered");
+      initialSignInError.message.toLowerCase().includes("already registered") ||
+      initialSignInError.message.toLowerCase().includes("session could not be initialized");
 
     if (!recoverable) {
       return { error: initialSignInError };
     }
 
-    const { error: ensureError } = await supabase.functions.invoke("ensure-shadow-account", {
+    // One hard retry: re-provision and sign in again
+    const { error: retryEnsureError } = await supabase.functions.invoke("ensure-shadow-account", {
       body: { phone: cleanPhone },
     });
 
-    if (ensureError) {
-      return { error: new Error("Could not initialize booking account. Please retry.") };
+    if (retryEnsureError) {
+      return { error: new Error("We couldn't start your booking session. Please retry.") };
     }
 
     const finalSignInError = await tryPasswordSignIn();
-    return { error: finalSignInError };
+    return {
+      error: finalSignInError ? new Error("We couldn't start your booking session. Please retry.") : null,
+    };
   };
 
   const signIn = async (email: string, password: string) => {
