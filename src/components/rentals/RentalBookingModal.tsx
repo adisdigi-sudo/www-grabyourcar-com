@@ -133,6 +133,9 @@ export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalP
         total_amount: totalAmount,
         status: "pending",
         payment_status: "pending",
+        customer_name: customerName,
+        phone: customerPhone,
+        email: customerEmail || null,
       };
 
       const { data: booking, error } = await supabase

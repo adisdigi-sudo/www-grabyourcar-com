@@ -17,6 +17,7 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { triggerWhatsApp } from "@/lib/whatsappTrigger";
 import { useAuth } from "@/hooks/useAuth";
 import { useRazorpay } from "@/hooks/useRazorpay";
 import { useHSRPPricing, formatPrice, useHSRPServices } from "@/hooks/useHSRPPricing";
@@ -237,6 +238,18 @@ export function HSRPBookingForm({
           vehicleModel: formData.vehicleModel,
         },
         onSuccess: () => {
+          // Trigger WhatsApp booking confirmation
+          triggerWhatsApp({
+            event: "hsrp_booking_confirmed",
+            phone: formData.mobile,
+            name: formData.ownerName,
+            data: {
+              tracking_id: trackingId,
+              registration_number: formData.registrationNumber.toUpperCase(),
+              service_type: selectedService?.title || "HSRP",
+              amount: totalAmount.toString(),
+            },
+          });
           toast.success(
             <div className="space-y-2">
               <p className="font-semibold">Payment Successful!</p>
