@@ -90,7 +90,7 @@ export const Footer = () => {
 
           {/* Right Side - All Links in a Grid */}
           <div className="lg:col-span-8">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
               {/* Services */}
               <div>
                 <h4 className="font-heading font-semibold mb-4 text-background">Services</h4>

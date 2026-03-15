@@ -107,7 +107,7 @@ export const Header = () => {
     <>
       <header className="sticky top-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-b border-border/50">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-14 md:h-20 gap-2">
+          <div className="flex items-center justify-between h-14 md:h-16 lg:h-20 gap-2">
             {/* Mobile Menu Button - Left side */}
             <button
               onClick={() => setMenuOpen(!menuOpen)}
@@ -284,17 +284,19 @@ export const Header = () => {
       {/* Mobile Menu Overlay */}
       {menuOpen && (
         <div className="lg:hidden fixed inset-0 z-40 bg-background/95 backdrop-blur-sm animate-fade-in pt-[6.5rem]">
-          <div className="flex flex-col h-full pb-8 px-6 overflow-y-auto">
+          <div className="flex flex-col h-full pb-24 px-5 overflow-y-auto">
             <nav className="flex flex-col gap-1">
               <p className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Services</p>
               {services.map((service) => (
                 <Link
                   key={service.title}
                   to={service.href}
-                  className="px-4 py-3 text-base font-medium text-foreground hover:bg-muted rounded-xl transition-colors flex items-center gap-3"
+                  className="px-4 py-3.5 text-[15px] font-medium text-foreground hover:bg-muted rounded-xl transition-colors flex items-center gap-3 active:bg-muted/80"
                   onClick={() => setMenuOpen(false)}
                 >
-                  <service.icon className="h-5 w-5 text-primary" />
+                  <div className="w-9 h-9 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <service.icon className="h-4.5 w-4.5 text-primary" />
+                  </div>
                   <span className="flex-1">{service.title}</span>
                 </Link>
               ))}
