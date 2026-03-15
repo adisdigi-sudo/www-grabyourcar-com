@@ -10,7 +10,7 @@ import {
   RefreshCw, AlertTriangle, Clock, CheckCircle2, XCircle,
   Bell, Calendar, Phone, Loader2, Zap, MessageSquare,
   Share2, Mail, Search, TrendingUp, Star, PhoneCall, FileSpreadsheet as FileSpreadsheetIcon,
-  Megaphone, Send, Upload, FileText
+  Megaphone, Send, Upload, FileText, Pencil, Check, X as XIcon
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator
@@ -30,15 +30,16 @@ function buildRenewalNotice(p: any): string {
   const daysRemaining = p.daysLeft != null ? (p.daysLeft <= 0 ? 0 : p.daysLeft) : 0;
   const policyNumber = p.policy_number || "";
   const insurer = p.insurer || c?.current_insurer || "";
-  const premium = p.premium_amount || c?.current_premium || "";
+  // Use renewal_quote_premium if set, otherwise fall back to premium_amount
+  const renewalPremium = p.renewal_quote_premium || p.premium_amount || c?.current_premium || "";
 
   let policySection = "";
-  if (policyNumber || insurer || premium || vehicleNumber) {
+  if (policyNumber || insurer || renewalPremium || vehicleNumber) {
     policySection = "\n📋 *Your Policy Details:*\n";
-    if (policyNumber) policySection += `📄 Policy: ${policyNumber}\n`;
+    if (policyNumber) policySection += `📄 Policy No: ${policyNumber}\n`;
     if (insurer) policySection += `🏢 Insurer: ${insurer}\n`;
-    if (premium) policySection += `💰 Premium: ₹${Number(premium).toLocaleString("en-IN")}\n`;
-    if (vehicleNumber) policySection += `🚗 Vehicle: ${vehicleNumber}\n`;
+    if (vehicleNumber) policySection += `🚗 Vehicle No: ${vehicleNumber}\n`;
+    if (renewalPremium) policySection += `💰 Renewal Premium: ₹${Number(renewalPremium).toLocaleString("en-IN")}/year\n`;
   }
 
   return `🚗 *Grabyourcar Policy Renewal Reminder*
@@ -81,7 +82,9 @@ function buildRenewalQuote(p: any): string {
   const expiryDate = p.expiry_date ? format(new Date(p.expiry_date), "dd MMM yyyy") : "soon";
   const policyNumber = p.policy_number || "";
   const insurer = p.insurer || c?.current_insurer || "";
-  const premium = p.premium_amount || c?.current_premium || "";
+  // Use renewal_quote_premium for the renewal quote price
+  const renewalPremium = p.renewal_quote_premium || p.premium_amount || c?.current_premium || "";
+  const bookedPremium = p.premium_amount || c?.current_premium || "";
 
   return `🚗 *Grabyourcar — Renewal Quote*
 ━━━━━━━━━━━━━━━━━━━━━
@@ -91,7 +94,7 @@ Dear *${customerName}*,
 Your renewal quote for *${vehicleModel}*${vehicleNumber ? ` (${vehicleNumber})` : ""} is ready!
 
 📋 *Quote Details:*
-${policyNumber ? `📄 Policy: ${policyNumber}\n` : ""}${insurer ? `🏢 Current Insurer: ${insurer}\n` : ""}${premium ? `💰 Renewal Premium: ₹${Number(premium).toLocaleString("en-IN")}\n` : ""}📅 Current Expiry: ${expiryDate}
+${policyNumber ? `📄 Policy No: ${policyNumber}\n` : ""}${vehicleNumber ? `🚗 Vehicle No: ${vehicleNumber}\n` : ""}${insurer ? `🏢 Current Insurer: ${insurer}\n` : ""}${bookedPremium ? `💰 Last Year Premium: ₹${Number(bookedPremium).toLocaleString("en-IN")}\n` : ""}${renewalPremium ? `✨ *Renewal Quote: ₹${Number(renewalPremium).toLocaleString("en-IN")}/year*\n` : ""}📅 Current Expiry: ${expiryDate}
 
 🎁 *Renewal Benefits:*
 ✅ NCB (No Claim Bonus) Protection
@@ -126,6 +129,8 @@ export function InsuranceRenewalsEngine() {
   const [sendingPreview, setSendingPreview] = useState(false);
   const [templateType, setTemplateType] = useState<"notice" | "quote">("notice");
   const [bulkUploading, setBulkUploading] = useState(false);
+  const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
+  const [editPriceValue, setEditPriceValue] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
@@ -271,9 +276,10 @@ export function InsuranceRenewalsEngine() {
   const sendRenewalEmail = (p: any) => {
     const client = p.insurance_clients;
     if (!client?.email) { toast.error("No email address"); return; }
+    const renewalPremium = p.renewal_quote_premium || p.premium_amount || "";
     const subject = encodeURIComponent(`🚗 Renew Your Motor Insurance — ${client.customer_name || "Customer"}`);
     const body = encodeURIComponent(
-      `Dear ${client.customer_name || "Valued Customer"},\n\nThis is a friendly reminder from Grabyourcar Insurance Desk.\n\nYour ${p.insurer || "motor insurance"} policy${p.policy_number ? ` (${p.policy_number})` : ""} for vehicle ${client.vehicle_number || ""} is${p.expiry_date ? ` set to expire on ${format(new Date(p.expiry_date), "dd MMM yyyy")}` : " due for renewal"}.\n\nRenewing on time helps you:\n✅ Avoid inspection hassles\n✅ Maintain No Claim Bonus\n✅ Stay financially protected\n\nReply to this email or call us at +91 98559 24442 for the best renewal quote.\n\nBest regards,\nGrabyourcar Insurance\nwww.grabyourcar.com`
+      `Dear ${client.customer_name || "Valued Customer"},\n\nThis is a friendly reminder from Grabyourcar Insurance Desk.\n\nYour ${p.insurer || "motor insurance"} policy${p.policy_number ? ` (Policy No: ${p.policy_number})` : ""} for vehicle ${client.vehicle_number || ""} is${p.expiry_date ? ` set to expire on ${format(new Date(p.expiry_date), "dd MMM yyyy")}` : " due for renewal"}.${renewalPremium ? `\n\nRenewal Quote: Rs.${Number(renewalPremium).toLocaleString("en-IN")}/year` : ""}\n\nRenewing on time helps you:\n✅ Avoid inspection hassles\n✅ Maintain No Claim Bonus\n✅ Stay financially protected\n\nReply to this email or call us at +91 98559 24442 for the best renewal quote.\n\nBest regards,\nGrabyourcar Insurance\nwww.grabyourcar.com`
     );
     window.open(`mailto:${client.email}?subject=${subject}&body=${body}`, "_blank");
     toast.success(`📧 Email opened for ${client.customer_name || client.email}`);
@@ -373,7 +379,8 @@ export function InsuranceRenewalsEngine() {
 
   const sharePolicy = (p: any) => {
     const c = p.insurance_clients;
-    const text = `📋 Renewal Alert\n━━━━━━━━━━━━━━━━\n👤 ${c?.customer_name || "—"}\n📄 Policy: ${p.policy_number || "N/A"}\n🏢 ${p.insurer || "—"}\n🚗 ${c?.vehicle_number || "—"}\n💰 Premium: ₹${Number(p.premium_amount || 0).toLocaleString("en-IN")}\n📅 Expiry: ${p.expiry_date ? format(new Date(p.expiry_date), "dd MMM yyyy") : "N/A"}\n⏳ ${p.daysLeft !== null ? (p.daysLeft <= 0 ? `Expired ${Math.abs(p.daysLeft)}d ago` : `${p.daysLeft} days left`) : "N/A"}\n\n— Grabyourcar Insurance`;
+    const renewalPremium = p.renewal_quote_premium || p.premium_amount || 0;
+    const text = `📋 Renewal Alert\n━━━━━━━━━━━━━━━━\n👤 ${c?.customer_name || "—"}\n📄 Policy No: ${p.policy_number || "N/A"}\n🏢 ${p.insurer || "—"}\n🚗 Vehicle: ${c?.vehicle_number || "—"}\n💰 Renewal Quote: ₹${Number(renewalPremium).toLocaleString("en-IN")}/year\n📅 Expiry: ${p.expiry_date ? format(new Date(p.expiry_date), "dd MMM yyyy") : "N/A"}\n⏳ ${p.daysLeft !== null ? (p.daysLeft <= 0 ? `Expired ${Math.abs(p.daysLeft)}d ago` : `${p.daysLeft} days left`) : "N/A"}\n\n— Grabyourcar Insurance`;
     if (navigator.share) {
       navigator.share({ title: `Renewal - ${c?.customer_name}`, text }).catch(() => {});
     } else {
@@ -383,6 +390,32 @@ export function InsuranceRenewalsEngine() {
   };
 
   const displayPhone = (phone: string | null) => (!phone || phone.startsWith("IB_")) ? null : phone;
+
+  // === Inline renewal price edit ===
+  const startEditPrice = (policyId: string, currentPrice: number | null) => {
+    setEditingPriceId(policyId);
+    setEditPriceValue(currentPrice ? String(currentPrice) : "");
+  };
+
+  const saveRenewalPrice = async (policyId: string) => {
+    const numValue = parseFloat(editPriceValue.replace(/,/g, ""));
+    if (isNaN(numValue) || numValue < 0) {
+      toast.error("Enter a valid price");
+      return;
+    }
+    try {
+      const { error } = await supabase
+        .from("insurance_policies")
+        .update({ renewal_quote_premium: numValue } as any)
+        .eq("id", policyId);
+      if (error) throw error;
+      toast.success("Renewal quote price updated!");
+      setEditingPriceId(null);
+      queryClient.invalidateQueries({ queryKey: ["ins-renewals-engine"] });
+    } catch (e: any) {
+      toast.error(e.message || "Failed to update");
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -479,7 +512,7 @@ export function InsuranceRenewalsEngine() {
             <TrendingUp className="h-4 w-4" />
             Renewal Pipeline — {filtered.length} policies
           </CardTitle>
-          <CardDescription className="text-xs">Sorted by priority score (high premium + urgency)</CardDescription>
+          <CardDescription className="text-xs">Sorted by priority • Click ✏️ to set renewal quote price (annual)</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           {isLoading ? (
@@ -493,6 +526,10 @@ export function InsuranceRenewalsEngine() {
                 const Icon = style.icon;
                 const client = p.insurance_clients;
                 const phone = displayPhone(client?.phone);
+                const renewalPrice = p.renewal_quote_premium;
+                const bookedPrice = p.premium_amount;
+                const isEditing = editingPriceId === p.id;
+
                 return (
                   <div key={p.id} className="flex items-center justify-between px-4 py-3 hover:bg-muted/20 transition-colors">
                     <div className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer" onClick={() => setSelectedPolicy(p)}>
@@ -505,20 +542,61 @@ export function InsuranceRenewalsEngine() {
                           {p.priorityScore >= 4 && <Star className="h-3 w-3 text-yellow-500 fill-yellow-500 shrink-0" />}
                         </div>
                         <p className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap">
-                          <span className="font-mono">{p.policy_number || "—"}</span>
+                          {p.policy_number && <span className="font-mono">📄 {p.policy_number}</span>}
+                          {client?.vehicle_number && <span>🚗 {client.vehicle_number}</span>}
                           <span>{p.insurer || "—"}</span>
-                          {client?.vehicle_number && <span>{client.vehicle_number}</span>}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
-                      <div className="text-right hidden sm:block">
+                      {/* Renewal Price Column with inline edit */}
+                      <div className="text-right hidden sm:block min-w-[120px]">
                         <Badge className={`${style.bg} ${style.text} border-0 text-[10px]`}>
                           {p.daysLeft !== null ? (p.daysLeft <= 0 ? `Expired ${Math.abs(p.daysLeft)}d` : `${p.daysLeft}d left`) : "—"}
                         </Badge>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">
-                          ₹{Number(p.premium_amount || 0).toLocaleString("en-IN")}
-                        </p>
+                        {isEditing ? (
+                          <div className="flex items-center gap-1 mt-0.5" onClick={e => e.stopPropagation()}>
+                            <Input
+                              className="h-6 w-20 text-[11px] px-1.5"
+                              value={editPriceValue}
+                              onChange={e => setEditPriceValue(e.target.value)}
+                              placeholder="₹ Price"
+                              autoFocus
+                              onKeyDown={e => { if (e.key === "Enter") saveRenewalPrice(p.id); if (e.key === "Escape") setEditingPriceId(null); }}
+                            />
+                            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => saveRenewalPrice(p.id)}>
+                              <Check className="h-3 w-3 text-emerald-600" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setEditingPriceId(null)}>
+                              <XIcon className="h-3 w-3 text-destructive" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1 mt-0.5 justify-end" onClick={e => e.stopPropagation()}>
+                            <div>
+                              {renewalPrice ? (
+                                <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
+                                  ₹{Number(renewalPrice).toLocaleString("en-IN")}/yr
+                                </p>
+                              ) : bookedPrice ? (
+                                <p className="text-[10px] text-muted-foreground line-through">
+                                  ₹{Number(bookedPrice).toLocaleString("en-IN")}
+                                </p>
+                              ) : (
+                                <p className="text-[10px] text-muted-foreground italic">No price</p>
+                              )}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-5 w-5"
+                              title="Edit renewal quote price"
+                              onClick={() => startEditPrice(p.id, renewalPrice || bookedPrice)}
+                            >
+                              <Pencil className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                            </Button>
+                          </div>
+                        )}
                       </div>
                       {phone && (
                         <a href={`tel:${phone}`}>
@@ -590,6 +668,7 @@ export function InsuranceRenewalsEngine() {
               onNotice={() => showRenewalPreview(selectedPolicy, "notice")}
               onQuote={() => showRenewalPreview(selectedPolicy, "quote")}
               onEmail={() => sendRenewalEmail(selectedPolicy)}
+              onEditPrice={(id, price) => { setSelectedPolicy(null); startEditPrice(id, price); }}
             />
           </DialogContent>
         </Dialog>
@@ -667,12 +746,15 @@ export function InsuranceRenewalsEngine() {
 
 // === DETAIL VIEW ===
 function RenewalDetailView({
-  policy, onShare, onNotice, onQuote, onEmail
+  policy, onShare, onNotice, onQuote, onEmail, onEditPrice
 }: {
   policy: any; onShare: () => void; onNotice: () => void; onQuote: () => void; onEmail: () => void;
+  onEditPrice: (id: string, price: number | null) => void;
 }) {
   const client = policy.insurance_clients;
   const phone = (!client?.phone || client.phone.startsWith("IB_")) ? null : client.phone;
+  const renewalPrice = policy.renewal_quote_premium;
+  const bookedPrice = policy.premium_amount;
   const reminderSchedule = [
     { days: 45, label: "45-day reminder" },
     { days: 30, label: "30-day reminder" },
@@ -699,8 +781,8 @@ function RenewalDetailView({
         {[
           { label: "Policy Number", value: policy.policy_number },
           { label: "Insurer", value: policy.insurer },
-          { label: "Vehicle", value: client?.vehicle_number },
-          { label: "Premium", value: policy.premium_amount ? `₹${Number(policy.premium_amount).toLocaleString("en-IN")}` : null },
+          { label: "Vehicle No", value: client?.vehicle_number },
+          { label: "Booked Premium", value: bookedPrice ? `₹${Number(bookedPrice).toLocaleString("en-IN")}` : null },
           { label: "Expiry", value: policy.expiry_date ? format(new Date(policy.expiry_date), "dd MMM yyyy") : null },
           { label: "Days Left", value: policy.daysLeft !== null ? (policy.daysLeft <= 0 ? `Expired ${Math.abs(policy.daysLeft)}d ago` : `${policy.daysLeft} days`) : null },
         ].map(item => (
@@ -710,6 +792,37 @@ function RenewalDetailView({
           </div>
         ))}
       </div>
+
+      {/* Renewal Quote Price - highlighted */}
+      <Card className="border-emerald-300 dark:border-emerald-700 bg-emerald-50/50 dark:bg-emerald-950/10">
+        <CardContent className="p-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Renewal Quote Price (Annual)</p>
+              <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400">
+                {renewalPrice ? `₹${Number(renewalPrice).toLocaleString("en-IN")}/year` : "Not set"}
+              </p>
+              {renewalPrice && bookedPrice && renewalPrice !== bookedPrice && (
+                <p className="text-[10px] text-muted-foreground">
+                  Previous: ₹{Number(bookedPrice).toLocaleString("en-IN")} •{" "}
+                  {renewalPrice > bookedPrice
+                    ? `+${((renewalPrice - bookedPrice) / bookedPrice * 100).toFixed(1)}%`
+                    : `${((renewalPrice - bookedPrice) / bookedPrice * 100).toFixed(1)}%`
+                  }
+                </p>
+              )}
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5 border-emerald-300 text-emerald-700 hover:bg-emerald-100"
+              onClick={() => onEditPrice(policy.id, renewalPrice || bookedPrice)}
+            >
+              <Pencil className="h-3.5 w-3.5" /> Edit Price
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Reminder Schedule */}
       <div>
