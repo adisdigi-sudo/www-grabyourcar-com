@@ -243,20 +243,20 @@ const EMICalculator = () => {
                 </thead>
                 <tbody>
                   {amortizationPreview.map((row, idx) => (
-                    <>
+                    <React.Fragment key={row.month}>
                       {idx === 3 && tenure > 6 && (
-                        <tr key="ellipsis" className="border-b border-border/20">
+                        <tr className="border-b border-border/20">
                           <td colSpan={5} className="text-center py-1.5 text-muted-foreground/50 text-xs">⋮ months {4} – {tenure - 3} ⋮</td>
                         </tr>
                       )}
-                      <tr key={row.month} className="border-b border-border/20 hover:bg-muted/20 transition-colors">
+                      <tr className="border-b border-border/20 hover:bg-muted/20 transition-colors">
                         <td className="px-3 py-1.5 font-medium">{row.month}</td>
                         <td className="px-3 py-1.5 text-right">{fmt(row.emiAmt)}</td>
                         <td className="px-3 py-1.5 text-right text-emerald-600">{fmt(row.principal)}</td>
                         <td className="px-3 py-1.5 text-right text-orange-500">{fmt(row.interest)}</td>
                         <td className="px-3 py-1.5 text-right font-medium">{fmt(row.balance)}</td>
                       </tr>
-                    </>
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>
