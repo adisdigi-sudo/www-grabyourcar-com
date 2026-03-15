@@ -203,7 +203,7 @@ export function HSRPUnifiedBookingForm() {
     try {
       const cartData = {
         session_id: sessionId,
-        phone: formData.mobile || null,
+        phone: formData.mobile.replace(/\D/g, "").slice(-10) || null,
         owner_name: formData.ownerName || null,
         email: formData.email || null,
         registration_number: formData.registrationNumber || null,
