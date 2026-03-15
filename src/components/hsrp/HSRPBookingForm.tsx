@@ -17,6 +17,7 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { triggerWhatsApp } from "@/lib/whatsappTrigger";
 import { useAuth } from "@/hooks/useAuth";
 import { useRazorpay } from "@/hooks/useRazorpay";
 import { useHSRPPricing, formatPrice, useHSRPServices } from "@/hooks/useHSRPPricing";
