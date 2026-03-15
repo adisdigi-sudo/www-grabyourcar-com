@@ -227,7 +227,7 @@ export const FloatingCTA = () => {
               ease: "easeOut",
               times: [0, 0.4, 0.6, 0.8, 1]
             }}
-            className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3"
+            className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50 flex flex-col items-end gap-2 md:gap-3"
           >
             {/* Expanded Menu */}
             <AnimatePresence>

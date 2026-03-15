@@ -291,10 +291,12 @@ export const Header = () => {
                 <Link
                   key={service.title}
                   to={service.href}
-                  className="px-4 py-3 text-base font-medium text-foreground hover:bg-muted rounded-xl transition-colors flex items-center gap-3"
+                  className="px-4 py-3.5 text-[15px] font-medium text-foreground hover:bg-muted rounded-xl transition-colors flex items-center gap-3 active:bg-muted/80"
                   onClick={() => setMenuOpen(false)}
                 >
-                  <service.icon className="h-5 w-5 text-primary" />
+                  <div className="w-9 h-9 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <service.icon className="h-4.5 w-4.5 text-primary" />
+                  </div>
                   <span className="flex-1">{service.title}</span>
                 </Link>
               ))}
