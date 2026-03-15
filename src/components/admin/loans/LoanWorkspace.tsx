@@ -989,8 +989,8 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
             </div>
           )}
 
-          {/* DISBURSED */}
-          {(currentStage === 'loan_application' || currentStage === 'disbursed' || application._targetStage === 'disbursed') && (
+          {/* DISBURSED — only for disbursed stage or when explicitly targeting it */}
+          {(currentStage === 'disbursed' || application._targetStage === 'disbursed') && (
             <div className="space-y-3 p-4 rounded-lg border border-emerald-500/20 bg-emerald-500/5">
               <div className="flex items-center gap-2 text-emerald-700 text-sm font-medium"><CheckCircle2 className="h-4 w-4" /> Disbursement Details</div>
               {currentStage === 'disbursed' && application.incentive_eligible && (
