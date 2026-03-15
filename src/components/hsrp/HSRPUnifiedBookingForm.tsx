@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -127,11 +127,12 @@ export function HSRPUnifiedBookingForm() {
   const [pincodeServiceable, setPincodeServiceable] = useState(false);
   const [homeInstallationFee, setHomeInstallationFee] = useState(0);
   const rcLookup = useRCLookup({ showToast: false });
-  const [abandonedCartId, setAbandonedCartId] = useState<string | null>(null);
   const [sessionId] = useState(() => `hsrp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
+  const abandonedCartIdRef = useRef<string>(crypto.randomUUID());
+  const hasSavedCartRef = useRef(false);
   const rcLookupTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastLookedUp = useRef<string>("");
-  const [detectedCategory, setDetectedCategory] = useState<string | null>(null);
+  
   
   const [formData, setFormData] = useState<FormData>({
     serviceType: "",
@@ -158,7 +159,7 @@ export function HSRPUnifiedBookingForm() {
     if (!pricing || !formData.vehicleCategory) return { hsrp: 0, fastag: 0, total: 0 };
     const category = vehicleCategories.find(c => c.value === formData.vehicleCategory);
     const hsrpPrice = category ? (pricing as any)[category.priceKey] || 0 : 0;
-    const fastagPrice = formData.vehicleCategory === '2w' ? 100 : 500;
+    const fastagPrice = pricing.fastag || 500;
     const colourSticker = pricing.colourSticker || 100;
     let total = 0;
     let hsrp = hsrpPrice + colourSticker;
@@ -198,7 +199,7 @@ export function HSRPUnifiedBookingForm() {
             
             // Auto-detect vehicle category
             const detected = detectVehicleCategory(result);
-            setDetectedCategory(detected);
+            
 
             setFormData(prev => ({
               ...prev,
@@ -220,16 +221,22 @@ export function HSRPUnifiedBookingForm() {
     return () => { if (rcLookupTimer.current) clearTimeout(rcLookupTimer.current); };
   }, [formData.registrationNumber]);
 
-  // ─── AUTO-ADVANCE: Step 1 → when RC fetched + service type selected ───
+  // ─── AUTO-ADVANCE: Step 1 → when category + service is ready ───
   useEffect(() => {
-    if (step === 1 && formData.serviceType && formData.vehicleCategory && rcLookup.data) {
+    const canAdvance =
+      step === 1 &&
+      formData.serviceType &&
+      formData.vehicleCategory &&
+      (Boolean(rcLookup.data) || Boolean(rcLookup.error));
+
+    if (canAdvance) {
       const t = setTimeout(() => {
         setStep(2);
         saveAbandonedCart(2);
       }, 500);
       return () => clearTimeout(t);
     }
-  }, [formData.serviceType, formData.vehicleCategory, rcLookup.data, step]);
+  }, [formData.serviceType, formData.vehicleCategory, rcLookup.data, rcLookup.error, step]);
 
   // ─── AUTO-ADVANCE: Step 2 → when owner, mobile, email filled ───
   useEffect(() => {
@@ -249,6 +256,7 @@ export function HSRPUnifiedBookingForm() {
   const saveAbandonedCart = async (currentStep: number) => {
     try {
       const cartData = {
+        id: abandonedCartIdRef.current,
         session_id: sessionId,
         phone: formData.mobile.replace(/\D/g, "").slice(-10) || null,
         owner_name: formData.ownerName || null,
@@ -264,13 +272,22 @@ export function HSRPUnifiedBookingForm() {
         estimated_total: prices.total,
         updated_at: new Date().toISOString(),
       };
-      if (abandonedCartId) {
-        await supabase.from("hsrp_abandoned_carts").update(cartData).eq("id", abandonedCartId);
+
+      if (hasSavedCartRef.current) {
+        const { error: updateError } = await supabase
+          .from("hsrp_abandoned_carts")
+          .update(cartData)
+          .eq("id", abandonedCartIdRef.current);
+
+        if (updateError) {
+          const { error: insertError } = await supabase.from("hsrp_abandoned_carts").insert(cartData);
+          if (!insertError) hasSavedCartRef.current = true;
+        }
       } else {
-        const { data } = await supabase.from("hsrp_abandoned_carts").insert(cartData).select("id").single();
-        if (data) setAbandonedCartId(data.id);
+        const { error: insertError } = await supabase.from("hsrp_abandoned_carts").insert(cartData);
+        if (!insertError) hasSavedCartRef.current = true;
       }
-    } catch (e) {
+    } catch {
       // Silent – don't block user flow
     }
   };
@@ -378,12 +395,12 @@ export function HSRPUnifiedBookingForm() {
             data: { tracking_id: trackingId, service: formData.serviceType, vehicle: formData.registrationNumber },
           });
           toast.success("Booking confirmed! Tracking ID: " + trackingId);
-          if (abandonedCartId) {
+          if (hasSavedCartRef.current) {
             supabase.from("hsrp_abandoned_carts").update({
               recovery_status: "converted",
               converted_booking_id: booking.id,
               converted_at: new Date().toISOString(),
-            }).eq("id", abandonedCartId).then(() => {});
+            }).eq("id", abandonedCartIdRef.current).then(() => {});
           }
           setStep(4);
         },
@@ -405,9 +422,11 @@ export function HSRPUnifiedBookingForm() {
     { title: "Confirmed", icon: CheckCircle2 },
   ];
 
-  const detectedCategoryInfo = formData.vehicleCategory 
-    ? vehicleCategories.find(c => c.value === formData.vehicleCategory) 
+  const detectedCategoryInfo = formData.vehicleCategory
+    ? vehicleCategories.find(c => c.value === formData.vehicleCategory)
     : null;
+  const cleanedRegistration = formData.registrationNumber.replace(/\s+/g, "").toUpperCase();
+  const hasValidRegistration = /^[A-Z]{2}\d{1,2}[A-Z]{0,3}\d{4}$/.test(cleanedRegistration);
 
   return (
     <div className="space-y-6">
@@ -543,34 +562,14 @@ export function HSRPUnifiedBookingForm() {
                       <Badge className="ml-auto bg-green-500 text-white">{detectedCategoryInfo.label}</Badge>
                     </div>
 
-                    {/* Allow manual override of category */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
-                      {vehicleCategories.map((cat) => {
-                        const CatIcon = cat.icon;
-                        const isSelected = formData.vehicleCategory === cat.value;
-                        return (
-                          <button
-                            key={cat.value}
-                            type="button"
-                            onClick={() => handleInputChange("vehicleCategory", cat.value)}
-                            className={cn(
-                              "p-2 rounded-lg border text-center transition-all text-xs",
-                              isSelected
-                                ? "border-primary bg-primary/10 ring-1 ring-primary/30 font-semibold"
-                                : "border-border hover:border-primary/50"
-                            )}
-                          >
-                            <CatIcon className={cn("w-5 h-5 mx-auto mb-1", isSelected && "text-primary")} />
-                            {cat.label}
-                          </button>
-                        );
-                      })}
-                    </div>
+                    <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+                      Vehicle category detected automatically from RC details.
+                    </p>
                   </motion.div>
                 )}
 
-                {/* Service Type Selection - show after RC detected or manually */}
-                {(rcLookup.data || formData.vehicleCategory) && (
+                {/* Service Type Selection - show after RC fetch or manual fallback category selection */}
+                {(rcLookup.data || (rcLookup.error && formData.vehicleCategory)) && (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -607,18 +606,18 @@ export function HSRPUnifiedBookingForm() {
                 )}
 
                 {/* Auto-advancing indicator */}
-                {formData.serviceType && formData.vehicleCategory && rcLookup.data && (
+                {formData.serviceType && formData.vehicleCategory && (rcLookup.data || rcLookup.error) && (
                   <p className="text-sm text-green-600 flex items-center gap-1 justify-center">
                     <Loader2 className="w-3 h-3 animate-spin" /> Moving to next step...
                   </p>
                 )}
 
-                {/* Manual vehicle category selection if no RC data */}
-                {!rcLookup.data && !rcLookup.loading && formData.registrationNumber.length < 6 && (
+                {/* Manual category selection only if RC lookup fails on a valid vehicle number */}
+                {!rcLookup.data && !rcLookup.loading && rcLookup.error && hasValidRegistration && (
                   <>
                     <Separator />
                     <div>
-                      <Label className="text-base font-semibold mb-3 block">Or select vehicle type manually</Label>
+                      <Label className="text-base font-semibold mb-3 block">Couldn’t auto-detect vehicle type. Select manually:</Label>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         {vehicleCategories.map((cat) => {
                           const CatIcon = cat.icon;
@@ -644,15 +643,6 @@ export function HSRPUnifiedBookingForm() {
                       </div>
                     </div>
                   </>
-                )}
-
-                {/* Manual continue if RC lookup failed or user skipped */}
-                {!rcLookup.data && !rcLookup.loading && formData.vehicleCategory && formData.serviceType && (
-                  <div className="flex justify-end">
-                    <Button type="button" onClick={() => { setStep(2); saveAbandonedCart(2); }} className="gap-2">
-                      Continue <ChevronLeft className="w-4 h-4 rotate-180" />
-                    </Button>
-                  </div>
                 )}
               </CardContent>
             </Card>
