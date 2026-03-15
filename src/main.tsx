@@ -3,6 +3,37 @@ import { ThemeProvider } from "next-themes";
 import { HelmetProvider } from "react-helmet-async";
 import App from "./App.tsx";
 import "./index.css";
+import {
+  isDynamicImportError,
+  recoverFromChunkLoadError,
+  resetChunkLoadRecovery,
+} from "@/lib/chunkLoadRecovery";
+
+const handleDynamicImportFailure = (error: unknown) => {
+  if (!isDynamicImportError(error)) return;
+  recoverFromChunkLoadError("global_chunk_recovery");
+};
+
+window.addEventListener(
+  "error",
+  (event) => {
+    handleDynamicImportFailure(event.error ?? event.message);
+  },
+  true
+);
+
+window.addEventListener("unhandledrejection", (event) => {
+  handleDynamicImportFailure(event.reason);
+});
+
+window.addEventListener(
+  "load",
+  () => {
+    resetChunkLoadRecovery("global_chunk_recovery");
+    resetChunkLoadRecovery("route_chunk_recovery");
+  },
+  { once: true }
+);
 
 // Block search-engine indexing on .lovable.app domains
 if (window.location.hostname.endsWith(".lovable.app")) {
