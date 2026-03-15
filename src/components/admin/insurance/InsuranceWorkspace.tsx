@@ -684,8 +684,11 @@ export function InsuranceWorkspace() {
                             {format(new Date(client.created_at), "dd MMM yy")}
                           </TableCell>
                           <TableCell>
-                            <div className="flex gap-1">
-                              {client.renewal_reminder_set && <Badge className="bg-emerald-100 text-emerald-700 text-[8px] px-1">✅ Renewal</Badge>}
+                            <div className="flex gap-1 flex-wrap">
+                              {(() => {
+                                const status = getExpiryStatus(client.policy_expiry_date);
+                                return <Badge variant="outline" className={cn("text-[8px] px-1", status.className)}>{status.label}</Badge>;
+                              })()}
                               {client.incentive_eligible && <Badge className="bg-amber-100 text-amber-700 text-[8px] px-1">⭐</Badge>}
                             </div>
                           </TableCell>
