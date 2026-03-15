@@ -242,41 +242,65 @@ export const Header = () => {
           </div>
         </div>
 
-        {/* Mobile Top Navigation Bar - Home, Search, Favorites only */}
+        {/* Mobile Bottom Navigation Bar */}
         <div className="md:hidden border-t border-border/50 bg-card/95">
-          <div className="flex items-center justify-around h-11">
+          <div className="flex items-center justify-around h-12">
             <Link
               to="/"
               className={cn(
                 "flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors",
-                isActive("/") ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                isActive("/") ? "text-primary" : "text-muted-foreground"
               )}
             >
-              <Home className="h-5 w-5" />
-              <span className="text-[10px] font-medium">Home</span>
+              <Home className="h-4.5 w-4.5" />
+              <span className="text-[9px] font-medium">Home</span>
             </Link>
             
             <Link
               to="/cars"
               className={cn(
                 "flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors",
-                isActive("/cars") ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                isActive("/cars") ? "text-primary" : "text-muted-foreground"
               )}
             >
-              <Search className="h-5 w-5" />
-              <span className="text-[10px] font-medium">Search</span>
+              <Search className="h-4.5 w-4.5" />
+              <span className="text-[9px] font-medium">Search</span>
             </Link>
-            
+
             <Link
               to="/favorites"
               className={cn(
                 "flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors",
-                isActive("/favorites") ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                isActive("/favorites") ? "text-primary" : "text-muted-foreground"
               )}
             >
-              <Heart className="h-5 w-5" />
-              <span className="text-[10px] font-medium">Favorites</span>
+              <Heart className="h-4.5 w-4.5" />
+              <span className="text-[9px] font-medium">Favorites</span>
             </Link>
+
+            {user ? (
+              <Link
+                to="/my-bookings"
+                className={cn(
+                  "flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors",
+                  isActive("/my-bookings") ? "text-primary" : "text-muted-foreground"
+                )}
+              >
+                <User className="h-4.5 w-4.5" />
+                <span className="text-[9px] font-medium">Account</span>
+              </Link>
+            ) : (
+              <Link
+                to="/auth"
+                className={cn(
+                  "flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors",
+                  isActive("/auth") ? "text-primary" : "text-muted-foreground"
+                )}
+              >
+                <User className="h-4.5 w-4.5" />
+                <span className="text-[9px] font-medium">Login</span>
+              </Link>
+            )}
           </div>
         </div>
       </header>
