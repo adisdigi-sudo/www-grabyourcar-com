@@ -831,7 +831,7 @@ export function HSRPUnifiedBookingForm() {
                   </Button>
                   <Button
                     type="button"
-                    onClick={handleSubmit}
+                    onClick={(e) => handleSubmit(e)}
                     disabled={isSubmitting || isPaymentLoading}
                     className="gap-2 bg-green-600 hover:bg-green-700"
                   >
