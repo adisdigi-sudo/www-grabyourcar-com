@@ -920,7 +920,7 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
             </div>
           )}
 
-          {/* SMART CALLING */}
+          {/* SMART CALLING — only for new_lead & smart_calling */}
           {(currentStage === 'new_lead' || currentStage === 'smart_calling') && (
             <div className="space-y-3 p-4 rounded-lg border border-amber-500/20 bg-amber-500/5">
               <div className="flex items-center gap-2 text-amber-700 text-sm font-medium"><PhoneCall className="h-4 w-4" /> Smart Calling</div>
@@ -938,7 +938,7 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
             </div>
           )}
 
-          {/* OFFER SHARED */}
+          {/* OFFER SHARED — only for interested & offer_shared */}
           {(currentStage === 'interested' || currentStage === 'offer_shared') && (
             <div className="space-y-3 p-4 rounded-lg border border-violet-500/20 bg-violet-500/5">
               <div className="flex items-center gap-2 text-violet-700 text-sm font-medium"><Building2 className="h-4 w-4" /> Share Offer — Bank Partners</div>
@@ -965,8 +965,8 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
             </div>
           )}
 
-          {/* LOAN APPLICATION */}
-          {(currentStage === 'offer_shared' || currentStage === 'loan_application' || application._targetStage === 'loan_application') && (
+          {/* LOAN APPLICATION — only for loan_application stage */}
+          {(currentStage === 'loan_application' || application._targetStage === 'loan_application') && (
             <div className="space-y-3 p-4 rounded-lg border border-indigo-500/20 bg-indigo-500/5">
               <div className="flex items-center gap-2 text-indigo-700 text-sm font-medium"><FileText className="h-4 w-4" /> Loan Application Status</div>
               <div>
