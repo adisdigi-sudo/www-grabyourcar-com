@@ -8,6 +8,7 @@ export interface HSRPPricing {
   colourSticker: number;
   homeInstallationFee: number;
   evVehicle: number;
+  fastag: number;
 }
 
 export interface HSRPServiceConfig {
@@ -25,12 +26,13 @@ export interface HSRPServiceConfig {
 }
 
 export const defaultPricing: HSRPPricing = {
-  fourWheeler: 1100,
-  twoWheeler: 450,
+  fourWheeler: 1500,
+  twoWheeler: 850,
   tractor: 600,
   colourSticker: 100,
   homeInstallationFee: 200,
-  evVehicle: 1100,
+  evVehicle: 1500,
+  fastag: 500,
 };
 
 export const defaultServices: HSRPServiceConfig[] = [
