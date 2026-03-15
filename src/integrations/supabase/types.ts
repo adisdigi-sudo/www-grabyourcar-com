@@ -5445,6 +5445,8 @@ export type Database = {
           policy_type: string
           premium_amount: number | null
           previous_policy_id: string | null
+          renewal_frequency: string | null
+          renewal_quote_premium: number | null
           renewal_status: string | null
           start_date: string
           status: string | null
@@ -5472,6 +5474,8 @@ export type Database = {
           policy_type: string
           premium_amount?: number | null
           previous_policy_id?: string | null
+          renewal_frequency?: string | null
+          renewal_quote_premium?: number | null
           renewal_status?: string | null
           start_date: string
           status?: string | null
@@ -5499,6 +5503,8 @@ export type Database = {
           policy_type?: string
           premium_amount?: number | null
           previous_policy_id?: string | null
+          renewal_frequency?: string | null
+          renewal_quote_premium?: number | null
           renewal_status?: string | null
           start_date?: string
           status?: string | null

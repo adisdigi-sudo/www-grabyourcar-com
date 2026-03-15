@@ -87,14 +87,14 @@ function buildMessage(
   let policyDetails = "";
   const insurer = policy?.insurer || client.current_insurer || "";
   const policyNumber = policy?.policy_number || client.current_policy_number || "";
-  const premium = policy?.premium_amount || client.current_premium || "";
+  const renewalPremium = policy?.renewal_quote_premium || policy?.premium_amount || client.current_premium || "";
 
-  if (insurer || policyNumber || premium) {
+  if (insurer || policyNumber || renewalPremium || vehicleNumber) {
     policyDetails = "📋 *Your Policy Details:*\n";
-    if (policyNumber) policyDetails += `📄 Policy: ${policyNumber}\n`;
+    if (policyNumber) policyDetails += `📄 Policy No: ${policyNumber}\n`;
     if (insurer) policyDetails += `🏢 Insurer: ${insurer}\n`;
-    if (premium) policyDetails += `💰 Premium: ₹${Number(premium).toLocaleString("en-IN")}\n`;
-    if (vehicleNumber) policyDetails += `🚗 Vehicle: ${vehicleNumber}\n`;
+    if (vehicleNumber) policyDetails += `🚗 Vehicle No: ${vehicleNumber}\n`;
+    if (renewalPremium) policyDetails += `💰 Renewal Premium: ₹${Number(renewalPremium).toLocaleString("en-IN")}/year\n`;
   }
 
   return template
@@ -108,7 +108,7 @@ function buildMessage(
     .replace(/\{\{policy_details_section\}\}/g, policyDetails)
     .replace(/\{\{insurer\}\}/g, insurer)
     .replace(/\{\{policy_number\}\}/g, policyNumber)
-    .replace(/\{\{premium\}\}/g, premium ? `₹${Number(premium).toLocaleString("en-IN")}` : "")
+    .replace(/\{\{premium\}\}/g, renewalPremium ? `₹${Number(renewalPremium).toLocaleString("en-IN")}/year` : "")
     .replace(/\n{3,}/g, "\n\n"); // Clean excess newlines
 }
 
