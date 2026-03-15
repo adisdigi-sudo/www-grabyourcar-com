@@ -256,6 +256,7 @@ export function HSRPUnifiedBookingForm() {
   const saveAbandonedCart = async (currentStep: number) => {
     try {
       const cartData = {
+        id: abandonedCartIdRef.current,
         session_id: sessionId,
         phone: formData.mobile.replace(/\D/g, "").slice(-10) || null,
         owner_name: formData.ownerName || null,
@@ -271,13 +272,22 @@ export function HSRPUnifiedBookingForm() {
         estimated_total: prices.total,
         updated_at: new Date().toISOString(),
       };
-      if (abandonedCartId) {
-        await supabase.from("hsrp_abandoned_carts").update(cartData).eq("id", abandonedCartId);
+
+      if (hasSavedCartRef.current) {
+        const { error: updateError } = await supabase
+          .from("hsrp_abandoned_carts")
+          .update(cartData)
+          .eq("id", abandonedCartIdRef.current);
+
+        if (updateError) {
+          const { error: insertError } = await supabase.from("hsrp_abandoned_carts").insert(cartData);
+          if (!insertError) hasSavedCartRef.current = true;
+        }
       } else {
-        const { data } = await supabase.from("hsrp_abandoned_carts").insert(cartData).select("id").single();
-        if (data) setAbandonedCartId(data.id);
+        const { error: insertError } = await supabase.from("hsrp_abandoned_carts").insert(cartData);
+        if (!insertError) hasSavedCartRef.current = true;
       }
-    } catch (e) {
+    } catch {
       // Silent – don't block user flow
     }
   };
