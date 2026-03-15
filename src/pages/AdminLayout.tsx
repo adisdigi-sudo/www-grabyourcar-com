@@ -276,7 +276,7 @@ const AdminLayout = () => {
       case "socialproof-stories":
         return <SocialProofManagement />;
       case "services-hsrp":
-        return <HSRPWorkspace />;
+        return <HSRPVerticalWorkspace />;
       case "services-rentals":
         return <SelfDriveWorkspace />;
       case "services-driver-bookings":
