@@ -265,7 +265,7 @@ We offer:
 
 Our finance expert will call you shortly!
 
-Calculate EMI: grabyourcar.lovable.app/car-loans`;
+Calculate EMI: www.grabyourcar.com/car-loans`;
   }
 
   if (message.includes("hi") || message.includes("hello") || message.includes("hey")) {
