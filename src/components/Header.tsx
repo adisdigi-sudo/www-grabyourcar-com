@@ -284,7 +284,7 @@ export const Header = () => {
       {/* Mobile Menu Overlay */}
       {menuOpen && (
         <div className="lg:hidden fixed inset-0 z-40 bg-background/95 backdrop-blur-sm animate-fade-in pt-[6.5rem]">
-          <div className="flex flex-col h-full pb-8 px-6 overflow-y-auto">
+          <div className="flex flex-col h-full pb-24 px-5 overflow-y-auto">
             <nav className="flex flex-col gap-1">
               <p className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Services</p>
               {services.map((service) => (
