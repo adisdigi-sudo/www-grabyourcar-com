@@ -606,7 +606,7 @@ export function HSRPUnifiedBookingForm() {
                 )}
 
                 {/* Auto-advancing indicator */}
-                {formData.serviceType && formData.vehicleCategory && rcLookup.data && (
+                {formData.serviceType && formData.vehicleCategory && (rcLookup.data || rcLookup.error) && (
                   <p className="text-sm text-green-600 flex items-center gap-1 justify-center">
                     <Loader2 className="w-3 h-3 animate-spin" /> Moving to next step...
                   </p>
