@@ -4258,6 +4258,86 @@ export type Database = {
         }
         Relationships: []
       }
+      hsrp_abandoned_carts: {
+        Row: {
+          city: string | null
+          converted_at: string | null
+          converted_booking_id: string | null
+          created_at: string | null
+          email: string | null
+          estimated_total: number | null
+          form_data: Json | null
+          id: string
+          last_recovery_at: string | null
+          last_step: number
+          owner_name: string | null
+          phone: string | null
+          pincode: string | null
+          recovery_attempts: number | null
+          recovery_status: string
+          registration_number: string | null
+          service_type: string | null
+          session_id: string | null
+          state: string | null
+          updated_at: string | null
+          vehicle_category: string | null
+        }
+        Insert: {
+          city?: string | null
+          converted_at?: string | null
+          converted_booking_id?: string | null
+          created_at?: string | null
+          email?: string | null
+          estimated_total?: number | null
+          form_data?: Json | null
+          id?: string
+          last_recovery_at?: string | null
+          last_step?: number
+          owner_name?: string | null
+          phone?: string | null
+          pincode?: string | null
+          recovery_attempts?: number | null
+          recovery_status?: string
+          registration_number?: string | null
+          service_type?: string | null
+          session_id?: string | null
+          state?: string | null
+          updated_at?: string | null
+          vehicle_category?: string | null
+        }
+        Update: {
+          city?: string | null
+          converted_at?: string | null
+          converted_booking_id?: string | null
+          created_at?: string | null
+          email?: string | null
+          estimated_total?: number | null
+          form_data?: Json | null
+          id?: string
+          last_recovery_at?: string | null
+          last_step?: number
+          owner_name?: string | null
+          phone?: string | null
+          pincode?: string | null
+          recovery_attempts?: number | null
+          recovery_status?: string
+          registration_number?: string | null
+          service_type?: string | null
+          session_id?: string | null
+          state?: string | null
+          updated_at?: string | null
+          vehicle_category?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hsrp_abandoned_carts_converted_booking_id_fkey"
+            columns: ["converted_booking_id"]
+            isOneToOne: false
+            referencedRelation: "hsrp_bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hsrp_bookings: {
         Row: {
           address: string | null

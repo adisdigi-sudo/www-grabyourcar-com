@@ -98,6 +98,8 @@ export function HSRPUnifiedBookingForm() {
   const [pincodeServiceable, setPincodeServiceable] = useState(false);
   const [homeInstallationFee, setHomeInstallationFee] = useState(0);
   const rcLookup = useRCLookup({ showToast: false });
+  const [abandonedCartId, setAbandonedCartId] = useState<string | null>(null);
+  const [sessionId] = useState(() => `hsrp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
   
   const [formData, setFormData] = useState<FormData>({
     serviceType: "hsrp",
@@ -194,9 +196,42 @@ export function HSRPUnifiedBookingForm() {
     return true;
   };
 
+  // Save abandoned cart progress
+  const saveAbandonedCart = async (currentStep: number) => {
+    try {
+      const cartData = {
+        session_id: sessionId,
+        phone: formData.mobile || null,
+        owner_name: formData.ownerName || null,
+        email: formData.email || null,
+        registration_number: formData.registrationNumber || null,
+        vehicle_category: formData.vehicleCategory || null,
+        service_type: formData.serviceType || null,
+        state: formData.state || null,
+        city: formData.city || null,
+        pincode: formData.pincode || null,
+        last_step: currentStep,
+        form_data: formData as any,
+        estimated_total: prices.total,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (abandonedCartId) {
+        await supabase.from("hsrp_abandoned_carts").update(cartData).eq("id", abandonedCartId);
+      } else {
+        const { data } = await supabase.from("hsrp_abandoned_carts").insert(cartData).select("id").single();
+        if (data) setAbandonedCartId(data.id);
+      }
+    } catch (e) {
+      console.error("Abandoned cart save error:", e);
+    }
+  };
+
   const nextStep = () => {
     if (validateStep(step)) {
-      setStep(prev => Math.min(prev + 1, 5));
+      const newStep = Math.min(step + 1, 5);
+      setStep(newStep);
+      saveAbandonedCart(newStep);
     }
   };
 
@@ -220,18 +255,25 @@ export function HSRPUnifiedBookingForm() {
       try {
         const { error } = await signInWithPhone(formData.mobile);
         if (error) {
-          toast.error("Could not verify your phone number. Please try again.");
-          return;
+          console.warn("Silent auth failed, retrying:", error.message);
+          // Retry once after a short delay
+          await new Promise(r => setTimeout(r, 500));
+          const { error: retryError } = await signInWithPhone(formData.mobile);
+          if (retryError) {
+            console.error("Silent auth retry failed:", retryError.message);
+            toast.error("Something went wrong. Please try again.");
+            return;
+          }
         }
         // Get the session after sign-in
         const { data: { session } } = await supabase.auth.getSession();
         currentUser = session?.user ?? null;
         if (!currentUser) {
-          toast.error("Authentication failed. Please try again.");
+          toast.error("Something went wrong. Please try again.");
           return;
         }
       } catch {
-        toast.error("Login failed. Please try again.");
+        toast.error("Something went wrong. Please try again.");
         return;
       }
     }
@@ -301,6 +343,14 @@ export function HSRPUnifiedBookingForm() {
             data: { tracking_id: trackingId, service: formData.serviceType, vehicle: formData.registrationNumber },
           });
           toast.success("Booking confirmed! Tracking ID: " + trackingId);
+          // Mark abandoned cart as converted
+          if (abandonedCartId) {
+            supabase.from("hsrp_abandoned_carts").update({
+              recovery_status: "converted",
+              converted_booking_id: booking.id,
+              converted_at: new Date().toISOString(),
+            }).eq("id", abandonedCartId).then(() => {});
+          }
           setStep(5); // Success step
         },
         onError: (error) => {
