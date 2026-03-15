@@ -407,14 +407,14 @@ const HSRP = () => {
                         <Car className="h-4 w-4 text-muted-foreground" />
                         <span>4-Wheeler (Car/SUV)</span>
                       </div>
-                      <span className="font-bold text-primary">{formatPrice(pricing?.fourWheeler || 1100)}</span>
+                      <span className="font-bold text-primary">{formatPrice(pricing?.fourWheeler || 1500)}</span>
                     </div>
                     <div className="flex justify-between items-center py-2 border-b border-border">
                       <div className="flex items-center gap-2">
                         <Bike className="h-4 w-4 text-muted-foreground" />
                         <span>2-Wheeler (Bike/Scooter)</span>
                       </div>
-                      <span className="font-bold text-primary">{formatPrice(pricing?.twoWheeler || 450)}</span>
+                      <span className="font-bold text-primary">{formatPrice(pricing?.twoWheeler || 850)}</span>
                     </div>
                     <div className="flex justify-between items-center py-2 border-b border-border">
                       <div className="flex items-center gap-2">
