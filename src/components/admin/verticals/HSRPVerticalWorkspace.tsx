@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Shield, CheckCircle2, ShoppingCart, LayoutDashboard } from "lucide-react";
-import { HSRPManagement } from "../HSRPManagement";
+import { HSRPWorkspace } from "../hsrp/HSRPWorkspace";
 import { HSRPAbandonedCarts } from "../hsrp/HSRPAbandonedCarts";
 
 export function HSRPVerticalWorkspace() {
@@ -40,7 +40,7 @@ export function HSRPVerticalWorkspace() {
           </TabsTrigger>
         </TabsList>
         <TabsContent value="pipeline">
-          <HSRPManagement />
+          <HSRPWorkspace />
         </TabsContent>
         <TabsContent value="abandoned">
           <HSRPAbandonedCarts />

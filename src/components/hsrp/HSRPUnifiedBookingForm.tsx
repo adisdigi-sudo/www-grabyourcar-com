@@ -176,16 +176,18 @@ export function HSRPUnifiedBookingForm() {
           return false;
         }
         break;
-      case 3:
-        if (!formData.ownerName || !formData.mobile || !formData.email) {
+      case 3: {
+        const cleanMobile = formData.mobile.replace(/\D/g, "").slice(-10);
+        if (!formData.ownerName || !cleanMobile || !formData.email) {
           toast.error("Please fill all contact details");
           return false;
         }
-        if (formData.mobile.length !== 10) {
-          toast.error("Please enter valid 10-digit mobile");
+        if (!/^[6-9]\d{9}$/.test(cleanMobile)) {
+          toast.error("Please enter a valid 10-digit mobile number");
           return false;
         }
         break;
+      }
       case 4:
         if (!formData.state || !formData.pincode || !formData.address) {
           toast.error("Please fill delivery address");
@@ -201,7 +203,7 @@ export function HSRPUnifiedBookingForm() {
     try {
       const cartData = {
         session_id: sessionId,
-        phone: formData.mobile || null,
+        phone: formData.mobile.replace(/\D/g, "").slice(-10) || null,
         owner_name: formData.ownerName || null,
         email: formData.email || null,
         registration_number: formData.registrationNumber || null,
@@ -249,31 +251,35 @@ export function HSRPUnifiedBookingForm() {
       if (!validateStep(i)) return;
     }
 
-    // Auto-login silently using the phone number from the form
+    const normalizedMobile = formData.mobile.replace(/\D/g, "").slice(-10);
+    if (!/^[6-9]\d{9}$/.test(normalizedMobile)) {
+      toast.error("Please enter a valid 10-digit mobile number");
+      return;
+    }
+
+    // Silent auto-login using form mobile (no extra input needed)
     let currentUser = user;
     if (!currentUser) {
       try {
-        const { error } = await signInWithPhone(formData.mobile);
+        const { error } = await signInWithPhone(normalizedMobile);
         if (error) {
-          console.warn("Silent auth failed, retrying:", error.message);
-          // Retry once after a short delay
-          await new Promise(r => setTimeout(r, 500));
-          const { error: retryError } = await signInWithPhone(formData.mobile);
-          if (retryError) {
-            console.error("Silent auth retry failed:", retryError.message);
-            toast.error("Something went wrong. Please try again.");
-            return;
-          }
+          console.error("Silent auth failed:", error.message);
+          toast.error("We couldn't start your booking session. Please retry.");
+          return;
         }
-        // Get the session after sign-in
-        const { data: { session } } = await supabase.auth.getSession();
-        currentUser = session?.user ?? null;
+
+        const [{ data: sessionData }, { data: userData }] = await Promise.all([
+          supabase.auth.getSession(),
+          supabase.auth.getUser(),
+        ]);
+
+        currentUser = userData.user ?? sessionData.session?.user ?? null;
         if (!currentUser) {
-          toast.error("Something went wrong. Please try again.");
+          toast.error("Session is not ready yet. Please try once more.");
           return;
         }
       } catch {
-        toast.error("Something went wrong. Please try again.");
+        toast.error("Something went wrong while starting your booking.");
         return;
       }
     }
@@ -291,7 +297,7 @@ export function HSRPUnifiedBookingForm() {
         vehicle_class: formData.vehicleCategory.toUpperCase(),
         state: formData.state,
         owner_name: formData.ownerName,
-        mobile: formData.mobile,
+        mobile: normalizedMobile,
         email: formData.email,
         address: formData.address,
         pincode: formData.pincode,
@@ -320,7 +326,7 @@ export function HSRPUnifiedBookingForm() {
         bookingId: booking.id,
         customerName: formData.ownerName,
         customerEmail: formData.email,
-        customerPhone: formData.mobile,
+        customerPhone: normalizedMobile,
         description: `${formData.serviceType.toUpperCase()} for ${formData.registrationNumber}`,
         notes: {
           tracking_id: trackingId,
@@ -338,7 +344,7 @@ export function HSRPUnifiedBookingForm() {
 
           triggerWhatsApp({
             event: "hsrp_order_placed",
-            phone: formData.mobile,
+            phone: normalizedMobile,
             name: formData.ownerName,
             data: { tracking_id: trackingId, service: formData.serviceType, vehicle: formData.registrationNumber },
           });
