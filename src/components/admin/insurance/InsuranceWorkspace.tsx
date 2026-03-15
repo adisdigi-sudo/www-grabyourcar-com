@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,12 +14,16 @@ import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { format, differenceInDays } from "date-fns";
+import { format, differenceInDays, subDays } from "date-fns";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
 import {
   UserPlus, Phone, FileText, Clock, CheckCircle2, XCircle,
   Search, PhoneCall, User, Car, Shield, TrendingUp, Send,
   MessageSquare, CalendarIcon, Bell, Plus, X,
-  ChevronRight, CreditCard, Upload, RefreshCw, FileSpreadsheet, BookOpen, CalendarClock
+  ChevronRight, CreditCard, Upload, RefreshCw, FileSpreadsheet, BookOpen, CalendarClock,
+  Filter, Eye, AlertTriangle, ArrowUpDown
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
@@ -40,7 +44,6 @@ const PIPELINE_STAGES = [
   { value: "policy_issued", label: "Policy Issued", icon: Shield, color: "from-emerald-600 to-emerald-800", bg: "bg-emerald-50 dark:bg-emerald-950/30", border: "border-emerald-200 dark:border-emerald-800", text: "text-emerald-700 dark:text-emerald-300", dot: "bg-emerald-600" },
 ];
 
-// Map old stages to new ones
 const STAGE_MAP: Record<string, string> = {
   new_lead: "new_lead",
   contact_attempted: "smart_calling",
@@ -57,7 +60,7 @@ const normalizeStage = (stage: string | null): string => STAGE_MAP[stage || "new
 
 const CALL_STATUSES = ["Interested", "Not Interested", "Call Back", "No Answer", "Wrong Number"];
 const LOST_REASONS = ["Too expensive", "Existing agent", "No response", "Not renewing", "Competitor offer", "Other"];
-const LEAD_SOURCES = ["Meta", "Google Ads", "Referral", "Walk-in", "WhatsApp Broadcast", "Website", "Manual"];
+const LEAD_SOURCES = ["Meta", "Google Ads", "Referral", "Walk-in", "WhatsApp Broadcast", "Website", "Manual", "CSV Import"];
 
 const SOURCE_COLORS: Record<string, string> = {
   Meta: "bg-blue-100 text-blue-700 border-blue-200",
@@ -67,6 +70,8 @@ const SOURCE_COLORS: Record<string, string> = {
   "WhatsApp Broadcast": "bg-emerald-100 text-emerald-700 border-emerald-200",
   Website: "bg-indigo-100 text-indigo-700 border-indigo-200",
   Manual: "bg-gray-100 text-gray-700 border-gray-200",
+  "CSV Import": "bg-violet-100 text-violet-700 border-violet-200",
+  "csv_import": "bg-violet-100 text-violet-700 border-violet-200",
 };
 
 interface Client {
@@ -107,6 +112,15 @@ interface Client {
   created_at: string;
 }
 
+// ── Source display helper ──
+function formatSource(source: string | null, createdAt: string): string {
+  if (!source) return "Unknown";
+  const date = format(new Date(createdAt), "dd MMM yyyy");
+  if (source === "csv_import" || source === "CSV Import") return `Imported on ${date}`;
+  if (source.startsWith("IB_") || source.toLowerCase().includes("insurebook")) return `Imported on ${date}`;
+  return source;
+}
+
 export function InsuranceWorkspace() {
   const queryClient = useQueryClient();
   const [selectedStage, setSelectedStage] = useState<string>("all");
@@ -116,6 +130,15 @@ export function InsuranceWorkspace() {
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<"crm" | "policy_book" | "renewals">("crm");
   const [showImport, setShowImport] = useState(false);
+
+  // Renewal filters
+  const [renewalWindow, setRenewalWindow] = useState<string>("all");
+  const [renewalSearch, setRenewalSearch] = useState("");
+  const [renewalSort, setRenewalSort] = useState<"days_asc" | "days_desc" | "name">("days_asc");
+
+  // Policy Book filters
+  const [pbSearch, setPbSearch] = useState("");
+  const [pbPartnerFilter, setPbPartnerFilter] = useState("all");
 
   // Modals
   const [showLostDialog, setShowLostDialog] = useState(false);
@@ -155,7 +178,7 @@ export function InsuranceWorkspace() {
     },
   });
 
-  // Counts using normalized stages
+  // Counts
   const stageCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     PIPELINE_STAGES.forEach(s => { counts[s.value] = 0; });
@@ -172,7 +195,6 @@ export function InsuranceWorkspace() {
   const lostCount = stageCounts["lost"] || 0;
   const convRate = totalLeads > 0 ? (((wonCount + policyCount) / totalLeads) * 100).toFixed(1) : "0";
 
-  // Notifications
   const insNotifications = useMemo(() => buildInsuranceNotifications(clients), [clients]);
 
   // Policy book data
@@ -181,14 +203,75 @@ export function InsuranceWorkspace() {
     return s === "won" || s === "policy_issued";
   }), [clients]);
 
-  // Renewal data
-  const renewalClients = useMemo(() => clients.filter(c => {
-    if (!c.policy_expiry_date) return false;
-    const days = differenceInDays(new Date(c.policy_expiry_date), new Date());
-    return days <= 90 && days >= -30;
-  }).sort((a, b) => new Date(a.policy_expiry_date!).getTime() - new Date(b.policy_expiry_date!).getTime()), [clients]);
+  // Unique partners/insurers for policy book filter
+  const pbPartners = useMemo(() => {
+    const set = new Set(policyBookClients.map(c => c.current_insurer).filter(Boolean));
+    return Array.from(set).sort() as string[];
+  }, [policyBookClients]);
 
-  // Filter using normalized stages
+  // Filtered policy book
+  const filteredPolicyBook = useMemo(() => {
+    let result = policyBookClients;
+    if (pbPartnerFilter !== "all") result = result.filter(c => c.current_insurer === pbPartnerFilter);
+    if (pbSearch.trim()) {
+      const s = pbSearch.toLowerCase();
+      result = result.filter(c =>
+        c.customer_name?.toLowerCase().includes(s) ||
+        c.phone?.includes(s) ||
+        c.vehicle_number?.toLowerCase().includes(s) ||
+        c.current_policy_number?.toLowerCase().includes(s) ||
+        c.current_insurer?.toLowerCase().includes(s)
+      );
+    }
+    return result;
+  }, [policyBookClients, pbPartnerFilter, pbSearch]);
+
+  // Renewal data (upcoming + recently expired)
+  const renewalClients = useMemo(() => {
+    const all = clients.filter(c => {
+      if (!c.policy_expiry_date) return false;
+      const days = differenceInDays(new Date(c.policy_expiry_date), new Date());
+      return days <= 90 && days >= -30;
+    });
+
+    let result = all;
+    if (renewalWindow === "expired") result = all.filter(c => differenceInDays(new Date(c.policy_expiry_date!), new Date()) < 0);
+    else if (renewalWindow === "7") result = all.filter(c => { const d = differenceInDays(new Date(c.policy_expiry_date!), new Date()); return d >= 0 && d <= 7; });
+    else if (renewalWindow === "15") result = all.filter(c => { const d = differenceInDays(new Date(c.policy_expiry_date!), new Date()); return d >= 0 && d <= 15; });
+    else if (renewalWindow === "30") result = all.filter(c => { const d = differenceInDays(new Date(c.policy_expiry_date!), new Date()); return d >= 0 && d <= 30; });
+    else if (renewalWindow === "60") result = all.filter(c => { const d = differenceInDays(new Date(c.policy_expiry_date!), new Date()); return d >= 0 && d <= 60; });
+
+    if (renewalSearch.trim()) {
+      const s = renewalSearch.toLowerCase();
+      result = result.filter(c =>
+        c.customer_name?.toLowerCase().includes(s) ||
+        c.phone?.includes(s) ||
+        c.vehicle_number?.toLowerCase().includes(s)
+      );
+    }
+
+    return result.sort((a, b) => {
+      if (renewalSort === "name") return (a.customer_name || "").localeCompare(b.customer_name || "");
+      if (renewalSort === "days_desc") return new Date(b.policy_expiry_date!).getTime() - new Date(a.policy_expiry_date!).getTime();
+      return new Date(a.policy_expiry_date!).getTime() - new Date(b.policy_expiry_date!).getTime();
+    });
+  }, [clients, renewalWindow, renewalSearch, renewalSort]);
+
+  // Renewal summary counts
+  const renewalSummary = useMemo(() => {
+    const all = clients.filter(c => c.policy_expiry_date);
+    const now = new Date();
+    return {
+      expired: all.filter(c => differenceInDays(new Date(c.policy_expiry_date!), now) < 0 && differenceInDays(new Date(c.policy_expiry_date!), now) >= -30).length,
+      within7: all.filter(c => { const d = differenceInDays(new Date(c.policy_expiry_date!), now); return d >= 0 && d <= 7; }).length,
+      within15: all.filter(c => { const d = differenceInDays(new Date(c.policy_expiry_date!), now); return d >= 0 && d <= 15; }).length,
+      within30: all.filter(c => { const d = differenceInDays(new Date(c.policy_expiry_date!), now); return d >= 0 && d <= 30; }).length,
+      within60: all.filter(c => { const d = differenceInDays(new Date(c.policy_expiry_date!), now); return d >= 0 && d <= 60; }).length,
+      total: all.filter(c => { const d = differenceInDays(new Date(c.policy_expiry_date!), now); return d >= -30 && d <= 90; }).length,
+    };
+  }, [clients]);
+
+  // CRM filter
   const filtered = useMemo(() => {
     let result = selectedStage === "all" ? clients : clients.filter(c => normalizeStage(c.pipeline_stage) === selectedStage);
     if (search.trim()) {
@@ -300,13 +383,10 @@ export function InsuranceWorkspace() {
   const handleMove = useCallback((client: Client, targetStage: string) => {
     const currentStage = normalizeStage(client.pipeline_stage);
     if (currentStage === targetStage) return;
-
-    // Guard: Can't move to policy_issued unless renewal_reminder_set
     if (targetStage === "policy_issued" && !client.renewal_reminder_set) {
-      toast.error("⚠️ Set renewal reminder first! Client must have renewal set before moving to Policy Issued.", { duration: 5000 });
+      toast.error("⚠️ Set renewal reminder first!", { duration: 5000 });
       return;
     }
-
     if (targetStage === "lost") {
       setPendingMoveClient(client); setLostReason(""); setLostRemarks(""); setShowLostDialog(true);
     } else if (targetStage === "smart_calling") {
@@ -322,18 +402,15 @@ export function InsuranceWorkspace() {
     if (!pendingMoveClient || !lostReason) { toast.error("Select a reason"); return; }
     moveStage.mutate({ clientId: pendingMoveClient.id, newStage: "lost", extras: { lost_reason: lostReason, notes: lostRemarks || undefined } });
   };
-
   const confirmCalling = () => {
     if (!pendingMoveClient || !callStatus) { toast.error("Select call status"); return; }
     if (!callRemarks.trim()) { toast.error("Add remarks"); return; }
     moveStage.mutate({ clientId: pendingMoveClient.id, newStage: "smart_calling", extras: { call_status: callStatus, call_remarks: callRemarks } });
   };
-
   const confirmFollowUp = () => {
     if (!pendingMoveClient || !followUpDate) { toast.error("Pick a date"); return; }
     moveStage.mutate({ clientId: pendingMoveClient.id, newStage: "follow_up", extras: { follow_up_date: format(followUpDate, "yyyy-MM-dd"), follow_up_time: followUpTime, notes: followUpRemarks || undefined } });
   };
-
   const setRenewalReminder = async () => {
     if (!selectedClient || !renewalDate) { toast.error("Pick a date"); return; }
     const { error } = await supabase.from("insurance_clients").update({
@@ -411,7 +488,7 @@ export function InsuranceWorkspace() {
         {[
           { key: "crm" as const, label: "Insurance CRM", icon: Shield, count: totalLeads },
           { key: "policy_book" as const, label: "Policy Book", icon: BookOpen, count: policyBookClients.length },
-          { key: "renewals" as const, label: "Renewal Data", icon: CalendarClock, count: renewalClients.length },
+          { key: "renewals" as const, label: "Renewal Data", icon: CalendarClock, count: renewalSummary.total },
         ].map(tab => (
           <Button
             key={tab.key}
@@ -423,10 +500,7 @@ export function InsuranceWorkspace() {
             <tab.icon className="h-3.5 w-3.5" />
             {tab.label}
             {tab.count > 0 && <Badge variant={activeView === tab.key ? "secondary" : "outline"} className="text-[9px] h-4 px-1">{tab.count}</Badge>}
-            {tab.key === "renewals" && renewalClients.filter(c => {
-              const d = differenceInDays(new Date(c.policy_expiry_date!), new Date());
-              return d <= 7;
-            }).length > 0 && (
+            {tab.key === "renewals" && renewalSummary.within7 > 0 && (
               <span className="relative flex h-2 w-2 ml-1">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
@@ -436,7 +510,6 @@ export function InsuranceWorkspace() {
         ))}
       </div>
 
-      {/* Notifications */}
       {insNotifications.length > 0 && <StageNotificationBanner items={insNotifications} />}
 
       {/* Import Dialog */}
@@ -464,120 +537,326 @@ export function InsuranceWorkspace() {
         }}
       />
 
-      {/* ── POLICY BOOK VIEW ── */}
+      {/* ══════════════════════════════════════════════════ */}
+      {/* ── POLICY BOOK VIEW (Enhanced) ── */}
+      {/* ══════════════════════════════════════════════════ */}
       {activeView === "policy_book" && (
-        <div className="space-y-3">
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search policy book..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 h-9" />
+        <div className="space-y-4">
+          {/* Toolbar */}
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name, phone, vehicle, policy number, insurer..."
+                value={pbSearch}
+                onChange={e => setPbSearch(e.target.value)}
+                className="pl-10 h-9 text-sm"
+              />
+            </div>
+            <Select value={pbPartnerFilter} onValueChange={setPbPartnerFilter}>
+              <SelectTrigger className="w-[180px] h-9 text-xs">
+                <SelectValue placeholder="All Partners" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Partners / Insurers</SelectItem>
+                {pbPartners.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Badge variant="outline" className="text-xs">{filteredPolicyBook.length} records</Badge>
           </div>
-          <div className="grid gap-3">
-            {policyBookClients.filter(c => {
-              if (!search.trim()) return true;
-              const s = search.toLowerCase();
-              return c.customer_name?.toLowerCase().includes(s) || c.phone?.includes(s) || c.vehicle_number?.toLowerCase().includes(s);
-            }).map(client => (
-              <Card key={client.id} className="border-emerald-200/50 hover:shadow-md transition-all cursor-pointer" onClick={() => setSelectedClient(client)}>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-sm">
-                        <Shield className="h-4 w-4 text-white" />
-                      </div>
-                      <div>
-                        <p className="font-bold text-sm">{client.customer_name || "Unknown"}</p>
-                        <p className="text-[11px] text-muted-foreground">{client.vehicle_number || "—"} • {client.current_insurer || "—"}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {client.current_premium && (
-                        <Badge variant="outline" className="text-xs">Rs.{client.current_premium.toLocaleString("en-IN")}</Badge>
-                      )}
-                      {client.renewal_reminder_set && <Badge className="bg-emerald-100 text-emerald-700 text-[9px]">✅ Renewal Set</Badge>}
-                      {client.incentive_eligible && <Badge className="bg-amber-100 text-amber-700 text-[9px]">⭐ Incentive</Badge>}
-                    </div>
-                  </div>
+
+          {/* Policy Book Table */}
+          <Card>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/30">
+                      <TableHead className="text-[10px] font-bold uppercase w-8">#</TableHead>
+                      <TableHead className="text-[10px] font-bold uppercase">Customer</TableHead>
+                      <TableHead className="text-[10px] font-bold uppercase">Phone</TableHead>
+                      <TableHead className="text-[10px] font-bold uppercase">Vehicle</TableHead>
+                      <TableHead className="text-[10px] font-bold uppercase">Insurer</TableHead>
+                      <TableHead className="text-[10px] font-bold uppercase">Policy No.</TableHead>
+                      <TableHead className="text-[10px] font-bold uppercase">Policy Type</TableHead>
+                      <TableHead className="text-[10px] font-bold uppercase">Premium</TableHead>
+                      <TableHead className="text-[10px] font-bold uppercase">Start Date</TableHead>
+                      <TableHead className="text-[10px] font-bold uppercase">Expiry Date</TableHead>
+                      <TableHead className="text-[10px] font-bold uppercase">Source</TableHead>
+                      <TableHead className="text-[10px] font-bold uppercase">Created</TableHead>
+                      <TableHead className="text-[10px] font-bold uppercase">Status</TableHead>
+                      <TableHead className="text-[10px] font-bold uppercase w-16">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredPolicyBook.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={14} className="text-center py-12 text-muted-foreground">
+                          <BookOpen className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                          <p className="text-sm">No policies found</p>
+                        </TableCell>
+                      </TableRow>
+                    ) : filteredPolicyBook.map((client, idx) => {
+                      const phone = displayPhone(client.phone);
+                      const waLink = getWhatsAppLink(client.phone);
+                      return (
+                        <TableRow key={client.id} className="hover:bg-muted/30 cursor-pointer text-xs" onClick={() => setSelectedClient(client)}>
+                          <TableCell className="font-mono text-muted-foreground">{idx + 1}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shrink-0">
+                                <User className="h-3 w-3 text-white" />
+                              </div>
+                              <div>
+                                <p className="font-semibold text-xs">{client.customer_name || "—"}</p>
+                                <p className="text-[10px] text-muted-foreground">{client.city || "—"}</p>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-mono text-xs">{phone || "—"}</TableCell>
+                          <TableCell>
+                            <div>
+                              <p className="font-mono font-semibold text-xs">{client.vehicle_number || "—"}</p>
+                              <p className="text-[10px] text-muted-foreground">{[client.vehicle_make, client.vehicle_model].filter(Boolean).join(" ") || "—"}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-xs">{client.current_insurer || "—"}</TableCell>
+                          <TableCell className="font-mono text-xs">{client.current_policy_number || "—"}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="text-[9px]">{client.current_policy_type || "—"}</Badge>
+                          </TableCell>
+                          <TableCell className="font-semibold text-xs">
+                            {client.current_premium ? `₹${client.current_premium.toLocaleString("en-IN")}` : "—"}
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            {client.policy_start_date ? format(new Date(client.policy_start_date), "dd/MM/yyyy") : "—"}
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            {client.policy_expiry_date ? format(new Date(client.policy_expiry_date), "dd/MM/yyyy") : "—"}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={cn("text-[9px]", getSourceColor(client.lead_source))}>
+                              {formatSource(client.lead_source, client.created_at)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-[10px] text-muted-foreground">
+                            {format(new Date(client.created_at), "dd MMM yy")}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              {client.renewal_reminder_set && <Badge className="bg-emerald-100 text-emerald-700 text-[8px] px-1">✅ Renewal</Badge>}
+                              {client.incentive_eligible && <Badge className="bg-amber-100 text-amber-700 text-[8px] px-1">⭐</Badge>}
+                            </div>
+                          </TableCell>
+                          <TableCell onClick={e => e.stopPropagation()}>
+                            <div className="flex gap-0.5">
+                              {phone && (
+                                <a href={`tel:${client.phone}`}>
+                                  <Button variant="ghost" size="icon" className="h-6 w-6"><PhoneCall className="h-3 w-3 text-primary" /></Button>
+                                </a>
+                              )}
+                              {waLink && (
+                                <a href={waLink} target="_blank" rel="noopener noreferrer">
+                                  <Button variant="ghost" size="icon" className="h-6 w-6"><MessageSquare className="h-3 w-3 text-green-600" /></Button>
+                                </a>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════ */}
+      {/* ── RENEWAL DATA VIEW (Enhanced) ── */}
+      {/* ══════════════════════════════════════════════════ */}
+      {activeView === "renewals" && (
+        <div className="space-y-4">
+          {/* Renewal Summary Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+            {[
+              { label: "Expired", count: renewalSummary.expired, color: "text-destructive", bg: "bg-destructive/10 border-destructive/20", filter: "expired" },
+              { label: "≤ 7 Days", count: renewalSummary.within7, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950/20 border-red-200", filter: "7" },
+              { label: "≤ 15 Days", count: renewalSummary.within15, color: "text-orange-600", bg: "bg-orange-50 dark:bg-orange-950/20 border-orange-200", filter: "15" },
+              { label: "≤ 30 Days", count: renewalSummary.within30, color: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-950/20 border-amber-200", filter: "30" },
+              { label: "≤ 60 Days", count: renewalSummary.within60, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/20 border-blue-200", filter: "60" },
+              { label: "All Upcoming", count: renewalSummary.total, color: "text-foreground", bg: "bg-muted/50 border-border", filter: "all" },
+            ].map(s => (
+              <Card
+                key={s.label}
+                className={cn("cursor-pointer hover:shadow-md transition-all border", s.bg, renewalWindow === s.filter && "ring-2 ring-primary shadow-md")}
+                onClick={() => setRenewalWindow(renewalWindow === s.filter ? "all" : s.filter)}
+              >
+                <CardContent className="pt-3 pb-3 text-center">
+                  <p className={cn("text-2xl font-bold", s.color)}>{s.count}</p>
+                  <p className="text-[10px] text-muted-foreground font-medium">{s.label}</p>
                 </CardContent>
               </Card>
             ))}
-            {policyBookClients.length === 0 && (
-              <div className="text-center py-12 text-muted-foreground">
-                <BookOpen className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                <p className="text-sm">No policies yet</p>
-              </div>
-            )}
           </div>
+
+          {/* Renewal Toolbar */}
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name, phone, vehicle number..."
+                value={renewalSearch}
+                onChange={e => setRenewalSearch(e.target.value)}
+                className="pl-10 h-9 text-sm"
+              />
+            </div>
+            <Select value={renewalSort} onValueChange={(v: any) => setRenewalSort(v)}>
+              <SelectTrigger className="w-[180px] h-9 text-xs">
+                <ArrowUpDown className="h-3 w-3 mr-1.5" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="days_asc">Expiry: Soonest First</SelectItem>
+                <SelectItem value="days_desc">Expiry: Latest First</SelectItem>
+                <SelectItem value="name">Name: A-Z</SelectItem>
+              </SelectContent>
+            </Select>
+            <Badge variant="outline" className="text-xs shrink-0">{renewalClients.length} results</Badge>
+          </div>
+
+          {/* Renewal Table */}
+          <Card>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/30">
+                      <TableHead className="text-[10px] font-bold uppercase w-8">#</TableHead>
+                      <TableHead className="text-[10px] font-bold uppercase">Customer</TableHead>
+                      <TableHead className="text-[10px] font-bold uppercase">Phone</TableHead>
+                      <TableHead className="text-[10px] font-bold uppercase">Vehicle</TableHead>
+                      <TableHead className="text-[10px] font-bold uppercase">Insurer</TableHead>
+                      <TableHead className="text-[10px] font-bold uppercase">Policy Type</TableHead>
+                      <TableHead className="text-[10px] font-bold uppercase">Premium</TableHead>
+                      <TableHead className="text-[10px] font-bold uppercase">Expiry Date</TableHead>
+                      <TableHead className="text-[10px] font-bold uppercase">Days Left</TableHead>
+                      <TableHead className="text-[10px] font-bold uppercase">Source</TableHead>
+                      <TableHead className="text-[10px] font-bold uppercase w-20">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {renewalClients.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={11} className="text-center py-12 text-muted-foreground">
+                          <CalendarClock className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                          <p className="text-sm">No upcoming renewals in this window</p>
+                        </TableCell>
+                      </TableRow>
+                    ) : renewalClients.map((client, idx) => {
+                      const days = differenceInDays(new Date(client.policy_expiry_date!), new Date());
+                      const isExpired = days < 0;
+                      const isUrgent = days >= 0 && days <= 7;
+                      const isWarning = days > 7 && days <= 15;
+                      const phone = displayPhone(client.phone);
+                      const waLink = getWhatsAppLink(client.phone);
+
+                      return (
+                        <TableRow
+                          key={client.id}
+                          className={cn(
+                            "cursor-pointer text-xs transition-colors",
+                            isExpired ? "bg-red-50/50 dark:bg-red-950/10 hover:bg-red-50 dark:hover:bg-red-950/20" :
+                            isUrgent ? "bg-amber-50/50 dark:bg-amber-950/10 hover:bg-amber-50 dark:hover:bg-amber-950/20" :
+                            isWarning ? "bg-orange-50/30 dark:bg-orange-950/10 hover:bg-orange-50/50" :
+                            "hover:bg-muted/30"
+                          )}
+                          onClick={() => setSelectedClient(client)}
+                        >
+                          <TableCell className="font-mono text-muted-foreground">{idx + 1}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <div className={cn("w-7 h-7 rounded-full flex items-center justify-center shrink-0",
+                                isExpired ? "bg-gradient-to-br from-red-500 to-red-600" :
+                                isUrgent ? "bg-gradient-to-br from-amber-500 to-amber-600" :
+                                "bg-gradient-to-br from-blue-500 to-blue-600"
+                              )}>
+                                <CalendarClock className="h-3 w-3 text-white" />
+                              </div>
+                              <div>
+                                <p className="font-semibold text-xs">{client.customer_name || "—"}</p>
+                                <p className="text-[10px] text-muted-foreground">{client.city || ""}</p>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-mono text-xs">{phone || "—"}</TableCell>
+                          <TableCell>
+                            <div>
+                              <p className="font-mono font-semibold text-xs">{client.vehicle_number || "—"}</p>
+                              <p className="text-[10px] text-muted-foreground">{[client.vehicle_make, client.vehicle_model].filter(Boolean).join(" ") || ""}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-xs">{client.current_insurer || "—"}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="text-[9px]">{client.current_policy_type || "—"}</Badge>
+                          </TableCell>
+                          <TableCell className="font-semibold text-xs">
+                            {client.current_premium ? `₹${client.current_premium.toLocaleString("en-IN")}` : "—"}
+                          </TableCell>
+                          <TableCell className="text-xs font-medium">
+                            {format(new Date(client.policy_expiry_date!), "dd MMM yyyy")}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={isExpired ? "destructive" : "outline"}
+                              className={cn("text-[10px] font-bold",
+                                isExpired ? "" :
+                                isUrgent ? "bg-red-100 text-red-700 border-red-200" :
+                                isWarning ? "bg-orange-100 text-orange-700 border-orange-200" :
+                                days <= 30 ? "bg-amber-100 text-amber-700 border-amber-200" :
+                                "bg-blue-100 text-blue-700 border-blue-200"
+                              )}
+                            >
+                              {isExpired ? `Expired ${Math.abs(days)}d ago` : `${days} days`}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={cn("text-[9px]", getSourceColor(client.lead_source))}>
+                              {formatSource(client.lead_source, client.created_at)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell onClick={e => e.stopPropagation()}>
+                            <div className="flex gap-0.5">
+                              {phone && (
+                                <a href={`tel:${client.phone}`}>
+                                  <Button variant="ghost" size="icon" className="h-6 w-6"><PhoneCall className="h-3 w-3 text-primary" /></Button>
+                                </a>
+                              )}
+                              {waLink && (
+                                <a href={waLink} target="_blank" rel="noopener noreferrer">
+                                  <Button variant="ghost" size="icon" className="h-6 w-6"><MessageSquare className="h-3 w-3 text-green-600" /></Button>
+                                </a>
+                              )}
+                              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setSelectedClient(client)}>
+                                <Eye className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
 
-      {/* ── RENEWAL VIEW ── */}
-      {activeView === "renewals" && (
-        <div className="space-y-3">
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search renewals..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 h-9" />
-          </div>
-          <div className="grid gap-3">
-            {renewalClients.filter(c => {
-              if (!search.trim()) return true;
-              const s = search.toLowerCase();
-              return c.customer_name?.toLowerCase().includes(s) || c.phone?.includes(s) || c.vehicle_number?.toLowerCase().includes(s);
-            }).map(client => {
-              const days = differenceInDays(new Date(client.policy_expiry_date!), new Date());
-              const isUrgent = days <= 7;
-              const isExpired = days < 0;
-              return (
-                <Card key={client.id} className={cn(
-                  "hover:shadow-md transition-all cursor-pointer",
-                  isExpired ? "border-red-300 bg-red-50/30 dark:bg-red-950/10" :
-                  isUrgent ? "border-amber-300 bg-amber-50/30 dark:bg-amber-950/10" :
-                  "border-border/50"
-                )} onClick={() => setSelectedClient(client)}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shadow-sm",
-                          isExpired ? "bg-gradient-to-br from-red-500 to-red-600" :
-                          isUrgent ? "bg-gradient-to-br from-amber-500 to-amber-600" :
-                          "bg-gradient-to-br from-blue-500 to-blue-600"
-                        )}>
-                          <CalendarClock className="h-4 w-4 text-white" />
-                        </div>
-                        <div>
-                          <p className="font-bold text-sm">{client.customer_name || "Unknown"}</p>
-                          <p className="text-[11px] text-muted-foreground">{client.vehicle_number || "—"} • {client.current_insurer || "—"}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <Badge variant={isExpired ? "destructive" : isUrgent ? "default" : "outline"} className={cn("text-xs", isUrgent && !isExpired && "bg-amber-500")}>
-                          {isExpired ? `Expired ${Math.abs(days)}d ago` : `${days} days left`}
-                        </Badge>
-                        <p className="text-[10px] text-muted-foreground mt-1">
-                          Expiry: {format(new Date(client.policy_expiry_date!), "dd MMM yyyy")}
-                        </p>
-                        {isUrgent && (
-                          <span className="relative flex h-2 w-2 ml-auto mt-1">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-            {renewalClients.length === 0 && (
-              <div className="text-center py-12 text-muted-foreground">
-                <CalendarClock className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                <p className="text-sm">No upcoming renewals</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── CRM VIEW ── */}
+      {/* ══════════════════════════════════════════════════ */}
+      {/* ── CRM VIEW (Enhanced Lead Table) ── */}
+      {/* ══════════════════════════════════════════════════ */}
       {activeView === "crm" && (<>
       {/* Stage Tabs */}
       <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
@@ -615,148 +894,160 @@ export function InsuranceWorkspace() {
         <Input placeholder="Search name, phone, vehicle, city..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 h-9" />
       </div>
 
-      {/* Lead Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        <AnimatePresence mode="popLayout">
-          {filtered.map(client => {
-            const normStage = normalizeStage(client.pipeline_stage);
-            const stage = PIPELINE_STAGES.find(s => s.value === normStage) || PIPELINE_STAGES[0];
-            const stageIdx = PIPELINE_STAGES.findIndex(s => s.value === stage.value);
-            const phone = displayPhone(client.phone);
-            const waLink = getWhatsAppLink(client.phone);
-            const daysToExpiry = client.policy_expiry_date ? differenceInDays(new Date(client.policy_expiry_date), new Date()) : null;
+      {/* Lead Table - Clean Row/Column Layout */}
+      <Card>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/30">
+                  <TableHead className="text-[10px] font-bold uppercase w-8">#</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase">Customer</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase">Phone</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase">Vehicle</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase">Insurer</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase">Stage</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase">Source</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase">Expiry</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase">Premium</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase">Follow-Up</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase">Created</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase w-24">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={12} className="text-center py-12 text-muted-foreground">Loading...</TableCell>
+                  </TableRow>
+                ) : filtered.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={12} className="text-center py-12 text-muted-foreground">
+                      <Shield className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                      <p className="text-sm">No leads found</p>
+                      <Button size="sm" variant="outline" className="mt-3 gap-1.5" onClick={() => setShowAddLead(true)}>
+                        <Plus className="h-3.5 w-3.5" /> Add First Lead
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ) : filtered.map((client, idx) => {
+                  const normStage = normalizeStage(client.pipeline_stage);
+                  const stage = PIPELINE_STAGES.find(s => s.value === normStage) || PIPELINE_STAGES[0];
+                  const phone = displayPhone(client.phone);
+                  const waLink = getWhatsAppLink(client.phone);
+                  const daysToExpiry = client.policy_expiry_date ? differenceInDays(new Date(client.policy_expiry_date), new Date()) : null;
 
-            return (
-              <motion.div
-                key={client.id}
-                layout
-                draggable
-                onDragStart={() => handleDragStart(client)}
-                onDragEnd={handleDragEnd}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.2 }}
-              >
-                <Card
-                  className={cn("border hover:shadow-lg transition-all duration-300 group cursor-pointer hover:-translate-y-0.5 overflow-hidden", stage.border)}
-                  onClick={() => setSelectedClient(client)}
-                >
-                  <div className={`h-1 bg-gradient-to-r ${stage.color}`} />
-                  <CardContent className="p-4 space-y-3">
-                    {/* Header */}
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-2.5">
-                        <div className={cn("w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center shadow-sm", stage.color)}>
-                          <User className="h-4 w-4 text-white" />
+                  return (
+                    <TableRow
+                      key={client.id}
+                      draggable
+                      onDragStart={() => handleDragStart(client)}
+                      onDragEnd={handleDragEnd}
+                      className="cursor-pointer text-xs hover:bg-muted/30 transition-colors group"
+                      onClick={() => setSelectedClient(client)}
+                    >
+                      <TableCell className="font-mono text-muted-foreground">{idx + 1}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div className={cn("w-7 h-7 rounded-full bg-gradient-to-br flex items-center justify-center shrink-0", stage.color)}>
+                            <User className="h-3 w-3 text-white" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-xs leading-tight">{client.customer_name || "Unknown"}</p>
+                            <p className="text-[10px] text-muted-foreground">{client.city || "—"}</p>
+                          </div>
                         </div>
+                      </TableCell>
+                      <TableCell className="font-mono text-xs">{phone || "—"}</TableCell>
+                      <TableCell>
                         <div>
-                          <p className="font-bold text-sm leading-tight">{client.customer_name || "Unknown"}</p>
-                          <p className="text-[11px] text-muted-foreground">{client.city || "—"} • {format(new Date(client.created_at), "dd MMM")}</p>
+                          {client.vehicle_number && <p className="font-mono font-semibold text-xs">{client.vehicle_number}</p>}
+                          <p className="text-[10px] text-muted-foreground">{[client.vehicle_make, client.vehicle_model].filter(Boolean).join(" ") || "—"}</p>
                         </div>
-                      </div>
-                      <div className="flex flex-col items-end gap-1">
-                        {client.lead_source && (
-                          <Badge variant="outline" className={cn("text-[9px] px-1.5 py-0", getSourceColor(client.lead_source))}>
-                            {client.lead_source}
-                          </Badge>
-                        )}
-                        <Badge variant="outline" className={cn("text-[9px] px-1.5 py-0", stage.bg, stage.text, "border", stage.border)}>
+                      </TableCell>
+                      <TableCell className="text-xs">{client.current_insurer || "—"}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={cn("text-[9px] px-1.5", stage.bg, stage.text, "border", stage.border)}>
                           {stage.label}
                         </Badge>
-                      </div>
-                    </div>
-
-                    {/* Info */}
-                    <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px]">
-                      {phone && (
-                        <div className="flex items-center gap-1.5 text-muted-foreground">
-                          <Phone className="h-3 w-3 shrink-0" /> <span className="font-mono">{phone}</span>
-                        </div>
-                      )}
-                      {client.vehicle_number && (
-                        <div className="flex items-center gap-1.5 text-muted-foreground">
-                          <Car className="h-3 w-3 shrink-0" /> <span className="font-mono font-medium">{client.vehicle_number}</span>
-                        </div>
-                      )}
-                      {client.current_insurer && (
-                        <div className="flex items-center gap-1.5 text-muted-foreground">
-                          <Shield className="h-3 w-3 shrink-0" /> {client.current_insurer}
-                        </div>
-                      )}
-                      {daysToExpiry !== null && (
-                        <div className={cn("flex items-center gap-1.5 font-semibold", daysToExpiry <= 7 ? "text-red-600" : daysToExpiry <= 30 ? "text-orange-600" : "text-muted-foreground")}>
-                          <Clock className="h-3 w-3 shrink-0" /> {daysToExpiry < 0 ? `Expired ${Math.abs(daysToExpiry)}d ago` : `${daysToExpiry}d to expiry`}
-                        </div>
-                      )}
-                      {client.current_premium && (
-                        <div className="flex items-center gap-1.5 text-muted-foreground font-semibold">
-                          <CreditCard className="h-3 w-3 shrink-0" /> Rs.{client.current_premium.toLocaleString("en-IN")}
-                        </div>
-                      )}
-                      {client.call_status && (
-                        <div className="flex items-center gap-1.5 text-muted-foreground">
-                          <PhoneCall className="h-3 w-3 shrink-0" /> {client.call_status}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Stage progress */}
-                    <div className="flex gap-0.5">
-                      {PIPELINE_STAGES.slice(0, 5).map((s, i) => (
-                        <div key={s.value} className={cn("h-1.5 flex-1 rounded-full transition-colors", i <= stageIdx && stageIdx < 5 ? s.dot : "bg-muted")} />
-                      ))}
-                    </div>
-
-                    {/* Quick Actions */}
-                    <div className="flex gap-1 items-center opacity-0 group-hover:opacity-100 transition-all duration-200 pt-1 border-t border-border/30" onClick={e => e.stopPropagation()}>
-                      {phone && (
-                        <>
-                          <a href={`tel:${client.phone}`}>
-                            <Button size="icon" variant="ghost" className="h-7 w-7"><PhoneCall className="h-3.5 w-3.5 text-primary" /></Button>
-                          </a>
-                          {waLink && (
-                            <a href={waLink} target="_blank" rel="noopener noreferrer">
-                              <Button size="icon" variant="ghost" className="h-7 w-7"><MessageSquare className="h-3.5 w-3.5 text-green-600" /></Button>
-                            </a>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={cn("text-[9px]", getSourceColor(client.lead_source))}>
+                          {formatSource(client.lead_source, client.created_at)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {daysToExpiry !== null ? (
+                          <span className={cn("text-xs font-semibold",
+                            daysToExpiry < 0 ? "text-red-600" : daysToExpiry <= 7 ? "text-red-600" : daysToExpiry <= 30 ? "text-orange-600" : "text-muted-foreground"
+                          )}>
+                            {daysToExpiry < 0 ? `Exp ${Math.abs(daysToExpiry)}d` : `${daysToExpiry}d`}
+                          </span>
+                        ) : <span className="text-muted-foreground">—</span>}
+                      </TableCell>
+                      <TableCell className="text-xs font-medium">
+                        {client.current_premium ? `₹${client.current_premium.toLocaleString("en-IN")}` : client.quote_amount ? `₹${client.quote_amount.toLocaleString("en-IN")}` : "—"}
+                      </TableCell>
+                      <TableCell className="text-[10px]">
+                        {client.follow_up_date ? (
+                          <span className={cn("font-medium",
+                            differenceInDays(new Date(client.follow_up_date), new Date()) < 0 ? "text-red-600" : "text-orange-600"
+                          )}>
+                            {format(new Date(client.follow_up_date), "dd MMM")}
+                            {client.follow_up_time ? ` ${client.follow_up_time}` : ""}
+                          </span>
+                        ) : "—"}
+                      </TableCell>
+                      <TableCell className="text-[10px] text-muted-foreground">
+                        {format(new Date(client.created_at), "dd MMM yy")}
+                      </TableCell>
+                      <TableCell onClick={e => e.stopPropagation()}>
+                        <div className="flex gap-0.5 items-center">
+                          {phone && (
+                            <>
+                              <a href={`tel:${client.phone}`}>
+                                <Button variant="ghost" size="icon" className="h-6 w-6"><PhoneCall className="h-3 w-3 text-primary" /></Button>
+                              </a>
+                              {waLink && (
+                                <a href={waLink} target="_blank" rel="noopener noreferrer">
+                                  <Button variant="ghost" size="icon" className="h-6 w-6"><MessageSquare className="h-3 w-3 text-green-600" /></Button>
+                                </a>
+                              )}
+                            </>
                           )}
-                        </>
-                      )}
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button size="sm" variant="outline" className="h-7 text-[11px] gap-1 ml-auto">
-                            Move <ChevronRight className="h-3 w-3" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                          {PIPELINE_STAGES.filter(s => s.value !== normStage).map(s => {
-                            const SIcon = s.icon;
-                            return (
-                              <DropdownMenuItem key={s.value} onClick={() => handleMove(client, s.value)} className="gap-2 text-xs">
-                                <SIcon className="h-3.5 w-3.5" /> {s.label}
-                              </DropdownMenuItem>
-                            );
-                          })}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
-      </div>
-
-      {filtered.length === 0 && !isLoading && (
-        <div className="text-center py-16 text-muted-foreground">
-          <Shield className="h-12 w-12 mx-auto mb-3 opacity-30" />
-          <p className="text-sm font-medium">No leads found</p>
-          <Button size="sm" variant="outline" className="mt-3 gap-1.5" onClick={() => setShowAddLead(true)}>
-            <Plus className="h-3.5 w-3.5" /> Add First Lead
-          </Button>
-        </div>
-      )}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button size="sm" variant="outline" className="h-6 text-[10px] gap-0.5 px-1.5">
+                                Move <ChevronRight className="h-2.5 w-2.5" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-44">
+                              {PIPELINE_STAGES.filter(s => s.value !== normStage).map(s => {
+                                const SIcon = s.icon;
+                                return (
+                                  <DropdownMenuItem key={s.value} onClick={() => handleMove(client, s.value)} className="gap-2 text-xs">
+                                    <SIcon className="h-3 w-3" /> {s.label}
+                                  </DropdownMenuItem>
+                                );
+                              })}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+          {filtered.length > 0 && (
+            <div className="flex items-center justify-between px-4 py-2 border-t text-xs text-muted-foreground bg-muted/20">
+              <span>Showing {filtered.length} leads</span>
+              <span>{stageCounts["won"] + stageCounts["policy_issued"]} won • {stageCounts["lost"]} lost • {convRate}% conversion</span>
+            </div>
+          )}
+        </CardContent>
+      </Card>
       </>)}
 
       {/* ── CLIENT DETAIL DIALOG ── */}
@@ -780,7 +1071,9 @@ export function InsuranceWorkspace() {
                   {/* Badges */}
                   <div className="flex gap-2 flex-wrap">
                     <Badge className={cn(stage.bg, stage.text, "border", stage.border)}>{stage.label}</Badge>
-                    {selectedClient.lead_source && <Badge variant="outline" className={getSourceColor(selectedClient.lead_source)}>{selectedClient.lead_source}</Badge>}
+                    <Badge variant="outline" className={getSourceColor(selectedClient.lead_source)}>
+                      {formatSource(selectedClient.lead_source, selectedClient.created_at)}
+                    </Badge>
                     {selectedClient.renewal_reminder_set && <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">✅ Renewal Set</Badge>}
                     {selectedClient.incentive_eligible && <Badge className="bg-amber-100 text-amber-700 border-amber-200">⭐ Incentive Eligible</Badge>}
                   </div>
@@ -798,12 +1091,18 @@ export function InsuranceWorkspace() {
 
                   {/* Vehicle */}
                   <div className="space-y-2">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Vehicle</p>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Vehicle & Policy</p>
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div><span className="text-muted-foreground">Number:</span> {selectedClient.vehicle_number || "—"}</div>
                       <div><span className="text-muted-foreground">Model:</span> {[selectedClient.vehicle_make, selectedClient.vehicle_model].filter(Boolean).join(" ") || "—"}</div>
                       <div><span className="text-muted-foreground">Year:</span> {selectedClient.vehicle_year || "—"}</div>
                       <div><span className="text-muted-foreground">Insurer:</span> {selectedClient.current_insurer || "—"}</div>
+                      <div><span className="text-muted-foreground">Policy No:</span> {selectedClient.current_policy_number || "—"}</div>
+                      <div><span className="text-muted-foreground">Policy Type:</span> {selectedClient.current_policy_type || "—"}</div>
+                      <div><span className="text-muted-foreground">Premium:</span> {selectedClient.current_premium ? `₹${selectedClient.current_premium.toLocaleString("en-IN")}` : "—"}</div>
+                      <div><span className="text-muted-foreground">NCB:</span> {selectedClient.ncb_percentage ? `${selectedClient.ncb_percentage}%` : "—"}</div>
+                      {selectedClient.policy_start_date && <div><span className="text-muted-foreground">Start:</span> {format(new Date(selectedClient.policy_start_date), "dd MMM yyyy")}</div>}
+                      {selectedClient.policy_expiry_date && <div><span className="text-muted-foreground">Expiry:</span> {format(new Date(selectedClient.policy_expiry_date), "dd MMM yyyy")}</div>}
                     </div>
                   </div>
 
@@ -817,6 +1116,14 @@ export function InsuranceWorkspace() {
                         {selectedClient.follow_up_date && <div><span className="text-muted-foreground">Follow-up:</span> {format(new Date(selectedClient.follow_up_date), "dd MMM yyyy")} {selectedClient.follow_up_time || ""}</div>}
                         {selectedClient.lost_reason && <div className="col-span-2"><span className="text-muted-foreground">Lost Reason:</span> {selectedClient.lost_reason}</div>}
                       </div>
+                    </div>
+                  )}
+
+                  {/* Notes */}
+                  {selectedClient.notes && (
+                    <div className="space-y-1">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Notes</p>
+                      <p className="text-sm text-muted-foreground bg-muted/30 rounded-lg p-2">{selectedClient.notes}</p>
                     </div>
                   )}
 
@@ -1000,13 +1307,11 @@ export function InsuranceWorkspace() {
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="w-full justify-start text-left h-9">
-                    <CalendarIcon className="h-4 w-4 mr-2" />
-                    {followUpDate ? format(followUpDate, "dd MMM yyyy") : "Pick a date"}
+                    <CalendarIcon className="h-4 w-4 mr-2 text-muted-foreground" />
+                    {followUpDate ? format(followUpDate, "PPP") : "Pick a date"}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar mode="single" selected={followUpDate} onSelect={setFollowUpDate} initialFocus className="p-3 pointer-events-auto" />
-                </PopoverContent>
+                <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={followUpDate} onSelect={setFollowUpDate} /></PopoverContent>
               </Popover>
             </div>
             <div className="space-y-1">
@@ -1014,7 +1319,7 @@ export function InsuranceWorkspace() {
               <Input type="time" value={followUpTime} onChange={e => setFollowUpTime(e.target.value)} className="h-9" />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Remarks</Label>
+              <Label className="text-xs">Notes</Label>
               <Textarea placeholder="Follow-up notes..." value={followUpRemarks} onChange={e => setFollowUpRemarks(e.target.value)} className="h-16" />
             </div>
           </div>
@@ -1024,57 +1329,42 @@ export function InsuranceWorkspace() {
         </DialogContent>
       </Dialog>
 
+      {/* ── QUOTE MODAL ── */}
+      {showQuoteModal && selectedClient && (
+        <InsuranceQuoteModal open={showQuoteModal} onOpenChange={setShowQuoteModal} client={selectedClient} />
+      )}
+
+      {/* ── UPLOAD POLICY ── */}
+      {showUploadPolicy && selectedClient && (
+        <Dialog open={showUploadPolicy} onOpenChange={setShowUploadPolicy}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader><DialogTitle>Upload Policy Document</DialogTitle></DialogHeader>
+            <InsurancePolicyDocumentUploader defaultClientId={selectedClient.id} onDone={() => setShowUploadPolicy(false)} />
+          </DialogContent>
+        </Dialog>
+      )}
+
       {/* ── RENEWAL REMINDER DIALOG ── */}
       <Dialog open={showRenewalDialog} onOpenChange={setShowRenewalDialog}>
         <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle className="flex items-center gap-2"><Bell className="h-5 w-5 text-emerald-600" /> Set Renewal Reminder</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">Set reminder date for next year's renewal. This marks the sale as incentive-eligible.</p>
+            <p className="text-sm text-muted-foreground">Setting a renewal reminder makes this client eligible for incentives and moves them to "Policy Issued" stage.</p>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="w-full justify-start text-left h-9">
-                  <CalendarIcon className="h-4 w-4 mr-2" />
-                  {renewalDate ? format(renewalDate, "dd MMM yyyy") : "Pick renewal date"}
+                  <CalendarIcon className="h-4 w-4 mr-2 text-muted-foreground" />
+                  {renewalDate ? format(renewalDate, "PPP") : "Pick renewal date"}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar mode="single" selected={renewalDate} onSelect={setRenewalDate} initialFocus className="p-3 pointer-events-auto" />
-              </PopoverContent>
+              <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={renewalDate} onSelect={setRenewalDate} /></PopoverContent>
             </Popover>
           </div>
           <DialogFooter>
-            <Button onClick={setRenewalReminder} disabled={!renewalDate} className="bg-emerald-600 hover:bg-emerald-700 text-white">Set Reminder</Button>
+            <Button onClick={setRenewalReminder} disabled={!renewalDate} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5">
+              <Bell className="h-4 w-4" /> Set Reminder & Move
+            </Button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ── QUOTE MODAL ── */}
-      {showQuoteModal && selectedClient && (
-        <InsuranceQuoteModal
-          open={showQuoteModal}
-          onOpenChange={(o) => { setShowQuoteModal(o); if (!o) setSelectedClient(null); }}
-          client={{
-            customer_name: selectedClient.customer_name || "Customer",
-            phone: selectedClient.phone,
-            email: selectedClient.email,
-            city: selectedClient.city,
-            vehicle_make: selectedClient.vehicle_make,
-            vehicle_model: selectedClient.vehicle_model,
-            vehicle_number: selectedClient.vehicle_number,
-            vehicle_year: selectedClient.vehicle_year,
-            current_insurer: selectedClient.current_insurer,
-            current_policy_type: selectedClient.current_policy_type,
-            ncb_percentage: selectedClient.ncb_percentage,
-            current_premium: selectedClient.current_premium,
-          }}
-        />
-      )}
-
-      {/* ── UPLOAD POLICY ── */}
-      <Dialog open={showUploadPolicy} onOpenChange={setShowUploadPolicy}>
-        <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle className="flex items-center gap-2"><Upload className="h-5 w-5 text-primary" /> Upload Policy Document</DialogTitle></DialogHeader>
-          <InsurancePolicyDocumentUploader defaultClientId={selectedClient?.id || undefined} onDone={() => { setShowUploadPolicy(false); queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] }); }} />
         </DialogContent>
       </Dialog>
     </div>
