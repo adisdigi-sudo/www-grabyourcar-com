@@ -297,7 +297,7 @@ export function HSRPUnifiedBookingForm() {
         vehicle_class: formData.vehicleCategory.toUpperCase(),
         state: formData.state,
         owner_name: formData.ownerName,
-        mobile: formData.mobile,
+        mobile: normalizedMobile,
         email: formData.email,
         address: formData.address,
         pincode: formData.pincode,
@@ -326,7 +326,7 @@ export function HSRPUnifiedBookingForm() {
         bookingId: booking.id,
         customerName: formData.ownerName,
         customerEmail: formData.email,
-        customerPhone: formData.mobile,
+        customerPhone: normalizedMobile,
         description: `${formData.serviceType.toUpperCase()} for ${formData.registrationNumber}`,
         notes: {
           tracking_id: trackingId,
@@ -344,7 +344,7 @@ export function HSRPUnifiedBookingForm() {
 
           triggerWhatsApp({
             event: "hsrp_order_placed",
-            phone: formData.mobile,
+            phone: normalizedMobile,
             name: formData.ownerName,
             data: { tracking_id: trackingId, service: formData.serviceType, vehicle: formData.registrationNumber },
           });
