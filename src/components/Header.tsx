@@ -367,7 +367,7 @@ export const Header = () => {
                   className="px-3 py-2.5 text-sm font-medium text-primary hover:bg-muted rounded-lg transition-colors flex items-center gap-3"
                   onClick={() => setMenuOpen(false)}
                 >
-                  <User className="h-5 w-5" />
+                  <User className="h-4 w-4" />
                   Login / Sign Up
                 </Link>
               )}
