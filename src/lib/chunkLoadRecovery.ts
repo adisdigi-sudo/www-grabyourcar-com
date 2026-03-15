@@ -1,0 +1,52 @@
+const DYNAMIC_IMPORT_ERROR_PATTERNS = [
+  "Failed to fetch dynamically imported module",
+  "Importing a module script failed",
+  "Failed to fetch module",
+];
+
+const DEFAULT_MAX_ATTEMPTS = 3;
+const CACHE_BUST_PARAM = "__v";
+
+const getErrorMessage = (error: unknown): string => {
+  if (typeof error === "string") return error;
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    return typeof message === "string" ? message : "";
+  }
+  return "";
+};
+
+export const isDynamicImportError = (error: unknown): boolean => {
+  const message = getErrorMessage(error);
+  return DYNAMIC_IMPORT_ERROR_PATTERNS.some((pattern) => message.includes(pattern));
+};
+
+export const recoverFromChunkLoadError = (
+  storageKey = "chunk_load_recovery",
+  maxAttempts = DEFAULT_MAX_ATTEMPTS
+): boolean => {
+  try {
+    const currentAttempts = Number.parseInt(sessionStorage.getItem(storageKey) ?? "0", 10);
+    if (!Number.isNaN(currentAttempts) && currentAttempts >= maxAttempts) {
+      return false;
+    }
+
+    sessionStorage.setItem(storageKey, String(Number.isNaN(currentAttempts) ? 1 : currentAttempts + 1));
+
+    const nextUrl = new URL(window.location.href);
+    nextUrl.searchParams.set(CACHE_BUST_PARAM, Date.now().toString());
+    window.location.replace(nextUrl.toString());
+    return true;
+  } catch {
+    window.location.reload();
+    return true;
+  }
+};
+
+export const resetChunkLoadRecovery = (storageKey = "chunk_load_recovery"): void => {
+  try {
+    sessionStorage.removeItem(storageKey);
+  } catch {
+    // ignore
+  }
+};

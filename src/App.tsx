@@ -13,6 +13,7 @@ import { AdminSubdomainRouter } from "@/components/AdminSubdomainRouter";
 import { isAdminSubdomain } from "@/hooks/useAdminSubdomain";
 import { useGlobalRealtimeSync } from "@/hooks/useRealtimeSync";
 import { VerticalProvider } from "@/hooks/useVerticalAccess";
+import { isDynamicImportError, recoverFromChunkLoadError } from "@/lib/chunkLoadRecovery";
 
 // Retry wrapper for lazy imports — handles stale chunk errors after deployments
 function lazyRetry<T extends ComponentType<any>>(
@@ -20,13 +21,10 @@ function lazyRetry<T extends ComponentType<any>>(
 ): React.LazyExoticComponent<T> {
   return lazy(() =>
     factory().catch((err) => {
-      const key = "chunk_retry";
-      if (!sessionStorage.getItem(key)) {
-        sessionStorage.setItem(key, "1");
-        window.location.reload();
+      if (isDynamicImportError(err) && recoverFromChunkLoadError("route_chunk_recovery")) {
         return new Promise(() => {});
       }
-      sessionStorage.removeItem(key);
+
       throw err;
     })
   );
