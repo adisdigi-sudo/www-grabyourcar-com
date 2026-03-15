@@ -29,6 +29,25 @@ interface PaymentSuccessData {
   booking: any;
 }
 
+const ORDER_FUNCTION = "razorpay-create-order-v2";
+const VERIFY_FUNCTION = "razorpay-verify-payment-v2";
+
+const parseFunctionError = (error: unknown, fallback: string) => {
+  if (!error || typeof error !== "object") return fallback;
+
+  const err = error as { message?: string; context?: unknown };
+  if (typeof err.context === "string") {
+    try {
+      const parsed = JSON.parse(err.context) as { error?: string; message?: string };
+      return parsed.error || parsed.message || err.message || fallback;
+    } catch {
+      // ignore JSON parsing errors
+    }
+  }
+
+  return err.message || fallback;
+};
+
 export const useRazorpay = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isScriptLoaded, setIsScriptLoaded] = useState(false);
@@ -78,15 +97,21 @@ export const useRazorpay = () => {
       setIsLoading(true);
 
       try {
-        // Get the current session
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session?.access_token) {
           throw new Error("Please login to make payment");
         }
 
+        const authHeaders = {
+          Authorization: `Bearer ${session.access_token}`,
+        };
+
         // Create order via edge function
         const { data: orderData, error: orderError } = await supabase.functions.invoke(
-          "razorpay-create-order",
+          ORDER_FUNCTION,
           {
             body: {
               amount,
@@ -95,11 +120,16 @@ export const useRazorpay = () => {
               bookingId,
               notes,
             },
+            headers: authHeaders,
           }
         );
 
-        if (orderError || !orderData?.success) {
-          throw new Error(orderData?.error || orderError?.message || "Failed to create order");
+        if (orderError) {
+          throw new Error(parseFunctionError(orderError, "Failed to create order"));
+        }
+
+        if (!orderData?.success) {
+          throw new Error(orderData?.error || "Failed to create order");
         }
 
         const { order, key } = orderData;
@@ -131,9 +161,17 @@ export const useRazorpay = () => {
             razorpay_signature: string;
           }) => {
             try {
+              const {
+                data: { session: verifySession },
+              } = await supabase.auth.getSession();
+
+              if (!verifySession?.access_token) {
+                throw new Error("Session expired before payment verification");
+              }
+
               // Verify payment via edge function
               const { data: verifyData, error: verifyError } = await supabase.functions.invoke(
-                "razorpay-verify-payment",
+                VERIFY_FUNCTION,
                 {
                   body: {
                     razorpay_order_id: response.razorpay_order_id,
@@ -142,10 +180,17 @@ export const useRazorpay = () => {
                     bookingType,
                     bookingId,
                   },
+                  headers: {
+                    Authorization: `Bearer ${verifySession.access_token}`,
+                  },
                 }
               );
 
-              if (verifyError || !verifyData?.success) {
+              if (verifyError) {
+                throw new Error(parseFunctionError(verifyError, "Payment verification failed"));
+              }
+
+              if (!verifyData?.success) {
                 throw new Error(verifyData?.error || "Payment verification failed");
               }
 
