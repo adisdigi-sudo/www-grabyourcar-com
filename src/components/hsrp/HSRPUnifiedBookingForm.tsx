@@ -221,16 +221,22 @@ export function HSRPUnifiedBookingForm() {
     return () => { if (rcLookupTimer.current) clearTimeout(rcLookupTimer.current); };
   }, [formData.registrationNumber]);
 
-  // ─── AUTO-ADVANCE: Step 1 → when RC fetched + service type selected ───
+  // ─── AUTO-ADVANCE: Step 1 → when category + service is ready ───
   useEffect(() => {
-    if (step === 1 && formData.serviceType && formData.vehicleCategory && rcLookup.data) {
+    const canAdvance =
+      step === 1 &&
+      formData.serviceType &&
+      formData.vehicleCategory &&
+      (Boolean(rcLookup.data) || Boolean(rcLookup.error));
+
+    if (canAdvance) {
       const t = setTimeout(() => {
         setStep(2);
         saveAbandonedCart(2);
       }, 500);
       return () => clearTimeout(t);
     }
-  }, [formData.serviceType, formData.vehicleCategory, rcLookup.data, step]);
+  }, [formData.serviceType, formData.vehicleCategory, rcLookup.data, rcLookup.error, step]);
 
   // ─── AUTO-ADVANCE: Step 2 → when owner, mobile, email filled ───
   useEffect(() => {
