@@ -872,6 +872,6 @@ export function HSRPUnifiedBookingForm() {
           </Button>
         </div>
       )}
-    </div>
+    </form>
   );
 }
