@@ -13,6 +13,7 @@ import { LeadManagement } from "@/components/admin/LeadManagement";
 import { HomepageManagement } from "@/components/admin/HomepageManagement";
 import { HSRPManagement } from "@/components/admin/HSRPManagement";
 import { HSRPWorkspace } from "@/components/admin/hsrp/HSRPWorkspace";
+import { HSRPVerticalWorkspace } from "@/components/admin/verticals/HSRPVerticalWorkspace";
 import { SalesWorkspace } from "@/components/admin/sales/SalesWorkspace";
 import { CarDataManagement } from "@/components/admin/CarDataManagement";
 import { RoleManagement } from "@/components/admin/RoleManagement";
