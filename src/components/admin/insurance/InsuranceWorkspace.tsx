@@ -1331,12 +1331,17 @@ export function InsuranceWorkspace() {
 
       {/* ── QUOTE MODAL ── */}
       {showQuoteModal && selectedClient && (
-        <InsuranceQuoteModal open={showQuoteModal} onClose={() => setShowQuoteModal(false)} client={selectedClient} />
+        <InsuranceQuoteModal open={showQuoteModal} onOpenChange={setShowQuoteModal} client={selectedClient} />
       )}
 
       {/* ── UPLOAD POLICY ── */}
       {showUploadPolicy && selectedClient && (
-        <InsurancePolicyDocumentUploader clientId={selectedClient.id} open={showUploadPolicy} onClose={() => setShowUploadPolicy(false)} />
+        <Dialog open={showUploadPolicy} onOpenChange={setShowUploadPolicy}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader><DialogTitle>Upload Policy Document</DialogTitle></DialogHeader>
+            <InsurancePolicyDocumentUploader defaultClientId={selectedClient.id} onDone={() => setShowUploadPolicy(false)} />
+          </DialogContent>
+        </Dialog>
       )}
 
       {/* ── RENEWAL REMINDER DIALOG ── */}
