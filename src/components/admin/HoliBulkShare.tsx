@@ -31,17 +31,17 @@ const SAMPLE_TEMPLATES = [
   {
     name: "🚗 New Car Offer",
     message:
-      "🚗 *Hi {name}, Exciting Offer from GrabYourCar!*\n\n🔥 Get the best deals on your dream car this season!\n💰 Lowest on-road prices\n📋 Free insurance quotes\n🎁 Special festive discounts\n\n👉 Visit: https://grabyourcar.lovable.app\n📞 Call us: 9855924442",
+      "🚗 *Hi {name}, Exciting Offer from GrabYourCar!*\n\n🔥 Get the best deals on your dream car this season!\n💰 Lowest on-road prices\n📋 Free insurance quotes\n🎁 Special festive discounts\n\n👉 Visit: https://www.grabyourcar.com\n📞 Call us: 9855924442",
   },
   {
     name: "🛡️ Insurance Offer",
     message:
-      "🛡️ *Hi {name}, Car Insurance Renewal Reminder!*\n\nDon't let your insurance lapse! Renew with GrabYourCar for:\n✅ Best premiums\n✅ Instant policy\n✅ Zero paperwork\n\n👉 https://grabyourcar.lovable.app/car-insurance\n📞 9855924442",
+      "🛡️ *Hi {name}, Car Insurance Renewal Reminder!*\n\nDon't let your insurance lapse! Renew with GrabYourCar for:\n✅ Best premiums\n✅ Instant policy\n✅ Zero paperwork\n\n👉 https://www.grabyourcar.com/car-insurance\n📞 9855924442",
   },
   {
     name: "📢 General Promo",
     message:
-      "👋 *Hello {name}, from GrabYourCar!*\n\nWe have something special for you! 🎁\n\n👉 https://grabyourcar.lovable.app\n📞 9855924442",
+      "👋 *Hello {name}, from GrabYourCar!*\n\nWe have something special for you! 🎁\n\n👉 https://www.grabyourcar.com\n📞 9855924442",
   },
 ];
 

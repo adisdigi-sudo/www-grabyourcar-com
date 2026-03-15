@@ -1651,7 +1651,7 @@ Our team has already prepared renewal assistance for you to make the process qui
 
 👉 Simply *reply to this message* or click below to get your renewal quote instantly.
 
-🔗 Renew Now: https://grabyourcar.lovable.app/insurance
+🔗 Renew Now: https://www.grabyourcar.com/insurance
 
 📞 +91 98559 24442
 🌐 www.grabyourcar.com

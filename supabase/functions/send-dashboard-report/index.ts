@@ -120,7 +120,7 @@ const generateEmailHtml = (stats: DashboardStats, dateRange: string, frequency: 
           <!-- CTA Button -->
           <tr>
             <td style="padding: 0 30px 30px 30px; text-align: center;">
-              <a href="https://grabyourcar.lovable.app/admin" style="display: inline-block; background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 14px;">View Full Dashboard →</a>
+              <a href="https://www.grabyourcar.com/admin" style="display: inline-block; background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 14px;">View Full Dashboard →</a>
             </td>
           </tr>
 

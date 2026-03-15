@@ -286,7 +286,7 @@ Just type your preference or ask any question!`;
 
 Our car expert will connect with you shortly to assist you better.
 
-Meanwhile, explore: grabyourcar.lovable.app
+Meanwhile, explore: www.grabyourcar.com
 
 What specific car or query can I help you with?`;
 }
