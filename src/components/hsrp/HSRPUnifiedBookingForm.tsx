@@ -395,12 +395,12 @@ export function HSRPUnifiedBookingForm() {
             data: { tracking_id: trackingId, service: formData.serviceType, vehicle: formData.registrationNumber },
           });
           toast.success("Booking confirmed! Tracking ID: " + trackingId);
-          if (abandonedCartId) {
+          if (hasSavedCartRef.current) {
             supabase.from("hsrp_abandoned_carts").update({
               recovery_status: "converted",
               converted_booking_id: booking.id,
               converted_at: new Date().toISOString(),
-            }).eq("id", abandonedCartId).then(() => {});
+            }).eq("id", abandonedCartIdRef.current).then(() => {});
           }
           setStep(4);
         },
