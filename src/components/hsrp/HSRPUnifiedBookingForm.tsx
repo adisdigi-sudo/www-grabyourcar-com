@@ -98,6 +98,8 @@ export function HSRPUnifiedBookingForm() {
   const [pincodeServiceable, setPincodeServiceable] = useState(false);
   const [homeInstallationFee, setHomeInstallationFee] = useState(0);
   const rcLookup = useRCLookup({ showToast: false });
+  const [abandonedCartId, setAbandonedCartId] = useState<string | null>(null);
+  const [sessionId] = useState(() => `hsrp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
   
   const [formData, setFormData] = useState<FormData>({
     serviceType: "hsrp",
