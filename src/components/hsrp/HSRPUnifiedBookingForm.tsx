@@ -255,18 +255,25 @@ export function HSRPUnifiedBookingForm() {
       try {
         const { error } = await signInWithPhone(formData.mobile);
         if (error) {
-          toast.error("Could not verify your phone number. Please try again.");
-          return;
+          console.warn("Silent auth failed, retrying:", error.message);
+          // Retry once after a short delay
+          await new Promise(r => setTimeout(r, 500));
+          const { error: retryError } = await signInWithPhone(formData.mobile);
+          if (retryError) {
+            console.error("Silent auth retry failed:", retryError.message);
+            toast.error("Something went wrong. Please try again.");
+            return;
+          }
         }
         // Get the session after sign-in
         const { data: { session } } = await supabase.auth.getSession();
         currentUser = session?.user ?? null;
         if (!currentUser) {
-          toast.error("Authentication failed. Please try again.");
+          toast.error("Something went wrong. Please try again.");
           return;
         }
       } catch {
-        toast.error("Login failed. Please try again.");
+        toast.error("Something went wrong. Please try again.");
         return;
       }
     }
