@@ -562,29 +562,9 @@ export function HSRPUnifiedBookingForm() {
                       <Badge className="ml-auto bg-green-500 text-white">{detectedCategoryInfo.label}</Badge>
                     </div>
 
-                    {/* Allow manual override of category */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
-                      {vehicleCategories.map((cat) => {
-                        const CatIcon = cat.icon;
-                        const isSelected = formData.vehicleCategory === cat.value;
-                        return (
-                          <button
-                            key={cat.value}
-                            type="button"
-                            onClick={() => handleInputChange("vehicleCategory", cat.value)}
-                            className={cn(
-                              "p-2 rounded-lg border text-center transition-all text-xs",
-                              isSelected
-                                ? "border-primary bg-primary/10 ring-1 ring-primary/30 font-semibold"
-                                : "border-border hover:border-primary/50"
-                            )}
-                          >
-                            <CatIcon className={cn("w-5 h-5 mx-auto mb-1", isSelected && "text-primary")} />
-                            {cat.label}
-                          </button>
-                        );
-                      })}
-                    </div>
+                    <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+                      Vehicle category detected automatically from RC details.
+                    </p>
                   </motion.div>
                 )}
 
