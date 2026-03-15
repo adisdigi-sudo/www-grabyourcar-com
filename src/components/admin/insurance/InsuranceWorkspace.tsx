@@ -112,6 +112,34 @@ interface Client {
   created_at: string;
 }
 
+interface PolicyRecord {
+  id: string;
+  client_id: string;
+  policy_number: string | null;
+  policy_type: string;
+  insurer: string;
+  premium_amount: number | null;
+  start_date: string;
+  expiry_date: string | null;
+  status: string | null;
+  is_renewal: boolean | null;
+  issued_date: string | null;
+  plan_name: string | null;
+  idv: number | null;
+  policy_document_url: string | null;
+  created_at: string;
+  // Joined client data
+  insurance_clients: {
+    customer_name: string | null;
+    phone: string;
+    city: string | null;
+    vehicle_number: string | null;
+    vehicle_make: string | null;
+    vehicle_model: string | null;
+    lead_source: string | null;
+  } | null;
+}
+
 // ── Source display helper ──
 function formatSource(source: string | null, createdAt: string): string {
   if (!source) return "Unknown";
