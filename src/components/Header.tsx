@@ -107,7 +107,7 @@ export const Header = () => {
     <>
       <header className="sticky top-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-b border-border/50">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-14 md:h-16 lg:h-20 gap-2">
+          <div className="flex items-center justify-between h-12 md:h-14 lg:h-16 gap-2">
             {/* Mobile Menu Button - Left side */}
             <button
               onClick={() => setMenuOpen(!menuOpen)}
