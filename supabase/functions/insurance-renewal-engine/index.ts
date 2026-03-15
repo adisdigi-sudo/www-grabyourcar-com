@@ -108,7 +108,7 @@ function buildMessage(
     .replace(/\{\{policy_details_section\}\}/g, policyDetails)
     .replace(/\{\{insurer\}\}/g, insurer)
     .replace(/\{\{policy_number\}\}/g, policyNumber)
-    .replace(/\{\{premium\}\}/g, premium ? `₹${Number(premium).toLocaleString("en-IN")}` : "")
+    .replace(/\{\{premium\}\}/g, renewalPremium ? `₹${Number(renewalPremium).toLocaleString("en-IN")}/year` : "")
     .replace(/\n{3,}/g, "\n\n"); // Clean excess newlines
 }
 
