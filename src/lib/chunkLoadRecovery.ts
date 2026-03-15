@@ -28,8 +28,17 @@ const getErrorMessage = (error: unknown): string => {
 };
 
 export const isDynamicImportError = (error: unknown): boolean => {
-  const message = getErrorMessage(error);
-  return DYNAMIC_IMPORT_ERROR_PATTERNS.some((pattern) => message.includes(pattern));
+  const message = getErrorMessage(error).toLowerCase();
+  // Must match a dynamic import pattern
+  const isImportError = DYNAMIC_IMPORT_ERROR_PATTERNS.some((pattern) => 
+    message.toLowerCase().includes(pattern.toLowerCase())
+  );
+  if (!isImportError) return false;
+  // Must NOT match a false positive (API/Supabase error)
+  const isFalsePositive = FALSE_POSITIVE_PATTERNS.some((pattern) => 
+    message.toLowerCase().includes(pattern.toLowerCase())
+  );
+  return !isFalsePositive;
 };
 
 export const recoverFromChunkLoadError = (
