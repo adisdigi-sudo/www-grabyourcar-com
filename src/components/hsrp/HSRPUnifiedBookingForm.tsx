@@ -20,10 +20,10 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useRazorpay } from "@/hooks/useRazorpay";
-import { useHSRPPricing, formatPrice, useHSRPBanners } from "@/hooks/useHSRPPricing";
+import { useHSRPPricing, formatPrice } from "@/hooks/useHSRPPricing";
 import { PincodeChecker } from "./PincodeChecker";
 import { cn } from "@/lib/utils";
-import { useRCLookup } from "@/hooks/useRCLookup";
+import { useRCLookup, RCData } from "@/hooks/useRCLookup";
 
 const states = [
   "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh",
@@ -37,6 +37,8 @@ const states = [
 const vehicleCategories = [
   { value: "2w", label: "Two Wheeler", icon: Bike, description: "Bike, Scooter", priceKey: "twoWheeler" },
   { value: "4w", label: "Four Wheeler", icon: Car, description: "Car, SUV, Sedan", priceKey: "fourWheeler" },
+  { value: "ev", label: "Electric Vehicle", icon: Zap, description: "EV Car, E-Scooter", priceKey: "evVehicle" },
+  { value: "tractor", label: "Tractor / Trailer", icon: Truck, description: "Agricultural", priceKey: "tractor" },
 ];
 
 const serviceTypes = [
@@ -51,6 +53,47 @@ const timeSlots = [
   "2:00 PM - 4:00 PM",
   "4:00 PM - 6:00 PM",
 ];
+
+/** Detect vehicle category from RC data */
+function detectVehicleCategory(rcData: RCData): string {
+  const fuel = (rcData.fuel_type || "").toUpperCase();
+  const vClass = (rcData.vehicle_class || "").toUpperCase();
+  const category = (rcData.vehicle_category || "").toUpperCase();
+  const model = (rcData.maker_model || "").toUpperCase();
+
+  // EV detection
+  if (
+    fuel.includes("ELECTRIC") || fuel.includes("EV") || fuel.includes("BATTERY") ||
+    model.includes("ELECTRIC") || model.includes("EV") ||
+    category.includes("ELECTRIC")
+  ) {
+    return "ev";
+  }
+
+  // Two wheeler detection
+  if (
+    vClass.includes("2W") || vClass.includes("TWO WHEELER") ||
+    vClass.includes("M-CYCLE") || vClass.includes("MOTOR CYCLE") ||
+    vClass.includes("SCOOTER") || vClass.includes("MOPED") ||
+    category.includes("2W") || category.includes("MCWG") ||
+    category.includes("MOTORCYCLE") || category.includes("SCOOTER")
+  ) {
+    return "2w";
+  }
+
+  // Tractor detection
+  if (
+    vClass.includes("TRACTOR") || vClass.includes("TRAILER") ||
+    vClass.includes("AGRICULTURAL") ||
+    category.includes("TRACTOR") || category.includes("TRAILER") ||
+    model.includes("TRACTOR")
+  ) {
+    return "tractor";
+  }
+
+  // Default: four wheeler (LMV, car, etc.)
+  return "4w";
+}
 
 interface FormData {
   serviceType: string;
@@ -88,6 +131,7 @@ export function HSRPUnifiedBookingForm() {
   const [sessionId] = useState(() => `hsrp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
   const rcLookupTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastLookedUp = useRef<string>("");
+  const [detectedCategory, setDetectedCategory] = useState<string | null>(null);
   
   const [formData, setFormData] = useState<FormData>({
     serviceType: "",
@@ -137,18 +181,7 @@ export function HSRPUnifiedBookingForm() {
     if (!serviceable) setHomeInstallation(false);
   };
 
-  // ─── AUTO-ADVANCE: Step 1 → when both serviceType AND vehicleCategory selected ───
-  useEffect(() => {
-    if (step === 1 && formData.serviceType && formData.vehicleCategory) {
-      const t = setTimeout(() => {
-        setStep(2);
-        saveAbandonedCart(2);
-      }, 400);
-      return () => clearTimeout(t);
-    }
-  }, [formData.serviceType, formData.vehicleCategory, step]);
-
-  // ─── AUTO RC LOOKUP: when registration number looks valid, silently fetch ───
+  // ─── AUTO RC LOOKUP on Step 1: when registration number looks valid ───
   useEffect(() => {
     const cleaned = formData.registrationNumber.replace(/\s+/g, "").toUpperCase();
     if (rcLookupTimer.current) clearTimeout(rcLookupTimer.current);
@@ -162,8 +195,14 @@ export function HSRPUnifiedBookingForm() {
             const model = result.maker
               ? (result.maker_model?.replace(result.maker, "").trim() || "")
               : (result.maker_model?.split(" ").slice(1).join(" ") || "");
+            
+            // Auto-detect vehicle category
+            const detected = detectVehicleCategory(result);
+            setDetectedCategory(detected);
+
             setFormData(prev => ({
               ...prev,
+              vehicleCategory: detected,
               chassisLast6: (result.chassis_number && result.chassis_number !== "N/A") ? result.chassis_number.slice(-6) : prev.chassisLast6,
               engineLast6: (result.engine_number && result.engine_number !== "N/A") ? result.engine_number.slice(-6) : prev.engineLast6,
               vehicleMake: maker || prev.vehicleMake,
@@ -176,37 +215,37 @@ export function HSRPUnifiedBookingForm() {
             toast.success("Vehicle details auto-filled!");
           }
         });
-      }, 600); // debounce 600ms after typing stops
+      }, 600);
     }
     return () => { if (rcLookupTimer.current) clearTimeout(rcLookupTimer.current); };
   }, [formData.registrationNumber]);
 
-  // ─── AUTO-ADVANCE: Step 2 → when RC is fetched and key fields are filled ───
+  // ─── AUTO-ADVANCE: Step 1 → when RC fetched + service type selected ───
   useEffect(() => {
-    if (step === 2 && rcLookup.data && formData.registrationNumber && formData.vehicleMake) {
+    if (step === 1 && formData.serviceType && formData.vehicleCategory && rcLookup.data) {
+      const t = setTimeout(() => {
+        setStep(2);
+        saveAbandonedCart(2);
+      }, 500);
+      return () => clearTimeout(t);
+    }
+  }, [formData.serviceType, formData.vehicleCategory, rcLookup.data, step]);
+
+  // ─── AUTO-ADVANCE: Step 2 → when owner, mobile, email filled ───
+  useEffect(() => {
+    if (step !== 2) return;
+    const cleanMobile = formData.mobile.replace(/\D/g, "").slice(-10);
+    const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email);
+    if (formData.ownerName.length >= 2 && /^[6-9]\d{9}$/.test(cleanMobile) && emailValid) {
       const t = setTimeout(() => {
         setStep(3);
         saveAbandonedCart(3);
       }, 800);
       return () => clearTimeout(t);
     }
-  }, [step, rcLookup.data, formData.registrationNumber, formData.vehicleMake]);
-
-  // ─── AUTO-ADVANCE: Step 3 → when owner, mobile, email filled ───
-  useEffect(() => {
-    if (step !== 3) return;
-    const cleanMobile = formData.mobile.replace(/\D/g, "").slice(-10);
-    const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email);
-    if (formData.ownerName.length >= 2 && /^[6-9]\d{9}$/.test(cleanMobile) && emailValid) {
-      const t = setTimeout(() => {
-        setStep(4);
-        saveAbandonedCart(4);
-      }, 800);
-      return () => clearTimeout(t);
-    }
   }, [step, formData.ownerName, formData.mobile, formData.email]);
 
-  // Save abandoned cart
+  // Save abandoned cart (silently, errors don't block flow)
   const saveAbandonedCart = async (currentStep: number) => {
     try {
       const cartData = {
@@ -232,7 +271,7 @@ export function HSRPUnifiedBookingForm() {
         if (data) setAbandonedCartId(data.id);
       }
     } catch (e) {
-      console.error("Abandoned cart save error:", e);
+      // Silent – don't block user flow
     }
   };
 
@@ -244,7 +283,6 @@ export function HSRPUnifiedBookingForm() {
   };
 
   const handleSubmit = async () => {
-    // Validate step 4
     if (!formData.state || !formData.pincode || !formData.address) {
       toast.error("Please fill delivery address");
       return;
@@ -265,15 +303,12 @@ export function HSRPUnifiedBookingForm() {
         const { error } = await signInWithPhone(normalizedMobile);
         if (error) {
           console.error("Silent auth failed:", error.message);
-          // Don't block – try to get session anyway
         }
-        // Wait briefly for session to propagate
         await new Promise(r => setTimeout(r, 500));
         const { data: sessionData } = await supabase.auth.getSession();
         currentUser = sessionData.session?.user ?? null;
 
         if (!currentUser) {
-          // Last resort: try getUser
           const { data: userData } = await supabase.auth.getUser();
           currentUser = userData.user ?? null;
         }
@@ -350,7 +385,7 @@ export function HSRPUnifiedBookingForm() {
               converted_at: new Date().toISOString(),
             }).eq("id", abandonedCartId).then(() => {});
           }
-          setStep(5);
+          setStep(4);
         },
         onError: (err) => { toast.error("Payment failed: " + err); },
       });
@@ -362,13 +397,17 @@ export function HSRPUnifiedBookingForm() {
     }
   };
 
+  // Steps: 1=Vehicle+Service, 2=Owner, 3=Delivery, 4=Success
   const stepTitles = [
-    { title: "Choose Service", icon: Package },
-    { title: "Vehicle Info", icon: Car },
+    { title: "Vehicle & Service", icon: Car },
     { title: "Your Details", icon: User },
-    { title: "Delivery", icon: MapPin },
-    { title: "Confirm", icon: CheckCircle2 },
+    { title: "Delivery & Pay", icon: MapPin },
+    { title: "Confirmed", icon: CheckCircle2 },
   ];
+
+  const detectedCategoryInfo = formData.vehicleCategory 
+    ? vehicleCategories.find(c => c.value === formData.vehicleCategory) 
+    : null;
 
   return (
     <div className="space-y-6">
@@ -404,7 +443,7 @@ export function HSRPUnifiedBookingForm() {
       </div>
 
       {/* Live Price Display */}
-      {formData.vehicleCategory && step < 5 && (
+      {formData.vehicleCategory && formData.serviceType && step < 4 && (
         <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
           <CardContent className="py-4">
             <div className="flex items-center justify-between flex-wrap gap-4">
@@ -447,173 +486,171 @@ export function HSRPUnifiedBookingForm() {
           exit={{ opacity: 0, x: -20 }}
           transition={{ duration: 0.3 }}
         >
-          {/* Step 1: Service + Vehicle Type */}
+          {/* ═══ Step 1: Enter Vehicle Number → auto-fetch → show detected category + pick service ═══ */}
           {step === 1 && (
             <Card>
               <CardContent className="pt-6 space-y-6">
-                <div>
-                  <Label className="text-base font-semibold mb-4 block">What do you need?</Label>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {serviceTypes.map((service) => {
-                      const ServiceIcon = service.icon;
-                      const isSelected = formData.serviceType === service.value;
-                      return (
-                        <button
-                          key={service.value}
-                          type="button"
-                          onClick={() => handleInputChange("serviceType", service.value)}
-                          className={cn(
-                            "relative p-4 rounded-xl border-2 text-left transition-all",
-                            isSelected
-                              ? "border-primary bg-primary/5 ring-2 ring-primary/20"
-                              : "border-border hover:border-primary/50"
-                          )}
-                        >
-                          {service.discount && (
-                            <Badge className="absolute -top-2 -right-2 bg-green-500">Save {service.discount}%</Badge>
-                          )}
-                          <ServiceIcon className={cn("w-8 h-8 mb-2", isSelected && "text-primary")} />
-                          <p className="font-semibold">{service.label}</p>
-                          <p className="text-sm text-muted-foreground">{service.description}</p>
-                        </button>
-                      );
-                    })}
-                  </div>
+                {/* Registration Number Input */}
+                <div className="text-center mb-4">
+                  <Car className="w-12 h-12 mx-auto text-primary mb-2" />
+                  <h3 className="text-xl font-semibold">Enter Your Vehicle Number</h3>
+                  <p className="text-muted-foreground text-sm">We'll auto-detect your vehicle type & fetch details</p>
                 </div>
 
-                <Separator />
-
                 <div>
-                  <Label className="text-base font-semibold mb-4 block">Select your vehicle type</Label>
-                  <div className="grid grid-cols-2 gap-4">
-                    {vehicleCategories.map((cat) => {
-                      const CatIcon = cat.icon;
-                      const isSelected = formData.vehicleCategory === cat.value;
-                      return (
-                        <button
-                          key={cat.value}
-                          type="button"
-                          onClick={() => handleInputChange("vehicleCategory", cat.value)}
-                          className={cn(
-                            "p-6 rounded-xl border-2 text-center transition-all",
-                            isSelected
-                              ? "border-primary bg-primary/5 ring-2 ring-primary/20"
-                              : "border-border hover:border-primary/50"
-                          )}
-                        >
-                          <CatIcon className={cn("w-12 h-12 mx-auto mb-2", isSelected && "text-primary")} />
-                          <p className="font-semibold">{cat.label}</p>
-                          <p className="text-xs text-muted-foreground">{cat.description}</p>
-                        </button>
-                      );
-                    })}
+                  <Label>Registration Number *</Label>
+                  <div className="relative">
+                    <Input
+                      placeholder="e.g., DL 01 AB 1234"
+                      value={formData.registrationNumber}
+                      onChange={(e) => handleInputChange("registrationNumber", e.target.value.toUpperCase())}
+                      className="text-lg font-mono uppercase pr-10 h-14 text-center tracking-widest"
+                      autoFocus
+                    />
+                    {rcLookup.loading && (
+                      <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 animate-spin text-primary" />
+                    )}
                   </div>
-                  {formData.serviceType && formData.vehicleCategory && (
-                    <p className="text-sm text-green-600 flex items-center gap-1 mt-3 justify-center">
-                      <Loader2 className="w-3 h-3 animate-spin" /> Moving to next step...
+                  {rcLookup.data?.source === "surepass" && (
+                    <p className="text-xs text-green-600 mt-1 flex items-center gap-1 justify-center">
+                      <CheckCircle2 className="h-3 w-3" /> Verified from RC database
                     </p>
                   )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Step 2: Vehicle Details – auto RC fetch */}
-          {step === 2 && (
-            <Card>
-              <CardContent className="pt-6 space-y-6">
-                <div className="text-center mb-6">
-                  <Car className="w-12 h-12 mx-auto text-primary mb-2" />
-                  <h3 className="text-xl font-semibold">Vehicle Details</h3>
-                  <p className="text-muted-foreground">Enter registration number — details auto-fill</p>
+                  {rcLookup.error && (
+                    <p className="text-xs text-destructive mt-1 text-center">{rcLookup.error}</p>
+                  )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="md:col-span-2">
-                    <Label>Registration Number *</Label>
-                    <div className="relative">
-                      <Input
-                        placeholder="e.g., DL 01 AB 1234"
-                        value={formData.registrationNumber}
-                        onChange={(e) => handleInputChange("registrationNumber", e.target.value.toUpperCase())}
-                        className="text-lg font-mono uppercase pr-10"
-                        autoFocus
-                      />
-                      {rcLookup.loading && (
-                        <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 animate-spin text-primary" />
-                      )}
+                {/* Show detected vehicle info */}
+                {rcLookup.data && detectedCategoryInfo && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-4 rounded-xl bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800"
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 rounded-lg bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
+                        {(() => { const Icon = detectedCategoryInfo.icon; return <Icon className="w-5 h-5 text-green-600" />; })()}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-green-800 dark:text-green-300">
+                          {rcLookup.data.maker_model || "Vehicle Detected"}
+                        </p>
+                        <p className="text-xs text-green-600">
+                          {detectedCategoryInfo.label} • {rcLookup.data.fuel_type} • {rcLookup.data.registration_date?.substring(0, 4) || ""}
+                        </p>
+                      </div>
+                      <Badge className="ml-auto bg-green-500 text-white">{detectedCategoryInfo.label}</Badge>
                     </div>
-                    {rcLookup.data?.source === "surepass" && (
-                      <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
-                        <CheckCircle2 className="h-3 w-3" /> Verified from RC database
-                      </p>
-                    )}
-                    {rcLookup.error && (
-                      <p className="text-xs text-destructive mt-1">{rcLookup.error}</p>
-                    )}
-                    {rcLookup.data && (
-                      <p className="text-sm text-green-600 flex items-center gap-1 mt-2">
-                        <Sparkles className="w-3 h-3" /> Auto-advancing...
-                      </p>
-                    )}
-                  </div>
-                  
-                  <div>
-                    <Label>Chassis Number (Last 6 digits)</Label>
-                    <Input
-                      placeholder="e.g., 123456"
-                      maxLength={6}
-                      value={formData.chassisLast6}
-                      onChange={(e) => handleInputChange("chassisLast6", e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Engine Number (Last 6 digits)</Label>
-                    <Input
-                      placeholder="e.g., 789012"
-                      maxLength={6}
-                      value={formData.engineLast6}
-                      onChange={(e) => handleInputChange("engineLast6", e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Vehicle Make/Brand</Label>
-                    <Input
-                      placeholder="e.g., Maruti, Hyundai"
-                      value={formData.vehicleMake}
-                      onChange={(e) => handleInputChange("vehicleMake", e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Vehicle Model</Label>
-                    <Input
-                      placeholder="e.g., Swift, Creta"
-                      value={formData.vehicleModel}
-                      onChange={(e) => handleInputChange("vehicleModel", e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Manufacturing Year</Label>
-                    <Select
-                      value={formData.manufacturingYear}
-                      onValueChange={(v) => handleInputChange("manufacturingYear", v)}
-                    >
-                      <SelectTrigger><SelectValue placeholder="Select year" /></SelectTrigger>
-                      <SelectContent>
-                        {Array.from({ length: 25 }, (_, i) => {
-                          const year = new Date().getFullYear() - i;
-                          return <SelectItem key={year} value={year.toString()}>{year}</SelectItem>;
-                        })}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
 
-                {/* Manual next if RC lookup fails */}
-                {!rcLookup.data && !rcLookup.loading && formData.registrationNumber.length >= 6 && (
+                    {/* Allow manual override of category */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
+                      {vehicleCategories.map((cat) => {
+                        const CatIcon = cat.icon;
+                        const isSelected = formData.vehicleCategory === cat.value;
+                        return (
+                          <button
+                            key={cat.value}
+                            type="button"
+                            onClick={() => handleInputChange("vehicleCategory", cat.value)}
+                            className={cn(
+                              "p-2 rounded-lg border text-center transition-all text-xs",
+                              isSelected
+                                ? "border-primary bg-primary/10 ring-1 ring-primary/30 font-semibold"
+                                : "border-border hover:border-primary/50"
+                            )}
+                          >
+                            <CatIcon className={cn("w-5 h-5 mx-auto mb-1", isSelected && "text-primary")} />
+                            {cat.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Service Type Selection - show after RC detected or manually */}
+                {(rcLookup.data || formData.vehicleCategory) && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                  >
+                    <Separator className="my-2" />
+                    <Label className="text-base font-semibold mb-3 block">What do you need?</Label>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {serviceTypes.map((service) => {
+                        const ServiceIcon = service.icon;
+                        const isSelected = formData.serviceType === service.value;
+                        return (
+                          <button
+                            key={service.value}
+                            type="button"
+                            onClick={() => handleInputChange("serviceType", service.value)}
+                            className={cn(
+                              "relative p-4 rounded-xl border-2 text-left transition-all",
+                              isSelected
+                                ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                                : "border-border hover:border-primary/50"
+                            )}
+                          >
+                            {service.discount && (
+                              <Badge className="absolute -top-2 -right-2 bg-green-500">Save {service.discount}%</Badge>
+                            )}
+                            <ServiceIcon className={cn("w-7 h-7 mb-1", isSelected && "text-primary")} />
+                            <p className="font-semibold text-sm">{service.label}</p>
+                            <p className="text-xs text-muted-foreground">{service.description}</p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Auto-advancing indicator */}
+                {formData.serviceType && formData.vehicleCategory && rcLookup.data && (
+                  <p className="text-sm text-green-600 flex items-center gap-1 justify-center">
+                    <Loader2 className="w-3 h-3 animate-spin" /> Moving to next step...
+                  </p>
+                )}
+
+                {/* Manual vehicle category selection if no RC data */}
+                {!rcLookup.data && !rcLookup.loading && formData.registrationNumber.length < 6 && (
+                  <>
+                    <Separator />
+                    <div>
+                      <Label className="text-base font-semibold mb-3 block">Or select vehicle type manually</Label>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {vehicleCategories.map((cat) => {
+                          const CatIcon = cat.icon;
+                          const isSelected = formData.vehicleCategory === cat.value;
+                          return (
+                            <button
+                              key={cat.value}
+                              type="button"
+                              onClick={() => handleInputChange("vehicleCategory", cat.value)}
+                              className={cn(
+                                "p-4 rounded-xl border-2 text-center transition-all",
+                                isSelected
+                                  ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                                  : "border-border hover:border-primary/50"
+                              )}
+                            >
+                              <CatIcon className={cn("w-10 h-10 mx-auto mb-2", isSelected && "text-primary")} />
+                              <p className="font-semibold text-sm">{cat.label}</p>
+                              <p className="text-xs text-muted-foreground">{cat.description}</p>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Manual continue if RC lookup failed or user skipped */}
+                {!rcLookup.data && !rcLookup.loading && formData.vehicleCategory && formData.serviceType && (
                   <div className="flex justify-end">
-                    <Button type="button" onClick={() => { setStep(3); saveAbandonedCart(3); }} className="gap-2">
-                      Continue Manually <ChevronLeft className="w-4 h-4 rotate-180" />
+                    <Button type="button" onClick={() => { setStep(2); saveAbandonedCart(2); }} className="gap-2">
+                      Continue <ChevronLeft className="w-4 h-4 rotate-180" />
                     </Button>
                   </div>
                 )}
@@ -621,15 +658,26 @@ export function HSRPUnifiedBookingForm() {
             </Card>
           )}
 
-          {/* Step 3: Owner Details */}
-          {step === 3 && (
+          {/* ═══ Step 2: Owner Details ═══ */}
+          {step === 2 && (
             <Card>
               <CardContent className="pt-6 space-y-6">
                 <div className="text-center mb-6">
                   <User className="w-12 h-12 mx-auto text-primary mb-2" />
                   <h3 className="text-xl font-semibold">Your Details</h3>
-                  <p className="text-muted-foreground">As per vehicle registration — auto-advances when complete</p>
+                  <p className="text-muted-foreground">Verify & complete — auto-advances when done</p>
                 </div>
+
+                {/* Show vehicle summary */}
+                {rcLookup.data && (
+                  <div className="p-3 rounded-lg bg-muted/50 flex items-center gap-3 text-sm">
+                    <Car className="w-5 h-5 text-primary" />
+                    <span className="font-mono font-semibold">{formData.registrationNumber}</span>
+                    <span className="text-muted-foreground">•</span>
+                    <span>{formData.vehicleMake} {formData.vehicleModel}</span>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
                     <Label>Owner Name (As on RC) *</Label>
@@ -637,6 +685,7 @@ export function HSRPUnifiedBookingForm() {
                       placeholder="Enter full name"
                       value={formData.ownerName}
                       onChange={(e) => handleInputChange("ownerName", e.target.value)}
+                      autoFocus
                     />
                   </div>
                   <div>
@@ -677,8 +726,8 @@ export function HSRPUnifiedBookingForm() {
             </Card>
           )}
 
-          {/* Step 4: Delivery Address + Submit */}
-          {step === 4 && (
+          {/* ═══ Step 3: Delivery Address + Submit ═══ */}
+          {step === 3 && (
             <Card>
               <CardContent className="pt-6 space-y-6">
                 <div className="text-center mb-6">
@@ -758,7 +807,7 @@ export function HSRPUnifiedBookingForm() {
                 </div>
 
                 <div className="flex justify-between pt-4">
-                  <Button type="button" variant="outline" onClick={() => setStep(3)} className="gap-2">
+                  <Button type="button" variant="outline" onClick={() => setStep(2)} className="gap-2">
                     <ChevronLeft className="w-4 h-4" /> Back
                   </Button>
                   <Button
@@ -775,8 +824,8 @@ export function HSRPUnifiedBookingForm() {
             </Card>
           )}
 
-          {/* Step 5: Success */}
-          {step === 5 && (
+          {/* ═══ Step 4: Success ═══ */}
+          {step === 4 && (
             <Card className="text-center py-12">
               <CardContent>
                 <div className="w-20 h-20 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto mb-6">
@@ -796,10 +845,10 @@ export function HSRPUnifiedBookingForm() {
         </motion.div>
       </AnimatePresence>
 
-      {/* Back button for steps 2-3 (step 4 has its own) */}
-      {(step === 2 || step === 3) && (
+      {/* Back button for step 2 (step 3 has its own) */}
+      {step === 2 && (
         <div className="flex justify-start">
-          <Button type="button" variant="outline" onClick={() => setStep(s => Math.max(1, s - 1))} className="gap-2">
+          <Button type="button" variant="outline" onClick={() => setStep(1)} className="gap-2">
             <ChevronLeft className="w-4 h-4" /> Back
           </Button>
         </div>
