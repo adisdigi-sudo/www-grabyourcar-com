@@ -254,17 +254,18 @@ export function InsuranceWorkspace() {
     });
   }, [clients, renewalWindow, renewalSearch, renewalSort]);
 
-  // Renewal summary counts
+  // Renewal summary counts — show all data with expiry dates
   const renewalSummary = useMemo(() => {
     const all = clients.filter(c => c.policy_expiry_date);
     const now = new Date();
     return {
-      expired: all.filter(c => differenceInDays(new Date(c.policy_expiry_date!), now) < 0 && differenceInDays(new Date(c.policy_expiry_date!), now) >= -30).length,
+      expired: all.filter(c => differenceInDays(new Date(c.policy_expiry_date!), now) < 0).length,
       within7: all.filter(c => { const d = differenceInDays(new Date(c.policy_expiry_date!), now); return d >= 0 && d <= 7; }).length,
       within15: all.filter(c => { const d = differenceInDays(new Date(c.policy_expiry_date!), now); return d >= 0 && d <= 15; }).length,
       within30: all.filter(c => { const d = differenceInDays(new Date(c.policy_expiry_date!), now); return d >= 0 && d <= 30; }).length,
       within60: all.filter(c => { const d = differenceInDays(new Date(c.policy_expiry_date!), now); return d >= 0 && d <= 60; }).length,
-      total: all.filter(c => { const d = differenceInDays(new Date(c.policy_expiry_date!), now); return d >= -30 && d <= 90; }).length,
+      upcoming: all.filter(c => differenceInDays(new Date(c.policy_expiry_date!), now) >= 0).length,
+      total: all.length,
     };
   }, [clients]);
 
