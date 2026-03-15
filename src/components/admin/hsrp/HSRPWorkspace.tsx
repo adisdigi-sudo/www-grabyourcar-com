@@ -109,7 +109,7 @@ export function HSRPWorkspace() {
 
   // Mutations
   const updateMutation = useMutation({
-    mutationFn: async ({ id, updates }: any) => {
+    mutationFn: async ({ id, updates, oldStage }: any) => {
       const statusMap: Record<string, string> = {
         new_booking: "pending", verification: "verifying", payment: "payment_pending",
         scheduled: "confirmed", installation: "in_progress", completed: "completed",
@@ -120,6 +120,16 @@ export function HSRPWorkspace() {
       }
       const { error } = await supabase.from("hsrp_bookings").update(dbUpdates).eq("id", id);
       if (error) throw error;
+
+      // Trigger WhatsApp status notification (non-blocking)
+      if (updates.pipeline_stage && updates.pipeline_stage !== oldStage) {
+        supabase.functions.invoke("hsrp-status-notifier", {
+          body: { booking_id: id, new_stage: updates.pipeline_stage, old_stage: oldStage },
+        }).then(({ error: fnErr }) => {
+          if (fnErr) console.error("HSRP notifier error:", fnErr);
+          else console.log("HSRP WhatsApp notification sent for stage:", updates.pipeline_stage);
+        }).catch(err => console.error("HSRP notifier failed:", err));
+      }
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["hsrp-pipeline"] }); toast.success("Updated"); },
     onError: (e: any) => toast.error(e.message),
