@@ -130,6 +130,7 @@ export const useHSRPPricing = () => {
         colourSticker: val?.colourSticker ?? defaultPricing.colourSticker,
         homeInstallationFee: val?.homeInstallationFee ?? defaultPricing.homeInstallationFee,
         evVehicle: val?.evVehicle ?? defaultPricing.evVehicle,
+        fastag: val?.fastag ?? defaultPricing.fastag,
       };
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
