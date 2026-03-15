@@ -54,49 +54,62 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const email = `91${cleanPhone}@grabyourcar.app`;
     const password = `wa_${cleanPhone}_gyc2024`;
 
-    const tryPasswordSignIn = async () => {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) return error as Error;
-      return await waitForSession(16, 250);
+    const tryPasswordSignIn = async (): Promise<Error | null> => {
+      try {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) return error as Error;
+        // Wait for session to propagate
+        for (let i = 0; i < 20; i++) {
+          const { data } = await supabase.auth.getSession();
+          if (data.session?.user) return null;
+          await new Promise((r) => setTimeout(r, 200));
+        }
+        return new Error("Session timeout");
+      } catch (e: any) {
+        return new Error(e?.message || "Sign-in failed");
+      }
     };
 
-    // Always provision/reset shadow account first so credentials are deterministic
+    // Step 1: Provision shadow account (fast – no more listUsers!)
+    console.log("[auth] Ensuring shadow account for", cleanPhone);
     const { error: ensureError } = await supabase.functions.invoke("ensure-shadow-account", {
       body: { phone: cleanPhone },
     });
 
     if (ensureError) {
-      console.error("ensure-shadow-account failed:", ensureError.message);
+      console.error("[auth] ensure-shadow-account failed:", ensureError.message);
     }
 
-    const initialSignInError = await tryPasswordSignIn();
-    if (!initialSignInError) {
+    // Step 2: Sign in
+    const signInError = await tryPasswordSignIn();
+    if (!signInError) {
+      console.log("[auth] Sign-in successful");
       return { error: null };
     }
 
-    const recoverable =
-      initialSignInError.message.toLowerCase().includes("invalid login credentials") ||
-      initialSignInError.message.toLowerCase().includes("email not confirmed") ||
-      initialSignInError.message.toLowerCase().includes("already registered") ||
-      initialSignInError.message.toLowerCase().includes("session could not be initialized");
+    console.warn("[auth] First sign-in failed:", signInError.message);
 
-    if (!recoverable) {
-      return { error: initialSignInError };
-    }
-
-    // One hard retry: re-provision and sign in again
-    const { error: retryEnsureError } = await supabase.functions.invoke("ensure-shadow-account", {
+    // Step 3: One retry – re-provision and try again
+    const { error: retryError } = await supabase.functions.invoke("ensure-shadow-account", {
       body: { phone: cleanPhone },
     });
 
-    if (retryEnsureError) {
-      return { error: new Error("We couldn't start your booking session. Please retry.") };
+    if (retryError) {
+      console.error("[auth] Retry ensure failed:", retryError.message);
+      return { error: new Error("Could not start booking session. Please retry.") };
     }
 
-    const finalSignInError = await tryPasswordSignIn();
-    return {
-      error: finalSignInError ? new Error("We couldn't start your booking session. Please retry.") : null,
-    };
+    // Small delay to let password update propagate
+    await new Promise((r) => setTimeout(r, 500));
+
+    const finalError = await tryPasswordSignIn();
+    if (finalError) {
+      console.error("[auth] Final sign-in failed:", finalError.message);
+      return { error: new Error("Could not start booking session. Please retry.") };
+    }
+
+    console.log("[auth] Sign-in successful on retry");
+    return { error: null };
   };
 
   const signIn = async (email: string, password: string) => {

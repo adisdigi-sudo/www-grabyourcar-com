@@ -3,7 +3,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 function normalizePhone(phone: string) {
@@ -43,6 +44,7 @@ serve(async (req) => {
     let userId: string | null = null;
     let created = false;
 
+    // Step 1: Try to create the user
     const { data: createdUser, error: createError } = await admin.auth.admin.createUser({
       email,
       password,
@@ -56,6 +58,7 @@ serve(async (req) => {
     if (!createError && createdUser?.user) {
       userId = createdUser.user.id;
       created = true;
+      console.log("Shadow account created:", email);
     } else {
       const message = (createError?.message || "").toLowerCase();
       const isAlreadyRegistered =
@@ -64,31 +67,47 @@ serve(async (req) => {
         message.includes("already exists");
 
       if (!isAlreadyRegistered) {
+        console.error("Unexpected create error:", createError?.message);
         throw createError ?? new Error("Failed to create shadow account");
       }
 
-      let page = 1;
-      const perPage = 200;
+      // Step 2: User exists — use generateLink to get user ID instantly (no pagination!)
+      console.log("User exists, fetching via generateLink:", email);
+      const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
+        type: "magiclink",
+        email,
+      });
 
-      while (!userId) {
-        const { data: listed, error: listError } = await admin.auth.admin.listUsers({ page, perPage });
-        if (listError) throw listError;
-
-        const users = listed?.users ?? [];
-        const found = users.find((u) => u.email?.toLowerCase() === email.toLowerCase());
-        if (found) {
-          userId = found.id;
-          break;
+      if (linkError || !linkData?.user?.id) {
+        console.error("generateLink failed:", linkError?.message);
+        // Fallback: try direct REST API call to get user
+        const restRes = await fetch(
+          `${SUPABASE_URL}/auth/v1/admin/users?filter=email%20eq%20${encodeURIComponent(email)}`,
+          {
+            headers: {
+              Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+              apikey: SUPABASE_SERVICE_ROLE_KEY,
+            },
+          }
+        );
+        if (restRes.ok) {
+          const restData = await restRes.json();
+          const users = restData?.users || restData || [];
+          const found = Array.isArray(users) ? users.find((u: any) => u.email?.toLowerCase() === email.toLowerCase()) : null;
+          if (found?.id) {
+            userId = found.id;
+          }
         }
 
-        if (users.length < perPage) break;
-        page += 1;
+        if (!userId) {
+          throw new Error("Could not find existing user account");
+        }
+      } else {
+        userId = linkData.user.id;
       }
 
-      if (!userId) {
-        throw new Error("Existing account found but user lookup failed");
-      }
-
+      // Step 3: Reset password so credentials are deterministic
+      console.log("Updating password for user:", userId);
       const { error: updateError } = await admin.auth.admin.updateUserById(userId, {
         password,
         email_confirm: true,
@@ -98,12 +117,15 @@ serve(async (req) => {
         },
       });
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error("Password update failed:", updateError.message);
+        throw updateError;
+      }
     }
 
     return new Response(
       JSON.stringify({ success: true, created, user_id: userId, email }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
