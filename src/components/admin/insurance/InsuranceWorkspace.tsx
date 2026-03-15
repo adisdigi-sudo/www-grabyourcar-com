@@ -367,23 +367,7 @@ export function InsuranceWorkspace() {
       });
 
       if (newStage === "won") {
-        const { data: client } = await supabase.from("insurance_clients").select("*").eq("id", clientId).single();
-        if (client) {
-          const today = new Date();
-          await supabase.from("insurance_policies").insert({
-            client_id: clientId,
-            policy_number: (client as any).current_policy_number || null,
-            policy_type: (client as any).current_policy_type || "comprehensive",
-            insurer: (client as any).current_insurer || (client as any).quote_insurer || "Unknown",
-            premium_amount: (client as any).quote_amount || (client as any).current_premium || null,
-            start_date: (client as any).policy_start_date || today.toISOString().split("T")[0],
-            expiry_date: (client as any).policy_expiry_date || new Date(today.getFullYear() + 1, today.getMonth(), today.getDate()).toISOString().split("T")[0],
-            status: "active",
-            is_renewal: false,
-            issued_date: today.toISOString().split("T")[0],
-          });
-          await supabase.from("insurance_clients").update({ is_active: true, lead_status: "won" }).eq("id", clientId);
-        }
+        await supabase.from("insurance_clients").update({ is_active: true, lead_status: "won" }).eq("id", clientId);
       }
     },
     onSuccess: (_, vars) => {
