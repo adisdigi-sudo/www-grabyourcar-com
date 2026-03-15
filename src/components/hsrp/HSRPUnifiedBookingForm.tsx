@@ -176,16 +176,18 @@ export function HSRPUnifiedBookingForm() {
           return false;
         }
         break;
-      case 3:
-        if (!formData.ownerName || !formData.mobile || !formData.email) {
+      case 3: {
+        const cleanMobile = formData.mobile.replace(/\D/g, "").slice(-10);
+        if (!formData.ownerName || !cleanMobile || !formData.email) {
           toast.error("Please fill all contact details");
           return false;
         }
-        if (formData.mobile.length !== 10) {
-          toast.error("Please enter valid 10-digit mobile");
+        if (!/^[6-9]\d{9}$/.test(cleanMobile)) {
+          toast.error("Please enter a valid 10-digit mobile number");
           return false;
         }
         break;
+      }
       case 4:
         if (!formData.state || !formData.pincode || !formData.address) {
           toast.error("Please fill delivery address");
