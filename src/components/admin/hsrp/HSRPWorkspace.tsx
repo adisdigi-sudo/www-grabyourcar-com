@@ -270,6 +270,23 @@ export function HSRPWorkspace() {
 
 // ─── Card ───────────────────────────────────────────────────────────────
 function HSRPCard({ booking, onDragStart, onDragEnd, onClick, isDragging }: any) {
+  const stage = booking.pipeline_stage;
+  const waMessages: Record<string, string> = {
+    new_booking: `Hi ${booking.owner_name}, your HSRP/FASTag booking for ${booking.registration_number} has been received. Tracking ID: ${booking.tracking_id || booking.id.slice(0, 8)}. We'll verify your documents shortly. — GrabYourCar`,
+    verification: `Hi ${booking.owner_name}, we're verifying your documents for ${booking.registration_number}. Please ensure chassis & engine numbers are correct. — GrabYourCar`,
+    payment: `Hi ${booking.owner_name}, verification is done for ${booking.registration_number}! Please pay Rs.${(booking.payment_amount || 0).toLocaleString("en-IN")} to proceed. — GrabYourCar`,
+    scheduled: `Hi ${booking.owner_name}, your ${booking.service_type} installation for ${booking.registration_number} is scheduled${booking.scheduled_date ? ` on ${format(new Date(booking.scheduled_date), "dd MMM")}` : ""}. Keep your vehicle ready! — GrabYourCar`,
+    installation: `Hi ${booking.owner_name}, our technician is on the way for your ${booking.service_type} installation on ${booking.registration_number}. — GrabYourCar`,
+    completed: `Hi ${booking.owner_name}, your ${booking.service_type} has been installed on ${booking.registration_number}. Thank you for choosing GrabYourCar! 🚗`,
+  };
+
+  const handleWhatsApp = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const phone = (booking.mobile || "").replace(/\D/g, "");
+    const msg = waMessages[stage] || waMessages.new_booking;
+    window.open(`https://wa.me/91${phone.replace(/^91/, "")}?text=${encodeURIComponent(msg)}`, "_blank");
+  };
+
   return (
     <Card draggable onDragStart={e => onDragStart(e, booking)} onDragEnd={onDragEnd} onClick={onClick}
       className={`border-border/50 hover:shadow-md transition-all cursor-grab active:cursor-grabbing group ${isDragging ? "opacity-30 scale-95" : ""}`}>
@@ -284,8 +301,13 @@ function HSRPCard({ booking, onDragStart, onDragEnd, onClick, isDragging }: any)
           </Badge>
         </div>
         <div className="text-[10px] font-mono font-bold text-foreground">{booking.registration_number}</div>
-        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-          <Phone className="h-2.5 w-2.5" />{booking.mobile}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <Phone className="h-2.5 w-2.5" />{booking.mobile}
+          </div>
+          <button onClick={handleWhatsApp} className="p-1 rounded-md hover:bg-emerald-500/10 transition-colors opacity-0 group-hover:opacity-100" title="Send WhatsApp">
+            <MessageCircle className="h-3 w-3 text-emerald-600" />
+          </button>
         </div>
         <div className="flex items-center justify-between">
           <Badge variant="outline" className="text-[8px]">{booking.service_type}</Badge>

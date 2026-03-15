@@ -295,6 +295,17 @@ export function SelfDriveWorkspace() {
 
 // ─── Card ───────────────────────────────────────────────────────────────
 function RentalCard({ booking, onDragStart, onDragEnd, onClick, isDragging }: any) {
+  const customerName = booking.customer_name || booking.notes?.match(/Imported:\s*(.+?)\s*-/)?.[1] || "";
+  const customerPhone = booking.phone || booking.notes?.match(/-\s*(\d{10})/)?.[1] || "";
+
+  const handleWhatsApp = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const phone = customerPhone.replace(/\D/g, "");
+    if (!phone) { return; }
+    const msg = `Hi${customerName ? ` ${customerName}` : ""}, regarding your ${booking.vehicle_name} rental booking (${booking.pickup_date ? format(new Date(booking.pickup_date), "dd MMM") : ""} - ${booking.dropoff_date ? format(new Date(booking.dropoff_date), "dd MMM") : ""}). Rs.${(booking.total_amount || 0).toLocaleString("en-IN")}. — GrabYourCar`;
+    window.open(`https://wa.me/91${phone.replace(/^91/, "")}?text=${encodeURIComponent(msg)}`, "_blank");
+  };
+
   return (
     <Card draggable onDragStart={e => onDragStart(e, booking)} onDragEnd={onDragEnd} onClick={onClick}
       className={`border-border/50 hover:shadow-md transition-all cursor-grab active:cursor-grabbing group ${isDragging ? "opacity-30 scale-95" : ""}`}>
@@ -308,6 +319,21 @@ function RentalCard({ booking, onDragStart, onDragEnd, onClick, isDragging }: an
             {booking.payment_status}
           </Badge>
         </div>
+        {customerName && (
+          <div className="text-[10px] font-medium text-foreground/80 flex items-center gap-1">
+            <Users className="h-2.5 w-2.5" /> {customerName}
+          </div>
+        )}
+        {customerPhone && (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <Phone className="h-2.5 w-2.5" />{customerPhone}
+            </div>
+            <button onClick={handleWhatsApp} className="p-1 rounded-md hover:bg-emerald-500/10 transition-colors opacity-0 group-hover:opacity-100" title="Send WhatsApp">
+              <MessageCircle className="h-3 w-3 text-emerald-600" />
+            </button>
+          </div>
+        )}
         <div className="text-[9px] font-mono text-muted-foreground/50">{booking.vehicle_type}</div>
         <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
           <MapPin className="h-2.5 w-2.5" />{booking.pickup_location}
