@@ -1,43 +1,67 @@
 
 
-## Plan: Holi WhatsApp Share Tool (No API Needed)
+# Car Loan CRM Workspace Overhaul
 
-### Approach
-Since no WhatsApp API is involved, we'll build a **personal share tool** that works directly from your phone's WhatsApp app using deep links.
+## What You Asked For
+1. EMI Calculator should show detailed calculations with typed inputs (month, amount) and proper number formatting
+2. Pipeline columns should have clean row/column lines with beautiful separators
+3. New Lead form should capture all details including loan type (New Car, Used Car, Top-up Loan, etc.)
+4. Show actual lead source in pipeline cards
+5. Remove non-loan services (HR, other verticals) — keep only the Loan CRM workspace
 
-**How it works:**
-1. Upload your Holi image to the project and host it on a **public shareable page** (e.g., `/holi`)
-2. Create an **admin share tool** where you paste/enter contact numbers and tap "Send" — each tap opens WhatsApp with a pre-filled greeting message + link to the hosted image page
-3. The message will include a link to `grabyourcar.lovable.app/holi` where the recipient sees the full branded Holi poster
+## Plan
 
-### What gets built
+### 1. Database Migration — Add `loan_type` Column
+Add a `loan_type` text column to `loan_applications` to categorize leads:
+- New Car Loan
+- Used Car Loan
+- Top-up Loan
+- Loan Transfer / Balance Transfer
+- Commercial Vehicle Loan
 
-**1. Public Holi Greeting Page (`/pages/HoliGreeting.tsx`)**
-- Displays the uploaded Holi image full-screen with GrabYourCar branding
-- Mobile-optimized, shareable URL: `grabyourcar.lovable.app/holi`
+### 2. EMI Calculator Redesign (`LoanWorkspace.tsx` — EMICalculator section)
+- Replace slider-only inputs with **typed number inputs** (editable fields for Amount, Rate, Tenure in months)
+- Keep range sliders as secondary visual aid
+- Add a **detailed breakdown table** showing:
+  - Monthly EMI, Total Interest, Total Payable
+  - Month-wise amortization summary (first/last 3 months preview)
+- Format numbers with commas (Indian locale) as user types
+- Keep PDF download and WhatsApp share
 
-**2. Admin Bulk Share Tool (`/components/admin/HoliBulkShare.tsx`)**
-- Textarea to paste phone numbers (one per line or comma-separated)
-- Pre-written Holi message with the image page link
-- "Send Next" button that opens `wa.me/{number}?text=...` one at a time
-- Progress tracker showing how many sent
+### 3. Pipeline Board Visual Upgrade (`LoanWorkspace.tsx` — Kanban section)
+- Add **visible column divider lines** (left border on each stage column)
+- Add **row separators** between cards (subtle bottom borders)
+- Improve card layout with cleaner grid lines and spacing
+- Show **loan type badge** on each card (e.g., "New Car", "Used Car", "Top-up")
+- Show **actual source** with color-coded badge (Meta = blue, Google = red, etc.)
+- Increase card width slightly for better readability
 
-**3. Files to create/edit**
-- Copy uploaded image to `public/images/holi-2026.png`
-- Create `src/pages/HoliGreeting.tsx` — public greeting page
-- Create `src/components/admin/HoliBulkShare.tsx` — bulk share tool
-- Edit `src/App.tsx` — add `/holi` route
-- Edit `src/pages/AdminLayout.tsx` — add access to the share tool
+### 4. Enhanced "New Lead" Dialog (`LoanWorkspace.tsx` — Add Dialog)
+Expand the form to capture full lead details before creation:
+- **Loan Type** (required): New Car / Used Car / Top-up / Balance Transfer / Commercial
+- **Customer Name** (required)
+- **Phone** (required)
+- **Email** (optional)
+- **Loan Amount** (optional)
+- **Car Model** (optional)
+- **Down Payment** (optional)
+- **Employment Type**: Salaried / Self-Employed / Business
+- **Monthly Income** (optional)
+- **City** (optional)
+- **Priority**: Hot / High / Medium / Low
+- **Source**: Meta, Google Ads, Referral, Walk-in, etc.
+- **Remarks**
 
-### Flow
-```text
-Admin pastes numbers → clicks "Send Next" → WhatsApp opens with message →
-admin hits send in WhatsApp → comes back → clicks "Send Next" for next number
-```
+### 5. Remove Non-Loan References
+- Update `LoansVerticalWorkspace.tsx` to render `LoanWorkspace` directly without the wrapper card (cleaner)
+- The workspace already only shows loan CRM — no HR/other services are in this component. The sidebar routing handles vertical isolation, so no additional cleanup needed in this file.
 
-**Message template:**
-> 🎨 Wishing you a Colorful & Joyful Holi! 🎉
-> May your journeys be filled with vibrant colors & happy memories.
-> Happy Holi from Team GrabYourCar! 🚗
-> 👉 grabyourcar.lovable.app/holi
+### 6. Config Updates (`LoanStageConfig.ts`)
+- Add `LOAN_TYPES` array for the dropdown options
+- Add `EMPLOYMENT_TYPES` array
+
+### Files to Edit
+- `src/components/admin/loans/LoanStageConfig.ts` — add loan types, employment types
+- `src/components/admin/loans/LoanWorkspace.tsx` — EMI calculator redesign, pipeline visual upgrade, enhanced add dialog
+- Database migration: add `loan_type` column
 
