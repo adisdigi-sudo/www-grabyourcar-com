@@ -458,7 +458,7 @@ export function HSRPUnifiedBookingForm() {
   const hasValidRegistration = /^[A-Z]{2}\d{1,2}[A-Z]{0,3}\d{4}$/.test(cleanedRegistration);
 
   return (
-    <div className="space-y-6">
+    <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
       {/* Progress Steps */}
       <div className="flex items-center justify-between max-w-2xl mx-auto mb-8">
         {stepTitles.map((s, idx) => {
