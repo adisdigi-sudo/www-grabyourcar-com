@@ -226,13 +226,9 @@ export function InsuranceWorkspace() {
     return result;
   }, [policyBookClients, pbPartnerFilter, pbSearch]);
 
-  // Renewal data (upcoming + recently expired)
+  // Renewal data — show ALL records with expiry dates (no artificial window cutoff)
   const renewalClients = useMemo(() => {
-    const all = clients.filter(c => {
-      if (!c.policy_expiry_date) return false;
-      const days = differenceInDays(new Date(c.policy_expiry_date), new Date());
-      return days <= 90 && days >= -30;
-    });
+    const all = clients.filter(c => !!c.policy_expiry_date);
 
     let result = all;
     if (renewalWindow === "expired") result = all.filter(c => differenceInDays(new Date(c.policy_expiry_date!), new Date()) < 0);
@@ -240,6 +236,7 @@ export function InsuranceWorkspace() {
     else if (renewalWindow === "15") result = all.filter(c => { const d = differenceInDays(new Date(c.policy_expiry_date!), new Date()); return d >= 0 && d <= 15; });
     else if (renewalWindow === "30") result = all.filter(c => { const d = differenceInDays(new Date(c.policy_expiry_date!), new Date()); return d >= 0 && d <= 30; });
     else if (renewalWindow === "60") result = all.filter(c => { const d = differenceInDays(new Date(c.policy_expiry_date!), new Date()); return d >= 0 && d <= 60; });
+    else if (renewalWindow === "upcoming") result = all.filter(c => differenceInDays(new Date(c.policy_expiry_date!), new Date()) >= 0);
 
     if (renewalSearch.trim()) {
       const s = renewalSearch.toLowerCase();
@@ -257,17 +254,18 @@ export function InsuranceWorkspace() {
     });
   }, [clients, renewalWindow, renewalSearch, renewalSort]);
 
-  // Renewal summary counts
+  // Renewal summary counts — show all data with expiry dates
   const renewalSummary = useMemo(() => {
     const all = clients.filter(c => c.policy_expiry_date);
     const now = new Date();
     return {
-      expired: all.filter(c => differenceInDays(new Date(c.policy_expiry_date!), now) < 0 && differenceInDays(new Date(c.policy_expiry_date!), now) >= -30).length,
+      expired: all.filter(c => differenceInDays(new Date(c.policy_expiry_date!), now) < 0).length,
       within7: all.filter(c => { const d = differenceInDays(new Date(c.policy_expiry_date!), now); return d >= 0 && d <= 7; }).length,
       within15: all.filter(c => { const d = differenceInDays(new Date(c.policy_expiry_date!), now); return d >= 0 && d <= 15; }).length,
       within30: all.filter(c => { const d = differenceInDays(new Date(c.policy_expiry_date!), now); return d >= 0 && d <= 30; }).length,
       within60: all.filter(c => { const d = differenceInDays(new Date(c.policy_expiry_date!), now); return d >= 0 && d <= 60; }).length,
-      total: all.filter(c => { const d = differenceInDays(new Date(c.policy_expiry_date!), now); return d >= -30 && d <= 90; }).length,
+      upcoming: all.filter(c => differenceInDays(new Date(c.policy_expiry_date!), now) >= 0).length,
+      total: all.length,
     };
   }, [clients]);
 
@@ -342,7 +340,38 @@ export function InsuranceWorkspace() {
       } else {
         toast.success(`Moved to ${stage?.label}`);
       }
-      setSelectedClient(null);
+
+      // Auto-prompt next logical action after stage move
+      const movedClient = clients.find(c => c.id === vars.clientId);
+      if (movedClient) {
+        const nextClient = { ...movedClient, pipeline_stage: vars.newStage };
+        setTimeout(() => {
+          if (vars.newStage === "new_lead") {
+            // Prompt to call
+            setPendingMoveClient(nextClient); setCallStatus(""); setCallRemarks(""); setShowCallingDialog(true);
+            toast.info("📞 Next: Make the first call", { duration: 3000 });
+          } else if (vars.newStage === "smart_calling") {
+            // After calling, prompt for quote or follow-up
+            setSelectedClient(nextClient);
+            toast.info("📋 Next: Share a quote or schedule follow-up", { duration: 3000 });
+          } else if (vars.newStage === "quote_shared") {
+            // Prompt for follow-up scheduling
+            setPendingMoveClient(nextClient); setFollowUpDate(undefined); setFollowUpTime("10:00"); setFollowUpRemarks(""); setShowFollowUpDialog(true);
+            toast.info("📅 Next: Schedule a follow-up", { duration: 3000 });
+          } else if (vars.newStage === "won") {
+            // Prompt renewal reminder
+            setSelectedClient(nextClient); setRenewalDate(undefined); setShowRenewalDialog(true);
+            toast.info("🔔 Next: Set renewal reminder for incentive eligibility", { duration: 4000 });
+          } else if (vars.newStage === "policy_issued") {
+            setSelectedClient(null);
+            toast.success("✅ Policy issued! Lead workflow complete.", { duration: 4000 });
+          } else {
+            setSelectedClient(null);
+          }
+        }, 400);
+      } else {
+        setSelectedClient(null);
+      }
       setShowLostDialog(false);
       setShowCallingDialog(false);
       setShowFollowUpDialog(false);
@@ -679,14 +708,15 @@ export function InsuranceWorkspace() {
       {activeView === "renewals" && (
         <div className="space-y-4">
           {/* Renewal Summary Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
             {[
               { label: "Expired", count: renewalSummary.expired, color: "text-destructive", bg: "bg-destructive/10 border-destructive/20", filter: "expired" },
               { label: "≤ 7 Days", count: renewalSummary.within7, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950/20 border-red-200", filter: "7" },
               { label: "≤ 15 Days", count: renewalSummary.within15, color: "text-orange-600", bg: "bg-orange-50 dark:bg-orange-950/20 border-orange-200", filter: "15" },
               { label: "≤ 30 Days", count: renewalSummary.within30, color: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-950/20 border-amber-200", filter: "30" },
               { label: "≤ 60 Days", count: renewalSummary.within60, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/20 border-blue-200", filter: "60" },
-              { label: "All Upcoming", count: renewalSummary.total, color: "text-foreground", bg: "bg-muted/50 border-border", filter: "all" },
+              { label: "Upcoming", count: renewalSummary.upcoming, color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200", filter: "upcoming" },
+              { label: "All Records", count: renewalSummary.total, color: "text-foreground", bg: "bg-muted/50 border-border", filter: "all" },
             ].map(s => (
               <Card
                 key={s.label}
