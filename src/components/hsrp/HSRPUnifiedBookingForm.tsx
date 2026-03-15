@@ -299,7 +299,13 @@ export function HSRPUnifiedBookingForm() {
     return `${prefix}${timestamp}${random}`;
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e?: React.FormEvent | React.MouseEvent) => {
+    // CRITICAL: Prevent any default form/anchor behavior that could navigate away
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
     if (!formData.state || !formData.pincode || !formData.address) {
       toast.error("Please fill delivery address");
       return;
@@ -317,11 +323,19 @@ export function HSRPUnifiedBookingForm() {
     let currentUser = user;
     if (!currentUser) {
       try {
+        console.log("[HSRP] Starting silent auth for", normalizedMobile);
         const { error } = await signInWithPhone(normalizedMobile);
         if (error) {
-          console.error("Silent auth failed:", error.message);
+          console.error("[HSRP] Silent auth error:", error.message);
+          toast.error("Login failed: " + error.message);
+          setIsSubmitting(false);
+          return;
         }
-        await new Promise(r => setTimeout(r, 500));
+
+        // Give auth state time to propagate through React context
+        await new Promise(r => setTimeout(r, 800));
+
+        // Get fresh session
         const { data: sessionData } = await supabase.auth.getSession();
         currentUser = sessionData.session?.user ?? null;
 
@@ -331,11 +345,15 @@ export function HSRPUnifiedBookingForm() {
         }
 
         if (!currentUser) {
-          toast.error("Could not create session. Please try again.");
+          console.error("[HSRP] No user after successful auth");
+          toast.error("Session not ready. Please click Pay again.");
           setIsSubmitting(false);
           return;
         }
-      } catch {
+
+        console.log("[HSRP] Auth successful, user:", currentUser.id);
+      } catch (err: any) {
+        console.error("[HSRP] Auth exception:", err);
         toast.error("Something went wrong. Please try again.");
         setIsSubmitting(false);
         return;
@@ -344,6 +362,8 @@ export function HSRPUnifiedBookingForm() {
 
     try {
       const trackingId = generateTrackingId();
+      console.log("[HSRP] Creating booking with tracking:", trackingId);
+
       const bookingData = {
         user_id: currentUser.id,
         registration_number: formData.registrationNumber.toUpperCase(),
@@ -370,7 +390,13 @@ export function HSRPUnifiedBookingForm() {
         .insert(bookingData)
         .select()
         .single();
-      if (error) throw error;
+
+      if (error) {
+        console.error("[HSRP] Booking insert error:", error);
+        throw error;
+      }
+
+      console.log("[HSRP] Booking created:", booking.id, "— initiating payment for ₹", prices.total);
 
       initiatePayment({
         amount: prices.total,
@@ -404,11 +430,14 @@ export function HSRPUnifiedBookingForm() {
           }
           setStep(4);
         },
-        onError: (err) => { toast.error("Payment failed: " + err); },
+        onError: (err) => {
+          console.error("[HSRP] Payment error:", err);
+          toast.error("Payment failed: " + err);
+        },
       });
-    } catch (error) {
-      console.error("Booking error:", error);
-      toast.error("Failed to process booking");
+    } catch (error: any) {
+      console.error("[HSRP] Booking error:", error);
+      toast.error("Failed to process booking: " + (error.message || "Unknown error"));
     } finally {
       setIsSubmitting(false);
     }
