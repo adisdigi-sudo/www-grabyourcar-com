@@ -1,51 +1,43 @@
 
 
-# Fix Loan CRM Workspace — Bug Cleanup
+## Plan: Holi WhatsApp Share Tool (No API Needed)
 
-## Current Status
-The Loan CRM workspace code **is fully implemented** with all requested features:
-- EMI Calculator with typed inputs + amortization table
-- Pipeline board with column dividers, row separators, drag-and-drop
-- Enhanced "New Lead" dialog with loan type, employment, income fields
-- Source badges on cards, loan type badges
+### Approach
+Since no WhatsApp API is involved, we'll build a **personal share tool** that works directly from your phone's WhatsApp app using deep links.
 
-You are currently viewing the **homepage** (`/`). Navigate to **CRM** (`/crm`) to see the Loan workspace.
+**How it works:**
+1. Upload your Holi image to the project and host it on a **public shareable page** (e.g., `/holi`)
+2. Create an **admin share tool** where you paste/enter contact numbers and tap "Send" — each tap opens WhatsApp with a pre-filled greeting message + link to the hosted image page
+3. The message will include a link to `grabyourcar.lovable.app/holi` where the recipient sees the full branded Holi poster
 
-## Bug Found
-One React warning in the amortization table — `<>` Fragment used inside `.map()` without a key. This causes React reconciliation issues.
+### What gets built
 
-## Fix
+**1. Public Holi Greeting Page (`/pages/HoliGreeting.tsx`)**
+- Displays the uploaded Holi image full-screen with GrabYourCar branding
+- Mobile-optimized, shareable URL: `grabyourcar.lovable.app/holi`
 
-### File: `src/components/admin/loans/LoanWorkspace.tsx`
-**Lines 246-259**: Replace keyless `<>` fragments with `<React.Fragment key={...}>`:
+**2. Admin Bulk Share Tool (`/components/admin/HoliBulkShare.tsx`)**
+- Textarea to paste phone numbers (one per line or comma-separated)
+- Pre-written Holi message with the image page link
+- "Send Next" button that opens `wa.me/{number}?text=...` one at a time
+- Progress tracker showing how many sent
 
-```tsx
-// Before (buggy):
-{amortizationPreview.map((row, idx) => (
-  <>
-    {idx === 3 && tenure > 6 && (
-      <tr key="ellipsis">...</tr>
-    )}
-    <tr key={row.month}>...</tr>
-  </>
-))}
+**3. Files to create/edit**
+- Copy uploaded image to `public/images/holi-2026.png`
+- Create `src/pages/HoliGreeting.tsx` — public greeting page
+- Create `src/components/admin/HoliBulkShare.tsx` — bulk share tool
+- Edit `src/App.tsx` — add `/holi` route
+- Edit `src/pages/AdminLayout.tsx` — add access to the share tool
 
-// After (fixed):
-{amortizationPreview.map((row, idx) => (
-  <React.Fragment key={row.month}>
-    {idx === 3 && tenure > 6 && (
-      <tr className="border-b border-border/20">...</tr>
-    )}
-    <tr className="border-b border-border/20 hover:bg-muted/20 transition-colors">...</tr>
-  </React.Fragment>
-))}
+### Flow
+```text
+Admin pastes numbers → clicks "Send Next" → WhatsApp opens with message →
+admin hits send in WhatsApp → comes back → clicks "Send Next" for next number
 ```
 
-### Also fix: `DealerLocatorWidget.tsx` Badge ref warning
-The `Badge` component is receiving a ref it can't handle. Quick fix: wrap or remove the ref usage.
-
-### Summary
-- Fix React Fragment key warning in EMI amortization table
-- Fix DealerLocatorWidget Badge ref warning
-- No other bugs found — all features are implemented and the code compiles correctly
+**Message template:**
+> 🎨 Wishing you a Colorful & Joyful Holi! 🎉
+> May your journeys be filled with vibrant colors & happy memories.
+> Happy Holi from Team GrabYourCar! 🚗
+> 👉 grabyourcar.lovable.app/holi
 
