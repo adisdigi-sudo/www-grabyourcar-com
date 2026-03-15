@@ -54,40 +54,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const email = `91${cleanPhone}@grabyourcar.app`;
     const password = `wa_${cleanPhone}_gyc2024`;
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-    if (!signInError) {
-      const sessionError = await waitForSession();
-      return { error: sessionError };
+    const tryPasswordSignIn = async () => {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) return error as Error;
+      return await waitForSession();
+    };
+
+    const initialSignInError = await tryPasswordSignIn();
+    if (!initialSignInError) {
+      return { error: null };
     }
 
-    const canCreateShadowAccount =
-      signInError.message.includes("Invalid login credentials") ||
-      signInError.message.toLowerCase().includes("email not confirmed");
+    const recoverable =
+      initialSignInError.message.toLowerCase().includes("invalid login credentials") ||
+      initialSignInError.message.toLowerCase().includes("email not confirmed") ||
+      initialSignInError.message.toLowerCase().includes("already registered");
 
-    if (!canCreateShadowAccount) {
-      return { error: signInError as Error };
+    if (!recoverable) {
+      return { error: initialSignInError };
     }
 
-    const { error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: window.location.origin,
-        data: { phone: `91${cleanPhone}`, auth_method: "whatsapp_otp" },
-      },
+    const { error: ensureError } = await supabase.functions.invoke("ensure-shadow-account", {
+      body: { phone: cleanPhone },
     });
 
-    if (signUpError && !signUpError.message.toLowerCase().includes("already registered")) {
-      return { error: signUpError as Error };
+    if (ensureError) {
+      return { error: new Error("Could not initialize booking account. Please retry.") };
     }
 
-    const { error: autoSignInError } = await supabase.auth.signInWithPassword({ email, password });
-    if (autoSignInError) {
-      return { error: autoSignInError as Error };
-    }
-
-    const sessionError = await waitForSession();
-    return { error: sessionError };
+    const finalSignInError = await tryPasswordSignIn();
+    return { error: finalSignInError };
   };
 
   const signIn = async (email: string, password: string) => {
