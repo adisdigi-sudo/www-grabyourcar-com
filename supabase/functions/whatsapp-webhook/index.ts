@@ -248,8 +248,8 @@ function getStaticResponse(message: string): string {
 Thank you for your interest! For the best on-road price in your city, our car expert will call you within 5 minutes.
 
 Quick links:
-• Browse cars: grabyourcar.lovable.app/cars
-• EMI Calculator: grabyourcar.lovable.app/car-loans
+• Browse cars: www.grabyourcar.com/cars
+• EMI Calculator: www.grabyourcar.com/car-loans
 
 Which car model are you interested in?`;
   }
