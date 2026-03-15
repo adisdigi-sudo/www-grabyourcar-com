@@ -121,6 +121,18 @@ function formatSource(source: string | null, createdAt: string): string {
   return source;
 }
 
+// ── Expiry status helper ──
+function getExpiryStatus(expiryDate: string | null): { label: string; className: string } {
+  if (!expiryDate) return { label: "No Expiry", className: "bg-muted text-muted-foreground" };
+  const days = differenceInDays(new Date(expiryDate), new Date());
+  if (days < 0) return { label: `Expired ${Math.abs(days)}d ago`, className: "bg-red-100 text-red-700 border-red-200" };
+  if (days <= 7) return { label: `Expires in ${days}d`, className: "bg-red-100 text-red-700 border-red-200 animate-pulse" };
+  if (days <= 15) return { label: `Expires in ${days}d`, className: "bg-orange-100 text-orange-700 border-orange-200" };
+  if (days <= 30) return { label: `Expires in ${days}d`, className: "bg-amber-100 text-amber-700 border-amber-200" };
+  if (days <= 60) return { label: `Expires in ${days}d`, className: "bg-blue-100 text-blue-700 border-blue-200" };
+  return { label: `Active (${days}d)`, className: "bg-emerald-100 text-emerald-700 border-emerald-200" };
+}
+
 export function InsuranceWorkspace() {
   const queryClient = useQueryClient();
   const [selectedStage, setSelectedStage] = useState<string>("all");
