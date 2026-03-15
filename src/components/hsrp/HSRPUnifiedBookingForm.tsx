@@ -159,7 +159,7 @@ export function HSRPUnifiedBookingForm() {
     if (!pricing || !formData.vehicleCategory) return { hsrp: 0, fastag: 0, total: 0 };
     const category = vehicleCategories.find(c => c.value === formData.vehicleCategory);
     const hsrpPrice = category ? (pricing as any)[category.priceKey] || 0 : 0;
-    const fastagPrice = formData.vehicleCategory === '2w' ? 100 : 500;
+    const fastagPrice = pricing.fastag || 500;
     const colourSticker = pricing.colourSticker || 100;
     let total = 0;
     let hsrp = hsrpPrice + colourSticker;
