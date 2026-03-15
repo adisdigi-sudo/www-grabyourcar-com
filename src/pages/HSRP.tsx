@@ -195,15 +195,23 @@ const HSRP = () => {
         <section className="py-4 bg-muted/50 border-b border-border">
           <div className="container mx-auto px-4">
             <div className="flex flex-wrap justify-center gap-3 text-sm">
-              <a href="#track" className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors">
+              <button
+                type="button"
+                onClick={() => document.getElementById("track")?.scrollIntoView({ behavior: "smooth" })}
+                className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors"
+              >
                 <Search className="h-4 w-4" />
                 Track Order
-              </a>
+              </button>
               <span className="text-border">|</span>
-              <a href="#booking-section" className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors">
+              <button
+                type="button"
+                onClick={() => document.getElementById("booking-section")?.scrollIntoView({ behavior: "smooth" })}
+                className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors"
+              >
                 <Calendar className="h-4 w-4" />
                 Book Now
-              </a>
+              </button>
               <span className="text-border">|</span>
               <button type="button" onClick={() => document.getElementById("booking-section")?.scrollIntoView({ behavior: "smooth" })} className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors">
                 <Home className="h-4 w-4" />
