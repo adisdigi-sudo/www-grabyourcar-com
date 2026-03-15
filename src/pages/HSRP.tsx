@@ -205,10 +205,10 @@ const HSRP = () => {
                 Book Now
               </a>
               <span className="text-border">|</span>
-              <a href="#" className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors">
+              <button type="button" onClick={() => document.getElementById("booking-section")?.scrollIntoView({ behavior: "smooth" })} className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors">
                 <Home className="h-4 w-4" />
                 Home Installation
-              </a>
+              </button>
               <span className="text-border">|</span>
               <a href="tel:+1155578093" className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors">
                 <Phone className="h-4 w-4" />

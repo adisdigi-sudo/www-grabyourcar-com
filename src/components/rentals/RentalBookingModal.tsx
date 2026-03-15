@@ -105,10 +105,48 @@ export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalP
   const handlePayNow = async () => {
     if (!validateForm()) return;
 
-    if (!user) {
-      toast.error("Please login to make a booking");
-      navigate("/auth");
-      return;
+    // Silent auto-login using customer phone (no redirect needed)
+    let currentUser = user;
+    if (!currentUser) {
+      try {
+        const { signInWithPhone } = await import("@/hooks/useAuth").then(m => {
+          // Can't call hook here, use supabase directly
+          return { signInWithPhone: null };
+        });
+        // Create shadow account using phone
+        const cleanPhone = customerPhone.replace(/\D/g, "").slice(-10);
+        const email = `91${cleanPhone}@grabyourcar.app`;
+        const password = `wa_${cleanPhone}_gyc2024`;
+        
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+        if (signInError) {
+          // Try signup + signin
+          await supabase.auth.signUp({
+            email, password,
+            options: { data: { phone: `91${cleanPhone}`, auth_method: "rental_booking" } },
+          });
+          const { error: retryError } = await supabase.auth.signInWithPassword({ email, password });
+          if (retryError) {
+            toast.error("Could not create booking session. Please try again.");
+            return;
+          }
+        }
+        
+        // Wait for session
+        for (let i = 0; i < 10; i++) {
+          const { data } = await supabase.auth.getSession();
+          if (data.session?.user) { currentUser = data.session.user; break; }
+          await new Promise(r => setTimeout(r, 300));
+        }
+        
+        if (!currentUser) {
+          toast.error("Session not ready. Please try again.");
+          return;
+        }
+      } catch {
+        toast.error("Something went wrong. Please try again.");
+        return;
+      }
     }
 
     setIsCreatingBooking(true);
