@@ -568,8 +568,8 @@ export function HSRPUnifiedBookingForm() {
                   </motion.div>
                 )}
 
-                {/* Service Type Selection - show after RC detected or manually */}
-                {(rcLookup.data || formData.vehicleCategory) && (
+                {/* Service Type Selection - show after RC fetch or manual fallback category selection */}
+                {(rcLookup.data || (rcLookup.error && formData.vehicleCategory)) && (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
