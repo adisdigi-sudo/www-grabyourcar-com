@@ -1119,7 +1119,10 @@ export function InsuranceWorkspace() {
                     <Badge variant="outline" className={getSourceColor(selectedClient.lead_source)}>
                       {formatSource(selectedClient.lead_source, selectedClient.created_at)}
                     </Badge>
-                    {selectedClient.renewal_reminder_set && <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">✅ Renewal Set</Badge>}
+                    {(() => {
+                      const status = getExpiryStatus(selectedClient.policy_expiry_date);
+                      return <Badge variant="outline" className={cn(status.className)}>{status.label}</Badge>;
+                    })()}
                     {selectedClient.incentive_eligible && <Badge className="bg-amber-100 text-amber-700 border-amber-200">⭐ Incentive Eligible</Badge>}
                   </div>
 
