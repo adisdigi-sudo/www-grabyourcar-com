@@ -196,9 +196,42 @@ export function HSRPUnifiedBookingForm() {
     return true;
   };
 
+  // Save abandoned cart progress
+  const saveAbandonedCart = async (currentStep: number) => {
+    try {
+      const cartData = {
+        session_id: sessionId,
+        phone: formData.mobile || null,
+        owner_name: formData.ownerName || null,
+        email: formData.email || null,
+        registration_number: formData.registrationNumber || null,
+        vehicle_category: formData.vehicleCategory || null,
+        service_type: formData.serviceType || null,
+        state: formData.state || null,
+        city: formData.city || null,
+        pincode: formData.pincode || null,
+        last_step: currentStep,
+        form_data: formData as any,
+        estimated_total: prices.total,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (abandonedCartId) {
+        await supabase.from("hsrp_abandoned_carts").update(cartData).eq("id", abandonedCartId);
+      } else {
+        const { data } = await supabase.from("hsrp_abandoned_carts").insert(cartData).select("id").single();
+        if (data) setAbandonedCartId(data.id);
+      }
+    } catch (e) {
+      console.error("Abandoned cart save error:", e);
+    }
+  };
+
   const nextStep = () => {
     if (validateStep(step)) {
-      setStep(prev => Math.min(prev + 1, 5));
+      const newStep = Math.min(step + 1, 5);
+      setStep(newStep);
+      saveAbandonedCart(newStep);
     }
   };
 
