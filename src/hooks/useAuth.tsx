@@ -13,16 +13,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const waitForSession = async (maxAttempts = 12, delayMs = 250): Promise<Error | null> => {
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const { data, error } = await supabase.auth.getSession();
-    if (error) return error as Error;
-    if (data.session?.user) return null;
-    await new Promise((resolve) => setTimeout(resolve, delayMs));
-  }
-
-  return new Error("Session could not be initialized. Please try again.");
-};
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
