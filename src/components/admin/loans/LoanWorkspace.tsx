@@ -17,14 +17,15 @@ import { motion } from "framer-motion";
 import {
   Banknote, Plus, Phone, IndianRupee, Car, GripVertical, Calculator,
   Share2, PhoneCall, MessageCircle, CheckCircle2, XCircle, Building2,
-  FileText, Upload, AlertTriangle, Clock, TrendingUp, Users, Download, Flame, FileSpreadsheet
+  FileText, AlertTriangle, Clock, TrendingUp, Users, Download, FileSpreadsheet
 } from "lucide-react";
 import jsPDF from "jspdf";
 import { LeadImportDialog } from "../shared/LeadImportDialog";
 import { StageNotificationBanner, buildLoanNotifications } from "../shared/StageNotificationBanner";
 import {
   LOAN_STAGES, STAGE_LABELS, STAGE_COLORS, LEAD_SOURCES, PRIORITY_OPTIONS,
-  CALL_STATUSES, LOST_REASONS, normalizeStage, type LoanStage
+  CALL_STATUSES, LOST_REASONS, normalizeStage, LOAN_TYPES, EMPLOYMENT_TYPES,
+  type LoanStage
 } from "./LoanStageConfig";
 
 // ─── EMI Calculator ───
@@ -32,7 +33,6 @@ const EMICalculator = () => {
   const [amount, setAmount] = useState(800000);
   const [rate, setRate] = useState(8.5);
   const [tenure, setTenure] = useState(60);
-  const [showShare, setShowShare] = useState(false);
 
   const monthlyRate = rate / 12 / 100;
   const emi = monthlyRate > 0
@@ -40,28 +40,43 @@ const EMICalculator = () => {
     : amount / tenure;
   const totalPayable = emi * tenure;
   const totalInterest = totalPayable - amount;
+  const principalPct = amount > 0 ? (amount / totalPayable) * 100 : 0;
 
-  const formatAmt = (v: number) => {
-    if (v >= 100000) return `Rs.${(v / 100000).toFixed(2)}L`;
-    if (v >= 1000) return `Rs.${(v / 1000).toFixed(0)}K`;
-    return `Rs.${Math.round(v)}`;
+  const fmt = (v: number) => `₹${Math.round(v).toLocaleString("en-IN")}`;
+  const fmtShort = (v: number) => {
+    if (v >= 10000000) return `₹${(v / 10000000).toFixed(2)} Cr`;
+    if (v >= 100000) return `₹${(v / 100000).toFixed(2)}L`;
+    if (v >= 1000) return `₹${(v / 1000).toFixed(0)}K`;
+    return `₹${Math.round(v)}`;
   };
 
+  // Amortization preview (first 3 + last 3 months)
+  const amortizationPreview = useMemo(() => {
+    const rows: { month: number; emiAmt: number; principal: number; interest: number; balance: number }[] = [];
+    let bal = amount;
+    for (let m = 1; m <= tenure; m++) {
+      const intPart = bal * monthlyRate;
+      const prinPart = emi - intPart;
+      bal = Math.max(bal - prinPart, 0);
+      if (m <= 3 || m > tenure - 3) {
+        rows.push({ month: m, emiAmt: emi, principal: prinPart, interest: intPart, balance: bal });
+      }
+    }
+    return rows;
+  }, [amount, monthlyRate, emi, tenure]);
+
   const handleShareWhatsApp = () => {
-    const msg = `*Car Loan EMI Plan*\n\nLoan Amount: ${formatAmt(amount)}\nInterest Rate: ${rate}%\nTenure: ${tenure} months\n\n*Monthly EMI: ${formatAmt(emi)}*\nTotal Interest: ${formatAmt(totalInterest)}\nTotal Payable: ${formatAmt(totalPayable)}\n\n_Powered by GrabYourCar_\nwww.grabyourcar.com`;
+    const msg = `*Car Loan EMI Plan*\n\nLoan Amount: ${fmt(amount)}\nInterest Rate: ${rate}%\nTenure: ${tenure} months\n\n*Monthly EMI: ${fmt(emi)}*\nTotal Interest: ${fmt(totalInterest)}\nTotal Payable: ${fmt(totalPayable)}\n\n_Powered by GrabYourCar_\nwww.grabyourcar.com`;
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
   const handleDownloadPDF = () => {
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
     const w = doc.internal.pageSize.getWidth();
-
-    // Header gradient
     doc.setFillColor(16, 185, 129);
     doc.rect(0, 0, w, 50, "F");
     doc.setFillColor(13, 148, 103);
     doc.rect(0, 45, w, 5, "F");
-
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(22);
     doc.setFont("helvetica", "bold");
@@ -73,61 +88,43 @@ const EMICalculator = () => {
 
     let y = 65;
     doc.setTextColor(60, 60, 60);
-
-    // Summary box
     const boxX = 20; const boxW = w - 40;
     doc.setFillColor(240, 253, 244);
     doc.roundedRect(boxX, y, boxW, 40, 4, 4, "F");
     doc.setDrawColor(16, 185, 129);
     doc.roundedRect(boxX, y, boxW, 40, 4, 4, "S");
-
     doc.setFontSize(28);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(16, 185, 129);
-    doc.text(formatAmt(emi), w / 2, y + 20, { align: "center" });
+    doc.text(fmt(emi), w / 2, y + 20, { align: "center" });
     doc.setFontSize(10);
     doc.setTextColor(100, 100, 100);
     doc.text("Monthly EMI", w / 2, y + 30, { align: "center" });
-
     y += 55;
 
-    // Details table
     const rows = [
-      ["Loan Amount", formatAmt(amount)],
+      ["Loan Amount", fmt(amount)],
       ["Interest Rate (p.a.)", `${rate}%`],
       ["Tenure", `${tenure} months (${(tenure / 12).toFixed(1)} years)`],
-      ["Monthly EMI", formatAmt(emi)],
-      ["Total Interest Payable", formatAmt(totalInterest)],
-      ["Total Amount Payable", formatAmt(totalPayable)],
+      ["Monthly EMI", fmt(emi)],
+      ["Total Interest Payable", fmt(totalInterest)],
+      ["Total Amount Payable", fmt(totalPayable)],
     ];
 
     rows.forEach(([label, value], i) => {
       const rowY = y + i * 14;
-      if (i % 2 === 0) {
-        doc.setFillColor(248, 250, 252);
-        doc.rect(boxX, rowY - 4, boxW, 14, "F");
-      }
-      doc.setFontSize(11);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(80, 80, 80);
+      if (i % 2 === 0) { doc.setFillColor(248, 250, 252); doc.rect(boxX, rowY - 4, boxW, 14, "F"); }
+      doc.setFontSize(11); doc.setFont("helvetica", "normal"); doc.setTextColor(80, 80, 80);
       doc.text(label, boxX + 8, rowY + 4);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(30, 30, 30);
+      doc.setFont("helvetica", "bold"); doc.setTextColor(30, 30, 30);
       doc.text(value, boxX + boxW - 8, rowY + 4, { align: "right" });
     });
 
     y += rows.length * 14 + 15;
-
-    // Footer
-    doc.setDrawColor(200, 200, 200);
-    doc.line(boxX, y, boxX + boxW, y);
-    y += 10;
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(150, 150, 150);
+    doc.setDrawColor(200, 200, 200); doc.line(boxX, y, boxX + boxW, y); y += 10;
+    doc.setFontSize(8); doc.setFont("helvetica", "normal"); doc.setTextColor(150, 150, 150);
     doc.text("* This is an indicative EMI calculation. Actual EMI may vary based on bank/NBFC terms.", boxX, y);
     doc.text(`Generated on ${format(new Date(), "dd MMM yyyy, hh:mm a")} | GrabYourCar`, boxX, y + 6);
-
     doc.save(`EMI_Plan_Rs${Math.round(amount / 100000)}L_${tenure}m.pdf`);
     toast.success("EMI Plan PDF downloaded!");
   };
@@ -145,52 +142,144 @@ const EMICalculator = () => {
             </div>
             <div>
               <h2 className="font-bold text-xl tracking-tight">Car Loan EMI Calculator</h2>
-              <p className="text-xs text-muted-foreground">Calculate & share beautiful EMI plans instantly</p>
+              <p className="text-xs text-muted-foreground">Type values or use sliders • Detailed breakdown below</p>
             </div>
           </div>
           <div className="flex gap-2">
             <Button size="sm" variant="outline" className="gap-1.5 border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10" onClick={handleDownloadPDF}>
-              <Download className="h-4 w-4" /> Download PDF
+              <Download className="h-4 w-4" /> PDF
             </Button>
             <Button size="sm" variant="outline" className="gap-1.5 border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10" onClick={handleShareWhatsApp}>
-              <Share2 className="h-4 w-4" /> Share WhatsApp
+              <Share2 className="h-4 w-4" /> WhatsApp
             </Button>
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+
+        {/* Inputs Row */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
           <div>
-            <Label className="text-xs text-muted-foreground">Loan Amount (₹)</Label>
-            <Input type="number" value={amount} onChange={e => setAmount(Number(e.target.value))}
-              className="mt-1 font-semibold bg-background/60" />
-            <input type="range" min={100000} max={5000000} step={50000} value={amount}
-              onChange={e => setAmount(Number(e.target.value))} className="w-full mt-1 accent-emerald-500" />
+            <Label className="text-xs text-muted-foreground mb-1 block">Loan Amount (₹)</Label>
+            <Input type="number" value={amount} onChange={e => setAmount(Number(e.target.value) || 0)}
+              className="font-semibold text-base bg-background/60 h-11" placeholder="e.g. 800000" />
+            <input type="range" min={100000} max={10000000} step={50000} value={amount}
+              onChange={e => setAmount(Number(e.target.value))} className="w-full mt-1.5 accent-emerald-500 h-1.5" />
+            <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5"><span>₹1L</span><span>₹1Cr</span></div>
           </div>
           <div>
-            <Label className="text-xs text-muted-foreground">Interest Rate (%)</Label>
-            <Input type="number" step="0.1" value={rate} onChange={e => setRate(Number(e.target.value))}
-              className="mt-1 font-semibold bg-background/60" />
+            <Label className="text-xs text-muted-foreground mb-1 block">Interest Rate (% p.a.)</Label>
+            <Input type="number" step="0.1" value={rate} onChange={e => setRate(Number(e.target.value) || 0)}
+              className="font-semibold text-base bg-background/60 h-11" placeholder="e.g. 8.5" />
             <input type="range" min={5} max={20} step={0.1} value={rate}
-              onChange={e => setRate(Number(e.target.value))} className="w-full mt-1 accent-emerald-500" />
+              onChange={e => setRate(Number(e.target.value))} className="w-full mt-1.5 accent-emerald-500 h-1.5" />
+            <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5"><span>5%</span><span>20%</span></div>
           </div>
           <div>
-            <Label className="text-xs text-muted-foreground">Tenure (months)</Label>
-            <Input type="number" value={tenure} onChange={e => setTenure(Number(e.target.value))}
-              className="mt-1 font-semibold bg-background/60" />
-            <input type="range" min={12} max={84} step={6} value={tenure}
-              onChange={e => setTenure(Number(e.target.value))} className="w-full mt-1 accent-emerald-500" />
+            <Label className="text-xs text-muted-foreground mb-1 block">Tenure (Months)</Label>
+            <Input type="number" value={tenure} onChange={e => setTenure(Number(e.target.value) || 12)}
+              className="font-semibold text-base bg-background/60 h-11" placeholder="e.g. 60" />
+            <input type="range" min={12} max={84} step={1} value={tenure}
+              onChange={e => setTenure(Number(e.target.value))} className="w-full mt-1.5 accent-emerald-500 h-1.5" />
+            <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5"><span>12m (1Y)</span><span>84m (7Y)</span></div>
           </div>
-          <div className="flex flex-col justify-center items-center rounded-xl bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 p-3">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Monthly EMI</p>
-            <p className="text-2xl font-bold text-emerald-600">{formatAmt(emi)}</p>
-            <div className="flex gap-3 mt-1 text-[10px] text-muted-foreground">
-              <span>Interest: {formatAmt(totalInterest)}</span>
-              <span>Total: {formatAmt(totalPayable)}</span>
+        </div>
+
+        {/* Results Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {/* Left: Summary Cards */}
+          <div className="space-y-4">
+            <motion.div key={Math.round(emi)} initial={{ scale: 0.97, opacity: 0.7 }} animate={{ scale: 1, opacity: 1 }}
+              className="bg-gradient-to-br from-emerald-500/10 to-teal-500/5 rounded-xl p-5 text-center border border-emerald-500/15">
+              <p className="text-xs text-muted-foreground mb-1">Monthly EMI</p>
+              <div className="flex items-center justify-center gap-1">
+                <IndianRupee className="h-6 w-6 text-emerald-600" />
+                <span className="text-3xl md:text-4xl font-extrabold text-foreground">{Math.round(emi).toLocaleString("en-IN")}</span>
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-1">per month for {tenure} months ({(tenure / 12).toFixed(1)} years)</p>
+            </motion.div>
+
+            <div className="grid grid-cols-3 gap-2.5">
+              <div className="text-center p-3 bg-muted/40 rounded-lg border border-border/40">
+                <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Principal</p>
+                <p className="text-sm font-bold text-foreground mt-0.5">{fmtShort(amount)}</p>
+              </div>
+              <div className="text-center p-3 bg-orange-500/5 rounded-lg border border-orange-500/15">
+                <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Total Interest</p>
+                <p className="text-sm font-bold text-orange-600 mt-0.5">{fmtShort(totalInterest)}</p>
+              </div>
+              <div className="text-center p-3 bg-muted/40 rounded-lg border border-border/40">
+                <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Total Payable</p>
+                <p className="text-sm font-bold text-foreground mt-0.5">{fmtShort(totalPayable)}</p>
+              </div>
+            </div>
+
+            {/* Visual bar */}
+            <div>
+              <div className="h-3.5 rounded-full overflow-hidden bg-muted flex">
+                <div className="bg-emerald-500 rounded-l-full transition-all" style={{ width: `${principalPct}%` }} />
+                <div className="bg-orange-400 rounded-r-full transition-all" style={{ width: `${100 - principalPct}%` }} />
+              </div>
+              <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> Principal ({principalPct.toFixed(0)}%)</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-400 inline-block" /> Interest ({(100 - principalPct).toFixed(0)}%)</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Amortization Preview Table */}
+          <div className="rounded-xl border border-border/50 overflow-hidden">
+            <div className="bg-muted/40 px-3 py-2 border-b border-border/40">
+              <p className="text-xs font-semibold text-foreground">Amortization Schedule (Preview)</p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[11px]">
+                <thead>
+                  <tr className="border-b border-border/40 bg-muted/20">
+                    <th className="text-left px-3 py-2 font-medium text-muted-foreground">Month</th>
+                    <th className="text-right px-3 py-2 font-medium text-muted-foreground">EMI</th>
+                    <th className="text-right px-3 py-2 font-medium text-muted-foreground">Principal</th>
+                    <th className="text-right px-3 py-2 font-medium text-muted-foreground">Interest</th>
+                    <th className="text-right px-3 py-2 font-medium text-muted-foreground">Balance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {amortizationPreview.map((row, idx) => (
+                    <>
+                      {idx === 3 && tenure > 6 && (
+                        <tr key="ellipsis" className="border-b border-border/20">
+                          <td colSpan={5} className="text-center py-1.5 text-muted-foreground/50 text-xs">⋮ months {4} – {tenure - 3} ⋮</td>
+                        </tr>
+                      )}
+                      <tr key={row.month} className="border-b border-border/20 hover:bg-muted/20 transition-colors">
+                        <td className="px-3 py-1.5 font-medium">{row.month}</td>
+                        <td className="px-3 py-1.5 text-right">{fmt(row.emiAmt)}</td>
+                        <td className="px-3 py-1.5 text-right text-emerald-600">{fmt(row.principal)}</td>
+                        <td className="px-3 py-1.5 text-right text-orange-500">{fmt(row.interest)}</td>
+                        <td className="px-3 py-1.5 text-right font-medium">{fmt(row.balance)}</td>
+                      </tr>
+                    </>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
       </div>
     </motion.div>
   );
+};
+
+// ─── Source color map ───
+const SOURCE_COLORS: Record<string, string> = {
+  meta: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
+  'google ads': 'bg-red-500/10 text-red-600 border-red-500/20',
+  referral: 'bg-green-500/10 text-green-600 border-green-500/20',
+  'walk-in': 'bg-amber-500/10 text-amber-600 border-amber-500/20',
+  'whatsapp broadcast': 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
+  website: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
+  manual: 'bg-gray-500/10 text-gray-500 border-gray-500/20',
+  partner: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20',
+  'social media': 'bg-pink-500/10 text-pink-600 border-pink-500/20',
+  'csv import': 'bg-slate-500/10 text-slate-600 border-slate-500/20',
 };
 
 // ─── Main Workspace ───
@@ -203,10 +292,10 @@ export const LoanWorkspace = () => {
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
   const [draggingApp, setDraggingApp] = useState<any>(null);
   const [newApp, setNewApp] = useState({
-    customer_name: '', phone: '', loan_amount: '', car_model: '',
-    priority: 'medium', source: 'Manual', remarks: '',
+    customer_name: '', phone: '', email: '', loan_amount: '', car_model: '',
+    down_payment: '', employment_type: '', monthly_income: '', city: '',
+    priority: 'medium', source: 'Manual', loan_type: 'new_car_loan', remarks: '',
   });
-
   const [showImport, setShowImport] = useState(false);
 
   // Fetch data
@@ -235,16 +324,11 @@ export const LoanWorkspace = () => {
     },
   });
 
-  // Normalize legacy stages
   const applications = useMemo(() =>
-    rawApplications.map((a: any) => ({
-      ...a,
-      stage: normalizeStage(a.stage),
-    })),
+    rawApplications.map((a: any) => ({ ...a, stage: normalizeStage(a.stage) })),
     [rawApplications]
   );
 
-  // KPI stats
   const totalApps = applications.length;
   const inPipeline = applications.filter((a: any) => !['disbursed', 'lost'].includes(a.stage)).length;
   const disbursed = applications.filter((a: any) => a.stage === 'disbursed').length;
@@ -253,8 +337,13 @@ export const LoanWorkspace = () => {
     .filter((a: any) => a.stage === 'disbursed')
     .reduce((s: number, a: any) => s + (Number(a.disbursement_amount) || Number(a.loan_amount) || 0), 0);
 
-  // Notifications
   const loanNotifications = useMemo(() => buildLoanNotifications(applications), [applications]);
+
+  const formatAmount = (amt: number | null) => {
+    if (!amt) return '-';
+    if (amt >= 100000) return `₹${(amt / 100000).toFixed(1)}L`;
+    return `₹${(amt / 1000).toFixed(0)}K`;
+  };
 
   // Create lead
   const createMutation = useMutation({
@@ -266,22 +355,30 @@ export const LoanWorkspace = () => {
         car_model: app.car_model || null,
         priority: app.priority,
         source: app.source,
+        loan_type: app.loan_type,
         lead_source_tag: app.source.toLowerCase().replace(/\s/g, '_'),
-        remarks: app.remarks || null,
+        remarks: [
+          app.remarks,
+          app.email ? `Email: ${app.email}` : '',
+          app.down_payment ? `Down Payment: ₹${app.down_payment}` : '',
+          app.employment_type ? `Employment: ${EMPLOYMENT_TYPES.find(e => e.value === app.employment_type)?.label || app.employment_type}` : '',
+          app.monthly_income ? `Income: ₹${app.monthly_income}` : '',
+          app.city ? `City: ${app.city}` : '',
+        ].filter(Boolean).join(' | ') || null,
         stage: 'new_lead',
-      });
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['loan-applications'] });
       toast.success("Lead added");
       setShowAddDialog(false);
-      setNewApp({ customer_name: '', phone: '', loan_amount: '', car_model: '', priority: 'medium', source: 'Manual', remarks: '' });
+      setNewApp({ customer_name: '', phone: '', email: '', loan_amount: '', car_model: '', down_payment: '', employment_type: '', monthly_income: '', city: '', priority: 'medium', source: 'Manual', loan_type: 'new_car_loan', remarks: '' });
     },
     onError: (err: any) => toast.error(err.message),
   });
 
-  // Quick stage move
+  // Stage mutations
   const quickMoveMutation = useMutation({
     mutationFn: async ({ appId, fromStage, toStage }: { appId: string; fromStage: string; toStage: string }) => {
       const { error } = await supabase.from('loan_applications')
@@ -306,17 +403,13 @@ export const LoanWorkspace = () => {
     e.dataTransfer.setData('application/json', JSON.stringify({ id: app.id, stage: app.stage }));
     setDraggingApp(app);
   }, []);
-
   const handleDragEnd = useCallback(() => { setDraggingApp(null); setDragOverStage(null); }, []);
-
   const handleDragOver = useCallback((e: React.DragEvent, stage: string) => {
     e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverStage(stage);
   }, []);
-
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOverStage(null);
   }, []);
-
   const handleDrop = useCallback((e: React.DragEvent, targetStage: LoanStage) => {
     e.preventDefault(); setDragOverStage(null);
     try {
@@ -324,7 +417,6 @@ export const LoanWorkspace = () => {
       if (data.stage === targetStage) return;
       const app = applications.find((a: any) => a.id === data.id);
       if (!app) return;
-      // Stages needing modal: lost, disbursed, loan_application, offer_shared
       if (['lost', 'disbursed', 'loan_application'].includes(targetStage)) {
         setSelectedApp({ ...app, _targetStage: targetStage });
         setShowStageModal(true);
@@ -336,23 +428,15 @@ export const LoanWorkspace = () => {
   }, [applications, quickMoveMutation]);
 
   const handleCardClick = (app: any) => { setSelectedApp(app); setShowStageModal(true); };
-
   const handleWhatsApp = (phone: string, name: string) => {
     const msg = `Hi ${name}, this is from GrabYourCar regarding your car loan inquiry. How can I help you today?`;
     window.open(`https://wa.me/91${phone.replace(/\D/g, '').slice(-10)}?text=${encodeURIComponent(msg)}`, '_blank');
-  };
-
-  const formatAmount = (amt: number | null) => {
-    if (!amt) return '-';
-    if (amt >= 100000) return `Rs.${(amt / 100000).toFixed(1)}L`;
-    return `Rs.${(amt / 1000).toFixed(0)}K`;
   };
 
   const pipelineStages = LOAN_STAGES.filter(s => s !== 'lost');
 
   return (
     <div className="space-y-5">
-      {/* EMI Calculator Header */}
       <EMICalculator />
 
       {/* KPI Row */}
@@ -368,9 +452,7 @@ export const LoanWorkspace = () => {
             <CardContent className="p-3 relative">
               <div className={`absolute inset-0 bg-gradient-to-br ${s.bg} to-transparent opacity-50`} />
               <div className="relative flex items-center gap-2.5">
-                <div className={`p-1.5 rounded-lg bg-background/80 ${s.color}`}>
-                  <s.icon className="h-3.5 w-3.5" />
-                </div>
+                <div className={`p-1.5 rounded-lg bg-background/80 ${s.color}`}><s.icon className="h-3.5 w-3.5" /></div>
                 <div>
                   <p className="text-lg font-bold leading-none">{s.value}</p>
                   <p className="text-[9px] text-muted-foreground mt-0.5">{s.label}</p>
@@ -381,19 +463,14 @@ export const LoanWorkspace = () => {
         ))}
       </div>
 
-      {/* Notifications Banner */}
       {loanNotifications.length > 0 && <StageNotificationBanner items={loanNotifications} />}
 
       {/* Pipeline Header */}
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-3">
           <h2 className="text-lg font-semibold">Pipeline</h2>
-          <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
-            {disbursed} Disbursed
-          </Badge>
-          <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/20">
-            {lost} Lost
-          </Badge>
+          <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">{disbursed} Disbursed</Badge>
+          <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/20">{lost} Lost</Badge>
         </div>
         <div className="flex gap-2">
           <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowImport(true)}>
@@ -405,35 +482,65 @@ export const LoanWorkspace = () => {
                 <Plus className="h-4 w-4" /> New Lead
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
               <DialogHeader><DialogTitle className="flex items-center gap-2"><Banknote className="h-5 w-5 text-emerald-600" /> New Car Loan Lead</DialogTitle></DialogHeader>
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div><Label>Name *</Label><Input value={newApp.customer_name} onChange={e => setNewApp(p => ({ ...p, customer_name: e.target.value }))} /></div>
-                  <div><Label>Phone *</Label><Input value={newApp.phone} onChange={e => setNewApp(p => ({ ...p, phone: e.target.value }))} placeholder="10-digit" /></div>
+                {/* Loan Type */}
+                <div>
+                  <Label className="text-xs font-medium">Loan Type *</Label>
+                  <Select value={newApp.loan_type} onValueChange={v => setNewApp(p => ({ ...p, loan_type: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>{LOAN_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
+                  </Select>
                 </div>
+                {/* Name + Phone */}
                 <div className="grid grid-cols-2 gap-3">
-                  <div><Label>Loan Amount</Label><Input type="number" value={newApp.loan_amount} onChange={e => setNewApp(p => ({ ...p, loan_amount: e.target.value }))} /></div>
-                  <div><Label>Car Model</Label><Input value={newApp.car_model} onChange={e => setNewApp(p => ({ ...p, car_model: e.target.value }))} /></div>
+                  <div><Label className="text-xs">Name *</Label><Input value={newApp.customer_name} onChange={e => setNewApp(p => ({ ...p, customer_name: e.target.value }))} /></div>
+                  <div><Label className="text-xs">Phone *</Label><Input value={newApp.phone} onChange={e => setNewApp(p => ({ ...p, phone: e.target.value }))} placeholder="10-digit" /></div>
                 </div>
+                {/* Email + City */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div><Label className="text-xs">Email</Label><Input type="email" value={newApp.email} onChange={e => setNewApp(p => ({ ...p, email: e.target.value }))} /></div>
+                  <div><Label className="text-xs">City</Label><Input value={newApp.city} onChange={e => setNewApp(p => ({ ...p, city: e.target.value }))} /></div>
+                </div>
+                {/* Loan Amount + Car Model */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div><Label className="text-xs">Loan Amount</Label><Input type="number" value={newApp.loan_amount} onChange={e => setNewApp(p => ({ ...p, loan_amount: e.target.value }))} /></div>
+                  <div><Label className="text-xs">Car Model</Label><Input value={newApp.car_model} onChange={e => setNewApp(p => ({ ...p, car_model: e.target.value }))} /></div>
+                </div>
+                {/* Down Payment + Monthly Income */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div><Label className="text-xs">Down Payment</Label><Input type="number" value={newApp.down_payment} onChange={e => setNewApp(p => ({ ...p, down_payment: e.target.value }))} /></div>
+                  <div><Label className="text-xs">Monthly Income</Label><Input type="number" value={newApp.monthly_income} onChange={e => setNewApp(p => ({ ...p, monthly_income: e.target.value }))} /></div>
+                </div>
+                {/* Employment + Priority */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label>Priority</Label>
+                    <Label className="text-xs">Employment Type</Label>
+                    <Select value={newApp.employment_type} onValueChange={v => setNewApp(p => ({ ...p, employment_type: v }))}>
+                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>{EMPLOYMENT_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Priority</Label>
                     <Select value={newApp.priority} onValueChange={v => setNewApp(p => ({ ...p, priority: v }))}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>{PRIORITY_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
-                  <div>
-                    <Label>Source</Label>
-                    <Select value={newApp.source} onValueChange={v => setNewApp(p => ({ ...p, source: v }))}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>{LEAD_SOURCES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
                 </div>
-                <div><Label>Remarks</Label><Textarea value={newApp.remarks} onChange={e => setNewApp(p => ({ ...p, remarks: e.target.value }))} rows={2} /></div>
-                <Button onClick={() => createMutation.mutate(newApp)} disabled={!newApp.customer_name || !newApp.phone || createMutation.isPending} className="w-full bg-emerald-600 hover:bg-emerald-700">
+                {/* Source */}
+                <div>
+                  <Label className="text-xs">Lead Source</Label>
+                  <Select value={newApp.source} onValueChange={v => setNewApp(p => ({ ...p, source: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>{LEAD_SOURCES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                {/* Remarks */}
+                <div><Label className="text-xs">Remarks</Label><Textarea value={newApp.remarks} onChange={e => setNewApp(p => ({ ...p, remarks: e.target.value }))} rows={2} /></div>
+                <Button onClick={() => createMutation.mutate(newApp)} disabled={!newApp.customer_name || !newApp.phone || createMutation.isPending} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white">
                   Create Lead
                 </Button>
               </div>
@@ -444,9 +551,7 @@ export const LoanWorkspace = () => {
 
       {/* Import Dialog */}
       <LeadImportDialog
-        open={showImport}
-        onOpenChange={setShowImport}
-        title="Import Loan Leads"
+        open={showImport} onOpenChange={setShowImport} title="Import Loan Leads"
         templateColumns={["name", "phone", "loan_amount", "car_model", "source"]}
         onImport={async (leads) => {
           const rows = leads.map(l => ({
@@ -472,48 +577,45 @@ export const LoanWorkspace = () => {
         </div>
       )}
 
-      {/* Kanban Board */}
+      {/* ─── Kanban Board with Grid Lines ─── */}
       <ScrollArea className="w-full">
-        <div className="flex gap-3 pb-4 min-w-max">
-          {pipelineStages.map(stage => {
+        <div className="flex min-w-max">
+          {pipelineStages.map((stage, colIdx) => {
             const stageApps = applications.filter((a: any) => a.stage === stage);
             const stageValue = stageApps.reduce((s: number, a: any) => s + (Number(a.loan_amount) || 0), 0);
             const isDragOver = dragOverStage === stage;
             const showDropIndicator = draggingApp && isDragOver;
 
             return (
-              <div key={stage} className="w-[270px] shrink-0 flex flex-col"
+              <div key={stage}
+                className={`w-[280px] shrink-0 flex flex-col ${colIdx > 0 ? 'border-l border-border/40' : ''}`}
                 onDragOver={e => handleDragOver(e, stage)}
                 onDragLeave={handleDragLeave}
                 onDrop={e => handleDrop(e, stage)}>
                 {/* Column Header */}
-                <div className={`rounded-lg border p-2.5 mb-2 transition-all ${STAGE_COLORS[stage]} ${
-                  showDropIndicator ? 'ring-2 ring-primary scale-[1.02] shadow-lg' : ''
-                }`}>
+                <div className={`mx-1.5 rounded-lg border p-2.5 mb-2 transition-all ${STAGE_COLORS[stage]} ${showDropIndicator ? 'ring-2 ring-primary scale-[1.02] shadow-lg' : ''}`}>
                   <div className="flex justify-between items-center">
                     <span className="font-semibold text-xs">{STAGE_LABELS[stage]}</span>
                     <Badge variant="secondary" className="text-[10px] h-5">{stageApps.length}</Badge>
                   </div>
-                  {stageValue > 0 && (
-                    <p className="text-[10px] mt-1 opacity-70">Rs.{(stageValue / 100000).toFixed(1)}L</p>
-                  )}
+                  {stageValue > 0 && <p className="text-[10px] mt-1 opacity-70">₹{(stageValue / 100000).toFixed(1)}L</p>}
                 </div>
 
                 {/* Cards */}
-                <div className={`space-y-2 min-h-[120px] flex-1 rounded-lg transition-all p-1 ${
-                  showDropIndicator ? 'bg-primary/5 border-2 border-dashed border-primary/30' : ''
-                }`}>
+                <div className={`flex-1 px-1.5 pb-2 min-h-[120px] transition-all ${showDropIndicator ? 'bg-primary/5' : ''}`}>
                   {stageApps.length === 0 && !showDropIndicator && (
                     <div className="h-full flex items-center justify-center text-[11px] text-muted-foreground/40 py-8">No leads</div>
                   )}
                   {showDropIndicator && stageApps.length === 0 && (
                     <div className="h-full flex items-center justify-center text-[11px] text-primary/60 py-8 font-medium">Drop here ✓</div>
                   )}
-                  {stageApps.map((app: any) => (
-                    <LoanCard key={app.id} app={app} stage={stage}
-                      onDragStart={handleDragStart} onDragEnd={handleDragEnd}
-                      onClick={handleCardClick} onWhatsApp={handleWhatsApp}
-                      isDragging={draggingApp?.id === app.id} formatAmount={formatAmount} />
+                  {stageApps.map((app: any, cardIdx: number) => (
+                    <div key={app.id} className={cardIdx > 0 ? 'border-t border-border/30 pt-2 mt-2' : ''}>
+                      <LoanCard app={app} stage={stage}
+                        onDragStart={handleDragStart} onDragEnd={handleDragEnd}
+                        onClick={handleCardClick} onWhatsApp={handleWhatsApp}
+                        isDragging={draggingApp?.id === app.id} formatAmount={formatAmount} />
+                    </div>
                   ))}
                 </div>
               </div>
@@ -521,26 +623,24 @@ export const LoanWorkspace = () => {
           })}
 
           {/* Lost Column */}
-          <div className="w-[270px] shrink-0 flex flex-col"
+          <div className="w-[280px] shrink-0 flex flex-col border-l border-border/40"
             onDragOver={e => handleDragOver(e, 'lost')}
             onDragLeave={handleDragLeave}
             onDrop={e => handleDrop(e, 'lost')}>
-            <div className={`rounded-lg border p-2.5 mb-2 transition-all ${STAGE_COLORS['lost']} ${
-              dragOverStage === 'lost' && draggingApp ? 'ring-2 ring-red-500 scale-[1.02] shadow-lg' : ''
-            }`}>
+            <div className={`mx-1.5 rounded-lg border p-2.5 mb-2 transition-all ${STAGE_COLORS['lost']} ${dragOverStage === 'lost' && draggingApp ? 'ring-2 ring-red-500 scale-[1.02] shadow-lg' : ''}`}>
               <div className="flex justify-between items-center">
                 <span className="font-semibold text-xs">Lost</span>
                 <Badge variant="secondary" className="text-[10px] h-5">{lost}</Badge>
               </div>
             </div>
-            <div className={`space-y-2 min-h-[120px] flex-1 rounded-lg transition-all p-1 ${
-              dragOverStage === 'lost' && draggingApp ? 'bg-red-500/5 border-2 border-dashed border-red-500/30' : ''
-            }`}>
-              {applications.filter((a: any) => a.stage === 'lost').slice(0, 5).map((app: any) => (
-                <LoanCard key={app.id} app={app} stage="lost"
-                  onDragStart={handleDragStart} onDragEnd={handleDragEnd}
-                  onClick={handleCardClick} onWhatsApp={handleWhatsApp}
-                  isDragging={draggingApp?.id === app.id} formatAmount={formatAmount} />
+            <div className={`flex-1 px-1.5 pb-2 min-h-[120px] transition-all ${dragOverStage === 'lost' && draggingApp ? 'bg-red-500/5' : ''}`}>
+              {applications.filter((a: any) => a.stage === 'lost').slice(0, 5).map((app: any, i: number) => (
+                <div key={app.id} className={i > 0 ? 'border-t border-border/30 pt-2 mt-2' : ''}>
+                  <LoanCard app={app} stage="lost"
+                    onDragStart={handleDragStart} onDragEnd={handleDragEnd}
+                    onClick={handleCardClick} onWhatsApp={handleWhatsApp}
+                    isDragging={draggingApp?.id === app.id} formatAmount={formatAmount} />
+                </div>
               ))}
             </div>
           </div>
@@ -551,10 +651,8 @@ export const LoanWorkspace = () => {
       {/* Stage Detail Modal */}
       {selectedApp && (
         <LoanStageDetailModal
-          open={showStageModal}
-          onOpenChange={setShowStageModal}
-          application={selectedApp}
-          bankPartners={bankPartners}
+          open={showStageModal} onOpenChange={setShowStageModal}
+          application={selectedApp} bankPartners={bankPartners}
         />
       )}
     </div>
@@ -563,23 +661,18 @@ export const LoanWorkspace = () => {
 
 // ─── Lead Card ───
 const LoanCard = ({ app, stage, onDragStart, onDragEnd, onClick, onWhatsApp, isDragging, formatAmount }: any) => {
-  const sourceColors: Record<string, string> = {
-    meta: 'bg-blue-500/10 text-blue-600', 'google ads': 'bg-red-500/10 text-red-600',
-    referral: 'bg-green-500/10 text-green-600', 'walk-in': 'bg-amber-500/10 text-amber-600',
-    'whatsapp broadcast': 'bg-emerald-500/10 text-emerald-600', website: 'bg-purple-500/10 text-purple-600',
-    manual: 'bg-gray-500/10 text-gray-600', partner: 'bg-indigo-500/10 text-indigo-600',
-  };
+  const loanTypeInfo = LOAN_TYPES.find(t => t.value === app.loan_type);
 
   return (
-    <Card draggable onDragStart={e => onDragStart(e, app)} onDragEnd={onDragEnd}
-      className={`border-border/50 hover:shadow-md transition-all cursor-grab active:cursor-grabbing group ${isDragging ? 'opacity-30 scale-95' : ''}`}
+    <Card draggable onDragStart={(e: React.DragEvent) => onDragStart(e, app)} onDragEnd={onDragEnd}
+      className={`border-border/40 hover:shadow-md transition-all cursor-grab active:cursor-grabbing group ${isDragging ? 'opacity-30 scale-95' : ''}`}
       onClick={() => onClick(app)}>
       <CardContent className="p-2.5 space-y-1.5">
-        {/* Client ID + Name */}
+        {/* Name + Priority */}
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-1.5 min-w-0">
             <GripVertical className="h-3 w-3 text-muted-foreground/30 group-hover:text-muted-foreground/60 shrink-0" />
-            <span className="font-medium text-xs truncate max-w-[140px]">{app.customer_name}</span>
+            <span className="font-medium text-xs truncate max-w-[150px]">{app.customer_name}</span>
           </div>
           {app.priority && (
             <Badge className={`text-[9px] px-1.5 py-0 shrink-0 ${PRIORITY_OPTIONS.find((o: any) => o.value === app.priority)?.color || ''}`}>
@@ -588,8 +681,10 @@ const LoanCard = ({ app, stage, onDragStart, onDragEnd, onClick, onWhatsApp, isD
           )}
         </div>
 
-        {/* Client ID */}
-        <div className="text-[9px] font-mono text-muted-foreground/50 truncate">ID: {app.id.slice(0, 8)}</div>
+        {/* Loan Type Badge */}
+        {loanTypeInfo && (
+          <Badge className={`text-[8px] px-1.5 py-0 ${loanTypeInfo.color}`}>{loanTypeInfo.label}</Badge>
+        )}
 
         {/* Phone + Quick Actions */}
         <div className="flex items-center justify-between">
@@ -597,10 +692,10 @@ const LoanCard = ({ app, stage, onDragStart, onDragEnd, onClick, onWhatsApp, isD
             <Phone className="h-2.5 w-2.5" />{app.phone}
           </div>
           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={e => { e.stopPropagation(); window.open(`tel:+91${app.phone.replace(/\D/g, '').slice(-10)}`, '_self'); }}>
+            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={(e: React.MouseEvent) => { e.stopPropagation(); window.open(`tel:+91${app.phone.replace(/\D/g, '').slice(-10)}`, '_self'); }}>
               <PhoneCall className="h-3 w-3 text-emerald-600" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={e => { e.stopPropagation(); onWhatsApp(app.phone, app.customer_name); }}>
+            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={(e: React.MouseEvent) => { e.stopPropagation(); onWhatsApp(app.phone, app.customer_name); }}>
               <MessageCircle className="h-3 w-3 text-green-600" />
             </Button>
           </div>
@@ -623,7 +718,7 @@ const LoanCard = ({ app, stage, onDragStart, onDragEnd, onClick, onWhatsApp, isD
 
         {/* Source badge */}
         {app.source && (
-          <Badge className={`text-[8px] px-1 py-0 ${sourceColors[app.source.toLowerCase()] || 'bg-gray-500/10 text-gray-500'}`}>
+          <Badge variant="outline" className={`text-[8px] px-1.5 py-0 ${SOURCE_COLORS[app.source.toLowerCase()] || 'bg-gray-500/10 text-gray-500 border-gray-500/20'}`}>
             {app.source}
           </Badge>
         )}
@@ -639,7 +734,7 @@ const LoanCard = ({ app, stage, onDragStart, onDragEnd, onClick, onWhatsApp, isD
         )}
         {stage === 'loan_application' && (
           <Badge variant="outline" className={`text-[9px] ${app.sanction_amount ? 'border-green-500/30 text-green-600' : 'border-amber-500/30 text-amber-600'}`}>
-            {app.sanction_amount ? `Approved Rs.${(app.sanction_amount / 100000).toFixed(1)}L` : 'Pending'}
+            {app.sanction_amount ? `Approved ₹${(app.sanction_amount / 100000).toFixed(1)}L` : 'Pending'}
           </Badge>
         )}
         {stage === 'disbursed' && (
@@ -674,9 +769,15 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
   const [disbAmount, setDisbAmount] = useState(application?.disbursement_amount?.toString() || '');
   const [disbDate, setDisbDate] = useState(application?.disbursement_date || '');
   const [disbBank, setDisbBank] = useState(application?.lender_name || '');
-  // Removed unused fileRef
 
   const currentStage = application?.stage || 'new_lead';
+  const loanTypeInfo = LOAN_TYPES.find(t => t.value === application?.loan_type);
+
+  const formatAmount = (amt: number | null) => {
+    if (!amt) return '-';
+    if (amt >= 100000) return `₹${(amt / 100000).toFixed(1)}L`;
+    return `₹${(amt / 1000).toFixed(0)}K`;
+  };
 
   const updateMutation = useMutation({
     mutationFn: async (updates: any) => {
@@ -686,11 +787,8 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
       if (error) throw error;
       if (updates.stage && updates.stage !== currentStage) {
         await supabase.from('loan_stage_history').insert({
-          application_id: application.id,
-          from_stage: currentStage,
-          to_stage: updates.stage,
-          changed_by: user?.id,
-          remarks: updates.remarks || remarks || null,
+          application_id: application.id, from_stage: currentStage, to_stage: updates.stage,
+          changed_by: user?.id, remarks: updates.remarks || remarks || null,
         });
       }
     },
@@ -706,16 +804,8 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
     if (!callStatus) { toast.error("Select a call status"); return; }
     if (!callRemarks.trim()) { toast.error("Remarks are mandatory"); return; }
     const nextStage = callStatus === 'Interested' ? 'interested' : callStatus === 'Not Interested' ? 'lost' : currentStage;
-    const updates: any = {
-      call_status: callStatus,
-      call_remarks: callRemarks,
-      remarks: callRemarks,
-      stage: nextStage,
-    };
-    if (nextStage === 'lost') {
-      updates.lost_reason = 'Customer not responding';
-      updates.lost_remarks = callRemarks;
-    }
+    const updates: any = { call_status: callStatus, call_remarks: callRemarks, remarks: callRemarks, stage: nextStage };
+    if (nextStage === 'lost') { updates.lost_reason = 'Customer not responding'; updates.lost_remarks = callRemarks; }
     updateMutation.mutate(updates);
   };
 
@@ -738,40 +828,26 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
     if (loanStatus === 'approved' && !sanctionAmount) { toast.error("Sanction amount required"); return; }
     const updates: any = {
       stage: loanStatus === 'approved' ? 'loan_application' : 'lost',
-      remarks: remarks || (loanStatus === 'approved' ? `Approved: Rs.${sanctionAmount}` : `Rejected: ${rejectionReason}`),
+      remarks: remarks || (loanStatus === 'approved' ? `Approved: ₹${sanctionAmount}` : `Rejected: ${rejectionReason}`),
     };
-    if (loanStatus === 'approved') {
-      updates.sanction_amount = Number(sanctionAmount);
-      updates.sanction_date = new Date().toISOString();
-    } else {
-      updates.rejection_reason = rejectionReason;
-      updates.lost_reason = 'Loan not approved';
-      updates.lost_remarks = rejectionReason;
-    }
+    if (loanStatus === 'approved') { updates.sanction_amount = Number(sanctionAmount); updates.sanction_date = new Date().toISOString(); }
+    else { updates.rejection_reason = rejectionReason; updates.lost_reason = 'Loan not approved'; updates.lost_remarks = rejectionReason; }
     updateMutation.mutate(updates);
   };
 
   const handleDisbursedSave = () => {
     if (!disbAmount || !disbDate || !disbBank) { toast.error("All disbursement details required"); return; }
     updateMutation.mutate({
-      stage: 'disbursed',
-      disbursement_amount: Number(disbAmount),
-      disbursement_date: disbDate,
-      lender_name: disbBank,
-      incentive_eligible: true,
-      converted_at: new Date().toISOString(),
-      remarks: `Disbursed: Rs.${disbAmount} via ${disbBank}`,
+      stage: 'disbursed', disbursement_amount: Number(disbAmount), disbursement_date: disbDate,
+      lender_name: disbBank, incentive_eligible: true, converted_at: new Date().toISOString(),
+      remarks: `Disbursed: ₹${disbAmount} via ${disbBank}`,
     });
   };
 
   const handleLostSave = () => {
     if (!lostReason) { toast.error("Select lost reason"); return; }
     if (!lostRemarks.trim()) { toast.error("Remarks required"); return; }
-    updateMutation.mutate({
-      stage: 'lost',
-      lost_reason: lostReason,
-      lost_remarks: lostRemarks,
-    });
+    updateMutation.mutate({ stage: 'lost', lost_reason: lostReason, lost_remarks: lostRemarks });
   };
 
   const handleMoveStage = (stage: string) => {
@@ -792,11 +868,12 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
             <Badge className={`text-[10px] ${STAGE_COLORS[currentStage as LoanStage] || ''}`}>
               {STAGE_LABELS[currentStage as LoanStage] || currentStage}
             </Badge>
+            {loanTypeInfo && <Badge className={`text-[9px] ${loanTypeInfo.color}`}>{loanTypeInfo.label}</Badge>}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Client ID Card */}
+          {/* Client Info Card */}
           <Card className="border-border/50 bg-muted/30">
             <CardContent className="p-3">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
@@ -828,45 +905,33 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
                   <p className="text-xs">{application.car_model || '—'}</p>
                 </div>
               </div>
-              {application.source && (
-                <div className="mt-2">
-                  <Badge variant="outline" className="text-[9px]">Source: {application.source}</Badge>
-                </div>
-              )}
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {application.source && <Badge variant="outline" className="text-[9px]">Source: {application.source}</Badge>}
+                {loanTypeInfo && <Badge variant="outline" className={`text-[9px] ${loanTypeInfo.color}`}>{loanTypeInfo.label}</Badge>}
+              </div>
             </CardContent>
           </Card>
 
-          {/* Remarks / Chat History */}
+          {/* Remarks */}
           {application.remarks && (
             <div className="rounded-lg border border-border/50 p-3">
               <p className="text-[10px] text-muted-foreground mb-1">Remarks History</p>
-              <div className="bg-muted/30 rounded p-2 text-xs whitespace-pre-wrap max-h-24 overflow-y-auto">
-                {application.remarks}
-              </div>
+              <div className="bg-muted/30 rounded p-2 text-xs whitespace-pre-wrap max-h-24 overflow-y-auto">{application.remarks}</div>
             </div>
           )}
-
-          {/* ─── Stage-Specific Actions ─── */}
 
           {/* SMART CALLING */}
           {(currentStage === 'new_lead' || currentStage === 'smart_calling') && (
             <div className="space-y-3 p-4 rounded-lg border border-amber-500/20 bg-amber-500/5">
-              <div className="flex items-center gap-2 text-amber-700 text-sm font-medium">
-                <PhoneCall className="h-4 w-4" /> Smart Calling
-              </div>
+              <div className="flex items-center gap-2 text-amber-700 text-sm font-medium"><PhoneCall className="h-4 w-4" /> Smart Calling</div>
               <div>
                 <Label>Call Status *</Label>
                 <Select value={callStatus} onValueChange={setCallStatus}>
                   <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
-                  <SelectContent>
-                    {CALL_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                  </SelectContent>
+                  <SelectContent>{CALL_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label>Remarks *</Label>
-                <Textarea value={callRemarks} onChange={e => setCallRemarks(e.target.value)} placeholder="Call notes..." rows={2} />
-              </div>
+              <div><Label>Remarks *</Label><Textarea value={callRemarks} onChange={e => setCallRemarks(e.target.value)} placeholder="Call notes..." rows={2} /></div>
               <Button onClick={handleSmartCallingSave} disabled={updateMutation.isPending} className="w-full bg-amber-600 hover:bg-amber-700 text-white">
                 {updateMutation.isPending ? "Saving..." : "Save & Update Status"}
               </Button>
@@ -876,18 +941,14 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
           {/* OFFER SHARED */}
           {(currentStage === 'interested' || currentStage === 'offer_shared') && (
             <div className="space-y-3 p-4 rounded-lg border border-violet-500/20 bg-violet-500/5">
-              <div className="flex items-center gap-2 text-violet-700 text-sm font-medium">
-                <Building2 className="h-4 w-4" /> Share Offer — Bank Partners
-              </div>
+              <div className="flex items-center gap-2 text-violet-700 text-sm font-medium"><Building2 className="h-4 w-4" /> Share Offer — Bank Partners</div>
               <div>
                 <Label>Select Bank/NBFC *</Label>
                 <Select value={selectedBank} onValueChange={setSelectedBank}>
                   <SelectTrigger><SelectValue placeholder="Choose bank partner" /></SelectTrigger>
                   <SelectContent>
                     {bankPartners.map((b: any) => (
-                      <SelectItem key={b.id} value={b.id}>
-                        {b.name} {b.interest_rate_min ? `(${b.interest_rate_min}%-${b.interest_rate_max}%)` : ''}
-                      </SelectItem>
+                      <SelectItem key={b.id} value={b.id}>{b.name} {b.interest_rate_min ? `(${b.interest_rate_min}%-${b.interest_rate_max}%)` : ''}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -907,9 +968,7 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
           {/* LOAN APPLICATION */}
           {(currentStage === 'offer_shared' || currentStage === 'loan_application' || application._targetStage === 'loan_application') && (
             <div className="space-y-3 p-4 rounded-lg border border-indigo-500/20 bg-indigo-500/5">
-              <div className="flex items-center gap-2 text-indigo-700 text-sm font-medium">
-                <FileText className="h-4 w-4" /> Loan Application Status
-              </div>
+              <div className="flex items-center gap-2 text-indigo-700 text-sm font-medium"><FileText className="h-4 w-4" /> Loan Application Status</div>
               <div>
                 <Label>Loan Status *</Label>
                 <Select value={loanStatus} onValueChange={setLoanStatus}>
@@ -920,12 +979,8 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
                   </SelectContent>
                 </Select>
               </div>
-              {loanStatus === 'approved' && (
-                <div><Label>Sanction Amount *</Label><Input type="number" value={sanctionAmount} onChange={e => setSanctionAmount(e.target.value)} placeholder="e.g. 750000" /></div>
-              )}
-              {loanStatus === 'rejected' && (
-                <div><Label>Rejection Reason *</Label><Textarea value={rejectionReason} onChange={e => setRejectionReason(e.target.value)} placeholder="Why was loan rejected?" rows={2} /></div>
-              )}
+              {loanStatus === 'approved' && <div><Label>Sanction Amount *</Label><Input type="number" value={sanctionAmount} onChange={e => setSanctionAmount(e.target.value)} placeholder="e.g. 750000" /></div>}
+              {loanStatus === 'rejected' && <div><Label>Rejection Reason *</Label><Textarea value={rejectionReason} onChange={e => setRejectionReason(e.target.value)} placeholder="Why was loan rejected?" rows={2} /></div>}
               <div><Label>Remarks</Label><Textarea value={remarks} onChange={e => setRemarks(e.target.value)} rows={2} /></div>
               <Button onClick={handleLoanAppSave} disabled={!loanStatus || updateMutation.isPending}
                 className={`w-full ${loanStatus === 'rejected' ? 'bg-red-600 hover:bg-red-700' : 'bg-indigo-600 hover:bg-indigo-700'} text-white`}>
@@ -937,9 +992,7 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
           {/* DISBURSED */}
           {(currentStage === 'loan_application' || currentStage === 'disbursed' || application._targetStage === 'disbursed') && (
             <div className="space-y-3 p-4 rounded-lg border border-emerald-500/20 bg-emerald-500/5">
-              <div className="flex items-center gap-2 text-emerald-700 text-sm font-medium">
-                <CheckCircle2 className="h-4 w-4" /> Disbursement Details
-              </div>
+              <div className="flex items-center gap-2 text-emerald-700 text-sm font-medium"><CheckCircle2 className="h-4 w-4" /> Disbursement Details</div>
               {currentStage === 'disbursed' && application.incentive_eligible && (
                 <Badge className="bg-green-500/10 text-green-600 border-green-500/20">✅ Incentive Eligible</Badge>
               )}
@@ -949,14 +1002,8 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
               </div>
               <div><Label>Bank Name *</Label><Input value={disbBank} onChange={e => setDisbBank(e.target.value)} placeholder="e.g. HDFC Bank" /></div>
               <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="p-2 rounded bg-background border">
-                  <p className="text-muted-foreground">Car</p>
-                  <p className="font-medium">{application.car_model || '—'}</p>
-                </div>
-                <div className="p-2 rounded bg-background border">
-                  <p className="text-muted-foreground">Sanction Amount</p>
-                  <p className="font-medium">{application.sanction_amount ? `Rs.${(application.sanction_amount / 100000).toFixed(1)}L` : '-'}</p>
-                </div>
+                <div className="p-2 rounded bg-background border"><p className="text-muted-foreground">Car</p><p className="font-medium">{application.car_model || '—'}</p></div>
+                <div className="p-2 rounded bg-background border"><p className="text-muted-foreground">Sanction Amount</p><p className="font-medium">{application.sanction_amount ? `₹${(application.sanction_amount / 100000).toFixed(1)}L` : '-'}</p></div>
               </div>
               <div><Label>Remarks</Label><Textarea value={remarks} onChange={e => setRemarks(e.target.value)} rows={2} /></div>
               {currentStage !== 'disbursed' && (
@@ -970,22 +1017,15 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
           {/* LOST */}
           {(application._targetStage === 'lost' || currentStage === 'lost') && currentStage !== 'lost' && (
             <div className="space-y-3 p-4 rounded-lg border border-red-500/20 bg-red-500/5">
-              <div className="flex items-center gap-2 text-red-600 text-sm font-medium">
-                <AlertTriangle className="h-4 w-4" /> Mark as Lost
-              </div>
+              <div className="flex items-center gap-2 text-red-600 text-sm font-medium"><AlertTriangle className="h-4 w-4" /> Mark as Lost</div>
               <div>
                 <Label>Lost Reason *</Label>
                 <Select value={lostReason} onValueChange={setLostReason}>
                   <SelectTrigger><SelectValue placeholder="Select reason" /></SelectTrigger>
-                  <SelectContent>
-                    {LOST_REASONS.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                  </SelectContent>
+                  <SelectContent>{LOST_REASONS.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label>Detailed Remarks *</Label>
-                <Textarea value={lostRemarks} onChange={e => setLostRemarks(e.target.value)} placeholder="Why was this lead lost?" rows={3} />
-              </div>
+              <div><Label>Detailed Remarks *</Label><Textarea value={lostRemarks} onChange={e => setLostRemarks(e.target.value)} placeholder="Why was this lead lost?" rows={3} /></div>
               <Button onClick={handleLostSave} disabled={updateMutation.isPending} variant="destructive" className="w-full">
                 {updateMutation.isPending ? "Saving..." : "Mark as Lost"}
               </Button>
@@ -1000,11 +1040,8 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
                 {LOAN_STAGES.filter(s => s !== currentStage).map(s => (
                   <Button key={s} variant="outline" size="sm" className={`text-[10px] h-7 ${STAGE_COLORS[s]}`}
                     onClick={() => {
-                      if (s === 'lost' || s === 'disbursed' || s === 'loan_application') {
-                        setTargetStage(s);
-                      } else {
-                        handleMoveStage(s);
-                      }
+                      if (s === 'lost' || s === 'disbursed' || s === 'loan_application') setTargetStage(s);
+                      else handleMoveStage(s);
                     }}>
                     {STAGE_LABELS[s]}
                   </Button>
@@ -1016,10 +1053,4 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
       </DialogContent>
     </Dialog>
   );
-};
-
-const formatAmount = (amt: number | null) => {
-  if (!amt) return '-';
-  if (amt >= 100000) return `Rs.${(amt / 100000).toFixed(1)}L`;
-  return `Rs.${(amt / 1000).toFixed(0)}K`;
 };

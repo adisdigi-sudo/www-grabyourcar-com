@@ -1,0 +1,1 @@
+ALTER TABLE public.loan_applications ADD COLUMN IF NOT EXISTS loan_type text DEFAULT 'new_car_loan';
