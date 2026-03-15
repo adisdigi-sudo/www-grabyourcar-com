@@ -121,7 +121,7 @@ export const Header = () => {
 
             {/* Logo - Responsive & Backend-Managed */}
             <Link to="/" className="flex items-center flex-shrink-0">
-              <ResponsiveLogo variant="header" />
+              <ResponsiveLogo variant="header" className="h-8 md:h-10 lg:h-12" />
             </Link>
 
             {/* Desktop Navigation with Mega Menu */}
