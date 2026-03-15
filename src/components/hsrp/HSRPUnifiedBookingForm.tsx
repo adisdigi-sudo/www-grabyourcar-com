@@ -422,9 +422,11 @@ export function HSRPUnifiedBookingForm() {
     { title: "Confirmed", icon: CheckCircle2 },
   ];
 
-  const detectedCategoryInfo = formData.vehicleCategory 
-    ? vehicleCategories.find(c => c.value === formData.vehicleCategory) 
+  const detectedCategoryInfo = formData.vehicleCategory
+    ? vehicleCategories.find(c => c.value === formData.vehicleCategory)
     : null;
+  const cleanedRegistration = formData.registrationNumber.replace(/\s+/g, "").toUpperCase();
+  const hasValidRegistration = /^[A-Z]{2}\d{1,2}[A-Z]{0,3}\d{4}$/.test(cleanedRegistration);
 
   return (
     <div className="space-y-6">
