@@ -107,7 +107,7 @@ export const Header = () => {
     <>
       <header className="sticky top-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-b border-border/50">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-14 md:h-16 lg:h-20 gap-2">
+          <div className="flex items-center justify-between h-12 md:h-14 lg:h-16 gap-2">
             {/* Mobile Menu Button - Left side */}
             <button
               onClick={() => setMenuOpen(!menuOpen)}
@@ -121,7 +121,7 @@ export const Header = () => {
 
             {/* Logo - Responsive & Backend-Managed */}
             <Link to="/" className="flex items-center flex-shrink-0">
-              <ResponsiveLogo variant="header" />
+              <ResponsiveLogo variant="header" className="h-8 md:h-10 lg:h-12" />
             </Link>
 
             {/* Desktop Navigation with Mega Menu */}
@@ -242,125 +242,148 @@ export const Header = () => {
           </div>
         </div>
 
-        {/* Mobile Top Navigation Bar - Home, Search, Favorites only */}
+        {/* Mobile Bottom Navigation Bar */}
         <div className="md:hidden border-t border-border/50 bg-card/95">
-          <div className="flex items-center justify-around h-11">
+          <div className="flex items-center justify-around h-12">
             <Link
               to="/"
               className={cn(
                 "flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors",
-                isActive("/") ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                isActive("/") ? "text-primary" : "text-muted-foreground"
               )}
             >
-              <Home className="h-5 w-5" />
-              <span className="text-[10px] font-medium">Home</span>
+              <Home className="h-4.5 w-4.5" />
+              <span className="text-[9px] font-medium">Home</span>
             </Link>
             
             <Link
               to="/cars"
               className={cn(
                 "flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors",
-                isActive("/cars") ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                isActive("/cars") ? "text-primary" : "text-muted-foreground"
               )}
             >
-              <Search className="h-5 w-5" />
-              <span className="text-[10px] font-medium">Search</span>
+              <Search className="h-4.5 w-4.5" />
+              <span className="text-[9px] font-medium">Search</span>
             </Link>
-            
+
             <Link
               to="/favorites"
               className={cn(
                 "flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors",
-                isActive("/favorites") ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                isActive("/favorites") ? "text-primary" : "text-muted-foreground"
               )}
             >
-              <Heart className="h-5 w-5" />
-              <span className="text-[10px] font-medium">Favorites</span>
+              <Heart className="h-4.5 w-4.5" />
+              <span className="text-[9px] font-medium">Favorites</span>
             </Link>
+
+            {user ? (
+              <Link
+                to="/my-bookings"
+                className={cn(
+                  "flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors",
+                  isActive("/my-bookings") ? "text-primary" : "text-muted-foreground"
+                )}
+              >
+                <User className="h-4.5 w-4.5" />
+                <span className="text-[9px] font-medium">Account</span>
+              </Link>
+            ) : (
+              <Link
+                to="/auth"
+                className={cn(
+                  "flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors",
+                  isActive("/auth") ? "text-primary" : "text-muted-foreground"
+                )}
+              >
+                <User className="h-4.5 w-4.5" />
+                <span className="text-[9px] font-medium">Login</span>
+              </Link>
+            )}
           </div>
         </div>
       </header>
 
       {/* Mobile Menu Overlay */}
       {menuOpen && (
-        <div className="lg:hidden fixed inset-0 z-40 bg-background/95 backdrop-blur-sm animate-fade-in pt-[6.5rem]">
-          <div className="flex flex-col h-full pb-24 px-5 overflow-y-auto">
+        <div className="lg:hidden fixed inset-0 z-40 bg-background/98 backdrop-blur-sm animate-fade-in pt-24 md:pt-[6.5rem]">
+          <div className="flex flex-col h-full pb-20 px-4 overflow-y-auto">
             <nav className="flex flex-col gap-1">
               <p className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Services</p>
               {services.map((service) => (
                 <Link
                   key={service.title}
                   to={service.href}
-                  className="px-4 py-3.5 text-[15px] font-medium text-foreground hover:bg-muted rounded-xl transition-colors flex items-center gap-3 active:bg-muted/80"
+                  className="px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted rounded-lg transition-colors flex items-center gap-3 active:bg-muted/80"
                   onClick={() => setMenuOpen(false)}
                 >
-                  <div className="w-9 h-9 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <service.icon className="h-4.5 w-4.5 text-primary" />
+                  <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <service.icon className="h-4 w-4 text-primary" />
                   </div>
                   <span className="flex-1">{service.title}</span>
                 </Link>
               ))}
               
-              <div className="border-t border-border/50 my-3" />
-              <p className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Quick Links</p>
+              <div className="border-t border-border/50 my-2" />
+              <p className="px-3 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Quick Links</p>
               {quickLinks.map((link) => (
                 <Link
                   key={link.label}
                   to={link.href}
-                  className="px-4 py-3 text-base font-medium text-foreground hover:bg-muted rounded-xl transition-colors"
+                  className="px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted rounded-lg transition-colors"
                   onClick={() => setMenuOpen(false)}
                 >
                   {link.label}
                 </Link>
               ))}
               
-              <div className="border-t border-border/50 my-4" />
+              <div className="border-t border-border/50 my-2" />
               
               {user ? (
                 <>
                   <Link
                     to="/favorites"
-                    className="px-4 py-4 text-lg font-medium text-foreground hover:bg-muted rounded-xl transition-colors flex items-center gap-3"
+                    className="px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted rounded-lg transition-colors flex items-center gap-3"
                     onClick={() => setMenuOpen(false)}
                   >
-                    <Heart className="h-5 w-5" />
+                    <Heart className="h-4 w-4" />
                     My Favorites
                   </Link>
-                  {/* Admin link removed from mobile menu for security - access via /admin directly */}
-                  <div className="px-4 py-2 text-sm text-muted-foreground">
+                  <div className="px-3 py-1.5 text-xs text-muted-foreground">
                     {user.email}
                   </div>
                   <button
-                    className="px-4 py-4 text-lg font-medium text-destructive hover:bg-muted rounded-xl transition-colors flex items-center gap-3 text-left"
+                    className="px-3 py-2.5 text-sm font-medium text-destructive hover:bg-muted rounded-lg transition-colors flex items-center gap-3 text-left"
                     onClick={handleSignOut}
                   >
-                    <LogOut className="h-5 w-5" />
+                    <LogOut className="h-4 w-4" />
                     Sign Out
                   </button>
                 </>
               ) : (
                 <Link
                   to="/auth"
-                  className="px-4 py-4 text-lg font-medium text-primary hover:bg-muted rounded-xl transition-colors flex items-center gap-3"
+                  className="px-3 py-2.5 text-sm font-medium text-primary hover:bg-muted rounded-lg transition-colors flex items-center gap-3"
                   onClick={() => setMenuOpen(false)}
                 >
-                  <User className="h-5 w-5" />
+                  <User className="h-4 w-4" />
                   Login / Sign Up
                 </Link>
               )}
             </nav>
 
             {/* Contact Buttons */}
-            <div className="mt-auto flex gap-3 pb-4">
+            <div className="mt-auto flex gap-2 pb-4">
               <a href="https://wa.me/1155578093" target="_blank" rel="noopener noreferrer" className="flex-1">
-                <Button variant="whatsapp" className="w-full h-12">
-                  <MessageCircle className="h-5 w-5 mr-2" />
+                <Button variant="whatsapp" className="w-full h-10 text-sm">
+                  <MessageCircle className="h-4 w-4 mr-1.5" />
                   WhatsApp
                 </Button>
               </a>
               <a href="tel:+1155578093" className="flex-1">
-                <Button variant="call" className="w-full h-12">
-                  <Phone className="h-5 w-5 mr-2" />
+                <Button variant="call" className="w-full h-10 text-sm">
+                  <Phone className="h-4 w-4 mr-1.5" />
                   Call Now
                 </Button>
               </a>
