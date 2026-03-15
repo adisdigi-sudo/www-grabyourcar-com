@@ -1,9 +1,14 @@
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Shield, CheckCircle2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Shield, CheckCircle2, ShoppingCart, LayoutDashboard } from "lucide-react";
 import { HSRPManagement } from "../HSRPManagement";
+import { HSRPAbandonedCarts } from "../hsrp/HSRPAbandonedCarts";
 
 export function HSRPVerticalWorkspace() {
+  const [tab, setTab] = useState("pipeline");
+
   return (
     <div className="space-y-4">
       <Card className="border-teal-200 dark:border-teal-900">
@@ -24,7 +29,23 @@ export function HSRPVerticalWorkspace() {
           </div>
         </CardContent>
       </Card>
-      <HSRPManagement />
+
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList>
+          <TabsTrigger value="pipeline" className="gap-1.5">
+            <LayoutDashboard className="h-4 w-4" /> Pipeline
+          </TabsTrigger>
+          <TabsTrigger value="abandoned" className="gap-1.5">
+            <ShoppingCart className="h-4 w-4" /> Abandoned Carts
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="pipeline">
+          <HSRPManagement />
+        </TabsContent>
+        <TabsContent value="abandoned">
+          <HSRPAbandonedCarts />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
