@@ -204,7 +204,12 @@ export function InsuranceWorkspace() {
   const [showAddLead, setShowAddLead] = useState(false);
   const [newLead, setNewLead] = useState({ customer_name: "", phone: "", email: "", city: "", vehicle_number: "", vehicle_make: "", vehicle_model: "", lead_source: "Manual", notes: "" });
 
-  // Data
+  // Bulk selection
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const toggleSelect = (id: string) => setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggleSelectAll = (ids: string[]) => setSelectedIds(prev => prev.size === ids.length ? new Set() : new Set(ids));
+
+  // Data - CRM leads
   const { data: clients = [], isLoading } = useQuery({
     queryKey: ["ins-workspace-clients"],
     queryFn: async () => {
@@ -215,6 +220,20 @@ export function InsuranceWorkspace() {
         .limit(1000);
       if (error) throw error;
       return (data || []) as Client[];
+    },
+  });
+
+  // Data - Actual booked policies from insurance_policies table
+  const { data: policies = [] } = useQuery({
+    queryKey: ["ins-policies-book"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("insurance_policies")
+        .select("id, client_id, policy_number, policy_type, insurer, premium_amount, start_date, expiry_date, status, is_renewal, issued_date, plan_name, idv, policy_document_url, created_at, insurance_clients(customer_name, phone, city, vehicle_number, vehicle_make, vehicle_model, lead_source)")
+        .in("status", ["active", "renewed"])
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data || []) as PolicyRecord[];
     },
   });
 
@@ -237,77 +256,72 @@ export function InsuranceWorkspace() {
 
   const insNotifications = useMemo(() => buildInsuranceNotifications(clients), [clients]);
 
-  // Policy book data
-  const policyBookClients = useMemo(() => clients.filter(c => {
-    const s = normalizeStage(c.pipeline_stage);
-    return s === "won" || s === "policy_issued";
-  }), [clients]);
-
-  // Unique partners/insurers for policy book filter
+  // Policy Book — from insurance_policies (actual booked policies only)
   const pbPartners = useMemo(() => {
-    const set = new Set(policyBookClients.map(c => c.current_insurer).filter(Boolean));
+    const set = new Set(policies.map(p => p.insurer).filter(Boolean));
     return Array.from(set).sort() as string[];
-  }, [policyBookClients]);
+  }, [policies]);
 
-  // Filtered policy book
   const filteredPolicyBook = useMemo(() => {
-    let result = policyBookClients;
-    if (pbPartnerFilter !== "all") result = result.filter(c => c.current_insurer === pbPartnerFilter);
+    let result = policies;
+    if (pbPartnerFilter !== "all") result = result.filter(p => p.insurer === pbPartnerFilter);
     if (pbSearch.trim()) {
       const s = pbSearch.toLowerCase();
-      result = result.filter(c =>
-        c.customer_name?.toLowerCase().includes(s) ||
-        c.phone?.includes(s) ||
-        c.vehicle_number?.toLowerCase().includes(s) ||
-        c.current_policy_number?.toLowerCase().includes(s) ||
-        c.current_insurer?.toLowerCase().includes(s)
+      result = result.filter(p =>
+        p.insurance_clients?.customer_name?.toLowerCase().includes(s) ||
+        p.insurance_clients?.phone?.includes(s) ||
+        p.insurance_clients?.vehicle_number?.toLowerCase().includes(s) ||
+        p.policy_number?.toLowerCase().includes(s) ||
+        p.insurer?.toLowerCase().includes(s)
       );
     }
     return result;
-  }, [policyBookClients, pbPartnerFilter, pbSearch]);
+  }, [policies, pbPartnerFilter, pbSearch]);
 
-  // Renewal data — show ALL records with expiry dates (no artificial window cutoff)
-  const renewalClients = useMemo(() => {
-    const all = clients.filter(c => !!c.policy_expiry_date);
+  // Renewal — only upcoming renewals (expiry within 90 days from today) from insurance_policies
+  const renewalPolicies = useMemo(() => {
+    const now = new Date();
+    const all = policies.filter(p => {
+      if (!p.expiry_date || p.status === "renewed") return false;
+      const days = differenceInDays(new Date(p.expiry_date), now);
+      return days >= 0 && days <= 90;
+    });
 
     let result = all;
-    if (renewalWindow === "expired") result = all.filter(c => differenceInDays(new Date(c.policy_expiry_date!), new Date()) < 0);
-    else if (renewalWindow === "7") result = all.filter(c => { const d = differenceInDays(new Date(c.policy_expiry_date!), new Date()); return d >= 0 && d <= 7; });
-    else if (renewalWindow === "15") result = all.filter(c => { const d = differenceInDays(new Date(c.policy_expiry_date!), new Date()); return d >= 0 && d <= 15; });
-    else if (renewalWindow === "30") result = all.filter(c => { const d = differenceInDays(new Date(c.policy_expiry_date!), new Date()); return d >= 0 && d <= 30; });
-    else if (renewalWindow === "60") result = all.filter(c => { const d = differenceInDays(new Date(c.policy_expiry_date!), new Date()); return d >= 0 && d <= 60; });
-    else if (renewalWindow === "upcoming") result = all.filter(c => differenceInDays(new Date(c.policy_expiry_date!), new Date()) >= 0);
+    if (renewalWindow === "7") result = all.filter(p => { const d = differenceInDays(new Date(p.expiry_date!), now); return d >= 0 && d <= 7; });
+    else if (renewalWindow === "15") result = all.filter(p => { const d = differenceInDays(new Date(p.expiry_date!), now); return d >= 0 && d <= 15; });
+    else if (renewalWindow === "30") result = all.filter(p => { const d = differenceInDays(new Date(p.expiry_date!), now); return d >= 0 && d <= 30; });
+    else if (renewalWindow === "60") result = all.filter(p => { const d = differenceInDays(new Date(p.expiry_date!), now); return d >= 0 && d <= 60; });
 
     if (renewalSearch.trim()) {
       const s = renewalSearch.toLowerCase();
-      result = result.filter(c =>
-        c.customer_name?.toLowerCase().includes(s) ||
-        c.phone?.includes(s) ||
-        c.vehicle_number?.toLowerCase().includes(s)
+      result = result.filter(p =>
+        p.insurance_clients?.customer_name?.toLowerCase().includes(s) ||
+        p.insurance_clients?.phone?.includes(s) ||
+        p.insurance_clients?.vehicle_number?.toLowerCase().includes(s)
       );
     }
 
     return result.sort((a, b) => {
-      if (renewalSort === "name") return (a.customer_name || "").localeCompare(b.customer_name || "");
-      if (renewalSort === "days_desc") return new Date(b.policy_expiry_date!).getTime() - new Date(a.policy_expiry_date!).getTime();
-      return new Date(a.policy_expiry_date!).getTime() - new Date(b.policy_expiry_date!).getTime();
+      if (renewalSort === "name") return (a.insurance_clients?.customer_name || "").localeCompare(b.insurance_clients?.customer_name || "");
+      if (renewalSort === "days_desc") return new Date(b.expiry_date!).getTime() - new Date(a.expiry_date!).getTime();
+      return new Date(a.expiry_date!).getTime() - new Date(b.expiry_date!).getTime();
     });
-  }, [clients, renewalWindow, renewalSearch, renewalSort]);
+  }, [policies, renewalWindow, renewalSearch, renewalSort]);
 
-  // Renewal summary counts — show all data with expiry dates
+  // Renewal summary counts — from insurance_policies only
   const renewalSummary = useMemo(() => {
-    const all = clients.filter(c => c.policy_expiry_date);
     const now = new Date();
+    const all = policies.filter(p => p.expiry_date && p.status !== "renewed");
+    const upcoming = all.filter(p => { const d = differenceInDays(new Date(p.expiry_date!), now); return d >= 0 && d <= 90; });
     return {
-      expired: all.filter(c => differenceInDays(new Date(c.policy_expiry_date!), now) < 0).length,
-      within7: all.filter(c => { const d = differenceInDays(new Date(c.policy_expiry_date!), now); return d >= 0 && d <= 7; }).length,
-      within15: all.filter(c => { const d = differenceInDays(new Date(c.policy_expiry_date!), now); return d >= 0 && d <= 15; }).length,
-      within30: all.filter(c => { const d = differenceInDays(new Date(c.policy_expiry_date!), now); return d >= 0 && d <= 30; }).length,
-      within60: all.filter(c => { const d = differenceInDays(new Date(c.policy_expiry_date!), now); return d >= 0 && d <= 60; }).length,
-      upcoming: all.filter(c => differenceInDays(new Date(c.policy_expiry_date!), now) >= 0).length,
-      total: all.length,
+      within7: upcoming.filter(p => { const d = differenceInDays(new Date(p.expiry_date!), now); return d >= 0 && d <= 7; }).length,
+      within15: upcoming.filter(p => { const d = differenceInDays(new Date(p.expiry_date!), now); return d >= 0 && d <= 15; }).length,
+      within30: upcoming.filter(p => { const d = differenceInDays(new Date(p.expiry_date!), now); return d >= 0 && d <= 30; }).length,
+      within60: upcoming.filter(p => { const d = differenceInDays(new Date(p.expiry_date!), now); return d >= 0 && d <= 60; }).length,
+      total: upcoming.length,
     };
-  }, [clients]);
+  }, [policies]);
 
   // CRM filter
   const filtered = useMemo(() => {
