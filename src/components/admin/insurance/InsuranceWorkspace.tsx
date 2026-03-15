@@ -340,7 +340,38 @@ export function InsuranceWorkspace() {
       } else {
         toast.success(`Moved to ${stage?.label}`);
       }
-      setSelectedClient(null);
+
+      // Auto-prompt next logical action after stage move
+      const movedClient = clients.find(c => c.id === vars.clientId);
+      if (movedClient) {
+        const nextClient = { ...movedClient, pipeline_stage: vars.newStage };
+        setTimeout(() => {
+          if (vars.newStage === "new_lead") {
+            // Prompt to call
+            setPendingMoveClient(nextClient); setCallStatus(""); setCallRemarks(""); setShowCallingDialog(true);
+            toast.info("📞 Next: Make the first call", { duration: 3000 });
+          } else if (vars.newStage === "smart_calling") {
+            // After calling, prompt for quote or follow-up
+            setSelectedClient(nextClient);
+            toast.info("📋 Next: Share a quote or schedule follow-up", { duration: 3000 });
+          } else if (vars.newStage === "quote_shared") {
+            // Prompt for follow-up scheduling
+            setPendingMoveClient(nextClient); setFollowUpDate(undefined); setFollowUpTime("10:00"); setFollowUpRemarks(""); setShowFollowUpDialog(true);
+            toast.info("📅 Next: Schedule a follow-up", { duration: 3000 });
+          } else if (vars.newStage === "won") {
+            // Prompt renewal reminder
+            setSelectedClient(nextClient); setRenewalDate(undefined); setShowRenewalDialog(true);
+            toast.info("🔔 Next: Set renewal reminder for incentive eligibility", { duration: 4000 });
+          } else if (vars.newStage === "policy_issued") {
+            setSelectedClient(null);
+            toast.success("✅ Policy issued! Lead workflow complete.", { duration: 4000 });
+          } else {
+            setSelectedClient(null);
+          }
+        }, 400);
+      } else {
+        setSelectedClient(null);
+      }
       setShowLostDialog(false);
       setShowCallingDialog(false);
       setShowFollowUpDialog(false);
