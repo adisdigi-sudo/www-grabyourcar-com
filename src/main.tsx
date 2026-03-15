@@ -11,19 +11,27 @@ import {
 
 const handleDynamicImportFailure = (error: unknown) => {
   if (!isDynamicImportError(error)) return;
+  console.warn("[ChunkRecovery] Dynamic import error detected, attempting recovery:", error);
   recoverFromChunkLoadError("global_chunk_recovery");
 };
 
 window.addEventListener(
   "error",
   (event) => {
-    handleDynamicImportFailure(event.error ?? event.message);
+    // Only handle script/module loading errors, not runtime errors
+    if (event.filename && (event.filename.endsWith('.js') || event.filename.endsWith('.mjs'))) {
+      handleDynamicImportFailure(event.error ?? event.message);
+    }
   },
   true
 );
 
 window.addEventListener("unhandledrejection", (event) => {
-  handleDynamicImportFailure(event.reason);
+  // Only recover from genuine dynamic import failures
+  if (isDynamicImportError(event.reason)) {
+    console.warn("[ChunkRecovery] Unhandled rejection from dynamic import:", event.reason);
+    handleDynamicImportFailure(event.reason);
+  }
 });
 
 window.addEventListener(
