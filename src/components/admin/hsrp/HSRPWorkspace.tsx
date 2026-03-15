@@ -152,7 +152,7 @@ export function HSRPWorkspace() {
         if (b) { setSelected({ ...b, _targetStage: "completed" }); setShowModal(true); }
         return;
       }
-      updateMutation.mutate({ id: data.id, updates: { pipeline_stage: target } });
+      updateMutation.mutate({ id: data.id, updates: { pipeline_stage: target }, oldStage: data.stage });
     } catch {}
     setDragging(null);
   }, [bookings, updateMutation]);
