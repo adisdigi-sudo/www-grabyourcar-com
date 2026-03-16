@@ -115,6 +115,26 @@ interface FormData {
   preferredTimeSlot: string;
 }
 
+const initialFormData: FormData = {
+  serviceType: "",
+  vehicleCategory: "",
+  registrationNumber: "",
+  chassisLast6: "",
+  engineLast6: "",
+  vehicleMake: "",
+  vehicleModel: "",
+  manufacturingYear: "",
+  ownerName: "",
+  mobile: "",
+  email: "",
+  state: "",
+  city: "",
+  pincode: "",
+  address: "",
+  preferredDate: "",
+  preferredTimeSlot: "",
+};
+
 export function HSRPUnifiedBookingForm() {
   const { user, signInWithPhone } = useAuth();
   const navigate = useNavigate();
