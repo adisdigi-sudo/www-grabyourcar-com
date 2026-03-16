@@ -171,10 +171,10 @@ function OverviewDashboard({ stats, onSelectVertical }: { stats: any; onSelectVe
     },
     {
       id: "hsrp" as Vertical,
-      title: "🔢 HSRP & FASTag",
-      desc: "HSRP plate registrations, FASTag issuance, tracking",
+      title: "🔢 HSRP",
+      desc: "HSRP plate registrations and tracking",
       stats: "—",
-      features: ["HSRP Orders", "FASTag Issuance", "Status Tracking", "Bulk Processing"],
+      features: ["HSRP Orders", "Status Tracking", "Bulk Processing"],
       color: "border-teal-200 dark:border-teal-900",
       ready: true,
     },

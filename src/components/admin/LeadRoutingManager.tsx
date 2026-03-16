@@ -34,7 +34,7 @@ const VERTICALS = [
 
 const SERVICE_CATEGORIES = [
   "car_inquiry", "insurance", "finance", "car_loan", "rental", "self_drive",
-  "hsrp", "fastag", "accessories", "corporate", "general", "test_drive",
+  "hsrp", "accessories", "corporate", "general", "test_drive",
 ];
 
 export function LeadRoutingManager() {

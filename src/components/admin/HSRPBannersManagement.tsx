@@ -236,7 +236,7 @@ export function HSRPBannersManagement() {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>HSRP & FASTag Service Banners</CardTitle>
+        <CardTitle>HSRP Service Banners</CardTitle>
         <Dialog open={dialogOpen} onOpenChange={(open) => {
           setDialogOpen(open);
           if (!open) {
