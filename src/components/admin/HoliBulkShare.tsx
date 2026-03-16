@@ -129,6 +129,24 @@ const parseContactsCsv = (csvText: string): Contact[] => {
   const lines = csvText.split(/\r?\n/).filter((line) => line.trim().length > 0);
   if (lines.length < 2) return [];
   const header = parseCsvLine(lines[0]).map((h) => h.toLowerCase().trim());
+
+  // Support simple name,phone CSV format
+  const simpleNameIdx = header.indexOf("name");
+  const simplePhoneIdx = header.indexOf("phone");
+  if (simpleNameIdx >= 0 && simplePhoneIdx >= 0) {
+    const contacts: Contact[] = [];
+    const seen = new Set<string>();
+    for (let i = 1; i < lines.length; i++) {
+      const cols = parseCsvLine(lines[i]);
+      const name = cols[simpleNameIdx]?.trim() || "Friend";
+      const rawPhone = cols[simplePhoneIdx]?.trim() || "";
+      const phone = normalizeIndianPhone(rawPhone);
+      if (phone && !seen.has(phone)) { seen.add(phone); contacts.push({ name, phone }); }
+    }
+    return contacts;
+  }
+
+  // Google Contacts CSV format
   const firstNameIdx = header.indexOf("first name");
   const middleNameIdx = header.indexOf("middle name");
   const lastNameIdx = header.indexOf("last name");
