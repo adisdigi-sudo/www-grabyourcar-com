@@ -66,7 +66,7 @@ const faqs = [
   },
   {
     question: "What is the cost of HSRP?",
-    answer: "HSRP costs vary by vehicle type: Two-wheelers: ₹850, Four-wheelers: ₹1,500, EV: ₹1,500, Tractor: ₹600. FASTag is ₹500. Additional charges may apply for home installation."
+    answer: "HSRP costs vary by vehicle type: Two-wheelers: ₹850, Four-wheelers: ₹1,500, EV: ₹1,500, Tractor: ₹600. Additional charges may apply for home installation."
   },
   {
     question: "How long does installation take?",
@@ -126,8 +126,8 @@ const HSRP = () => {
     <>
       <GlobalSEO
         pageKey="hsrp"
-        title="HSRP & FASTag Online Booking | GrabYourCar"
-        description="Book HSRP and FASTag online. Government authorized high security registration plates and toll stickers with quick installation. Avoid fines - book now!"
+        title="HSRP Online Booking | GrabYourCar"
+        description="Book HSRP online. Government authorized high security registration plates with quick installation. Avoid fines - book now!"
         path="/hsrp"
       />
 
@@ -136,7 +136,7 @@ const HSRP = () => {
 
         <ServiceBanner
           highlightText="Mandatory"
-          title="Get Your HSRP & FASTag Today!"
+          title="Get Your HSRP Today!"
           subtitle="Avoid ₹10,000 fine | Government authorized | Quick installation in 48 hours"
           variant="dark"
           showCountdown
@@ -153,10 +153,10 @@ const HSRP = () => {
             <div className="mx-auto max-w-4xl text-center">
               <Badge className="mb-4 bg-amber-500/20 text-amber-600 dark:text-amber-400">Government Authorized</Badge>
               <h1 className="mb-4 text-3xl font-bold md:text-4xl lg:text-5xl">
-                HSRP & FASTag Services
+                HSRP Services
               </h1>
               <p className="mb-6 text-base text-primary-foreground/80 md:text-lg">
-                High Security Registration Plates & FASTag for seamless toll payments. Quick booking, easy installation, pan-India service.
+                High Security Registration Plates for your vehicle. Quick booking, easy installation, pan-India service.
               </p>
               <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
                 <Button
@@ -168,16 +168,6 @@ const HSRP = () => {
                 >
                   <Shield className="h-5 w-5" />
                   Book HSRP
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="lg"
-                  className="w-full gap-2 sm:w-auto"
-                  onClick={() => document.getElementById("booking-section")?.scrollIntoView({ behavior: "smooth" })}
-                >
-                  <CreditCard className="h-5 w-5" />
-                  Get FASTag
                 </Button>
                 <Button
                   type="button"
@@ -242,7 +232,7 @@ const HSRP = () => {
                     Quick & Easy Booking
                   </Badge>
                   <h2 className="mb-3 text-2xl font-bold text-foreground md:text-3xl">
-                    Book Your HSRP & FASTag
+                    Book Your HSRP
                   </h2>
                   <p className="mx-auto max-w-2xl text-muted-foreground lg:mx-0">
                     Complete the form below - price calculates automatically based on your vehicle.
@@ -427,13 +417,6 @@ const HSRP = () => {
                         <span>Tractor & Trailer</span>
                       </div>
                       <span className="font-bold text-primary">{formatPrice(pricing?.tractor || 600)}</span>
-                    </div>
-                    <div className="flex justify-between items-center py-2 border-b border-border">
-                      <div className="flex items-center gap-2">
-                        <CreditCard className="h-4 w-4 text-muted-foreground" />
-                        <span>FASTag</span>
-                      </div>
-                      <span className="font-bold text-primary">{formatPrice(pricing?.fastag || 500)}</span>
                     </div>
                     <div className="flex justify-between items-center py-2 border-b border-border">
                       <div className="flex items-center gap-2">

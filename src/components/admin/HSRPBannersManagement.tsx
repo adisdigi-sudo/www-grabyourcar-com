@@ -236,7 +236,7 @@ export function HSRPBannersManagement() {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>HSRP & FASTag Service Banners</CardTitle>
+        <CardTitle>HSRP Service Banners</CardTitle>
         <Dialog open={dialogOpen} onOpenChange={(open) => {
           setDialogOpen(open);
           if (!open) {
@@ -497,9 +497,7 @@ export function HSRPBannersManagement() {
                       <span className="ml-1">{banner.sort_order}</span>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={banner.service_type === 'hsrp' ? 'default' : 'secondary'}>
-                        {banner.service_type === 'hsrp' ? 'HSRP' : 'FASTag'}
-                      </Badge>
+                      <Badge variant="default">HSRP</Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-3">

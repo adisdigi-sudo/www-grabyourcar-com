@@ -28,13 +28,13 @@ const VERTICALS = [
   { slug: "insurance", label: "Insurance" },
   { slug: "loans", label: "Car Loans" },
   { slug: "rental", label: "Self-Drive Rental" },
-  { slug: "hsrp", label: "HSRP & FASTag" },
+  { slug: "hsrp", label: "HSRP" },
   { slug: "accessories", label: "Accessories" },
 ];
 
 const SERVICE_CATEGORIES = [
   "car_inquiry", "insurance", "finance", "car_loan", "rental", "self_drive",
-  "hsrp", "fastag", "accessories", "corporate", "general", "test_drive",
+  "hsrp", "accessories", "corporate", "general", "test_drive",
 ];
 
 export function LeadRoutingManager() {

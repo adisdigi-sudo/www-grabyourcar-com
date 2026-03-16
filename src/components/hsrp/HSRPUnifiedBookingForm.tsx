@@ -43,8 +43,6 @@ const vehicleCategories = [
 
 const serviceTypes = [
   { value: "hsrp", label: "HSRP Number Plate", icon: Shield, description: "High Security Registration Plate" },
-  { value: "fastag", label: "FASTag", icon: CreditCard, description: "Toll Collection Sticker" },
-  { value: "both", label: "HSRP + FASTag", icon: Package, description: "Complete Package", discount: 10 },
 ];
 
 const timeSlots = [
@@ -159,19 +157,14 @@ export function HSRPUnifiedBookingForm() {
 
   // Calculate price
   const calculatePrice = () => {
-    if (!pricing || !formData.vehicleCategory) return { hsrp: 0, fastag: 0, total: 0 };
+    if (!pricing || !formData.vehicleCategory) return { hsrp: 0, total: 0 };
     const category = vehicleCategories.find(c => c.value === formData.vehicleCategory);
     const hsrpPrice = category ? (pricing as any)[category.priceKey] || 0 : 0;
-    const fastagPrice = pricing.fastag || 500;
     const colourSticker = pricing.colourSticker || 100;
-    let total = 0;
     let hsrp = hsrpPrice + colourSticker;
-    let fastag = fastagPrice;
-    if (formData.serviceType === 'hsrp') total = hsrp;
-    else if (formData.serviceType === 'fastag') total = fastag;
-    else if (formData.serviceType === 'both') total = Math.round((hsrp + fastag) * 0.9);
+    let total = hsrp;
     if (homeInstallation) total += homeInstallationFee || pricing.homeInstallationFee || 200;
-    return { hsrp, fastag, total };
+    return { hsrp, total };
   };
   const prices = calculatePrice();
 
@@ -304,7 +297,7 @@ export function HSRPUnifiedBookingForm() {
   };
 
   const generateTrackingId = () => {
-    const prefix = formData.serviceType === 'fastag' ? 'FT' : 'HSRP';
+    const prefix = 'HSRP';
     const timestamp = Date.now().toString(36).toUpperCase();
     const random = Math.random().toString(36).substring(2, 6).toUpperCase();
     return `${prefix}${timestamp}${random}`;
@@ -524,21 +517,10 @@ export function HSRPUnifiedBookingForm() {
                 </div>
               </div>
               <div className="flex flex-wrap gap-3 text-sm sm:justify-end sm:text-right">
-                {formData.serviceType !== 'fastag' && (
-                  <div>
-                    <p className="text-muted-foreground">HSRP</p>
-                    <p className="font-semibold">{formatPrice(prices.hsrp)}</p>
-                  </div>
-                )}
-                {formData.serviceType !== 'hsrp' && (
-                  <div>
-                    <p className="text-muted-foreground">FASTag</p>
-                    <p className="font-semibold">{formatPrice(prices.fastag)}</p>
-                  </div>
-                )}
-                {formData.serviceType === 'both' && (
-                  <Badge className="bg-primary text-primary-foreground">10% OFF</Badge>
-                )}
+                <div>
+                  <p className="text-muted-foreground">HSRP</p>
+                  <p className="font-semibold">{formatPrice(prices.hsrp)}</p>
+                </div>
               </div>
             </div>
           </CardContent>
@@ -640,8 +622,8 @@ export function HSRPUnifiedBookingForm() {
                                 : "border-border hover:border-primary/50"
                             )}
                           >
-                            {service.discount && (
-                              <Badge className="absolute -top-2 -right-2 bg-green-500">Save {service.discount}%</Badge>
+                            {'discount' in service && (service as any).discount && (
+                              <Badge className="absolute -top-2 -right-2 bg-green-500">Save {(service as any).discount}%</Badge>
                             )}
                             <ServiceIcon className={cn("w-7 h-7 mb-1", isSelected && "text-primary")} />
                             <p className="font-semibold text-sm">{service.label}</p>
@@ -871,7 +853,7 @@ export function HSRPUnifiedBookingForm() {
                 </div>
                 <h2 className="text-2xl font-bold text-green-600 mb-2">Booking Confirmed!</h2>
                 <p className="text-muted-foreground mb-6">
-                  Your {formData.serviceType === 'both' ? 'HSRP & FASTag' : formData.serviceType.toUpperCase()} booking has been placed successfully.
+                  Your HSRP booking has been placed successfully.
                 </p>
                 <div className="flex justify-center gap-4">
                   <Button variant="outline" onClick={() => navigate("/my-orders")}>View Orders</Button>

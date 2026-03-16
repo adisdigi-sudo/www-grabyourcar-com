@@ -16,7 +16,7 @@ const VERTICAL_META: Record<string, { label: string; icon: React.ElementType; gr
   loans: { label: "Car Loans", icon: CreditCard, gradient: "from-emerald-500 to-teal-500", desc: "Loan eligibility & document follow-ups" },
   insurance: { label: "Insurance", icon: Shield, gradient: "from-purple-500 to-violet-500", desc: "Insurance renewal & new policy leads" },
   rental: { label: "Self-Drive Rental", icon: CalendarDays, gradient: "from-amber-500 to-orange-500", desc: "Rental bookings, extensions & returns" },
-  hsrp: { label: "HSRP & FASTag", icon: Wrench, gradient: "from-red-500 to-pink-500", desc: "HSRP application & FASTag follow-ups" },
+  hsrp: { label: "HSRP", icon: Wrench, gradient: "from-red-500 to-pink-500", desc: "HSRP application follow-ups" },
 };
 
 export function CallingDashboard() {

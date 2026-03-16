@@ -77,7 +77,7 @@ const navItems: NavItem[] = [
     label: "Services", 
     icon: Wrench,
     children: [
-      { id: "services-hsrp", label: "HSRP & FASTag", icon: Shield, verticals: ["hsrp"], allowedRoles: ["super_admin", "admin", "operations"] },
+      { id: "services-hsrp", label: "HSRP", icon: Shield, verticals: ["hsrp"], allowedRoles: ["super_admin", "admin", "operations"] },
       { id: "services-rentals", label: "Self-Drive Rentals", icon: CalendarDays, verticals: ["rental"], allowedRoles: ["super_admin", "admin", "operations"] },
       { id: "services-driver-bookings", label: "🚗 Driver Bookings", icon: Car, verticals: ["rental"], allowedRoles: ["super_admin", "admin", "operations"] },
       { id: "services-api-partners", label: "🔗 API Partners", icon: Globe, verticals: ["rental"], allowedRoles: ["super_admin", "admin"] },
@@ -132,7 +132,7 @@ const navItems: NavItem[] = [
     children: [
       { id: "services-insurance", label: "🛡️ Insurance CRM", icon: FileText },
       { id: "services-loans", label: "💰 Car Loans", icon: CreditCard },
-      { id: "services-hsrp", label: "HSRP & FASTag", icon: Shield },
+      { id: "services-hsrp", label: "HSRP", icon: Shield },
       { id: "services-rentals", label: "Self-Drive Rentals", icon: CalendarDays },
       { id: "services-pricing", label: "Service Pricing", icon: CreditCard },
       { id: "services-partners", label: "Partners", icon: Users },

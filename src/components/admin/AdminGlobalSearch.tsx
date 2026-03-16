@@ -47,7 +47,7 @@ const allSearchItems: SearchResult[] = [
   { id: "socialproof-stories", label: "Delivery Stories", category: "Social Proof", icon: Image, keywords: ["delivery", "stories", "customers", "success"] },
   
   // Services
-  { id: "services-hsrp", label: "HSRP & FASTag", category: "Services", icon: Shield, keywords: ["hsrp", "fastag", "registration", "plate", "number plate"] },
+  { id: "services-hsrp", label: "HSRP", category: "Services", icon: Shield, keywords: ["hsrp", "registration", "plate", "number plate"] },
   { id: "services-rentals", label: "Self-Drive Rentals", category: "Services", icon: Car, keywords: ["rental", "self-drive", "hire", "booking"] },
   { id: "services-driver-bookings", label: "Driver Bookings", category: "Services", icon: Car, keywords: ["driver", "chauffeur", "booking", "hire"] },
   { id: "services-api-partners", label: "API Partners", category: "Services", icon: Globe, keywords: ["api", "partners", "integration", "webhook"] },
