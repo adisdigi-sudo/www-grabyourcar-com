@@ -177,12 +177,12 @@ const navItems: NavItem[] = [
     verticals: ["marketing"],
     allowedRoles: ["super_admin", "admin", "finance"] },
 
-  // ── Car Database — marketing workspace ──
+  // ── Car Database — isolated vertical ──
   { 
     id: "cars", 
     label: "🚗 Car Database", 
     icon: Car,
-    verticals: ["car-database", "marketing"],
+    verticals: ["car-database"],
     allowedRoles: ["super_admin", "admin"],
     children: [
       { id: "cars-list", label: "Cars & Details", icon: Car },
