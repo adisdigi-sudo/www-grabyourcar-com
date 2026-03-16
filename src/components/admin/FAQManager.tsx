@@ -35,7 +35,7 @@ const CATEGORIES = [
   { value: 'buying', label: 'Car Buying' },
   { value: 'finance', label: 'Finance & Loans' },
   { value: 'insurance', label: 'Insurance' },
-  { value: 'hsrp', label: 'HSRP & FASTag' },
+  { value: 'hsrp', label: 'HSRP' },
   { value: 'delivery', label: 'Delivery' },
   { value: 'after-sales', label: 'After Sales' },
 ];
