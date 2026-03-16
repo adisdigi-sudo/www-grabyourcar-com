@@ -126,8 +126,8 @@ const HSRP = () => {
     <>
       <GlobalSEO
         pageKey="hsrp"
-        title="HSRP & FASTag Online Booking | GrabYourCar"
-        description="Book HSRP and FASTag online. Government authorized high security registration plates and toll stickers with quick installation. Avoid fines - book now!"
+        title="HSRP Online Booking | GrabYourCar"
+        description="Book HSRP online. Government authorized high security registration plates with quick installation. Avoid fines - book now!"
         path="/hsrp"
       />
 
