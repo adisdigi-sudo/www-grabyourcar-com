@@ -122,13 +122,18 @@ export const PincodeChecker = ({
   const handlePincodeInput = (value: string) => {
     const numericValue = value.replace(/\D/g, "").slice(0, 6);
     onPincodeChange(numericValue);
-    
-    // Reset check result when pincode changes
     if (checkResult) {
       setCheckResult(null);
       onServiceabilityChange(false, 0);
     }
   };
+
+  // Auto-check when pincode reaches 6 digits
+  useEffect(() => {
+    if (pincode.length === 6) {
+      handleCheck();
+    }
+  }, [pincode]);
 
   return (
     <div className="space-y-3">
