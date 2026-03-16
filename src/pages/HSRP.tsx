@@ -153,10 +153,10 @@ const HSRP = () => {
             <div className="mx-auto max-w-4xl text-center">
               <Badge className="mb-4 bg-amber-500/20 text-amber-600 dark:text-amber-400">Government Authorized</Badge>
               <h1 className="mb-4 text-3xl font-bold md:text-4xl lg:text-5xl">
-                HSRP & FASTag Services
+                HSRP Services
               </h1>
               <p className="mb-6 text-base text-primary-foreground/80 md:text-lg">
-                High Security Registration Plates & FASTag for seamless toll payments. Quick booking, easy installation, pan-India service.
+                High Security Registration Plates for your vehicle. Quick booking, easy installation, pan-India service.
               </p>
               <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
                 <Button
