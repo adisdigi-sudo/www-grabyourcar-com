@@ -568,9 +568,19 @@ export const HoliBulkShare = () => {
                   </Button>
                 </div>
               ) : (
-                <Button variant="outline" size="sm" className="w-full gap-2" onClick={() => csvInputRef.current?.click()}>
-                  <Upload className="h-4 w-4" /> Import Contacts from CSV
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" className="flex-1 gap-2" onClick={() => csvInputRef.current?.click()}>
+                    <Upload className="h-4 w-4" /> Import CSV
+                  </Button>
+                  <Button variant="outline" size="sm" className="flex-1 gap-2" onClick={() => {
+                    setContacts(PRELOADED_CONTACTS);
+                    setCsvImported(true);
+                    reset();
+                    toast.success(`✅ Loaded ${PRELOADED_CONTACTS.length} review clients!`);
+                  }}>
+                    <Users className="h-4 w-4" /> Load 33 Review Clients
+                  </Button>
+                </div>
               )}
               <input ref={csvInputRef} type="file" accept=".csv" className="hidden" onChange={handleCsvImport} />
             </div>
