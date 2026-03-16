@@ -115,6 +115,26 @@ interface FormData {
   preferredTimeSlot: string;
 }
 
+const initialFormData: FormData = {
+  serviceType: "",
+  vehicleCategory: "",
+  registrationNumber: "",
+  chassisLast6: "",
+  engineLast6: "",
+  vehicleMake: "",
+  vehicleModel: "",
+  manufacturingYear: "",
+  ownerName: "",
+  mobile: "",
+  email: "",
+  state: "",
+  city: "",
+  pincode: "",
+  address: "",
+  preferredDate: "",
+  preferredTimeSlot: "",
+};
+
 export function HSRPUnifiedBookingForm() {
   const { user, signInWithPhone } = useAuth();
   const navigate = useNavigate();
@@ -130,29 +150,12 @@ export function HSRPUnifiedBookingForm() {
   const [sessionId] = useState(() => `hsrp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
   const abandonedCartIdRef = useRef<string>(crypto.randomUUID());
   const hasSavedCartRef = useRef(false);
+  const autoAdvancedStep1Ref = useRef(false);
+  const autoAdvancedStep2Ref = useRef(false);
   const rcLookupTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastLookedUp = useRef<string>("");
-  
-  
-  const [formData, setFormData] = useState<FormData>({
-    serviceType: "",
-    vehicleCategory: "",
-    registrationNumber: "",
-    chassisLast6: "",
-    engineLast6: "",
-    vehicleMake: "",
-    vehicleModel: "",
-    manufacturingYear: "",
-    ownerName: "",
-    mobile: "",
-    email: "",
-    state: "",
-    city: "",
-    pincode: "",
-    address: "",
-    preferredDate: "",
-    preferredTimeSlot: "",
-  });
+
+  const [formData, setFormData] = useState<FormData>(initialFormData);
 
   // Calculate price
   const calculatePrice = () => {
@@ -173,6 +176,12 @@ export function HSRPUnifiedBookingForm() {
   const prices = calculatePrice();
 
   const handleInputChange = (field: keyof FormData, value: string) => {
+    if (field === "registrationNumber") {
+      autoAdvancedStep1Ref.current = false;
+    }
+    if (["ownerName", "mobile", "email"].includes(field)) {
+      autoAdvancedStep2Ref.current = false;
+    }
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -221,7 +230,7 @@ export function HSRPUnifiedBookingForm() {
     return () => { if (rcLookupTimer.current) clearTimeout(rcLookupTimer.current); };
   }, [formData.registrationNumber]);
 
-  // ─── AUTO-ADVANCE: Step 1 → when category + service is ready ───
+  // ─── CONTROLLED AUTO-ADVANCE: Step 1 → when category + service is ready ───
   useEffect(() => {
     const canAdvance =
       step === 1 &&
@@ -229,25 +238,27 @@ export function HSRPUnifiedBookingForm() {
       formData.vehicleCategory &&
       (Boolean(rcLookup.data) || Boolean(rcLookup.error));
 
-    if (canAdvance) {
-      const t = setTimeout(() => {
-        setStep(2);
-        saveAbandonedCart(2);
-      }, 500);
-      return () => clearTimeout(t);
-    }
+    if (!canAdvance || autoAdvancedStep1Ref.current) return;
+
+    autoAdvancedStep1Ref.current = true;
+    const t = setTimeout(() => {
+      setStep(2);
+      saveAbandonedCart(2);
+    }, 350);
+    return () => clearTimeout(t);
   }, [formData.serviceType, formData.vehicleCategory, rcLookup.data, rcLookup.error, step]);
 
-  // ─── AUTO-ADVANCE: Step 2 → when owner, mobile, email filled ───
+  // ─── CONTROLLED AUTO-ADVANCE: Step 2 → when owner, mobile, email filled ───
   useEffect(() => {
-    if (step !== 2) return;
+    if (step !== 2 || autoAdvancedStep2Ref.current) return;
     const cleanMobile = formData.mobile.replace(/\D/g, "").slice(-10);
     const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email);
     if (formData.ownerName.length >= 2 && /^[6-9]\d{9}$/.test(cleanMobile) && emailValid) {
+      autoAdvancedStep2Ref.current = true;
       const t = setTimeout(() => {
         setStep(3);
         saveAbandonedCart(3);
-      }, 800);
+      }, 500);
       return () => clearTimeout(t);
     }
   }, [step, formData.ownerName, formData.mobile, formData.email]);
@@ -458,67 +469,75 @@ export function HSRPUnifiedBookingForm() {
   const hasValidRegistration = /^[A-Z]{2}\d{1,2}[A-Z]{0,3}\d{4}$/.test(cleanedRegistration);
 
   return (
-    <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+      className="space-y-4 md:space-y-6"
+    >
       {/* Progress Steps */}
-      <div className="flex items-center justify-between max-w-2xl mx-auto mb-8">
-        {stepTitles.map((s, idx) => {
-          const StepIcon = s.icon;
-          const isActive = step === idx + 1;
-          const isCompleted = step > idx + 1;
-          return (
-            <div key={idx} className="flex items-center">
-              <div className="flex flex-col items-center">
-                <div className={cn(
-                  "w-10 h-10 rounded-full flex items-center justify-center transition-all",
-                  isActive && "bg-primary text-primary-foreground ring-4 ring-primary/20",
-                  isCompleted && "bg-green-500 text-white",
-                  !isActive && !isCompleted && "bg-muted text-muted-foreground"
-                )}>
-                  {isCompleted ? <CheckCircle2 className="w-5 h-5" /> : <StepIcon className="w-5 h-5" />}
+      <div className="mb-6 overflow-x-auto pb-1">
+        <div className="mx-auto flex min-w-max items-center justify-between gap-2 px-1 md:max-w-2xl md:gap-0">
+          {stepTitles.map((s, idx) => {
+            const StepIcon = s.icon;
+            const isActive = step === idx + 1;
+            const isCompleted = step > idx + 1;
+            return (
+              <div key={idx} className="flex items-center">
+                <div className="flex flex-col items-center">
+                  <div className={cn(
+                    "flex h-9 w-9 items-center justify-center rounded-full transition-all md:h-10 md:w-10",
+                    isActive && "bg-primary text-primary-foreground ring-4 ring-primary/20",
+                    isCompleted && "bg-primary text-primary-foreground",
+                    !isActive && !isCompleted && "bg-muted text-muted-foreground"
+                  )}>
+                    {isCompleted ? <CheckCircle2 className="h-4 w-4 md:h-5 md:w-5" /> : <StepIcon className="h-4 w-4 md:h-5 md:w-5" />}
+                  </div>
+                  <span className={cn(
+                    "mt-1 text-[11px] sm:text-xs",
+                    isActive && "font-medium text-primary",
+                    !isActive && "text-muted-foreground"
+                  )}>{s.title}</span>
                 </div>
-                <span className={cn(
-                  "text-xs mt-1 hidden sm:block",
-                  isActive && "text-primary font-medium",
-                  !isActive && "text-muted-foreground"
-                )}>{s.title}</span>
+                {idx < stepTitles.length - 1 && (
+                  <div className={cn("mx-2 h-1 w-8 rounded-full sm:w-10 md:w-16", step > idx + 1 ? "bg-primary" : "bg-muted")} />
+                )}
               </div>
-              {idx < stepTitles.length - 1 && (
-                <div className={cn("w-8 sm:w-16 h-1 mx-1", step > idx + 1 ? "bg-green-500" : "bg-muted")} />
-              )}
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
       {/* Live Price Display */}
       {formData.vehicleCategory && formData.serviceType && step < 4 && (
-        <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
+        <Card className="border-primary/20 bg-gradient-to-r from-primary/10 to-primary/5">
           <CardContent className="py-4">
-            <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
-                  <IndianRupee className="w-6 h-6 text-primary" />
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/20 md:h-12 md:w-12">
+                  <IndianRupee className="h-5 w-5 text-primary md:h-6 md:w-6" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Estimated Total</p>
-                  <p className="text-2xl font-bold text-primary">{formatPrice(prices.total)}</p>
+                  <p className="text-xl font-bold text-primary md:text-2xl">{formatPrice(prices.total)}</p>
                 </div>
               </div>
-              <div className="flex gap-4 text-sm">
+              <div className="flex flex-wrap gap-3 text-sm sm:justify-end sm:text-right">
                 {formData.serviceType !== 'fastag' && (
-                  <div className="text-center">
+                  <div>
                     <p className="text-muted-foreground">HSRP</p>
                     <p className="font-semibold">{formatPrice(prices.hsrp)}</p>
                   </div>
                 )}
                 {formData.serviceType !== 'hsrp' && (
-                  <div className="text-center">
+                  <div>
                     <p className="text-muted-foreground">FASTag</p>
                     <p className="font-semibold">{formatPrice(prices.fastag)}</p>
                   </div>
                 )}
                 {formData.serviceType === 'both' && (
-                  <Badge className="bg-green-500 text-white">10% OFF</Badge>
+                  <Badge className="bg-primary text-primary-foreground">10% OFF</Badge>
                 )}
               </div>
             </div>

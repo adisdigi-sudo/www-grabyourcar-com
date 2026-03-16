@@ -144,43 +144,46 @@ const HSRP = () => {
         />
 
         {/* Hero Section */}
-        <section className="relative bg-gradient-to-br from-primary via-primary/90 to-primary/80 text-primary-foreground py-12 md:py-16 overflow-hidden">
+        <section className="relative overflow-hidden bg-gradient-to-br from-primary via-primary/90 to-primary/80 py-10 text-primary-foreground md:py-16">
           <div className="absolute inset-0 opacity-10">
-            <div className="absolute top-10 left-10 w-32 h-32 border-4 border-primary-foreground rounded-full" />
-            <div className="absolute bottom-10 right-10 w-48 h-48 border-4 border-primary-foreground rounded-full" />
+            <div className="absolute left-[-10%] top-8 h-28 w-28 rounded-full border-4 border-primary-foreground md:left-10 md:top-10 md:h-32 md:w-32" />
+            <div className="absolute bottom-[-10%] right-[-5%] h-40 w-40 rounded-full border-4 border-primary-foreground md:bottom-10 md:right-10 md:h-48 md:w-48" />
           </div>
-          <div className="container mx-auto px-4 relative">
-            <div className="text-center max-w-3xl mx-auto">
-              <Badge className="bg-amber-500/20 text-amber-600 dark:text-amber-400 mb-4">Government Authorized</Badge>
-              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
+          <div className="container relative mx-auto px-4">
+            <div className="mx-auto max-w-4xl text-center">
+              <Badge className="mb-4 bg-amber-500/20 text-amber-600 dark:text-amber-400">Government Authorized</Badge>
+              <h1 className="mb-4 text-3xl font-bold md:text-4xl lg:text-5xl">
                 HSRP & FASTag Services
               </h1>
-              <p className="text-primary-foreground/80 text-base md:text-lg mb-6">
+              <p className="mb-6 text-base text-primary-foreground/80 md:text-lg">
                 High Security Registration Plates & FASTag for seamless toll payments. Quick booking, easy installation, pan-India service.
               </p>
-              <div className="flex flex-wrap justify-center gap-3">
-                <Button 
-                  variant="secondary" 
-                  size="lg" 
-                  className="gap-2" 
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="lg"
+                  className="w-full gap-2 sm:w-auto"
                   onClick={() => document.getElementById("booking-section")?.scrollIntoView({ behavior: "smooth" })}
                 >
                   <Shield className="h-5 w-5" />
                   Book HSRP
                 </Button>
-                <Button 
-                  variant="secondary" 
-                  size="lg" 
-                  className="gap-2" 
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="lg"
+                  className="w-full gap-2 sm:w-auto"
                   onClick={() => document.getElementById("booking-section")?.scrollIntoView({ behavior: "smooth" })}
                 >
                   <CreditCard className="h-5 w-5" />
                   Get FASTag
                 </Button>
-                <Button 
-                  variant="outline" 
-                  size="lg" 
-                  className="gap-2 bg-transparent border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10" 
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  className="w-full gap-2 border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10 sm:w-auto"
                   onClick={() => document.getElementById("track")?.scrollIntoView({ behavior: "smooth" })}
                 >
                   <Search className="h-5 w-5" />
@@ -192,33 +195,34 @@ const HSRP = () => {
         </section>
 
         {/* Quick Actions */}
-        <section className="py-4 bg-muted/50 border-b border-border">
+        <section className="border-b border-border bg-muted/50 py-4">
           <div className="container mx-auto px-4">
-            <div className="flex flex-wrap justify-center gap-3 text-sm">
+            <div className="grid grid-cols-2 gap-2 md:flex md:flex-wrap md:justify-center md:gap-3 md:text-sm">
               <button
                 type="button"
                 onClick={() => document.getElementById("track")?.scrollIntoView({ behavior: "smooth" })}
-                className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors"
+                className="flex items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-primary md:border-0 md:bg-transparent md:px-0 md:py-0"
               >
                 <Search className="h-4 w-4" />
                 Track Order
               </button>
-              <span className="text-border">|</span>
               <button
                 type="button"
                 onClick={() => document.getElementById("booking-section")?.scrollIntoView({ behavior: "smooth" })}
-                className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors"
+                className="flex items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-primary md:border-0 md:bg-transparent md:px-0 md:py-0"
               >
                 <Calendar className="h-4 w-4" />
                 Book Now
               </button>
-              <span className="text-border">|</span>
-              <button type="button" onClick={() => document.getElementById("booking-section")?.scrollIntoView({ behavior: "smooth" })} className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors">
+              <button
+                type="button"
+                onClick={() => document.getElementById("booking-section")?.scrollIntoView({ behavior: "smooth" })}
+                className="flex items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-primary md:border-0 md:bg-transparent md:px-0 md:py-0"
+              >
                 <Home className="h-4 w-4" />
-                Home Installation
+                Home Install
               </button>
-              <span className="text-border">|</span>
-              <a href="tel:+1155578093" className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors">
+              <a href="tel:+1155578093" className="flex items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-primary md:border-0 md:bg-transparent md:px-0 md:py-0">
                 <Phone className="h-4 w-4" />
                 Contact Us
               </a>
@@ -227,29 +231,29 @@ const HSRP = () => {
         </section>
 
         {/* Main Booking Section - Always Visible */}
-        <section id="booking-section" className="py-12 md:py-16 bg-muted/30">
+        <section id="booking-section" className="bg-muted/30 py-10 md:py-16">
           <div className="container mx-auto px-4">
-            <div className="grid lg:grid-cols-3 gap-8">
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)] xl:gap-8">
               {/* Main Booking Form */}
-              <div className="lg:col-span-2">
-                <div className="text-center mb-8 lg:text-left">
-                  <Badge className="mb-3 bg-primary/10 text-primary border-primary/20">
-                    <Sparkles className="w-3 h-3 mr-1" />
+              <div className="min-w-0">
+                <div className="mb-6 text-center lg:mb-8 lg:text-left">
+                  <Badge className="mb-3 border-primary/20 bg-primary/10 text-primary">
+                    <Sparkles className="mr-1 h-3 w-3" />
                     Quick & Easy Booking
                   </Badge>
-                  <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-3">
+                  <h2 className="mb-3 text-2xl font-bold text-foreground md:text-3xl">
                     Book Your HSRP & FASTag
                   </h2>
-                  <p className="text-muted-foreground">
-                    Complete the form below - price calculates automatically based on your vehicle
+                  <p className="mx-auto max-w-2xl text-muted-foreground lg:mx-0">
+                    Complete the form below - price calculates automatically based on your vehicle.
                   </p>
                 </div>
-                
+
                 <HSRPUnifiedBookingForm />
               </div>
 
               {/* Sidebar - Track Order & Info */}
-              <div className="space-y-6">
+              <div id="track" className="space-y-4 md:space-y-6">
                 {/* Track Order Card */}
                 <Card>
                   <CardHeader>
@@ -262,22 +266,23 @@ const HSRP = () => {
                     <div className="space-y-4">
                       <div className="space-y-2">
                         <Label htmlFor="trackingNumber">Order ID / Reg. Number</Label>
-                        <div className="flex gap-2">
+                        <div className="flex flex-col gap-2 sm:flex-row">
                           <Input
                             id="trackingNumber"
                             placeholder="e.g., HSRP12345 or DL01AB1234"
                             value={trackingNumber}
                             onChange={(e) => setTrackingNumber(e.target.value)}
+                            className="min-w-0"
                           />
-                          <Button onClick={handleTrackOrder} disabled={isTracking}>
+                          <Button type="button" onClick={handleTrackOrder} disabled={isTracking} className="w-full sm:w-auto">
                             {isTracking ? <Loader2 className="h-4 w-4 animate-spin" /> : "Track"}
                           </Button>
                         </div>
                       </div>
 
                       {trackingResult?.found && (
-                        <div className="p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
-                          <div className="flex items-center gap-2 text-green-600 mb-2">
+                        <div className="rounded-lg border border-primary/20 bg-primary/10 p-4">
+                          <div className="mb-2 flex items-center gap-2 text-primary">
                             <CheckCircle2 className="h-5 w-5" />
                             <span className="font-semibold">Order Found</span>
                           </div>
@@ -290,8 +295,8 @@ const HSRP = () => {
                       )}
 
                       {trackingResult && !trackingResult.found && (
-                        <div className="p-4 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
-                          <div className="flex items-center gap-2 text-red-600">
+                        <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4">
+                          <div className="flex items-center gap-2 text-destructive">
                             <AlertCircle className="h-5 w-5" />
                             <span>No order found with this ID</span>
                           </div>
@@ -311,11 +316,11 @@ const HSRP = () => {
                       const Icon = benefit.icon;
                       return (
                         <div key={idx} className="flex items-start gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                            <Icon className="w-4 h-4 text-primary" />
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                            <Icon className="h-4 w-4 text-primary" />
                           </div>
                           <div>
-                            <p className="font-medium text-sm">{benefit.title}</p>
+                            <p className="text-sm font-medium">{benefit.title}</p>
                             <p className="text-xs text-muted-foreground">{benefit.description}</p>
                           </div>
                         </div>
@@ -325,14 +330,14 @@ const HSRP = () => {
                 </Card>
 
                 {/* Help Card */}
-                <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+                <Card className="border-primary/20 bg-gradient-to-br from-primary/10 to-primary/5">
                   <CardContent className="pt-6 text-center">
-                    <Phone className="w-10 h-10 mx-auto text-primary mb-3" />
+                    <Phone className="mx-auto mb-3 h-10 w-10 text-primary" />
                     <p className="font-semibold">Need Help?</p>
-                    <p className="text-sm text-muted-foreground mb-4">Our team is available 24/7</p>
+                    <p className="mb-4 text-sm text-muted-foreground">Our team is available 24/7</p>
                     <Button variant="outline" className="w-full gap-2" asChild>
                       <a href="tel:+1155578093">
-                        <Phone className="w-4 h-4" />
+                        <Phone className="h-4 w-4" />
                         Call Now
                       </a>
                     </Button>
