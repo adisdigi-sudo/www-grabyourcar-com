@@ -47,7 +47,7 @@ export const MarketingDashboard = ({ onNavigate }: MarketingDashboardProps) => {
     { id: "content-blog", label: "Blog & News", desc: "Articles, auto news, launches", icon: FileText, color: "bg-violet-500/10 text-violet-600" },
     { id: "marketing-command", label: "WhatsApp Portal", desc: "Campaigns, broadcasts, automation", icon: MessageSquare, color: "bg-emerald-500/10 text-emerald-600", badge: "🔥" },
     { id: "website-seo", label: "SEO & Analytics", desc: "Meta tags, schemas, tracking", icon: TrendingUp, color: "bg-amber-500/10 text-amber-600" },
-    { id: "cars-list", label: "Car Database", desc: "Listings, variants, pricing", icon: Database, color: "bg-cyan-500/10 text-cyan-600" },
+    
     { id: "website-branding", label: "Logo & Branding", desc: "Visual identity, colors, fonts", icon: Palette, color: "bg-pink-500/10 text-pink-600" },
     { id: "content-ai", label: "AI Content Hub", desc: "AI-powered content generation", icon: Brain, color: "bg-indigo-500/10 text-indigo-600", badge: "AI" },
     { id: "automation-center", label: "Automation Center", desc: "Workflows, triggers, engines", icon: Zap, color: "bg-orange-500/10 text-orange-600", badge: "🔥" },
