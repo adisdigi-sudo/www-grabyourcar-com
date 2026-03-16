@@ -224,7 +224,7 @@ export function HSRPUnifiedBookingForm() {
     return () => { if (rcLookupTimer.current) clearTimeout(rcLookupTimer.current); };
   }, [formData.registrationNumber]);
 
-  // ─── AUTO-ADVANCE: Step 1 → when category + service is ready ───
+  // ─── CONTROLLED AUTO-ADVANCE: Step 1 → when category + service is ready ───
   useEffect(() => {
     const canAdvance =
       step === 1 &&
@@ -232,25 +232,27 @@ export function HSRPUnifiedBookingForm() {
       formData.vehicleCategory &&
       (Boolean(rcLookup.data) || Boolean(rcLookup.error));
 
-    if (canAdvance) {
-      const t = setTimeout(() => {
-        setStep(2);
-        saveAbandonedCart(2);
-      }, 500);
-      return () => clearTimeout(t);
-    }
+    if (!canAdvance || autoAdvancedStep1Ref.current) return;
+
+    autoAdvancedStep1Ref.current = true;
+    const t = setTimeout(() => {
+      setStep(2);
+      saveAbandonedCart(2);
+    }, 350);
+    return () => clearTimeout(t);
   }, [formData.serviceType, formData.vehicleCategory, rcLookup.data, rcLookup.error, step]);
 
-  // ─── AUTO-ADVANCE: Step 2 → when owner, mobile, email filled ───
+  // ─── CONTROLLED AUTO-ADVANCE: Step 2 → when owner, mobile, email filled ───
   useEffect(() => {
-    if (step !== 2) return;
+    if (step !== 2 || autoAdvancedStep2Ref.current) return;
     const cleanMobile = formData.mobile.replace(/\D/g, "").slice(-10);
     const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email);
     if (formData.ownerName.length >= 2 && /^[6-9]\d{9}$/.test(cleanMobile) && emailValid) {
+      autoAdvancedStep2Ref.current = true;
       const t = setTimeout(() => {
         setStep(3);
         saveAbandonedCart(3);
-      }, 800);
+      }, 500);
       return () => clearTimeout(t);
     }
   }, [step, formData.ownerName, formData.mobile, formData.email]);
