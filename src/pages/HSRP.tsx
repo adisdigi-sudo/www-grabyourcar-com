@@ -136,7 +136,7 @@ const HSRP = () => {
 
         <ServiceBanner
           highlightText="Mandatory"
-          title="Get Your HSRP & FASTag Today!"
+          title="Get Your HSRP Today!"
           subtitle="Avoid ₹10,000 fine | Government authorized | Quick installation in 48 hours"
           variant="dark"
           showCountdown
