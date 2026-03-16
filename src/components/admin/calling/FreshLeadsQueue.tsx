@@ -22,7 +22,7 @@ const VERTICAL_SERVICE_MAP: Record<string, string[]> = {
   insurance: ["insurance"],
   loans: ["finance", "car_loan"],
   rental: ["rental", "self_drive"],
-  hsrp: ["hsrp", "fastag"],
+  hsrp: ["hsrp"],
   accessories: ["accessories"],
   corporate: ["corporate"],
 };
