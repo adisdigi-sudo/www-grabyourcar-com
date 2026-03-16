@@ -157,19 +157,14 @@ export function HSRPUnifiedBookingForm() {
 
   // Calculate price
   const calculatePrice = () => {
-    if (!pricing || !formData.vehicleCategory) return { hsrp: 0, fastag: 0, total: 0 };
+    if (!pricing || !formData.vehicleCategory) return { hsrp: 0, total: 0 };
     const category = vehicleCategories.find(c => c.value === formData.vehicleCategory);
     const hsrpPrice = category ? (pricing as any)[category.priceKey] || 0 : 0;
-    const fastagPrice = pricing.fastag || 500;
     const colourSticker = pricing.colourSticker || 100;
-    let total = 0;
     let hsrp = hsrpPrice + colourSticker;
-    let fastag = fastagPrice;
-    if (formData.serviceType === 'hsrp') total = hsrp;
-    else if (formData.serviceType === 'fastag') total = fastag;
-    else if (formData.serviceType === 'both') total = Math.round((hsrp + fastag) * 0.9);
+    let total = hsrp;
     if (homeInstallation) total += homeInstallationFee || pricing.homeInstallationFee || 200;
-    return { hsrp, fastag, total };
+    return { hsrp, total };
   };
   const prices = calculatePrice();
 
