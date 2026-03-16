@@ -28,7 +28,7 @@ const VERTICALS = [
   { slug: "insurance", label: "Insurance" },
   { slug: "loans", label: "Car Loans" },
   { slug: "rental", label: "Self-Drive Rental" },
-  { slug: "hsrp", label: "HSRP & FASTag" },
+  { slug: "hsrp", label: "HSRP" },
   { slug: "accessories", label: "Accessories" },
 ];
 
