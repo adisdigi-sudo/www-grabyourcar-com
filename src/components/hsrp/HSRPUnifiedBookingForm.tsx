@@ -517,21 +517,10 @@ export function HSRPUnifiedBookingForm() {
                 </div>
               </div>
               <div className="flex flex-wrap gap-3 text-sm sm:justify-end sm:text-right">
-                {formData.serviceType !== 'fastag' && (
-                  <div>
-                    <p className="text-muted-foreground">HSRP</p>
-                    <p className="font-semibold">{formatPrice(prices.hsrp)}</p>
-                  </div>
-                )}
-                {formData.serviceType !== 'hsrp' && (
-                  <div>
-                    <p className="text-muted-foreground">FASTag</p>
-                    <p className="font-semibold">{formatPrice(prices.fastag)}</p>
-                  </div>
-                )}
-                {formData.serviceType === 'both' && (
-                  <Badge className="bg-primary text-primary-foreground">10% OFF</Badge>
-                )}
+                <div>
+                  <p className="text-muted-foreground">HSRP</p>
+                  <p className="font-semibold">{formatPrice(prices.hsrp)}</p>
+                </div>
               </div>
             </div>
           </CardContent>
