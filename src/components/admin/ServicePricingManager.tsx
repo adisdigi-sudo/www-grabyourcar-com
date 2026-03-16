@@ -42,8 +42,6 @@ const defaultPricing: PricingFormData = {
 
 const SERVICE_TYPES = [
   { value: 'hsrp', label: 'HSRP', icon: Shield },
-  { value: 'fastag', label: 'FASTag', icon: Key },
-  { value: 'hsrp_fastag', label: 'HSRP + FASTag', icon: Shield },
   { value: 'insurance', label: 'Insurance', icon: Shield },
   { value: 'loan', label: 'Car Loan', icon: CreditCard },
   { value: 'rental', label: 'Rental', icon: Car },
