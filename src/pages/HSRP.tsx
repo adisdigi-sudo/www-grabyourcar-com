@@ -232,7 +232,7 @@ const HSRP = () => {
                     Quick & Easy Booking
                   </Badge>
                   <h2 className="mb-3 text-2xl font-bold text-foreground md:text-3xl">
-                    Book Your HSRP & FASTag
+                    Book Your HSRP
                   </h2>
                   <p className="mx-auto max-w-2xl text-muted-foreground lg:mx-0">
                     Complete the form below - price calculates automatically based on your vehicle.
