@@ -133,7 +133,7 @@ export const PincodeChecker = ({
   return (
     <div className="space-y-3">
       <Label htmlFor="pincode-check">Check Home Installation Availability</Label>
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row">
         <div className="relative flex-1">
           <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -146,13 +146,15 @@ export const PincodeChecker = ({
           />
         </div>
         <Button
+          type="button"
           onClick={handleCheck}
           disabled={pincode.length !== 6 || isChecking}
           variant="outline"
+          className="w-full sm:w-auto"
         >
           {isChecking ? (
             <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Checking...
             </>
           ) : (

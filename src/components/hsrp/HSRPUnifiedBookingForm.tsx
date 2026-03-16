@@ -150,29 +150,12 @@ export function HSRPUnifiedBookingForm() {
   const [sessionId] = useState(() => `hsrp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
   const abandonedCartIdRef = useRef<string>(crypto.randomUUID());
   const hasSavedCartRef = useRef(false);
+  const autoAdvancedStep1Ref = useRef(false);
+  const autoAdvancedStep2Ref = useRef(false);
   const rcLookupTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastLookedUp = useRef<string>("");
-  
-  
-  const [formData, setFormData] = useState<FormData>({
-    serviceType: "",
-    vehicleCategory: "",
-    registrationNumber: "",
-    chassisLast6: "",
-    engineLast6: "",
-    vehicleMake: "",
-    vehicleModel: "",
-    manufacturingYear: "",
-    ownerName: "",
-    mobile: "",
-    email: "",
-    state: "",
-    city: "",
-    pincode: "",
-    address: "",
-    preferredDate: "",
-    preferredTimeSlot: "",
-  });
+
+  const [formData, setFormData] = useState<FormData>(initialFormData);
 
   // Calculate price
   const calculatePrice = () => {

@@ -157,19 +157,19 @@ export const WhatsAppFloatingButton = ({
   };
 
   return (
-    <div className={cn("fixed bottom-24 right-6 z-40 flex flex-col items-center gap-1", className)}>
+    <div className={cn("fixed bottom-20 right-3 z-40 flex flex-col items-center gap-1 sm:bottom-24 sm:right-6", className)}>
       {/* Label */}
-      <div className="flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-card via-card to-success/10 backdrop-blur-sm rounded-full text-[11px] font-bold text-foreground shadow-lg border border-success/30 whitespace-nowrap glow-border-pulse">
+      <div className="hidden items-center gap-1 whitespace-nowrap rounded-full border border-success/30 bg-gradient-to-r from-card via-card to-success/10 px-2.5 py-1 text-[11px] font-bold text-foreground shadow-lg glow-border-pulse sm:flex">
         <Car className="h-3 w-3 text-success" />
         <span>AutoBot</span>
-        <Sparkles className="h-2.5 w-2.5 text-success animate-pulse" />
+        <Sparkles className="h-2.5 w-2.5 animate-pulse text-success" />
       </div>
       {/* Button */}
       <a
         href={whatsappUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="relative w-14 h-14 rounded-full bg-gradient-to-br from-[#25D366] to-[#128C7E] hover:from-[#20BD5A] hover:to-[#0f7a6d] shadow-xl flex items-center justify-center transition-all hover:scale-110 animate-bounce-slow group autobot-glow"
+        className="group relative flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-[#25D366] to-[#128C7E] shadow-xl transition-all hover:scale-110 sm:h-14 sm:w-14 animate-bounce-slow autobot-glow"
         aria-label="Chat with AutoBot on WhatsApp"
         onClick={handleClick}
       >
@@ -177,8 +177,8 @@ export const WhatsAppFloatingButton = ({
         <span className="absolute inset-0 rounded-full bg-[#25D366]/40 animate-ping" />
         {/* Icon container with car + bot hybrid */}
         <div className="relative flex items-center justify-center">
-          <Car className="h-6 w-6 text-white" />
-          <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-white rounded-full flex items-center justify-center shadow-sm">
+          <Car className="h-5 w-5 text-white sm:h-6 sm:w-6" />
+          <div className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-white shadow-sm">
             <Bot className="h-2.5 w-2.5 text-[#25D366]" />
           </div>
         </div>
