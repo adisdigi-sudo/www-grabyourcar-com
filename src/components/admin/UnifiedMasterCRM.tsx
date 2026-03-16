@@ -57,7 +57,7 @@ const VERTICALS = [
   { id: "car-sales" as Vertical, label: "Car Sales", icon: Car, color: "text-blue-600", ready: true },
   { id: "loans" as Vertical, label: "Car Loans", icon: Banknote, color: "text-purple-600", ready: true },
   { id: "accessories" as Vertical, label: "Accessories", icon: ShoppingBag, color: "text-orange-600", ready: true },
-  { id: "hsrp" as Vertical, label: "HSRP & FASTag", icon: FileText, color: "text-teal-600", ready: true },
+  { id: "hsrp" as Vertical, label: "HSRP", icon: FileText, color: "text-teal-600", ready: true },
   { id: "rentals" as Vertical, label: "Self-Drive Rental", icon: Car, color: "text-cyan-600", ready: true },
   { id: "fleet" as Vertical, label: "Fleet Business", icon: Users, color: "text-indigo-600", ready: true },
 ];
