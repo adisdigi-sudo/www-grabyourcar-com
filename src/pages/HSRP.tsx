@@ -171,16 +171,6 @@ const HSRP = () => {
                 </Button>
                 <Button
                   type="button"
-                  variant="secondary"
-                  size="lg"
-                  className="w-full gap-2 sm:w-auto"
-                  onClick={() => document.getElementById("booking-section")?.scrollIntoView({ behavior: "smooth" })}
-                >
-                  <CreditCard className="h-5 w-5" />
-                  Get FASTag
-                </Button>
-                <Button
-                  type="button"
                   variant="outline"
                   size="lg"
                   className="w-full gap-2 border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10 sm:w-auto"
