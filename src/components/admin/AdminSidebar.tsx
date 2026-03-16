@@ -77,7 +77,7 @@ const navItems: NavItem[] = [
     label: "Services", 
     icon: Wrench,
     children: [
-      { id: "services-hsrp", label: "HSRP & FASTag", icon: Shield, verticals: ["hsrp"], allowedRoles: ["super_admin", "admin", "operations"] },
+      { id: "services-hsrp", label: "HSRP", icon: Shield, verticals: ["hsrp"], allowedRoles: ["super_admin", "admin", "operations"] },
       { id: "services-rentals", label: "Self-Drive Rentals", icon: CalendarDays, verticals: ["rental"], allowedRoles: ["super_admin", "admin", "operations"] },
       { id: "services-driver-bookings", label: "🚗 Driver Bookings", icon: Car, verticals: ["rental"], allowedRoles: ["super_admin", "admin", "operations"] },
       { id: "services-api-partners", label: "🔗 API Partners", icon: Globe, verticals: ["rental"], allowedRoles: ["super_admin", "admin"] },
