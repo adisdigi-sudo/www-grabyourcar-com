@@ -24,6 +24,11 @@ import { supabase } from "@/integrations/supabase/client";
 
 const SAMPLE_TEMPLATES = [
   {
+    name: "⭐ Review Request",
+    message:
+      "😊 *Hi {name}!*\n\nThank you so much for choosing *GrabYourCar* for your car! 🚗 We truly appreciate your trust and support — it means the world to us! 🙏\n\nWe'd love to hear about your experience! Could you please take a moment to leave us a quick review on Google? Your feedback helps us serve you and others even better! ⭐\n\n👉 https://share.google/xBBnueLfRt6stD8MO\n\nThank you so much! Wishing you many happy miles ahead! 🛣️✨\n\n— Team GrabYourCar 💚",
+  },
+  {
     name: "🎨 Holi Greeting",
     message:
       "🎨 *Wishing you a Colorful & Joyful Holi, {name}!* 🎉\n\nMay your journeys be filled with vibrant colors & happy memories.\n\n*Happy Holi from Team GrabYourCar!* 🚗✨",
@@ -43,6 +48,42 @@ const SAMPLE_TEMPLATES = [
     message:
       "👋 *Hello {name}, from GrabYourCar!*\n\nWe have something special for you! 🎁\n\n👉 https://www.grabyourcar.com\n📞 9855924442",
   },
+];
+
+const PRELOADED_CONTACTS: Contact[] = [
+  { name: "Parag", phone: "919582306727" },
+  { name: "Lokesh", phone: "918860806436" },
+  { name: "Lakshay", phone: "919812031059" },
+  { name: "Manikant", phone: "919871026150" },
+  { name: "Sanchit", phone: "919999615950" },
+  { name: "Renu", phone: "919654696613" },
+  { name: "Taranbir", phone: "919910749905" },
+  { name: "Rahul", phone: "919323020006" },
+  { name: "Shweta Dhir", phone: "919811260155" },
+  { name: "Madhur Malhotra", phone: "919811021944" },
+  { name: "Ankur Gupta", phone: "919717998888" },
+  { name: "Vidit Gupta", phone: "919811787282" },
+  { name: "Rakesh Gupta", phone: "919953007760" },
+  { name: "Shishender Kataria", phone: "919034192008" },
+  { name: "Shreyansh Mittal", phone: "919267975769" },
+  { name: "Mayank Tanwar", phone: "919999029998" },
+  { name: "Prabh Khera", phone: "919818200313" },
+  { name: "Ahluwalia", phone: "919911991147" },
+  { name: "Ayush", phone: "917503341403" },
+  { name: "Mohit", phone: "918950544435" },
+  { name: "Funkyy", phone: "919818284935" },
+  { name: "Shivyank Udyog", phone: "919899016617" },
+  { name: "Isha", phone: "917206607985" },
+  { name: "Udit Jain", phone: "918076732734" },
+  { name: "Himanshu Sharma", phone: "919582279204" },
+  { name: "Ujjwal Bhati", phone: "919599745311" },
+  { name: "Advocate Sidarth Arora", phone: "919560601768" },
+  { name: "Khushboo", phone: "917011158564" },
+  { name: "Gautam", phone: "919871774224" },
+  { name: "Rajat Suri", phone: "919810108221" },
+  { name: "Akhilesh Maurya", phone: "919873255531" },
+  { name: "Inder", phone: "919873255594" },
+  { name: "Harsh Mahajan", phone: "919362142258" },
 ];
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
