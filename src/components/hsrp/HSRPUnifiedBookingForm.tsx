@@ -43,8 +43,6 @@ const vehicleCategories = [
 
 const serviceTypes = [
   { value: "hsrp", label: "HSRP Number Plate", icon: Shield, description: "High Security Registration Plate" },
-  { value: "fastag", label: "FASTag", icon: CreditCard, description: "Toll Collection Sticker" },
-  { value: "both", label: "HSRP + FASTag", icon: Package, description: "Complete Package", discount: 10 },
 ];
 
 const timeSlots = [
