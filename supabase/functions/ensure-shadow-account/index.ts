@@ -106,20 +106,45 @@ serve(async (req) => {
         userId = linkData.user.id;
       }
 
-      // Step 3: Reset password so credentials are deterministic
-      console.log("Updating password for user:", userId);
-      const { error: updateError } = await admin.auth.admin.updateUserById(userId, {
-        password,
-        email_confirm: true,
-        user_metadata: {
-          phone: `91${cleanPhone}`,
-          auth_method: "whatsapp_otp",
-        },
-      });
+      // Step 3: Check if this user is an admin/super_admin — if so, do NOT reset their password
+      let isAdminUser = false;
+      if (userId) {
+        const { data: roles } = await admin
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", userId);
+        const { data: crmUser } = await admin
+          .from("crm_users")
+          .select("role")
+          .eq("auth_user_id", userId);
+        
+        isAdminUser = 
+          (roles || []).some((r: any) => ["admin", "super_admin"].includes(r.role)) ||
+          (crmUser || []).some((r: any) => r.role === "admin");
+      }
 
-      if (updateError) {
-        console.error("Password update failed:", updateError.message);
-        throw updateError;
+      if (isAdminUser) {
+        console.log("Skipping password reset for admin user:", userId);
+        // Only ensure email is confirmed, don't touch password
+        await admin.auth.admin.updateUserById(userId!, {
+          email_confirm: true,
+        });
+      } else {
+        // Reset password so credentials are deterministic for guest users
+        console.log("Updating password for guest user:", userId);
+        const { error: updateError } = await admin.auth.admin.updateUserById(userId!, {
+          password,
+          email_confirm: true,
+          user_metadata: {
+            phone: `91${cleanPhone}`,
+            auth_method: "whatsapp_otp",
+          },
+        });
+
+        if (updateError) {
+          console.error("Password update failed:", updateError.message);
+          throw updateError;
+        }
       }
     }
 
