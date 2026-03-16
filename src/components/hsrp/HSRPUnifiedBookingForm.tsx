@@ -622,8 +622,8 @@ export function HSRPUnifiedBookingForm() {
                                 : "border-border hover:border-primary/50"
                             )}
                           >
-                            {service.discount && (
-                              <Badge className="absolute -top-2 -right-2 bg-green-500">Save {service.discount}%</Badge>
+                            {'discount' in service && (service as any).discount && (
+                              <Badge className="absolute -top-2 -right-2 bg-green-500">Save {(service as any).discount}%</Badge>
                             )}
                             <ServiceIcon className={cn("w-7 h-7 mb-1", isSelected && "text-primary")} />
                             <p className="font-semibold text-sm">{service.label}</p>
