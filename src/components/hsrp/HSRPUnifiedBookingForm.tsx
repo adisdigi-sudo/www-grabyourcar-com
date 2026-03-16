@@ -853,7 +853,7 @@ export function HSRPUnifiedBookingForm() {
                 </div>
                 <h2 className="text-2xl font-bold text-green-600 mb-2">Booking Confirmed!</h2>
                 <p className="text-muted-foreground mb-6">
-                  Your {formData.serviceType === 'both' ? 'HSRP & FASTag' : formData.serviceType.toUpperCase()} booking has been placed successfully.
+                  Your HSRP booking has been placed successfully.
                 </p>
                 <div className="flex justify-center gap-4">
                   <Button variant="outline" onClick={() => navigate("/my-orders")}>View Orders</Button>

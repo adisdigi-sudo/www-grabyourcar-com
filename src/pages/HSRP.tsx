@@ -420,13 +420,6 @@ const HSRP = () => {
                     </div>
                     <div className="flex justify-between items-center py-2 border-b border-border">
                       <div className="flex items-center gap-2">
-                        <CreditCard className="h-4 w-4 text-muted-foreground" />
-                        <span>FASTag</span>
-                      </div>
-                      <span className="font-bold text-primary">{formatPrice(pricing?.fastag || 500)}</span>
-                    </div>
-                    <div className="flex justify-between items-center py-2 border-b border-border">
-                      <div className="flex items-center gap-2">
                         <Package className="h-4 w-4 text-muted-foreground" />
                         <span>Colour Sticker Only</span>
                       </div>

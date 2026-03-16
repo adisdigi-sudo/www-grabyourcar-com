@@ -176,7 +176,7 @@ export interface HSRPBannerData {
   service_type: string;
 }
 
-export const useHSRPBanners = (serviceType?: 'hsrp' | 'fastag' | 'all') => {
+export const useHSRPBanners = (serviceType?: 'hsrp' | 'all') => {
   return useQuery({
     queryKey: ["hsrp-banners-public", serviceType],
     queryFn: async () => {

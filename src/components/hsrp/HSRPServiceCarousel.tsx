@@ -28,7 +28,7 @@ const priceKeyMap: Record<string, string> = {
 interface HSRPServiceCarouselProps {
   onSelectService: (serviceId: string, price: number, vehicleClass: string) => void;
   selectedServiceId?: string | null;
-  serviceType?: 'hsrp' | 'fastag';
+  serviceType?: 'hsrp';
 }
 
 export function HSRPServiceCarousel({ onSelectService, selectedServiceId, serviceType = 'hsrp' }: HSRPServiceCarouselProps) {
