@@ -176,6 +176,12 @@ export function HSRPUnifiedBookingForm() {
   const prices = calculatePrice();
 
   const handleInputChange = (field: keyof FormData, value: string) => {
+    if (field === "registrationNumber") {
+      autoAdvancedStep1Ref.current = false;
+    }
+    if (["ownerName", "mobile", "email"].includes(field)) {
+      autoAdvancedStep2Ref.current = false;
+    }
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
