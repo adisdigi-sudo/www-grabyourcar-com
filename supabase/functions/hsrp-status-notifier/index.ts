@@ -17,7 +17,7 @@ const STAGE_MESSAGES: Record<string, { emoji: string; title: string; body: strin
   verification: {
     emoji: "📋",
     title: "Documents Under Verification",
-    body: "Your HSRP/FASTag booking documents have been received and are being verified. We'll update you shortly.",
+    body: "Your HSRP booking documents have been received and are being verified. We'll update you shortly.",
   },
   payment: {
     emoji: "💳",
