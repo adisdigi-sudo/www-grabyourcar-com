@@ -323,122 +323,120 @@ export function HSRPUnifiedBookingForm() {
 
     setIsSubmitting(true);
 
-    // Silent auto-login
-    let currentUser = user;
-    if (!currentUser) {
-      try {
-        console.log("[HSRP] Starting silent auth for", normalizedMobile);
-        const { error } = await signInWithPhone(normalizedMobile);
-        if (error) {
-          console.error("[HSRP] Silent auth error:", error.message);
-          toast.error("Login failed: " + error.message);
-          setIsSubmitting(false);
-          return;
-        }
+    try {
+      const trackingId = generateTrackingId();
+      const normalizedMobile = formData.mobile.replace(/\D/g, "").slice(-10);
+      console.log("[HSRP] Creating booking via server, tracking:", trackingId);
 
-        // Give auth state time to propagate through React context
-        await new Promise(r => setTimeout(r, 800));
+      // Use server-side edge function — no client auth needed
+      const { data: result, error: fnError } = await supabase.functions.invoke("hsrp-book-and-pay", {
+        body: {
+          phone: normalizedMobile,
+          registration_number: formData.registrationNumber,
+          chassis_number: formData.chassisLast6 || null,
+          engine_number: formData.engineLast6 || null,
+          vehicle_class: formData.vehicleCategory,
+          state: formData.state,
+          owner_name: formData.ownerName,
+          email: formData.email,
+          address: formData.address,
+          pincode: formData.pincode,
+          service_type: formData.serviceType || "hsrp",
+          service_price: prices.total,
+          home_installation: homeInstallation,
+          home_installation_fee: homeInstallation ? homeInstallationFee : 0,
+          payment_amount: prices.total,
+          tracking_id: trackingId,
+          scheduled_date: formData.preferredDate || null,
+        },
+      });
 
-        // Get fresh session
-        const { data: sessionData } = await supabase.auth.getSession();
-        currentUser = sessionData.session?.user ?? null;
-
-        if (!currentUser) {
-          const { data: userData } = await supabase.auth.getUser();
-          currentUser = userData.user ?? null;
-        }
-
-        if (!currentUser) {
-          console.error("[HSRP] No user after successful auth");
-          toast.error("Session not ready. Please click Pay again.");
-          setIsSubmitting(false);
-          return;
-        }
-
-        console.log("[HSRP] Auth successful, user:", currentUser.id);
-      } catch (err: any) {
-        console.error("[HSRP] Auth exception:", err);
-        toast.error("Something went wrong. Please try again.");
+      if (fnError || !result?.success) {
+        const msg = result?.error || fnError?.message || "Failed to create booking";
+        console.error("[HSRP] Server booking error:", msg);
+        toast.error(msg);
         setIsSubmitting(false);
         return;
       }
-    }
 
-    try {
-      const trackingId = generateTrackingId();
-      console.log("[HSRP] Creating booking with tracking:", trackingId);
+      const { booking, order, key } = result;
+      console.log("[HSRP] Booking created:", booking.id, "— opening Razorpay for ₹", prices.total);
 
-      const bookingData = {
-        user_id: currentUser.id,
-        registration_number: formData.registrationNumber.toUpperCase(),
-        chassis_number: formData.chassisLast6 || null,
-        engine_number: formData.engineLast6 || null,
-        vehicle_class: formData.vehicleCategory.toUpperCase(),
-        state: formData.state,
-        owner_name: formData.ownerName,
-        mobile: normalizedMobile,
-        email: formData.email,
-        address: formData.address,
-        pincode: formData.pincode,
-        service_type: formData.serviceType,
-        service_price: prices.total,
-        home_installation: homeInstallation,
-        home_installation_fee: homeInstallation ? homeInstallationFee : 0,
-        payment_amount: prices.total,
-        tracking_id: trackingId,
-        scheduled_date: formData.preferredDate || null,
-      };
-
-      const { data: booking, error } = await supabase
-        .from("hsrp_bookings")
-        .insert(bookingData)
-        .select()
-        .single();
-
-      if (error) {
-        console.error("[HSRP] Booking insert error:", error);
-        throw error;
+      // Load Razorpay script if needed
+      if (!window.Razorpay) {
+        await new Promise<void>((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = "https://checkout.razorpay.com/v1/checkout.js";
+          script.onload = () => resolve();
+          script.onerror = () => reject(new Error("Failed to load payment gateway"));
+          document.body.appendChild(script);
+        });
       }
 
-      console.log("[HSRP] Booking created:", booking.id, "— initiating payment for ₹", prices.total);
-
-      initiatePayment({
-        amount: prices.total,
-        receipt: booking.id,
-        bookingType: "hsrp",
-        bookingId: booking.id,
-        customerName: formData.ownerName,
-        customerEmail: formData.email,
-        customerPhone: normalizedMobile,
-        description: `${formData.serviceType.toUpperCase()} for ${formData.registrationNumber}`,
-        notes: { tracking_id: trackingId, service: formData.serviceType },
-        onSuccess: async (paymentData) => {
-          await supabase.from("hsrp_bookings").update({
-            payment_status: "paid",
-            payment_id: paymentData.razorpay_payment_id,
-            order_status: "confirmed",
-          }).eq("id", booking.id);
-          triggerWhatsApp({
-            event: "hsrp_order_placed",
-            phone: normalizedMobile,
-            name: formData.ownerName,
-            data: { tracking_id: trackingId, service: formData.serviceType, vehicle: formData.registrationNumber },
-          });
-          toast.success("Booking confirmed! Tracking ID: " + trackingId);
-          if (hasSavedCartRef.current) {
-            supabase.from("hsrp_abandoned_carts").update({
-              recovery_status: "converted",
-              converted_booking_id: booking.id,
-              converted_at: new Date().toISOString(),
-            }).eq("id", abandonedCartIdRef.current).then(() => {});
-          }
-          setStep(4);
+      const razorpay = new window.Razorpay({
+        key,
+        amount: order.amount,
+        currency: order.currency || "INR",
+        name: "GrabYourCar",
+        description: `HSRP for ${formData.registrationNumber}`,
+        order_id: order.id,
+        prefill: {
+          name: formData.ownerName,
+          email: formData.email,
+          contact: normalizedMobile,
         },
-        onError: (err) => {
-          console.error("[HSRP] Payment error:", err);
-          toast.error("Payment failed: " + err);
+        theme: { color: "#1a1a2e" },
+        handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
+          try {
+            const { data: verifyResult, error: verifyError } = await supabase.functions.invoke("hsrp-verify-payment", {
+              body: {
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                bookingId: booking.id,
+              },
+            });
+
+            if (verifyError || !verifyResult?.success) {
+              toast.error("Payment verification failed. Contact support.");
+              return;
+            }
+
+            triggerWhatsApp({
+              event: "hsrp_order_placed",
+              phone: normalizedMobile,
+              name: formData.ownerName,
+              data: { tracking_id: trackingId, service: formData.serviceType, vehicle: formData.registrationNumber },
+            });
+            toast.success("Booking confirmed! Tracking ID: " + trackingId);
+            if (hasSavedCartRef.current) {
+              supabase.from("hsrp_abandoned_carts").update({
+                recovery_status: "converted",
+                converted_booking_id: booking.id,
+                converted_at: new Date().toISOString(),
+              }).eq("id", abandonedCartIdRef.current).then(() => {});
+            }
+            setStep(4);
+          } catch (err: any) {
+            console.error("[HSRP] Verify error:", err);
+            toast.error("Payment verification error. Contact support.");
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            toast.info("Payment cancelled");
+            setIsSubmitting(false);
+          },
         },
       });
+
+      razorpay.on("payment.failed", (resp: any) => {
+        console.error("[HSRP] Payment failed:", resp.error);
+        toast.error(resp.error?.description || "Payment failed");
+        setIsSubmitting(false);
+      });
+
+      razorpay.open();
     } catch (error: any) {
       console.error("[HSRP] Booking error:", error);
       toast.error("Failed to process booking: " + (error.message || "Unknown error"));
