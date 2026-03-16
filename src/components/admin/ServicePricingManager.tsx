@@ -54,13 +54,6 @@ const CATEGORIES = {
     { value: 'ev', label: 'Electric Vehicle' },
     { value: 'commercial', label: 'Commercial Vehicle' },
   ],
-  fastag: [
-    { value: 'standard', label: 'Standard' },
-    { value: 'commercial', label: 'Commercial' },
-  ],
-  hsrp_fastag: [
-    { value: '4w', label: 'Four Wheeler Combo' },
-  ],
   insurance: [
     { value: 'comprehensive', label: 'Comprehensive' },
     { value: 'third_party', label: 'Third Party' },
