@@ -307,7 +307,7 @@ export const Header = () => {
 
       {/* Mobile Menu Overlay */}
       {menuOpen && (
-        <div className="lg:hidden fixed inset-0 z-40 bg-background animate-fade-in pt-24 md:pt-[6.5rem]">
+        <div className="lg:hidden fixed inset-0 z-[9999] bg-background animate-fade-in pt-24 md:pt-[6.5rem]">
           <div className="flex flex-col h-full pb-20 px-4 overflow-y-auto">
             <nav className="flex flex-col gap-1">
               <p className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Services</p>
