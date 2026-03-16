@@ -297,7 +297,7 @@ export function HSRPUnifiedBookingForm() {
   };
 
   const generateTrackingId = () => {
-    const prefix = formData.serviceType === 'fastag' ? 'FT' : 'HSRP';
+    const prefix = 'HSRP';
     const timestamp = Date.now().toString(36).toUpperCase();
     const random = Math.random().toString(36).substring(2, 6).toUpperCase();
     return `${prefix}${timestamp}${random}`;
