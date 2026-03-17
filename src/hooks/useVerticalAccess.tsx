@@ -31,6 +31,7 @@ interface VerticalContextType {
   availableVerticals: BusinessVertical[];
   isLoading: boolean;
   teamMember: TeamMember | null;
+  isManagerInVertical: boolean;
 }
 
 const VerticalContext = createContext<VerticalContextType | undefined>(undefined);
