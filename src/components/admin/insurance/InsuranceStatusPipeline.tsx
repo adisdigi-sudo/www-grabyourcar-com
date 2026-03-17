@@ -867,7 +867,7 @@ export function InsuranceStatusPipeline() {
                       </Button>
                       <Button
                         className="gap-2 bg-green-600 hover:bg-green-700 text-white h-11"
-                        onClick={() => {
+                        onClick={async () => {
                           const phone = (selectedClient.phone || "").replace(/\D/g, "");
                           const fullPhone = phone.startsWith("91") ? phone : `91${phone}`;
                           generateInsuranceQuotePdf({
