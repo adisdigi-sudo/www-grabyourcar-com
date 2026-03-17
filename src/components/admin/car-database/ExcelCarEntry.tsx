@@ -78,6 +78,16 @@ const emptyRow = (): CarRow => ({
   status: 'draft',
 });
 
+const autoCalcOnRoad = (exShowroom: string): { rto: string; insurance: string; tcs: string; on_road_price: string } => {
+  const ex = Number(exShowroom) || 0;
+  if (ex === 0) return { rto: '', insurance: '', tcs: '', on_road_price: '' };
+  const rto = Math.round(ex * 0.08);
+  const insurance = Math.round(ex * 0.035);
+  const tcs = ex > 1000000 ? Math.round(ex * 0.01) : 0;
+  const onRoad = ex + rto + insurance + tcs + 500 + 1000 + 15000;
+  return { rto: String(rto), insurance: String(insurance), tcs: String(tcs), on_road_price: String(onRoad) };
+};
+
 const emptyVariant = (): CarVariant => ({
   name: "", price: "", price_numeric: "", fuel_type: "Petrol", transmission: "Manual",
   ex_showroom: "", rto: "", insurance: "", tcs: "", on_road_price: "", features: "",
