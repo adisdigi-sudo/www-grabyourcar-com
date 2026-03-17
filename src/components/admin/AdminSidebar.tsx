@@ -362,12 +362,13 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
       });
     }
 
-    // Insurance workspace should stay focused: keep Dashboard + Smart Calling + Insurance CRM tools
+    // Insurance workspace should stay focused: keep Dashboard + Insurance CRM tools only
     if (normalizedActiveSlug === "insurance") {
       items = items
         .map(item => {
           if (item.id === "dashboard" || item.id === "calling-system") return item;
-          if (item.id === "finance-hub" || item.id === "hr-hub") return item;
+          // Remove Accounts & Finance and HR from insurance vertical
+          if (item.id === "finance-hub" || item.id === "hr-hub") return null;
           if (item.id === "services" && item.children) {
             const allowedInsuranceChildren = item.children.filter(
               child => child.id === "services-insurance" || child.id === "services-insurance-import"
