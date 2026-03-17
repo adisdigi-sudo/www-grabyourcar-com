@@ -13,9 +13,12 @@ import { toast } from "sonner";
 import { CallDispositionModal } from "./CallDispositionModal";
 import {
   Phone, MessageCircle, Search, Inbox, Clock, User,
-  MapPin, Car, Filter, ArrowUpRight, Flame, Globe, MessageSquare
+  MapPin, Car, Filter, ArrowUpRight, Flame, Globe, MessageSquare,
+  UserCheck, Users, Zap, CheckSquare
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
+import { LeadAssignmentPanel } from "../shared/LeadAssignmentPanel";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const VERTICAL_SERVICE_MAP: Record<string, string[]> = {
   sales: ["car_inquiry", "general", "test_drive"],
