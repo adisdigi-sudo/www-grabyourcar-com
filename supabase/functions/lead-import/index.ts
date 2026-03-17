@@ -84,12 +84,20 @@ serve(async (req) => {
             continue;
           }
 
-          const { error: insertErr } = await supabase.from("leads").insert(mapped);
+          const { data: inserted, error: insertErr } = await supabase.from("leads").insert(mapped).select("id").single();
           if (insertErr) {
             failed++;
             errors.push({ row: lead, reason: insertErr.message });
           } else {
             imported++;
+            // Auto-assign via round-robin if verticalId provided
+            if (verticalId && inserted?.id) {
+              await supabase.rpc("auto_assign_lead_round_robin", {
+                p_vertical_id: verticalId,
+                p_lead_id: inserted.id,
+                p_assigned_by: null,
+              });
+            }
           }
         } catch (e: any) {
           failed++;
