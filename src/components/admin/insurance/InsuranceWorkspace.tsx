@@ -890,7 +890,7 @@ export function InsuranceWorkspace() {
                         {format(new Date(client.created_at), "dd MMM yy")}
                       </TableCell>
                       <TableCell onClick={e => e.stopPropagation()}>
-                        <div className="flex gap-0.5 items-center">
+                        <div className="flex gap-0.5 items-center flex-wrap">
                           {phone && (
                             <>
                               <a href={`tel:${client.phone}`}>
@@ -903,6 +903,9 @@ export function InsuranceWorkspace() {
                               )}
                             </>
                           )}
+                          <Button size="sm" variant="outline" className="h-6 text-[10px] gap-0.5 px-1.5 text-emerald-600 border-emerald-200" onClick={() => { setSelectedClient(client); setShowQuoteModal(true); }}>
+                            <FileText className="h-2.5 w-2.5" /> Quote
+                          </Button>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button size="sm" variant="outline" className="h-6 text-[10px] gap-0.5 px-1.5">
