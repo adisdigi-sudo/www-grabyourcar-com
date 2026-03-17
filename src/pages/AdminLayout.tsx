@@ -81,6 +81,7 @@ import { ClientManagement } from "@/components/admin/ClientManagement";
 import { LeadImportManager } from "@/components/admin/LeadImportManager";
 import { DataExportEngine } from "@/components/admin/DataExportEngine";
 import { SuperAdminUserManager } from "@/components/admin/SuperAdminUserManager";
+import { UserManagementDashboard } from "@/components/admin/UserManagementDashboard";
 import { InsuranceDashboard } from "@/components/admin/verticals/InsuranceDashboard";
 import { SalesDashboard } from "@/components/admin/verticals/SalesDashboard";
 import { RentalDashboard } from "@/components/admin/verticals/RentalDashboard";
