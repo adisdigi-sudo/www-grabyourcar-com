@@ -1701,12 +1701,11 @@ ${currentPremium && renewalPremium ? `\n📊 *Comparison:*\n💰 Current: ${form
 
   const currentMessage = activeTemplate === "notice" ? buildNotice() : buildQuote();
 
-  const sendViaWhatsAppLink = () => {
+  const sendViaWhatsAppLink = async () => {
     const cleanPhone = phone.replace(/\D/g, "");
     if (!cleanPhone) { toast.error("Enter a valid phone number"); return; }
-    const fullPhone = cleanPhone.startsWith("91") ? cleanPhone : `91${cleanPhone}`;
-    window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(currentMessage)}`, "_blank");
-    toast.success(`${activeTemplate === "notice" ? "Renewal Notice" : "Renewal Quote"} opened in WhatsApp`);
+    const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+    await sendWhatsApp({ phone: cleanPhone, message: currentMessage, logEvent: activeTemplate === "notice" ? "renewal_notice" : "renewal_quote" });
     onClose();
   };
 
