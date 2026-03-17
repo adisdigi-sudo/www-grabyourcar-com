@@ -804,6 +804,57 @@ export type Database = {
         }
         Relationships: []
       }
+      bank_reconciliation: {
+        Row: {
+          account_number: string | null
+          bank_balance: number | null
+          bank_name: string
+          book_balance: number | null
+          created_at: string | null
+          id: string
+          items: Json | null
+          notes: string | null
+          reconciled_at: string | null
+          reconciled_balance: number | null
+          reconciled_by: string | null
+          statement_date: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_number?: string | null
+          bank_balance?: number | null
+          bank_name: string
+          book_balance?: number | null
+          created_at?: string | null
+          id?: string
+          items?: Json | null
+          notes?: string | null
+          reconciled_at?: string | null
+          reconciled_balance?: number | null
+          reconciled_by?: string | null
+          statement_date: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_number?: string | null
+          bank_balance?: number | null
+          bank_name?: string
+          book_balance?: number | null
+          created_at?: string | null
+          id?: string
+          items?: Json | null
+          notes?: string | null
+          reconciled_at?: string | null
+          reconciled_balance?: number | null
+          reconciled_by?: string | null
+          statement_date?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       banners: {
         Row: {
           created_at: string
@@ -1909,6 +1960,53 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      chart_of_accounts: {
+        Row: {
+          account_code: string
+          account_name: string
+          account_type: string
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          opening_balance: number | null
+          parent_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_code: string
+          account_name: string
+          account_type?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          opening_balance?: number | null
+          parent_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_code?: string
+          account_name?: string
+          account_type?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          opening_balance?: number | null
+          parent_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chart_of_accounts_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       chat_conversations: {
         Row: {
@@ -3791,6 +3889,57 @@ export type Database = {
           text_content?: string | null
           updated_at?: string
           variables?: string[] | null
+        }
+        Relationships: []
+      }
+      employee_documents: {
+        Row: {
+          created_at: string | null
+          document_name: string
+          document_number: string | null
+          document_type: string
+          document_url: string | null
+          employee_id: string | null
+          employee_name: string
+          expiry_date: string | null
+          id: string
+          is_verified: boolean | null
+          notes: string | null
+          updated_at: string | null
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          document_name: string
+          document_number?: string | null
+          document_type: string
+          document_url?: string | null
+          employee_id?: string | null
+          employee_name: string
+          expiry_date?: string | null
+          id?: string
+          is_verified?: boolean | null
+          notes?: string | null
+          updated_at?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          document_name?: string
+          document_number?: string | null
+          document_type?: string
+          document_url?: string | null
+          employee_id?: string | null
+          employee_name?: string
+          expiry_date?: string | null
+          id?: string
+          is_verified?: boolean | null
+          notes?: string | null
+          updated_at?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Relationships: []
       }
@@ -6264,6 +6413,189 @@ export type Database = {
         }
         Relationships: []
       }
+      invoices: {
+        Row: {
+          amount_paid: number | null
+          balance_due: number | null
+          client_address: string | null
+          client_email: string | null
+          client_name: string
+          client_phone: string | null
+          created_at: string | null
+          created_by: string | null
+          discount_amount: number | null
+          due_date: string | null
+          gstin: string | null
+          id: string
+          invoice_date: string
+          invoice_number: string
+          items: Json | null
+          notes: string | null
+          payment_mode: string | null
+          status: string | null
+          subtotal: number | null
+          tax_amount: number | null
+          total_amount: number | null
+          updated_at: string | null
+          vertical_name: string | null
+        }
+        Insert: {
+          amount_paid?: number | null
+          balance_due?: number | null
+          client_address?: string | null
+          client_email?: string | null
+          client_name: string
+          client_phone?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          discount_amount?: number | null
+          due_date?: string | null
+          gstin?: string | null
+          id?: string
+          invoice_date?: string
+          invoice_number: string
+          items?: Json | null
+          notes?: string | null
+          payment_mode?: string | null
+          status?: string | null
+          subtotal?: number | null
+          tax_amount?: number | null
+          total_amount?: number | null
+          updated_at?: string | null
+          vertical_name?: string | null
+        }
+        Update: {
+          amount_paid?: number | null
+          balance_due?: number | null
+          client_address?: string | null
+          client_email?: string | null
+          client_name?: string
+          client_phone?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          discount_amount?: number | null
+          due_date?: string | null
+          gstin?: string | null
+          id?: string
+          invoice_date?: string
+          invoice_number?: string
+          items?: Json | null
+          notes?: string | null
+          payment_mode?: string | null
+          status?: string | null
+          subtotal?: number | null
+          tax_amount?: number | null
+          total_amount?: number | null
+          updated_at?: string | null
+          vertical_name?: string | null
+        }
+        Relationships: []
+      }
+      journal_entries: {
+        Row: {
+          approved_by: string | null
+          attachments: string[] | null
+          created_at: string | null
+          created_by: string | null
+          description: string
+          entry_date: string
+          entry_number: string
+          fiscal_month: string | null
+          fiscal_year: number | null
+          id: string
+          notes: string | null
+          posted_at: string | null
+          reference_number: string | null
+          reference_type: string | null
+          status: string | null
+          total_amount: number
+          updated_at: string | null
+        }
+        Insert: {
+          approved_by?: string | null
+          attachments?: string[] | null
+          created_at?: string | null
+          created_by?: string | null
+          description: string
+          entry_date?: string
+          entry_number: string
+          fiscal_month?: string | null
+          fiscal_year?: number | null
+          id?: string
+          notes?: string | null
+          posted_at?: string | null
+          reference_number?: string | null
+          reference_type?: string | null
+          status?: string | null
+          total_amount?: number
+          updated_at?: string | null
+        }
+        Update: {
+          approved_by?: string | null
+          attachments?: string[] | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string
+          entry_date?: string
+          entry_number?: string
+          fiscal_month?: string | null
+          fiscal_year?: number | null
+          id?: string
+          notes?: string | null
+          posted_at?: string | null
+          reference_number?: string | null
+          reference_type?: string | null
+          status?: string | null
+          total_amount?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      journal_entry_lines: {
+        Row: {
+          account_id: string
+          created_at: string | null
+          credit_amount: number | null
+          debit_amount: number | null
+          description: string | null
+          id: string
+          journal_entry_id: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string | null
+          credit_amount?: number | null
+          debit_amount?: number | null
+          description?: string | null
+          id?: string
+          journal_entry_id: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string | null
+          credit_amount?: number | null
+          debit_amount?: number | null
+          description?: string | null
+          id?: string
+          journal_entry_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journal_entry_lines_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entry_lines_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       journey_automations: {
         Row: {
           created_at: string
@@ -7849,6 +8181,159 @@ export type Database = {
           team_member_phone?: string | null
           updated_at?: string | null
           vertical_name?: string | null
+        }
+        Relationships: []
+      }
+      payroll_records: {
+        Row: {
+          bank_account: string | null
+          basic_salary: number | null
+          created_at: string | null
+          da: number | null
+          department: string | null
+          designation: string | null
+          employee_id: string | null
+          employee_name: string
+          esi_deduction: number | null
+          gross_salary: number | null
+          hra: number | null
+          id: string
+          net_salary: number | null
+          other_allowances: number | null
+          other_deductions: number | null
+          payment_date: string | null
+          payment_mode: string | null
+          payment_status: string | null
+          payroll_month: string
+          pf_deduction: number | null
+          professional_tax: number | null
+          remarks: string | null
+          special_allowance: number | null
+          tds: number | null
+          total_deductions: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          bank_account?: string | null
+          basic_salary?: number | null
+          created_at?: string | null
+          da?: number | null
+          department?: string | null
+          designation?: string | null
+          employee_id?: string | null
+          employee_name: string
+          esi_deduction?: number | null
+          gross_salary?: number | null
+          hra?: number | null
+          id?: string
+          net_salary?: number | null
+          other_allowances?: number | null
+          other_deductions?: number | null
+          payment_date?: string | null
+          payment_mode?: string | null
+          payment_status?: string | null
+          payroll_month: string
+          pf_deduction?: number | null
+          professional_tax?: number | null
+          remarks?: string | null
+          special_allowance?: number | null
+          tds?: number | null
+          total_deductions?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          bank_account?: string | null
+          basic_salary?: number | null
+          created_at?: string | null
+          da?: number | null
+          department?: string | null
+          designation?: string | null
+          employee_id?: string | null
+          employee_name?: string
+          esi_deduction?: number | null
+          gross_salary?: number | null
+          hra?: number | null
+          id?: string
+          net_salary?: number | null
+          other_allowances?: number | null
+          other_deductions?: number | null
+          payment_date?: string | null
+          payment_mode?: string | null
+          payment_status?: string | null
+          payroll_month?: string
+          pf_deduction?: number | null
+          professional_tax?: number | null
+          remarks?: string | null
+          special_allowance?: number | null
+          tds?: number | null
+          total_deductions?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      performance_reviews: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          areas_of_improvement: string | null
+          created_at: string | null
+          employee_id: string | null
+          employee_name: string
+          goals_next_period: string | null
+          id: string
+          increment_amount: number | null
+          increment_percentage: number | null
+          kra_scores: Json | null
+          notes: string | null
+          overall_rating: number | null
+          review_period: string
+          reviewer_name: string | null
+          status: string | null
+          strengths: string | null
+          submitted_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          areas_of_improvement?: string | null
+          created_at?: string | null
+          employee_id?: string | null
+          employee_name: string
+          goals_next_period?: string | null
+          id?: string
+          increment_amount?: number | null
+          increment_percentage?: number | null
+          kra_scores?: Json | null
+          notes?: string | null
+          overall_rating?: number | null
+          review_period: string
+          reviewer_name?: string | null
+          status?: string | null
+          strengths?: string | null
+          submitted_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          areas_of_improvement?: string | null
+          created_at?: string | null
+          employee_id?: string | null
+          employee_name?: string
+          goals_next_period?: string | null
+          id?: string
+          increment_amount?: number | null
+          increment_percentage?: number | null
+          kra_scores?: Json | null
+          notes?: string | null
+          overall_rating?: number | null
+          review_period?: string
+          reviewer_name?: string | null
+          status?: string | null
+          strengths?: string | null
+          submitted_at?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
