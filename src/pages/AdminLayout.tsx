@@ -223,36 +223,27 @@ const AdminLayout = () => {
         const verticalCat = activeVertical?.slug ? verticalSlugMap[activeVertical.slug] : undefined;
         return <LeadManagement verticalCategory={verticalCat} />;
       }
+      case "cars-workspace":
       case "cars-list":
       case "cars-variants":
       case "cars-specs":
       case "cars-pricing":
       case "cars-compare":
-        return <UnifiedCarManagement />;
       case "cars-colors":
-        return <CarColorManagement />;
       case "cars-images":
-        return <CarImageScrapingManager />;
       case "cars-image-sync":
-        return <CarImageScrapingManager />;
       case "cars-migration":
-        return <CarDataManagement />;
       case "cars-brands":
-        return <BrandsManagement />;
       case "cars-ai-entry":
-        return <AICarEntryGenerator />;
       case "cars-bulk-import":
-        return <BulkCarUploader />;
       case "cars-quick-import":
-        return <QuickTextImporter />;
       case "cars-city-pricing":
-        return <StateCityPricingManager />;
       case "cars-attributes":
-        return <VehicleAttributesManager />;
       case "cars-ai":
-        return <AIContentManagement />;
-      case "cars-url-scraper":
-        return <URLDataScraper />;
+      case "cars-url-scraper": {
+        const { CarDatabaseWorkspace } = await import("@/components/admin/car-database/CarDatabaseWorkspace");
+        return <CarDatabaseWorkspace />;
+      }
       case "website-homepage":
         return (
           <div className="space-y-6">
