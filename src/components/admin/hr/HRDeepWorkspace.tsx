@@ -181,11 +181,11 @@ export const HRDeepWorkspace = ({ initialTab = "overview" }: { initialTab?: stri
         review_date: entry.review_date || today,
         overall_rating: Number(entry.overall_rating || 3),
         strengths: entry.strengths,
-        improvements: entry.improvements,
+        areas_of_improvement: entry.improvements,
         goals_next_period: entry.goals,
         comments: entry.comments,
         status: "completed",
-      });
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["hr-reviews"] }); setShowDialog(null); resetForm(); toast.success("Review submitted"); },
