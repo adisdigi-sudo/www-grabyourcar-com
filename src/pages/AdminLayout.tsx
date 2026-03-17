@@ -97,6 +97,7 @@ import AutomationCommandCenter from "@/components/admin/AutomationCommandCenter"
 import { LeadRoutingManager } from "@/components/admin/LeadRoutingManager";
 import { AccountsFinanceWorkspace } from "@/components/admin/finance/AccountsFinanceWorkspace";
 import { HRWorkspace } from "@/components/admin/hr/HRWorkspace";
+import { CarDatabaseWorkspace } from "@/components/admin/car-database/CarDatabaseWorkspace";
 import { OpenAPIPortal } from "@/components/admin/OpenAPIPortal";
 
 import { Button } from "@/components/ui/button";
