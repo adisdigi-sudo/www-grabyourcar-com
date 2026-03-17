@@ -889,9 +889,9 @@ export function InsuranceStatusPipeline() {
                             addonPremium: 3500,
                             addons: ["Zero Depreciation", "Engine Protection", "Roadside Assistance (RSA)"],
                           });
-                          const msg = encodeURIComponent(`Hi ${selectedClient.customer_name}! Here is your insurance quote. Please find the PDF attached.\n\n— Grabyourcar Insurance\n📞 +91 98559 24442`);
-                          window.open(`https://wa.me/${fullPhone}?text=${msg}`, "_blank");
-                          toast.success("📱 PDF downloaded & WhatsApp opened!");
+                          const msgText = `Hi ${selectedClient.customer_name}! Here is your insurance quote. Please find the PDF attached.\n\n— Grabyourcar Insurance\n📞 +91 98559 24442`;
+                          const { sendWhatsApp: sendWA } = await import("@/lib/sendWhatsApp");
+                          await sendWA({ phone: selectedClient.phone, message: msgText, name: selectedClient.customer_name, logEvent: "quote_share" });
                         }}
                       >
                         <MessageSquare className="h-4 w-4" /> WhatsApp
