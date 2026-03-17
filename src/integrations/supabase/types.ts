@@ -440,6 +440,51 @@ export type Database = {
         }
         Relationships: []
       }
+      api_key_vertical_access: {
+        Row: {
+          can_delete: boolean | null
+          can_read: boolean | null
+          can_write: boolean | null
+          created_at: string | null
+          id: string
+          partner_id: string
+          vertical_id: string
+        }
+        Insert: {
+          can_delete?: boolean | null
+          can_read?: boolean | null
+          can_write?: boolean | null
+          created_at?: string | null
+          id?: string
+          partner_id: string
+          vertical_id: string
+        }
+        Update: {
+          can_delete?: boolean | null
+          can_read?: boolean | null
+          can_write?: boolean | null
+          created_at?: string | null
+          id?: string
+          partner_id?: string
+          vertical_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_key_vertical_access_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "api_partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_key_vertical_access_vertical_id_fkey"
+            columns: ["vertical_id"]
+            isOneToOne: false
+            referencedRelation: "business_verticals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       api_logs: {
         Row: {
           created_at: string | null
@@ -494,6 +539,7 @@ export type Database = {
         Row: {
           allowed_services: string[] | null
           api_key_hash: string | null
+          api_key_prefix: string | null
           api_secret_hash: string | null
           branding_enabled: boolean | null
           callback_url: string | null
@@ -507,17 +553,23 @@ export type Database = {
           id: string
           ip_whitelist: string[] | null
           is_active: boolean | null
+          key_created_at: string | null
+          key_rotated_at: string | null
+          last_request_at: string | null
           logo_url: string | null
           name: string
           notes: string | null
           rate_limit_per_minute: number | null
           slug: string
+          total_requests: number | null
           updated_at: string | null
+          vertical_ids: string[] | null
           webhook_url: string | null
         }
         Insert: {
           allowed_services?: string[] | null
           api_key_hash?: string | null
+          api_key_prefix?: string | null
           api_secret_hash?: string | null
           branding_enabled?: boolean | null
           callback_url?: string | null
@@ -531,17 +583,23 @@ export type Database = {
           id?: string
           ip_whitelist?: string[] | null
           is_active?: boolean | null
+          key_created_at?: string | null
+          key_rotated_at?: string | null
+          last_request_at?: string | null
           logo_url?: string | null
           name: string
           notes?: string | null
           rate_limit_per_minute?: number | null
           slug: string
+          total_requests?: number | null
           updated_at?: string | null
+          vertical_ids?: string[] | null
           webhook_url?: string | null
         }
         Update: {
           allowed_services?: string[] | null
           api_key_hash?: string | null
+          api_key_prefix?: string | null
           api_secret_hash?: string | null
           branding_enabled?: boolean | null
           callback_url?: string | null
@@ -555,15 +613,64 @@ export type Database = {
           id?: string
           ip_whitelist?: string[] | null
           is_active?: boolean | null
+          key_created_at?: string | null
+          key_rotated_at?: string | null
+          last_request_at?: string | null
           logo_url?: string | null
           name?: string
           notes?: string | null
           rate_limit_per_minute?: number | null
           slug?: string
+          total_requests?: number | null
           updated_at?: string | null
+          vertical_ids?: string[] | null
           webhook_url?: string | null
         }
         Relationships: []
+      }
+      api_usage_daily: {
+        Row: {
+          avg_response_ms: number | null
+          created_at: string | null
+          endpoints_hit: Json | null
+          failed_requests: number | null
+          id: string
+          partner_id: string
+          successful_requests: number | null
+          total_requests: number | null
+          usage_date: string
+        }
+        Insert: {
+          avg_response_ms?: number | null
+          created_at?: string | null
+          endpoints_hit?: Json | null
+          failed_requests?: number | null
+          id?: string
+          partner_id: string
+          successful_requests?: number | null
+          total_requests?: number | null
+          usage_date?: string
+        }
+        Update: {
+          avg_response_ms?: number | null
+          created_at?: string | null
+          endpoints_hit?: Json | null
+          failed_requests?: number | null
+          id?: string
+          partner_id?: string
+          successful_requests?: number | null
+          total_requests?: number | null
+          usage_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_usage_daily_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "api_partners"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       attendance_records: {
         Row: {

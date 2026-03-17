@@ -97,6 +97,7 @@ import AutomationCommandCenter from "@/components/admin/AutomationCommandCenter"
 import { LeadRoutingManager } from "@/components/admin/LeadRoutingManager";
 import { AccountsFinanceWorkspace } from "@/components/admin/finance/AccountsFinanceWorkspace";
 import { HRWorkspace } from "@/components/admin/hr/HRWorkspace";
+import { OpenAPIPortal } from "@/components/admin/OpenAPIPortal";
 
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
@@ -321,6 +322,8 @@ const AdminLayout = () => {
         return <BulkDataManager />;
       case "integrations-api":
         return <APIIntegrationPortal />;
+      case "open-api-portal":
+        return <OpenAPIPortal />;
       case "integrations-whatsapp":
         return <WhatsAppManagement />;
       case "marketing-templates":

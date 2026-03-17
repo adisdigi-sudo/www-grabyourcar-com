@@ -39,6 +39,7 @@ import {
   LogOut,
   Building2,
   MessageCircle,
+  KeyRound,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AdminGlobalSearch } from "./AdminGlobalSearch";
@@ -277,6 +278,7 @@ const navItems: NavItem[] = [
     allowedRoles: ["super_admin", "admin"],
     children: [
       { id: "integrations-api", label: "API Portal", icon: Database },
+      { id: "open-api-portal", label: "Open API Keys", icon: KeyRound },
       { id: "integrations-whatsapp", label: "WhatsApp API", icon: MessageSquare },
       { id: "integrations-shipping", label: "Shipping Partners", icon: Package },
       { id: "integrations-payments", label: "Payment Gateway", icon: CreditCard },
