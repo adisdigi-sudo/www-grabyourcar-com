@@ -320,6 +320,18 @@ const navItems: NavItem[] = [
       { id: "hr-announcements", label: "📢 Announcements", icon: FileText },
     ]
   },
+
+  // ── Incentive Management — Super Admin only ──
+  { 
+    id: "incentive-hub", 
+    label: "🏆 Incentives", 
+    icon: Trophy,
+    verticals: ["all"],
+    allowedRoles: ["super_admin"],
+    children: [
+      { id: "incentive-management", label: "🏆 Incentive Dashboard", icon: Trophy },
+    ]
+  },
 ];
 
 export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => {
