@@ -191,6 +191,28 @@ export function FreshLeadsQueue() {
         ))}
       </div>
 
+      {/* Bulk Actions */}
+      {canSeeAll && selectedLeads.length > 0 && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="p-3 flex items-center gap-3">
+            <Badge>{selectedLeads.length} selected</Badge>
+            <Button size="sm" variant="secondary" onClick={() => setShowAssignPanel(!showAssignPanel)}>
+              <UserCheck className="h-3 w-3 mr-1" /> Assign Selected
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setSelectedLeads([])}>Clear</Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {showAssignPanel && selectedLeads.length > 0 && (
+        <LeadAssignmentPanel
+          leadIds={selectedLeads}
+          verticalId={activeVertical?.id}
+          mode="bulk"
+          onAssigned={() => { setSelectedLeads([]); setShowAssignPanel(false); }}
+        />
+      )}
+
       {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="relative flex-1 min-w-[200px]">
@@ -213,6 +235,22 @@ export function FreshLeadsQueue() {
             <SelectItem value="normal">Normal</SelectItem>
           </SelectContent>
         </Select>
+        {canSeeAll && (
+          <Select value={filterAssignee} onValueChange={setFilterAssignee}>
+            <SelectTrigger className="w-40"><SelectValue placeholder="Assignee" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Leads</SelectItem>
+              <SelectItem value="unassigned">Unassigned</SelectItem>
+              <SelectItem value="mine">My Leads</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
+        {canSeeAll && filteredLeads.length > 0 && (
+          <Button size="sm" variant="outline" onClick={toggleSelectAll}>
+            <CheckSquare className="h-3 w-3 mr-1" />
+            {selectedLeads.length === filteredLeads.length ? "Deselect All" : "Select All"}
+          </Button>
+        )}
       </div>
 
       {/* Leads List */}
