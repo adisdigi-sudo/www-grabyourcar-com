@@ -339,6 +339,8 @@ const AdminLayout = () => {
         return <ProfileSettings />;
       case "roles":
         return <SuperAdminUserManager />;
+      case "team-management":
+        return <UserManagementDashboard />;
       case "settings":
         return <SiteSettingsManager />;
       case "services-pricing":

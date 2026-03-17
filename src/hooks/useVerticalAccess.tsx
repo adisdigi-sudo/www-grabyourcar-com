@@ -124,6 +124,13 @@ export const VerticalProvider = ({ children }: { children: ReactNode }) => {
     ? allVerticals
     : allVerticals.filter(v => userAccess.includes(v.id));
 
+  // Check if user is manager in currently active vertical
+  const isManagerInVertical = isAdminUser || (
+    activeVertical
+      ? userAccessData.some(d => d.vertical_id === activeVertical.id && d.access_level === "manager")
+      : false
+  );
+
   return (
     <VerticalContext.Provider value={{
       activeVertical,
@@ -131,6 +138,7 @@ export const VerticalProvider = ({ children }: { children: ReactNode }) => {
       availableVerticals,
       isLoading: verticalsLoading || accessLoading || memberLoading,
       teamMember,
+      isManagerInVertical,
     }}>
       {children}
     </VerticalContext.Provider>
