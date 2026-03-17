@@ -385,6 +385,8 @@ const AdminLayout = () => {
         return <HRWorkspace initialTab="leaves" />;
       case "hr-announcements":
         return <HRWorkspace initialTab="culture" />;
+      case "incentive-management":
+        return <SuperAdminIncentiveWorkspace />;
       default:
         return <AdminDashboard />;
     }
