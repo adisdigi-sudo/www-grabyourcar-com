@@ -78,7 +78,7 @@ export const HRDeepWorkspace = ({ initialTab = "overview" }: { initialTab?: stri
   const { data: payrolls = [] } = useQuery({
     queryKey: ["hr-payrolls", currentMonth],
     queryFn: async () => {
-      const { data, error } = await supabase.from("payroll_records").select("*").eq("pay_period", currentMonth).order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("payroll_records").select("*").eq("pay_period" as any, currentMonth).order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },

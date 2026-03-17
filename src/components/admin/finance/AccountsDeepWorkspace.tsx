@@ -122,15 +122,15 @@ export const AccountsDeepWorkspace = ({ initialTab = "overview" }: { initialTab?
         invoice_number: entry.invoice_number || `INV-${Date.now().toString(36).toUpperCase()}`,
         invoice_date: entry.invoice_date || format(new Date(), "yyyy-MM-dd"),
         due_date: entry.due_date,
-        customer_name: entry.customer_name,
-        customer_phone: entry.customer_phone,
+        client_name: entry.customer_name,
+        client_phone: entry.customer_phone,
         description: entry.description,
         subtotal: Number(entry.amount),
         tax_amount: Number(entry.amount) * 0.18,
         total_amount: Number(entry.amount) * 1.18,
         status: "pending",
         invoice_type: entry.invoice_type || "service",
-      });
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["invoices"] }); setShowDialog(null); resetForm(); toast.success("Invoice created"); },
