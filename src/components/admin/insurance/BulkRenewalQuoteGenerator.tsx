@@ -33,6 +33,26 @@ const RENEWAL_QUOTES: BulkQuoteEntry[] = [
     addonPremium: 23889,
     addons: ["Zero Depreciation", "24x7 Roadside Assistance", "Consumables"],
   },
+  {
+    id: "2",
+    customerName: "Saurabh Virmani",
+    phone: "",
+    vehicleMake: "Toyota",
+    vehicleModel: "Fortuner",
+    vehicleNumber: "7100",
+    vehicleYear: 2023,
+    fuelType: "Diesel",
+    insuranceCompany: "Oriental Insurance",
+    policyType: "Comprehensive",
+    idv: 1119744,
+    basicOD: 42252,
+    odDiscount: 36356,
+    ncbDiscount: 2986,
+    thirdParty: 7897,
+    securePremium: 0,
+    addonPremium: 75,
+    addons: ["24x7 Roadside Assistance"],
+  },
 ];
 
 export function BulkRenewalQuoteGenerator({ onClose }: { onClose: () => void }) {
