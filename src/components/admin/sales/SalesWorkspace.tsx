@@ -659,9 +659,10 @@ function SalesDetailModal({ open, onOpenChange, lead, activities, onUpdate }: an
     toast.success("Quotation PDF downloaded!");
   };
 
-  const handleShareQuoteWhatsApp = () => {
+  const handleShareQuoteWhatsApp = async () => {
     const msg = `*Car Sales Quote - GrabYourCar*\n\nCustomer: ${lead.customer_name}\nCar: ${lead.car_brand || ""} ${lead.car_model || ""} ${lead.car_variant || ""}\nCity: ${lead.city || "-"}\nBuying Intent: ${lead.buying_intent || "-"}\n\n_Contact us for the best offer!_\nwww.grabyourcar.com`;
-    window.open(`https://wa.me/91${lead.phone?.replace(/\D/g, "").slice(-10)}?text=${encodeURIComponent(msg)}`, "_blank");
+    const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+    await sendWhatsApp({ phone: lead.phone || "", message: msg, name: lead.customer_name, logEvent: "sales_quote" });
   };
 
   return (

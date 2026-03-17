@@ -113,17 +113,12 @@ export default function DealerInquiryHub() {
   };
 
   // Send One-by-One (opens WhatsApp web links)
-  const sendOneByOne = () => {
+  const sendOneByOne = async () => {
     if (selectedIds.length === 0) { toast.error("Select at least one dealer"); return; }
     if (!message.trim()) { toast.error("Write a message first"); return; }
     const selectedReps = reps.filter((r: any) => selectedIds.includes(r.id) && r.whatsapp_number);
-    const encoded = encodeURIComponent(message);
-    selectedReps.forEach((r: any, i: number) => {
-      const phone = r.whatsapp_number.replace(/\D/g, "");
-      const fullPhone = phone.startsWith("91") ? phone : `91${phone}`;
-      setTimeout(() => window.open(`https://wa.me/${fullPhone}?text=${encoded}`, "_blank"), i * 1500);
-    });
-    toast.success(`Opening ${selectedReps.length} WhatsApp chats...`);
+    const { sendWhatsAppBulk } = await import("@/lib/sendWhatsApp");
+    await sendWhatsAppBulk(selectedReps.map((r: any) => ({ phone: r.whatsapp_number, message, name: r.name })));
   };
 
   // Bulk import

@@ -492,7 +492,7 @@ function RentalDetailModal({ open, onOpenChange, booking, vehicles, partners, on
     toast.success("Agreement PDF downloaded!");
   };
 
-  const handleShareWhatsApp = () => {
+  const handleShareWhatsApp = async () => {
     const msg = `*Self-Drive Rental - GrabYourCar*\n\nVehicle: ${booking.vehicle_name}\nType: ${booking.vehicle_type}\nPickup: ${booking.pickup_date} at ${booking.pickup_time}\nLocation: ${booking.pickup_location}\nDrop-off: ${booking.dropoff_date}\nTotal: Rs.${(booking.total_amount || 0).toLocaleString("en-IN")}\n\nwww.grabyourcar.com`;
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
   };

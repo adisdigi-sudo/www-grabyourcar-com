@@ -2027,12 +2027,11 @@ Thank you for choosing Grabyourcar for your motor insurance needs! Here's your p
 — *Grabyourcar Insurance* 🛡️`;
   };
 
-  const sendTemplateViaWhatsApp = (template: string) => {
+  const sendTemplateViaWhatsApp = async (template: string) => {
     const phone = whatsappNumber.replace(/\D/g, "");
     if (!phone) { toast.error("Enter a valid phone number"); return; }
-    const fullPhone = phone.startsWith("91") ? phone : `91${phone}`;
-    window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(template)}`, "_blank");
-    toast.success("WhatsApp opened!");
+    const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+    await sendWhatsApp({ phone, message: template, logEvent: "template_send" });
   };
 
   return (

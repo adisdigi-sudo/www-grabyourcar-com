@@ -993,14 +993,10 @@ export function InsuranceStatusPipeline() {
                                 {/* Share policy via WhatsApp */}
                                 {displayPhone(selectedClient.phone) && (
                                   <Button size="icon" variant="ghost" className="h-7 w-7" title="Send policy via WhatsApp"
-                                    onClick={() => {
-                                      const phone = selectedClient.phone.replace(/\D/g, "");
-                                      const fullPhone = phone.startsWith("91") ? phone : `91${phone}`;
-                                      const msg = encodeURIComponent(
-                                        `📋 *Policy Details*\n━━━━━━━━━━━━━━━━\n📄 Policy: ${p.policy_number}\n🏢 Insurer: ${p.insurer || "N/A"}\n💰 Premium: ₹${p.premium_amount ? Number(p.premium_amount).toLocaleString("en-IN") : "N/A"}\n📅 Expiry: ${p.expiry_date ? new Date(p.expiry_date).toLocaleDateString("en-IN") : "N/A"}\n🚗 Vehicle: ${selectedClient.vehicle_number || "N/A"}\n\n— *Grabyourcar Insurance*`
-                                      );
-                                      window.open(`https://wa.me/${fullPhone}?text=${msg}`, "_blank");
-                                      toast.success("Sharing policy via WhatsApp!");
+                                    onClick={async () => {
+                                      const msgText = `📋 *Policy Details*\n━━━━━━━━━━━━━━━━\n📄 Policy: ${p.policy_number}\n🏢 Insurer: ${p.insurer || "N/A"}\n💰 Premium: ₹${p.premium_amount ? Number(p.premium_amount).toLocaleString("en-IN") : "N/A"}\n📅 Expiry: ${p.expiry_date ? new Date(p.expiry_date).toLocaleDateString("en-IN") : "N/A"}\n🚗 Vehicle: ${selectedClient.vehicle_number || "N/A"}\n\n— *Grabyourcar Insurance*`;
+                                      const { sendWhatsApp: sendWA } = await import("@/lib/sendWhatsApp");
+                                      await sendWA({ phone: selectedClient.phone, message: msgText, name: selectedClient.customer_name, logEvent: "policy_share" });
                                     }}>
                                     <Send className="h-3.5 w-3.5 text-green-600" />
                                   </Button>

@@ -342,8 +342,12 @@ export function InsuranceWorkspace() {
   const displayPhone = (phone: string | null) => (!phone || phone.startsWith("IB_")) ? null : phone;
   const getWhatsAppLink = (phone: string | null) => {
     if (!phone || phone.startsWith("IB_")) return null;
-    const clean = phone.replace(/\D/g, "");
-    return `https://wa.me/${clean.startsWith("91") ? clean : `91${clean}`}`;
+    return phone; // Used as identifier for sendWhatsApp, not as URL anymore
+  };
+  const handleWASend = async (phone: string | null, name?: string) => {
+    if (!phone || phone.startsWith("IB_")) return;
+    const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+    await sendWhatsApp({ phone, message: `Hi ${name || ""}! This is GrabYourCar Insurance. How can we help?`, name, logEvent: "insurance_workspace" });
   };
 
   // Move mutation

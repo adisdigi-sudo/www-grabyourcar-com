@@ -1202,12 +1202,10 @@ export function InsuranceSmartCalling() {
                         ? `Hi ${currentClient.customer_name || ""}! Here is your insurance quote for your ${currentClient.vehicle_make || ""} ${currentClient.vehicle_model || ""}.\n\nVehicle: ${currentClient.vehicle_number || "N/A"}\nPolicy Type: ${currentClient.current_policy_type || "Comprehensive"}\nInsurer: ${currentClient.current_insurer || "Best Available"}\n\nPlease review and let us know if you'd like to proceed. Thank you!`
                         : `Hi ${currentClient.customer_name || ""}! Your insurance renewal is due${currentClient.policy_expiry_date ? ` on ${currentClient.policy_expiry_date}` : " soon"} for your ${currentClient.vehicle_make || ""} ${currentClient.vehicle_model || ""}.\n\nVehicle: ${currentClient.vehicle_number || "N/A"}\nCurrent Insurer: ${currentClient.current_insurer || "N/A"}\nNCB: ${currentClient.ncb_percentage ?? "N/A"}%\n\nWe have the best renewal offers for you. Let's connect!`;
 
-                      const handleWhatsApp = () => {
-                        const cleanPhone = (currentClient.phone || "").replace(/\D/g, "");
-                        const fullPhone = cleanPhone.startsWith("91") ? cleanPhone : `91${cleanPhone}`;
-                        window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(shareMsg)}`, "_blank");
+                      const handleWhatsApp = async () => {
+                        const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+                        await sendWhatsApp({ phone: currentClient.phone || "", message: shareMsg, name: currentClient.customer_name, logEvent: `call_${o.value}` });
                         setCallOutcome(o.value);
-                        toast.success(`📱 Opened WhatsApp for ${o.label}`);
                       };
 
                       const handleEmail = () => {

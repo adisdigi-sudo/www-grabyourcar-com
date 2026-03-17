@@ -226,20 +226,14 @@ export function BulkQuoteSharePanel({ leads, source, onDone }: BulkQuoteSharePan
     const target = selectedLeads.filter(l => l.phone && !l.phone.startsWith("IB_"));
     if (target.length === 0) { toast.error("No leads with valid phone numbers"); return; }
     setSending(true); setProgress(0);
-    let count = 0;
-    for (const l of target) {
-      const clean = (l.phone || "").replace(/\D/g, "");
-      const full = clean.startsWith("91") ? clean : `91${clean}`;
+    const { sendWhatsAppBulk } = await import("@/lib/sendWhatsApp");
+    const recipients = target.map(l => {
       const daysLeft = l.policy_expiry_date ? differenceInDays(new Date(l.policy_expiry_date), new Date()) :
                        l.renewal_date ? differenceInDays(new Date(l.renewal_date), new Date()) : 0;
-      const msg = `Hi ${l.customer_name || ""}! Your insurance renewal is ${daysLeft <= 0 ? "overdue" : `due in ${daysLeft} days`} for ${l.vehicle_make || ""} ${l.vehicle_model || ""} (${l.vehicle_number || ""}).\n\nCurrent Insurer: ${l.current_insurer || "N/A"}\nNCB: ${l.ncb_percentage ?? 0}%\n\nWe have the best renewal offers!\n📞 +91 98559 24442\n🌐 www.grabyourcar.com\n— Grabyourcar Insurance`;
-      window.open(`https://wa.me/${full}?text=${encodeURIComponent(msg)}`, "_blank");
-      count++;
-      setProgress(Math.round((count / target.length) * 100));
-      await new Promise(r => setTimeout(r, 1500));
-    }
+      return { phone: l.phone || "", name: l.customer_name || "", message: `Hi ${l.customer_name || ""}! Your insurance renewal is ${daysLeft <= 0 ? "overdue" : `due in ${daysLeft} days`} for ${l.vehicle_make || ""} ${l.vehicle_model || ""} (${l.vehicle_number || ""}).\n\nCurrent Insurer: ${l.current_insurer || "N/A"}\nNCB: ${l.ncb_percentage ?? 0}%\n\nWe have the best renewal offers!\n📞 +91 98559 24442\n🌐 www.grabyourcar.com\n— Grabyourcar Insurance` };
+    });
+    await sendWhatsAppBulk(recipients, { onProgress: (sent, total) => setProgress(Math.round((sent / total) * 100)) });
     setSending(false);
-    toast.success(`📱 WhatsApp opened for ${count} clients!`);
   }, [selectedLeads]);
 
   // Bulk WhatsApp API

@@ -889,9 +889,10 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
                     <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => window.open(`tel:+91${application.phone.replace(/\D/g, '').slice(-10)}`)}>
                       <PhoneCall className="h-3 w-3 text-emerald-600" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => {
+                    <Button variant="ghost" size="icon" className="h-5 w-5" onClick={async () => {
                       const msg = `Hi ${application.customer_name}, this is from GrabYourCar regarding your car loan. How can I help?`;
-                      window.open(`https://wa.me/91${application.phone.replace(/\D/g, '').slice(-10)}?text=${encodeURIComponent(msg)}`);
+                      const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+                      await sendWhatsApp({ phone: application.phone, message: msg, name: application.customer_name, logEvent: "loan_followup" });
                     }}>
                       <MessageCircle className="h-3 w-3 text-green-600" />
                     </Button>

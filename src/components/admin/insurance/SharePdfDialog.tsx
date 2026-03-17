@@ -47,14 +47,13 @@ export function SharePdfDialog({
     onOpenChange(v);
   };
 
-  const handleWhatsAppShare = () => {
+  const handleWhatsAppShare = async () => {
     const cleanPhone = (phone || "").replace(/\D/g, "");
     if (cleanPhone.length < 10) { toast.error("Please enter a valid phone number"); return; }
-    const fullPhone = cleanPhone.startsWith("91") ? cleanPhone : `91${cleanPhone}`;
     const { fileName } = generatePdf();
     const msg = shareMessage || `Hi ${customerName}! Please find the attached ${title}. For any queries, contact us at +91 98559 24442. - Grabyourcar Insurance`;
-    window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(msg + `\n\nDocument: ${fileName}`)}`, "_blank");
-    toast.success(`PDF downloaded & WhatsApp opened for ${phone}`);
+    const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+    await sendWhatsApp({ phone: cleanPhone, message: msg + `\n\nDocument: ${fileName}`, name: customerName, logEvent: "pdf_share" });
     onShared?.();
     onOpenChange(false);
   };

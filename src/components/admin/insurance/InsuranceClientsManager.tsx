@@ -452,11 +452,12 @@ function ClientDetailDialog({ client, policies, onClose }: { client: any; polici
                     <PhoneCall className="h-3.5 w-3.5" /> Call
                   </Button>
                 </a>
-                <a href={`https://wa.me/91${phone}`} target="_blank" rel="noopener noreferrer">
-                  <Button size="sm" variant="outline" className="gap-1.5">
-                    <MessageSquare className="h-3.5 w-3.5 text-green-600" /> WhatsApp
-                  </Button>
-                </a>
+                <Button size="sm" variant="outline" className="gap-1.5" onClick={async () => {
+                  const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+                  await sendWhatsApp({ phone: phone!, message: `Hi ${client.customer_name || ""}! This is GrabYourCar Insurance. How can we help?`, name: client.customer_name });
+                }}>
+                  <MessageSquare className="h-3.5 w-3.5 text-green-600" /> WhatsApp
+                </Button>
                 <a href={`sms:${phone}`}>
                   <Button size="sm" variant="outline" className="gap-1.5">SMS</Button>
                 </a>
