@@ -171,7 +171,7 @@ serve(async (req) => {
             continue;
           }
 
-          const { error: insertErr } = await supabase.from("leads").insert({
+          const { data: inserted, error: insertErr } = await supabase.from("leads").insert({
             customer_name: getMapped("customer_name") || getMapped("name") || "Unknown",
             phone,
             email: getMapped("email") || null,
@@ -182,13 +182,20 @@ serve(async (req) => {
             car_model: getMapped("car_model") || getMapped("model") || null,
             city: getMapped("city") || null,
             notes: getMapped("notes") || getMapped("remarks") || null,
-          });
+          }).select("id").single();
 
           if (insertErr) {
             failed++;
             errors.push({ phone, reason: insertErr.message });
           } else {
             imported++;
+            if (verticalId && inserted?.id) {
+              await supabase.rpc("auto_assign_lead_round_robin", {
+                p_vertical_id: verticalId,
+                p_lead_id: inserted.id,
+                p_assigned_by: null,
+              });
+            }
           }
         } catch (e: any) {
           failed++;
