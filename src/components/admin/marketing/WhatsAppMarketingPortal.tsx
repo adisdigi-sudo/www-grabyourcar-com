@@ -11,6 +11,7 @@ import { WAAnalyticsDashboard } from "./wa/WAAnalyticsDashboard";
 import { WAContactSegments } from "./wa/WAContactSegments";
 import { WATemplateManager } from "./wa/WATemplateManager";
 import { WACompliancePanel } from "./wa/WACompliancePanel";
+import { WAIntegrationHub } from "./wa/WAIntegrationHub";
 
 export function WhatsAppMarketingPortal() {
   const [activeTab, setActiveTab] = useState("campaigns");
