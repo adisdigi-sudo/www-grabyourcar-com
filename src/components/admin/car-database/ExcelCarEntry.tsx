@@ -222,6 +222,16 @@ export const ExcelCarEntry = ({ onClose }: { onClose?: () => void }) => {
     }
   };
 
+  // ─── Image upload helper ───
+  const uploadFile = async (file: File, carSlug: string, prefix: string): Promise<string> => {
+    const ext = file.name.split('.').pop() || 'jpg';
+    const path = `${carSlug}/${prefix}-${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from('car-images').upload(path, file, { upsert: true });
+    if (error) throw error;
+    const { data: { publicUrl } } = supabase.storage.from('car-images').getPublicUrl(path);
+    return publicUrl;
+  };
+
   // ─── Save ───
   const saveRowMutation = useMutation({
     mutationFn: async ({ row, index }: { row: CarRow; index: number }) => {
