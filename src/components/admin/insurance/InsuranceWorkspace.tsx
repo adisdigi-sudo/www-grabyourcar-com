@@ -714,6 +714,11 @@ export function InsuranceWorkspace() {
         </div>
       )}
 
+      {/* ── BULK QUOTES VIEW ── */}
+      {activeView === "bulk_quotes" && (
+        <BulkRenewalQuoteGenerator onClose={() => setActiveView("crm")} />
+      )}
+
       {/* ══════════════════════════════════════════════════ */}
       {/* ── CRM VIEW (Enhanced Lead Table) ── */}
       {/* ══════════════════════════════════════════════════ */}
