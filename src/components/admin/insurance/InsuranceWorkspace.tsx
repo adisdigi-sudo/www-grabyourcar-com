@@ -32,6 +32,7 @@ import InsuranceQuoteModal from "./InsuranceQuoteModal";
 import { InsurancePolicyDocumentUploader } from "./InsurancePolicyDocumentUploader";
 import { LeadImportDialog } from "../shared/LeadImportDialog";
 import { StageNotificationBanner, buildInsuranceNotifications } from "../shared/StageNotificationBanner";
+import { BulkRenewalQuoteGenerator } from "./BulkRenewalQuoteGenerator";
 
 // ── 6+1 Pipeline Stages ──
 const PIPELINE_STAGES = [
@@ -168,7 +169,7 @@ export function InsuranceWorkspace() {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [draggingClient, setDraggingClient] = useState<Client | null>(null);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
-  const [activeView, setActiveView] = useState<"crm" | "policy_book" | "renewals">("crm");
+  const [activeView, setActiveView] = useState<"crm" | "policy_book" | "renewals" | "bulk_quotes">("crm");
   const [showImport, setShowImport] = useState(false);
 
   // Renewal filters
@@ -556,6 +557,7 @@ export function InsuranceWorkspace() {
           { key: "crm" as const, label: "Insurance CRM", icon: Shield, count: totalLeads },
           { key: "policy_book" as const, label: "Policy Book", icon: BookOpen, count: policies.length },
           { key: "renewals" as const, label: "Renewal Data", icon: CalendarClock, count: renewalSummary.total },
+          { key: "bulk_quotes" as const, label: "Bulk Quotes", icon: FileText, count: 0 },
         ].map(tab => (
           <Button key={tab.key} variant={activeView === tab.key ? "default" : "ghost"} size="sm" className={cn("flex-1 gap-1.5 text-xs", activeView === tab.key && "shadow-sm")} onClick={() => { setActiveView(tab.key); setSelectedIds(new Set()); }}>
             <tab.icon className="h-3.5 w-3.5" />
@@ -710,6 +712,11 @@ export function InsuranceWorkspace() {
             </TableBody>
           </Table></div></CardContent></Card>
         </div>
+      )}
+
+      {/* ── BULK QUOTES VIEW ── */}
+      {activeView === "bulk_quotes" && (
+        <BulkRenewalQuoteGenerator onClose={() => setActiveView("crm")} />
       )}
 
       {/* ══════════════════════════════════════════════════ */}
