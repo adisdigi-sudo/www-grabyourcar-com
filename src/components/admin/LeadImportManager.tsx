@@ -103,6 +103,7 @@ export const LeadImportManager = ({ verticalCategory, verticalId }: LeadImportMa
           leads: csvData,
           source: importSource,
           fieldMapping,
+          verticalId,
         },
       });
       if (error) throw error;
