@@ -846,12 +846,15 @@ export function InsuranceWorkspace() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {daysToExpiry !== null ? (
-                          <span className={cn("text-xs font-semibold",
-                            daysToExpiry < 0 ? "text-red-600" : daysToExpiry <= 7 ? "text-red-600" : daysToExpiry <= 30 ? "text-orange-600" : "text-muted-foreground"
-                          )}>
-                            {daysToExpiry < 0 ? `Exp ${Math.abs(daysToExpiry)}d` : `${daysToExpiry}d`}
-                          </span>
+                        {client.policy_expiry_date ? (
+                          <div>
+                            <span className={cn("text-xs font-semibold",
+                              daysToExpiry !== null && daysToExpiry < 0 ? "text-red-600" : daysToExpiry !== null && daysToExpiry <= 7 ? "text-red-600" : daysToExpiry !== null && daysToExpiry <= 30 ? "text-orange-600" : "text-muted-foreground"
+                            )}>
+                              {daysToExpiry !== null ? (daysToExpiry < 0 ? `Exp ${Math.abs(daysToExpiry)}d` : `${daysToExpiry}d`) : "—"}
+                            </span>
+                            <p className="text-[9px] text-muted-foreground">{format(new Date(client.policy_expiry_date), "dd MMM yy")}</p>
+                          </div>
                         ) : <span className="text-muted-foreground">—</span>}
                       </TableCell>
                       <TableCell className="text-xs font-medium">
