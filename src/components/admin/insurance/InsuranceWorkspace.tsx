@@ -201,6 +201,13 @@ export function InsuranceWorkspace() {
   const [showRenewalDialog, setShowRenewalDialog] = useState(false);
   const [renewalDate, setRenewalDate] = useState<Date | undefined>();
 
+  // Renewal Won/Lost
+  const [showRenewalWonDialog, setShowRenewalWonDialog] = useState(false);
+  const [showRenewalLostDialog, setShowRenewalLostDialog] = useState(false);
+  const [renewalTargetPolicy, setRenewalTargetPolicy] = useState<PolicyRecord | null>(null);
+  const [renewalWonExpiryDate, setRenewalWonExpiryDate] = useState<Date | undefined>();
+  const [renewalLostRemarks, setRenewalLostRemarks] = useState("");
+
   // Add Lead
   const [showAddLead, setShowAddLead] = useState(false);
   const [newLead, setNewLead] = useState({ customer_name: "", phone: "", email: "", city: "", vehicle_number: "", vehicle_make: "", vehicle_model: "", lead_source: "Manual", notes: "" });
