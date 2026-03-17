@@ -201,6 +201,13 @@ export function InsuranceWorkspace() {
   const [showRenewalDialog, setShowRenewalDialog] = useState(false);
   const [renewalDate, setRenewalDate] = useState<Date | undefined>();
 
+  // Renewal Won/Lost
+  const [showRenewalWonDialog, setShowRenewalWonDialog] = useState(false);
+  const [showRenewalLostDialog, setShowRenewalLostDialog] = useState(false);
+  const [renewalTargetPolicy, setRenewalTargetPolicy] = useState<PolicyRecord | null>(null);
+  const [renewalWonExpiryDate, setRenewalWonExpiryDate] = useState<Date | undefined>();
+  const [renewalLostRemarks, setRenewalLostRemarks] = useState("");
+
   // Add Lead
   const [showAddLead, setShowAddLead] = useState(false);
   const [newLead, setNewLead] = useState({ customer_name: "", phone: "", email: "", city: "", vehicle_number: "", vehicle_make: "", vehicle_model: "", lead_source: "Manual", notes: "" });
@@ -526,12 +533,15 @@ export function InsuranceWorkspace() {
               </div>
               Insurance Workspace
             </h2>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button size="sm" onClick={() => setShowImport(true)} className="gap-1.5 bg-white/15 hover:bg-white/25 backdrop-blur-sm text-white border border-white/20">
                 <FileSpreadsheet className="h-4 w-4" /> Import
               </Button>
               <Button size="sm" onClick={() => setShowAddLead(true)} className="gap-1.5 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border border-white/20">
                 <Plus className="h-4 w-4" /> Add Lead
+              </Button>
+              <Button size="sm" onClick={() => { setActiveView("crm"); setSelectedStage("new_lead"); }} className="gap-1.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white border border-white/20">
+                <Shield className="h-4 w-4" /> Policy Extract
               </Button>
             </div>
           </div>
@@ -578,7 +588,7 @@ export function InsuranceWorkspace() {
 
       <LeadImportDialog open={showImport} onOpenChange={setShowImport} title="Import Insurance Leads" templateColumns={["name", "phone", "city", "vehicle_number", "vehicle_make", "vehicle_model", "source"]}
         onImport={async (leads) => {
-          const rows = leads.map(l => ({ customer_name: l.name || l.customer_name || "Unknown", phone: (l.phone || l.mobile || "").replace(/\D/g, ""), city: l.city || null, vehicle_number: l.vehicle_number || null, vehicle_make: l.vehicle_make || null, vehicle_model: l.vehicle_model || null, lead_source: l.source || "CSV Import", pipeline_stage: "smart_calling", lead_status: "new", priority: "medium" }));
+          const rows = leads.map(l => ({ customer_name: l.name || l.customer_name || "Unknown", phone: (l.phone || l.mobile || "").replace(/\D/g, ""), city: l.city || null, vehicle_number: l.vehicle_number || null, vehicle_make: l.vehicle_make || null, vehicle_model: l.vehicle_model || null, lead_source: l.source || "CSV Import", pipeline_stage: "new_lead", lead_status: "new", priority: "medium" }));
           const { error } = await supabase.from("insurance_clients").insert(rows);
           if (error) throw error;
           queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
@@ -682,7 +692,7 @@ export function InsuranceWorkspace() {
               <TableHead className="text-[10px] font-bold uppercase">Premium</TableHead>
               <TableHead className="text-[10px] font-bold uppercase">Expiry</TableHead>
               <TableHead className="text-[10px] font-bold uppercase">Days Left</TableHead>
-              <TableHead className="text-[10px] font-bold uppercase w-20">Action</TableHead>
+              <TableHead className="text-[10px] font-bold uppercase w-32">Action</TableHead>
             </TableRow></TableHeader>
             <TableBody>
               {renewalPolicies.length === 0 ? (
@@ -706,9 +716,15 @@ export function InsuranceWorkspace() {
                     <TableCell className="font-semibold text-xs">{policy.premium_amount ? `₹${policy.premium_amount.toLocaleString("en-IN")}` : "—"}</TableCell>
                     <TableCell className="text-xs font-medium">{format(new Date(policy.expiry_date!), "dd MMM yyyy")}</TableCell>
                     <TableCell><Badge variant="outline" className={cn("text-[10px] font-bold", isUrgent ? "bg-red-100 text-red-700 border-red-200" : isWarning ? "bg-orange-100 text-orange-700 border-orange-200" : days <= 30 ? "bg-amber-100 text-amber-700 border-amber-200" : "bg-blue-100 text-blue-700 border-blue-200")}>{days} days</Badge></TableCell>
-                    <TableCell onClick={e => e.stopPropagation()}><div className="flex gap-0.5">
+                    <TableCell onClick={e => e.stopPropagation()}><div className="flex gap-0.5 flex-wrap">
                       {phone && <a href={`tel:${c?.phone}`}><Button variant="ghost" size="icon" className="h-6 w-6"><PhoneCall className="h-3 w-3 text-primary" /></Button></a>}
                       {waLink && <a href={waLink} target="_blank" rel="noopener noreferrer"><Button variant="ghost" size="icon" className="h-6 w-6"><MessageSquare className="h-3 w-3 text-green-600" /></Button></a>}
+                      <Button size="sm" variant="outline" className="h-6 text-[9px] px-1.5 text-emerald-600 border-emerald-200" onClick={() => { setRenewalTargetPolicy(policy); setRenewalWonExpiryDate(undefined); setShowRenewalWonDialog(true); }}>
+                        <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" /> Won
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-6 text-[9px] px-1.5 text-red-600 border-red-200" onClick={() => { setRenewalTargetPolicy(policy); setRenewalLostRemarks(""); setShowRenewalLostDialog(true); }}>
+                        <XCircle className="h-2.5 w-2.5 mr-0.5" /> Lost
+                      </Button>
                     </div></TableCell>
                   </TableRow>
                 );
@@ -781,7 +797,7 @@ export function InsuranceWorkspace() {
                   <TableHead className="text-[10px] font-bold uppercase">Premium</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase">Follow-Up</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase">Created</TableHead>
-                  <TableHead className="text-[10px] font-bold uppercase w-24">Actions</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase w-36">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -846,12 +862,15 @@ export function InsuranceWorkspace() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {daysToExpiry !== null ? (
-                          <span className={cn("text-xs font-semibold",
-                            daysToExpiry < 0 ? "text-red-600" : daysToExpiry <= 7 ? "text-red-600" : daysToExpiry <= 30 ? "text-orange-600" : "text-muted-foreground"
-                          )}>
-                            {daysToExpiry < 0 ? `Exp ${Math.abs(daysToExpiry)}d` : `${daysToExpiry}d`}
-                          </span>
+                        {client.policy_expiry_date ? (
+                          <div>
+                            <span className={cn("text-xs font-semibold",
+                              daysToExpiry !== null && daysToExpiry < 0 ? "text-red-600" : daysToExpiry !== null && daysToExpiry <= 7 ? "text-red-600" : daysToExpiry !== null && daysToExpiry <= 30 ? "text-orange-600" : "text-muted-foreground"
+                            )}>
+                              {daysToExpiry !== null ? (daysToExpiry < 0 ? `Exp ${Math.abs(daysToExpiry)}d` : `${daysToExpiry}d`) : "—"}
+                            </span>
+                            <p className="text-[9px] text-muted-foreground">{format(new Date(client.policy_expiry_date), "dd MMM yy")}</p>
+                          </div>
                         ) : <span className="text-muted-foreground">—</span>}
                       </TableCell>
                       <TableCell className="text-xs font-medium">
@@ -871,7 +890,7 @@ export function InsuranceWorkspace() {
                         {format(new Date(client.created_at), "dd MMM yy")}
                       </TableCell>
                       <TableCell onClick={e => e.stopPropagation()}>
-                        <div className="flex gap-0.5 items-center">
+                        <div className="flex gap-0.5 items-center flex-wrap">
                           {phone && (
                             <>
                               <a href={`tel:${client.phone}`}>
@@ -884,6 +903,9 @@ export function InsuranceWorkspace() {
                               )}
                             </>
                           )}
+                          <Button size="sm" variant="outline" className="h-6 text-[10px] gap-0.5 px-1.5 text-emerald-600 border-emerald-200" onClick={() => { setSelectedClient(client); setShowQuoteModal(true); }}>
+                            <FileText className="h-2.5 w-2.5" /> Quote
+                          </Button>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button size="sm" variant="outline" className="h-6 text-[10px] gap-0.5 px-1.5">
@@ -1183,17 +1205,18 @@ export function InsuranceWorkspace() {
                     {followUpDate ? format(followUpDate, "PPP") : "Pick a date"}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={followUpDate} onSelect={setFollowUpDate} /></PopoverContent>
+                <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={followUpDate} onSelect={(d) => { setFollowUpDate(d); if (d && pendingMoveClient) { setTimeout(() => { moveStage.mutate({ clientId: pendingMoveClient.id, newStage: "follow_up", extras: { follow_up_date: format(d, "yyyy-MM-dd"), follow_up_time: followUpTime, notes: followUpRemarks || undefined } }); }, 300); } }} /></PopoverContent>
               </Popover>
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Time</Label>
-              <Input type="time" value={followUpTime} onChange={e => setFollowUpTime(e.target.value)} className="h-9" />
+              <Input type="time" value={followUpTime} onChange={e => { setFollowUpTime(e.target.value); }} className="h-9" />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Notes</Label>
               <Textarea placeholder="Follow-up notes..." value={followUpRemarks} onChange={e => setFollowUpRemarks(e.target.value)} className="h-16" />
             </div>
+            {followUpDate && <p className="text-xs text-emerald-600 font-medium">✓ Will auto-schedule on date selection</p>}
           </div>
           <DialogFooter>
             <Button onClick={confirmFollowUp} disabled={!followUpDate} className="bg-orange-600 hover:bg-orange-700 text-white">Schedule</Button>
@@ -1235,6 +1258,105 @@ export function InsuranceWorkspace() {
           <DialogFooter>
             <Button onClick={setRenewalReminder} disabled={!renewalDate} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5">
               <Bell className="h-4 w-4" /> Set Reminder & Move
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── RENEWAL WON DIALOG ── */}
+      <Dialog open={showRenewalWonDialog} onOpenChange={setShowRenewalWonDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><CheckCircle2 className="h-5 w-5 text-emerald-600" /> Renewal Won — New Policy</DialogTitle></DialogHeader>
+          {renewalTargetPolicy && (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Mark <strong>{renewalTargetPolicy.insurance_clients?.customer_name}</strong>'s renewal as won. This will create a new policy in the Policy Book and mark the old one as renewed.
+              </p>
+              <div className="space-y-1">
+                <Label className="text-xs">New Policy Expiry Date (next year) *</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left h-9">
+                      <CalendarIcon className="h-4 w-4 mr-2 text-muted-foreground" />
+                      {renewalWonExpiryDate ? format(renewalWonExpiryDate, "PPP") : "Pick new expiry date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={renewalWonExpiryDate} onSelect={setRenewalWonExpiryDate} /></PopoverContent>
+                </Popover>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Upload New Policy Document (optional)</Label>
+                <InsurancePolicyDocumentUploader defaultClientId={renewalTargetPolicy.client_id} onDone={() => {}} />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRenewalWonDialog(false)}>Cancel</Button>
+            <Button disabled={!renewalWonExpiryDate} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5" onClick={async () => {
+              if (!renewalTargetPolicy || !renewalWonExpiryDate) return;
+              try {
+                // Mark old policy as renewed
+                await supabase.from("insurance_policies").update({ status: "renewed" }).eq("id", renewalTargetPolicy.id);
+                // Create new policy
+                const newStart = renewalTargetPolicy.expiry_date ? new Date(renewalTargetPolicy.expiry_date) : new Date();
+                await supabase.from("insurance_policies").insert({
+                  client_id: renewalTargetPolicy.client_id,
+                  policy_type: renewalTargetPolicy.policy_type,
+                  insurer: renewalTargetPolicy.insurer,
+                  premium_amount: renewalTargetPolicy.premium_amount,
+                  start_date: format(newStart, "yyyy-MM-dd"),
+                  expiry_date: format(renewalWonExpiryDate, "yyyy-MM-dd"),
+                  status: "active",
+                  is_renewal: true,
+                  issued_date: format(new Date(), "yyyy-MM-dd"),
+                  plan_name: renewalTargetPolicy.plan_name,
+                  idv: renewalTargetPolicy.idv,
+                });
+                // Update client status
+                await supabase.from("insurance_clients").update({ pipeline_stage: "won", lead_status: "won" }).eq("id", renewalTargetPolicy.client_id);
+                queryClient.invalidateQueries({ queryKey: ["ins-policies-book"] });
+                queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
+                toast.success("🎉 Renewal won! New policy added to Policy Book");
+                setShowRenewalWonDialog(false);
+              } catch (e: any) { toast.error(e?.message || "Failed"); }
+            }}>
+              <CheckCircle2 className="h-4 w-4" /> Confirm Won
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── RENEWAL LOST DIALOG ── */}
+      <Dialog open={showRenewalLostDialog} onOpenChange={setShowRenewalLostDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><XCircle className="h-5 w-5 text-red-600" /> Renewal Lost</DialogTitle></DialogHeader>
+          {renewalTargetPolicy && (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Mark <strong>{renewalTargetPolicy.insurance_clients?.customer_name}</strong>'s renewal as lost.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {LOST_REASONS.map(r => (
+                  <Button key={r} variant={renewalLostRemarks === r ? "default" : "outline"} size="sm" onClick={() => setRenewalLostRemarks(r)}>{r}</Button>
+                ))}
+              </div>
+              <Textarea placeholder="Additional remarks..." value={renewalLostRemarks} onChange={e => setRenewalLostRemarks(e.target.value)} className="h-20" />
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRenewalLostDialog(false)}>Cancel</Button>
+            <Button disabled={!renewalLostRemarks} className="bg-red-600 hover:bg-red-700 text-white" onClick={async () => {
+              if (!renewalTargetPolicy || !renewalLostRemarks) return;
+              try {
+                await supabase.from("insurance_policies").update({ status: "lapsed" }).eq("id", renewalTargetPolicy.id);
+                await supabase.from("insurance_clients").update({ pipeline_stage: "lost", lead_status: "lost", lost_reason: renewalLostRemarks }).eq("id", renewalTargetPolicy.client_id);
+                queryClient.invalidateQueries({ queryKey: ["ins-policies-book"] });
+                queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
+                toast.success("Renewal marked as lost");
+                setShowRenewalLostDialog(false);
+              } catch (e: any) { toast.error(e?.message || "Failed"); }
+            }}>
+              Mark as Lost
             </Button>
           </DialogFooter>
         </DialogContent>

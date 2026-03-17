@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
   FileText, Download, CheckCircle2, Loader2, Plus, Trash2, Upload,
-  Send, MessageCircle, Filter, Clock, CheckSquare
+  Send, MessageCircle, Filter, Clock, CheckSquare, Mail, Search, X
 } from "lucide-react";
 import { generateInsuranceQuotePdf, InsuranceQuoteData } from "@/lib/generateInsuranceQuotePdf";
 import {
@@ -20,93 +20,58 @@ import {
   BulkRenewalQuote,
   BulkQuoteInsert,
 } from "@/hooks/useBulkRenewalQuotes";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
 
-// ── Add Quote Form ──
-function AddQuoteDialog({ onAdd }: { onAdd: (quotes: BulkQuoteInsert[]) => void }) {
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({
-    customer_name: "", phone: "", vehicle_make: "", vehicle_model: "",
-    vehicle_number: "", vehicle_year: new Date().getFullYear(),
-    fuel_type: "Petrol", insurance_company: "", policy_type: "Comprehensive",
-    idv: 0, basic_od: 0, od_discount: 0, ncb_discount: 0,
-    third_party: 0, secure_premium: 0, addon_premium: 0,
-    addons: [] as string[], status: "pending", notes: null as string | null,
-    batch_label: null as string | null, email: null as string | null, city: null as string | null,
-  });
-  const [addonsText, setAddonsText] = useState("");
+const INSURANCE_COMPANIES = [
+  "ICICI Lombard", "HDFC Ergo", "Bajaj Allianz", "New India Assurance",
+  "United India", "Oriental Insurance", "National Insurance", "Tata AIG",
+  "Reliance General", "SBI General", "Cholamandalam MS", "Future Generali",
+  "Royal Sundaram", "Bharti AXA", "Liberty General", "Magma HDI",
+  "Navi General", "Digit Insurance", "Acko General", "Kotak General",
+  "Star Health", "Care Health", "Iffco Tokio", "Shriram General",
+];
 
-  const handleSubmit = () => {
-    if (!form.customer_name || !form.vehicle_make) {
-      toast.error("Customer name and vehicle make are required");
-      return;
-    }
-    const quote: BulkQuoteInsert = {
-      ...form,
-      addons: addonsText.split("|").map(a => a.trim()).filter(Boolean),
-    };
-    onAdd([quote]);
-    setOpen(false);
-    setForm({
-      customer_name: "", phone: "", vehicle_make: "", vehicle_model: "",
-      vehicle_number: "", vehicle_year: new Date().getFullYear(),
-      fuel_type: "Petrol", insurance_company: "", policy_type: "Comprehensive",
-      idv: 0, basic_od: 0, od_discount: 0, ncb_discount: 0,
-      third_party: 0, secure_premium: 0, addon_premium: 0,
-      addons: [], status: "pending", notes: null, batch_label: null, email: null, city: null,
-    });
-    setAddonsText("");
-  };
+const POLICY_TYPES = ["Comprehensive", "Third Party", "Own Damage", "Standalone OD"];
+const FUEL_TYPES = ["Petrol", "Diesel", "CNG", "Electric", "Hybrid"];
 
-  const Field = ({ label, field, type = "text" }: { label: string; field: string; type?: string }) => (
-    <div>
-      <Label className="text-xs">{label}</Label>
-      <Input
-        type={type}
-        value={(form as any)[field] ?? ""}
-        onChange={e => setForm(f => ({ ...f, [field]: type === "number" ? Number(e.target.value) : e.target.value }))}
-        className="h-8 text-xs"
-      />
-    </div>
-  );
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm" variant="outline" className="gap-1.5">
-          <Plus className="h-3.5 w-3.5" /> Add Quote
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>Add Renewal Quote</DialogTitle></DialogHeader>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Customer Name *" field="customer_name" />
-          <Field label="Phone" field="phone" />
-          <Field label="Vehicle Make *" field="vehicle_make" />
-          <Field label="Vehicle Model" field="vehicle_model" />
-          <Field label="Vehicle Number" field="vehicle_number" />
-          <Field label="Vehicle Year" field="vehicle_year" type="number" />
-          <Field label="Fuel Type" field="fuel_type" />
-          <Field label="Insurance Company" field="insurance_company" />
-          <Field label="IDV" field="idv" type="number" />
-          <Field label="Basic OD" field="basic_od" type="number" />
-          <Field label="OD Discount" field="od_discount" type="number" />
-          <Field label="NCB Discount" field="ncb_discount" type="number" />
-          <Field label="Third Party" field="third_party" type="number" />
-          <Field label="Addon Premium" field="addon_premium" type="number" />
-          <Field label="Batch Label" field="batch_label" />
-          <div className="col-span-2">
-            <Label className="text-xs">Addons (pipe separated)</Label>
-            <Input value={addonsText} onChange={e => setAddonsText(e.target.value)} placeholder="Zero Dep|RSA|Engine Protect" className="h-8 text-xs" />
-          </div>
-        </div>
-        <Button onClick={handleSubmit} className="w-full mt-2 gap-1.5"><Plus className="h-4 w-4" /> Add Quote</Button>
-      </DialogContent>
-    </Dialog>
-  );
+// ── Inline Excel Row for adding quotes ──
+interface InlineRow {
+  customer_name: string;
+  phone: string;
+  email: string;
+  city: string;
+  vehicle_make: string;
+  vehicle_model: string;
+  vehicle_number: string;
+  vehicle_year: number;
+  fuel_type: string;
+  insurance_company: string;
+  policy_type: string;
+  idv: number;
+  basic_od: number;
+  od_discount: number;
+  ncb_discount: number;
+  third_party: number;
+  secure_premium: number;
+  addon_premium: number;
+  addons: string;
+  batch_label: string;
 }
+
+const emptyRow = (): InlineRow => ({
+  customer_name: "", phone: "", email: "", city: "",
+  vehicle_make: "", vehicle_model: "", vehicle_number: "",
+  vehicle_year: new Date().getFullYear(), fuel_type: "Petrol",
+  insurance_company: "", policy_type: "Comprehensive",
+  idv: 0, basic_od: 0, od_discount: 0, ncb_discount: 0,
+  third_party: 0, secure_premium: 0, addon_premium: 0,
+  addons: "", batch_label: "",
+});
 
 // ── CSV Import ──
 function CSVImportButton({ onImport }: { onImport: (quotes: BulkQuoteInsert[]) => void }) {
@@ -173,7 +138,7 @@ Rajesh Kumar,9876543210,rajesh@email.com,Delhi,Maruti,Swift,DL01AB1234,2022,Petr
   return (
     <div className="flex gap-1.5">
       <Button size="sm" variant="outline" onClick={downloadTemplate} className="gap-1.5 text-xs">
-        <Download className="h-3.5 w-3.5" /> Template
+        <Download className="h-3.5 w-3.5" /> Sample CSV
       </Button>
       <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()} className="gap-1.5 text-xs">
         <Upload className="h-3.5 w-3.5" /> Import CSV
@@ -183,87 +148,43 @@ Rajesh Kumar,9876543210,rajesh@email.com,Delhi,Maruti,Swift,DL01AB1234,2022,Petr
   );
 }
 
-// ── Quote Row ──
-function QuoteRow({
-  q, selected, onSelect, onGenerate, onMarkDone, onDelete, onSendWhatsApp,
-  isGenerating, isSending,
-}: {
-  q: BulkRenewalQuote;
-  selected: boolean;
-  onSelect: (checked: boolean) => void;
-  onGenerate: () => void;
-  onMarkDone: () => void;
-  onDelete: () => void;
-  onSendWhatsApp: () => void;
-  isGenerating: boolean;
-  isSending: boolean;
-}) {
-  const netOD = Math.max(0, q.basic_od - q.od_discount - q.ncb_discount);
-  const netPremium = netOD + q.third_party + q.secure_premium + q.addon_premium;
-  const gst = Math.round(netPremium * 0.18);
-  const total = netPremium + gst;
-  const fmt = (n: number) => `Rs. ${Math.round(n).toLocaleString("en-IN")}`;
-
-  const statusColor = q.status === "done" ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400"
-    : q.status === "sent" ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-    : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400";
+// ── Insurance Company Combobox ──
+function InsuranceCompanySelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [customCompany, setCustomCompany] = useState("");
+  const [showCustom, setShowCustom] = useState(false);
 
   return (
-    <div className={`border rounded-lg p-3 transition-all ${q.status === "done" ? "border-emerald-300/50 bg-emerald-50/30 dark:bg-emerald-950/10" : "border-border"}`}>
-      <div className="flex items-start gap-3">
-        <Checkbox checked={selected} onCheckedChange={onSelect} className="mt-1" />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <span className="font-semibold text-sm">{q.customer_name}</span>
-            <Badge variant="outline" className="text-[10px]">{q.insurance_company}</Badge>
-            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${statusColor}`}>
-              {q.status.toUpperCase()}
-            </span>
-            {q.pdf_generated && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />}
-            {q.whatsapp_sent && <MessageCircle className="h-3.5 w-3.5 text-emerald-500" />}
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {q.vehicle_make} {q.vehicle_model} &bull; {q.vehicle_number || "No Plate"} &bull; {q.vehicle_year} &bull; {q.fuel_type}
-            {q.phone && <> &bull; {q.phone}</>}
-          </p>
-          <div className="mt-1.5 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-0.5 text-[11px]">
-            <div><span className="text-muted-foreground">Basic OD:</span> <span className="font-medium">{fmt(q.basic_od)}</span></div>
-            <div><span className="text-muted-foreground">OD Disc:</span> <span className="font-medium text-destructive">-{fmt(q.od_discount)}</span></div>
-            <div><span className="text-muted-foreground">NCB:</span> <span className="font-medium text-destructive">-{fmt(q.ncb_discount)}</span></div>
-            <div><span className="text-muted-foreground">Net OD:</span> <span className="font-bold">{fmt(netOD)}</span></div>
-            <div><span className="text-muted-foreground">TP:</span> <span className="font-medium">{fmt(q.third_party)}</span></div>
-            <div><span className="text-muted-foreground">Addons:</span> <span className="font-medium">{fmt(q.addon_premium)}</span></div>
-            <div><span className="text-muted-foreground">GST:</span> <span className="font-medium">{fmt(gst)}</span></div>
-            <div><span className="text-muted-foreground font-bold">Total:</span> <span className="font-bold text-primary">{fmt(total)}</span></div>
-          </div>
-          {q.addons && q.addons.length > 0 && (
-            <div className="mt-1 flex flex-wrap gap-1">
-              {q.addons.map(a => <Badge key={a} variant="secondary" className="text-[10px] px-1.5 py-0">{a}</Badge>)}
-            </div>
-          )}
-          {q.batch_label && <span className="text-[10px] text-muted-foreground mt-1 block">Batch: {q.batch_label}</span>}
-        </div>
-        <div className="flex flex-col gap-1 shrink-0">
-          <Button size="sm" variant={q.pdf_generated ? "outline" : "default"} onClick={onGenerate} disabled={isGenerating} className="gap-1 text-xs h-7">
-            {isGenerating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
-            PDF
+    <div className="flex gap-1">
+      {showCustom ? (
+        <div className="flex gap-1 flex-1">
+          <Input
+            value={customCompany}
+            onChange={e => setCustomCompany(e.target.value)}
+            placeholder="Enter company name"
+            className="h-7 text-[11px] flex-1"
+            onKeyDown={e => { if (e.key === "Enter" && customCompany.trim()) { onChange(customCompany.trim()); setShowCustom(false); } }}
+          />
+          <Button type="button" size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { if (customCompany.trim()) onChange(customCompany.trim()); setShowCustom(false); }}>
+            <CheckCircle2 className="h-3 w-3" />
           </Button>
-          {q.phone && (
-            <Button size="sm" variant="outline" onClick={onSendWhatsApp} disabled={isSending || !q.phone} className="gap-1 text-xs h-7">
-              {isSending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
-              WA
-            </Button>
-          )}
-          {q.status !== "done" && (
-            <Button size="sm" variant="ghost" onClick={onMarkDone} className="gap-1 text-xs h-7 text-emerald-600">
-              <CheckSquare className="h-3 w-3" /> Done
-            </Button>
-          )}
-          <Button size="sm" variant="ghost" onClick={onDelete} className="gap-1 text-xs h-7 text-destructive">
-            <Trash2 className="h-3 w-3" />
+          <Button type="button" size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setShowCustom(false)}>
+            <X className="h-3 w-3" />
           </Button>
         </div>
-      </div>
+      ) : (
+        <div className="flex gap-1 flex-1">
+          <Select value={INSURANCE_COMPANIES.includes(value) ? value : "custom"} onValueChange={v => { if (v === "__add_new__") { setShowCustom(true); setCustomCompany(""); } else { onChange(v); } }}>
+            <SelectTrigger className="h-7 text-[11px] flex-1"><SelectValue placeholder="Select insurer" /></SelectTrigger>
+            <SelectContent>
+              {INSURANCE_COMPANIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              <SelectItem value="__add_new__">+ Add New Company</SelectItem>
+            </SelectContent>
+          </Select>
+          {value && !INSURANCE_COMPANIES.includes(value) && (
+            <Badge variant="secondary" className="text-[9px] shrink-0">{value}</Badge>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -271,6 +192,7 @@ function QuoteRow({
 // ── Main Component ──
 export function BulkRenewalQuoteGenerator({ onClose }: { onClose: () => void }) {
   const [statusFilter, setStatusFilter] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
   const { data: quotes = [], isLoading } = useBulkRenewalQuotes(statusFilter);
   const addQuotes = useAddBulkQuotes();
   const updateQuote = useUpdateBulkQuote();
@@ -280,6 +202,8 @@ export function BulkRenewalQuoteGenerator({ onClose }: { onClose: () => void }) 
   const [generatingId, setGeneratingId] = useState<string | null>(null);
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [bulkAction, setBulkAction] = useState(false);
+  const [showAddRows, setShowAddRows] = useState(false);
+  const [inlineRows, setInlineRows] = useState<InlineRow[]>([emptyRow()]);
 
   const toggleSelect = (id: string, checked: boolean) => {
     setSelectedIds(prev => {
@@ -288,10 +212,20 @@ export function BulkRenewalQuoteGenerator({ onClose }: { onClose: () => void }) 
       return next;
     });
   };
-
   const selectAll = (checked: boolean) => {
-    setSelectedIds(checked ? new Set(quotes.map(q => q.id)) : new Set());
+    setSelectedIds(checked ? new Set(filteredQuotes.map(q => q.id)) : new Set());
   };
+
+  const filteredQuotes = useMemo(() => {
+    if (!searchTerm.trim()) return quotes;
+    const s = searchTerm.toLowerCase();
+    return quotes.filter(q =>
+      q.customer_name.toLowerCase().includes(s) ||
+      q.phone?.includes(s) ||
+      q.vehicle_number?.toLowerCase().includes(s) ||
+      q.insurance_company?.toLowerCase().includes(s)
+    );
+  }, [quotes, searchTerm]);
 
   const toQuoteData = (q: BulkRenewalQuote): InsuranceQuoteData => ({
     customerName: q.customer_name,
@@ -354,14 +288,21 @@ export function BulkRenewalQuoteGenerator({ onClose }: { onClose: () => void }) 
     setSendingId(null);
   };
 
-  const handleMarkDone = async (q: BulkRenewalQuote) => {
-    await updateQuote.mutateAsync({ id: q.id, status: "done" } as any);
-    toast.success(`${q.customer_name} marked as done`);
+  const handleSendEmail = async (q: BulkRenewalQuote) => {
+    if (!q.email) { toast.error("No email address"); return; }
+    try {
+      const netOD = Math.max(0, q.basic_od - q.od_discount - q.ncb_discount);
+      const netPremium = netOD + q.third_party + q.secure_premium + q.addon_premium;
+      const gst = Math.round(netPremium * 0.18);
+      const total = netPremium + gst;
+      window.open(`mailto:${q.email}?subject=Insurance Renewal Quote - ${q.vehicle_make} ${q.vehicle_model}&body=${encodeURIComponent(`Dear ${q.customer_name},\n\nHere is your insurance renewal quote:\n\nVehicle: ${q.vehicle_make} ${q.vehicle_model} (${q.vehicle_number})\nInsurer: ${q.insurance_company}\nTotal Premium: Rs. ${total.toLocaleString("en-IN")}\n\nPlease contact us for more details.\n\nTeam GrabYourCar\n+91 98559 24442`)}`, "_blank");
+      toast.success("Email opened");
+    } catch { toast.error("Failed"); }
   };
 
   // ── Bulk Actions ──
   const handleBulkGeneratePDFs = async () => {
-    const selected = quotes.filter(q => selectedIds.has(q.id));
+    const selected = filteredQuotes.filter(q => selectedIds.has(q.id));
     if (!selected.length) { toast.error("Select quotes first"); return; }
     setBulkAction(true);
     for (const q of selected) {
@@ -376,7 +317,7 @@ export function BulkRenewalQuoteGenerator({ onClose }: { onClose: () => void }) 
   };
 
   const handleBulkSendWhatsApp = async () => {
-    const selected = quotes.filter(q => selectedIds.has(q.id) && q.phone);
+    const selected = filteredQuotes.filter(q => selectedIds.has(q.id) && q.phone);
     if (!selected.length) { toast.error("Select quotes with phone numbers"); return; }
     setBulkAction(true);
     let sent = 0;
@@ -388,15 +329,11 @@ export function BulkRenewalQuoteGenerator({ onClose }: { onClose: () => void }) 
         const netPremium = netOD + q.third_party + q.secure_premium + q.addon_premium;
         const gst = Math.round(netPremium * 0.18);
         const total = netPremium + gst;
-
         await supabase.functions.invoke("wa-automation-trigger", {
           body: {
-            event: "insurance_renewal_bulk",
-            phone: full,
-            customerName: q.customer_name,
-            vehicleNumber: q.vehicle_number,
-            vehicleMake: q.vehicle_make,
-            vehicleModel: q.vehicle_model,
+            event: "insurance_renewal_bulk", phone: full,
+            customerName: q.customer_name, vehicleNumber: q.vehicle_number,
+            vehicleMake: q.vehicle_make, vehicleModel: q.vehicle_model,
             insuranceCompany: q.insurance_company,
             totalPremium: `Rs. ${total.toLocaleString("en-IN")}`,
           },
@@ -411,7 +348,7 @@ export function BulkRenewalQuoteGenerator({ onClose }: { onClose: () => void }) 
   };
 
   const handleBulkMarkDone = async () => {
-    const selected = quotes.filter(q => selectedIds.has(q.id));
+    const selected = filteredQuotes.filter(q => selectedIds.has(q.id));
     if (!selected.length) return;
     for (const q of selected) {
       await updateQuote.mutateAsync({ id: q.id, status: "done" } as any);
@@ -420,102 +357,295 @@ export function BulkRenewalQuoteGenerator({ onClose }: { onClose: () => void }) 
     setSelectedIds(new Set());
   };
 
+  // ── Inline Add Rows ──
+  const updateInlineRow = (idx: number, field: keyof InlineRow, value: any) => {
+    setInlineRows(prev => prev.map((r, i) => i === idx ? { ...r, [field]: value } : r));
+  };
+
+  const addInlineRow = () => setInlineRows(prev => [...prev, emptyRow()]);
+  const removeInlineRow = (idx: number) => setInlineRows(prev => prev.length <= 1 ? prev : prev.filter((_, i) => i !== idx));
+
+  const saveInlineRows = () => {
+    const valid = inlineRows.filter(r => r.customer_name.trim() && r.vehicle_make.trim());
+    if (!valid.length) { toast.error("Fill at least customer name and vehicle make"); return; }
+    const inserts: BulkQuoteInsert[] = valid.map(r => ({
+      customer_name: r.customer_name.trim(),
+      phone: r.phone.trim(),
+      email: r.email.trim() || null,
+      city: r.city.trim() || null,
+      vehicle_make: r.vehicle_make.trim(),
+      vehicle_model: r.vehicle_model.trim(),
+      vehicle_number: r.vehicle_number.trim(),
+      vehicle_year: r.vehicle_year,
+      fuel_type: r.fuel_type,
+      insurance_company: r.insurance_company || "N/A",
+      policy_type: r.policy_type,
+      idv: r.idv,
+      basic_od: r.basic_od,
+      od_discount: r.od_discount,
+      ncb_discount: r.ncb_discount,
+      third_party: r.third_party,
+      secure_premium: r.secure_premium,
+      addon_premium: r.addon_premium,
+      addons: r.addons ? r.addons.split("|").map(a => a.trim()).filter(Boolean) : [],
+      status: "pending",
+      notes: null,
+      batch_label: r.batch_label || null,
+    }));
+    addQuotes.mutate(inserts);
+    setInlineRows([emptyRow()]);
+    setShowAddRows(false);
+  };
+
   const pendingCount = quotes.filter(q => q.status === "pending").length;
   const sentCount = quotes.filter(q => q.status === "sent").length;
   const doneCount = quotes.filter(q => q.status === "done").length;
 
-  return (
-    <Card className="border-0 shadow-none">
-      <CardHeader className="pb-3">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <CardTitle className="text-base font-bold flex items-center gap-2">
-            <FileText className="h-4 w-4 text-primary" />
-            Bulk Renewal Quotes
-            <Badge variant="secondary" className="text-xs">{quotes.length} total</Badge>
-          </CardTitle>
-          <div className="flex items-center gap-2 flex-wrap">
-            <AddQuoteDialog onAdd={q => addQuotes.mutate(q)} />
-            <CSVImportButton onImport={q => addQuotes.mutate(q)} />
-            <Button size="sm" variant="outline" onClick={onClose}>Close</Button>
-          </div>
-        </div>
+  const fmt = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
+  const calcTotal = (q: BulkRenewalQuote) => {
+    const netOD = Math.max(0, q.basic_od - q.od_discount - q.ncb_discount);
+    const netPremium = netOD + q.third_party + q.secure_premium + q.addon_premium;
+    return netPremium + Math.round(netPremium * 0.18);
+  };
 
-        {/* Status Filter + Stats */}
-        <div className="flex items-center gap-3 mt-3 flex-wrap">
-          <div className="flex items-center gap-1.5">
-            <Filter className="h-3.5 w-3.5 text-muted-foreground" />
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-7 text-xs w-[120px]"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All ({quotes.length})</SelectItem>
-                <SelectItem value="pending">Pending ({pendingCount})</SelectItem>
-                <SelectItem value="sent">Sent ({sentCount})</SelectItem>
-                <SelectItem value="done">Done ({doneCount})</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex gap-2 text-[11px]">
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div>
+          <h3 className="text-base font-bold flex items-center gap-2">
+            <FileText className="h-4 w-4 text-primary" /> Bulk Renewal Quotes
+            <Badge variant="secondary" className="text-xs">{quotes.length} total</Badge>
+          </h3>
+          <div className="flex gap-3 text-[11px] mt-1">
             <span className="flex items-center gap-1"><Clock className="h-3 w-3 text-amber-500" /> {pendingCount} pending</span>
             <span className="flex items-center gap-1"><Send className="h-3 w-3 text-blue-500" /> {sentCount} sent</span>
             <span className="flex items-center gap-1"><CheckCircle2 className="h-3 w-3 text-emerald-500" /> {doneCount} done</span>
           </div>
         </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button size="sm" variant={showAddRows ? "default" : "outline"} className="gap-1.5 text-xs" onClick={() => setShowAddRows(!showAddRows)}>
+            <Plus className="h-3.5 w-3.5" /> {showAddRows ? "Close Entry" : "Add Quotes"}
+          </Button>
+          <CSVImportButton onImport={q => addQuotes.mutate(q)} />
+          <Button size="sm" variant="outline" onClick={onClose} className="text-xs">Close</Button>
+        </div>
+      </div>
 
-        {/* Bulk Actions Bar */}
-        {selectedIds.size > 0 && (
-          <div className="flex items-center gap-2 mt-2 p-2 bg-muted/50 rounded-lg">
-            <span className="text-xs font-medium">{selectedIds.size} selected</span>
-            <Button size="sm" variant="outline" onClick={handleBulkGeneratePDFs} disabled={bulkAction} className="gap-1 text-xs h-7">
-              <Download className="h-3 w-3" /> Download All PDFs
-            </Button>
-            <Button size="sm" variant="outline" onClick={handleBulkSendWhatsApp} disabled={bulkAction} className="gap-1 text-xs h-7">
-              <MessageCircle className="h-3 w-3" /> Send All WhatsApp
-            </Button>
-            <Button size="sm" variant="outline" onClick={handleBulkMarkDone} disabled={bulkAction} className="gap-1 text-xs h-7">
-              <CheckSquare className="h-3 w-3" /> Mark All Done
-            </Button>
-            {bulkAction && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-          </div>
-        )}
-      </CardHeader>
+      {/* ── Excel-Style Add Rows ── */}
+      {showAddRows && (
+        <Card className="border-primary/30">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Plus className="h-4 w-4" /> Add Quotes (Excel Style)
+              <Button size="sm" variant="ghost" className="ml-auto text-xs gap-1" onClick={addInlineRow}><Plus className="h-3 w-3" /> Add Row</Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/30">
+                    <TableHead className="text-[9px] font-bold uppercase w-8">#</TableHead>
+                    <TableHead className="text-[9px] font-bold uppercase min-w-[120px]">Name *</TableHead>
+                    <TableHead className="text-[9px] font-bold uppercase min-w-[100px]">Phone</TableHead>
+                    <TableHead className="text-[9px] font-bold uppercase min-w-[100px]">Vehicle Make *</TableHead>
+                    <TableHead className="text-[9px] font-bold uppercase min-w-[100px]">Vehicle Model</TableHead>
+                    <TableHead className="text-[9px] font-bold uppercase min-w-[100px]">Vehicle No.</TableHead>
+                    <TableHead className="text-[9px] font-bold uppercase min-w-[60px]">Year</TableHead>
+                    <TableHead className="text-[9px] font-bold uppercase min-w-[140px]">Insurance Company</TableHead>
+                    <TableHead className="text-[9px] font-bold uppercase min-w-[80px]">Policy Type</TableHead>
+                    <TableHead className="text-[9px] font-bold uppercase min-w-[70px]">IDV</TableHead>
+                    <TableHead className="text-[9px] font-bold uppercase min-w-[70px]">Basic OD</TableHead>
+                    <TableHead className="text-[9px] font-bold uppercase min-w-[70px]">OD Disc</TableHead>
+                    <TableHead className="text-[9px] font-bold uppercase min-w-[70px]">NCB Disc</TableHead>
+                    <TableHead className="text-[9px] font-bold uppercase min-w-[70px]">TP</TableHead>
+                    <TableHead className="text-[9px] font-bold uppercase min-w-[70px]">Addon</TableHead>
+                    <TableHead className="text-[9px] font-bold uppercase min-w-[120px]">Addons (pipe sep)</TableHead>
+                    <TableHead className="text-[9px] font-bold uppercase w-8"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {inlineRows.map((row, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell className="text-[10px] text-muted-foreground">{idx + 1}</TableCell>
+                      <TableCell><Input value={row.customer_name} onChange={e => updateInlineRow(idx, "customer_name", e.target.value)} className="h-7 text-[11px]" placeholder="Name" /></TableCell>
+                      <TableCell><Input value={row.phone} onChange={e => updateInlineRow(idx, "phone", e.target.value)} className="h-7 text-[11px]" placeholder="Phone" /></TableCell>
+                      <TableCell><Input value={row.vehicle_make} onChange={e => updateInlineRow(idx, "vehicle_make", e.target.value)} className="h-7 text-[11px]" placeholder="Make" /></TableCell>
+                      <TableCell><Input value={row.vehicle_model} onChange={e => updateInlineRow(idx, "vehicle_model", e.target.value)} className="h-7 text-[11px]" placeholder="Model" /></TableCell>
+                      <TableCell><Input value={row.vehicle_number} onChange={e => updateInlineRow(idx, "vehicle_number", e.target.value)} className="h-7 text-[11px]" placeholder="PB10XX1234" /></TableCell>
+                      <TableCell><Input type="number" value={row.vehicle_year} onChange={e => updateInlineRow(idx, "vehicle_year", Number(e.target.value))} className="h-7 text-[11px] w-16" /></TableCell>
+                      <TableCell><InsuranceCompanySelect value={row.insurance_company} onChange={v => updateInlineRow(idx, "insurance_company", v)} /></TableCell>
+                      <TableCell>
+                        <Select value={row.policy_type} onValueChange={v => updateInlineRow(idx, "policy_type", v)}>
+                          <SelectTrigger className="h-7 text-[11px]"><SelectValue /></SelectTrigger>
+                          <SelectContent>{POLICY_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell><Input type="number" value={row.idv || ""} onChange={e => updateInlineRow(idx, "idv", Number(e.target.value))} className="h-7 text-[11px] w-16" placeholder="0" /></TableCell>
+                      <TableCell><Input type="number" value={row.basic_od || ""} onChange={e => updateInlineRow(idx, "basic_od", Number(e.target.value))} className="h-7 text-[11px] w-16" placeholder="0" /></TableCell>
+                      <TableCell><Input type="number" value={row.od_discount || ""} onChange={e => updateInlineRow(idx, "od_discount", Number(e.target.value))} className="h-7 text-[11px] w-16" placeholder="0" /></TableCell>
+                      <TableCell><Input type="number" value={row.ncb_discount || ""} onChange={e => updateInlineRow(idx, "ncb_discount", Number(e.target.value))} className="h-7 text-[11px] w-16" placeholder="0" /></TableCell>
+                      <TableCell><Input type="number" value={row.third_party || ""} onChange={e => updateInlineRow(idx, "third_party", Number(e.target.value))} className="h-7 text-[11px] w-16" placeholder="0" /></TableCell>
+                      <TableCell><Input type="number" value={row.addon_premium || ""} onChange={e => updateInlineRow(idx, "addon_premium", Number(e.target.value))} className="h-7 text-[11px] w-16" placeholder="0" /></TableCell>
+                      <TableCell><Input value={row.addons} onChange={e => updateInlineRow(idx, "addons", e.target.value)} className="h-7 text-[11px]" placeholder="Zero Dep|RSA" /></TableCell>
+                      <TableCell>
+                        <Button type="button" size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => removeInlineRow(idx)}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <div className="flex gap-2 p-3 border-t">
+              <Button size="sm" onClick={saveInlineRows} disabled={addQuotes.isPending} className="gap-1.5 text-xs">
+                {addQuotes.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                Save {inlineRows.filter(r => r.customer_name.trim()).length} Quote(s)
+              </Button>
+              <Button size="sm" variant="ghost" className="text-xs gap-1" onClick={addInlineRow}><Plus className="h-3 w-3" /> Add Row</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-      <CardContent className="space-y-2">
-        {/* Select All */}
-        {quotes.length > 0 && (
-          <div className="flex items-center gap-2 pb-1">
-            <Checkbox
-              checked={selectedIds.size === quotes.length && quotes.length > 0}
-              onCheckedChange={selectAll}
-            />
-            <span className="text-xs text-muted-foreground">Select all</span>
-          </div>
-        )}
+      {/* Search & Filter */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Search name, phone, vehicle..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-8 text-xs" />
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="h-8 text-xs w-[130px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All ({quotes.length})</SelectItem>
+              <SelectItem value="pending">Pending ({pendingCount})</SelectItem>
+              <SelectItem value="sent">Sent ({sentCount})</SelectItem>
+              <SelectItem value="done">Done ({doneCount})</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
-        {isLoading ? (
-          <div className="flex items-center justify-center py-10">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      {/* Bulk Actions Bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-2 p-2.5 bg-muted/50 rounded-lg border flex-wrap">
+          <span className="text-xs font-medium">{selectedIds.size} selected</span>
+          <Button size="sm" variant="outline" onClick={handleBulkGeneratePDFs} disabled={bulkAction} className="gap-1 text-xs h-7">
+            <Download className="h-3 w-3" /> Download All PDFs
+          </Button>
+          <Button size="sm" variant="outline" onClick={handleBulkSendWhatsApp} disabled={bulkAction} className="gap-1 text-xs h-7">
+            <MessageCircle className="h-3 w-3" /> Bulk WhatsApp API
+          </Button>
+          <Button size="sm" variant="outline" onClick={handleBulkMarkDone} disabled={bulkAction} className="gap-1 text-xs h-7">
+            <CheckSquare className="h-3 w-3" /> Mark All Done
+          </Button>
+          {bulkAction && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+        </div>
+      )}
+
+      {/* Quotes Table */}
+      <Card>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/30">
+                  <TableHead className="w-8">
+                    <Checkbox checked={selectedIds.size === filteredQuotes.length && filteredQuotes.length > 0} onCheckedChange={selectAll} />
+                  </TableHead>
+                  <TableHead className="text-[9px] font-bold uppercase w-8">#</TableHead>
+                  <TableHead className="text-[9px] font-bold uppercase">Customer</TableHead>
+                  <TableHead className="text-[9px] font-bold uppercase">Phone</TableHead>
+                  <TableHead className="text-[9px] font-bold uppercase">Vehicle</TableHead>
+                  <TableHead className="text-[9px] font-bold uppercase">Insurer</TableHead>
+                  <TableHead className="text-[9px] font-bold uppercase">Type</TableHead>
+                  <TableHead className="text-[9px] font-bold uppercase">Total</TableHead>
+                  <TableHead className="text-[9px] font-bold uppercase">Status</TableHead>
+                  <TableHead className="text-[9px] font-bold uppercase w-36">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow><TableCell colSpan={10} className="text-center py-10"><Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" /></TableCell></TableRow>
+                ) : filteredQuotes.length === 0 ? (
+                  <TableRow><TableCell colSpan={10} className="text-center py-10 text-muted-foreground text-sm">No quotes found. Add quotes or import CSV.</TableCell></TableRow>
+                ) : filteredQuotes.map((q, idx) => {
+                  const total = calcTotal(q);
+                  const statusColor = q.status === "done" ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+                    : q.status === "sent" ? "bg-blue-100 text-blue-800 border-blue-200"
+                    : "bg-amber-100 text-amber-800 border-amber-200";
+                  return (
+                    <TableRow key={q.id} className="text-xs hover:bg-muted/30">
+                      <TableCell onClick={e => e.stopPropagation()}>
+                        <Checkbox checked={selectedIds.has(q.id)} onCheckedChange={c => toggleSelect(q.id, !!c)} />
+                      </TableCell>
+                      <TableCell className="font-mono text-muted-foreground">{idx + 1}</TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-semibold text-xs">{q.customer_name}</p>
+                          {q.batch_label && <p className="text-[9px] text-muted-foreground">{q.batch_label}</p>}
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-mono text-xs">{q.phone || "—"}</TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-mono text-xs">{q.vehicle_number || "—"}</p>
+                          <p className="text-[10px] text-muted-foreground">{q.vehicle_make} {q.vehicle_model} • {q.vehicle_year}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-xs">{q.insurance_company}</TableCell>
+                      <TableCell><Badge variant="outline" className="text-[9px]">{q.policy_type}</Badge></TableCell>
+                      <TableCell className="font-bold text-xs text-primary">{fmt(total)}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={`text-[9px] ${statusColor}`}>
+                          {q.status.toUpperCase()}
+                          {q.pdf_generated && " ✓PDF"}
+                          {q.whatsapp_sent && " ✓WA"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell onClick={e => e.stopPropagation()}>
+                        <div className="flex gap-0.5 flex-wrap">
+                          <Button size="sm" variant={q.pdf_generated ? "outline" : "default"} onClick={() => handleGenerate(q)} disabled={generatingId === q.id} className="gap-0.5 text-[10px] h-6 px-1.5">
+                            {generatingId === q.id ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Download className="h-2.5 w-2.5" />} PDF
+                          </Button>
+                          {q.phone && (
+                            <Button size="sm" variant="outline" onClick={() => handleSendWhatsApp(q)} disabled={sendingId === q.id} className="gap-0.5 text-[10px] h-6 px-1.5">
+                              {sendingId === q.id ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <MessageCircle className="h-2.5 w-2.5" />} WA
+                            </Button>
+                          )}
+                          {q.email && (
+                            <Button size="sm" variant="outline" onClick={() => handleSendEmail(q)} className="gap-0.5 text-[10px] h-6 px-1.5">
+                              <Mail className="h-2.5 w-2.5" /> Email
+                            </Button>
+                          )}
+                          {q.status !== "done" && (
+                            <Button size="sm" variant="ghost" onClick={() => updateQuote.mutateAsync({ id: q.id, status: "done" } as any).then(() => toast.success("Done"))} className="gap-0.5 text-[10px] h-6 px-1.5 text-emerald-600">
+                              <CheckSquare className="h-2.5 w-2.5" />
+                            </Button>
+                          )}
+                          <Button size="sm" variant="ghost" onClick={() => deleteQuote.mutate(q.id)} className="gap-0.5 text-[10px] h-6 px-1.5 text-destructive">
+                            <Trash2 className="h-2.5 w-2.5" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
           </div>
-        ) : quotes.length === 0 ? (
-          <div className="text-center py-10 text-muted-foreground text-sm">
-            No quotes found. Add quotes manually or import via CSV.
-          </div>
-        ) : (
-          quotes.map(q => (
-            <QuoteRow
-              key={q.id}
-              q={q}
-              selected={selectedIds.has(q.id)}
-              onSelect={c => toggleSelect(q.id, !!c)}
-              onGenerate={() => handleGenerate(q)}
-              onMarkDone={() => handleMarkDone(q)}
-              onDelete={() => deleteQuote.mutate(q.id)}
-              onSendWhatsApp={() => handleSendWhatsApp(q)}
-              isGenerating={generatingId === q.id}
-              isSending={sendingId === q.id}
-            />
-          ))
-        )}
-      </CardContent>
-    </Card>
+          {filteredQuotes.length > 0 && (
+            <div className="flex items-center justify-between px-4 py-2 border-t text-xs text-muted-foreground bg-muted/20">
+              <span>Showing {filteredQuotes.length} quotes</span>
+              <span>{pendingCount} pending • {sentCount} sent • {doneCount} done</span>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
