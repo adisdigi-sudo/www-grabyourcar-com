@@ -58,12 +58,25 @@ export function FreshLeadsQueue() {
   const slug = activeVertical?.slug || "sales";
   const serviceCategories = VERTICAL_SERVICE_MAP[slug] || ["general"];
 
+  // Check if user is admin/manager or just employee
+  const { data: userRoles = [] } = useQuery({
+    queryKey: ["user-roles-queue", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
+      return data?.map(d => d.role) || [];
+    },
+    enabled: !!user?.id,
+  });
+  const isAdmin = userRoles.includes("super_admin") || userRoles.includes("admin");
+  const canSeeAll = isAdmin || isManagerInVertical;
+
   const { data: leads = [], isLoading } = useQuery({
-    queryKey: ["fresh-leads", slug, activeVertical?.id],
+    queryKey: ["fresh-leads", slug, activeVertical?.id, canSeeAll, user?.id],
     queryFn: async () => {
       let query = supabase
         .from("leads")
-        .select("id, name, customer_name, phone, email, city, source, service_category, priority, status, car_brand, car_model, notes, created_at, vertical_id, lead_type")
+        .select("id, name, customer_name, phone, email, city, source, service_category, priority, status, car_brand, car_model, notes, created_at, vertical_id, lead_type, assigned_to")
         .in("status", ["new", "pending", "fresh", "contacted"])
         .order("created_at", { ascending: false })
         .limit(200);
@@ -72,6 +85,11 @@ export function FreshLeadsQueue() {
         query = query.eq("vertical_id", activeVertical.id);
       } else {
         query = query.in("service_category", serviceCategories);
+      }
+
+      // Employee: only see their assigned leads
+      if (!canSeeAll && user?.id) {
+        query = query.eq("assigned_to", user.id);
       }
 
       const { data, error } = await query;
@@ -86,6 +104,8 @@ export function FreshLeadsQueue() {
     let result = leads;
     if (filterSource !== "all") result = result.filter(l => l.source === filterSource);
     if (filterPriority !== "all") result = result.filter(l => l.priority === filterPriority);
+    if (filterAssignee === "unassigned") result = result.filter(l => !l.assigned_to);
+    else if (filterAssignee === "mine") result = result.filter(l => l.assigned_to === user?.id);
     if (search) {
       const q = search.toLowerCase();
       result = result.filter(l =>
@@ -95,7 +115,15 @@ export function FreshLeadsQueue() {
       );
     }
     return result;
-  }, [leads, filterSource, filterPriority, search]);
+  }, [leads, filterSource, filterPriority, filterAssignee, search, user?.id]);
+
+  const toggleSelectLead = (id: string) => {
+    setSelectedLeads(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+  const toggleSelectAll = () => {
+    if (selectedLeads.length === filteredLeads.length) setSelectedLeads([]);
+    else setSelectedLeads(filteredLeads.map(l => l.id));
+  };
 
   const handleCall = (phone: string, name: string, method: "phone" | "whatsapp", leadId?: string, leadType?: string) => {
     const cleanPhone = phone.replace(/\D/g, "");
