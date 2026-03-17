@@ -797,7 +797,7 @@ export function InsuranceWorkspace() {
                   <TableHead className="text-[10px] font-bold uppercase">Premium</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase">Follow-Up</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase">Created</TableHead>
-                  <TableHead className="text-[10px] font-bold uppercase w-24">Actions</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase w-36">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
