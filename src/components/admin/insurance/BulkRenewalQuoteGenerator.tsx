@@ -53,6 +53,26 @@ const RENEWAL_QUOTES: BulkQuoteEntry[] = [
     addonPremium: 75,
     addons: ["24x7 Roadside Assistance"],
   },
+  {
+    id: "3",
+    customerName: "Orange Education",
+    phone: "",
+    vehicleMake: "Kia",
+    vehicleModel: "Seltos",
+    vehicleNumber: "",
+    vehicleYear: 2023,
+    fuelType: "Petrol",
+    insuranceCompany: "Liberty General Insurance",
+    policyType: "Comprehensive",
+    idv: 1112898,
+    basicOD: 36536,
+    odDiscount: 24662,
+    ncbDiscount: 4156,
+    thirdParty: 3416,
+    securePremium: 0,
+    addonPremium: 11199,
+    addons: ["Zero Depreciation", "24x7 Roadside Assistance", "Engine Protection Cover", "Consumables", "Key & Lock Replacement", "Invoice Price Cover", "Tyre Protector", "Loss of Personal Belongings"],
+  },
 ];
 
 export function BulkRenewalQuoteGenerator({ onClose }: { onClose: () => void }) {
