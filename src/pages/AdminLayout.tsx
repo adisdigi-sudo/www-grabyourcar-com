@@ -97,6 +97,7 @@ import AutomationCommandCenter from "@/components/admin/AutomationCommandCenter"
 import { LeadRoutingManager } from "@/components/admin/LeadRoutingManager";
 import { AccountsFinanceWorkspace } from "@/components/admin/finance/AccountsFinanceWorkspace";
 import { HRWorkspace } from "@/components/admin/hr/HRWorkspace";
+import { CarDatabaseWorkspace } from "@/components/admin/car-database/CarDatabaseWorkspace";
 import { OpenAPIPortal } from "@/components/admin/OpenAPIPortal";
 
 import { Button } from "@/components/ui/button";
@@ -223,36 +224,25 @@ const AdminLayout = () => {
         const verticalCat = activeVertical?.slug ? verticalSlugMap[activeVertical.slug] : undefined;
         return <LeadManagement verticalCategory={verticalCat} />;
       }
+      case "cars-workspace":
       case "cars-list":
       case "cars-variants":
       case "cars-specs":
       case "cars-pricing":
       case "cars-compare":
-        return <UnifiedCarManagement />;
       case "cars-colors":
-        return <CarColorManagement />;
       case "cars-images":
-        return <CarImageScrapingManager />;
       case "cars-image-sync":
-        return <CarImageScrapingManager />;
       case "cars-migration":
-        return <CarDataManagement />;
       case "cars-brands":
-        return <BrandsManagement />;
       case "cars-ai-entry":
-        return <AICarEntryGenerator />;
       case "cars-bulk-import":
-        return <BulkCarUploader />;
       case "cars-quick-import":
-        return <QuickTextImporter />;
       case "cars-city-pricing":
-        return <StateCityPricingManager />;
       case "cars-attributes":
-        return <VehicleAttributesManager />;
       case "cars-ai":
-        return <AIContentManagement />;
       case "cars-url-scraper":
-        return <URLDataScraper />;
+        return <CarDatabaseWorkspace />;
       case "website-homepage":
         return (
           <div className="space-y-6">

@@ -95,11 +95,7 @@ interface AdminGlobalSearchProps {
 
 // Map search items to their vertical
 const itemVerticalMap: Record<string, string[]> = {
-  "cars-list": ["car-database"], "cars-brands": ["car-database"], "cars-ai-entry": ["car-database"],
-  "cars-bulk-import": ["car-database"], "cars-quick-import": ["car-database"], "cars-city-pricing": ["car-database"],
-  "cars-attributes": ["car-database"], "cars-colors": ["car-database"], "cars-image-sync": ["car-database"],
-  "cars-images": ["car-database"], "cars-variants": ["car-database"], "cars-pricing": ["car-database"],
-  "cars-migration": ["car-database"], "cars-ai": ["car-database"],
+  "cars-workspace": ["car-database"],
 };
 
 export const AdminGlobalSearch = ({ onNavigate, activeVerticalSlug }: AdminGlobalSearchProps) => {
