@@ -38,11 +38,14 @@ const SOURCE_ICONS: Record<string, React.ElementType> = {
 
 export function FreshLeadsQueue() {
   const { user } = useAuth();
-  const { activeVertical } = useVerticalAccess();
+  const { activeVertical, isManagerInVertical } = useVerticalAccess();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [filterSource, setFilterSource] = useState("all");
   const [filterPriority, setFilterPriority] = useState("all");
+  const [filterAssignee, setFilterAssignee] = useState("all");
+  const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
+  const [showAssignPanel, setShowAssignPanel] = useState(false);
 
   const [dispositionOpen, setDispositionOpen] = useState(false);
   const [activeCall, setActiveCall] = useState<{
