@@ -40,6 +40,7 @@ import {
   Building2,
   MessageCircle,
   KeyRound,
+  Trophy,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AdminGlobalSearch } from "./AdminGlobalSearch";
@@ -318,6 +319,18 @@ const navItems: NavItem[] = [
       { id: "hr-attendance", label: "📋 Attendance", icon: CalendarDays },
       { id: "hr-leaves", label: "🏖️ Leave Management", icon: CalendarDays },
       { id: "hr-announcements", label: "📢 Announcements", icon: FileText },
+    ]
+  },
+
+  // ── Incentive Management — Super Admin only ──
+  { 
+    id: "incentive-hub", 
+    label: "🏆 Incentives", 
+    icon: Trophy,
+    verticals: ["all"],
+    allowedRoles: ["super_admin"],
+    children: [
+      { id: "incentive-management", label: "🏆 Incentive Dashboard", icon: Trophy },
     ]
   },
 ];

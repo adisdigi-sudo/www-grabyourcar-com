@@ -4900,6 +4900,248 @@ export type Database = {
         }
         Relationships: []
       }
+      incentive_entries: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          calculation_details: Json | null
+          created_at: string | null
+          deal_description: string | null
+          deal_reference: string | null
+          deal_value: number | null
+          employee_name: string
+          id: string
+          incentive_amount: number | null
+          month_year: string
+          notes: string | null
+          paid_at: string | null
+          rule_id: string | null
+          status: string | null
+          user_id: string | null
+          vertical_name: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          calculation_details?: Json | null
+          created_at?: string | null
+          deal_description?: string | null
+          deal_reference?: string | null
+          deal_value?: number | null
+          employee_name: string
+          id?: string
+          incentive_amount?: number | null
+          month_year: string
+          notes?: string | null
+          paid_at?: string | null
+          rule_id?: string | null
+          status?: string | null
+          user_id?: string | null
+          vertical_name: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          calculation_details?: Json | null
+          created_at?: string | null
+          deal_description?: string | null
+          deal_reference?: string | null
+          deal_value?: number | null
+          employee_name?: string
+          id?: string
+          incentive_amount?: number | null
+          month_year?: string
+          notes?: string | null
+          paid_at?: string | null
+          rule_id?: string | null
+          status?: string | null
+          user_id?: string | null
+          vertical_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incentive_entries_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "incentive_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      incentive_monthly_summary: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          base_incentive: number | null
+          created_at: string | null
+          employee_name: string
+          id: string
+          manager_bonus: number | null
+          month_year: string
+          paid_at: string | null
+          role: string | null
+          sent_to_accounts_at: string | null
+          slab_bonus: number | null
+          special_bonus: number | null
+          status: string | null
+          super_admin_notes: string | null
+          total_deal_value: number | null
+          total_deals: number | null
+          total_incentive: number | null
+          updated_at: string | null
+          user_id: string | null
+          vertical_name: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          base_incentive?: number | null
+          created_at?: string | null
+          employee_name: string
+          id?: string
+          manager_bonus?: number | null
+          month_year: string
+          paid_at?: string | null
+          role?: string | null
+          sent_to_accounts_at?: string | null
+          slab_bonus?: number | null
+          special_bonus?: number | null
+          status?: string | null
+          super_admin_notes?: string | null
+          total_deal_value?: number | null
+          total_deals?: number | null
+          total_incentive?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+          vertical_name: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          base_incentive?: number | null
+          created_at?: string | null
+          employee_name?: string
+          id?: string
+          manager_bonus?: number | null
+          month_year?: string
+          paid_at?: string | null
+          role?: string | null
+          sent_to_accounts_at?: string | null
+          slab_bonus?: number | null
+          special_bonus?: number | null
+          status?: string | null
+          super_admin_notes?: string | null
+          total_deal_value?: number | null
+          total_deals?: number | null
+          total_incentive?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+          vertical_name?: string
+        }
+        Relationships: []
+      }
+      incentive_rules: {
+        Row: {
+          bank_wise_config: Json | null
+          conditions: Json | null
+          created_at: string | null
+          fixed_amount: number | null
+          id: string
+          is_active: boolean | null
+          manager_bonus_config: Json | null
+          manager_bonus_type: string | null
+          percentage: number | null
+          percentage_of: string | null
+          role_applicable: string
+          rule_name: string
+          rule_type: string
+          slab_config: Json | null
+          updated_at: string | null
+          vertical_name: string
+        }
+        Insert: {
+          bank_wise_config?: Json | null
+          conditions?: Json | null
+          created_at?: string | null
+          fixed_amount?: number | null
+          id?: string
+          is_active?: boolean | null
+          manager_bonus_config?: Json | null
+          manager_bonus_type?: string | null
+          percentage?: number | null
+          percentage_of?: string | null
+          role_applicable?: string
+          rule_name: string
+          rule_type?: string
+          slab_config?: Json | null
+          updated_at?: string | null
+          vertical_name: string
+        }
+        Update: {
+          bank_wise_config?: Json | null
+          conditions?: Json | null
+          created_at?: string | null
+          fixed_amount?: number | null
+          id?: string
+          is_active?: boolean | null
+          manager_bonus_config?: Json | null
+          manager_bonus_type?: string | null
+          percentage?: number | null
+          percentage_of?: string | null
+          role_applicable?: string
+          rule_name?: string
+          rule_type?: string
+          slab_config?: Json | null
+          updated_at?: string | null
+          vertical_name?: string
+        }
+        Relationships: []
+      }
+      incentive_targets: {
+        Row: {
+          achieved_count: number | null
+          achieved_value: number | null
+          achievement_percentage: number | null
+          created_at: string | null
+          employee_name: string
+          id: string
+          month_year: string
+          target_count: number | null
+          target_value: number | null
+          updated_at: string | null
+          user_id: string | null
+          vertical_name: string
+        }
+        Insert: {
+          achieved_count?: number | null
+          achieved_value?: number | null
+          achievement_percentage?: number | null
+          created_at?: string | null
+          employee_name: string
+          id?: string
+          month_year: string
+          target_count?: number | null
+          target_value?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+          vertical_name: string
+        }
+        Update: {
+          achieved_count?: number | null
+          achieved_value?: number | null
+          achievement_percentage?: number | null
+          created_at?: string | null
+          employee_name?: string
+          id?: string
+          month_year?: string
+          target_count?: number | null
+          target_value?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+          vertical_name?: string
+        }
+        Relationships: []
+      }
       indian_cities: {
         Row: {
           created_at: string
@@ -7781,6 +8023,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      manager_bonus_tracking: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          bonus_amount: number | null
+          bonus_config: Json | null
+          created_at: string | null
+          id: string
+          manager_name: string
+          manager_user_id: string | null
+          month_year: string
+          status: string | null
+          team_achievement_pct: number | null
+          team_target: number | null
+          team_total_deals: number | null
+          team_total_value: number | null
+          vertical_name: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          bonus_amount?: number | null
+          bonus_config?: Json | null
+          created_at?: string | null
+          id?: string
+          manager_name: string
+          manager_user_id?: string | null
+          month_year: string
+          status?: string | null
+          team_achievement_pct?: number | null
+          team_target?: number | null
+          team_total_deals?: number | null
+          team_total_value?: number | null
+          vertical_name: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          bonus_amount?: number | null
+          bonus_config?: Json | null
+          created_at?: string | null
+          id?: string
+          manager_name?: string
+          manager_user_id?: string | null
+          month_year?: string
+          status?: string | null
+          team_achievement_pct?: number | null
+          team_target?: number | null
+          team_total_deals?: number | null
+          team_total_value?: number | null
+          vertical_name?: string
+        }
+        Relationships: []
       }
       marketing_alerts: {
         Row: {

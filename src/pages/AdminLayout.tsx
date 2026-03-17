@@ -99,6 +99,7 @@ import { AccountsFinanceWorkspace } from "@/components/admin/finance/AccountsFin
 import { HRWorkspace } from "@/components/admin/hr/HRWorkspace";
 import { CarDatabaseWorkspace } from "@/components/admin/car-database/CarDatabaseWorkspace";
 import { OpenAPIPortal } from "@/components/admin/OpenAPIPortal";
+import SuperAdminIncentiveWorkspace from "@/components/admin/incentives/SuperAdminIncentiveWorkspace";
 
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
@@ -384,6 +385,8 @@ const AdminLayout = () => {
         return <HRWorkspace initialTab="leaves" />;
       case "hr-announcements":
         return <HRWorkspace initialTab="culture" />;
+      case "incentive-management":
+        return <SuperAdminIncentiveWorkspace />;
       default:
         return <AdminDashboard />;
     }
