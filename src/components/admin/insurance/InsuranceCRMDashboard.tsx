@@ -480,12 +480,9 @@ export function InsuranceCRMDashboard() {
     toast.success("Policy details downloaded!");
   }, [now]);
 
-  const shareViaWhatsApp = useCallback((r: PolicyRow, phone: string) => {
-    const cleanPhone = phone.replace(/\D/g, "");
-    const fullPhone = cleanPhone.startsWith("91") ? cleanPhone : `91${cleanPhone}`;
-    const text = encodeURIComponent(getPolicyText(r));
-    window.open(`https://wa.me/${fullPhone}?text=${text}`, "_blank");
-    toast.success("Opening WhatsApp...");
+  const shareViaWhatsApp = useCallback(async (r: PolicyRow, phone: string) => {
+    const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+    await sendWhatsApp({ phone, message: getPolicyText(r), name: r.customer_name });
   }, []);
 
   const shareViaEmail = useCallback((r: PolicyRow, email: string) => {
