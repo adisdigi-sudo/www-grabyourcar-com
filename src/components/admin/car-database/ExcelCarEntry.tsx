@@ -30,8 +30,8 @@ const FUEL_OPTIONS = ['Petrol','Diesel','Electric','Hybrid','CNG','LPG'];
 const TRANSMISSION_OPTIONS = ['Manual','Automatic','AMT','CVT','DCT','iMT'];
 
 // ─── Sub-item types ───
-interface CarImage { url: string; alt_text: string; is_primary: boolean }
-interface CarColor { name: string; hex_code: string; image_url: string }
+interface CarImage { url: string; alt_text: string; is_primary: boolean; file?: File }
+interface CarColor { name: string; hex_code: string; image_url: string; file?: File }
 interface CarVariant {
   name: string; price: string; price_numeric: string; fuel_type: string; transmission: string;
   ex_showroom: string; rto: string; insurance: string; tcs: string; on_road_price: string;
