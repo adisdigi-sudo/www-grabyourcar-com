@@ -689,7 +689,7 @@ export function InsuranceWorkspace() {
               <TableHead className="text-[10px] font-bold uppercase">Premium</TableHead>
               <TableHead className="text-[10px] font-bold uppercase">Expiry</TableHead>
               <TableHead className="text-[10px] font-bold uppercase">Days Left</TableHead>
-              <TableHead className="text-[10px] font-bold uppercase w-20">Action</TableHead>
+              <TableHead className="text-[10px] font-bold uppercase w-32">Action</TableHead>
             </TableRow></TableHeader>
             <TableBody>
               {renewalPolicies.length === 0 ? (
