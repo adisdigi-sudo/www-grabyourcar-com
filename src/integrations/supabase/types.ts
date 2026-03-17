@@ -798,6 +798,102 @@ export type Database = {
           },
         ]
       }
+      bulk_renewal_quotes: {
+        Row: {
+          addon_premium: number
+          addons: string[] | null
+          basic_od: number
+          batch_label: string | null
+          city: string | null
+          created_at: string
+          customer_name: string
+          email: string | null
+          fuel_type: string
+          id: string
+          idv: number
+          insurance_company: string
+          ncb_discount: number
+          notes: string | null
+          od_discount: number
+          pdf_generated: boolean
+          pdf_generated_at: string | null
+          phone: string | null
+          policy_type: string
+          secure_premium: number
+          status: string
+          third_party: number
+          updated_at: string
+          vehicle_make: string
+          vehicle_model: string
+          vehicle_number: string | null
+          vehicle_year: number
+          whatsapp_sent: boolean
+          whatsapp_sent_at: string | null
+        }
+        Insert: {
+          addon_premium?: number
+          addons?: string[] | null
+          basic_od?: number
+          batch_label?: string | null
+          city?: string | null
+          created_at?: string
+          customer_name: string
+          email?: string | null
+          fuel_type?: string
+          id?: string
+          idv?: number
+          insurance_company?: string
+          ncb_discount?: number
+          notes?: string | null
+          od_discount?: number
+          pdf_generated?: boolean
+          pdf_generated_at?: string | null
+          phone?: string | null
+          policy_type?: string
+          secure_premium?: number
+          status?: string
+          third_party?: number
+          updated_at?: string
+          vehicle_make: string
+          vehicle_model: string
+          vehicle_number?: string | null
+          vehicle_year?: number
+          whatsapp_sent?: boolean
+          whatsapp_sent_at?: string | null
+        }
+        Update: {
+          addon_premium?: number
+          addons?: string[] | null
+          basic_od?: number
+          batch_label?: string | null
+          city?: string | null
+          created_at?: string
+          customer_name?: string
+          email?: string | null
+          fuel_type?: string
+          id?: string
+          idv?: number
+          insurance_company?: string
+          ncb_discount?: number
+          notes?: string | null
+          od_discount?: number
+          pdf_generated?: boolean
+          pdf_generated_at?: string | null
+          phone?: string | null
+          policy_type?: string
+          secure_premium?: number
+          status?: string
+          third_party?: number
+          updated_at?: string
+          vehicle_make?: string
+          vehicle_model?: string
+          vehicle_number?: string | null
+          vehicle_year?: number
+          whatsapp_sent?: boolean
+          whatsapp_sent_at?: string | null
+        }
+        Relationships: []
+      }
       business_verticals: {
         Row: {
           color: string | null
