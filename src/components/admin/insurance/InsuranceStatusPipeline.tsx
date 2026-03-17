@@ -311,14 +311,11 @@ export function InsuranceStatusPipeline() {
     return clean.startsWith("91") ? clean : `91${clean}`;
   };
 
-  const requestPolicyViaWhatsApp = (client: Client) => {
-    const fullPhone = getWhatsAppPhone(client);
-    if (!fullPhone) { toast.error("No phone number available"); return; }
-    const message = encodeURIComponent(
-      `🙏 Namaste ${client.customer_name || "Sir/Madam"},\n\nThis is *Grabyourcar Insurance* team.\n\nWe need your current motor insurance policy document for ${client.vehicle_number ? `vehicle *${client.vehicle_number}*` : "your vehicle"} to prepare the best renewal quote.\n\n📎 Please share:\n1️⃣ Current Policy PDF/Photo\n2️⃣ RC Copy (if available)\n\nYou can simply *reply to this message* with the documents.\n\nThank you! 🚗\n— *Grabyourcar Insurance*`
-    );
-    window.open(`https://wa.me/${fullPhone}?text=${message}`, "_blank");
-    toast.success("📱 WhatsApp opened to request documents!");
+  const requestPolicyViaWhatsApp = async (client: Client) => {
+    if (!client.phone || client.phone.startsWith("IB_")) { toast.error("No phone number available"); return; }
+    const msg = `🙏 Namaste ${client.customer_name || "Sir/Madam"},\n\nThis is *Grabyourcar Insurance* team.\n\nWe need your current motor insurance policy document for ${client.vehicle_number ? `vehicle *${client.vehicle_number}*` : "your vehicle"} to prepare the best renewal quote.\n\n📎 Please share:\n1️⃣ Current Policy PDF/Photo\n2️⃣ RC Copy (if available)\n\nYou can simply *reply to this message* with the documents.\n\nThank you! 🚗\n— *Grabyourcar Insurance*`;
+    const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+    await sendWhatsApp({ phone: client.phone, message: msg, name: client.customer_name, logEvent: "policy_doc_request" });
     supabase.from("insurance_activity_log").insert({
       client_id: client.id, activity_type: "whatsapp_sent",
       title: "Policy document requested via WhatsApp",
