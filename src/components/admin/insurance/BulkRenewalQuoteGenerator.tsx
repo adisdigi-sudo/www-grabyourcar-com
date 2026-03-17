@@ -93,6 +93,26 @@ const RENEWAL_QUOTES: BulkQuoteEntry[] = [
     addonPremium: 50,
     addons: ["24x7 Roadside Assistance"],
   },
+  {
+    id: "5",
+    customerName: "Orange Education Pvt Ltd",
+    phone: "7307370056",
+    vehicleMake: "Mercedes-Benz",
+    vehicleModel: "E Class E 220 d",
+    vehicleNumber: "HR26ET7871",
+    vehicleYear: 2022,
+    fuelType: "Diesel",
+    insuranceCompany: "Go Digit Insurance",
+    policyType: "Comprehensive",
+    idv: 4247193,
+    basicOD: 21298,
+    odDiscount: 0,
+    ncbDiscount: 0,
+    thirdParty: 7947,
+    securePremium: 0,
+    addonPremium: 64358,
+    addons: ["Zero Depreciation", "Tyre Protect", "Breakdown Assistance", "Consumables", "Engine & Gear Box Protect", "Personal Belonging", "Key & Lock Protect"],
+  },
 ];
 
 export function BulkRenewalQuoteGenerator({ onClose }: { onClose: () => void }) {
