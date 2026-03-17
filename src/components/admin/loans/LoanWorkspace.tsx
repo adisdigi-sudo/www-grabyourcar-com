@@ -65,7 +65,7 @@ const EMICalculator = () => {
     return rows;
   }, [amount, monthlyRate, emi, tenure]);
 
-  const handleShareWhatsApp = () => {
+  const handleShareWhatsApp = async () => {
     const msg = `*Car Loan EMI Plan*\n\nLoan Amount: ${fmt(amount)}\nInterest Rate: ${rate}%\nTenure: ${tenure} months\n\n*Monthly EMI: ${fmt(emi)}*\nTotal Interest: ${fmt(totalInterest)}\nTotal Payable: ${fmt(totalPayable)}\n\n_Powered by GrabYourCar_\nwww.grabyourcar.com`;
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
   };
