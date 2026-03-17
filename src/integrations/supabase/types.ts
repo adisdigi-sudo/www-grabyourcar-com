@@ -6416,6 +6416,57 @@ export type Database = {
           },
         ]
       }
+      lead_assignments: {
+        Row: {
+          assigned_at: string | null
+          assigned_by_user_id: string | null
+          assigned_to_user_id: string
+          assignment_type: string | null
+          id: string
+          lead_id: string
+          notes: string | null
+          status: string | null
+          vertical_id: string | null
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_by_user_id?: string | null
+          assigned_to_user_id: string
+          assignment_type?: string | null
+          id?: string
+          lead_id: string
+          notes?: string | null
+          status?: string | null
+          vertical_id?: string | null
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_by_user_id?: string | null
+          assigned_to_user_id?: string
+          assignment_type?: string | null
+          id?: string
+          lead_id?: string
+          notes?: string | null
+          status?: string | null
+          vertical_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_lead"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_assignments_vertical_id_fkey"
+            columns: ["vertical_id"]
+            isOneToOne: false
+            referencedRelation: "business_verticals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_imports: {
         Row: {
           completed_at: string | null
@@ -10044,6 +10095,14 @@ export type Database = {
       }
     }
     Functions: {
+      auto_assign_lead_round_robin: {
+        Args: {
+          p_assigned_by?: string
+          p_lead_id: string
+          p_vertical_id: string
+        }
+        Returns: string
+      }
       get_crm_role: { Args: { _user_id: string }; Returns: string }
       get_user_tenant_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
