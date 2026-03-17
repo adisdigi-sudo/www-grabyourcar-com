@@ -39,6 +39,7 @@ import {
   LogOut,
   Building2,
   MessageCircle,
+  KeyRound,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AdminGlobalSearch } from "./AdminGlobalSearch";
