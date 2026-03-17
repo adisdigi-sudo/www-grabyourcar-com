@@ -713,9 +713,15 @@ export function InsuranceWorkspace() {
                     <TableCell className="font-semibold text-xs">{policy.premium_amount ? `₹${policy.premium_amount.toLocaleString("en-IN")}` : "—"}</TableCell>
                     <TableCell className="text-xs font-medium">{format(new Date(policy.expiry_date!), "dd MMM yyyy")}</TableCell>
                     <TableCell><Badge variant="outline" className={cn("text-[10px] font-bold", isUrgent ? "bg-red-100 text-red-700 border-red-200" : isWarning ? "bg-orange-100 text-orange-700 border-orange-200" : days <= 30 ? "bg-amber-100 text-amber-700 border-amber-200" : "bg-blue-100 text-blue-700 border-blue-200")}>{days} days</Badge></TableCell>
-                    <TableCell onClick={e => e.stopPropagation()}><div className="flex gap-0.5">
+                    <TableCell onClick={e => e.stopPropagation()}><div className="flex gap-0.5 flex-wrap">
                       {phone && <a href={`tel:${c?.phone}`}><Button variant="ghost" size="icon" className="h-6 w-6"><PhoneCall className="h-3 w-3 text-primary" /></Button></a>}
                       {waLink && <a href={waLink} target="_blank" rel="noopener noreferrer"><Button variant="ghost" size="icon" className="h-6 w-6"><MessageSquare className="h-3 w-3 text-green-600" /></Button></a>}
+                      <Button size="sm" variant="outline" className="h-6 text-[9px] px-1.5 text-emerald-600 border-emerald-200" onClick={() => { setRenewalTargetPolicy(policy); setRenewalWonExpiryDate(undefined); setShowRenewalWonDialog(true); }}>
+                        <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" /> Won
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-6 text-[9px] px-1.5 text-red-600 border-red-200" onClick={() => { setRenewalTargetPolicy(policy); setRenewalLostRemarks(""); setShowRenewalLostDialog(true); }}>
+                        <XCircle className="h-2.5 w-2.5 mr-0.5" /> Lost
+                      </Button>
                     </div></TableCell>
                   </TableRow>
                 );
