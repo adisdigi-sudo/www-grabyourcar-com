@@ -93,7 +93,7 @@ const RENEWAL_QUOTES: BulkQuoteEntry[] = [
     addonPremium: 50,
     addons: ["24x7 Roadside Assistance"],
   },
-
+];
 
 export function BulkRenewalQuoteGenerator({ onClose }: { onClose: () => void }) {
   const [quotes] = useState<BulkQuoteEntry[]>(RENEWAL_QUOTES);
