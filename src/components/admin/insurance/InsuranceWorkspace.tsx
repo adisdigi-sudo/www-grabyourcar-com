@@ -32,6 +32,7 @@ import InsuranceQuoteModal from "./InsuranceQuoteModal";
 import { InsurancePolicyDocumentUploader } from "./InsurancePolicyDocumentUploader";
 import { LeadImportDialog } from "../shared/LeadImportDialog";
 import { StageNotificationBanner, buildInsuranceNotifications } from "../shared/StageNotificationBanner";
+import { BulkRenewalQuoteGenerator } from "./BulkRenewalQuoteGenerator";
 
 // ── 6+1 Pipeline Stages ──
 const PIPELINE_STAGES = [
