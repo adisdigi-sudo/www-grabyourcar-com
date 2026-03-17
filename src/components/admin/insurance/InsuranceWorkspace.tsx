@@ -585,7 +585,7 @@ export function InsuranceWorkspace() {
 
       <LeadImportDialog open={showImport} onOpenChange={setShowImport} title="Import Insurance Leads" templateColumns={["name", "phone", "city", "vehicle_number", "vehicle_make", "vehicle_model", "source"]}
         onImport={async (leads) => {
-          const rows = leads.map(l => ({ customer_name: l.name || l.customer_name || "Unknown", phone: (l.phone || l.mobile || "").replace(/\D/g, ""), city: l.city || null, vehicle_number: l.vehicle_number || null, vehicle_make: l.vehicle_make || null, vehicle_model: l.vehicle_model || null, lead_source: l.source || "CSV Import", pipeline_stage: "smart_calling", lead_status: "new", priority: "medium" }));
+          const rows = leads.map(l => ({ customer_name: l.name || l.customer_name || "Unknown", phone: (l.phone || l.mobile || "").replace(/\D/g, ""), city: l.city || null, vehicle_number: l.vehicle_number || null, vehicle_make: l.vehicle_make || null, vehicle_model: l.vehicle_model || null, lead_source: l.source || "CSV Import", pipeline_stage: "new_lead", lead_status: "new", priority: "medium" }));
           const { error } = await supabase.from("insurance_clients").insert(rows);
           if (error) throw error;
           queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
