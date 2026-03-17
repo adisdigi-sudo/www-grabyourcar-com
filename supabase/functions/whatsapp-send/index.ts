@@ -84,7 +84,17 @@ serve(async (req) => {
       );
     }
 
-    const { to, message, messageType = "text", template_name, template_variables, mediaUrl }: SendMessageRequest = await req.json();
+    const body = await req.json();
+
+    // Health check action for Integration Hub
+    if (body.action === "health_check") {
+      return new Response(
+        JSON.stringify({ status: "ok", configured: true, phoneNumberId: WHATSAPP_PHONE_NUMBER_ID.slice(-4) }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { to, message, messageType = "text", template_name, template_variables, mediaUrl }: SendMessageRequest = body;
 
     if (!to) {
       return new Response(
