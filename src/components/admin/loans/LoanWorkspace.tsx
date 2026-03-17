@@ -428,9 +428,10 @@ export const LoanWorkspace = () => {
   }, [applications, quickMoveMutation]);
 
   const handleCardClick = (app: any) => { setSelectedApp(app); setShowStageModal(true); };
-  const handleWhatsApp = (phone: string, name: string) => {
+  const handleWhatsApp = async (phone: string, name: string) => {
     const msg = `Hi ${name}, this is from GrabYourCar regarding your car loan inquiry. How can I help you today?`;
-    window.open(`https://wa.me/91${phone.replace(/\D/g, '').slice(-10)}?text=${encodeURIComponent(msg)}`, '_blank');
+    const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+    await sendWhatsApp({ phone, message: msg, name, logEvent: "loan_inquiry" });
   };
 
   const pipelineStages = LOAN_STAGES.filter(s => s !== 'lost');
