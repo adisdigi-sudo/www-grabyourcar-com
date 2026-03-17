@@ -311,14 +311,11 @@ export function InsuranceStatusPipeline() {
     return clean.startsWith("91") ? clean : `91${clean}`;
   };
 
-  const requestPolicyViaWhatsApp = (client: Client) => {
-    const fullPhone = getWhatsAppPhone(client);
-    if (!fullPhone) { toast.error("No phone number available"); return; }
-    const message = encodeURIComponent(
-      `🙏 Namaste ${client.customer_name || "Sir/Madam"},\n\nThis is *Grabyourcar Insurance* team.\n\nWe need your current motor insurance policy document for ${client.vehicle_number ? `vehicle *${client.vehicle_number}*` : "your vehicle"} to prepare the best renewal quote.\n\n📎 Please share:\n1️⃣ Current Policy PDF/Photo\n2️⃣ RC Copy (if available)\n\nYou can simply *reply to this message* with the documents.\n\nThank you! 🚗\n— *Grabyourcar Insurance*`
-    );
-    window.open(`https://wa.me/${fullPhone}?text=${message}`, "_blank");
-    toast.success("📱 WhatsApp opened to request documents!");
+  const requestPolicyViaWhatsApp = async (client: Client) => {
+    if (!client.phone || client.phone.startsWith("IB_")) { toast.error("No phone number available"); return; }
+    const msg = `🙏 Namaste ${client.customer_name || "Sir/Madam"},\n\nThis is *Grabyourcar Insurance* team.\n\nWe need your current motor insurance policy document for ${client.vehicle_number ? `vehicle *${client.vehicle_number}*` : "your vehicle"} to prepare the best renewal quote.\n\n📎 Please share:\n1️⃣ Current Policy PDF/Photo\n2️⃣ RC Copy (if available)\n\nYou can simply *reply to this message* with the documents.\n\nThank you! 🚗\n— *Grabyourcar Insurance*`;
+    const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+    await sendWhatsApp({ phone: client.phone, message: msg, name: client.customer_name, logEvent: "policy_doc_request" });
     supabase.from("insurance_activity_log").insert({
       client_id: client.id, activity_type: "whatsapp_sent",
       title: "Policy document requested via WhatsApp",
@@ -870,7 +867,7 @@ export function InsuranceStatusPipeline() {
                       </Button>
                       <Button
                         className="gap-2 bg-green-600 hover:bg-green-700 text-white h-11"
-                        onClick={() => {
+                        onClick={async () => {
                           const phone = (selectedClient.phone || "").replace(/\D/g, "");
                           const fullPhone = phone.startsWith("91") ? phone : `91${phone}`;
                           generateInsuranceQuotePdf({
@@ -892,9 +889,9 @@ export function InsuranceStatusPipeline() {
                             addonPremium: 3500,
                             addons: ["Zero Depreciation", "Engine Protection", "Roadside Assistance (RSA)"],
                           });
-                          const msg = encodeURIComponent(`Hi ${selectedClient.customer_name}! Here is your insurance quote. Please find the PDF attached.\n\n— Grabyourcar Insurance\n📞 +91 98559 24442`);
-                          window.open(`https://wa.me/${fullPhone}?text=${msg}`, "_blank");
-                          toast.success("📱 PDF downloaded & WhatsApp opened!");
+                          const msgText = `Hi ${selectedClient.customer_name}! Here is your insurance quote. Please find the PDF attached.\n\n— Grabyourcar Insurance\n📞 +91 98559 24442`;
+                          const { sendWhatsApp: sendWA } = await import("@/lib/sendWhatsApp");
+                          await sendWA({ phone: selectedClient.phone, message: msgText, name: selectedClient.customer_name, logEvent: "quote_share" });
                         }}
                       >
                         <MessageSquare className="h-4 w-4" /> WhatsApp
@@ -996,14 +993,10 @@ export function InsuranceStatusPipeline() {
                                 {/* Share policy via WhatsApp */}
                                 {displayPhone(selectedClient.phone) && (
                                   <Button size="icon" variant="ghost" className="h-7 w-7" title="Send policy via WhatsApp"
-                                    onClick={() => {
-                                      const phone = selectedClient.phone.replace(/\D/g, "");
-                                      const fullPhone = phone.startsWith("91") ? phone : `91${phone}`;
-                                      const msg = encodeURIComponent(
-                                        `📋 *Policy Details*\n━━━━━━━━━━━━━━━━\n📄 Policy: ${p.policy_number}\n🏢 Insurer: ${p.insurer || "N/A"}\n💰 Premium: ₹${p.premium_amount ? Number(p.premium_amount).toLocaleString("en-IN") : "N/A"}\n📅 Expiry: ${p.expiry_date ? new Date(p.expiry_date).toLocaleDateString("en-IN") : "N/A"}\n🚗 Vehicle: ${selectedClient.vehicle_number || "N/A"}\n\n— *Grabyourcar Insurance*`
-                                      );
-                                      window.open(`https://wa.me/${fullPhone}?text=${msg}`, "_blank");
-                                      toast.success("Sharing policy via WhatsApp!");
+                                    onClick={async () => {
+                                      const msgText = `📋 *Policy Details*\n━━━━━━━━━━━━━━━━\n📄 Policy: ${p.policy_number}\n🏢 Insurer: ${p.insurer || "N/A"}\n💰 Premium: ₹${p.premium_amount ? Number(p.premium_amount).toLocaleString("en-IN") : "N/A"}\n📅 Expiry: ${p.expiry_date ? new Date(p.expiry_date).toLocaleDateString("en-IN") : "N/A"}\n🚗 Vehicle: ${selectedClient.vehicle_number || "N/A"}\n\n— *Grabyourcar Insurance*`;
+                                      const { sendWhatsApp: sendWA } = await import("@/lib/sendWhatsApp");
+                                      await sendWA({ phone: selectedClient.phone, message: msgText, name: selectedClient.customer_name, logEvent: "policy_share" });
                                     }}>
                                     <Send className="h-3.5 w-3.5 text-green-600" />
                                   </Button>

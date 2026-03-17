@@ -280,11 +280,11 @@ function HSRPCard({ booking, onDragStart, onDragEnd, onClick, isDragging }: any)
     completed: `Hi ${booking.owner_name}, your ${booking.service_type} has been installed on ${booking.registration_number}. Thank you for choosing GrabYourCar! 🚗`,
   };
 
-  const handleWhatsApp = (e: React.MouseEvent) => {
+  const handleWhatsApp = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    const phone = (booking.mobile || "").replace(/\D/g, "");
     const msg = waMessages[stage] || waMessages.new_booking;
-    window.open(`https://wa.me/91${phone.replace(/^91/, "")}?text=${encodeURIComponent(msg)}`, "_blank");
+    const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+    await sendWhatsApp({ phone: booking.mobile || "", message: msg, name: booking.owner_name, logEvent: "hsrp_update" });
   };
 
   return (
@@ -468,9 +468,10 @@ function HSRPDetailModal({ open, onOpenChange, booking, onUpdate }: any) {
     toast.success("Receipt PDF downloaded!");
   };
 
-  const handleShareWhatsApp = () => {
+  const handleShareWhatsApp = async () => {
     const msg = `*HSRP Booking - GrabYourCar*\n\nOwner: ${booking.owner_name}\nVehicle: ${booking.registration_number}\nService: ${booking.service_type}\nAmount: Rs.${(booking.payment_amount || 0).toLocaleString("en-IN")}\nStatus: ${booking.payment_status}\n${booking.scheduled_date ? `Scheduled: ${booking.scheduled_date}` : ""}\n\nwww.grabyourcar.com`;
-    window.open(`https://wa.me/91${booking.mobile?.replace(/\D/g, "").slice(-10)}?text=${encodeURIComponent(msg)}`, "_blank");
+    const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+    await sendWhatsApp({ phone: booking.mobile || "", message: msg, name: booking.owner_name, logEvent: "hsrp_share" });
   };
 
   return (

@@ -298,12 +298,12 @@ function RentalCard({ booking, onDragStart, onDragEnd, onClick, isDragging }: an
   const customerName = booking.customer_name || booking.notes?.match(/Imported:\s*(.+?)\s*-/)?.[1] || "";
   const customerPhone = booking.phone || booking.notes?.match(/-\s*(\d{10})/)?.[1] || "";
 
-  const handleWhatsApp = (e: React.MouseEvent) => {
+  const handleWhatsApp = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    const phone = customerPhone.replace(/\D/g, "");
-    if (!phone) { return; }
+    if (!customerPhone) return;
     const msg = `Hi${customerName ? ` ${customerName}` : ""}, regarding your ${booking.vehicle_name} rental booking (${booking.pickup_date ? format(new Date(booking.pickup_date), "dd MMM") : ""} - ${booking.dropoff_date ? format(new Date(booking.dropoff_date), "dd MMM") : ""}). Rs.${(booking.total_amount || 0).toLocaleString("en-IN")}. — GrabYourCar`;
-    window.open(`https://wa.me/91${phone.replace(/^91/, "")}?text=${encodeURIComponent(msg)}`, "_blank");
+    const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+    await sendWhatsApp({ phone: customerPhone, message: msg, name: customerName, logEvent: "rental_update" });
   };
 
   return (
@@ -492,7 +492,7 @@ function RentalDetailModal({ open, onOpenChange, booking, vehicles, partners, on
     toast.success("Agreement PDF downloaded!");
   };
 
-  const handleShareWhatsApp = () => {
+  const handleShareWhatsApp = async () => {
     const msg = `*Self-Drive Rental - GrabYourCar*\n\nVehicle: ${booking.vehicle_name}\nType: ${booking.vehicle_type}\nPickup: ${booking.pickup_date} at ${booking.pickup_time}\nLocation: ${booking.pickup_location}\nDrop-off: ${booking.dropoff_date}\nTotal: Rs.${(booking.total_amount || 0).toLocaleString("en-IN")}\n\nwww.grabyourcar.com`;
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
   };

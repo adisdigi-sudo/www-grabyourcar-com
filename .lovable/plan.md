@@ -1,69 +1,43 @@
 
 
-# Plan: One-Click WhatsApp API Send Across All Workspaces
+## Plan: Holi WhatsApp Share Tool (No API Needed)
 
-## Current State
+### Approach
+Since no WhatsApp API is involved, we'll build a **personal share tool** that works directly from your phone's WhatsApp app using deep links.
 
-The platform has **two WhatsApp send patterns**:
-1. **API sends** (already working): ~8 places use `supabase.functions.invoke("whatsapp-send")` — these actually send messages via Meta API.
-2. **wa.me link opens** (~18 files, ~145 instances): These just open WhatsApp Web in a new tab — the user still has to manually press "Send". This is the problem.
+**How it works:**
+1. Upload your Holi image to the project and host it on a **public shareable page** (e.g., `/holi`)
+2. Create an **admin share tool** where you paste/enter contact numbers and tap "Send" — each tap opens WhatsApp with a pre-filled greeting message + link to the hosted image page
+3. The message will include a link to `grabyourcar.lovable.app/holi` where the recipient sees the full branded Holi poster
 
-## What Will Change
+### What gets built
 
-Create a **unified `sendWhatsApp()` utility** that calls the `whatsapp-send` edge function directly. Then replace all `window.open(wa.me/...)` calls across 18 admin components with this utility, so every WhatsApp button becomes a **one-click auto-send**.
+**1. Public Holi Greeting Page (`/pages/HoliGreeting.tsx`)**
+- Displays the uploaded Holi image full-screen with GrabYourCar branding
+- Mobile-optimized, shareable URL: `grabyourcar.lovable.app/holi`
 
-## Technical Approach
+**2. Admin Bulk Share Tool (`/components/admin/HoliBulkShare.tsx`)**
+- Textarea to paste phone numbers (one per line or comma-separated)
+- Pre-written Holi message with the image page link
+- "Send Next" button that opens `wa.me/{number}?text=...` one at a time
+- Progress tracker showing how many sent
 
-### 1. Create unified send utility (`src/lib/sendWhatsApp.ts`)
-A single reusable function:
-```
-sendWhatsApp({ phone, message, name?, logEvent? }) → { success, messageId }
-```
-- Normalizes phone numbers
-- Calls `whatsapp-send` edge function
-- Logs to `wa_message_logs` automatically
-- Returns success/failure with toast feedback
-- Falls back to wa.me link if API fails (graceful degradation)
+**3. Files to create/edit**
+- Copy uploaded image to `public/images/holi-2026.png`
+- Create `src/pages/HoliGreeting.tsx` — public greeting page
+- Create `src/components/admin/HoliBulkShare.tsx` — bulk share tool
+- Edit `src/App.tsx` — add `/holi` route
+- Edit `src/pages/AdminLayout.tsx` — add access to the share tool
 
-### 2. Update `whatsapp-send` edge function
-Add a health check handler so the Integration Hub ping works, and ensure all message types (text, template) work reliably.
-
-### 3. Replace wa.me links in all admin workspaces
-Files to update (all in `src/components/admin/`):
-
-| Workspace | File | wa.me instances |
-|-----------|------|----------------|
-| Insurance CRM | `InsuranceCRMDashboard.tsx` | ~8 instances |
-| Insurance Renewals | `InsuranceRenewalsEngine.tsx` | `sendDirectWhatsApp()` |
-| Insurance Quote | `InsuranceQuoteModal.tsx` | 1 |
-| Insurance Clients | `InsuranceClientsManager.tsx` | 2 |
-| Lead Management | `LeadManagement.tsx` | 2 |
-| HSRP | `HSRPWorkspace.tsx` | 2 |
-| Loans | `LoanWorkspace.tsx` | 3 |
-| Loans Pipeline | `LoanPipelineBoard.tsx` | 1 |
-| Loan Disposition | `LoanCallDispositionModal.tsx` | 1 |
-| Sales | `SalesWorkspace.tsx` | 2 |
-| Calling Queue | `SmartCallingQueue.tsx` | 1 |
-| WA Management | `WhatsAppManagement.tsx` | 1 |
-
-Each `window.open(wa.me/...)` becomes:
-```ts
-import { sendWhatsApp } from "@/lib/sendWhatsApp";
-await sendWhatsApp({ phone, message, name });
+### Flow
+```text
+Admin pastes numbers → clicks "Send Next" → WhatsApp opens with message →
+admin hits send in WhatsApp → comes back → clicks "Send Next" for next number
 ```
 
-### 4. Fix existing bugs
-- `whatsapp-send` edge function doesn't handle `health_check` action — the Integration Hub ping always fails. Add that handler.
-- `InsuranceRenewalsEngine.tsx` `sendDirectWhatsApp` opens wa.me instead of using API — convert to API send.
-- Bulk send in `BulkRenewalQuoteGenerator` uses `wa-automation-trigger` which requires matching event rules — switch to direct `whatsapp-send` for reliability.
-
-### 5. Message logging
-Every API send will automatically log to `wa_message_logs` so the Analytics dashboard in Marketing shows real data.
-
-## Scope
-- ~15 files modified
-- 1 new utility file created
-- 1 edge function updated
-- No database changes needed
-- No new secrets needed (WHATSAPP_ACCESS_TOKEN and WHATSAPP_PHONE_NUMBER_ID already configured)
+**Message template:**
+> 🎨 Wishing you a Colorful & Joyful Holi! 🎉
+> May your journeys be filled with vibrant colors & happy memories.
+> Happy Holi from Team GrabYourCar! 🚗
+> 👉 grabyourcar.lovable.app/holi
 

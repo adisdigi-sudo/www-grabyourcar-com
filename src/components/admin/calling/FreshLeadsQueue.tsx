@@ -98,7 +98,9 @@ export function FreshLeadsQueue() {
     if (method === "phone") {
       window.open(`tel:+${fullPhone}`, "_self");
     } else {
-      window.open(`https://wa.me/${fullPhone}`, "_blank");
+      import("@/lib/sendWhatsApp").then(({ sendWhatsApp }) => {
+        sendWhatsApp({ phone, message: `Hi ${name}, this is GrabYourCar. How can we help you today?`, name, logEvent: "fresh_lead_call" });
+      });
     }
 
     setActiveCall({ phone, name, leadId, leadType: leadType || slug, method });

@@ -112,13 +112,11 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
     onQuoteSent?.();
   };
 
-  const handleWhatsApp = () => {
+  const handleWhatsApp = async () => {
     generateInsuranceQuotePdf(buildQuoteData());
     const msg = `Hi ${client.customer_name || ""}! 🚗\n\nHere's your *Motor Insurance Quotation* from Grabyourcar:\n\n🏢 Insurer: ${form.insuranceCompany}\n🚘 Vehicle: ${client.vehicle_make || ""} ${client.vehicle_model || ""}\n📋 Reg: ${client.vehicle_number || "N/A"}\n💰 IDV: ${formatINR(form.idv)}\n\n📊 *Premium Breakup:*\nNet Premium: ${formatINR(netPremium)}\nGST (18%): ${formatINR(gst)}\n*Total: ${formatINR(totalPremium)}*\n\n✅ Coverage: ${form.addons.join(", ")}\n\nPlease find the detailed PDF quote attached. Let us know to proceed!\n\n— Grabyourcar Insurance Desk\n📞 +91 98559 24442`;
-    const cleanPhone = (client.phone || "").replace(/\D/g, "");
-    const fullPhone = cleanPhone.startsWith("91") ? cleanPhone : `91${cleanPhone}`;
-    window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(msg)}`, "_blank");
-    toast.success("📱 PDF downloaded & WhatsApp opened – attach the PDF!");
+    const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+    await sendWhatsApp({ phone: client.phone || "", message: msg, name: client.customer_name, logEvent: "insurance_quote" });
     onQuoteSent?.();
   };
 

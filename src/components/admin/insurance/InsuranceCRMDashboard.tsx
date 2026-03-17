@@ -480,12 +480,9 @@ export function InsuranceCRMDashboard() {
     toast.success("Policy details downloaded!");
   }, [now]);
 
-  const shareViaWhatsApp = useCallback((r: PolicyRow, phone: string) => {
-    const cleanPhone = phone.replace(/\D/g, "");
-    const fullPhone = cleanPhone.startsWith("91") ? cleanPhone : `91${cleanPhone}`;
-    const text = encodeURIComponent(getPolicyText(r));
-    window.open(`https://wa.me/${fullPhone}?text=${text}`, "_blank");
-    toast.success("Opening WhatsApp...");
+  const shareViaWhatsApp = useCallback(async (r: PolicyRow, phone: string) => {
+    const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+    await sendWhatsApp({ phone, message: getPolicyText(r), name: r.customer_name });
   }, []);
 
   const shareViaEmail = useCallback((r: PolicyRow, email: string) => {
@@ -1704,12 +1701,11 @@ ${currentPremium && renewalPremium ? `\n📊 *Comparison:*\n💰 Current: ${form
 
   const currentMessage = activeTemplate === "notice" ? buildNotice() : buildQuote();
 
-  const sendViaWhatsAppLink = () => {
+  const sendViaWhatsAppLink = async () => {
     const cleanPhone = phone.replace(/\D/g, "");
     if (!cleanPhone) { toast.error("Enter a valid phone number"); return; }
-    const fullPhone = cleanPhone.startsWith("91") ? cleanPhone : `91${cleanPhone}`;
-    window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(currentMessage)}`, "_blank");
-    toast.success(`${activeTemplate === "notice" ? "Renewal Notice" : "Renewal Quote"} opened in WhatsApp`);
+    const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+    await sendWhatsApp({ phone: cleanPhone, message: currentMessage, logEvent: activeTemplate === "notice" ? "renewal_notice" : "renewal_quote" });
     onClose();
   };
 
@@ -2031,12 +2027,11 @@ Thank you for choosing Grabyourcar for your motor insurance needs! Here's your p
 — *Grabyourcar Insurance* 🛡️`;
   };
 
-  const sendTemplateViaWhatsApp = (template: string) => {
+  const sendTemplateViaWhatsApp = async (template: string) => {
     const phone = whatsappNumber.replace(/\D/g, "");
     if (!phone) { toast.error("Enter a valid phone number"); return; }
-    const fullPhone = phone.startsWith("91") ? phone : `91${phone}`;
-    window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(template)}`, "_blank");
-    toast.success("WhatsApp opened!");
+    const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+    await sendWhatsApp({ phone, message: template, logEvent: "template_send" });
   };
 
   return (

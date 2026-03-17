@@ -65,7 +65,7 @@ const EMICalculator = () => {
     return rows;
   }, [amount, monthlyRate, emi, tenure]);
 
-  const handleShareWhatsApp = () => {
+  const handleShareWhatsApp = async () => {
     const msg = `*Car Loan EMI Plan*\n\nLoan Amount: ${fmt(amount)}\nInterest Rate: ${rate}%\nTenure: ${tenure} months\n\n*Monthly EMI: ${fmt(emi)}*\nTotal Interest: ${fmt(totalInterest)}\nTotal Payable: ${fmt(totalPayable)}\n\n_Powered by GrabYourCar_\nwww.grabyourcar.com`;
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
   };
@@ -428,9 +428,10 @@ export const LoanWorkspace = () => {
   }, [applications, quickMoveMutation]);
 
   const handleCardClick = (app: any) => { setSelectedApp(app); setShowStageModal(true); };
-  const handleWhatsApp = (phone: string, name: string) => {
+  const handleWhatsApp = async (phone: string, name: string) => {
     const msg = `Hi ${name}, this is from GrabYourCar regarding your car loan inquiry. How can I help you today?`;
-    window.open(`https://wa.me/91${phone.replace(/\D/g, '').slice(-10)}?text=${encodeURIComponent(msg)}`, '_blank');
+    const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+    await sendWhatsApp({ phone, message: msg, name, logEvent: "loan_inquiry" });
   };
 
   const pipelineStages = LOAN_STAGES.filter(s => s !== 'lost');
@@ -888,9 +889,10 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
                     <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => window.open(`tel:+91${application.phone.replace(/\D/g, '').slice(-10)}`)}>
                       <PhoneCall className="h-3 w-3 text-emerald-600" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => {
+                    <Button variant="ghost" size="icon" className="h-5 w-5" onClick={async () => {
                       const msg = `Hi ${application.customer_name}, this is from GrabYourCar regarding your car loan. How can I help?`;
-                      window.open(`https://wa.me/91${application.phone.replace(/\D/g, '').slice(-10)}?text=${encodeURIComponent(msg)}`);
+                      const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+                      await sendWhatsApp({ phone: application.phone, message: msg, name: application.customer_name, logEvent: "loan_followup" });
                     }}>
                       <MessageCircle className="h-3 w-3 text-green-600" />
                     </Button>

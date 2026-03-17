@@ -766,17 +766,13 @@ export function InsuranceSmartCalling() {
                     setBulkSending(true);
                     const selected = callingList.filter(c => selectedLeads.has(c.id));
                     let count = 0;
-                    for (const client of selected) {
-                      const cleanPhone = client.phone.replace(/\D/g, "");
-                      const fullPhone = cleanPhone.startsWith("91") ? cleanPhone : `91${cleanPhone}`;
+                    const { sendWhatsAppBulk } = await import("@/lib/sendWhatsApp");
+                    const recipients = selected.map(client => {
                       const daysLeft = client.policy_expiry_date ? differenceInDays(new Date(client.policy_expiry_date), new Date()) : 0;
-                      const msg = `Hi ${client.customer_name || ""}! Your insurance renewal is ${daysLeft <= 0 ? "overdue" : `due in ${daysLeft} days`} for your ${client.vehicle_make || ""} ${client.vehicle_model || ""} (${client.vehicle_number || ""}).\n\nCurrent Insurer: ${client.current_insurer || "N/A"}\nNCB: ${client.ncb_percentage ?? 0}%\n\nWe have the best renewal offers. Contact us!\n📞 +91 98559 24442\n🌐 www.grabyourcar.com\n- Grabyourcar Insurance`;
-                      window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(msg)}`, "_blank");
-                      count++;
-                      await new Promise(r => setTimeout(r, 1500));
-                    }
+                      return { phone: client.phone, name: client.customer_name || "", message: `Hi ${client.customer_name || ""}! Your insurance renewal is ${daysLeft <= 0 ? "overdue" : `due in ${daysLeft} days`} for your ${client.vehicle_make || ""} ${client.vehicle_model || ""} (${client.vehicle_number || ""}).\n\nCurrent Insurer: ${client.current_insurer || "N/A"}\nNCB: ${client.ncb_percentage ?? 0}%\n\nWe have the best renewal offers. Contact us!\n📞 +91 98559 24442\n🌐 www.grabyourcar.com\n- Grabyourcar Insurance` };
+                    });
+                    await sendWhatsAppBulk(recipients);
                     setBulkSending(false);
-                    toast.success(`📱 Opened WhatsApp for ${count} clients!`);
                   }}
                 >
                   <MessageCircle className="h-4 w-4" />
@@ -1206,12 +1202,10 @@ export function InsuranceSmartCalling() {
                         ? `Hi ${currentClient.customer_name || ""}! Here is your insurance quote for your ${currentClient.vehicle_make || ""} ${currentClient.vehicle_model || ""}.\n\nVehicle: ${currentClient.vehicle_number || "N/A"}\nPolicy Type: ${currentClient.current_policy_type || "Comprehensive"}\nInsurer: ${currentClient.current_insurer || "Best Available"}\n\nPlease review and let us know if you'd like to proceed. Thank you!`
                         : `Hi ${currentClient.customer_name || ""}! Your insurance renewal is due${currentClient.policy_expiry_date ? ` on ${currentClient.policy_expiry_date}` : " soon"} for your ${currentClient.vehicle_make || ""} ${currentClient.vehicle_model || ""}.\n\nVehicle: ${currentClient.vehicle_number || "N/A"}\nCurrent Insurer: ${currentClient.current_insurer || "N/A"}\nNCB: ${currentClient.ncb_percentage ?? "N/A"}%\n\nWe have the best renewal offers for you. Let's connect!`;
 
-                      const handleWhatsApp = () => {
-                        const cleanPhone = (currentClient.phone || "").replace(/\D/g, "");
-                        const fullPhone = cleanPhone.startsWith("91") ? cleanPhone : `91${cleanPhone}`;
-                        window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(shareMsg)}`, "_blank");
+                      const handleWhatsApp = async () => {
+                        const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+                        await sendWhatsApp({ phone: currentClient.phone || "", message: shareMsg, name: currentClient.customer_name, logEvent: `call_${o.value}` });
                         setCallOutcome(o.value);
-                        toast.success(`📱 Opened WhatsApp for ${o.label}`);
                       };
 
                       const handleEmail = () => {
