@@ -277,6 +277,7 @@ const navItems: NavItem[] = [
     allowedRoles: ["super_admin", "admin"],
     children: [
       { id: "integrations-api", label: "API Portal", icon: Database },
+      { id: "open-api-portal", label: "Open API Keys", icon: Key },
       { id: "integrations-whatsapp", label: "WhatsApp API", icon: MessageSquare },
       { id: "integrations-shipping", label: "Shipping Partners", icon: Package },
       { id: "integrations-payments", label: "Payment Gateway", icon: CreditCard },
