@@ -130,7 +130,7 @@ export const LeadImportManager = ({ verticalCategory, verticalId }: LeadImportMa
       }
 
       const { data, error } = await supabase.functions.invoke("lead-import", {
-        body: { action: "api-push", leads, source: importSource },
+        body: { action: "api-push", leads, source: importSource, verticalId },
       });
       if (error) throw error;
       return data;
