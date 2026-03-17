@@ -148,7 +148,7 @@ export const HRDeepWorkspace = ({ initialTab = "overview" }: { initialTab?: stri
         deductions, tds, pf, gross_salary: gross, net_salary: net,
         payment_mode: entry.payment_mode || "bank_transfer",
         status: "pending",
-      });
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["hr-payrolls"] }); setShowDialog(null); resetForm(); toast.success("Payroll entry added"); },
