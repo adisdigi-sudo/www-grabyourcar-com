@@ -1205,7 +1205,7 @@ export function InsuranceWorkspace() {
                     {followUpDate ? format(followUpDate, "PPP") : "Pick a date"}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={followUpDate} onSelect={(d) => { setFollowUpDate(d); if (d && followUpTime) { setTimeout(() => { if (pendingMoveClient) confirmFollowUp(); }, 300); } }} /></PopoverContent>
+                <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={followUpDate} onSelect={(d) => { setFollowUpDate(d); if (d && pendingMoveClient) { setTimeout(() => { moveStage.mutate({ clientId: pendingMoveClient.id, newStage: "follow_up", extras: { follow_up_date: format(d, "yyyy-MM-dd"), follow_up_time: followUpTime, notes: followUpRemarks || undefined } }); }, 300); } }} /></PopoverContent>
               </Popover>
             </div>
             <div className="space-y-1">
