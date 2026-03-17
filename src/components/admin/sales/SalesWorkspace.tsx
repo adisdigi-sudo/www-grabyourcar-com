@@ -409,7 +409,7 @@ function SalesLeadCard({ lead, onDragStart, onDragEnd, onClick, isDragging }: an
             <Button variant="ghost" size="icon" className="h-5 w-5" onClick={e => { e.stopPropagation(); window.open(`tel:${lead.phone}`); }}>
               <PhoneCall className="h-3 w-3 text-blue-600" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={e => { e.stopPropagation(); window.open(`https://wa.me/91${lead.phone?.replace(/\D/g, "").slice(-10)}`); }}>
+            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={async e => { e.stopPropagation(); const { sendWhatsApp } = await import("@/lib/sendWhatsApp"); await sendWhatsApp({ phone: lead.phone || "", message: `Hi ${lead.customer_name}, this is GrabYourCar. How can we help?`, name: lead.customer_name, logEvent: "sales_contact" }); }}>
               <MessageCircle className="h-3 w-3 text-green-600" />
             </Button>
           </div>
