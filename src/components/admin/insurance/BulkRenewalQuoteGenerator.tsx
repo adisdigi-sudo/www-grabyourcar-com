@@ -73,6 +73,26 @@ const RENEWAL_QUOTES: BulkQuoteEntry[] = [
     addonPremium: 11199,
     addons: ["Zero Depreciation", "24x7 Roadside Assistance", "Engine Protection Cover", "Consumables", "Key & Lock Replacement", "Invoice Price Cover", "Tyre Protector", "Loss of Personal Belongings"],
   },
+  {
+    id: "4",
+    customerName: "Regius Business",
+    phone: "",
+    vehicleMake: "Mercedes-Benz",
+    vehicleModel: "E Class",
+    vehicleNumber: "HR26DL4204",
+    vehicleYear: 2018,
+    fuelType: "Diesel",
+    insuranceCompany: "United India Insurance",
+    policyType: "Comprehensive",
+    idv: 1894068,
+    basicOD: 66482,
+    odDiscount: 56510,
+    ncbDiscount: 3490,
+    thirdParty: 7897,
+    securePremium: 0,
+    addonPremium: 50,
+    addons: ["24x7 Roadside Assistance"],
+  },
 ];
 
 export function BulkRenewalQuoteGenerator({ onClose }: { onClose: () => void }) {
