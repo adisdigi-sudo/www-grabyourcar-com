@@ -766,17 +766,13 @@ export function InsuranceSmartCalling() {
                     setBulkSending(true);
                     const selected = callingList.filter(c => selectedLeads.has(c.id));
                     let count = 0;
-                    for (const client of selected) {
-                      const cleanPhone = client.phone.replace(/\D/g, "");
-                      const fullPhone = cleanPhone.startsWith("91") ? cleanPhone : `91${cleanPhone}`;
+                    const { sendWhatsAppBulk } = await import("@/lib/sendWhatsApp");
+                    const recipients = selected.map(client => {
                       const daysLeft = client.policy_expiry_date ? differenceInDays(new Date(client.policy_expiry_date), new Date()) : 0;
-                      const msg = `Hi ${client.customer_name || ""}! Your insurance renewal is ${daysLeft <= 0 ? "overdue" : `due in ${daysLeft} days`} for your ${client.vehicle_make || ""} ${client.vehicle_model || ""} (${client.vehicle_number || ""}).\n\nCurrent Insurer: ${client.current_insurer || "N/A"}\nNCB: ${client.ncb_percentage ?? 0}%\n\nWe have the best renewal offers. Contact us!\n📞 +91 98559 24442\n🌐 www.grabyourcar.com\n- Grabyourcar Insurance`;
-                      window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(msg)}`, "_blank");
-                      count++;
-                      await new Promise(r => setTimeout(r, 1500));
-                    }
+                      return { phone: client.phone, name: client.customer_name || "", message: `Hi ${client.customer_name || ""}! Your insurance renewal is ${daysLeft <= 0 ? "overdue" : `due in ${daysLeft} days`} for your ${client.vehicle_make || ""} ${client.vehicle_model || ""} (${client.vehicle_number || ""}).\n\nCurrent Insurer: ${client.current_insurer || "N/A"}\nNCB: ${client.ncb_percentage ?? 0}%\n\nWe have the best renewal offers. Contact us!\n📞 +91 98559 24442\n🌐 www.grabyourcar.com\n- Grabyourcar Insurance` };
+                    });
+                    await sendWhatsAppBulk(recipients);
                     setBulkSending(false);
-                    toast.success(`📱 Opened WhatsApp for ${count} clients!`);
                   }}
                 >
                   <MessageCircle className="h-4 w-4" />
