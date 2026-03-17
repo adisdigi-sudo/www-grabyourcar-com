@@ -159,12 +159,13 @@ export const HRDeepWorkspace = ({ initialTab = "overview" }: { initialTab?: stri
     mutationFn: async (entry: any) => {
       const { error } = await supabase.from("employee_documents").insert({
         employee_name: entry.employee_name,
+        document_name: entry.document_name || entry.document_type,
         document_type: entry.document_type,
         document_number: entry.document_number,
         expiry_date: entry.expiry_date || null,
         notes: entry.notes,
         verification_status: "pending",
-      });
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["hr-emp-docs"] }); setShowDialog(null); resetForm(); toast.success("Document added"); },
