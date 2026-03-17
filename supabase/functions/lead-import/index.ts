@@ -19,7 +19,7 @@ serve(async (req) => {
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const { action, leads, importId, source, fieldMapping } = await req.json();
+    const { action, leads, importId, source, fieldMapping, verticalId } = await req.json();
 
     // ── Webhook/API endpoint for external portals ──
     if (action === "webhook" || action === "api-push") {

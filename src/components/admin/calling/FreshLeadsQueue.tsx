@@ -273,6 +273,13 @@ export function FreshLeadsQueue() {
                 lead.priority === "high" ? "border-l-4 border-l-amber-500" : ""
               }`}>
                 <CardContent className="p-4 flex items-center justify-between gap-4">
+                  {canSeeAll && (
+                    <Checkbox
+                      checked={selectedLeads.includes(lead.id)}
+                      onCheckedChange={() => toggleSelectLead(lead.id)}
+                      className="shrink-0"
+                    />
+                  )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <span className="font-semibold truncate">{lead.name || lead.customer_name || "Unknown"}</span>
