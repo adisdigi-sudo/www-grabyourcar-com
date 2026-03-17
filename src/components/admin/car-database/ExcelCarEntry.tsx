@@ -573,10 +573,17 @@ export const ExcelCarEntry = ({ onClose }: { onClose?: () => void }) => {
                             {row.images.map((img, ii) => (
                               <div key={ii} className="flex items-center gap-2 bg-background rounded-md border p-1.5">
                                 <div className="w-12 h-9 rounded border bg-muted flex items-center justify-center overflow-hidden shrink-0">
-                                  {img.url ? <img src={img.url} className="w-full h-full object-cover" alt="" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} /> : <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />}
+                                  {(img.url || img.file) ? <img src={img.file ? URL.createObjectURL(img.file) : img.url} className="w-full h-full object-cover" alt="" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} /> : <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />}
                                 </div>
-                                <Input value={img.url} onChange={e => { const imgs = [...row.images]; imgs[ii] = { ...imgs[ii], url: e.target.value }; updateSubArray(ri, 'images', imgs); }} placeholder="Image URL (OEM source)" className="h-7 text-[10px] flex-1" />
-                                <Input value={img.alt_text} onChange={e => { const imgs = [...row.images]; imgs[ii] = { ...imgs[ii], alt_text: e.target.value }; updateSubArray(ri, 'images', imgs); }} placeholder="Alt text" className="h-7 text-[10px] w-32" />
+                                <Input value={img.url} onChange={e => { const imgs = [...row.images]; imgs[ii] = { ...imgs[ii], url: e.target.value, file: undefined }; updateSubArray(ri, 'images', imgs); }} placeholder="Image URL or upload →" className="h-7 text-[10px] flex-1" />
+                                <label className="cursor-pointer text-[9px] font-bold px-2 py-1 rounded border border-dashed border-primary/50 text-primary hover:bg-primary/10 whitespace-nowrap flex items-center gap-1">
+                                  <Upload className="h-3 w-3" />Upload
+                                  <input type="file" accept="image/*" className="hidden" onChange={e => {
+                                    const file = e.target.files?.[0];
+                                    if (file) { const imgs = [...row.images]; imgs[ii] = { ...imgs[ii], file, url: '' }; updateSubArray(ri, 'images', imgs); }
+                                  }} />
+                                </label>
+                                <Input value={img.alt_text} onChange={e => { const imgs = [...row.images]; imgs[ii] = { ...imgs[ii], alt_text: e.target.value }; updateSubArray(ri, 'images', imgs); }} placeholder="Alt text" className="h-7 text-[10px] w-28" />
                                 <button onClick={() => { const imgs = [...row.images]; imgs[ii] = { ...imgs[ii], is_primary: !imgs[ii].is_primary }; updateSubArray(ri, 'images', imgs); }} className={cn("text-[9px] font-bold px-2 py-0.5 rounded border whitespace-nowrap", img.is_primary ? "bg-primary text-primary-foreground border-primary" : "text-muted-foreground border-border")}>
                                   {img.is_primary ? '★ Hero' : 'Set Hero'}
                                 </button>
