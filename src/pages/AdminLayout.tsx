@@ -322,6 +322,8 @@ const AdminLayout = () => {
         return <BulkDataManager />;
       case "integrations-api":
         return <APIIntegrationPortal />;
+      case "open-api-portal":
+        return <OpenAPIPortal />;
       case "integrations-whatsapp":
         return <WhatsAppManagement />;
       case "marketing-templates":
