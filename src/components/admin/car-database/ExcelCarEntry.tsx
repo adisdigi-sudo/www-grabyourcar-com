@@ -258,19 +258,35 @@ export const ExcelCarEntry = ({ onClose }: { onClose?: () => void }) => {
       if (error) throw error;
       const carId = carData.id;
 
-      // 2) Images
+      // 2) Upload images if files present, then insert
       if (row.images.length > 0) {
-        const imgs = row.images.filter(i => i.url.trim()).map((img, idx) => ({
-          car_id: carId, url: img.url.trim(), alt_text: img.alt_text || row.name, is_primary: img.is_primary, sort_order: idx + 1
-        }));
+        const imgs = [];
+        for (let idx = 0; idx < row.images.length; idx++) {
+          const img = row.images[idx];
+          let finalUrl = img.url.trim();
+          if (img.file) {
+            finalUrl = await uploadFile(img.file, slug, `gallery-${idx}`);
+          }
+          if (finalUrl) {
+            imgs.push({ car_id: carId, url: finalUrl, alt_text: img.alt_text || row.name, is_primary: img.is_primary, sort_order: idx + 1 });
+          }
+        }
         if (imgs.length) await supabase.from('car_images').insert(imgs);
       }
 
-      // 3) Colors
+      // 3) Upload color images if files present, then insert
       if (row.colors.length > 0) {
-        const cols = row.colors.filter(c => c.name.trim()).map((c, idx) => ({
-          car_id: carId, name: c.name, hex_code: c.hex_code, image_url: c.image_url || null, sort_order: idx + 1
-        }));
+        const cols = [];
+        for (let idx = 0; idx < row.colors.length; idx++) {
+          const c = row.colors[idx];
+          let imgUrl = c.image_url || '';
+          if (c.file) {
+            imgUrl = await uploadFile(c.file, slug, `color-${c.name.replace(/\s+/g, '-').toLowerCase()}`);
+          }
+          if (c.name.trim()) {
+            cols.push({ car_id: carId, name: c.name, hex_code: c.hex_code, image_url: imgUrl || null, sort_order: idx + 1 });
+          }
+        }
         if (cols.length) await supabase.from('car_colors').insert(cols);
       }
 
