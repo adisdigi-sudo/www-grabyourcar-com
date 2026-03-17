@@ -6,14 +6,50 @@ interface SendWhatsAppParams {
   message: string;
   name?: string;
   logEvent?: string;
-  silent?: boolean; // skip toast
+  silent?: boolean;
 }
 
 interface SendWhatsAppResult {
   success: boolean;
   messageId?: string;
   error?: string;
-  fallback?: boolean; // true if fell back to wa.me
+  fallback?: boolean;
+}
+
+// Cache the send mode to avoid repeated DB reads
+let cachedSendMode: "api" | "manual" | null = null;
+let cacheTimestamp = 0;
+const CACHE_TTL = 60_000; // 1 minute
+
+/**
+ * Get the current WhatsApp send mode from admin_settings.
+ */
+async function getSendMode(): Promise<"api" | "manual"> {
+  const now = Date.now();
+  if (cachedSendMode && now - cacheTimestamp < CACHE_TTL) {
+    return cachedSendMode;
+  }
+
+  try {
+    const { data } = await supabase
+      .from("admin_settings")
+      .select("setting_value")
+      .eq("setting_key", "whatsapp_send_mode")
+      .maybeSingle();
+
+    const mode = (data?.setting_value as any) === "manual" ? "manual" : "api";
+    cachedSendMode = mode;
+    cacheTimestamp = now;
+    return mode;
+  } catch {
+    return "api";
+  }
+}
+
+/** Clear the cached send mode (call after toggling). */
+export function clearSendModeCache() {
+  cachedSendMode = null;
+  cacheTimestamp = 0;
 }
 
 /**
@@ -28,7 +64,8 @@ function normalizePhone(phone: string): string {
 
 /**
  * One-click WhatsApp send via Meta Cloud API.
- * Falls back to wa.me link if API fails or is not configured.
+ * Checks admin_settings for send mode — if "manual", opens wa.me directly.
+ * Falls back to wa.me link if API fails.
  */
 export async function sendWhatsApp({
   phone,
@@ -38,6 +75,15 @@ export async function sendWhatsApp({
   silent = false,
 }: SendWhatsAppParams): Promise<SendWhatsAppResult> {
   const fullPhone = normalizePhone(phone);
+  const sendMode = await getSendMode();
+
+  // Manual mode — go straight to wa.me
+  if (sendMode === "manual") {
+    const waUrl = `https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`;
+    window.open(waUrl, "_blank");
+    if (!silent) toast.info("📱 Opened WhatsApp — please send manually");
+    return { success: false, fallback: true };
+  }
 
   try {
     const { data, error } = await supabase.functions.invoke("whatsapp-send", {
@@ -69,12 +115,10 @@ export async function sendWhatsApp({
       return { success: true, messageId: data.messageId };
     }
 
-    // API returned failure — fall back
     throw new Error(data?.error || data?.details || "API send failed");
   } catch (err) {
     console.warn("WhatsApp API send failed, falling back to wa.me:", err);
 
-    // Fallback: open wa.me link
     const waUrl = `https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`;
     window.open(waUrl, "_blank");
 

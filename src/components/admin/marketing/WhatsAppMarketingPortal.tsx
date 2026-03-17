@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Rocket, Send, MessageSquare, Target, Zap, BarChart3, 
-  Users, Shield, Settings
+  Users, Shield, Settings, ClipboardList
 } from "lucide-react";
 import { WACampaignDashboard } from "./wa/WACampaignDashboard";
 import { WAConversationInbox } from "./wa/WAConversationInbox";
@@ -12,13 +12,13 @@ import { WAContactSegments } from "./wa/WAContactSegments";
 import { WATemplateManager } from "./wa/WATemplateManager";
 import { WACompliancePanel } from "./wa/WACompliancePanel";
 import { WAIntegrationHub } from "./wa/WAIntegrationHub";
+import { WAMessageStatusTracker } from "./wa/WAMessageStatusTracker";
 
 export function WhatsAppMarketingPortal() {
   const [activeTab, setActiveTab] = useState("campaigns");
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
           <div className="p-2 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-xl">
@@ -40,6 +40,10 @@ export function WhatsAppMarketingPortal() {
           <TabsTrigger value="inbox" className="gap-2">
             <MessageSquare className="h-4 w-4" />
             <span className="hidden sm:inline">Inbox</span>
+          </TabsTrigger>
+          <TabsTrigger value="logs" className="gap-2">
+            <ClipboardList className="h-4 w-4" />
+            <span className="hidden sm:inline">Message Logs</span>
           </TabsTrigger>
           <TabsTrigger value="automation" className="gap-2">
             <Zap className="h-4 w-4" />
@@ -69,6 +73,7 @@ export function WhatsAppMarketingPortal() {
 
         <TabsContent value="campaigns"><WACampaignDashboard /></TabsContent>
         <TabsContent value="inbox"><WAConversationInbox /></TabsContent>
+        <TabsContent value="logs"><WAMessageStatusTracker /></TabsContent>
         <TabsContent value="automation"><WAAutomationRules /></TabsContent>
         <TabsContent value="segments"><WAContactSegments /></TabsContent>
         <TabsContent value="templates"><WATemplateManager /></TabsContent>

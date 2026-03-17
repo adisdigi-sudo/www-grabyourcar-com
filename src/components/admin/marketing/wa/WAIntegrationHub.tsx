@@ -1,12 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { clearSendModeCache } from "@/lib/sendWhatsApp";
 import {
   CheckCircle2, XCircle, Loader2, RefreshCw, Zap, Send, MessageSquare,
-  Bot, Bell, Users, ShieldCheck, Megaphone, Phone, Settings2, ArrowRight
+  Bot, Bell, Users, ShieldCheck, Megaphone, Phone, Settings2, ArrowRight, ToggleLeft
 } from "lucide-react";
 
 interface IntegrationPoint {
@@ -48,6 +51,44 @@ export function WAIntegrationHub() {
   const [apiDetails, setApiDetails] = useState<{ phone_id?: string; display_name?: string } | null>(null);
   const [testingFn, setTestingFn] = useState<string | null>(null);
   const [fnResults, setFnResults] = useState<Record<string, "ok" | "error">>({});
+  const [sendMode, setSendMode] = useState<"api" | "manual">("api");
+  const [modeLoading, setModeLoading] = useState(true);
+
+  // Load current send mode
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from("admin_settings")
+          .select("setting_value")
+          .eq("setting_key", "whatsapp_send_mode")
+          .maybeSingle();
+        if ((data?.setting_value as any) === "manual") setSendMode("manual");
+      } catch {}
+      setModeLoading(false);
+    })();
+  }, []);
+
+  const toggleSendMode = async (checked: boolean) => {
+    const newMode = checked ? "api" : "manual";
+    setSendMode(newMode);
+
+    const { error } = await supabase.from("admin_settings").upsert({
+      setting_key: "whatsapp_send_mode",
+      setting_value: newMode as any,
+      description: "WhatsApp send mode: api (direct Meta API) or manual (wa.me link)",
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "setting_key" });
+
+    clearSendModeCache();
+
+    if (error) {
+      toast({ title: "Failed to update", variant: "destructive" });
+      setSendMode(newMode === "api" ? "manual" : "api");
+    } else {
+      toast({ title: newMode === "api" ? "✅ API Send enabled" : "📱 Manual wa.me mode enabled" });
+    }
+  };
 
   const checkApiConnection = async () => {
     setApiStatus("checking");
@@ -87,6 +128,36 @@ export function WAIntegrationHub() {
 
   return (
     <div className="space-y-6">
+      {/* Send Mode Toggle */}
+      <Card className="border-primary/20 bg-primary/5">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <ToggleLeft className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <Label className="text-base font-semibold">WhatsApp Send Mode</Label>
+                <p className="text-sm text-muted-foreground">
+                  {sendMode === "api"
+                    ? "Messages are sent directly via Meta API (one-click delivery)"
+                    : "Messages open wa.me link for manual sending"}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 shrink-0">
+              <span className={`text-xs font-medium ${sendMode === "manual" ? "text-amber-600" : "text-muted-foreground"}`}>Manual</span>
+              <Switch
+                checked={sendMode === "api"}
+                onCheckedChange={toggleSendMode}
+                disabled={modeLoading}
+              />
+              <span className={`text-xs font-medium ${sendMode === "api" ? "text-green-600" : "text-muted-foreground"}`}>API Send</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* API Connection Status */}
       <Card className="border-2 border-dashed">
         <CardHeader>
@@ -131,8 +202,7 @@ export function WAIntegrationHub() {
               <Badge variant="outline" className="font-mono text-xs">WHATSAPP_VERIFY_TOKEN</Badge>
             </div>
             <p className="text-muted-foreground mt-2">
-              These secrets are shared across all {INTEGRATION_POINTS.length} backend functions listed below. 
-              Update them once and every integration point updates automatically.
+              These secrets are shared across all {INTEGRATION_POINTS.length} backend functions listed below.
             </p>
           </div>
         </CardContent>
@@ -163,13 +233,7 @@ export function WAIntegrationHub() {
                       <div className="flex items-center gap-2 shrink-0">
                         {fnResults[point.edgeFunction] === "ok" && <CheckCircle2 className="h-4 w-4 text-green-500" />}
                         {fnResults[point.edgeFunction] === "error" && <XCircle className="h-4 w-4 text-amber-500" />}
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-7 text-xs"
-                          disabled={testingFn === point.edgeFunction}
-                          onClick={() => testFunction(point.edgeFunction)}
-                        >
+                        <Button size="sm" variant="ghost" className="h-7 text-xs" disabled={testingFn === point.edgeFunction} onClick={() => testFunction(point.edgeFunction)}>
                           {testingFn === point.edgeFunction ? <Loader2 className="h-3 w-3 animate-spin" /> : "Ping"}
                         </Button>
                       </div>

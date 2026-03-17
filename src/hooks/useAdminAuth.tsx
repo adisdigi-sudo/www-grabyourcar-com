@@ -82,6 +82,10 @@ export const useAdminAuth = () => {
     return isAdmin() || hasRole('dealer');
   };
 
+  const canManageUsers = (): boolean => {
+    return hasRole('super_admin');
+  };
+
   return {
     user,
     roles: roles || [],
@@ -92,5 +96,6 @@ export const useAdminAuth = () => {
     canManageLeads,
     canManageFinance,
     canManageDealers,
+    canManageUsers,
   };
 };

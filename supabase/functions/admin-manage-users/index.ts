@@ -72,11 +72,13 @@ Deno.serve(async (req) => {
           email,
         });
 
-        // Assign vertical access
+        // Assign vertical access with access_level
         if (verticalIds?.length) {
+          const accessLevels = payload.accessLevels || {};
           const accessRows = verticalIds.map((vid: string) => ({
             user_id: userId,
             vertical_id: vid,
+            access_level: accessLevels[vid] || "member",
             granted_by: caller.id,
           }));
           await supabase.from("user_vertical_access").insert(accessRows);
@@ -114,9 +116,11 @@ Deno.serve(async (req) => {
         if (verticalIds) {
           await supabase.from("user_vertical_access").delete().eq("user_id", userId);
           if (verticalIds.length > 0) {
+            const accessLevels = payload.accessLevels || {};
             const accessRows = verticalIds.map((vid: string) => ({
               user_id: userId,
               vertical_id: vid,
+              access_level: accessLevels[vid] || "member",
               granted_by: caller.id,
             }));
             await supabase.from("user_vertical_access").insert(accessRows);
