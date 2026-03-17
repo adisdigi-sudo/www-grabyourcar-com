@@ -95,12 +95,13 @@ export const AccountsDeepWorkspace = ({ initialTab = "overview" }: { initialTab?
   const addJournal = useMutation({
     mutationFn: async (entry: any) => {
       const { data, error } = await supabase.from("journal_entries").insert({
+        entry_number: entry.entry_number || `JE-${Date.now().toString(36).toUpperCase()}`,
         entry_date: entry.entry_date || format(new Date(), "yyyy-MM-dd"),
         reference_number: entry.reference_number,
         description: entry.description,
         narration: entry.narration,
         status: "posted",
-      }).select().single();
+      } as any).select().single();
       if (error) throw error;
 
       // Add lines
