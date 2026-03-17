@@ -241,10 +241,8 @@ const AdminLayout = () => {
       case "cars-city-pricing":
       case "cars-attributes":
       case "cars-ai":
-      case "cars-url-scraper": {
-        const { CarDatabaseWorkspace } = await import("@/components/admin/car-database/CarDatabaseWorkspace");
+      case "cars-url-scraper":
         return <CarDatabaseWorkspace />;
-      }
       case "website-homepage":
         return (
           <div className="space-y-6">
