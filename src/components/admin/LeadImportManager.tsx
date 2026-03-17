@@ -23,9 +23,10 @@ const LEAD_FIELDS = [
 
 interface LeadImportManagerProps {
   verticalCategory?: string;
+  verticalId?: string;
 }
 
-export const LeadImportManager = ({ verticalCategory }: LeadImportManagerProps = {}) => {
+export const LeadImportManager = ({ verticalCategory, verticalId }: LeadImportManagerProps = {}) => {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [csvData, setCsvData] = useState<Record<string, string>[]>([]);
