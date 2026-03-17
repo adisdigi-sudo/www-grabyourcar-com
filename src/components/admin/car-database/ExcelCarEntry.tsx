@@ -608,7 +608,19 @@ export const ExcelCarEntry = ({ onClose }: { onClose?: () => void }) => {
                                 <input type="color" value={color.hex_code} onChange={e => { const cols = [...row.colors]; cols[ci] = { ...cols[ci], hex_code: e.target.value }; updateSubArray(ri, 'colors', cols); }} className="w-8 h-7 rounded border cursor-pointer shrink-0" />
                                 <Input value={color.name} onChange={e => { const cols = [...row.colors]; cols[ci] = { ...cols[ci], name: e.target.value }; updateSubArray(ri, 'colors', cols); }} placeholder="Color Name (e.g., Napoli Black)" className="h-7 text-[10px] w-40" />
                                 <Input value={color.hex_code} onChange={e => { const cols = [...row.colors]; cols[ci] = { ...cols[ci], hex_code: e.target.value }; updateSubArray(ri, 'colors', cols); }} placeholder="#000000" className="h-7 text-[10px] w-24 font-mono" />
-                                <Input value={color.image_url} onChange={e => { const cols = [...row.colors]; cols[ci] = { ...cols[ci], image_url: e.target.value }; updateSubArray(ri, 'colors', cols); }} placeholder="Color-specific car image URL" className="h-7 text-[10px] flex-1" />
+                                {(color.image_url || color.file) && (
+                                  <div className="w-10 h-7 rounded border bg-muted overflow-hidden shrink-0">
+                                    <img src={color.file ? URL.createObjectURL(color.file) : color.image_url} className="w-full h-full object-cover" alt="" />
+                                  </div>
+                                )}
+                                <Input value={color.image_url} onChange={e => { const cols = [...row.colors]; cols[ci] = { ...cols[ci], image_url: e.target.value, file: undefined }; updateSubArray(ri, 'colors', cols); }} placeholder="Color car image URL or upload →" className="h-7 text-[10px] flex-1" />
+                                <label className="cursor-pointer text-[9px] font-bold px-2 py-1 rounded border border-dashed border-primary/50 text-primary hover:bg-primary/10 whitespace-nowrap flex items-center gap-1">
+                                  <Upload className="h-3 w-3" />Upload
+                                  <input type="file" accept="image/*" className="hidden" onChange={e => {
+                                    const file = e.target.files?.[0];
+                                    if (file) { const cols = [...row.colors]; cols[ci] = { ...cols[ci], file, image_url: '' }; updateSubArray(ri, 'colors', cols); }
+                                  }} />
+                                </label>
                                 <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => updateSubArray(ri, 'colors', row.colors.filter((_, j) => j !== ci))}><Trash2 className="h-3 w-3" /></Button>
                               </div>
                             ))}
