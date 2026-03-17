@@ -533,12 +533,15 @@ export function InsuranceWorkspace() {
               </div>
               Insurance Workspace
             </h2>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button size="sm" onClick={() => setShowImport(true)} className="gap-1.5 bg-white/15 hover:bg-white/25 backdrop-blur-sm text-white border border-white/20">
                 <FileSpreadsheet className="h-4 w-4" /> Import
               </Button>
               <Button size="sm" onClick={() => setShowAddLead(true)} className="gap-1.5 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border border-white/20">
                 <Plus className="h-4 w-4" /> Add Lead
+              </Button>
+              <Button size="sm" onClick={() => { setActiveView("crm"); setSelectedStage("new_lead"); }} className="gap-1.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white border border-white/20">
+                <Shield className="h-4 w-4" /> Policy Extract
               </Button>
             </div>
           </div>
