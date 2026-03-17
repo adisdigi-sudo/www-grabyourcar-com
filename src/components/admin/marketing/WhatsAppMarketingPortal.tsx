@@ -61,6 +61,10 @@ export function WhatsAppMarketingPortal() {
             <Shield className="h-4 w-4" />
             <span className="hidden sm:inline">Compliance</span>
           </TabsTrigger>
+          <TabsTrigger value="integration" className="gap-2">
+            <Settings className="h-4 w-4" />
+            <span className="hidden sm:inline">Integration</span>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="campaigns"><WACampaignDashboard /></TabsContent>
@@ -70,6 +74,7 @@ export function WhatsAppMarketingPortal() {
         <TabsContent value="templates"><WATemplateManager /></TabsContent>
         <TabsContent value="analytics"><WAAnalyticsDashboard /></TabsContent>
         <TabsContent value="compliance"><WACompliancePanel /></TabsContent>
+        <TabsContent value="integration"><WAIntegrationHub /></TabsContent>
       </Tabs>
     </div>
   );
