@@ -269,11 +269,12 @@ export function InsuranceClientsManager() {
                                     <PhoneCall className="h-3.5 w-3.5 text-green-600" />
                                   </Button>
                                 </a>
-                                <a href={`https://wa.me/91${c.phone}`} target="_blank" rel="noopener noreferrer">
-                                  <Button variant="ghost" size="icon" className="h-7 w-7" title="WhatsApp">
-                                    <MessageSquare className="h-3.5 w-3.5 text-green-600" />
-                                  </Button>
-                                </a>
+                                <Button variant="ghost" size="icon" className="h-7 w-7" title="WhatsApp" onClick={async () => {
+                                  const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+                                  await sendWhatsApp({ phone: c.phone, message: `Hi ${c.customer_name || ""}! This is GrabYourCar Insurance. How can we help you today?`, name: c.customer_name });
+                                }}>
+                                  <MessageSquare className="h-3.5 w-3.5 text-green-600" />
+                                </Button>
                               </>
                             )}
                             <Button variant="ghost" size="icon" className="h-7 w-7" title="View" onClick={() => setViewClient(c)}>
