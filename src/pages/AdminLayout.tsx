@@ -99,6 +99,7 @@ import { AccountsFinanceWorkspace } from "@/components/admin/finance/AccountsFin
 import { HRWorkspace } from "@/components/admin/hr/HRWorkspace";
 import { CarDatabaseWorkspace } from "@/components/admin/car-database/CarDatabaseWorkspace";
 import { OpenAPIPortal } from "@/components/admin/OpenAPIPortal";
+import SuperAdminIncentiveWorkspace from "@/components/admin/incentives/SuperAdminIncentiveWorkspace";
 
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
