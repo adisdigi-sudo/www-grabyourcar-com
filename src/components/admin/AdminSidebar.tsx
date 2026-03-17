@@ -186,21 +186,7 @@ const navItems: NavItem[] = [
     verticals: ["car-database"],
     allowedRoles: ["super_admin", "admin"],
     children: [
-      { id: "cars-list", label: "Cars & Details", icon: Car },
-      { id: "cars-brands", label: "🏭 Brands", icon: Database },
-      { id: "cars-variants", label: "Variants & Specs", icon: Tags },
-      { id: "cars-pricing", label: "Pricing & Breakup", icon: CreditCard },
-      { id: "cars-city-pricing", label: "📍 State/City Pricing", icon: CreditCard },
-      { id: "cars-colors", label: "Colors & Images", icon: Palette },
-      { id: "cars-images", label: "Gallery", icon: Image },
-      { id: "cars-attributes", label: "🏷️ Vehicle Attributes", icon: Tags },
-      { id: "cars-ai-entry", label: "🤖 AI Car Entry", icon: Sparkles, badge: "AI" },
-      { id: "cars-bulk-import", label: "📊 Bulk Import", icon: Database },
-      { id: "cars-quick-import", label: "💬 Quick Text Import", icon: MessageSquare },
-      { id: "cars-image-sync", label: "🤖 AI Image Sync", icon: Sparkles, badge: "AI" },
-      { id: "cars-migration", label: "Data Migration", icon: Database },
-      { id: "cars-ai", label: "AI Enhancement", icon: Brain },
-      { id: "cars-url-scraper", label: "🌐 URL Scraper", icon: Globe },
+      { id: "cars-workspace", label: "📊 Car Data Entry", icon: Car },
     ]
   },
 
