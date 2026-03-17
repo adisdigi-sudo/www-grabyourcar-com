@@ -1183,17 +1183,18 @@ export function InsuranceWorkspace() {
                     {followUpDate ? format(followUpDate, "PPP") : "Pick a date"}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={followUpDate} onSelect={setFollowUpDate} /></PopoverContent>
+                <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={followUpDate} onSelect={(d) => { setFollowUpDate(d); if (d && followUpTime) { setTimeout(() => { if (pendingMoveClient) confirmFollowUp(); }, 300); } }} /></PopoverContent>
               </Popover>
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Time</Label>
-              <Input type="time" value={followUpTime} onChange={e => setFollowUpTime(e.target.value)} className="h-9" />
+              <Input type="time" value={followUpTime} onChange={e => { setFollowUpTime(e.target.value); }} className="h-9" />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Notes</Label>
               <Textarea placeholder="Follow-up notes..." value={followUpRemarks} onChange={e => setFollowUpRemarks(e.target.value)} className="h-16" />
             </div>
+            {followUpDate && <p className="text-xs text-emerald-600 font-medium">✓ Will auto-schedule on date selection</p>}
           </div>
           <DialogFooter>
             <Button onClick={confirmFollowUp} disabled={!followUpDate} className="bg-orange-600 hover:bg-orange-700 text-white">Schedule</Button>
