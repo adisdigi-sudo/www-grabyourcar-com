@@ -19,7 +19,7 @@ serve(async (req) => {
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const { action, leads, importId, source, fieldMapping } = await req.json();
+    const { action, leads, importId, source, fieldMapping, verticalId } = await req.json();
 
     // ── Webhook/API endpoint for external portals ──
     if (action === "webhook" || action === "api-push") {
@@ -84,12 +84,20 @@ serve(async (req) => {
             continue;
           }
 
-          const { error: insertErr } = await supabase.from("leads").insert(mapped);
+          const { data: inserted, error: insertErr } = await supabase.from("leads").insert(mapped).select("id").single();
           if (insertErr) {
             failed++;
             errors.push({ row: lead, reason: insertErr.message });
           } else {
             imported++;
+            // Auto-assign via round-robin if verticalId provided
+            if (verticalId && inserted?.id) {
+              await supabase.rpc("auto_assign_lead_round_robin", {
+                p_vertical_id: verticalId,
+                p_lead_id: inserted.id,
+                p_assigned_by: null,
+              });
+            }
           }
         } catch (e: any) {
           failed++;
@@ -163,7 +171,7 @@ serve(async (req) => {
             continue;
           }
 
-          const { error: insertErr } = await supabase.from("leads").insert({
+          const { data: inserted, error: insertErr } = await supabase.from("leads").insert({
             customer_name: getMapped("customer_name") || getMapped("name") || "Unknown",
             phone,
             email: getMapped("email") || null,
@@ -174,13 +182,20 @@ serve(async (req) => {
             car_model: getMapped("car_model") || getMapped("model") || null,
             city: getMapped("city") || null,
             notes: getMapped("notes") || getMapped("remarks") || null,
-          });
+          }).select("id").single();
 
           if (insertErr) {
             failed++;
             errors.push({ phone, reason: insertErr.message });
           } else {
             imported++;
+            if (verticalId && inserted?.id) {
+              await supabase.rpc("auto_assign_lead_round_robin", {
+                p_vertical_id: verticalId,
+                p_lead_id: inserted.id,
+                p_assigned_by: null,
+              });
+            }
           }
         } catch (e: any) {
           failed++;
