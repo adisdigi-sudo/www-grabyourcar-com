@@ -78,9 +78,9 @@ export const HRDeepWorkspace = ({ initialTab = "overview" }: { initialTab?: stri
   const { data: payrolls = [] } = useQuery({
     queryKey: ["hr-payrolls", currentMonth],
     queryFn: async () => {
-      const { data, error } = await supabase.from("payroll_records").select("*").eq("pay_period", currentMonth).order("created_at", { ascending: false });
+      const { data, error } = await (supabase.from("payroll_records") as any).select("*").eq("pay_period", currentMonth).order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      return data || [];
     },
   });
 
@@ -148,7 +148,7 @@ export const HRDeepWorkspace = ({ initialTab = "overview" }: { initialTab?: stri
         deductions, tds, pf, gross_salary: gross, net_salary: net,
         payment_mode: entry.payment_mode || "bank_transfer",
         status: "pending",
-      });
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["hr-payrolls"] }); setShowDialog(null); resetForm(); toast.success("Payroll entry added"); },
@@ -159,12 +159,13 @@ export const HRDeepWorkspace = ({ initialTab = "overview" }: { initialTab?: stri
     mutationFn: async (entry: any) => {
       const { error } = await supabase.from("employee_documents").insert({
         employee_name: entry.employee_name,
+        document_name: entry.document_name || entry.document_type,
         document_type: entry.document_type,
         document_number: entry.document_number,
         expiry_date: entry.expiry_date || null,
         notes: entry.notes,
         verification_status: "pending",
-      });
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["hr-emp-docs"] }); setShowDialog(null); resetForm(); toast.success("Document added"); },
@@ -180,11 +181,11 @@ export const HRDeepWorkspace = ({ initialTab = "overview" }: { initialTab?: stri
         review_date: entry.review_date || today,
         overall_rating: Number(entry.overall_rating || 3),
         strengths: entry.strengths,
-        improvements: entry.improvements,
+        areas_of_improvement: entry.improvements,
         goals_next_period: entry.goals,
         comments: entry.comments,
         status: "completed",
-      });
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["hr-reviews"] }); setShowDialog(null); resetForm(); toast.success("Review submitted"); },
