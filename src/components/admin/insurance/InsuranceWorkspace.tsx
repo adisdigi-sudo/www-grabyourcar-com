@@ -557,6 +557,7 @@ export function InsuranceWorkspace() {
           { key: "crm" as const, label: "Insurance CRM", icon: Shield, count: totalLeads },
           { key: "policy_book" as const, label: "Policy Book", icon: BookOpen, count: policies.length },
           { key: "renewals" as const, label: "Renewal Data", icon: CalendarClock, count: renewalSummary.total },
+          { key: "bulk_quotes" as const, label: "Bulk Quotes", icon: FileText, count: 0 },
         ].map(tab => (
           <Button key={tab.key} variant={activeView === tab.key ? "default" : "ghost"} size="sm" className={cn("flex-1 gap-1.5 text-xs", activeView === tab.key && "shadow-sm")} onClick={() => { setActiveView(tab.key); setSelectedIds(new Set()); }}>
             <tab.icon className="h-3.5 w-3.5" />
