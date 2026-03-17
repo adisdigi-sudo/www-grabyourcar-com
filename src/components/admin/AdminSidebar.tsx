@@ -40,6 +40,7 @@ import {
   Building2,
   MessageCircle,
   KeyRound,
+  Trophy,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AdminGlobalSearch } from "./AdminGlobalSearch";
