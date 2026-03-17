@@ -54,20 +54,22 @@ export const VerticalProvider = ({ children }: { children: ReactNode }) => {
     enabled: !!user?.id,
   });
 
-  // Fetch user's vertical access
-  const { data: userAccess = [], isLoading: accessLoading } = useQuery({
+  // Fetch user's vertical access with access_level
+  const { data: userAccessData = [], isLoading: accessLoading } = useQuery({
     queryKey: ['user-vertical-access', user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
       const { data, error } = await supabase
         .from('user_vertical_access')
-        .select('vertical_id')
+        .select('vertical_id, access_level')
         .eq('user_id', user.id);
       if (error) throw error;
-      return data.map(d => d.vertical_id);
+      return data as Array<{ vertical_id: string; access_level: string | null }>;
     },
     enabled: !!user?.id,
   });
+
+  const userAccess = userAccessData.map(d => d.vertical_id);
 
   // Fetch team member info
   const { data: teamMember = null, isLoading: memberLoading } = useQuery({
