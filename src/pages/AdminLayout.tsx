@@ -394,6 +394,22 @@ const AdminLayout = () => {
         return <HRWorkspace initialTab="culture" />;
       case "incentive-management":
         return <SuperAdminIncentiveWorkspace />;
+      case "incentive-my-dashboard":
+        return <SalesIncentiveDashboard />;
+      case "hr-employees":
+        return <HREmployeeManagement />;
+      case "hr-onboarding":
+        return <HROnboarding />;
+      case "hr-kpi":
+        return <HRKPIManagement />;
+      case "hr-templates":
+        return <HRTemplates />;
+      case "hr-documents":
+      case "accounts-documents":
+      case "document-vault":
+        return <DocumentVault />;
+      case "accounts-incentive-payouts":
+        return <IncentivePayoutApproval />;
       default:
         return <AdminDashboard />;
     }
