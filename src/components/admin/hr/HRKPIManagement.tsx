@@ -34,7 +34,7 @@ export const HRKPIManagement = () => {
   const { data: employees = [] } = useQuery({
     queryKey: ["hr-employees-kpi"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("hr_team_directory").select("*").eq("employment_status", "active").order("full_name");
+      const { data, error } = await (supabase.from("hr_team_directory") as any).select("*").eq("employment_status", "active").order("full_name");
       if (error) throw error;
       return data;
     },
