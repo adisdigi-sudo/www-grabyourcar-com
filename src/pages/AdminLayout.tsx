@@ -100,6 +100,13 @@ import { HRWorkspace } from "@/components/admin/hr/HRWorkspace";
 import { CarDatabaseWorkspace } from "@/components/admin/car-database/CarDatabaseWorkspace";
 import { OpenAPIPortal } from "@/components/admin/OpenAPIPortal";
 import SuperAdminIncentiveWorkspace from "@/components/admin/incentives/SuperAdminIncentiveWorkspace";
+import { HREmployeeManagement } from "@/components/admin/hr/HREmployeeManagement";
+import { HROnboarding } from "@/components/admin/hr/HROnboarding";
+import { HRKPIManagement } from "@/components/admin/hr/HRKPIManagement";
+import { HRTemplates } from "@/components/admin/hr/HRTemplates";
+import { DocumentVault } from "@/components/admin/documents/DocumentVault";
+import { SalesIncentiveDashboard } from "@/components/admin/incentives/SalesIncentiveDashboard";
+import { IncentivePayoutApproval } from "@/components/admin/finance/IncentivePayoutApproval";
 
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
