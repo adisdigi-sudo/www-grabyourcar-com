@@ -1,6 +1,8 @@
 import { createRoot } from "react-dom/client";
 import { ThemeProvider } from "next-themes";
 import { HelmetProvider } from "react-helmet-async";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import App from "./App.tsx";
 import "./index.css";
 import {
@@ -54,7 +56,11 @@ if (window.location.hostname.endsWith(".lovable.app")) {
 createRoot(document.getElementById("root")!).render(
   <HelmetProvider>
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <App />
+      <>
+        <App />
+        <Analytics />
+        <SpeedInsights />
+      </>
     </ThemeProvider>
   </HelmetProvider>
 );

@@ -105,7 +105,7 @@ export const Header = () => {
 
   return (
     <>
-      <header className="sticky top-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-b border-border/50">
+      <header className="sticky top-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-b border-border/50 overflow-x-clip">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-12 md:h-14 lg:h-16 gap-2">
             {/* Mobile Menu Button - Left side */}
@@ -120,7 +120,7 @@ export const Header = () => {
             </button>
 
             {/* Logo - Responsive & Backend-Managed */}
-            <Link to="/" className="flex items-center flex-shrink-0">
+            <Link to="/" className="flex items-center flex-shrink-0 max-w-[130px] sm:max-w-[160px] md:max-w-none overflow-hidden">
               <ResponsiveLogo variant="header" className="h-8 md:h-10 lg:h-12" />
             </Link>
 

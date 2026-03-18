@@ -60,12 +60,12 @@ export const Footer = () => {
             {/* Newsletter */}
             <div className="pt-2">
               <p className="text-sm font-medium text-background/80 mb-3">Subscribe to Updates</p>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Input
                   placeholder="Enter your email"
-                  className="bg-background/10 border-background/20 text-background placeholder:text-background/50 max-w-xs"
+                  className="bg-background/10 border-background/20 text-background placeholder:text-background/50 min-w-0 flex-1"
                 />
-                <Button variant="accent">Subscribe</Button>
+                <Button variant="accent" className="flex-shrink-0">Subscribe</Button>
               </div>
             </div>
 
@@ -183,7 +183,7 @@ export const Footer = () => {
             </p>
             
             {/* Legal Links */}
-            <div className="flex items-center gap-6">
+            <div className="flex flex-wrap justify-center md:justify-end items-center gap-3 md:gap-6">
               {footerLinks.legal.map((link) => (
                 <a
                   key={link.label}
