@@ -303,6 +303,8 @@ const navItems: NavItem[] = [
       { id: "accounts-expenses", label: "📤 Expenses", icon: CreditCard },
       { id: "accounts-commissions", label: "🏆 Commissions", icon: CreditCard },
       { id: "accounts-payouts", label: "💳 Payouts", icon: CreditCard },
+      { id: "accounts-incentive-payouts", label: "🎯 Incentive Payouts", icon: Trophy },
+      { id: "accounts-documents", label: "📂 Documents", icon: FileText },
     ]
   },
 
@@ -316,21 +318,35 @@ const navItems: NavItem[] = [
     children: [
       { id: "hr-workspace", label: "📊 HR Overview", icon: BarChart3 },
       { id: "hr-directory", label: "👥 Team Directory", icon: Users },
+      { id: "hr-employees", label: "🧑‍💼 Employee Mgmt", icon: UserCog },
+      { id: "hr-onboarding", label: "🚀 Onboarding", icon: Rocket },
+      { id: "hr-kpi", label: "🎯 KPI & Targets", icon: BarChart3 },
+      { id: "hr-templates", label: "📝 Templates", icon: FileText },
       { id: "hr-attendance", label: "📋 Attendance", icon: CalendarDays },
       { id: "hr-leaves", label: "🏖️ Leave Management", icon: CalendarDays },
+      { id: "hr-documents", label: "📂 Documents", icon: FileText },
       { id: "hr-announcements", label: "📢 Announcements", icon: FileText },
     ]
   },
 
-  // ── Incentive Management — Super Admin only ──
+  // ── Document Vault — Super Admin only ──
+  { 
+    id: "document-vault", 
+    label: "📂 Document Vault", 
+    icon: FileText,
+    verticals: ["accounts", "hr"],
+    allowedRoles: ["super_admin", "admin"],
+  },
+
+  // ── Incentive Management — visible to all roles ──
   { 
     id: "incentive-hub", 
     label: "🏆 Incentives", 
     icon: Trophy,
     verticals: ["all"],
-    allowedRoles: ["super_admin"],
     children: [
-      { id: "incentive-management", label: "🏆 Incentive Dashboard", icon: Trophy },
+      { id: "incentive-management", label: "🏆 Admin Dashboard", icon: Trophy, allowedRoles: ["super_admin"] },
+      { id: "incentive-my-dashboard", label: "💰 My Incentives", icon: CreditCard },
     ]
   },
 ];

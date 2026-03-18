@@ -100,6 +100,13 @@ import { HRWorkspace } from "@/components/admin/hr/HRWorkspace";
 import { CarDatabaseWorkspace } from "@/components/admin/car-database/CarDatabaseWorkspace";
 import { OpenAPIPortal } from "@/components/admin/OpenAPIPortal";
 import SuperAdminIncentiveWorkspace from "@/components/admin/incentives/SuperAdminIncentiveWorkspace";
+import { HREmployeeManagement } from "@/components/admin/hr/HREmployeeManagement";
+import { HROnboarding } from "@/components/admin/hr/HROnboarding";
+import { HRKPIManagement } from "@/components/admin/hr/HRKPIManagement";
+import { HRTemplates } from "@/components/admin/hr/HRTemplates";
+import { DocumentVault } from "@/components/admin/documents/DocumentVault";
+import { SalesIncentiveDashboard } from "@/components/admin/incentives/SalesIncentiveDashboard";
+import { IncentivePayoutApproval } from "@/components/admin/finance/IncentivePayoutApproval";
 
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
@@ -387,6 +394,22 @@ const AdminLayout = () => {
         return <HRWorkspace initialTab="culture" />;
       case "incentive-management":
         return <SuperAdminIncentiveWorkspace />;
+      case "incentive-my-dashboard":
+        return <SalesIncentiveDashboard />;
+      case "hr-employees":
+        return <HREmployeeManagement />;
+      case "hr-onboarding":
+        return <HROnboarding />;
+      case "hr-kpi":
+        return <HRKPIManagement />;
+      case "hr-templates":
+        return <HRTemplates />;
+      case "hr-documents":
+      case "accounts-documents":
+      case "document-vault":
+        return <DocumentVault />;
+      case "accounts-incentive-payouts":
+        return <IncentivePayoutApproval />;
       default:
         return <AdminDashboard />;
     }
