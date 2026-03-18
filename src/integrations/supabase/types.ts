@@ -3440,6 +3440,75 @@ export type Database = {
         }
         Relationships: []
       }
+      document_vault: {
+        Row: {
+          category: string
+          created_at: string | null
+          description: string | null
+          file_name: string | null
+          file_size: string | null
+          file_type: string | null
+          file_url: string | null
+          folder_path: string | null
+          id: string
+          is_template: boolean | null
+          month_year: string | null
+          related_entity_id: string | null
+          related_entity_type: string | null
+          status: string | null
+          sub_category: string | null
+          tags: string[] | null
+          title: string
+          updated_at: string | null
+          uploaded_by: string | null
+          vertical_name: string | null
+        }
+        Insert: {
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          file_name?: string | null
+          file_size?: string | null
+          file_type?: string | null
+          file_url?: string | null
+          folder_path?: string | null
+          id?: string
+          is_template?: boolean | null
+          month_year?: string | null
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          status?: string | null
+          sub_category?: string | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string | null
+          uploaded_by?: string | null
+          vertical_name?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          file_name?: string | null
+          file_size?: string | null
+          file_type?: string | null
+          file_url?: string | null
+          folder_path?: string | null
+          id?: string
+          is_template?: boolean | null
+          month_year?: string | null
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          status?: string | null
+          sub_category?: string | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string | null
+          uploaded_by?: string | null
+          vertical_name?: string | null
+        }
+        Relationships: []
+      }
       driver_bookings: {
         Row: {
           api_partner_id: string | null
@@ -4514,6 +4583,45 @@ export type Database = {
         }
         Relationships: []
       }
+      hr_onboarding: {
+        Row: {
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string | null
+          employee_id: string
+          employee_name: string
+          id: string
+          is_completed: boolean | null
+          notes: string | null
+          step_name: string
+          step_order: number | null
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string | null
+          employee_id: string
+          employee_name: string
+          id?: string
+          is_completed?: boolean | null
+          notes?: string | null
+          step_name: string
+          step_order?: number | null
+        }
+        Update: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string | null
+          employee_id?: string
+          employee_name?: string
+          id?: string
+          is_completed?: boolean | null
+          notes?: string | null
+          step_name?: string
+          step_order?: number | null
+        }
+        Relationships: []
+      }
       hr_team_directory: {
         Row: {
           aadhar_number: string | null
@@ -4607,6 +4715,42 @@ export type Database = {
           updated_at?: string | null
           user_id?: string | null
           vertical_name?: string | null
+        }
+        Relationships: []
+      }
+      hr_templates: {
+        Row: {
+          content: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          template_name: string
+          template_type: string
+          updated_at: string | null
+          variables: string[] | null
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          template_name: string
+          template_type: string
+          updated_at?: string | null
+          variables?: string[] | null
+        }
+        Update: {
+          content?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          template_name?: string
+          template_type?: string
+          updated_at?: string | null
+          variables?: string[] | null
         }
         Relationships: []
       }
@@ -5037,6 +5181,66 @@ export type Database = {
           updated_at?: string | null
           user_id?: string | null
           vertical_name?: string
+        }
+        Relationships: []
+      }
+      incentive_payouts: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          bonus_amount: number | null
+          created_at: string | null
+          deductions: number | null
+          employee_name: string
+          id: string
+          month_year: string
+          net_payout: number | null
+          notes: string | null
+          paid_at: string | null
+          payment_reference: string | null
+          status: string | null
+          total_incentive: number | null
+          updated_at: string | null
+          user_id: string
+          vertical_name: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          bonus_amount?: number | null
+          created_at?: string | null
+          deductions?: number | null
+          employee_name: string
+          id?: string
+          month_year: string
+          net_payout?: number | null
+          notes?: string | null
+          paid_at?: string | null
+          payment_reference?: string | null
+          status?: string | null
+          total_incentive?: number | null
+          updated_at?: string | null
+          user_id: string
+          vertical_name?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          bonus_amount?: number | null
+          created_at?: string | null
+          deductions?: number | null
+          employee_name?: string
+          id?: string
+          month_year?: string
+          net_payout?: number | null
+          notes?: string | null
+          paid_at?: string | null
+          payment_reference?: string | null
+          status?: string | null
+          total_incentive?: number | null
+          updated_at?: string | null
+          user_id?: string
+          vertical_name?: string | null
         }
         Relationships: []
       }
@@ -6986,6 +7190,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      kpi_targets: {
+        Row: {
+          achieved_deals: number | null
+          achieved_revenue: number | null
+          created_at: string | null
+          employee_name: string
+          id: string
+          kpi_score: number | null
+          month_year: string
+          notes: string | null
+          status: string | null
+          target_deals: number | null
+          target_revenue: number | null
+          updated_at: string | null
+          user_id: string
+          vertical_name: string | null
+        }
+        Insert: {
+          achieved_deals?: number | null
+          achieved_revenue?: number | null
+          created_at?: string | null
+          employee_name: string
+          id?: string
+          kpi_score?: number | null
+          month_year: string
+          notes?: string | null
+          status?: string | null
+          target_deals?: number | null
+          target_revenue?: number | null
+          updated_at?: string | null
+          user_id: string
+          vertical_name?: string | null
+        }
+        Update: {
+          achieved_deals?: number | null
+          achieved_revenue?: number | null
+          created_at?: string | null
+          employee_name?: string
+          id?: string
+          kpi_score?: number | null
+          month_year?: string
+          notes?: string | null
+          status?: string | null
+          target_deals?: number | null
+          target_revenue?: number | null
+          updated_at?: string | null
+          user_id?: string
+          vertical_name?: string | null
+        }
+        Relationships: []
       }
       lead_activities: {
         Row: {
