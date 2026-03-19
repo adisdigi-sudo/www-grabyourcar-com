@@ -1,98 +1,115 @@
 
 
-# Ads-Ready Tracking & Landing Pages — Implementation Plan
+# Phase 1: Complete HR + Incentive + Accounts CRM System — What Exists & What to Build
 
-## Overview
-Install Google Ads (gtag.js) and Meta Pixel globally, wire conversion events to successful actions only, capture UTM params in all lead forms, create a /thank-you page, and build 3 conversion-optimized landing pages.
+## What's Already Built (Your Backend + Frontend)
+
+You already have a substantial system. Here's where to find everything:
+
+### Existing Database Tables
+- `hr_team_directory` — Full employee records (name, phone, department, vertical, salary, bank details, Aadhaar, PAN, documents JSON, etc.)
+- `hr_templates` — Reusable HR letter templates
+- `hr_onboarding` — Onboarding checklist steps
+- `kpi_targets` — Monthly KPI targets per employee
+- `incentive_rules` — Per-vertical incentive rule definitions (fixed, slab, bank-wise, manager override)
+- `incentive_entries` — Per-deal incentive records
+- `incentive_monthly_summary` — Monthly rollup per employee
+- `incentive_payouts` — Payout approval records (pending/approved/paid)
+- `manager_bonus_tracking` — Manager bonus calculations
+- `deals` — Deal pipeline with auto-calculated commissions
+- `document_vault` — Centralized document storage
+- `revenue_entries`, `expense_entries` — Finance tracking
+- `chart_of_accounts`, `journal_entries`, `journal_entry_lines` — Double-entry accounting
+- `invoices` — Invoice management
+- `team_members` — Core team identity table
+- `user_roles` — RBAC roles
+- `user_vertical_access` — Vertical-level permissions
+
+### Existing Frontend Components (Navigate via CRM sidebar)
+| Module | Sidebar Path | Component |
+|--------|-------------|-----------|
+| HR Overview | HR & Office → HR Overview | `HRWorkspace` (directory, attendance, leaves, announcements) |
+| HR Deep | HR vertical dashboard | `HRDeepWorkspace` (payroll, KRA reviews, documents, attendance — 631 lines) |
+| Employee Mgmt | HR & Office → Employee Mgmt | `HREmployeeManagement` |
+| Onboarding | HR & Office → Onboarding | `HROnboarding` |
+| KPI & Targets | HR & Office → KPI & Targets | `HRKPIManagement` |
+| HR Templates | HR & Office → Templates | `HRTemplates` |
+| Documents | HR & Office → Documents | `DocumentVault` |
+| Finance Overview | Accounts & Finance → Finance Overview | `AccountsFinanceWorkspace` (revenue, expenses, commissions, payouts) |
+| Deep Accounting | Accounts vertical dashboard | `AccountsDeepWorkspace` (chart of accounts, journal entries, invoices) |
+| Incentive Payouts | Accounts → Incentive Payouts | `IncentivePayoutApproval` |
+| Incentive Admin | Incentives → Admin Dashboard | `SuperAdminIncentiveWorkspace` |
+| My Incentives | Incentives → My Incentives | `SalesIncentiveDashboard` |
+| Incentive Banner | Embedded in dashboards | `IncentiveBanner` |
+
+### Missing Database Tables (Not Yet Created)
+- `hr_attendance` — Daily attendance tracking
+- `hr_leave_requests` — Leave application & approval
+- `hr_payroll` — Monthly salary processing
+- `hr_documents` — Per-employee document storage (separate from document_vault)
+- `hr_kra_reviews` — Performance reviews & appraisals
+
+### How to Access (Where to See It)
+1. Log in at `/crm-auth`
+2. Select the **HR** vertical at `/workspace` → opens HR sidebar
+3. Select the **Accounts** vertical → opens Finance sidebar
+4. **Incentives** section appears in all verticals for all roles
 
 ---
 
-## What Will Be Built
+## Phase 1 Build Plan — What's Missing & Needs Building
 
-### 1. Global Tracking Scripts (gtag.js + Meta Pixel)
-- Add Google Tag (`gtag.js`) and Meta Pixel (`fbq`) scripts to `index.html` `<head>`
-- Use placeholder IDs (`AW-XXXXXXXXXX` and `XXXXXXXXXXXXXXXXX`) that the user replaces with real IDs
-- Add preconnect hints for `googletagmanager.com` and `connect.facebook.net`
+### 1. Create Missing HR Database Tables
+Create 5 tables via migration:
+- **`hr_attendance`**: employee_id, date, status (present/absent/half_day/late/wfh), check_in, check_out, notes
+- **`hr_leave_requests`**: employee_id, leave_type, from_date, to_date, reason, status (pending/approved/rejected), approved_by
+- **`hr_payroll`**: employee_id, month_year, gross_salary, hra, da, deductions, net_salary, status (draft/processed/paid)
+- **`hr_documents`**: employee_id, doc_type, file_name, file_url, uploaded_by, created_at
+- **`hr_kra_reviews`**: employee_id, review_type, period, kra_data (JSONB), rating, reviewer_id, status
 
-### 2. Centralized Tracking Utility — `src/lib/adTracking.ts`
-A single module exposing:
-- `trackLeadConversion(formSource)` — fires `gtag('event', 'conversion', ...)` + `fbq('track', 'Lead')`
-- `trackWhatsAppConversion()` — fires `gtag_report_conversion` + `fbq('track', 'Contact')`
-- `trackCallConversion()` — fires conversion events for phone clicks
-- `captureUTMParams()` — reads `utm_source`, `utm_medium`, `utm_campaign`, `utm_term`, `utm_content` from URL and returns them
-- Debug console logs gated behind `localStorage.getItem('debug_ads')`
-- All events fire ONLY when called explicitly (never on page load)
+All tables with RLS policies using `is_admin()` function.
 
-### 3. SPA Page View Tracking
-- Create a `usePageViewTracking` hook that fires `gtag('event', 'page_view')` and `fbq('track', 'PageView')` on every route change via `useLocation()`
-- Add it to `App.tsx`
+### 2. Upgrade HRDeepWorkspace to Use Real Tables
+Currently `HRDeepWorkspace` (631 lines) queries these tables but they don't exist yet. Wire it to the new tables so:
+- Attendance tab reads/writes `hr_attendance`
+- Leave tab reads/writes `hr_leave_requests`
+- Payroll tab reads/writes `hr_payroll`
+- Documents tab uploads to `hr-documents` storage bucket + writes to `hr_documents`
+- KRA Reviews tab reads/writes `hr_kra_reviews`
 
-### 4. Wire Conversions to Existing Forms & CTAs
-Integrate `trackLeadConversion()` into successful submit handlers of:
-- `BookingForm.tsx` — after successful insert
-- `LeadForm.tsx` — after successful insert
-- `EntryLeadCaptureModal.tsx` — after successful submit
-- `ExitIntentPopup.tsx` — after successful submit
-- `BrochureLeadGate.tsx` — after successful submit
-- `CorporateCTA.tsx` — after successful submit
-- `InsuranceHeroForm.tsx` — after phone submit
-- `CarLoanEligibilityForm.tsx` — after eligibility check
+### 3. Upgrade HRWorkspace to Use Real Tables
+Same fix — the attendance and leaves tabs need the real tables.
 
-Integrate `trackWhatsAppConversion()` into:
-- `WhatsAppCTA.tsx` — existing `trackWhatsAppClick` handler
-- `WhatsAppFloatingButton` — existing click handler
+### 4. Add Deals Pipeline View
+Create a `DealsPipeline.tsx` component showing the `deals` table with:
+- Customer name, vertical, deal value, status, assigned employee
+- Auto-calculated incentive display (from `incentive_entries`)
+- Filters by vertical, status, month
+- Add to sidebar under the active vertical
 
-Integrate `trackCallConversion()` into:
-- Any `tel:` link click handlers (Header component)
+### 5. Add Role Switcher for Testing
+Add a dev/testing dropdown in the sidebar (Super Admin only) that lets you temporarily view the CRM as Admin / Manager / Sales role without changing database roles.
 
-Add `captureUTMParams()` to all lead form submissions — append UTM fields to the Supabase insert payload (tables already have `utm_source`, `utm_medium`, `utm_campaign` columns).
-
-### 5. Thank You Page — `/thank-you`
-- New page `src/pages/ThankYou.tsx`
-- Fires conversion events on mount (since user is redirected here only after successful submit)
-- Shows confirmation message, next steps, and CTA to browse cars
-- Accepts query params `?source=booking&car=Creta` for contextual messaging
-- Route added to `App.tsx`
-- Update key forms to redirect to `/thank-you` after success
-
-### 6. Ad Landing Pages (Conversion-Optimized)
-
-**`/no-waiting-cars`** — `src/pages/NoWaitingCars.tsx`
-- Hero: "Zero Waiting Period Cars — Drive Home Today"
-- Filtered car listings (ready stock)
-- Simple lead form (Name + Phone only) with UTM capture
-- Strong CTAs: WhatsApp + Call
-
-**`/best-car-deals`** — `src/pages/BestCarDeals.tsx`
-- Hero: "Best Car Deals This Month — Save Up To ₹2 Lakh"
-- Featured deals/offers section
-- Simple lead form (Name + Phone) with UTM capture
-- Trust badges, urgency indicators
-
-**`/car-loan` already exists** — enhance with conversion tracking (already has form + eligibility checker)
-
-### 7. Click-to-Call Button
-- Already exists as WhatsApp floating button; add a mobile-only floating call button in `WhatsAppCTA.tsx` or a new `FloatingCallButton` component
-- Fires `trackCallConversion()` on click
+### 6. Sales "My Earnings" Enhancement
+The existing `SalesIncentiveDashboard` already shows personal deals, earnings, and bonus progress. Enhance with:
+- Projected monthly payout calculation
+- Team leaderboard rank
+- Historical earnings chart
 
 ---
 
 ## Technical Details
 
 **Files to create:**
-- `src/lib/adTracking.ts` — centralized gtag/fbq helpers + UTM capture
-- `src/hooks/usePageViewTracking.ts` — SPA route change tracking
-- `src/pages/ThankYou.tsx`
-- `src/pages/NoWaitingCars.tsx`
-- `src/pages/BestCarDeals.tsx`
-- `src/components/FloatingCallButton.tsx`
+- Migration SQL for 5 new HR tables with RLS
+- `src/components/admin/deals/DealsPipeline.tsx`
 
 **Files to modify:**
-- `index.html` — add gtag.js + Meta Pixel scripts
-- `App.tsx` — add routes + page view hook
-- `BookingForm.tsx`, `LeadForm.tsx`, `EntryLeadCaptureModal.tsx`, `ExitIntentPopup.tsx`, `BrochureLeadGate.tsx`, `CorporateCTA.tsx` — add conversion + UTM tracking
-- `WhatsAppCTA.tsx` — add ad conversion tracking to click handlers
-- `src/config/contact.ts` — already has phone number (will use for call button)
+- `src/components/admin/hr/HRDeepWorkspace.tsx` — wire to real tables
+- `src/components/admin/hr/HRWorkspace.tsx` — wire attendance/leaves to real tables
+- `src/components/admin/incentives/SalesIncentiveDashboard.tsx` — add projected payout + leaderboard
+- `src/components/admin/AdminSidebar.tsx` — add Deals Pipeline nav item + role switcher
+- `src/pages/AdminLayout.tsx` — add deals-pipeline route
 
-**No database changes needed** — UTM columns already exist on leads/insurance tables.
+**No new edge functions needed** — all operations use direct Supabase client queries with RLS.
 
