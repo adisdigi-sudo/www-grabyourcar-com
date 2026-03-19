@@ -21,6 +21,7 @@ import { RentalManagement } from "@/components/admin/RentalManagement";
 import { SelfDriveWorkspace } from "@/components/admin/rentals/SelfDriveWorkspace";
 import { AccessoriesManagement } from "@/components/admin/AccessoriesManagement";
 import { WebsiteSettings } from "@/components/admin/WebsiteSettings";
+import { AdTrackingSettings } from "@/components/admin/AdTrackingSettings";
 import { WhatsAppManagement } from "@/components/admin/WhatsAppManagement";
 import { BlogManagement } from "@/components/admin/BlogManagement";
 import { NotificationCenter } from "@/components/admin/NotificationCenter";
