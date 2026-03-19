@@ -34,6 +34,72 @@ import { LeadImportDialog } from "../shared/LeadImportDialog";
 import { StageNotificationBanner, buildInsuranceNotifications } from "../shared/StageNotificationBanner";
 import { BulkRenewalQuoteGenerator } from "./BulkRenewalQuoteGenerator";
 
+// ── Types ──
+type Client = {
+  id: string;
+  customer_name: string;
+  phone: string;
+  email: string | null;
+  city: string | null;
+  vehicle_number: string | null;
+  vehicle_make: string | null;
+  vehicle_model: string | null;
+  vehicle_year: number | null;
+  current_insurer: string | null;
+  current_policy_type: string | null;
+  current_premium: number | null;
+  ncb_percentage: number | null;
+  previous_claim: boolean | null;
+  policy_expiry_date: string | null;
+  policy_start_date: string | null;
+  current_policy_number: string | null;
+  lead_source: string | null;
+  lead_status: string | null;
+  assigned_executive: string | null;
+  priority: string | null;
+  pipeline_stage: string | null;
+  contact_attempts: number | null;
+  quote_amount: number | null;
+  quote_insurer: string | null;
+  lost_reason: string | null;
+  follow_up_date: string | null;
+  follow_up_time: string | null;
+  call_status: string | null;
+  call_remarks: string | null;
+  renewal_reminder_set: boolean | null;
+  renewal_reminder_date: string | null;
+  incentive_eligible: boolean | null;
+  notes: string | null;
+  created_at: string;
+};
+
+type PolicyRecord = {
+  id: string;
+  client_id: string | null;
+  policy_number: string | null;
+  policy_type: string | null;
+  insurer: string | null;
+  premium_amount: number | null;
+  start_date: string | null;
+  expiry_date: string | null;
+  status: string | null;
+  is_renewal: boolean | null;
+  issued_date: string | null;
+  plan_name: string | null;
+  idv: number | null;
+  policy_document_url: string | null;
+  created_at: string;
+  insurance_clients: {
+    customer_name: string;
+    phone: string;
+    city: string | null;
+    vehicle_number: string | null;
+    vehicle_make: string | null;
+    vehicle_model: string | null;
+    lead_source: string | null;
+  } | null;
+};
+
 // ── 6+1 Pipeline Stages ──
 const PIPELINE_STAGES = [
   { value: "new_lead", label: "New Lead", icon: UserPlus, color: "from-blue-500 to-blue-600", bg: "bg-blue-50 dark:bg-blue-950/30", border: "border-blue-200 dark:border-blue-800", text: "text-blue-700 dark:text-blue-300", dot: "bg-blue-500" },
@@ -77,7 +143,7 @@ const SOURCE_COLORS: Record<string, string> = {
   "CSV Import": "bg-violet-100 text-violet-700 border-violet-200",
   csv_import: "bg-violet-100 text-violet-700 border-violet-200",
 };
-...
+
 // ── Source display helper ──
 function formatSource(source: string | null, createdAt: string): string {
   if (!source) return "Unknown";
