@@ -61,7 +61,7 @@ const normalizeStage = (stage: string | null): string => STAGE_MAP[stage || "new
 
 const CALL_STATUSES = ["Interested", "Not Interested", "Call Back", "No Answer", "Wrong Number"];
 const LOST_REASONS = ["Too expensive", "Existing agent", "No response", "Not renewing", "Competitor offer", "Other"];
-const LEAD_SOURCES = ["Meta", "Google Ads", "Referral", "Walk-in", "WhatsApp Broadcast", "Website", "Manual", "CSV Import"];
+const LEAD_SOURCES = ["Meta", "Google Ads", "Referral", "Walk-in", "WhatsApp Broadcast", "Website", "Manual", "Rollover"];
 
 const SOURCE_COLORS: Record<string, string> = {
   Meta: "bg-blue-100 text-blue-700 border-blue-200",
@@ -71,82 +71,20 @@ const SOURCE_COLORS: Record<string, string> = {
   "WhatsApp Broadcast": "bg-emerald-100 text-emerald-700 border-emerald-200",
   Website: "bg-indigo-100 text-indigo-700 border-indigo-200",
   Manual: "bg-gray-100 text-gray-700 border-gray-200",
+  Rollover: "bg-violet-100 text-violet-700 border-violet-200",
+  rollover: "bg-violet-100 text-violet-700 border-violet-200",
+  rollover_data: "bg-violet-100 text-violet-700 border-violet-200",
   "CSV Import": "bg-violet-100 text-violet-700 border-violet-200",
-  "csv_import": "bg-violet-100 text-violet-700 border-violet-200",
+  csv_import: "bg-violet-100 text-violet-700 border-violet-200",
 };
-
-interface Client {
-  id: string;
-  customer_name: string | null;
-  phone: string;
-  email: string | null;
-  city: string | null;
-  vehicle_number: string | null;
-  vehicle_make: string | null;
-  vehicle_model: string | null;
-  vehicle_year: number | null;
-  current_insurer: string | null;
-  current_policy_type: string | null;
-  current_premium: number | null;
-  ncb_percentage: number | null;
-  previous_claim: boolean | null;
-  policy_expiry_date: string | null;
-  policy_start_date: string | null;
-  current_policy_number: string | null;
-  lead_source: string | null;
-  lead_status: string | null;
-  assigned_executive: string | null;
-  priority: string | null;
-  pipeline_stage: string | null;
-  contact_attempts: number | null;
-  quote_amount: number | null;
-  quote_insurer: string | null;
-  lost_reason: string | null;
-  follow_up_date: string | null;
-  follow_up_time: string | null;
-  call_status: string | null;
-  call_remarks: string | null;
-  renewal_reminder_set: boolean | null;
-  renewal_reminder_date: string | null;
-  incentive_eligible: boolean | null;
-  notes: string | null;
-  created_at: string;
-}
-
-interface PolicyRecord {
-  id: string;
-  client_id: string;
-  policy_number: string | null;
-  policy_type: string;
-  insurer: string;
-  premium_amount: number | null;
-  start_date: string;
-  expiry_date: string | null;
-  status: string | null;
-  is_renewal: boolean | null;
-  issued_date: string | null;
-  plan_name: string | null;
-  idv: number | null;
-  policy_document_url: string | null;
-  created_at: string;
-  // Joined client data
-  insurance_clients: {
-    customer_name: string | null;
-    phone: string;
-    city: string | null;
-    vehicle_number: string | null;
-    vehicle_make: string | null;
-    vehicle_model: string | null;
-    lead_source: string | null;
-  } | null;
-}
-
+...
 // ── Source display helper ──
 function formatSource(source: string | null, createdAt: string): string {
   if (!source) return "Unknown";
+  const normalized = source.toLowerCase();
   const date = format(new Date(createdAt), "dd MMM yyyy");
-  if (source === "csv_import" || source === "CSV Import") return `Imported on ${date}`;
-  if (source.startsWith("IB_") || source.toLowerCase().includes("insurebook")) return `Imported on ${date}`;
+  if (["csv_import", "csv import", "rollover", "rollover_data"].includes(normalized)) return `Rollover • ${date}`;
+  if (source.startsWith("IB_") || normalized.includes("insurebook")) return `Rollover • ${date}`;
   return source;
 }
 
