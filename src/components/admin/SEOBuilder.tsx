@@ -212,6 +212,23 @@ export const SEOBuilder = () => {
     }
   };
 
+  const autoOptimizeAll = async () => {
+    setIsAutoOptimizing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("seo-agent", {
+        body: { action: "optimize_all" },
+      });
+      if (error) throw error;
+      const successCount = data?.results?.filter((r: any) => r.status === "success").length || 0;
+      toast.success(`Auto-optimized ${successCount}/${defaultPages.length} pages!`);
+      queryClient.invalidateQueries({ queryKey: ["seoSettings"] });
+    } catch (e) {
+      toast.error("Auto-optimize failed: " + (e as Error).message);
+    } finally {
+      setIsAutoOptimizing(false);
+    }
+  };
+
   const handlePageChange = (pageKey: string) => {
     setSelectedPage(pageKey);
   };
