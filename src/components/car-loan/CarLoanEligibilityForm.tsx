@@ -117,6 +117,10 @@ export const CarLoanEligibilityForm = ({ onEligibilityResult }: Props) => {
     setStep("result");
     setIsChecking(false);
 
+    // Ad conversion tracking
+    const { trackLeadConversion } = await import("@/lib/adTracking");
+    trackLeadConversion("car_loan_eligibility", { eligible: String(eligible) });
+
     // Determine lead priority
     let leadPriority = "normal";
     let leadScore = 30;

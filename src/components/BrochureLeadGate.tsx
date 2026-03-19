@@ -98,6 +98,10 @@ export const BrochureLeadGate = ({ brochureUrl, carName, carSlug, children }: Br
       } catch { /* best effort */ }
 
       localStorage.setItem(`gyc_brochure_lead_${carSlug || carName}`, "true");
+
+      const { trackLeadConversion } = await import("@/lib/adTracking");
+      trackLeadConversion("brochure_download", { car: carName });
+
       confetti({ particleCount: 60, spread: 50, origin: { y: 0.6 } });
       setStep("success");
       triggerDownload();

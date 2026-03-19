@@ -94,6 +94,9 @@ export const ExitIntentPopup = () => {
         });
       } catch { /* best effort */ }
 
+      const { trackLeadConversion } = await import("@/lib/adTracking");
+      trackLeadConversion("exit_intent");
+
       confetti({ particleCount: 60, spread: 50, origin: { y: 0.6 } });
       localStorage.setItem(CAPTURED_KEY, "true");
       setIsSubmitted(true);

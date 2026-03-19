@@ -14,6 +14,8 @@ import { isAdminSubdomain } from "@/hooks/useAdminSubdomain";
 import { useGlobalRealtimeSync } from "@/hooks/useRealtimeSync";
 import { VerticalProvider } from "@/hooks/useVerticalAccess";
 import { isDynamicImportError, recoverFromChunkLoadError } from "@/lib/chunkLoadRecovery";
+import { usePageViewTracking } from "@/hooks/usePageViewTracking";
+import { FloatingCallButton } from "@/components/FloatingCallButton";
 
 // Retry wrapper for lazy imports — handles stale chunk errors after deployments
 function lazyRetry<T extends ComponentType<any>>(
@@ -64,6 +66,9 @@ const About = lazyRetry(() => import("./pages/About"));
 const AutoIntelligence = lazyRetry(() => import("./pages/AutoIntelligence"));
 const HoliGreeting = lazyRetry(() => import("./pages/HoliGreeting"));
 const VehicleLookup = lazyRetry(() => import("./pages/VehicleLookup"));
+const ThankYou = lazyRetry(() => import("./pages/ThankYou"));
+const NoWaitingCars = lazyRetry(() => import("./pages/NoWaitingCars"));
+const BestCarDeals = lazyRetry(() => import("./pages/BestCarDeals"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -75,10 +80,15 @@ const queryClient = new QueryClient({
   },
 });
 
-// Component to initialize global real-time sync
+// Component to initialize global real-time sync + page view tracking
 const RealtimeSyncProvider = ({ children }: { children: React.ReactNode }) => {
   useGlobalRealtimeSync();
   return <>{children}</>;
+};
+
+const PageViewTracker = () => {
+  usePageViewTracking();
+  return null;
 };
 
 const App = () => (
@@ -99,6 +109,7 @@ const App = () => (
                   </div>
                 }
               >
+                <PageViewTracker />
                 <AdminSubdomainRouter>
                   <Routes>
                     <Route path="/" element={<Index />} />
@@ -139,6 +150,9 @@ const App = () => (
                     <Route path="/auto-intelligence" element={<AutoIntelligence />} />
                     <Route path="/holi" element={<HoliGreeting />} />
                     <Route path="/vehicle-lookup" element={<VehicleLookup />} />
+                    <Route path="/thank-you" element={<ThankYou />} />
+                    <Route path="/no-waiting-cars" element={<NoWaitingCars />} />
+                    <Route path="/best-car-deals" element={<BestCarDeals />} />
                     {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                     <Route path="*" element={<NotFound />} />
                   </Routes>
@@ -147,6 +161,7 @@ const App = () => (
                     <>
                       <FloatingCompareBar />
                       <WhatsAppFloatingButton />
+                      <FloatingCallButton />
                     </>
                   )}
                 </AdminSubdomainRouter>

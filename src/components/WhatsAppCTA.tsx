@@ -114,6 +114,7 @@ export const WhatsAppCTA = ({
 
   const handleClick = () => {
     trackWhatsAppClick(context, label);
+    import("@/lib/adTracking").then(({ trackWhatsAppConversion }) => trackWhatsAppConversion(context));
   };
 
   return (
@@ -154,6 +155,7 @@ export const WhatsAppFloatingButton = ({
 
   const handleClick = () => {
     trackWhatsAppClick('floating_button', 'Floating WhatsApp');
+    import("@/lib/adTracking").then(({ trackWhatsAppConversion }) => trackWhatsAppConversion("floating_button"));
   };
 
   return (
