@@ -335,6 +335,8 @@ const AdminLayout = () => {
         return <IntegrationsManagement />;
       case "integrations-payments":
         return <WebsiteSettings />;
+      case "integrations-ad-tracking":
+        return <AdTrackingSettings />;
       case "profile-business":
       case "profile-logo":
       case "profile-users":
