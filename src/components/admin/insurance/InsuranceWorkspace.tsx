@@ -336,6 +336,7 @@ export function InsuranceWorkspace() {
       within7: upcoming.filter(p => { const d = differenceInDays(new Date(p.expiry_date!), now); return d >= 0 && d <= 7; }).length,
       within15: upcoming.filter(p => { const d = differenceInDays(new Date(p.expiry_date!), now); return d >= 0 && d <= 15; }).length,
       within30: upcoming.filter(p => { const d = differenceInDays(new Date(p.expiry_date!), now); return d >= 0 && d <= 30; }).length,
+      within45: upcoming.filter(p => { const d = differenceInDays(new Date(p.expiry_date!), now); return d >= 0 && d <= 45; }).length,
       within60: upcoming.filter(p => { const d = differenceInDays(new Date(p.expiry_date!), now); return d >= 0 && d <= 60; }).length,
       total: upcoming.length,
     };
