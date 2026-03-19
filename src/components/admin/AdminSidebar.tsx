@@ -269,6 +269,7 @@ const navItems: NavItem[] = [
       { id: "integrations-whatsapp", label: "WhatsApp API", icon: MessageSquare },
       { id: "integrations-shipping", label: "Shipping Partners", icon: Package },
       { id: "integrations-payments", label: "Payment Gateway", icon: CreditCard },
+      { id: "integrations-ad-tracking", label: "Ad Tracking", icon: BarChart3 },
     ]
   },
 

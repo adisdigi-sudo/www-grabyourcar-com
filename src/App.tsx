@@ -1,4 +1,4 @@
-import { Suspense, lazy, ComponentType } from "react";
+import { Suspense, lazy, ComponentType, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,6 +15,7 @@ import { useGlobalRealtimeSync } from "@/hooks/useRealtimeSync";
 import { VerticalProvider } from "@/hooks/useVerticalAccess";
 import { isDynamicImportError, recoverFromChunkLoadError } from "@/lib/chunkLoadRecovery";
 import { usePageViewTracking } from "@/hooks/usePageViewTracking";
+import { initDynamicTracking } from "@/lib/adTracking";
 import { FloatingCallButton } from "@/components/FloatingCallButton";
 import { CookieConsentBanner } from "@/components/CookieConsentBanner";
 
@@ -89,6 +90,7 @@ const RealtimeSyncProvider = ({ children }: { children: React.ReactNode }) => {
 
 const PageViewTracker = () => {
   usePageViewTracking();
+  useEffect(() => { initDynamicTracking(); }, []);
   return null;
 };
 

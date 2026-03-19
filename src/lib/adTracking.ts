@@ -1,10 +1,9 @@
 /**
  * Centralized Ad Tracking — Google Ads (gtag.js) + Meta Pixel (fbq)
- *
- * Replace placeholder IDs in index.html:
- *   - Google Ads:  AW-XXXXXXXXXX / AW-XXXXXXXXXX/YYYYYYYYYYYY
- *   - Meta Pixel:  XXXXXXXXXXXXXXXXX
+ * IDs are loaded dynamically from admin_settings (ad_tracking_config).
  */
+
+import { fetchAdTrackingConfig, type AdTrackingConfig } from "@/hooks/useAdTrackingConfig";
 
 declare global {
   interface Window {
@@ -14,18 +13,21 @@ declare global {
 }
 
 const DEBUG = () => localStorage.getItem("debug_ads") === "true";
+const log = (...args: any[]) => { if (DEBUG()) console.log("[AdTracking]", ...args); };
 
-const log = (...args: any[]) => {
-  if (DEBUG()) console.log("[AdTracking]", ...args);
+let _cfg: AdTrackingConfig | null = null;
+
+/** Ensure config is loaded (cached after first call) */
+const ensureConfig = async (): Promise<AdTrackingConfig | null> => {
+  if (!_cfg) _cfg = await fetchAdTrackingConfig();
+  return _cfg;
 };
 
 /* ─── Google Ads conversion ─── */
 const gtagConversion = (conversionLabel: string, extras?: Record<string, any>) => {
+  if (!conversionLabel) return;
   if (window.gtag) {
-    window.gtag("event", "conversion", {
-      send_to: conversionLabel,
-      ...extras,
-    });
+    window.gtag("event", "conversion", { send_to: conversionLabel, ...extras });
     log("gtag conversion →", conversionLabel, extras);
   }
 };
@@ -49,24 +51,32 @@ export const trackPageView = (url: string) => {
   log("pageView →", url);
 };
 
-/* ─── Lead form conversion (fire ONLY after successful DB insert) ─── */
-export const trackLeadConversion = (source: string, extras?: Record<string, any>) => {
-  // Replace AW-XXXXXXXXXX/YYYYYYYYYYYY with your real conversion label
-  gtagConversion("AW-XXXXXXXXXX/YYYYYYYYYYYY", { event_category: "lead", event_label: source, ...extras });
+/* ─── Lead form conversion ─── */
+export const trackLeadConversion = async (source: string, extras?: Record<string, any>) => {
+  const cfg = await ensureConfig();
+  if (cfg) {
+    gtagConversion(cfg.google_lead_label, { event_category: "lead", event_label: source, ...extras });
+  }
   fbqTrack("Lead", { content_name: source, ...extras });
   log("leadConversion →", source);
 };
 
 /* ─── WhatsApp click conversion ─── */
-export const trackWhatsAppConversion = (context?: string) => {
-  gtagConversion("AW-XXXXXXXXXX/WHATSAPP_LABEL", { event_category: "engagement", event_label: context || "whatsapp_click" });
+export const trackWhatsAppConversion = async (context?: string) => {
+  const cfg = await ensureConfig();
+  if (cfg) {
+    gtagConversion(cfg.google_whatsapp_label, { event_category: "engagement", event_label: context || "whatsapp_click" });
+  }
   fbqTrack("Contact", { content_name: context || "whatsapp_click" });
   log("whatsappConversion →", context);
 };
 
 /* ─── Call click conversion ─── */
-export const trackCallConversion = () => {
-  gtagConversion("AW-XXXXXXXXXX/CALL_LABEL", { event_category: "engagement", event_label: "call_click" });
+export const trackCallConversion = async () => {
+  const cfg = await ensureConfig();
+  if (cfg) {
+    gtagConversion(cfg.google_call_label, { event_category: "engagement", event_label: "call_click" });
+  }
   fbqTrack("Contact", { content_name: "call_click" });
   log("callConversion");
 };
@@ -91,4 +101,13 @@ export const getUTMFields = () => {
   if (utm.utm_medium) fields.utm_medium = utm.utm_medium;
   if (utm.utm_campaign) fields.utm_campaign = utm.utm_campaign;
   return fields;
+};
+
+/** Initialize dynamic gtag config (call once on app load) */
+export const initDynamicTracking = async () => {
+  const cfg = await ensureConfig();
+  if (cfg?.google_ads_id && window.gtag) {
+    window.gtag("config", cfg.google_ads_id, { send_page_view: false });
+    log("Dynamic gtag config →", cfg.google_ads_id);
+  }
 };
