@@ -585,8 +585,10 @@ export function InsuranceWorkspace() {
       <div className="flex gap-2 bg-muted/50 p-1 rounded-xl border">
         {[
           { key: "crm" as const, label: "Insurance CRM", icon: Shield, count: totalLeads },
-          { key: "policy_book" as const, label: "Policy Book", icon: BookOpen, count: policies.length },
+          { key: "policy_book" as const, label: "Policy Book", icon: BookOpen, count: policies.filter(p => p.status === "active").length },
+          { key: "policy_issued" as const, label: "Policy Issued", icon: CheckCircle2, count: policies.filter(p => p.issued_date).length },
           { key: "renewals" as const, label: "Renewal Data", icon: CalendarClock, count: renewalSummary.total },
+          { key: "bulk_quotes" as const, label: "Bulk Quotes", icon: FileSpreadsheet, count: 0 },
           { key: "bulk_quotes" as const, label: "Bulk Quotes", icon: FileText, count: 0 },
         ].map(tab => (
           <Button key={tab.key} variant={activeView === tab.key ? "default" : "ghost"} size="sm" className={cn("flex-1 gap-1.5 text-xs", activeView === tab.key && "shadow-sm")} onClick={() => { setActiveView(tab.key); setSelectedIds(new Set()); }}>
