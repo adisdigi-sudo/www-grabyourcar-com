@@ -438,9 +438,11 @@ export function InsuranceWorkspace() {
   };
   const setRenewalReminder = async () => {
     if (!selectedClient || !renewalDate) { toast.error("Pick a date"); return; }
+    const expiryDate = format(renewalDate, "yyyy-MM-dd");
     const { error } = await supabase.from("insurance_clients").update({
       renewal_reminder_set: true,
-      renewal_reminder_date: format(renewalDate, "yyyy-MM-dd"),
+      renewal_reminder_date: expiryDate,
+      policy_expiry_date: expiryDate,
       incentive_eligible: true,
       pipeline_stage: "policy_issued",
     }).eq("id", selectedClient.id);
