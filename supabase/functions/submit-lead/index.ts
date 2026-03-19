@@ -51,7 +51,7 @@ serve(async (req) => {
     }
 
     const serviceCategory = body.serviceCategory?.trim()?.toLowerCase() || '';
-    const isInsurance = serviceCategory === 'insurance' || body.source?.toLowerCase()?.includes('insurance');
+    const isInsurance = ['insurance', 'car-insurance', 'motor-insurance', 'vehicle-insurance', 'car_insurance', 'motor_insurance'].includes(serviceCategory) || body.source?.toLowerCase()?.includes('insurance');
 
     const { data: lead, error: insertError } = await supabaseAdmin
       .from('leads')
