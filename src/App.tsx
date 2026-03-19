@@ -161,6 +161,7 @@ const App = () => (
                     <>
                       <FloatingCompareBar />
                       <WhatsAppFloatingButton />
+                      <FloatingCallButton />
                     </>
                   )}
                 </AdminSubdomainRouter>
