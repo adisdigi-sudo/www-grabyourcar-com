@@ -1,125 +1,120 @@
 
 
-# Insurance CRM Workspace — Complete Redesign Plan
+# Implementation Plan: Insurance Workspace Polish + Loan CRM Redesign + Lead Capture Fix
 
-## What You Want (In Simple Words)
+## Summary
 
-A clean, professional insurance workspace that works like a real insurance company system:
-
-1. **New lead comes in** → marked with source, journey starts
-2. **Call the lead** → record call remarks, outcome
-3. **Share quote** → generate and send easily from the same screen
-4. **Mark won/lost** → if lost, ask why; if won, record policy details + issue date
-5. **Policy issued** → shows in Policy Book with all details
-6. **Next year auto follow-up** → auto reminders at 7/15/30/45/60 days, team re-engages
-7. **Renewal won** → old policy replaced, new one shows in "Coming Renewals"
-8. **Lost leads** → still tracked for future retargeting
+The Insurance CRM workspace is already well-built with 4 tabs, journey tracking, enhanced Won/Lost flows, and bulk tools. The main work is:
+1. Fix website lead capture so insurance leads actually appear in the CRM
+2. Polish existing insurance components (calendar month/year jump, PDF filename enforcement)
+3. Redesign Loan CRM to match the same 4-tab pattern as Insurance
 
 ---
 
-## What Will Change
+## Phase 1: Fix Website Lead Capture (Priority)
 
-### 1. Redesign the InsuranceWorkspace into 4 Clean Tabs
+**Problem**: The `captureInsuranceLead` function in `src/lib/insuranceLeadCapture.ts` inserts into `insurance_clients` but fails silently due to RLS. The `submit-lead` edge function routes insurance leads correctly but only when `serviceCategory === 'insurance'`.
 
-Replace the current 5-tab layout with 4 focused views:
+**Fix**:
+- Add an RLS policy on `insurance_clients` to allow anonymous inserts (matching the pattern already on `leads` table) via a database migration
+- Update `captureInsuranceLead.ts` to set `pipeline_stage: 'new_lead'` and `lead_status: 'new'` on new client creation (partially done, verify)
+- Update `submit-lead` edge function to also match `serviceCategory` values like `car-insurance`, `motor-insurance` (not just exact `insurance`)
 
-```text
-┌──────────────┬──────────────┬──────────────┬──────────────┐
-│  Lead Pipeline │ Policy Book  │ Coming       │  Bulk Tools  │
-│  (CRM)        │ (Issued)     │ Renewals     │              │
-└──────────────┴──────────────┴──────────────┴──────────────┘
-```
-
-- **Lead Pipeline**: The main CRM with the 6-stage journey (New Lead → Calling → Quote Shared → Follow-Up → Won → Lost). Each row shows journey breadcrumb trail.
-- **Policy Book**: All issued policies (Won + Rollover) with issue date, policy number, document link, and universal search (name/phone/vehicle/policy no).
-- **Coming Renewals**: Auto-populated from Policy Book when expiry approaches. Filter by 7/15/30/45/60 days. Won renewal replaces old policy.
-- **Bulk Tools**: CSV import (as "Rollover"), bulk WhatsApp, bulk quote generation.
-
-### 2. Lead Journey Tracker (Visual Breadcrumb)
-
-Add a visual journey trail on each lead row and in the detail dialog:
-
-```text
-New Lead → Called (14 Mar) → Quote Sent (15 Mar) → Follow-Up (18 Mar) → Won (20 Mar)
-```
-
-- Store journey events in `insurance_activity_log` (already exists)
-- Fetch last 5 events per client and render as a compact breadcrumb in the detail dialog
-- Show "current stage" dot indicator on the table row
-
-### 3. Fix Website Lead Capture → Insurance CRM Flow
-
-- Update the `captureInsuranceLead` function and `submit-lead` edge function to ensure website leads with insurance service category are routed to `insurance_clients` table with `pipeline_stage: "new_lead"` and `lead_source: "Website"`
-- Add RLS policy for anonymous inserts on `insurance_clients` if missing
-
-### 4. Enhanced "Won" Flow — Policy Issued with Details
-
-When marking a lead as "Won":
-- Dialog asks for: Policy Number, Insurer, Premium, Start Date, Expiry Date, Policy Document (PDF upload)
-- Auto-creates a record in `insurance_policies` with `issued_date = today`, `source_label = "Won (New)"` or `"Won (Renewal)"`
-- Reflects immediately in Policy Book tab
-
-### 5. Enhanced "Lost" Flow — Mandatory Reason + Retarget Flag
-
-Current lost dialog works but add:
-- A "Retarget Next Year?" toggle that sets `retarget_status = 'scheduled'` on the client
-- These clients appear in a "Retarget" filter in the lead pipeline
-
-### 6. Renewal Lifecycle — Auto Replace & Coming Renewals
-
-When a renewal is marked "Won":
-- Old policy status → `renewed`
-- New policy created with incremented `renewal_count`, `source_label = "Won (Renewal)"`, new expiry date
-- Client's `pipeline_stage` resets to `"policy_issued"`
-- New policy auto-appears in "Coming Renewals" as its expiry approaches
-
-### 7. Auto Renewal Reminders (60/45/30/15/7 days)
-
-- The existing `insurance-renewal-engine` edge function already handles this
-- Ensure it's triggered via pg_cron (verify or create the cron job)
-- Add a visual indicator in the workspace showing which reminders have been sent
-
-### 8. Calendar Date Picker Fix
-
-- Replace the basic Calendar with month/year dropdown selectors so users can jump to any date quickly without clicking arrows repeatedly
-- Apply this to all date pickers in the insurance workspace (follow-up, renewal reminder, policy dates)
-
-### 9. Policy Book Universal Search
-
-- Search across: customer name, phone, vehicle number, policy number, insurer, vehicle make/model
-- Already partially implemented — will ensure all fields are searchable
-- Add date range filter for issued date
-
-### 10. PDF Upload — Smart Policy Number Extraction
-
-- Enforce that uploaded PDF filename must contain the policy number
-- Extract policy number from filename, auto-link to the correct record
-- Reject uploads without a parseable policy number in filename
+**Files**: Database migration (RLS), `src/lib/insuranceLeadCapture.ts`, `supabase/functions/submit-lead/index.ts`
 
 ---
 
-## Technical Changes Summary
+## Phase 2: Insurance Calendar & PDF Polish
 
-| File | Change |
+**Calendar Fix**: Replace the basic `Calendar` component in date pickers throughout the insurance workspace with month/year dropdown selectors. Create a `SmartDatePicker` component that wraps the existing Calendar but adds month and year `<Select>` dropdowns above it so users can jump to any date without clicking arrows repeatedly.
+
+**PDF Filename Enforcement**: Update `InsurancePolicyDocumentUploader.tsx` to:
+- Extract policy number from filename using a regex
+- Show the extracted policy number for confirmation
+- Reject uploads where no policy number pattern is found in the filename
+
+**Files**: New `src/components/ui/smart-date-picker.tsx`, update `InsuranceLeadPipeline.tsx` (3 calendar instances), `InsuranceComingRenewals.tsx` (1 calendar instance), `InsurancePolicyBook.tsx` (2 calendar instances), `InsurancePolicyDocumentUploader.tsx`
+
+---
+
+## Phase 3: Loan CRM Redesign — 4-Tab Layout
+
+Transform `LoanWorkspace.tsx` from a single Kanban-only view into a 4-tab workspace matching the Insurance pattern:
+
+```text
+┌────────────────┬──────────────┬──────────────────┬──────────────┐
+│ Lead Pipeline  │ Disbursement │ Repayment Track  │  Bulk Tools  │
+│ (Kanban CRM)   │ Book         │ (After Sales)    │              │
+└────────────────┴──────────────┴──────────────────┴──────────────┘
+```
+
+### Tab 1 — Lead Pipeline (existing Kanban, keep as-is)
+The current 6-stage Kanban (New Lead → Smart Calling → Interested → Offer Shared → Loan Application → Disbursed) plus Lost column stays. Keep EMI Calculator at the top.
+
+### Tab 2 — Disbursement Book (new)
+- Table of all disbursed loans with universal search (name, phone, car model, bank, loan amount)
+- Columns: Customer, Phone, Car, Bank, Loan Amount, Disbursed Amount, Disbursement Date, EMI, Source
+- Date range filter on disbursement date
+
+### Tab 3 — After Sales / Repayment (new)
+- Placeholder for tracking post-disbursement status (EMI tracking, customer satisfaction)
+- Show recently disbursed loans with follow-up reminders
+
+### Tab 4 — Bulk Tools (existing import, wrap it)
+- CSV import (already exists as `LeadImportDialog`)
+
+**New Files**:
+- `src/components/admin/loans/LoanDisbursementBook.tsx` — Disbursement Book table
+- `src/components/admin/loans/LoanAfterSales.tsx` — After Sales placeholder
+
+**Modified Files**:
+- `src/components/admin/loans/LoanWorkspace.tsx` — Refactor into 4-tab layout with KPI header matching Insurance style, keep existing Kanban as Tab 1 content
+
+### KPI Header (new, matching Insurance style)
+Gradient header card with:
+- Total Leads, In Pipeline, Disbursed, Lost, Total Disbursed Value
+
+---
+
+## Phase 4: Loan Lead Journey Breadcrumb
+
+Add journey tracking to loan leads using `loan_stage_history` table (already exists).
+- Create a `LoanJourneyBreadcrumb` component that queries `loan_stage_history` for a given `application_id`
+- Display in the Kanban card detail modal
+
+---
+
+## Technical Details
+
+### Database Migration
+```sql
+-- Allow anonymous inserts on insurance_clients for website lead capture
+CREATE POLICY "anon_insert_insurance_clients" 
+  ON public.insurance_clients FOR INSERT 
+  TO anon WITH CHECK (true);
+```
+
+### File Change Summary
+
+| File | Action |
 |------|--------|
-| `InsuranceWorkspace.tsx` | Full redesign — 4 tabs, journey breadcrumbs, enhanced Won/Lost dialogs, improved date pickers, universal search |
+| Database migration | RLS for insurance_clients anon insert |
+| `src/lib/insuranceLeadCapture.ts` | Ensure pipeline_stage + lead_status set |
+| `supabase/functions/submit-lead/index.ts` | Broaden insurance category matching |
+| `src/components/ui/smart-date-picker.tsx` | New: Calendar with month/year jump |
+| `InsuranceLeadPipeline.tsx` | Use SmartDatePicker in 3 places |
+| `InsuranceComingRenewals.tsx` | Use SmartDatePicker |
+| `InsurancePolicyBook.tsx` | Use SmartDatePicker |
 | `InsurancePolicyDocumentUploader.tsx` | Enforce policy number from filename |
-| `src/lib/insuranceLeadCapture.ts` | Ensure website leads flow into insurance_clients |
-| `supabase/functions/submit-lead/index.ts` | Route insurance-category leads correctly |
-| Database migration | Add `retarget_status` column if not exists, verify RLS for anonymous inserts |
-| pg_cron | Verify renewal engine cron job is active |
+| `LoanWorkspace.tsx` | Refactor into 4-tab layout |
+| `LoanDisbursementBook.tsx` | New: Disbursement book table |
+| `LoanAfterSales.tsx` | New: After sales placeholder |
 
----
-
-## What You'll See When Done
-
-1. **Admin → Insurance** → Clean 4-tab workspace
-2. Every lead shows its journey trail (New → Called → Quoted → etc.)
-3. "Won" button opens a rich dialog to capture policy details + upload document
-4. "Lost" button asks reason + offers retarget toggle
-5. **Policy Book** shows all issued policies with universal search
-6. **Coming Renewals** auto-fills from Policy Book, filters by 7-60 day windows
-7. Renewal "Won" replaces old policy, creates new one for next year
-8. Calendar pickers let you jump to any month/year instantly
-9. Website leads automatically appear in the Lead Pipeline
+### Execution Order
+1. Database migration (RLS fix) — immediate impact
+2. Lead capture fix (submit-lead + captureInsuranceLead) — deploy edge function
+3. SmartDatePicker component
+4. Insurance workspace polish (calendar + PDF)
+5. Loan workspace 4-tab redesign
+6. Loan journey breadcrumb
 
