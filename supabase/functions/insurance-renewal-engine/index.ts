@@ -50,7 +50,7 @@ Thank you for trusting *Grabyourcar* — we look forward to protecting your jour
 
 Drive safe! 🚘`;
 
-const DEFAULT_WINDOWS = [45, 30, 15, 7, 1];
+const DEFAULT_WINDOWS = [60, 45, 30, 15, 7];
 const DEFAULT_ADVISOR = "+91 98559 24442";
 
 function normalizePhone(phone: string): string | null {

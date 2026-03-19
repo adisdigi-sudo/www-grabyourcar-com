@@ -1229,7 +1229,7 @@ export function InsuranceWorkspace() {
                       {renewalWonExpiryDate ? format(renewalWonExpiryDate, "PPP") : "Pick new expiry date"}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={renewalWonExpiryDate} onSelect={setRenewalWonExpiryDate} /></PopoverContent>
+                  <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={renewalWonExpiryDate} onSelect={setRenewalWonExpiryDate} className="p-3 pointer-events-auto" /></PopoverContent>
                 </Popover>
               </div>
               <div className="space-y-1">

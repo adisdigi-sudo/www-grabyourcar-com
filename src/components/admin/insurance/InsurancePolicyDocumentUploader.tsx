@@ -23,6 +23,14 @@ interface InsurancePolicyDocumentUploaderProps {
   onDone?: () => void;
 }
 
+const normalizePolicyNumber = (value: string) => value.replace(/\.[^.]+$/, "").trim().replace(/\s+/g, "-").toUpperCase();
+
+const extractPolicyNumberFromFileName = (fileName: string) => {
+  const base = fileName.replace(/\.[^.]+$/, "").trim();
+  const match = base.match(/[A-Za-z0-9][A-Za-z0-9\/-]{5,}/);
+  return match ? normalizePolicyNumber(match[0]) : "";
+};
+
 export function InsurancePolicyDocumentUploader({
   defaultPolicyId,
   defaultClientId,
@@ -30,11 +38,12 @@ export function InsurancePolicyDocumentUploader({
 }: InsurancePolicyDocumentUploaderProps) {
   const [selectedPolicyId, setSelectedPolicyId] = useState<string>(defaultPolicyId || "");
   const [docFile, setDocFile] = useState<File | null>(null);
+  const [typedPolicyNumber, setTypedPolicyNumber] = useState("");
   const [saving, setSaving] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const { data: policies = [], isLoading } = useQuery({
-    queryKey: ["insurance-policy-doc-uploader", defaultClientId || "all"],
+    queryKey: ["insurance-policy-doc-uploader", defaultClientId || "all", defaultPolicyId || "none"],
     queryFn: async () => {
       let query = supabase
         .from("insurance_policies")
@@ -42,7 +51,9 @@ export function InsurancePolicyDocumentUploader({
         .order("created_at", { ascending: false })
         .limit(1000);
 
-      if (defaultClientId) {
+      if (defaultPolicyId) {
+        query = query.eq("id", defaultPolicyId);
+      } else if (defaultClientId) {
         query = query.eq("client_id", defaultClientId);
       }
 
@@ -68,6 +79,13 @@ export function InsurancePolicyDocumentUploader({
     [policies, selectedPolicyId]
   );
 
+  const resolvedPolicyNumber = useMemo(() => {
+    const manual = normalizePolicyNumber(typedPolicyNumber || "");
+    if (manual) return manual;
+    if (docFile) return extractPolicyNumberFromFileName(docFile.name);
+    return normalizePolicyNumber(selectedPolicy?.policy_number || "");
+  }, [docFile, selectedPolicy?.policy_number, typedPolicyNumber]);
+
   const uploadDocument = async () => {
     if (!selectedPolicyId) {
       toast.error("Please select a policy");
@@ -78,10 +96,23 @@ export function InsurancePolicyDocumentUploader({
       return;
     }
 
+    const finalPolicyNumber = resolvedPolicyNumber;
+    if (!finalPolicyNumber) {
+      toast.error("Policy number is required. Use the PDF file name or enter it manually.");
+      return;
+    }
+
+    const existingPolicyNumber = normalizePolicyNumber(selectedPolicy?.policy_number || "");
+    if (existingPolicyNumber && existingPolicyNumber !== finalPolicyNumber) {
+      toast.error(`Policy number mismatch. Expected ${existingPolicyNumber}. Rename the PDF or enter the same policy number.`);
+      return;
+    }
+
     setSaving(true);
     try {
       const ext = docFile.name.split(".").pop() || "pdf";
-      const filePath = `${selectedPolicyId}/${Date.now()}.${ext}`;
+      const safeFileName = `${finalPolicyNumber}.${ext.toLowerCase()}`;
+      const filePath = `${selectedPolicyId}/${safeFileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from("policy-documents")
@@ -90,9 +121,15 @@ export function InsurancePolicyDocumentUploader({
 
       const { data: urlData } = supabase.storage.from("policy-documents").getPublicUrl(filePath);
 
+      const updatePayload: Record<string, any> = {
+        policy_document_url: urlData.publicUrl,
+        policy_number: finalPolicyNumber,
+        document_file_name: safeFileName,
+      };
+
       const { data: updatedPolicy, error: updateError } = await supabase
         .from("insurance_policies")
-        .update({ policy_document_url: urlData.publicUrl })
+        .update(updatePayload as any)
         .eq("id", selectedPolicyId)
         .select("id, client_id, policy_number")
         .single();
@@ -100,13 +137,16 @@ export function InsurancePolicyDocumentUploader({
 
       await supabase.from("insurance_activity_log").insert({
         client_id: updatedPolicy.client_id,
+        policy_id: updatedPolicy.id,
         activity_type: "policy_document_uploaded",
         title: "Policy document uploaded",
         description: `Document uploaded for policy ${updatedPolicy.policy_number || updatedPolicy.id}`,
+        metadata: { file_name: safeFileName, upload_source: "manual_upload" },
       });
 
       toast.success("Policy document uploaded successfully");
       setDocFile(null);
+      setTypedPolicyNumber("");
       onDone?.();
     } catch (e: any) {
       toast.error(e?.message || "Failed to upload policy document");
@@ -161,7 +201,7 @@ export function InsurancePolicyDocumentUploader({
                 <div className="flex items-center justify-center gap-2">
                   <FileText className="h-4 w-4 text-primary" />
                   <span className="text-xs font-medium truncate max-w-[190px]">{docFile.name}</span>
-                  <Button type="button" variant="ghost" size="icon" className="h-5 w-5" onClick={() => setDocFile(null)}>
+                  <Button type="button" variant="ghost" size="icon" className="h-5 w-5" onClick={() => { setDocFile(null); setTypedPolicyNumber(""); }}>
                     <X className="h-3 w-3" />
                   </Button>
                 </div>
@@ -184,6 +224,7 @@ export function InsurancePolicyDocumentUploader({
                     return;
                   }
                   setDocFile(file);
+                  setTypedPolicyNumber(extractPolicyNumberFromFileName(file.name));
                 }}
               />
               {!docFile && (
@@ -192,6 +233,19 @@ export function InsurancePolicyDocumentUploader({
                 </Button>
               )}
             </div>
+          </div>
+
+          <div className="space-y-1">
+            <Label className="text-xs font-semibold">Policy Number *</Label>
+            <Input
+              value={typedPolicyNumber}
+              onChange={(e) => setTypedPolicyNumber(e.target.value.toUpperCase())}
+              placeholder="Auto-detected from PDF name or enter manually"
+              className="h-9 text-sm"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Save the PDF using the policy number as the file name. If the PDF name does not contain it, enter it here.
+            </p>
           </div>
         </>
       )}
