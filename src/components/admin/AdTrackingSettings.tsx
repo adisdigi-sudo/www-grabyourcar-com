@@ -222,7 +222,7 @@ export const AdTrackingSettings = () => {
                 <Badge variant="secondary">Google Ads Not Set</Badge>
               )}
               {config.meta_pixel_id ? (
-                <Badge variant="default" className="bg-blue-600">Meta Pixel Active</Badge>
+                <Badge variant="default">Meta Pixel Active</Badge>
               ) : (
                 <Badge variant="secondary">Meta Pixel Not Set</Badge>
               )}
