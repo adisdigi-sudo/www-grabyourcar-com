@@ -282,6 +282,10 @@ export function InsuranceWorkspace() {
         c.customer_name?.toLowerCase().includes(s) ||
         c.phone?.includes(s) ||
         c.vehicle_number?.toLowerCase().includes(s) ||
+        c.vehicle_make?.toLowerCase().includes(s) ||
+        c.vehicle_model?.toLowerCase().includes(s) ||
+        c.current_policy_number?.toLowerCase().includes(s) ||
+        c.current_insurer?.toLowerCase().includes(s) ||
         c.city?.toLowerCase().includes(s)
       );
     }
