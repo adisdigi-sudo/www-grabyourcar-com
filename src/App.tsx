@@ -80,10 +80,15 @@ const queryClient = new QueryClient({
   },
 });
 
-// Component to initialize global real-time sync
+// Component to initialize global real-time sync + page view tracking
 const RealtimeSyncProvider = ({ children }: { children: React.ReactNode }) => {
   useGlobalRealtimeSync();
   return <>{children}</>;
+};
+
+const PageViewTracker = () => {
+  usePageViewTracking();
+  return null;
 };
 
 const App = () => (
