@@ -44,7 +44,8 @@ export async function fetchAdTrackingConfig(): Promise<AdTrackingConfig | null> 
       } catch {
         configPromise = null;
         return null;
-      });
+      }
+    })();
   }
   return configPromise;
 }
