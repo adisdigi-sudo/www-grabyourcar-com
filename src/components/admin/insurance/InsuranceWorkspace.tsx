@@ -309,6 +309,7 @@ export function InsuranceWorkspace() {
     if (renewalWindow === "7") result = all.filter(p => { const d = differenceInDays(new Date(p.expiry_date!), now); return d >= 0 && d <= 7; });
     else if (renewalWindow === "15") result = all.filter(p => { const d = differenceInDays(new Date(p.expiry_date!), now); return d >= 0 && d <= 15; });
     else if (renewalWindow === "30") result = all.filter(p => { const d = differenceInDays(new Date(p.expiry_date!), now); return d >= 0 && d <= 30; });
+    else if (renewalWindow === "45") result = all.filter(p => { const d = differenceInDays(new Date(p.expiry_date!), now); return d >= 0 && d <= 45; });
     else if (renewalWindow === "60") result = all.filter(p => { const d = differenceInDays(new Date(p.expiry_date!), now); return d >= 0 && d <= 60; });
 
     if (renewalSearch.trim()) {
