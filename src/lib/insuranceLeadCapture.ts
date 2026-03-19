@@ -80,6 +80,9 @@ export async function captureInsuranceLead(params: {
         current_policy_type: policyType || null,
         lead_source: source,
         notes: notes || null,
+        pipeline_stage: "new_lead",
+        lead_status: "new",
+        priority: "medium",
       }).select("id").single();
 
       if (newClient) {

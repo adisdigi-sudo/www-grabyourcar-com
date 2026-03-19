@@ -51,7 +51,7 @@ serve(async (req) => {
     }
 
     const serviceCategory = body.serviceCategory?.trim()?.toLowerCase() || '';
-    const isInsurance = serviceCategory === 'insurance' || body.source?.toLowerCase()?.includes('insurance');
+    const isInsurance = ['insurance', 'car-insurance', 'motor-insurance', 'vehicle-insurance', 'car_insurance', 'motor_insurance'].includes(serviceCategory) || body.source?.toLowerCase()?.includes('insurance');
 
     const { data: lead, error: insertError } = await supabaseAdmin
       .from('leads')
@@ -75,20 +75,39 @@ serve(async (req) => {
     // Also route insurance leads into insurance_clients CRM
     if (isInsurance) {
       try {
-        await supabaseAdmin.from('insurance_clients').insert({
-          phone,
-          customer_name: name,
-          email: body.email?.trim() || null,
-          city: body.city?.trim() || null,
-          vehicle_number: body.vehicleNumber?.trim() || null,
-          vehicle_make: body.vehicleMake?.trim() || null,
-          vehicle_model: body.carInterest?.trim() || null,
-          lead_source: 'Website',
-          pipeline_stage: 'new_lead',
-          lead_status: 'new',
-          priority: 'medium',
-          notes: body.message?.trim() || null,
-        });
+        // Upsert: check if already exists by phone
+        const { data: existingClient } = await supabaseAdmin
+          .from('insurance_clients')
+          .select('id')
+          .eq('phone', phone)
+          .limit(1);
+
+        if (existingClient && existingClient.length > 0) {
+          await supabaseAdmin.from('insurance_clients').update({
+            customer_name: name,
+            email: body.email?.trim() || undefined,
+            city: body.city?.trim() || undefined,
+            vehicle_number: body.vehicleNumber?.trim() || undefined,
+            vehicle_make: body.vehicleMake?.trim() || undefined,
+            vehicle_model: body.carInterest?.trim() || undefined,
+            notes: body.message?.trim() || undefined,
+          }).eq('id', existingClient[0].id);
+        } else {
+          await supabaseAdmin.from('insurance_clients').insert({
+            phone,
+            customer_name: name,
+            email: body.email?.trim() || null,
+            city: body.city?.trim() || null,
+            vehicle_number: body.vehicleNumber?.trim() || null,
+            vehicle_make: body.vehicleMake?.trim() || null,
+            vehicle_model: body.carInterest?.trim() || null,
+            lead_source: 'Website',
+            pipeline_stage: 'new_lead',
+            lead_status: 'new',
+            priority: 'medium',
+            notes: body.message?.trim() || null,
+          });
+        }
       } catch (e) {
         console.error('Insurance client insert failed:', e);
       }

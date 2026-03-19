@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
+import { SmartDatePicker } from "@/components/ui/smart-date-picker";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -257,31 +257,11 @@ function WonPolicyDialog({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Start Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full h-9 justify-start text-left text-xs">
-                      <CalendarIcon className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-                      {startDate ? format(startDate, "dd MMM yyyy") : "Pick date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar mode="single" selected={startDate} onSelect={setStartDate} className="p-3 pointer-events-auto" />
-                  </PopoverContent>
-                </Popover>
+                <SmartDatePicker date={startDate} onSelect={setStartDate} placeholder="Pick date" yearRange={[new Date().getFullYear() - 1, new Date().getFullYear() + 2]} />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Expiry Date *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full h-9 justify-start text-left text-xs">
-                      <CalendarIcon className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-                      {expiryDate ? format(expiryDate, "dd MMM yyyy") : "Pick date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar mode="single" selected={expiryDate} onSelect={setExpiryDate} className="p-3 pointer-events-auto" />
-                  </PopoverContent>
-                </Popover>
+                <SmartDatePicker date={expiryDate} onSelect={setExpiryDate} placeholder="Pick date" yearRange={[new Date().getFullYear(), new Date().getFullYear() + 3]} />
               </div>
             </div>
           </div>
@@ -832,15 +812,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
           <div className="space-y-3">
             <div className="space-y-1">
               <Label className="text-xs">Follow-Up Date *</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-full justify-start text-left h-9">
-                    <CalendarIcon className="h-4 w-4 mr-2 text-muted-foreground" />
-                    {followUpDate ? format(followUpDate, "PPP") : "Pick a date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={followUpDate} onSelect={setFollowUpDate} className="p-3 pointer-events-auto" /></PopoverContent>
-              </Popover>
+              <SmartDatePicker date={followUpDate} onSelect={setFollowUpDate} placeholder="Pick a date" yearRange={[new Date().getFullYear(), new Date().getFullYear() + 2]} />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Time</Label>

@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
+import { SmartDatePicker } from "@/components/ui/smart-date-picker";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -366,15 +366,7 @@ export function InsuranceComingRenewals({ policies }: InsuranceComingRenewalsPro
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">New Expiry Date *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full h-9 justify-start text-left text-xs">
-                      <CalendarIcon className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-                      {wonExpiryDate ? format(wonExpiryDate, "dd MMM yyyy") : "Pick new expiry date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={wonExpiryDate} onSelect={setWonExpiryDate} className="p-3 pointer-events-auto" /></PopoverContent>
-                </Popover>
+                <SmartDatePicker date={wonExpiryDate} onSelect={setWonExpiryDate} placeholder="Pick new expiry date" yearRange={[new Date().getFullYear(), new Date().getFullYear() + 3]} />
               </div>
             </div>
           )}

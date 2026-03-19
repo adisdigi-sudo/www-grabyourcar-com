@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
+import { SmartDatePicker } from "@/components/ui/smart-date-picker";
 import { cn } from "@/lib/utils";
 import { format, isWithinInterval } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -127,14 +127,14 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
           </PopoverTrigger>
           <PopoverContent className="w-auto p-3 space-y-2">
             <p className="text-xs font-medium">Issued Date Range</p>
-            <div className="flex gap-2">
-              <div>
-                <p className="text-[10px] text-muted-foreground mb-1">From</p>
-                <Calendar mode="single" selected={dateFrom} onSelect={setDateFrom} className="p-2 pointer-events-auto" />
+            <div className="flex gap-3">
+              <div className="space-y-1">
+                <p className="text-[10px] text-muted-foreground">From</p>
+                <SmartDatePicker date={dateFrom} onSelect={setDateFrom} placeholder="Start date" yearRange={[new Date().getFullYear() - 3, new Date().getFullYear()]} />
               </div>
-              <div>
-                <p className="text-[10px] text-muted-foreground mb-1">To</p>
-                <Calendar mode="single" selected={dateTo} onSelect={setDateTo} className="p-2 pointer-events-auto" />
+              <div className="space-y-1">
+                <p className="text-[10px] text-muted-foreground">To</p>
+                <SmartDatePicker date={dateTo} onSelect={setDateTo} placeholder="End date" yearRange={[new Date().getFullYear() - 3, new Date().getFullYear()]} />
               </div>
             </div>
             {(dateFrom || dateTo) && <Button variant="ghost" size="sm" className="text-xs" onClick={() => { setDateFrom(undefined); setDateTo(undefined); }}>Clear</Button>}

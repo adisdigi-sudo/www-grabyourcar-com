@@ -17,7 +17,8 @@ import { motion } from "framer-motion";
 import {
   Banknote, Plus, Phone, IndianRupee, Car, GripVertical, Calculator,
   Share2, PhoneCall, MessageCircle, CheckCircle2, XCircle, Building2,
-  FileText, AlertTriangle, Clock, TrendingUp, Users, Download, FileSpreadsheet
+  FileText, AlertTriangle, Clock, TrendingUp, Users, Download, FileSpreadsheet,
+  BookOpen, HeartHandshake, Wrench
 } from "lucide-react";
 import jsPDF from "jspdf";
 import { LeadImportDialog } from "../shared/LeadImportDialog";
@@ -27,6 +28,9 @@ import {
   CALL_STATUSES, LOST_REASONS, normalizeStage, LOAN_TYPES, EMPLOYMENT_TYPES,
   type LoanStage
 } from "./LoanStageConfig";
+import { LoanDisbursementBook } from "./LoanDisbursementBook";
+import { LoanAfterSales } from "./LoanAfterSales";
+import { cn } from "@/lib/utils";
 
 // ─── EMI Calculator ───
 const EMICalculator = () => {
@@ -286,6 +290,7 @@ const SOURCE_COLORS: Record<string, string> = {
 export const LoanWorkspace = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [activeView, setActiveView] = useState<"pipeline" | "disbursement" | "after_sales" | "bulk_tools">("pipeline");
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [selectedApp, setSelectedApp] = useState<any>(null);
   const [showStageModal, setShowStageModal] = useState(false);
@@ -436,119 +441,128 @@ export const LoanWorkspace = () => {
 
   const pipelineStages = LOAN_STAGES.filter(s => s !== 'lost');
 
+  const TABS = [
+    { key: "pipeline" as const, label: "Lead Pipeline", icon: Banknote, count: totalApps },
+    { key: "disbursement" as const, label: "Disbursement Book", icon: BookOpen, count: disbursed },
+    { key: "after_sales" as const, label: "After Sales", icon: HeartHandshake, count: 0 },
+    { key: "bulk_tools" as const, label: "Bulk Tools", icon: Wrench, count: 0 },
+  ];
+
   return (
     <div className="space-y-5">
-      <EMICalculator />
-
-      {/* KPI Row */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        {[
-          { label: "Total Leads", value: totalApps, icon: Users, color: "text-blue-600", bg: "from-blue-500/10" },
-          { label: "In Pipeline", value: inPipeline, icon: TrendingUp, color: "text-indigo-600", bg: "from-indigo-500/10" },
-          { label: "Disbursed", value: disbursed, icon: CheckCircle2, color: "text-emerald-600", bg: "from-emerald-500/10" },
-          { label: "Lost", value: lost, icon: XCircle, color: "text-red-600", bg: "from-red-500/10" },
-          { label: "Total Value", value: formatAmount(totalValue), icon: IndianRupee, color: "text-emerald-600", bg: "from-emerald-500/10" },
-        ].map((s, i) => (
-          <Card key={i} className="border-border/40 overflow-hidden">
-            <CardContent className="p-3 relative">
-              <div className={`absolute inset-0 bg-gradient-to-br ${s.bg} to-transparent opacity-50`} />
-              <div className="relative flex items-center gap-2.5">
-                <div className={`p-1.5 rounded-lg bg-background/80 ${s.color}`}><s.icon className="h-3.5 w-3.5" /></div>
-                <div>
-                  <p className="text-lg font-bold leading-none">{s.value}</p>
-                  <p className="text-[9px] text-muted-foreground mt-0.5">{s.label}</p>
-                </div>
+      {/* KPI Header */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-600 via-teal-700 to-teal-900 p-5 sm:p-6 text-white">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-60" />
+        <div className="relative">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold tracking-tight flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center">
+                <Banknote className="h-5 w-5" />
               </div>
-            </CardContent>
-          </Card>
+              Car Loan Workspace
+            </h2>
+            <div className="flex gap-2 flex-wrap">
+              <Button size="sm" onClick={() => setShowImport(true)} className="gap-1.5 bg-white/15 hover:bg-white/25 backdrop-blur-sm text-white border border-white/20">
+                <FileSpreadsheet className="h-4 w-4" /> Import
+              </Button>
+              <Button size="sm" onClick={() => setShowAddDialog(true)} className="gap-1.5 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border border-white/20">
+                <Plus className="h-4 w-4" /> Add Lead
+              </Button>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            {[
+              { label: "Total Leads", value: totalApps, icon: Users, bgc: "bg-blue-500/20" },
+              { label: "In Pipeline", value: inPipeline, icon: TrendingUp, bgc: "bg-orange-400/20" },
+              { label: "Disbursed", value: disbursed, icon: CheckCircle2, bgc: "bg-emerald-400/20" },
+              { label: "Lost", value: lost, icon: XCircle, bgc: "bg-red-400/20" },
+              { label: "Total Value", value: formatAmount(totalValue), icon: IndianRupee, bgc: "bg-cyan-400/20" },
+            ].map(kpi => (
+              <div key={kpi.label} className={`${kpi.bgc} backdrop-blur-sm rounded-xl px-4 py-3 border border-white/10`}>
+                <div className="flex items-center gap-2 mb-1">
+                  <kpi.icon className="h-4 w-4 text-white/70" />
+                  <span className="text-[10px] uppercase tracking-wider text-white/70">{kpi.label}</span>
+                </div>
+                <p className="text-2xl font-bold tracking-tight">{kpi.value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* 4 View Tabs */}
+      <div className="flex gap-2 bg-muted/50 p-1 rounded-xl border">
+        {TABS.map(tab => (
+          <Button key={tab.key} variant={activeView === tab.key ? "default" : "ghost"} size="sm"
+            className={cn("flex-1 gap-1.5 text-xs", activeView === tab.key && "shadow-sm")}
+            onClick={() => setActiveView(tab.key)}>
+            <tab.icon className="h-3.5 w-3.5" />
+            {tab.label}
+            {tab.count > 0 && <Badge variant={activeView === tab.key ? "secondary" : "outline"} className="text-[9px] h-4 px-1">{tab.count}</Badge>}
+          </Button>
         ))}
       </div>
 
       {loanNotifications.length > 0 && <StageNotificationBanner items={loanNotifications} />}
 
-      {/* Pipeline Header */}
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-3">
-          <h2 className="text-lg font-semibold">Pipeline</h2>
-          <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">{disbursed} Disbursed</Badge>
-          <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/20">{lost} Lost</Badge>
-        </div>
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowImport(true)}>
-            <FileSpreadsheet className="h-4 w-4" /> Import
-          </Button>
-          <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white">
-                <Plus className="h-4 w-4" /> New Lead
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader><DialogTitle className="flex items-center gap-2"><Banknote className="h-5 w-5 text-emerald-600" /> New Car Loan Lead</DialogTitle></DialogHeader>
-              <div className="space-y-4">
-                {/* Loan Type */}
-                <div>
-                  <Label className="text-xs font-medium">Loan Type *</Label>
-                  <Select value={newApp.loan_type} onValueChange={v => setNewApp(p => ({ ...p, loan_type: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{LOAN_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                {/* Name + Phone */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div><Label className="text-xs">Name *</Label><Input value={newApp.customer_name} onChange={e => setNewApp(p => ({ ...p, customer_name: e.target.value }))} /></div>
-                  <div><Label className="text-xs">Phone *</Label><Input value={newApp.phone} onChange={e => setNewApp(p => ({ ...p, phone: e.target.value }))} placeholder="10-digit" /></div>
-                </div>
-                {/* Email + City */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div><Label className="text-xs">Email</Label><Input type="email" value={newApp.email} onChange={e => setNewApp(p => ({ ...p, email: e.target.value }))} /></div>
-                  <div><Label className="text-xs">City</Label><Input value={newApp.city} onChange={e => setNewApp(p => ({ ...p, city: e.target.value }))} /></div>
-                </div>
-                {/* Loan Amount + Car Model */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div><Label className="text-xs">Loan Amount</Label><Input type="number" value={newApp.loan_amount} onChange={e => setNewApp(p => ({ ...p, loan_amount: e.target.value }))} /></div>
-                  <div><Label className="text-xs">Car Model</Label><Input value={newApp.car_model} onChange={e => setNewApp(p => ({ ...p, car_model: e.target.value }))} /></div>
-                </div>
-                {/* Down Payment + Monthly Income */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div><Label className="text-xs">Down Payment</Label><Input type="number" value={newApp.down_payment} onChange={e => setNewApp(p => ({ ...p, down_payment: e.target.value }))} /></div>
-                  <div><Label className="text-xs">Monthly Income</Label><Input type="number" value={newApp.monthly_income} onChange={e => setNewApp(p => ({ ...p, monthly_income: e.target.value }))} /></div>
-                </div>
-                {/* Employment + Priority */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label className="text-xs">Employment Type</Label>
-                    <Select value={newApp.employment_type} onValueChange={v => setNewApp(p => ({ ...p, employment_type: v }))}>
-                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent>{EMPLOYMENT_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label className="text-xs">Priority</Label>
-                    <Select value={newApp.priority} onValueChange={v => setNewApp(p => ({ ...p, priority: v }))}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>{PRIORITY_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                {/* Source */}
-                <div>
-                  <Label className="text-xs">Lead Source</Label>
-                  <Select value={newApp.source} onValueChange={v => setNewApp(p => ({ ...p, source: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{LEAD_SOURCES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                {/* Remarks */}
-                <div><Label className="text-xs">Remarks</Label><Textarea value={newApp.remarks} onChange={e => setNewApp(p => ({ ...p, remarks: e.target.value }))} rows={2} /></div>
-                <Button onClick={() => createMutation.mutate(newApp)} disabled={!newApp.customer_name || !newApp.phone || createMutation.isPending} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white">
-                  Create Lead
-                </Button>
+      {/* Add Lead Dialog */}
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><Banknote className="h-5 w-5 text-emerald-600" /> New Car Loan Lead</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-xs font-medium">Loan Type *</Label>
+              <Select value={newApp.loan_type} onValueChange={v => setNewApp(p => ({ ...p, loan_type: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{LOAN_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label className="text-xs">Name *</Label><Input value={newApp.customer_name} onChange={e => setNewApp(p => ({ ...p, customer_name: e.target.value }))} /></div>
+              <div><Label className="text-xs">Phone *</Label><Input value={newApp.phone} onChange={e => setNewApp(p => ({ ...p, phone: e.target.value }))} placeholder="10-digit" /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label className="text-xs">Email</Label><Input type="email" value={newApp.email} onChange={e => setNewApp(p => ({ ...p, email: e.target.value }))} /></div>
+              <div><Label className="text-xs">City</Label><Input value={newApp.city} onChange={e => setNewApp(p => ({ ...p, city: e.target.value }))} /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label className="text-xs">Loan Amount</Label><Input type="number" value={newApp.loan_amount} onChange={e => setNewApp(p => ({ ...p, loan_amount: e.target.value }))} /></div>
+              <div><Label className="text-xs">Car Model</Label><Input value={newApp.car_model} onChange={e => setNewApp(p => ({ ...p, car_model: e.target.value }))} /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label className="text-xs">Down Payment</Label><Input type="number" value={newApp.down_payment} onChange={e => setNewApp(p => ({ ...p, down_payment: e.target.value }))} /></div>
+              <div><Label className="text-xs">Monthly Income</Label><Input type="number" value={newApp.monthly_income} onChange={e => setNewApp(p => ({ ...p, monthly_income: e.target.value }))} /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Employment Type</Label>
+                <Select value={newApp.employment_type} onValueChange={v => setNewApp(p => ({ ...p, employment_type: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>{EMPLOYMENT_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
+                </Select>
               </div>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
+              <div>
+                <Label className="text-xs">Priority</Label>
+                <Select value={newApp.priority} onValueChange={v => setNewApp(p => ({ ...p, priority: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{PRIORITY_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Lead Source</Label>
+              <Select value={newApp.source} onValueChange={v => setNewApp(p => ({ ...p, source: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{LEAD_SOURCES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div><Label className="text-xs">Remarks</Label><Textarea value={newApp.remarks} onChange={e => setNewApp(p => ({ ...p, remarks: e.target.value }))} rows={2} /></div>
+            <Button onClick={() => createMutation.mutate(newApp)} disabled={!newApp.customer_name || !newApp.phone || createMutation.isPending} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white">
+              Create Lead
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Import Dialog */}
       <LeadImportDialog
@@ -571,48 +585,75 @@ export const LoanWorkspace = () => {
         }}
       />
 
-      {/* Drag hint */}
-      {draggingApp && (
-        <div className="text-xs text-center text-muted-foreground bg-muted/50 rounded-lg py-1.5 border border-dashed border-primary/30 animate-pulse">
-          Drop on a stage to move <strong>{draggingApp.customer_name}</strong>
-        </div>
-      )}
+      {/* Tab Content */}
+      {activeView === "pipeline" && (
+        <>
+          <EMICalculator />
 
-      {/* ─── Kanban Board with Grid Lines ─── */}
-      <ScrollArea className="w-full">
-        <div className="flex min-w-max">
-          {pipelineStages.map((stage, colIdx) => {
-            const stageApps = applications.filter((a: any) => a.stage === stage);
-            const stageValue = stageApps.reduce((s: number, a: any) => s + (Number(a.loan_amount) || 0), 0);
-            const isDragOver = dragOverStage === stage;
-            const showDropIndicator = draggingApp && isDragOver;
+          {/* Drag hint */}
+          {draggingApp && (
+            <div className="text-xs text-center text-muted-foreground bg-muted/50 rounded-lg py-1.5 border border-dashed border-primary/30 animate-pulse">
+              Drop on a stage to move <strong>{draggingApp.customer_name}</strong>
+            </div>
+          )}
 
-            return (
-              <div key={stage}
-                className={`w-[280px] shrink-0 flex flex-col ${colIdx > 0 ? 'border-l border-border/40' : ''}`}
-                onDragOver={e => handleDragOver(e, stage)}
-                onDragLeave={handleDragLeave}
-                onDrop={e => handleDrop(e, stage)}>
-                {/* Column Header */}
-                <div className={`mx-1.5 rounded-lg border p-2.5 mb-2 transition-all ${STAGE_COLORS[stage]} ${showDropIndicator ? 'ring-2 ring-primary scale-[1.02] shadow-lg' : ''}`}>
-                  <div className="flex justify-between items-center">
-                    <span className="font-semibold text-xs">{STAGE_LABELS[stage]}</span>
-                    <Badge variant="secondary" className="text-[10px] h-5">{stageApps.length}</Badge>
+          {/* Kanban Board */}
+          <ScrollArea className="w-full">
+            <div className="flex min-w-max">
+              {pipelineStages.map((stage, colIdx) => {
+                const stageApps = applications.filter((a: any) => a.stage === stage);
+                const stageValue = stageApps.reduce((s: number, a: any) => s + (Number(a.loan_amount) || 0), 0);
+                const isDragOver = dragOverStage === stage;
+                const showDropIndicator = draggingApp && isDragOver;
+
+                return (
+                  <div key={stage}
+                    className={`w-[280px] shrink-0 flex flex-col ${colIdx > 0 ? 'border-l border-border/40' : ''}`}
+                    onDragOver={e => handleDragOver(e, stage)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={e => handleDrop(e, stage)}>
+                    <div className={`mx-1.5 rounded-lg border p-2.5 mb-2 transition-all ${STAGE_COLORS[stage]} ${showDropIndicator ? 'ring-2 ring-primary scale-[1.02] shadow-lg' : ''}`}>
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold text-xs">{STAGE_LABELS[stage]}</span>
+                        <Badge variant="secondary" className="text-[10px] h-5">{stageApps.length}</Badge>
+                      </div>
+                      {stageValue > 0 && <p className="text-[10px] mt-1 opacity-70">₹{(stageValue / 100000).toFixed(1)}L</p>}
+                    </div>
+                    <div className={`flex-1 px-1.5 pb-2 min-h-[120px] transition-all ${showDropIndicator ? 'bg-primary/5' : ''}`}>
+                      {stageApps.length === 0 && !showDropIndicator && (
+                        <div className="h-full flex items-center justify-center text-[11px] text-muted-foreground/40 py-8">No leads</div>
+                      )}
+                      {showDropIndicator && stageApps.length === 0 && (
+                        <div className="h-full flex items-center justify-center text-[11px] text-primary/60 py-8 font-medium">Drop here ✓</div>
+                      )}
+                      {stageApps.map((app: any, cardIdx: number) => (
+                        <div key={app.id} className={cardIdx > 0 ? 'border-t border-border/30 pt-2 mt-2' : ''}>
+                          <LoanCard app={app} stage={stage}
+                            onDragStart={handleDragStart} onDragEnd={handleDragEnd}
+                            onClick={handleCardClick} onWhatsApp={handleWhatsApp}
+                            isDragging={draggingApp?.id === app.id} formatAmount={formatAmount} />
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  {stageValue > 0 && <p className="text-[10px] mt-1 opacity-70">₹{(stageValue / 100000).toFixed(1)}L</p>}
-                </div>
+                );
+              })}
 
-                {/* Cards */}
-                <div className={`flex-1 px-1.5 pb-2 min-h-[120px] transition-all ${showDropIndicator ? 'bg-primary/5' : ''}`}>
-                  {stageApps.length === 0 && !showDropIndicator && (
-                    <div className="h-full flex items-center justify-center text-[11px] text-muted-foreground/40 py-8">No leads</div>
-                  )}
-                  {showDropIndicator && stageApps.length === 0 && (
-                    <div className="h-full flex items-center justify-center text-[11px] text-primary/60 py-8 font-medium">Drop here ✓</div>
-                  )}
-                  {stageApps.map((app: any, cardIdx: number) => (
-                    <div key={app.id} className={cardIdx > 0 ? 'border-t border-border/30 pt-2 mt-2' : ''}>
-                      <LoanCard app={app} stage={stage}
+              {/* Lost Column */}
+              <div className="w-[280px] shrink-0 flex flex-col border-l border-border/40"
+                onDragOver={e => handleDragOver(e, 'lost')}
+                onDragLeave={handleDragLeave}
+                onDrop={e => handleDrop(e, 'lost')}>
+                <div className={`mx-1.5 rounded-lg border p-2.5 mb-2 transition-all ${STAGE_COLORS['lost']} ${dragOverStage === 'lost' && draggingApp ? 'ring-2 ring-red-500 scale-[1.02] shadow-lg' : ''}`}>
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold text-xs">Lost</span>
+                    <Badge variant="secondary" className="text-[10px] h-5">{lost}</Badge>
+                  </div>
+                </div>
+                <div className={`flex-1 px-1.5 pb-2 min-h-[120px] transition-all ${dragOverStage === 'lost' && draggingApp ? 'bg-red-500/5' : ''}`}>
+                  {applications.filter((a: any) => a.stage === 'lost').slice(0, 5).map((app: any, i: number) => (
+                    <div key={app.id} className={i > 0 ? 'border-t border-border/30 pt-2 mt-2' : ''}>
+                      <LoanCard app={app} stage="lost"
                         onDragStart={handleDragStart} onDragEnd={handleDragEnd}
                         onClick={handleCardClick} onWhatsApp={handleWhatsApp}
                         isDragging={draggingApp?.id === app.id} formatAmount={formatAmount} />
@@ -620,34 +661,20 @@ export const LoanWorkspace = () => {
                   ))}
                 </div>
               </div>
-            );
-          })}
+            </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
+        </>
+      )}
 
-          {/* Lost Column */}
-          <div className="w-[280px] shrink-0 flex flex-col border-l border-border/40"
-            onDragOver={e => handleDragOver(e, 'lost')}
-            onDragLeave={handleDragLeave}
-            onDrop={e => handleDrop(e, 'lost')}>
-            <div className={`mx-1.5 rounded-lg border p-2.5 mb-2 transition-all ${STAGE_COLORS['lost']} ${dragOverStage === 'lost' && draggingApp ? 'ring-2 ring-red-500 scale-[1.02] shadow-lg' : ''}`}>
-              <div className="flex justify-between items-center">
-                <span className="font-semibold text-xs">Lost</span>
-                <Badge variant="secondary" className="text-[10px] h-5">{lost}</Badge>
-              </div>
-            </div>
-            <div className={`flex-1 px-1.5 pb-2 min-h-[120px] transition-all ${dragOverStage === 'lost' && draggingApp ? 'bg-red-500/5' : ''}`}>
-              {applications.filter((a: any) => a.stage === 'lost').slice(0, 5).map((app: any, i: number) => (
-                <div key={app.id} className={i > 0 ? 'border-t border-border/30 pt-2 mt-2' : ''}>
-                  <LoanCard app={app} stage="lost"
-                    onDragStart={handleDragStart} onDragEnd={handleDragEnd}
-                    onClick={handleCardClick} onWhatsApp={handleWhatsApp}
-                    isDragging={draggingApp?.id === app.id} formatAmount={formatAmount} />
-                </div>
-              ))}
-            </div>
-          </div>
+      {activeView === "disbursement" && <LoanDisbursementBook applications={applications} />}
+      {activeView === "after_sales" && <LoanAfterSales applications={applications} />}
+      {activeView === "bulk_tools" && (
+        <div className="text-center py-12">
+          <Wrench className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
+          <p className="text-sm text-muted-foreground">Use the Import button above to bulk import leads via CSV</p>
         </div>
-        <ScrollBar orientation="horizontal" />
-      </ScrollArea>
+      )}
 
       {/* Stage Detail Modal */}
       {selectedApp && (
