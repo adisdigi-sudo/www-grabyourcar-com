@@ -88,6 +88,8 @@ type PolicyRecord = {
   plan_name: string | null;
   idv: number | null;
   policy_document_url: string | null;
+  source_label: string | null;
+  renewal_count: number | null;
   created_at: string;
   insurance_clients: {
     customer_name: string;
