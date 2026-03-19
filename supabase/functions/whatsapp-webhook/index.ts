@@ -14,7 +14,6 @@ serve(async (req) => {
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const WHATSAPP_VERIFY_TOKEN = Deno.env.get("WHATSAPP_VERIFY_TOKEN") || "grabyourcar_webhook_verify";
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
   // GET — Meta webhook verification
   if (req.method === "GET") {
@@ -24,7 +23,6 @@ serve(async (req) => {
     const challenge = url.searchParams.get("hub.challenge");
 
     if (mode === "subscribe" && token === WHATSAPP_VERIFY_TOKEN && challenge) {
-      console.log("Webhook verified");
       return new Response(challenge, { status: 200 });
     }
 
@@ -34,13 +32,12 @@ serve(async (req) => {
     });
   }
 
-  // POST — incoming messages + delivery status updates from Meta
+  // POST — incoming messages + delivery status updates
   if (req.method === "POST") {
     try {
       const body = await req.json();
-      console.log("Meta webhook payload:", JSON.stringify(body));
+      console.log("Meta webhook payload:", JSON.stringify(body).slice(0, 500));
 
-      // Health check
       if (body.action === "health_check") {
         return new Response(JSON.stringify({ status: "ok" }), {
           status: 200,
@@ -50,67 +47,53 @@ serve(async (req) => {
 
       const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-      // Process Meta webhook format
       const entry = body.entry?.[0];
       const changes = entry?.changes?.[0];
       const value = changes?.value;
 
       if (!value) {
-        // Legacy Finbite format fallback
-        return await handleLegacyWebhook(body, supabase, LOVABLE_API_KEY);
+        return new Response(JSON.stringify({ success: true, status: "acknowledged" }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
 
       // --- Handle delivery status updates ---
-      if (value.statuses && value.statuses.length > 0) {
+      if (value.statuses?.length > 0) {
         for (const statusUpdate of value.statuses) {
-          const messageId = statusUpdate.id;
-          const status = statusUpdate.status; // sent, delivered, read, failed
+          const updates: Record<string, any> = { status: statusUpdate.status };
           const timestamp = statusUpdate.timestamp
             ? new Date(parseInt(statusUpdate.timestamp) * 1000).toISOString()
             : new Date().toISOString();
 
-          console.log(`Status update: ${messageId} → ${status}`);
-
-          const updates: Record<string, any> = { status };
-
-          if (status === "sent") {
-            updates.sent_at = timestamp;
-          } else if (status === "delivered") {
-            updates.delivered_at = timestamp;
-          } else if (status === "read") {
-            updates.read_at = timestamp;
-          } else if (status === "failed") {
-            const errorInfo = statusUpdate.errors?.[0];
-            updates.error_message = errorInfo?.title || errorInfo?.message || "Delivery failed";
+          if (statusUpdate.status === "sent") updates.sent_at = timestamp;
+          else if (statusUpdate.status === "delivered") updates.delivered_at = timestamp;
+          else if (statusUpdate.status === "read") updates.read_at = timestamp;
+          else if (statusUpdate.status === "failed") {
+            updates.error_message = statusUpdate.errors?.[0]?.title || "Delivery failed";
           }
 
-          // Update wa_message_logs by provider_message_id
-          const { error } = await supabase
+          await supabase
             .from("wa_message_logs")
             .update(updates)
-            .eq("provider_message_id", messageId);
-
-          if (error) {
-            console.error(`Failed to update status for ${messageId}:`, error);
-          }
+            .eq("provider_message_id", statusUpdate.id);
         }
-
         return new Response(JSON.stringify({ success: true, processed: "statuses" }), {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      // --- Handle incoming messages ---
-      if (value.messages && value.messages.length > 0) {
+      // --- Handle incoming messages via AI Brain ---
+      if (value.messages?.length > 0) {
         for (const msg of value.messages) {
           const from = msg.from;
           const messageText = msg.text?.body || msg.caption || "";
           const contactName = value.contacts?.[0]?.profile?.name || "Customer";
 
-          console.log(`Incoming message from ${contactName} (${from}): ${messageText}`);
+          console.log(`Incoming from ${contactName} (${from}): ${messageText}`);
 
-          // Upsert conversation
+          // Get or create conversation
           const { data: existingConvo } = await supabase
             .from("whatsapp_conversations")
             .select("*")
@@ -123,6 +106,17 @@ serve(async (req) => {
           if (existingConvo) {
             conversationId = existingConvo.id;
             conversationHistory = (existingConvo.messages as any[]) || [];
+
+            // If human takeover is active, skip AI response
+            if (existingConvo.human_takeover) {
+              console.log(`Human takeover active for ${from}, skipping AI`);
+              conversationHistory.push({ role: "user", content: messageText });
+              await supabase.from("whatsapp_conversations").update({
+                messages: conversationHistory.slice(-20),
+                last_message_at: new Date().toISOString(),
+              }).eq("id", conversationId);
+              continue;
+            }
           } else {
             const { data: newConvo } = await supabase
               .from("whatsapp_conversations")
@@ -131,6 +125,7 @@ serve(async (req) => {
                 customer_name: contactName,
                 messages: [],
                 status: "active",
+                ai_enabled: true,
               })
               .select()
               .single();
@@ -139,26 +134,46 @@ serve(async (req) => {
 
           conversationHistory.push({ role: "user", content: messageText });
 
-          // Generate AI response
-          let aiResponse = getStaticResponse(messageText.toLowerCase());
-          if (LOVABLE_API_KEY) {
-            try {
-              aiResponse = await generateAIResponse(LOVABLE_API_KEY, contactName, messageText, conversationHistory);
-            } catch (e) {
-              console.error("AI response error:", e);
+          // Call AI Brain for intelligent response
+          let aiResponse = getFallbackResponse(messageText.toLowerCase());
+          let intentDetected = "general";
+
+          try {
+            const brainResponse = await fetch(`${SUPABASE_URL}/functions/v1/ai-brain`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+              },
+              body: JSON.stringify({
+                messages: conversationHistory.slice(-10),
+                channel: "whatsapp",
+                customer_name: contactName,
+                customer_phone: from,
+              }),
+            });
+
+            if (brainResponse.ok) {
+              const brainData = await brainResponse.json();
+              aiResponse = brainData.response || aiResponse;
+              intentDetected = brainData.intent || "general";
+
+              // Update conversation intent
+              await supabase.from("whatsapp_conversations").update({
+                intent_detected: intentDetected,
+              }).eq("id", conversationId);
             }
+          } catch (e) {
+            console.error("AI Brain call failed, using fallback:", e);
           }
 
           conversationHistory.push({ role: "assistant", content: aiResponse });
 
           // Update conversation
-          await supabase
-            .from("whatsapp_conversations")
-            .update({
-              messages: conversationHistory.slice(-20),
-              last_message_at: new Date().toISOString(),
-            })
-            .eq("id", conversationId);
+          await supabase.from("whatsapp_conversations").update({
+            messages: conversationHistory.slice(-20),
+            last_message_at: new Date().toISOString(),
+          }).eq("id", conversationId);
 
           // Send reply via Meta API
           const WHATSAPP_ACCESS_TOKEN = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
@@ -180,30 +195,17 @@ serve(async (req) => {
             });
           }
 
-          // Log to wa_message_logs
+          // Log message
           await supabase.from("wa_message_logs").insert({
             phone: from,
             customer_name: contactName,
             message_type: "text",
             message_content: aiResponse,
-            trigger_event: "chatbot_reply",
+            trigger_event: "ai_brain_reply",
             status: "sent",
             provider: "meta",
             sent_at: new Date().toISOString(),
           });
-
-          // Save as lead
-          if (!existingConvo || detectHighIntent(messageText)) {
-            await supabase.from("leads").upsert({
-              phone: formatPhoneDisplay(from),
-              customer_name: contactName,
-              source: "whatsapp_chatbot",
-              lead_type: detectLeadType(messageText),
-              notes: `Latest: ${messageText}`,
-              status: existingConvo ? "contacted" : "new",
-              priority: detectHighIntent(messageText) ? "high" : "medium",
-            }, { onConflict: "phone" });
-          }
         }
 
         return new Response(JSON.stringify({ success: true, processed: "messages" }), {
@@ -217,7 +219,7 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     } catch (error) {
-      console.error("Webhook processing error:", error);
+      console.error("Webhook error:", error);
       return new Response(JSON.stringify({ error: "Processing failed" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -228,83 +230,18 @@ serve(async (req) => {
   return new Response("Method not allowed", { status: 405 });
 });
 
-// Legacy Finbite webhook handler
-async function handleLegacyWebhook(body: any, supabase: any, lovableApiKey: string | undefined) {
-  const from = body.phone || body.from || body.sender;
-  const messageText = body.message || body.msg || body.text || "";
-
-  if (!from || !messageText) {
-    return new Response(JSON.stringify({ success: true, status: "acknowledged" }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-
-  return new Response(JSON.stringify({ success: true }), {
-    status: 200,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
-// AI response generation
-async function generateAIResponse(
-  apiKey: string,
-  customerName: string,
-  currentMessage: string,
-  conversationHistory: Array<{ role: string; content: string }>
-): Promise<string> {
-  const systemPrompt = `You are GrabYourCar's WhatsApp car buying assistant. Keep responses under 200 words. Be friendly and helpful. Brands: Maruti, Hyundai, Tata, Mahindra, Kia, Toyota, Honda, MG, Skoda, VW. Services: New cars, loans (8.5%+), insurance (up to 70% discount), HSRP. Website: www.grabyourcar.com`;
-
-  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
-      messages: [
-        { role: "system", content: systemPrompt },
-        ...conversationHistory.slice(-10),
-      ],
-      max_tokens: 500,
-    }),
-  });
-
-  if (!response.ok) return getStaticResponse(currentMessage.toLowerCase());
-  const data = await response.json();
-  return data.choices?.[0]?.message?.content || getStaticResponse(currentMessage.toLowerCase());
-}
-
-function getStaticResponse(message: string): string {
+function getFallbackResponse(message: string): string {
   if (message.includes("price") || message.includes("cost")) {
-    return `🚗 For the best on-road price in your city, our expert will call you within 5 minutes.\n\nBrowse cars: www.grabyourcar.com/cars`;
+    return `🚗 For the best on-road price, our expert will call you within 5 minutes.\n\nBrowse cars: www.grabyourcar.com/cars`;
   }
   if (message.includes("loan") || message.includes("emi")) {
-    return `💰 Car Finance: Interest from 8.5%, up to 100% funding, instant approval.\n\nCalculate EMI: www.grabyourcar.com/car-loans`;
+    return `💰 Car Finance: Interest from 8.5%, up to 100% funding.\n\nCalculate EMI: www.grabyourcar.com/car-loans`;
+  }
+  if (message.includes("insurance")) {
+    return `🛡️ Car Insurance with up to 70% discount!\n\nGet quote: www.grabyourcar.com/car-insurance`;
   }
   if (message.includes("hi") || message.includes("hello")) {
-    return `👋 Welcome to GrabYourCar!\n\n1️⃣ Find the perfect car\n2️⃣ Check prices & offers\n3️⃣ Calculate EMI\n4️⃣ Locate nearest dealer\n\nJust ask!`;
+    return `👋 Welcome to GrabYourCar!\n\n1️⃣ Find the perfect car\n2️⃣ Check prices & offers\n3️⃣ Calculate EMI\n4️⃣ Get Insurance Quote\n\nJust ask!`;
   }
   return `Thank you! Our car expert will connect with you shortly.\n\nExplore: www.grabyourcar.com`;
-}
-
-function detectHighIntent(message: string): boolean {
-  const keywords = ["buy", "purchase", "book", "price", "offer", "discount", "loan", "emi", "dealer", "test drive"];
-  return keywords.some(k => message.toLowerCase().includes(k));
-}
-
-function detectLeadType(message: string): string {
-  const lower = message.toLowerCase();
-  if (lower.includes("loan") || lower.includes("emi")) return "finance_inquiry";
-  if (lower.includes("insurance")) return "insurance_inquiry";
-  return "car_inquiry";
-}
-
-function formatPhoneDisplay(phone: string): string {
-  const cleaned = phone.replace(/\D/g, "");
-  if (cleaned.startsWith("91") && cleaned.length === 12) {
-    return `+91 ${cleaned.slice(2, 7)} ${cleaned.slice(7)}`;
-  }
-  return phone;
 }

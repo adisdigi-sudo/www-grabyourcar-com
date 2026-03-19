@@ -15,7 +15,7 @@ type Message = {
   content: string;
 };
 
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/car-advisor`;
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-brain`;
 
 const DEFAULT_MESSAGE: Message = {
   role: "assistant",
@@ -187,7 +187,7 @@ export const CarAdvisorChat = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ messages: newMessages }),
+        body: JSON.stringify({ messages: newMessages, channel: "website", stream: true, page_context: window.location.pathname }),
       });
 
       if (!response.ok || !response.body) {

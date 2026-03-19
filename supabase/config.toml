@@ -168,6 +168,15 @@ verify_jwt = false
 [functions.ai-generate]
 verify_jwt = false
 
+[functions.ai-brain]
+verify_jwt = false
+
+[functions.crm-ai-assistant]
+verify_jwt = false
+
+[functions.seo-agent]
+verify_jwt = false
+
 [functions.lead-scoring]
 verify_jwt = false
 

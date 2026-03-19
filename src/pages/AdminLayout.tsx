@@ -108,6 +108,7 @@ import { DocumentVault } from "@/components/admin/documents/DocumentVault";
 import { SalesIncentiveDashboard } from "@/components/admin/incentives/SalesIncentiveDashboard";
 import { IncentivePayoutApproval } from "@/components/admin/finance/IncentivePayoutApproval";
 import { DealsPipeline } from "@/components/admin/deals/DealsPipeline";
+import { CRMAssistant } from "@/components/admin/CRMAssistant";
 
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
@@ -449,6 +450,8 @@ const AdminLayout = () => {
           {renderContent()}
         </div>
       </main>
+      {/* CRM AI Assistant Overlay */}
+      <CRMAssistant />
     </div>
   );
 };
