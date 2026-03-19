@@ -5833,6 +5833,7 @@ export type Database = {
           incentive_eligible: boolean | null
           is_active: boolean | null
           is_otp_verified: boolean | null
+          journey_drop_off_page: string | null
           journey_last_event: string | null
           journey_last_event_at: string | null
           last_contacted_at: string | null
@@ -5858,6 +5859,8 @@ export type Database = {
           relationship: string | null
           renewal_reminder_date: string | null
           renewal_reminder_set: boolean | null
+          retarget_sent_at: string | null
+          retarget_status: string | null
           retargeting_enabled: boolean
           rto_tax_expiry: string | null
           state: string | null
@@ -5903,6 +5906,7 @@ export type Database = {
           incentive_eligible?: boolean | null
           is_active?: boolean | null
           is_otp_verified?: boolean | null
+          journey_drop_off_page?: string | null
           journey_last_event?: string | null
           journey_last_event_at?: string | null
           last_contacted_at?: string | null
@@ -5928,6 +5932,8 @@ export type Database = {
           relationship?: string | null
           renewal_reminder_date?: string | null
           renewal_reminder_set?: boolean | null
+          retarget_sent_at?: string | null
+          retarget_status?: string | null
           retargeting_enabled?: boolean
           rto_tax_expiry?: string | null
           state?: string | null
@@ -5973,6 +5979,7 @@ export type Database = {
           incentive_eligible?: boolean | null
           is_active?: boolean | null
           is_otp_verified?: boolean | null
+          journey_drop_off_page?: string | null
           journey_last_event?: string | null
           journey_last_event_at?: string | null
           last_contacted_at?: string | null
@@ -5998,6 +6005,8 @@ export type Database = {
           relationship?: string | null
           renewal_reminder_date?: string | null
           renewal_reminder_set?: boolean | null
+          retarget_sent_at?: string | null
+          retarget_status?: string | null
           retargeting_enabled?: boolean
           rto_tax_expiry?: string | null
           state?: string | null
@@ -6459,6 +6468,7 @@ export type Database = {
           policy_type: string
           premium_amount: number | null
           previous_policy_id: string | null
+          renewal_count: number | null
           renewal_frequency: string | null
           renewal_quote_premium: number | null
           renewal_status: string | null
@@ -6490,6 +6500,7 @@ export type Database = {
           policy_type: string
           premium_amount?: number | null
           previous_policy_id?: string | null
+          renewal_count?: number | null
           renewal_frequency?: string | null
           renewal_quote_premium?: number | null
           renewal_status?: string | null
@@ -6521,6 +6532,7 @@ export type Database = {
           policy_type?: string
           premium_amount?: number | null
           previous_policy_id?: string | null
+          renewal_count?: number | null
           renewal_frequency?: string | null
           renewal_quote_premium?: number | null
           renewal_status?: string | null
