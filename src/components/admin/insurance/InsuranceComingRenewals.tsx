@@ -366,15 +366,7 @@ export function InsuranceComingRenewals({ policies }: InsuranceComingRenewalsPro
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">New Expiry Date *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full h-9 justify-start text-left text-xs">
-                      <CalendarIcon className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-                      {wonExpiryDate ? format(wonExpiryDate, "dd MMM yyyy") : "Pick new expiry date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={wonExpiryDate} onSelect={setWonExpiryDate} className="p-3 pointer-events-auto" /></PopoverContent>
-                </Popover>
+                <SmartDatePicker date={wonExpiryDate} onSelect={setWonExpiryDate} placeholder="Pick new expiry date" yearRange={[new Date().getFullYear(), new Date().getFullYear() + 3]} />
               </div>
             </div>
           )}

@@ -812,15 +812,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
           <div className="space-y-3">
             <div className="space-y-1">
               <Label className="text-xs">Follow-Up Date *</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-full justify-start text-left h-9">
-                    <CalendarIcon className="h-4 w-4 mr-2 text-muted-foreground" />
-                    {followUpDate ? format(followUpDate, "PPP") : "Pick a date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={followUpDate} onSelect={setFollowUpDate} className="p-3 pointer-events-auto" /></PopoverContent>
-              </Popover>
+              <SmartDatePicker date={followUpDate} onSelect={setFollowUpDate} placeholder="Pick a date" yearRange={[new Date().getFullYear(), new Date().getFullYear() + 2]} />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Time</Label>
