@@ -17,7 +17,8 @@ import { motion } from "framer-motion";
 import {
   Banknote, Plus, Phone, IndianRupee, Car, GripVertical, Calculator,
   Share2, PhoneCall, MessageCircle, CheckCircle2, XCircle, Building2,
-  FileText, AlertTriangle, Clock, TrendingUp, Users, Download, FileSpreadsheet
+  FileText, AlertTriangle, Clock, TrendingUp, Users, Download, FileSpreadsheet,
+  BookOpen, HeartHandshake, Wrench
 } from "lucide-react";
 import jsPDF from "jspdf";
 import { LeadImportDialog } from "../shared/LeadImportDialog";
@@ -27,6 +28,9 @@ import {
   CALL_STATUSES, LOST_REASONS, normalizeStage, LOAN_TYPES, EMPLOYMENT_TYPES,
   type LoanStage
 } from "./LoanStageConfig";
+import { LoanDisbursementBook } from "./LoanDisbursementBook";
+import { LoanAfterSales } from "./LoanAfterSales";
+import { cn } from "@/lib/utils";
 
 // ─── EMI Calculator ───
 const EMICalculator = () => {
