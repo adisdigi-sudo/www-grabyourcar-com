@@ -109,6 +109,7 @@ const App = () => (
                   </div>
                 }
               >
+                <PageViewTracker />
                 <AdminSubdomainRouter>
                   <Routes>
                     <Route path="/" element={<Index />} />
