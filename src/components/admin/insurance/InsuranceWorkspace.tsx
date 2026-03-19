@@ -235,13 +235,13 @@ export function InsuranceWorkspace() {
     },
   });
 
-  // Data - Actual booked policies from insurance_policies table
+  // Data - Actual booked policies from insurance_policies table (active + renewed = Policy Book)
   const { data: policies = [] } = useQuery({
     queryKey: ["ins-policies-book"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("insurance_policies")
-        .select("id, client_id, policy_number, policy_type, insurer, premium_amount, start_date, expiry_date, status, is_renewal, issued_date, plan_name, idv, policy_document_url, created_at, insurance_clients(customer_name, phone, city, vehicle_number, vehicle_make, vehicle_model, lead_source)")
+        .select("id, client_id, policy_number, policy_type, insurer, premium_amount, start_date, expiry_date, status, is_renewal, issued_date, plan_name, idv, policy_document_url, source_label, renewal_count, created_at, insurance_clients(customer_name, phone, city, vehicle_number, vehicle_make, vehicle_model, lead_source)")
         .in("status", ["active", "renewed"])
         .order("created_at", { ascending: false });
       if (error) throw error;
