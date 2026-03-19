@@ -123,6 +123,10 @@ export function InsuranceHeroForm({ policyType = "comprehensive", vehicleLabel =
         source: `insurance_hero_${policyType}`,
       });
     } catch { /* Don't block flow */ }
+
+    const { trackLeadConversion } = await import("@/lib/adTracking");
+    trackLeadConversion("insurance_hero", { policyType });
+
     setIsLoading(false);
     setShowRedirect(true);
     toast.success("Redirecting you to get your quotes 🎉");

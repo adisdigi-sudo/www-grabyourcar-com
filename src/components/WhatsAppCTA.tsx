@@ -155,6 +155,7 @@ export const WhatsAppFloatingButton = ({
 
   const handleClick = () => {
     trackWhatsAppClick('floating_button', 'Floating WhatsApp');
+    import("@/lib/adTracking").then(({ trackWhatsAppConversion }) => trackWhatsAppConversion("floating_button"));
   };
 
   return (

@@ -56,6 +56,9 @@ export const CorporateCTA = () => {
 
       if (error) throw error;
 
+      const { trackLeadConversion } = await import("@/lib/adTracking");
+      trackLeadConversion("corporate_enquiry");
+
       toast.success("Request submitted successfully!", {
         description: "Our corporate team will contact you within 24 hours.",
       });

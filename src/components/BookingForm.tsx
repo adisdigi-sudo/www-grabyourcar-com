@@ -80,6 +80,10 @@
 
        if (error) throw error;
 
+       // Ad conversion tracking
+       const { trackLeadConversion, getUTMFields } = await import("@/lib/adTracking");
+       trackLeadConversion("car_detail_booking", { car: carName });
+
        // Celebration!
        confetti({
          particleCount: 100,

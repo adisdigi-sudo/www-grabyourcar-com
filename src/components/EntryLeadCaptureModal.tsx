@@ -102,6 +102,9 @@ export const EntryLeadCaptureModal = () => {
         });
       } catch { /* WhatsApp is best-effort */ }
 
+      const { trackLeadConversion } = await import("@/lib/adTracking");
+      trackLeadConversion("entry_popup");
+
       confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
       localStorage.setItem(STORAGE_KEY, "true");
       setIsSubmitted(true);
