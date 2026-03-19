@@ -5682,6 +5682,60 @@ export type Database = {
           },
         ]
       }
+      insurance_client_journey: {
+        Row: {
+          client_id: string
+          created_at: string
+          event_details: Json
+          event_title: string
+          event_type: string
+          from_stage: string | null
+          id: string
+          policy_id: string | null
+          source_label: string | null
+          to_stage: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          event_details?: Json
+          event_title: string
+          event_type: string
+          from_stage?: string | null
+          id?: string
+          policy_id?: string | null
+          source_label?: string | null
+          to_stage?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          event_details?: Json
+          event_title?: string
+          event_type?: string
+          from_stage?: string | null
+          id?: string
+          policy_id?: string | null
+          source_label?: string | null
+          to_stage?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insurance_client_journey_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "insurance_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insurance_client_journey_policy_id_fkey"
+            columns: ["policy_id"]
+            isOneToOne: false
+            referencedRelation: "insurance_policies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       insurance_clients: {
         Row: {
           advisor_name: string | null
@@ -5710,7 +5764,10 @@ export type Database = {
           incentive_eligible: boolean | null
           is_active: boolean | null
           is_otp_verified: boolean | null
+          journey_last_event: string | null
+          journey_last_event_at: string | null
           last_contacted_at: string | null
+          last_retargeted_at: string | null
           lead_source: string | null
           lead_status: string | null
           lost_reason: string | null
@@ -5732,6 +5789,7 @@ export type Database = {
           relationship: string | null
           renewal_reminder_date: string | null
           renewal_reminder_set: boolean | null
+          retargeting_enabled: boolean
           rto_tax_expiry: string | null
           state: string | null
           state_permit_expiry: string | null
@@ -5776,7 +5834,10 @@ export type Database = {
           incentive_eligible?: boolean | null
           is_active?: boolean | null
           is_otp_verified?: boolean | null
+          journey_last_event?: string | null
+          journey_last_event_at?: string | null
           last_contacted_at?: string | null
+          last_retargeted_at?: string | null
           lead_source?: string | null
           lead_status?: string | null
           lost_reason?: string | null
@@ -5798,6 +5859,7 @@ export type Database = {
           relationship?: string | null
           renewal_reminder_date?: string | null
           renewal_reminder_set?: boolean | null
+          retargeting_enabled?: boolean
           rto_tax_expiry?: string | null
           state?: string | null
           state_permit_expiry?: string | null
@@ -5842,7 +5904,10 @@ export type Database = {
           incentive_eligible?: boolean | null
           is_active?: boolean | null
           is_otp_verified?: boolean | null
+          journey_last_event?: string | null
+          journey_last_event_at?: string | null
           last_contacted_at?: string | null
+          last_retargeted_at?: string | null
           lead_source?: string | null
           lead_status?: string | null
           lost_reason?: string | null
@@ -5864,6 +5929,7 @@ export type Database = {
           relationship?: string | null
           renewal_reminder_date?: string | null
           renewal_reminder_set?: boolean | null
+          retargeting_enabled?: boolean
           rto_tax_expiry?: string | null
           state?: string | null
           state_permit_expiry?: string | null
@@ -6306,6 +6372,7 @@ export type Database = {
           addons: string[] | null
           client_id: string
           created_at: string
+          document_file_name: string | null
           expiry_date: string | null
           gst_amount: number | null
           id: string
@@ -6326,6 +6393,7 @@ export type Database = {
           renewal_frequency: string | null
           renewal_quote_premium: number | null
           renewal_status: string | null
+          source_label: string | null
           start_date: string
           status: string | null
           updated_at: string
@@ -6335,6 +6403,7 @@ export type Database = {
           addons?: string[] | null
           client_id: string
           created_at?: string
+          document_file_name?: string | null
           expiry_date?: string | null
           gst_amount?: number | null
           id?: string
@@ -6355,6 +6424,7 @@ export type Database = {
           renewal_frequency?: string | null
           renewal_quote_premium?: number | null
           renewal_status?: string | null
+          source_label?: string | null
           start_date: string
           status?: string | null
           updated_at?: string
@@ -6364,6 +6434,7 @@ export type Database = {
           addons?: string[] | null
           client_id?: string
           created_at?: string
+          document_file_name?: string | null
           expiry_date?: string | null
           gst_amount?: number | null
           id?: string
@@ -6384,6 +6455,7 @@ export type Database = {
           renewal_frequency?: string | null
           renewal_quote_premium?: number | null
           renewal_status?: string | null
+          source_label?: string | null
           start_date?: string
           status?: string | null
           updated_at?: string
