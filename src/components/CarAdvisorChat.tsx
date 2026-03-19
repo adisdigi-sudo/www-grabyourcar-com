@@ -187,7 +187,7 @@ export const CarAdvisorChat = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ messages: newMessages }),
+        body: JSON.stringify({ messages: newMessages, channel: "website", stream: true, page_context: window.location.pathname }),
       });
 
       if (!response.ok || !response.body) {
