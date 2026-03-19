@@ -290,6 +290,7 @@ const SOURCE_COLORS: Record<string, string> = {
 export const LoanWorkspace = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [activeView, setActiveView] = useState<"pipeline" | "disbursement" | "after_sales" | "bulk_tools">("pipeline");
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [selectedApp, setSelectedApp] = useState<any>(null);
   const [showStageModal, setShowStageModal] = useState(false);
