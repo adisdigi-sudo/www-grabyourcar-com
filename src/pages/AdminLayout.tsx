@@ -107,6 +107,7 @@ import { HRTemplates } from "@/components/admin/hr/HRTemplates";
 import { DocumentVault } from "@/components/admin/documents/DocumentVault";
 import { SalesIncentiveDashboard } from "@/components/admin/incentives/SalesIncentiveDashboard";
 import { IncentivePayoutApproval } from "@/components/admin/finance/IncentivePayoutApproval";
+import { DealsPipeline } from "@/components/admin/deals/DealsPipeline";
 
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
