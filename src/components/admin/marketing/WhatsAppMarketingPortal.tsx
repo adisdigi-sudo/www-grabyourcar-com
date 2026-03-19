@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Rocket, Send, MessageSquare, Target, Zap, BarChart3, 
-  Users, Shield, Settings, ClipboardList
+  Users, Shield, Settings, ClipboardList, Brain, Eye, Activity
 } from "lucide-react";
 import { WACampaignDashboard } from "./wa/WACampaignDashboard";
 import { WAConversationInbox } from "./wa/WAConversationInbox";
@@ -13,6 +13,9 @@ import { WATemplateManager } from "./wa/WATemplateManager";
 import { WACompliancePanel } from "./wa/WACompliancePanel";
 import { WAIntegrationHub } from "./wa/WAIntegrationHub";
 import { WAMessageStatusTracker } from "./wa/WAMessageStatusTracker";
+import { WAAgentConfig } from "./wa/WAAgentConfig";
+import { WALiveConversations } from "./wa/WALiveConversations";
+import { WAPerformanceDashboard } from "./wa/WAPerformanceDashboard";
 
 export function WhatsAppMarketingPortal() {
   const [activeTab, setActiveTab] = useState("campaigns");
@@ -27,7 +30,7 @@ export function WhatsAppMarketingPortal() {
           WhatsApp Marketing Portal
         </h1>
         <p className="text-muted-foreground">
-          Enterprise-grade WhatsApp campaigns, automation, and customer engagement
+          Enterprise-grade WhatsApp campaigns, AI automation, and customer engagement
         </p>
       </div>
 
@@ -36,6 +39,18 @@ export function WhatsAppMarketingPortal() {
           <TabsTrigger value="campaigns" className="gap-2">
             <Send className="h-4 w-4" />
             <span className="hidden sm:inline">Campaigns</span>
+          </TabsTrigger>
+          <TabsTrigger value="ai-agent" className="gap-2">
+            <Brain className="h-4 w-4" />
+            <span className="hidden sm:inline">AI Agent</span>
+          </TabsTrigger>
+          <TabsTrigger value="live" className="gap-2">
+            <Eye className="h-4 w-4" />
+            <span className="hidden sm:inline">Live View</span>
+          </TabsTrigger>
+          <TabsTrigger value="performance" className="gap-2">
+            <Activity className="h-4 w-4" />
+            <span className="hidden sm:inline">AI Performance</span>
           </TabsTrigger>
           <TabsTrigger value="inbox" className="gap-2">
             <MessageSquare className="h-4 w-4" />
@@ -72,6 +87,9 @@ export function WhatsAppMarketingPortal() {
         </TabsList>
 
         <TabsContent value="campaigns"><WACampaignDashboard /></TabsContent>
+        <TabsContent value="ai-agent"><WAAgentConfig /></TabsContent>
+        <TabsContent value="live"><WALiveConversations /></TabsContent>
+        <TabsContent value="performance"><WAPerformanceDashboard /></TabsContent>
         <TabsContent value="inbox"><WAConversationInbox /></TabsContent>
         <TabsContent value="logs"><WAMessageStatusTracker /></TabsContent>
         <TabsContent value="automation"><WAAutomationRules /></TabsContent>

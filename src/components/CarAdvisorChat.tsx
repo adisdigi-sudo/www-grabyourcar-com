@@ -15,7 +15,7 @@ type Message = {
   content: string;
 };
 
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/car-advisor`;
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-brain`;
 
 const DEFAULT_MESSAGE: Message = {
   role: "assistant",
