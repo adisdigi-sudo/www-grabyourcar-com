@@ -450,6 +450,8 @@ const AdminLayout = () => {
           {renderContent()}
         </div>
       </main>
+      {/* CRM AI Assistant Overlay */}
+      <CRMAssistant />
     </div>
   );
 };
