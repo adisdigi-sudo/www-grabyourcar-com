@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { motion } from "framer-motion";
 import {
   Trophy, Target, TrendingUp, IndianRupee, Zap, Star, Gift, Award,
-  ArrowUp, Flame, Crown
+  ArrowUp, Flame, Crown, Medal
 } from "lucide-react";
 
 const fmt = (v: number) => `₹${Math.round(v).toLocaleString("en-IN")}`;
@@ -27,7 +27,6 @@ export const SalesIncentiveDashboard = () => {
   const { user } = useAuth();
   const currentMonth = format(new Date(), "yyyy-MM");
 
-  // Fetch user's incentive summaries across verticals
   const { data: summaries = [] } = useQuery({
     queryKey: ["my-incentives", user?.id, currentMonth],
     queryFn: async () => {
@@ -40,7 +39,6 @@ export const SalesIncentiveDashboard = () => {
     enabled: !!user?.id,
   });
 
-  // Fetch deal-level entries
   const { data: entries = [] } = useQuery({
     queryKey: ["my-incentive-entries", user?.id, currentMonth],
     queryFn: async () => {
@@ -53,7 +51,6 @@ export const SalesIncentiveDashboard = () => {
     enabled: !!user?.id,
   });
 
-  // Fetch KPI targets
   const { data: kpiTarget } = useQuery({
     queryKey: ["my-kpi", user?.id, currentMonth],
     queryFn: async () => {
@@ -66,12 +63,31 @@ export const SalesIncentiveDashboard = () => {
     enabled: !!user?.id,
   });
 
-  // Fetch incentive rules for "next slab" calculation
   const { data: rules = [] } = useQuery({
     queryKey: ["incentive-rules-user"],
     queryFn: async () => {
       const { data, error } = await (supabase.from("incentive_rules") as any)
         .select("*").eq("is_active", true).neq("role_applicable", "manager");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Leaderboard — all summaries for current month
+  const { data: allSummaries = [] } = useQuery({
+    queryKey: ["leaderboard", currentMonth],
+    queryFn: async () => {
+      const { data, error } = await (supabase.from("incentive_monthly_summary") as any)
+        .select("user_id, total_incentive, total_deals").eq("month_year", currentMonth);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: teamMembers = [] } = useQuery({
+    queryKey: ["team-members-names"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("team_members").select("user_id, name");
       if (error) throw error;
       return data || [];
     },
@@ -85,7 +101,31 @@ export const SalesIncentiveDashboard = () => {
   const motivation = MOTIVATIONAL_MESSAGES.find(m => achievementPct >= m.min && achievementPct <= m.max) || MOTIVATIONAL_MESSAGES[0];
   const MotivIcon = motivation.icon;
 
-  // Calculate "next slab" hint
+  // Projected payout: approved + pending entries
+  const projectedPayout = useMemo(() => {
+    return entries.reduce((s: number, e: any) => s + Number(e.incentive_amount || 0), 0);
+  }, [entries]);
+
+  // Leaderboard ranking
+  const leaderboard = useMemo(() => {
+    const memberMap: Record<string, string> = {};
+    teamMembers.forEach((m: any) => { if (m.user_id) memberMap[m.user_id] = m.name; });
+
+    const grouped: Record<string, { deals: number; earned: number }> = {};
+    allSummaries.forEach((s: any) => {
+      if (!grouped[s.user_id]) grouped[s.user_id] = { deals: 0, earned: 0 };
+      grouped[s.user_id].deals += Number(s.total_deals || 0);
+      grouped[s.user_id].earned += Number(s.total_incentive || 0);
+    });
+
+    return Object.entries(grouped)
+      .map(([uid, stats]) => ({ uid, name: memberMap[uid] || uid.slice(0, 8), ...stats }))
+      .sort((a, b) => b.earned - a.earned)
+      .slice(0, 10);
+  }, [allSummaries, teamMembers]);
+
+  const myRank = leaderboard.findIndex(l => l.uid === user?.id) + 1;
+
   const getNextSlabHint = () => {
     for (const rule of rules) {
       if (rule.rule_type === "slab" && rule.slab_config) {
@@ -124,12 +164,21 @@ export const SalesIncentiveDashboard = () => {
       </motion.div>
 
       {/* Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-5">
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }}>
           <Card className="border-l-4 border-l-green-500">
             <CardContent className="pt-4">
               <div className="flex items-center gap-2 text-sm text-muted-foreground"><IndianRupee className="h-4 w-4" /> Total Earned</div>
               <p className="text-3xl font-bold text-green-600 mt-1">{fmt(totalEarned)}</p>
+            </CardContent>
+          </Card>
+        </motion.div>
+        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.15 }}>
+          <Card className="border-l-4 border-l-emerald-500">
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground"><ArrowUp className="h-4 w-4" /> Projected Payout</div>
+              <p className="text-2xl font-bold text-emerald-600 mt-1">{fmt(projectedPayout)}</p>
+              <p className="text-[10px] text-muted-foreground">incl. pending approval</p>
             </CardContent>
           </Card>
         </motion.div>
@@ -142,7 +191,7 @@ export const SalesIncentiveDashboard = () => {
             </CardContent>
           </Card>
         </motion.div>
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 }}>
+        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.25 }}>
           <Card className="border-l-4 border-l-purple-500">
             <CardContent className="pt-4">
               <div className="flex items-center gap-2 text-sm text-muted-foreground"><Award className="h-4 w-4" /> Achievement</div>
@@ -151,11 +200,12 @@ export const SalesIncentiveDashboard = () => {
             </CardContent>
           </Card>
         </motion.div>
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.4 }}>
-          <Card className="border-l-4 border-l-orange-500">
+        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 }}>
+          <Card className="border-l-4 border-l-amber-500">
             <CardContent className="pt-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground"><Zap className="h-4 w-4" /> Verticals</div>
-              <p className="text-3xl font-bold mt-1">{summaries.length}</p>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground"><Medal className="h-4 w-4" /> Leaderboard Rank</div>
+              <p className="text-3xl font-bold mt-1">{myRank > 0 ? `#${myRank}` : "—"}</p>
+              <p className="text-[10px] text-muted-foreground">of {leaderboard.length} team members</p>
             </CardContent>
           </Card>
         </motion.div>
@@ -173,70 +223,105 @@ export const SalesIncentiveDashboard = () => {
         </motion.div>
       )}
 
-      {/* Vertical-wise Breakdown */}
-      {summaries.length > 0 && (
-        <div className="grid gap-4 md:grid-cols-3">
-          {summaries.map((s: any, i: number) => (
-            <motion.div key={s.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 * i }}>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm flex items-center justify-between">
-                    <span>{s.vertical_name?.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}</span>
-                    <Badge className="bg-green-100 text-green-800">{fmt(s.total_incentive)}</Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div><span className="text-muted-foreground">Deals:</span> <strong>{s.total_deals}</strong></div>
-                    <div><span className="text-muted-foreground">Value:</span> <strong>{fmt(s.total_deal_value)}</strong></div>
-                    <div><span className="text-muted-foreground">Base:</span> <strong>{fmt(s.base_incentive)}</strong></div>
-                    <div><span className="text-muted-foreground">Bonus:</span> <strong>{fmt(s.slab_bonus)}</strong></div>
-                  </div>
-                  <Badge variant="outline" className="mt-2">{s.status}</Badge>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </div>
-      )}
-
-      {/* Deal-wise Incentive Log */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Deal-wise Incentive Log</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Deal</TableHead>
-                <TableHead>Vertical</TableHead>
-                <TableHead>Deal Value</TableHead>
-                <TableHead>Incentive</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {entries.map((e: any) => (
-                <TableRow key={e.id}>
-                  <TableCell className="font-medium text-sm">{e.deal_description}</TableCell>
-                  <TableCell><Badge variant="outline" className="text-xs">{e.vertical_name}</Badge></TableCell>
-                  <TableCell>{fmt(e.deal_value)}</TableCell>
-                  <TableCell className="font-bold text-green-600">{fmt(e.incentive_amount)}</TableCell>
-                  <TableCell>
-                    <Badge className={e.status === "approved" ? "bg-green-100 text-green-800" : e.status === "paid" ? "bg-emerald-100 text-emerald-800" : "bg-yellow-100 text-yellow-800"}>
-                      {e.status}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Vertical-wise Breakdown */}
+        <div className="lg:col-span-2 space-y-4">
+          {summaries.length > 0 && (
+            <div className="grid gap-4 md:grid-cols-2">
+              {summaries.map((s: any, i: number) => (
+                <motion.div key={s.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 * i }}>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center justify-between">
+                        <span>{s.vertical_name?.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}</span>
+                        <Badge className="bg-green-100 text-green-800">{fmt(s.total_incentive)}</Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div><span className="text-muted-foreground">Deals:</span> <strong>{s.total_deals}</strong></div>
+                        <div><span className="text-muted-foreground">Value:</span> <strong>{fmt(s.total_deal_value)}</strong></div>
+                        <div><span className="text-muted-foreground">Base:</span> <strong>{fmt(s.base_incentive)}</strong></div>
+                        <div><span className="text-muted-foreground">Bonus:</span> <strong>{fmt(s.slab_bonus)}</strong></div>
+                      </div>
+                      <Badge variant="outline" className="mt-2">{s.status}</Badge>
+                    </CardContent>
+                  </Card>
+                </motion.div>
               ))}
-              {entries.length === 0 && (
-                <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No incentive entries yet this month</TableCell></TableRow>
+            </div>
+          )}
+
+          {/* Deal-wise Incentive Log */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Deal-wise Incentive Log</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Deal</TableHead>
+                    <TableHead>Vertical</TableHead>
+                    <TableHead>Deal Value</TableHead>
+                    <TableHead>Incentive</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {entries.map((e: any) => (
+                    <TableRow key={e.id}>
+                      <TableCell className="font-medium text-sm">{e.deal_description}</TableCell>
+                      <TableCell><Badge variant="outline" className="text-xs">{e.vertical_name}</Badge></TableCell>
+                      <TableCell>{fmt(e.deal_value)}</TableCell>
+                      <TableCell className="font-bold text-green-600">{fmt(e.incentive_amount)}</TableCell>
+                      <TableCell>
+                        <Badge className={e.status === "approved" ? "bg-green-100 text-green-800" : e.status === "paid" ? "bg-emerald-100 text-emerald-800" : "bg-yellow-100 text-yellow-800"}>
+                          {e.status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {entries.length === 0 && (
+                    <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No incentive entries yet this month</TableCell></TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Team Leaderboard */}
+        <div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Trophy className="h-4 w-4 text-yellow-500" /> Team Leaderboard
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {leaderboard.map((l, i) => (
+                <div
+                  key={l.uid}
+                  className={`flex items-center gap-3 p-2 rounded-lg ${l.uid === user?.id ? "bg-primary/10 ring-1 ring-primary/20" : ""}`}
+                >
+                  <span className={`text-lg font-bold w-7 text-center ${i === 0 ? "text-yellow-500" : i === 1 ? "text-gray-400" : i === 2 ? "text-amber-700" : "text-muted-foreground"}`}>
+                    {i + 1}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{l.name}</p>
+                    <p className="text-xs text-muted-foreground">{l.deals} deals</p>
+                  </div>
+                  <span className="text-sm font-bold text-green-600">{fmt(l.earned)}</span>
+                </div>
+              ))}
+              {leaderboard.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">No data yet</p>
               )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 };
