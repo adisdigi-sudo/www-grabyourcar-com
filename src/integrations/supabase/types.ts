@@ -293,6 +293,75 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_conversation_analytics: {
+        Row: {
+          channel: string
+          conversation_id: string | null
+          created_at: string | null
+          id: string
+          intent_detected: string | null
+          lead_captured: boolean | null
+          lead_id: string | null
+          message_count: number | null
+          response_quality_score: number | null
+        }
+        Insert: {
+          channel?: string
+          conversation_id?: string | null
+          created_at?: string | null
+          id?: string
+          intent_detected?: string | null
+          lead_captured?: boolean | null
+          lead_id?: string | null
+          message_count?: number | null
+          response_quality_score?: number | null
+        }
+        Update: {
+          channel?: string
+          conversation_id?: string | null
+          created_at?: string | null
+          id?: string
+          intent_detected?: string | null
+          lead_captured?: boolean | null
+          lead_id?: string | null
+          message_count?: number | null
+          response_quality_score?: number | null
+        }
+        Relationships: []
+      }
+      ai_knowledge_base: {
+        Row: {
+          category: string
+          content: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          sort_order: number | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string
+          content: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          sort_order?: number | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          content?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          sort_order?: number | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       ai_news_cache: {
         Row: {
           author: string | null
@@ -11138,9 +11207,12 @@ export type Database = {
       }
       whatsapp_conversations: {
         Row: {
+          ai_enabled: boolean | null
           created_at: string
           customer_name: string | null
+          human_takeover: boolean | null
           id: string
+          intent_detected: string | null
           last_message_at: string | null
           messages: Json | null
           phone_number: string
@@ -11148,9 +11220,12 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          ai_enabled?: boolean | null
           created_at?: string
           customer_name?: string | null
+          human_takeover?: boolean | null
           id?: string
+          intent_detected?: string | null
           last_message_at?: string | null
           messages?: Json | null
           phone_number: string
@@ -11158,9 +11233,12 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          ai_enabled?: boolean | null
           created_at?: string
           customer_name?: string | null
+          human_takeover?: boolean | null
           id?: string
+          intent_detected?: string | null
           last_message_at?: string | null
           messages?: Json | null
           phone_number?: string
