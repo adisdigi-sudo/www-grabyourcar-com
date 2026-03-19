@@ -217,7 +217,7 @@ export const AdTrackingSettings = () => {
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">Status:</span>
               {config.google_ads_id ? (
-                <Badge variant="default" className="bg-green-600">Google Ads Active</Badge>
+                <Badge variant="default">Google Ads Active</Badge>
               ) : (
                 <Badge variant="secondary">Google Ads Not Set</Badge>
               )}
