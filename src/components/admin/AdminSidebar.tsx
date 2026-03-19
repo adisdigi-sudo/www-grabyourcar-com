@@ -338,6 +338,15 @@ const navItems: NavItem[] = [
     allowedRoles: ["super_admin", "admin"],
   },
 
+  // ── Deals Pipeline — visible across verticals for admin/sales ──
+  { 
+    id: "deals-pipeline", 
+    label: "📋 Deals Pipeline", 
+    icon: FileText,
+    verticals: ["all"],
+    allowedRoles: ["super_admin", "admin", "sales", "finance"],
+  },
+
   // ── Incentive Management — visible to all roles ──
   { 
     id: "incentive-hub", 
@@ -661,35 +670,63 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
             "border-t space-y-2",
             collapsed ? "p-2" : "p-3"
           )}>
-            {/* Logout Button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(
-                "w-full text-destructive hover:text-destructive hover:bg-destructive/10 touch-manipulation",
-                collapsed ? "justify-center px-2" : "justify-start gap-2"
-              )}
-              onClick={async () => {
-                await signOut();
-                navigate('/crm-auth');
-              }}
-              title={collapsed ? "Sign Out" : undefined}
-            >
-              <LogOut className="h-4 w-4 shrink-0" />
-              {!collapsed && <span className="text-sm">Sign Out</span>}
-            </Button>
-            
-            <div className={cn(
-              "flex items-center",
-              collapsed ? "justify-center" : "justify-between"
-            )}>
-              {!collapsed && (
-                <p className="text-xs text-muted-foreground">
-                  © 2025 Grabyourcar
-                </p>
-              )}
-              <ThemeToggle />
+          {/* Role Switcher — Super Admin testing only */}
+          {!collapsed && isSuperAdmin() && (
+            <div className="px-1 pb-2">
+              <label className="text-[10px] text-muted-foreground uppercase tracking-wider px-1">View as Role</label>
+              <select
+                className="w-full mt-1 text-xs rounded-md border bg-background px-2 py-1.5"
+                defaultValue=""
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val) {
+                    localStorage.setItem("gyc_role_override", val);
+                    window.location.reload();
+                  } else {
+                    localStorage.removeItem("gyc_role_override");
+                    window.location.reload();
+                  }
+                }}
+              >
+                <option value="">Default (My Roles)</option>
+                <option value="super_admin">Super Admin</option>
+                <option value="admin">Admin</option>
+                <option value="sales">Sales</option>
+                <option value="operations">Manager / Ops</option>
+              </select>
             </div>
+          )}
+
+          {/* Logout Button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(
+              "w-full text-destructive hover:text-destructive hover:bg-destructive/10 touch-manipulation",
+              collapsed ? "justify-center px-2" : "justify-start gap-2"
+            )}
+            onClick={async () => {
+              localStorage.removeItem("gyc_role_override");
+              await signOut();
+              navigate('/crm-auth');
+            }}
+            title={collapsed ? "Sign Out" : undefined}
+          >
+            <LogOut className="h-4 w-4 shrink-0" />
+            {!collapsed && <span className="text-sm">Sign Out</span>}
+          </Button>
+          
+          <div className={cn(
+            "flex items-center",
+            collapsed ? "justify-center" : "justify-between"
+          )}>
+            {!collapsed && (
+              <p className="text-xs text-muted-foreground">
+                © 2025 Grabyourcar
+              </p>
+            )}
+            <ThemeToggle />
+          </div>
           </div>
         </div>
       </aside>
