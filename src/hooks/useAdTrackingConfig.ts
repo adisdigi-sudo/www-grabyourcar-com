@@ -26,12 +26,13 @@ export async function fetchAdTrackingConfig(): Promise<AdTrackingConfig | null> 
   } catch {}
 
   if (!configPromise) {
-    configPromise = supabase
-      .from("admin_settings")
-      .select("setting_value")
-      .eq("setting_key", "ad_tracking_config")
-      .maybeSingle()
-      .then(({ data }) => {
+    configPromise = (async () => {
+      try {
+        const { data } = await supabase
+          .from("admin_settings")
+          .select("setting_value")
+          .eq("setting_key", "ad_tracking_config")
+          .maybeSingle();
         const cfg = (data?.setting_value as unknown as AdTrackingConfig) || null;
         if (cfg) {
           try {
@@ -40,8 +41,7 @@ export async function fetchAdTrackingConfig(): Promise<AdTrackingConfig | null> 
         }
         configPromise = null;
         return cfg;
-      })
-      .catch(() => {
+      } catch {
         configPromise = null;
         return null;
       });
