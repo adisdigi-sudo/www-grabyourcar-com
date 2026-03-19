@@ -77,7 +77,7 @@ const SOURCE_COLORS: Record<string, string> = {
   "CSV Import": "bg-violet-100 text-violet-700 border-violet-200",
   csv_import: "bg-violet-100 text-violet-700 border-violet-200",
 };
-...
+
 // ── Source display helper ──
 function formatSource(source: string | null, createdAt: string): string {
   if (!source) return "Unknown";
