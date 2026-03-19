@@ -259,6 +259,20 @@ export const SEOBuilder = () => {
         </div>
       </div>
 
+      {/* Auto Optimize All */}
+      <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
+        <CardContent className="pt-4 flex items-center justify-between">
+          <div>
+            <p className="font-medium text-sm">AI Auto-Optimize</p>
+            <p className="text-xs text-muted-foreground">Generate SEO for all pages at once</p>
+          </div>
+          <Button onClick={autoOptimizeAll} disabled={isAutoOptimizing} size="sm">
+            {isAutoOptimizing ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Wand2 className="h-4 w-4 mr-2" />}
+            {isAutoOptimizing ? "Optimizing..." : "Auto-Optimize All"}
+          </Button>
+        </CardContent>
+      </Card>
+
       <div className="grid gap-6 lg:grid-cols-4">
         {/* Page Selector */}
         <Card className="lg:col-span-1">
