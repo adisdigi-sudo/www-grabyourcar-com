@@ -50,6 +50,9 @@ serve(async (req) => {
       submittedBy = user?.id ?? null;
     }
 
+    const serviceCategory = body.serviceCategory?.trim()?.toLowerCase() || '';
+    const isInsurance = serviceCategory === 'insurance' || body.source?.toLowerCase()?.includes('insurance');
+
     const { data: lead, error: insertError } = await supabaseAdmin
       .from('leads')
       .insert({
@@ -64,9 +67,32 @@ serve(async (req) => {
         status: 'new',
         priority: 'medium',
         user_id: submittedBy,
+        service_category: serviceCategory || null,
       })
       .select()
       .single();
+
+    // Also route insurance leads into insurance_clients CRM
+    if (isInsurance) {
+      try {
+        await supabaseAdmin.from('insurance_clients').insert({
+          phone,
+          customer_name: name,
+          email: body.email?.trim() || null,
+          city: body.city?.trim() || null,
+          vehicle_number: body.vehicleNumber?.trim() || null,
+          vehicle_make: body.vehicleMake?.trim() || null,
+          vehicle_model: body.carInterest?.trim() || null,
+          lead_source: 'Website',
+          pipeline_stage: 'new_lead',
+          lead_status: 'new',
+          priority: 'medium',
+          notes: body.message?.trim() || null,
+        });
+      } catch (e) {
+        console.error('Insurance client insert failed:', e);
+      }
+    }
 
     if (insertError) {
       console.error('Insert error:', insertError);
