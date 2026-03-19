@@ -46,7 +46,6 @@ serve(async (req) => {
       }
 
       const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
       const entry = body.entry?.[0];
       const changes = entry?.changes?.[0];
       const value = changes?.value;
@@ -84,14 +83,15 @@ serve(async (req) => {
         });
       }
 
-      // --- Handle incoming messages via AI Brain ---
+      // --- Handle incoming messages ---
       if (value.messages?.length > 0) {
         for (const msg of value.messages) {
           const from = msg.from;
           const messageText = msg.text?.body || msg.caption || "";
           const contactName = value.contacts?.[0]?.profile?.name || "Customer";
+          const messageType = msg.type || "text";
 
-          console.log(`Incoming from ${contactName} (${from}): ${messageText}`);
+          console.log(`Incoming from ${contactName} (${from}): [${messageType}] ${messageText}`);
 
           // Get or create conversation
           const { data: existingConvo } = await supabase
@@ -107,17 +107,19 @@ serve(async (req) => {
             conversationId = existingConvo.id;
             conversationHistory = (existingConvo.messages as any[]) || [];
 
-            // If human takeover is active, skip AI response
+            // If human takeover is active, just save message and skip AI
             if (existingConvo.human_takeover) {
               console.log(`Human takeover active for ${from}, skipping AI`);
               conversationHistory.push({ role: "user", content: messageText });
               await supabase.from("whatsapp_conversations").update({
                 messages: conversationHistory.slice(-20),
                 last_message_at: new Date().toISOString(),
+                customer_name: contactName,
               }).eq("id", conversationId);
               continue;
             }
           } else {
+            // New conversation — send greeting
             const { data: newConvo } = await supabase
               .from("whatsapp_conversations")
               .insert({
@@ -134,9 +136,10 @@ serve(async (req) => {
 
           conversationHistory.push({ role: "user", content: messageText });
 
-          // Call AI Brain for intelligent response
+          // Call AI Brain v2 for intelligent response
           let aiResponse = getFallbackResponse(messageText.toLowerCase());
           let intentDetected = "general";
+          let leadCaptured = false;
 
           try {
             const brainResponse = await fetch(`${SUPABASE_URL}/functions/v1/ai-brain`, {
@@ -146,7 +149,7 @@ serve(async (req) => {
                 Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
               },
               body: JSON.stringify({
-                messages: conversationHistory.slice(-10),
+                messages: conversationHistory.slice(-12),
                 channel: "whatsapp",
                 customer_name: contactName,
                 customer_phone: from,
@@ -157,11 +160,9 @@ serve(async (req) => {
               const brainData = await brainResponse.json();
               aiResponse = brainData.response || aiResponse;
               intentDetected = brainData.intent || "general";
-
-              // Update conversation intent
-              await supabase.from("whatsapp_conversations").update({
-                intent_detected: intentDetected,
-              }).eq("id", conversationId);
+              leadCaptured = brainData.lead_captured || false;
+            } else {
+              console.error("AI Brain error:", brainResponse.status, await brainResponse.text());
             }
           } catch (e) {
             console.error("AI Brain call failed, using fallback:", e);
@@ -169,10 +170,12 @@ serve(async (req) => {
 
           conversationHistory.push({ role: "assistant", content: aiResponse });
 
-          // Update conversation
+          // Update conversation with intent
           await supabase.from("whatsapp_conversations").update({
             messages: conversationHistory.slice(-20),
             last_message_at: new Date().toISOString(),
+            customer_name: contactName,
+            intent_detected: intentDetected,
           }).eq("id", conversationId);
 
           // Send reply via Meta API
@@ -180,7 +183,7 @@ serve(async (req) => {
           const WHATSAPP_PHONE_NUMBER_ID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
 
           if (WHATSAPP_ACCESS_TOKEN && WHATSAPP_PHONE_NUMBER_ID) {
-            await fetch(`https://graph.facebook.com/v21.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`, {
+            const sendResult = await fetch(`https://graph.facebook.com/v21.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
@@ -193,19 +196,23 @@ serve(async (req) => {
                 text: { body: aiResponse },
               }),
             });
-          }
 
-          // Log message
-          await supabase.from("wa_message_logs").insert({
-            phone: from,
-            customer_name: contactName,
-            message_type: "text",
-            message_content: aiResponse,
-            trigger_event: "ai_brain_reply",
-            status: "sent",
-            provider: "meta",
-            sent_at: new Date().toISOString(),
-          });
+            const sendData = await sendResult.json();
+            const providerMessageId = sendData.messages?.[0]?.id || null;
+
+            // Log outgoing message
+            await supabase.from("wa_message_logs").insert({
+              phone: from,
+              customer_name: contactName,
+              message_type: "text",
+              message_content: aiResponse,
+              trigger_event: "ai_brain_v2_reply",
+              status: sendResult.ok ? "sent" : "failed",
+              provider: "meta",
+              provider_message_id: providerMessageId,
+              sent_at: new Date().toISOString(),
+            });
+          }
         }
 
         return new Response(JSON.stringify({ success: true, processed: "messages" }), {
@@ -220,8 +227,9 @@ serve(async (req) => {
       });
     } catch (error) {
       console.error("Webhook error:", error);
+      // Always return 200 to Meta to prevent webhook deactivation
       return new Response(JSON.stringify({ error: "Processing failed" }), {
-        status: 500,
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -231,17 +239,17 @@ serve(async (req) => {
 });
 
 function getFallbackResponse(message: string): string {
-  if (message.includes("price") || message.includes("cost")) {
-    return `🚗 For the best on-road price, our expert will call you within 5 minutes.\n\nBrowse cars: www.grabyourcar.com/cars`;
+  if (message.includes("price") || message.includes("cost") || message.includes("kitna")) {
+    return `🚗 For the best on-road price, our expert will call you within 5 minutes!\n\nBrowse cars: www.grabyourcar.com/cars`;
   }
-  if (message.includes("loan") || message.includes("emi")) {
-    return `💰 Car Finance: Interest from 8.5%, up to 100% funding.\n\nCalculate EMI: www.grabyourcar.com/car-loans`;
+  if (message.includes("loan") || message.includes("emi") || message.includes("finance")) {
+    return `💰 Car Finance: Interest from 8.5%, up to 100% funding!\n\nCalculate EMI: www.grabyourcar.com/car-loans`;
   }
-  if (message.includes("insurance")) {
+  if (message.includes("insurance") || message.includes("bima")) {
     return `🛡️ Car Insurance with up to 70% discount!\n\nGet quote: www.grabyourcar.com/car-insurance`;
   }
-  if (message.includes("hi") || message.includes("hello")) {
-    return `👋 Welcome to GrabYourCar!\n\n1️⃣ Find the perfect car\n2️⃣ Check prices & offers\n3️⃣ Calculate EMI\n4️⃣ Get Insurance Quote\n\nJust ask!`;
+  if (message.includes("hi") || message.includes("hello") || message.includes("namaste")) {
+    return `👋 Welcome to GrabYourCar!\n\nI'm your AI car assistant. I can help with:\n\n1️⃣ Find the perfect car\n2️⃣ Check prices & offers\n3️⃣ Calculate EMI\n4️⃣ Get Insurance Quote\n5️⃣ Book Test Drive\n\nJust ask me anything! 🚗`;
   }
-  return `Thank you! Our car expert will connect with you shortly.\n\nExplore: www.grabyourcar.com`;
+  return `Thank you for your message! Our car expert will connect with you shortly.\n\nMeanwhile, explore: www.grabyourcar.com`;
 }
