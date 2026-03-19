@@ -50,6 +50,7 @@ export const SEOBuilder = () => {
   const queryClient = useQueryClient();
   const [selectedPage, setSelectedPage] = useState<string>("home");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isAutoOptimizing, setIsAutoOptimizing] = useState(false);
   
   const [formData, setFormData] = useState({
     title: "",
