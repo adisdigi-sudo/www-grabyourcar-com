@@ -14,6 +14,8 @@ import { isAdminSubdomain } from "@/hooks/useAdminSubdomain";
 import { useGlobalRealtimeSync } from "@/hooks/useRealtimeSync";
 import { VerticalProvider } from "@/hooks/useVerticalAccess";
 import { isDynamicImportError, recoverFromChunkLoadError } from "@/lib/chunkLoadRecovery";
+import { usePageViewTracking } from "@/hooks/usePageViewTracking";
+import { FloatingCallButton } from "@/components/FloatingCallButton";
 
 // Retry wrapper for lazy imports — handles stale chunk errors after deployments
 function lazyRetry<T extends ComponentType<any>>(
