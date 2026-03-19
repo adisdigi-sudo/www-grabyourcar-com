@@ -217,8 +217,12 @@ export function InsuranceWorkspace() {
         p.insurance_clients?.customer_name?.toLowerCase().includes(s) ||
         p.insurance_clients?.phone?.includes(s) ||
         p.insurance_clients?.vehicle_number?.toLowerCase().includes(s) ||
+        p.insurance_clients?.vehicle_make?.toLowerCase().includes(s) ||
+        p.insurance_clients?.vehicle_model?.toLowerCase().includes(s) ||
+        p.insurance_clients?.lead_source?.toLowerCase().includes(s) ||
         p.policy_number?.toLowerCase().includes(s) ||
-        p.insurer?.toLowerCase().includes(s)
+        p.insurer?.toLowerCase().includes(s) ||
+        p.plan_name?.toLowerCase().includes(s)
       );
     }
     return result;
