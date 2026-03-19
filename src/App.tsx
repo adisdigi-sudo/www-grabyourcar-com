@@ -163,6 +163,7 @@ const App = () => (
                       <FloatingCompareBar />
                       <WhatsAppFloatingButton />
                       <FloatingCallButton />
+                      <CookieConsentBanner />
                     </>
                   )}
                 </AdminSubdomainRouter>
