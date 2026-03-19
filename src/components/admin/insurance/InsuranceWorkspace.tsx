@@ -173,7 +173,7 @@ export function InsuranceWorkspace() {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [draggingClient, setDraggingClient] = useState<Client | null>(null);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
-  const [activeView, setActiveView] = useState<"crm" | "policy_book" | "renewals" | "bulk_quotes">("crm");
+  const [activeView, setActiveView] = useState<"crm" | "policy_book" | "policy_issued" | "renewals" | "bulk_quotes">("crm");
   const [showImport, setShowImport] = useState(false);
 
   // Renewal filters
