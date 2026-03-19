@@ -114,6 +114,7 @@ export const WhatsAppCTA = ({
 
   const handleClick = () => {
     trackWhatsAppClick(context, label);
+    import("@/lib/adTracking").then(({ trackWhatsAppConversion }) => trackWhatsAppConversion(context));
   };
 
   return (
