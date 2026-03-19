@@ -411,6 +411,8 @@ const AdminLayout = () => {
         return <DocumentVault />;
       case "accounts-incentive-payouts":
         return <IncentivePayoutApproval />;
+      case "deals-pipeline":
+        return <DealsPipeline />;
       default:
         return <AdminDashboard />;
     }

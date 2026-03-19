@@ -338,6 +338,15 @@ const navItems: NavItem[] = [
     allowedRoles: ["super_admin", "admin"],
   },
 
+  // ── Deals Pipeline — visible across verticals for admin/sales ──
+  { 
+    id: "deals-pipeline", 
+    label: "📋 Deals Pipeline", 
+    icon: FileText,
+    verticals: ["all"],
+    allowedRoles: ["super_admin", "admin", "sales", "finance"],
+  },
+
   // ── Incentive Management — visible to all roles ──
   { 
     id: "incentive-hub", 
