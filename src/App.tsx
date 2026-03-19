@@ -90,6 +90,7 @@ const RealtimeSyncProvider = ({ children }: { children: React.ReactNode }) => {
 
 const PageViewTracker = () => {
   usePageViewTracking();
+  useEffect(() => { initDynamicTracking(); }, []);
   return null;
 };
 
