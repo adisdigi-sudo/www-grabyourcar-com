@@ -16,6 +16,7 @@ import { VerticalProvider } from "@/hooks/useVerticalAccess";
 import { isDynamicImportError, recoverFromChunkLoadError } from "@/lib/chunkLoadRecovery";
 import { usePageViewTracking } from "@/hooks/usePageViewTracking";
 import { FloatingCallButton } from "@/components/FloatingCallButton";
+import { CookieConsentBanner } from "@/components/CookieConsentBanner";
 
 // Retry wrapper for lazy imports — handles stale chunk errors after deployments
 function lazyRetry<T extends ComponentType<any>>(
