@@ -66,6 +66,9 @@ const About = lazyRetry(() => import("./pages/About"));
 const AutoIntelligence = lazyRetry(() => import("./pages/AutoIntelligence"));
 const HoliGreeting = lazyRetry(() => import("./pages/HoliGreeting"));
 const VehicleLookup = lazyRetry(() => import("./pages/VehicleLookup"));
+const ThankYou = lazyRetry(() => import("./pages/ThankYou"));
+const NoWaitingCars = lazyRetry(() => import("./pages/NoWaitingCars"));
+const BestCarDeals = lazyRetry(() => import("./pages/BestCarDeals"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
