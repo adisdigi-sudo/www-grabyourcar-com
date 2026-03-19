@@ -1333,9 +1333,11 @@ export function InsuranceWorkspace() {
                   status: "active",
                   is_renewal: true,
                   issued_date: format(new Date(), "yyyy-MM-dd"),
+                  source_label: "Won (Renewal)",
+                  renewal_count: (renewalTargetPolicy.renewal_count || 0) + 1,
                   plan_name: renewalTargetPolicy.plan_name,
                   idv: renewalTargetPolicy.idv,
-                });
+                } as any);
                 // Update client status
                 await supabase.from("insurance_clients").update({ pipeline_stage: "won", lead_status: "won" }).eq("id", renewalTargetPolicy.client_id);
                 queryClient.invalidateQueries({ queryKey: ["ins-policies-book"] });
