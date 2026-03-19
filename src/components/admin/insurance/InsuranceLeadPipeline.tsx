@@ -257,17 +257,11 @@ function WonPolicyDialog({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Start Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full h-9 justify-start text-left text-xs">
-                      <CalendarIcon className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-                      {startDate ? format(startDate, "dd MMM yyyy") : "Pick date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar mode="single" selected={startDate} onSelect={setStartDate} className="p-3 pointer-events-auto" />
-                  </PopoverContent>
-                </Popover>
+                <SmartDatePicker date={startDate} onSelect={setStartDate} placeholder="Pick date" yearRange={[new Date().getFullYear() - 1, new Date().getFullYear() + 2]} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Expiry Date *</Label>
+                <SmartDatePicker date={expiryDate} onSelect={setExpiryDate} placeholder="Pick date" yearRange={[new Date().getFullYear(), new Date().getFullYear() + 3]} />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Expiry Date *</Label>
