@@ -244,10 +244,25 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
                       <TableCell>{sourceLabel(policy)}</TableCell>
                       <TableCell>
                         {policy.policy_document_url ? (
-                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => window.open(policy.policy_document_url!, "_blank")}>
-                            <Eye className="h-3 w-3 text-primary" />
+                          <div className="flex items-center gap-0.5">
+                            <Button variant="ghost" size="icon" className="h-6 w-6" title="View" onClick={() => window.open(policy.policy_document_url!, "_blank")}>
+                              <Eye className="h-3 w-3 text-primary" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-6 w-6" title="Download" onClick={() => {
+                              const a = document.createElement("a");
+                              a.href = policy.policy_document_url!;
+                              a.download = `${policy.policy_number || "policy"}.pdf`;
+                              a.target = "_blank";
+                              a.click();
+                            }}>
+                              <Download className="h-3 w-3 text-muted-foreground" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button variant="ghost" size="icon" className="h-6 w-6" title="Upload Document" onClick={() => { setUploadPolicyId(policy.id); setUploadClientId(policy.client_id); }}>
+                            <Upload className="h-3 w-3 text-amber-500" />
                           </Button>
-                        ) : <span className="text-muted-foreground">—</span>}
+                        )}
                       </TableCell>
                     </TableRow>
                   );
@@ -257,6 +272,26 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Upload Document Dialog */}
+      <Dialog open={!!uploadPolicyId} onOpenChange={(open) => { if (!open) { setUploadPolicyId(null); setUploadClientId(null); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-sm">Upload Policy Document</DialogTitle>
+          </DialogHeader>
+          {uploadPolicyId && (
+            <InsurancePolicyDocumentUploader
+              defaultPolicyId={uploadPolicyId}
+              defaultClientId={uploadClientId || undefined}
+              onDone={() => {
+                setUploadPolicyId(null);
+                setUploadClientId(null);
+                queryClient.invalidateQueries({ queryKey: ["ins-policies"] });
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
