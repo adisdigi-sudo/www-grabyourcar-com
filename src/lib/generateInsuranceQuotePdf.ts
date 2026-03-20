@@ -1,5 +1,6 @@
 import jsPDF from "jspdf";
 import { format } from "date-fns";
+import { loadInsurancePdfBrandingCache, resolveInsurerLogo } from "@/lib/insurancePdfBranding";
 
 export interface InsuranceQuoteData {
   customerName: string;
@@ -21,6 +22,7 @@ export interface InsuranceQuoteData {
   securePremium: number;
   addonPremium: number;
   addons: string[];
+  insurerLogoUrl?: string;
 }
 
 const formatINR = (amount: number): string =>
@@ -33,6 +35,10 @@ export const generateInsuranceQuotePdf = (data: InsuranceQuoteData) => {
   const m = 15;
   const contentW = pw - 2 * m;
 
+  const branding = loadInsurancePdfBrandingCache();
+  const insurerLogoUrl = data.insurerLogoUrl || resolveInsurerLogo(data.insuranceCompany, branding);
+  const brandLogoUrl = branding.grabyourcarLogoUrl;
+
   const green: [number, number, number] = [34, 197, 94];
   const darkGreen: [number, number, number] = [22, 163, 74];
   const lightGreen: [number, number, number] = [220, 252, 231];
@@ -40,7 +46,6 @@ export const generateInsuranceQuotePdf = (data: InsuranceQuoteData) => {
   const gray: [number, number, number] = [100, 116, 139];
   const white: [number, number, number] = [255, 255, 255];
 
-  // Footer height reserved
   const footerH = 24;
   const footerY = ph - footerH;
 
@@ -111,24 +116,33 @@ export const generateInsuranceQuotePdf = (data: InsuranceQuoteData) => {
   doc.setFillColor(...darkGreen);
   doc.rect(0, 31, pw, 3, "F");
 
-  // Brand
+  if (brandLogoUrl) {
+    try {
+      doc.addImage(brandLogoUrl, "PNG", m, 7, 26, 14);
+    } catch {}
+  }
+
   doc.setFontSize(22);
   doc.setTextColor(...white);
   doc.setFont("helvetica", "bold");
-  doc.text("GRABYOURCAR", m, 16);
+  doc.text(branding.brandName || "GRABYOURCAR", brandLogoUrl ? m + 30 : m, 16);
 
-  // Tagline
   doc.setFontSize(8.5);
   doc.setFont("helvetica", "normal");
-  doc.text("India's Smarter Way to Buy New Cars", m, 24);
+  doc.text(branding.brandTagline || "India's Smarter Way to Buy New Cars", brandLogoUrl ? m + 30 : m, 24);
 
-  // Website & badge
+  if (insurerLogoUrl) {
+    try {
+      doc.addImage(insurerLogoUrl, "PNG", pw - m - 22, 8, 22, 12);
+    } catch {}
+  }
+
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
-  doc.text("www.grabyourcar.com", pw - m, 16, { align: "right" });
+  doc.text("www.grabyourcar.com", pw - m, insurerLogoUrl ? 24 : 16, { align: "right" });
   doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
-  doc.text("Insurance Desk", pw - m, 24, { align: "right" });
+  doc.text(data.insuranceCompany || "Insurance Desk", pw - m, 29, { align: "right" });
 
   y = 42;
 
@@ -269,15 +283,21 @@ export const generateInsuranceQuotePdf = (data: InsuranceQuoteData) => {
   doc.setFillColor(...darkGreen);
   doc.rect(0, footerY, pw, 2, "F");
 
+  if (brandLogoUrl) {
+    try {
+      doc.addImage(brandLogoUrl, "PNG", m, footerY + 4, 14, 8);
+    } catch {}
+  }
+
   doc.setFontSize(9);
   doc.setTextColor(...white);
   doc.setFont("helvetica", "bold");
-  doc.text("Grabyourcar Insurance Desk", m, footerY + 9);
+  doc.text("Grabyourcar Insurance Desk", brandLogoUrl ? m + 18 : m, footerY + 9);
 
   doc.setFontSize(7.5);
   doc.setFont("helvetica", "normal");
-  doc.text("Phone: +91 98559 24442  |  Email: hello@grabyourcar.com", m, footerY + 15);
-  doc.text("Web: www.grabyourcar.com", m, footerY + 20);
+  doc.text("Phone: +91 98559 24442  |  Email: hello@grabyourcar.com", brandLogoUrl ? m + 18 : m, footerY + 15);
+  doc.text("Web: www.grabyourcar.com", brandLogoUrl ? m + 18 : m, footerY + 20);
   doc.setFontSize(7);
   doc.text("MS 228, 2nd Floor, DT Mega Mall, Sector 28, Gurugram, Haryana - 122001", pw - m, footerY + 15, { align: "right" });
 
