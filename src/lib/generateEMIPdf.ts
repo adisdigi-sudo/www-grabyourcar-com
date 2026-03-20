@@ -388,8 +388,8 @@ function generateCarQuotePdf(
   C: ColorPalette, pageWidth: number, pageHeight: number, margin: number, contentWidth: number
 ) {
   let y = 0;
-  const accentRgb = hexToRgb(COMPANY.accentColor || "#f59e0b");
-  const CA = { ...C, accent: accentRgb };
+  const accentRgb: RGB = hexToRgb(COMPANY.accentColor || "#f59e0b");
+  const CA: ColorPalette & { accent: RGB } = { ...C, accent: accentRgb };
 
   const hasDiscount = data.discount && data.discount.amount > 0;
   const hasEMI = data.emi > 0 && data.tenure > 0;
