@@ -135,9 +135,8 @@ export function InsuranceHeroForm({ policyType = "comprehensive", vehicleLabel =
   const handleSeriesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.replace(/[^a-zA-Z]/g, "").toUpperCase().slice(0, 3);
     setSeries(val);
-    if (val.length >= 2) {
-      setTimeout(() => numberRef.current?.focus(), 30);
-    }
+    // Don't auto-advance — series can be 0, 1, 2, or 3 chars
+    // User presses Tab or types a digit to move to Number field
   };
 
   const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
