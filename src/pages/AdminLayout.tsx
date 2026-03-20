@@ -447,8 +447,11 @@ const AdminLayout = () => {
       )}>
         <div className={cn(
           "mx-auto",
-          // Responsive max-width
-          isMobile ? "max-w-full" : "max-w-7xl"
+          isMobile ? "max-w-full" : (
+            ["services-insurance", "services-insurance-import", "sales-crm", "loan-crm", "rental-crm", "hsrp-crm", "deals-pipeline", "calling-system", "manager-dashboard"].includes(activeTab)
+              ? "max-w-full"
+              : "max-w-7xl"
+          )
         )}>
           {renderContent()}
         </div>
