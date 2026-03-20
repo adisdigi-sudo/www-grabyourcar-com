@@ -98,6 +98,8 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
   const [lostReason, setLostReason] = useState("");
   const [showUploadPolicy, setShowUploadPolicy] = useState(false);
   const [note, setNote] = useState("");
+  const [editFields, setEditFields] = useState<Record<string, string>>({});
+  const [savingEdit, setSavingEdit] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [filterPriority, setFilterPriority] = useState<string>("all");
   const [filterSource, setFilterSource] = useState<string>("all");
