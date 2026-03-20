@@ -194,18 +194,24 @@ serve(async (req) => {
     }
 
     // === STEP 4: Also insert into vertical-specific tables ===
-    await routeToVerticalTable(supabase, verticalTag, {
-      name,
-      phone,
-      email,
-      city,
-      source,
-      message,
-      vehicleNumber,
-      vehicleMake,
-      vehicleModel,
-      policyType,
-    });
+    let routingError: string | null = null;
+    try {
+      await routeToVerticalTable(supabase, verticalTag, {
+        name,
+        phone,
+        email,
+        city,
+        source,
+        message,
+        vehicleNumber,
+        vehicleMake,
+        vehicleModel,
+        policyType,
+      });
+    } catch (routeErr) {
+      routingError = String(routeErr);
+      console.error("ROUTING ERROR for", verticalTag, ":", routeErr);
+    }
 
     // === STEP 5: Notify Executive via WhatsApp (Finbite) ===
     const executivePhone = "+919855924442";
