@@ -1,5 +1,6 @@
 import jsPDF from "jspdf";
 import { format } from "date-fns";
+import { loadInsurancePdfBrandingCache, resolveInsurerLogo } from "@/lib/insurancePdfBranding";
 
 export interface InsuranceQuoteData {
   customerName: string;
@@ -21,6 +22,7 @@ export interface InsuranceQuoteData {
   securePremium: number;
   addonPremium: number;
   addons: string[];
+  insurerLogoUrl?: string;
 }
 
 const formatINR = (amount: number): string =>
