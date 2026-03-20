@@ -396,14 +396,26 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
   // Move mutation
   const moveStage = useMutation({
     mutationFn: async ({ clientId, newStage, extras }: { clientId: string; newStage: string; extras?: Record<string, any> }) => {
+      if (isLegacyClientId(clientId)) {
+        throw new Error("This lead is still syncing. Please refresh and try again.");
+      }
+
       const update: any = { pipeline_stage: newStage, ...extras };
       if (newStage === "smart_calling") {
         const client = clients.find(c => c.id === clientId);
         update.contact_attempts = (client?.contact_attempts || 0) + 1;
         update.last_contacted_at = new Date().toISOString();
       }
-      const { error } = await supabase.from("insurance_clients").update(update).eq("id", clientId);
+
+      const { data, error } = await supabase
+        .from("insurance_clients")
+        .update(update)
+        .eq("id", clientId)
+        .select("id")
+        .maybeSingle();
+
       if (error) throw error;
+      if (!data) throw new Error("Lead was not found in the CRM database. Please refresh once.");
 
       const stage = PIPELINE_STAGES.find(s => s.value === newStage);
       await supabase.from("insurance_activity_log").insert({
@@ -419,7 +431,6 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
       const stage = PIPELINE_STAGES.find(s => s.value === vars.newStage);
       toast.success(`Moved to ${stage?.label}`);
 
-      // Auto-prompt next action
       const movedClient = clients.find(c => c.id === vars.clientId);
       if (movedClient) {
         const nextClient = { ...movedClient, pipeline_stage: vars.newStage };
