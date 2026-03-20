@@ -211,7 +211,6 @@ export function InsurancePolicyDocumentUploader({
                     return;
                   }
                   setDocFile(file);
-                  setTypedPolicyNumber(extractPolicyNumberFromFileName(file.name));
                 }}
               />
               {!docFile && (
