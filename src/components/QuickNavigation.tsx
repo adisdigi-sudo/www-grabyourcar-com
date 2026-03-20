@@ -66,7 +66,7 @@ const navGroups = [
 
 export const QuickNavigation = () => {
   return (
-    <section className="bg-background py-6 md:py-10">
+    <section className="bg-muted/50 py-8 md:py-12 border-y border-border">
       <div className="container mx-auto px-4">
         <motion.div
           initial={{ opacity: 0, y: 18, filter: "blur(4px)" }}
