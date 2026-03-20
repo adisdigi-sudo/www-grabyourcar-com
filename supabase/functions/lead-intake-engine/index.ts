@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 /**
@@ -80,6 +80,17 @@ function cleanPhone(phone: string): string {
   return (phone || "").replace(/\D/g, "").replace(/^91/, "");
 }
 
+function getPhoneCandidates(phone: string): string[] {
+  const cleaned = cleanPhone(phone);
+  if (!cleaned) return [];
+
+  return Array.from(new Set([
+    cleaned,
+    `91${cleaned}`,
+    `0${cleaned}`,
+  ]));
+}
+
 function normalizeVehicleNumber(vehicleNumber?: string | null): string | null {
   const normalized = (vehicleNumber || "").toUpperCase().replace(/\s+/g, "").trim();
   return normalized || null;
@@ -132,10 +143,12 @@ serve(async (req) => {
         : classifyVertical(verticalInput);
 
     // === STEP 3: Dedup by Phone ===
+    const phoneCandidates = getPhoneCandidates(phone);
+
     const { data: existing } = await supabase
       .from("automation_lead_tracking")
       .select("id, multi_vertical_tags, message, status, contacted")
-      .eq("phone", phone)
+      .in("phone", phoneCandidates)
       .limit(1);
 
     let leadId: string;
@@ -207,10 +220,15 @@ serve(async (req) => {
         vehicleMake,
         vehicleModel,
         policyType,
+        leadSourceType,
       });
     } catch (routeErr) {
       routingError = String(routeErr);
       console.error("ROUTING ERROR for", verticalTag, ":", routeErr);
+    }
+
+    if (routingError) {
+      throw new Error(`Vertical routing failed for ${verticalTag}: ${routingError}`);
     }
 
     // === STEP 5: Notify Executive via WhatsApp (Finbite) ===
@@ -316,9 +334,11 @@ async function routeToVerticalTable(
   }
 ) {
   const cleanedPhone = cleanPhone(data.phone);
+  const phoneCandidates = getPhoneCandidates(cleanedPhone);
   const safeEmail = data.email?.trim() || null;
   const safeCity = data.city?.trim() || null;
   const safeName = (data.name && data.name !== "Unknown") ? data.name : null;
+  const requiredName = safeName || `${vertical} Lead`;
   const safeMessage = data.message?.trim() || null;
   const now = new Date().toISOString();
 
@@ -330,7 +350,7 @@ async function routeToVerticalTable(
         const { data: existingLead } = await supabase
           .from("leads")
           .select("id")
-          .eq("phone", cleanedPhone)
+          .in("phone", phoneCandidates)
           .order("created_at", { ascending: false })
           .limit(1);
 
@@ -349,17 +369,18 @@ async function routeToVerticalTable(
           }).eq("id", existingLead[0].id);
         } else {
           await supabase.from("leads").insert({
-            name: data.name || "Car Sales Lead",
-            customer_name: data.name || "Car Sales Lead",
+            name: requiredName,
+            customer_name: requiredName,
             phone: cleanedPhone,
-            email: data.email || null,
-            city: data.city || null,
+            email: safeEmail,
+            city: safeCity,
             source: data.source,
-            notes: data.message || null,
+            notes: safeMessage,
             status: "new",
             priority: "medium",
             car_brand: data.vehicleMake || null,
             car_model: data.vehicleModel || null,
+            service_category: "car_sales",
           });
         }
 
@@ -367,7 +388,7 @@ async function routeToVerticalTable(
         const { data: existingSales } = await supabase
           .from("sales_pipeline")
           .select("id, pipeline_stage")
-          .eq("phone", cleanedPhone)
+          .in("phone", phoneCandidates)
           .order("created_at", { ascending: false })
           .limit(1);
 
@@ -395,12 +416,12 @@ async function routeToVerticalTable(
           await supabase.from("sales_pipeline").update(updates).eq("id", existingSales[0].id);
         } else {
           await supabase.from("sales_pipeline").insert({
-            customer_name: data.name || "Car Sales Lead",
+            customer_name: requiredName,
             phone: cleanedPhone,
-            email: data.email || null,
-            city: data.city || null,
+            email: safeEmail,
+            city: safeCity,
             source: data.source,
-            inquiry_remarks: data.message || null,
+            inquiry_remarks: safeMessage,
             pipeline_stage: "new_lead",
             car_brand: data.vehicleMake || null,
             car_model: data.vehicleModel || null,
@@ -460,33 +481,34 @@ async function routeToVerticalTable(
         const { data: existingLoan } = await supabase
           .from("car_loan_leads")
           .select("id, status")
-          .eq("phone", cleanedPhone)
+          .in("phone", phoneCandidates)
           .order("created_at", { ascending: false })
           .limit(1);
 
         if (existingLoan?.length) {
-          await supabase.from("car_loan_leads").update({
-            name: data.name !== "Unknown" ? data.name : undefined,
-            email: data.email || undefined,
-            city: data.city || undefined,
+          const { error: loanUpdateErr } = await supabase.from("car_loan_leads").update({
+            name: safeName || undefined,
+            city: safeCity || undefined,
             source: data.source,
-            notes: data.message || undefined,
+            notes: safeMessage || undefined,
             status: "new",
             preferred_car: data.vehicleModel || undefined,
+            utm_source: data.leadSourceType || data.source || undefined,
             updated_at: now,
           }).eq("id", existingLoan[0].id);
+          if (loanUpdateErr) throw loanUpdateErr;
         } else {
           const { error: loanInsertErr } = await supabase.from("car_loan_leads").insert({
             name: safeName,
             phone: cleanedPhone,
-            email: safeEmail,
             city: safeCity,
             source: data.source,
             notes: safeMessage,
             status: "new",
             preferred_car: data.vehicleModel || null,
+            utm_source: data.leadSourceType || data.source || null,
           });
-          if (loanInsertErr) console.error("Loan insert error:", loanInsertErr);
+          if (loanInsertErr) throw loanInsertErr;
         }
         break;
       }
@@ -500,7 +522,7 @@ async function routeToVerticalTable(
         const { data: existingLead } = await supabase
           .from("leads")
           .select("id")
-          .eq("phone", cleanedPhone)
+          .in("phone", phoneCandidates)
           .order("created_at", { ascending: false })
           .limit(1);
 
@@ -518,13 +540,13 @@ async function routeToVerticalTable(
           }).eq("id", existingLead[0].id);
         } else {
           await supabase.from("leads").insert({
-            name: data.name || `${vertical} Lead`,
-            customer_name: data.name || `${vertical} Lead`,
+            name: requiredName,
+            customer_name: requiredName,
             phone: cleanedPhone,
-            email: data.email || null,
-            city: data.city || null,
+            email: safeEmail,
+            city: safeCity,
             source: `${data.source} (${vertical})`,
-            notes: data.message || null,
+            notes: safeMessage,
             status: "new",
             priority: "medium",
             service_category: vertical.toLowerCase().replace(/\s+/g, "_"),
