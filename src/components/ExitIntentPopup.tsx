@@ -6,10 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, Gift, Loader2, CheckCircle, Shield, Clock } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 import { motion } from "framer-motion";
 import confetti from "canvas-confetti";
+import { captureWebsiteLead } from "@/lib/websiteLeadCapture";
 
 const DISMISS_KEY = "gyc_exit_intent_dismissed";
 const CAPTURED_KEY = "gyc_exit_intent_captured";
@@ -73,26 +73,15 @@ export const ExitIntentPopup = () => {
 
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.from("leads").insert({
-        name: formData.name.trim(),
-        customer_name: formData.name.trim(),
-        phone: formData.phone.trim(),
+      await captureWebsiteLead({
+        name: formData.name,
+        phone: formData.phone,
         source: "exit_intent",
-        lead_type: "recovery",
-        status: "new",
+        vertical: "car",
+        type: "recovery",
         priority: "high",
+        message: "Recovered lead from exit intent popup",
       });
-      if (error) throw error;
-
-      try {
-        await supabase.functions.invoke("whatsapp-send", {
-          body: {
-            phone: `91${formData.phone}`,
-            template: "lead_created",
-            params: { name: formData.name, car: "Priority Delivery" },
-          },
-        });
-      } catch { /* best effort */ }
 
       const { trackLeadConversion } = await import("@/lib/adTracking");
       trackLeadConversion("exit_intent");

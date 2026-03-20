@@ -23,6 +23,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { triggerFeedback } from "@/lib/feedback";
 import confetti from "canvas-confetti";
+import { captureWebsiteLead } from "@/lib/websiteLeadCapture";
 
 const quickFormSchema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters").max(100, "Name is too long"),
@@ -115,17 +116,15 @@ export const FloatingCTA = () => {
 
   const submitQuickForm = async () => {
     try {
-      const { error } = await supabase.from("leads").insert({
-        name: quickFormData.name.trim(),
-        customer_name: quickFormData.name.trim(),
-        phone: quickFormData.phone.trim(),
+      await captureWebsiteLead({
+        name: quickFormData.name,
+        phone: quickFormData.phone,
         source: "floating_cta",
-        lead_type: "quick_deal",
-        status: "new",
+        vertical: "car",
+        type: "quick_deal",
         priority: "high",
+        message: "Quick deal request from floating CTA",
       });
-
-      if (error) throw error;
 
       confetti({
         particleCount: 100,

@@ -8,11 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Gift, Phone, Shield, Clock, Loader2, Car, MessageCircle, Percent, Star } from "lucide-react";
 import { toast } from "sonner";
-import { trackLeadConversion, getUTMFields } from "@/lib/adTracking";
+import { trackLeadConversion } from "@/lib/adTracking";
 import { PHONE_NUMBER, getWhatsAppLink } from "@/config/contact";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { captureWebsiteLead } from "@/lib/websiteLeadCapture";
 
 const BestCarDeals = () => {
   const navigate = useNavigate();
@@ -42,17 +43,15 @@ const BestCarDeals = () => {
     }
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.from("leads").insert({
-        name: name.trim(),
-        customer_name: name.trim(),
-        phone: phone.trim(),
+      await captureWebsiteLead({
+        name,
+        phone,
         source: "best_deals_landing",
-        lead_type: "high_intent",
-        status: "new",
+        vertical: "car",
+        type: "high_intent",
         priority: "high",
-        ...getUTMFields(),
+        message: "Best deals landing page lead",
       });
-      if (error) throw error;
       trackLeadConversion("best_car_deals");
       navigate(`/thank-you?source=best-deals`);
     } catch {

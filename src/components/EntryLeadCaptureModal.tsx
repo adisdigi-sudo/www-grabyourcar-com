@@ -8,9 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Car, Zap, Shield, CheckCircle, Loader2, Gift, Clock, X } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 import confetti from "canvas-confetti";
+import { captureWebsiteLead } from "@/lib/websiteLeadCapture";
 
 const STORAGE_KEY = "gyc_entry_lead_captured";
 const DISMISS_KEY = "gyc_entry_lead_dismissed";
@@ -75,32 +75,20 @@ export const EntryLeadCaptureModal = () => {
 
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.from("leads").insert({
-        name: formData.name.trim(),
-        customer_name: formData.name.trim(),
-        phone: formData.phone.trim(),
-        city: formData.city.trim(),
-        car_model: formData.carInterest.trim() || null,
-        buying_timeline: formData.purchaseTimeline || null,
+      await captureWebsiteLead({
+        name: formData.name,
+        phone: formData.phone,
+        city: formData.city,
+        carInterest: formData.carInterest,
         source: "entry_popup",
-        lead_type: "high_intent",
-        status: "new",
+        vertical: "car",
+        type: "high_intent",
         priority: "high",
-        notes: formData.budgetRange ? `Budget: ${formData.budgetRange}` : null,
+        message: [
+          formData.purchaseTimeline && `Timeline: ${formData.purchaseTimeline}`,
+          formData.budgetRange && `Budget: ${formData.budgetRange}`,
+        ].filter(Boolean).join(" | ") || null,
       });
-
-      if (error) throw error;
-
-      // Trigger WhatsApp notification
-      try {
-        await supabase.functions.invoke("whatsapp-send", {
-          body: {
-            phone: `91${formData.phone}`,
-            template: "lead_created",
-            params: { name: formData.name, car: formData.carInterest || "New Car" },
-          },
-        });
-      } catch { /* WhatsApp is best-effort */ }
 
       const { trackLeadConversion } = await import("@/lib/adTracking");
       trackLeadConversion("entry_popup");

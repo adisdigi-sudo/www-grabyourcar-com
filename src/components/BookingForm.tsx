@@ -18,8 +18,8 @@
  import { toast } from "sonner";
  import { AnimatePresence, motion } from "framer-motion";
  
- import { supabase } from "@/integrations/supabase/client";
  import confetti from "canvas-confetti";
+ import { captureWebsiteLead } from "@/lib/websiteLeadCapture";
  
  interface BookingFormProps {
    carName: string;
@@ -64,24 +64,21 @@
    const submitLead = async () => {
      setIsSubmitting(true);
      try {
-        const { error } = await supabase.from("leads").insert({
-          name: bookingForm.name.trim(),
-          customer_name: bookingForm.name.trim(),
-          phone: bookingForm.phone.trim(),
-          email: bookingForm.email.trim() || null,
-          car_brand: carBrand,
-          car_model: carName,
-          source: "car_detail_booking_form",
-          lead_type: "booking",
-          status: "new",
-          priority: "high",
-          notes: bookingForm.preferredDate ? `Preferred visit date: ${bookingForm.preferredDate}` : null,
-        });
-
-       if (error) throw error;
+       await captureWebsiteLead({
+         name: bookingForm.name,
+         phone: bookingForm.phone,
+         email: bookingForm.email,
+         carInterest: carName,
+         carBrand,
+         source: "car_detail_booking_form",
+         vertical: "car",
+         type: "booking",
+         priority: "high",
+         message: bookingForm.preferredDate ? `Preferred visit date: ${bookingForm.preferredDate}` : `Booking request for ${carBrand} ${carName}`,
+       });
 
        // Ad conversion tracking
-       const { trackLeadConversion, getUTMFields } = await import("@/lib/adTracking");
+       const { trackLeadConversion } = await import("@/lib/adTracking");
        trackLeadConversion("car_detail_booking", { car: carName });
 
        // Celebration!
