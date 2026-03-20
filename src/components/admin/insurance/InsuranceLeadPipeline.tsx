@@ -443,7 +443,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
     },
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
-      const stage = PIPELINE_STAGES.find(s => s.value === vars.newStage);
+      const stage = ALL_STAGES.find(s => s.value === vars.newStage);
       toast.success(`Moved to ${stage?.label}`);
 
       const movedClient = clients.find(c => c.id === vars.clientId);
