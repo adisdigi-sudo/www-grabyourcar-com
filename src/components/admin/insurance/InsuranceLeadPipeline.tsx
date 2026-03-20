@@ -628,6 +628,44 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                           )}
                         </div>
                       </TableCell>
+                      <TableCell onClick={e => e.stopPropagation()}>
+                        {client.picked_up_by ? (
+                          <div className="flex flex-col gap-0.5">
+                            <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[9px] px-1.5">
+                              ✅ {client.picked_up_by}
+                            </Badge>
+                            {client.picked_up_at && (
+                              <span className="text-[8px] text-muted-foreground">
+                                {formatDistanceToNow(new Date(client.picked_up_at), { addSuffix: true })}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-6 text-[10px] gap-1 px-2 border-amber-300 text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                            onClick={async () => {
+                              const { data: { user } } = await supabase.auth.getUser();
+                              const userName = user?.email?.split("@")[0] || "Unknown";
+                              const { error } = await supabase
+                                .from("insurance_clients")
+                                .update({ picked_up_by: userName, picked_up_at: new Date().toISOString() })
+                                .eq("id", client.id);
+                              if (error) { toast.error("Failed to pick up"); return; }
+                              await supabase.from("insurance_activity_log").insert({
+                                client_id: client.id,
+                                activity_type: "picked_up",
+                                title: `Picked up by ${userName}`,
+                                description: `Lead claimed by ${userName}`,
+                              });
+                              queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
+                              toast.success(`Lead picked up by ${userName}`);
+                            }}
+                          >
+                            <UserPlus className="h-2.5 w-2.5" /> Pick Up
+                          </Button>
+                        )}
                       <TableCell>
                         <Badge variant="outline" className={cn("text-[9px]", getSourceColor(client.lead_source))}>
                           {formatSource(client.lead_source, client.created_at)}
