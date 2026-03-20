@@ -620,6 +620,12 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                         </Badge>
                       </TableCell>
                       <TableCell>
+                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          {formatDistanceToNow(new Date(client.created_at), { addSuffix: true })}
+                        </div>
+                      </TableCell>
+                      <TableCell>
                         {client.policy_expiry_date ? (
                           <div>
                             <span className={cn("text-xs font-semibold",
