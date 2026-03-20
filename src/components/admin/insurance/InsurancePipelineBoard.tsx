@@ -894,11 +894,81 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
       </Dialog>
 
       {/* Client Detail Sheet */}
-      <Dialog open={!!selectedClient && !showMoveDialog} onOpenChange={(o) => { if (!o) setSelectedClient(null); }}>
+      <Dialog open={!!selectedClient && !showMoveDialog} onOpenChange={(o) => {
+        if (!o) { setSelectedClient(null); setEditFields({}); }
+        else if (selectedClient) {
+          setEditFields({
+            customer_name: selectedClient.customer_name || "",
+            phone: selectedClient.phone || "",
+            email: selectedClient.email || "",
+            city: selectedClient.city || "",
+            vehicle_number: selectedClient.vehicle_number || "",
+            vehicle_make: selectedClient.vehicle_make || "",
+            vehicle_model: selectedClient.vehicle_model || "",
+            vehicle_year: selectedClient.vehicle_year ? String(selectedClient.vehicle_year) : "",
+            current_insurer: selectedClient.current_insurer || "",
+            current_policy_type: selectedClient.current_policy_type || "",
+            current_premium: selectedClient.current_premium ? String(selectedClient.current_premium) : "",
+            ncb_percentage: selectedClient.ncb_percentage ? String(selectedClient.ncb_percentage) : "",
+          });
+        }
+      }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           {selectedClient && (() => {
             const stage = PIPELINE_STAGES.find(s => s.value === (selectedClient.pipeline_stage || "new_lead")) || PIPELINE_STAGES[0];
             const phone = displayPhone(selectedClient.phone);
+
+            const initEditIfEmpty = () => {
+              if (Object.keys(editFields).length === 0) {
+                setEditFields({
+                  customer_name: selectedClient.customer_name || "",
+                  phone: selectedClient.phone || "",
+                  email: selectedClient.email || "",
+                  city: selectedClient.city || "",
+                  vehicle_number: selectedClient.vehicle_number || "",
+                  vehicle_make: selectedClient.vehicle_make || "",
+                  vehicle_model: selectedClient.vehicle_model || "",
+                  vehicle_year: selectedClient.vehicle_year ? String(selectedClient.vehicle_year) : "",
+                  current_insurer: selectedClient.current_insurer || "",
+                  current_policy_type: selectedClient.current_policy_type || "",
+                  current_premium: selectedClient.current_premium ? String(selectedClient.current_premium) : "",
+                  ncb_percentage: selectedClient.ncb_percentage ? String(selectedClient.ncb_percentage) : "",
+                });
+              }
+            };
+            initEditIfEmpty();
+
+            const updateField = (key: string, value: string) => setEditFields(f => ({ ...f, [key]: value }));
+
+            const saveEdits = async () => {
+              setSavingEdit(true);
+              try {
+                const updates: Record<string, any> = {
+                  customer_name: editFields.customer_name || null,
+                  phone: editFields.phone || selectedClient.phone,
+                  email: editFields.email || null,
+                  city: editFields.city || null,
+                  vehicle_number: editFields.vehicle_number || null,
+                  vehicle_make: editFields.vehicle_make || null,
+                  vehicle_model: editFields.vehicle_model || null,
+                  vehicle_year: editFields.vehicle_year ? Number(editFields.vehicle_year) : null,
+                  current_insurer: editFields.current_insurer || null,
+                  current_policy_type: editFields.current_policy_type || null,
+                  current_premium: editFields.current_premium ? Number(editFields.current_premium) : null,
+                  ncb_percentage: editFields.ncb_percentage ? Number(editFields.ncb_percentage) : null,
+                };
+                const { error } = await supabase.from("insurance_clients").update(updates).eq("id", selectedClient.id);
+                if (error) throw error;
+                toast.success("✅ Lead details updated!");
+                queryClient.invalidateQueries({ queryKey: ["insurance-pipeline-clients"] });
+                setSelectedClient({ ...selectedClient, ...updates });
+              } catch (e: any) {
+                toast.error(e.message || "Failed to save");
+              } finally {
+                setSavingEdit(false);
+              }
+            };
+
             return (
               <>
                 <DialogHeader>
@@ -906,7 +976,7 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
                     <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${stage.color} flex items-center justify-center`}>
                       <User className="h-4 w-4 text-white" />
                     </div>
-                    {selectedClient.customer_name || "Unknown"}
+                    Insurance Lead
                   </DialogTitle>
                 </DialogHeader>
 
@@ -920,39 +990,80 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
                     {NEXT_ACTIONS[selectedClient.pipeline_stage || "new_lead"]}
                   </div>
 
-                  {/* Customer Details */}
+                  {/* Editable Customer Details */}
                   <div className="space-y-2">
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Customer</p>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div><span className="text-muted-foreground">Mobile:</span> {phone || "—"}</div>
-                      <div><span className="text-muted-foreground">Email:</span> {selectedClient.email || "—"}</div>
-                      <div><span className="text-muted-foreground">City:</span> {selectedClient.city || "—"}</div>
-                      <div><span className="text-muted-foreground">Source:</span> {selectedClient.lead_source || "—"}</div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Name</Label>
+                        <Input value={editFields.customer_name || ""} onChange={e => updateField("customer_name", e.target.value)} className="h-8 text-sm" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Mobile</Label>
+                        <Input value={editFields.phone || ""} onChange={e => updateField("phone", e.target.value)} className="h-8 text-sm" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Email</Label>
+                        <Input value={editFields.email || ""} onChange={e => updateField("email", e.target.value)} className="h-8 text-sm" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">City</Label>
+                        <Input value={editFields.city || ""} onChange={e => updateField("city", e.target.value)} className="h-8 text-sm" />
+                      </div>
                     </div>
                   </div>
 
-                  {/* Vehicle Details */}
+                  {/* Editable Vehicle Details */}
                   <div className="space-y-2">
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Vehicle</p>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div><span className="text-muted-foreground">Number:</span> {selectedClient.vehicle_number || "—"}</div>
-                      <div><span className="text-muted-foreground">Model:</span> {selectedClient.vehicle_make} {selectedClient.vehicle_model || "—"}</div>
-                      <div><span className="text-muted-foreground">Year:</span> {selectedClient.vehicle_year || "—"}</div>
-                      <div><span className="text-muted-foreground">Insurer:</span> {selectedClient.current_insurer || "—"}</div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Vehicle Number</Label>
+                        <Input value={editFields.vehicle_number || ""} onChange={e => updateField("vehicle_number", e.target.value.toUpperCase())} placeholder="e.g. DL01AB1234" className="h-8 text-sm font-mono uppercase" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Make</Label>
+                        <Input value={editFields.vehicle_make || ""} onChange={e => updateField("vehicle_make", e.target.value)} className="h-8 text-sm" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Model</Label>
+                        <Input value={editFields.vehicle_model || ""} onChange={e => updateField("vehicle_model", e.target.value)} className="h-8 text-sm" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Year</Label>
+                        <Input type="number" value={editFields.vehicle_year || ""} onChange={e => updateField("vehicle_year", e.target.value)} className="h-8 text-sm" />
+                      </div>
                     </div>
                   </div>
 
-                  {/* Insurance Details */}
+                  {/* Editable Insurance Details */}
                   <div className="space-y-2">
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Insurance</p>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div><span className="text-muted-foreground">Type:</span> {selectedClient.current_policy_type || "—"}</div>
-                      <div><span className="text-muted-foreground">NCB:</span> {selectedClient.ncb_percentage ? `${selectedClient.ncb_percentage}%` : "—"}</div>
-                      <div><span className="text-muted-foreground">Premium:</span> {selectedClient.current_premium ? `₹${selectedClient.current_premium.toLocaleString("en-IN")}` : "—"}</div>
-                      <div><span className="text-muted-foreground">Claim:</span> {selectedClient.previous_claim ? "Yes" : "No"}</div>
-                      <div><span className="text-muted-foreground">Expiry:</span> {selectedClient.policy_expiry_date ? format(new Date(selectedClient.policy_expiry_date), "dd MMM yyyy") : "—"}</div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Insurer</Label>
+                        <Input value={editFields.current_insurer || ""} onChange={e => updateField("current_insurer", e.target.value)} className="h-8 text-sm" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Policy Type</Label>
+                        <Input value={editFields.current_policy_type || ""} onChange={e => updateField("current_policy_type", e.target.value)} className="h-8 text-sm" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Premium (₹)</Label>
+                        <Input type="number" value={editFields.current_premium || ""} onChange={e => updateField("current_premium", e.target.value)} className="h-8 text-sm" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">NCB %</Label>
+                        <Input type="number" value={editFields.ncb_percentage || ""} onChange={e => updateField("ncb_percentage", e.target.value)} className="h-8 text-sm" />
+                      </div>
                     </div>
                   </div>
+
+                  {/* Save Button */}
+                  <Button onClick={saveEdits} disabled={savingEdit} className="w-full gap-2">
+                    {savingEdit ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    {savingEdit ? "Saving..." : "Save Changes"}
+                  </Button>
 
                   {/* Notes */}
                   {selectedClient.notes && (
