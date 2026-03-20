@@ -131,28 +131,28 @@ export const CarLoanEligibilityForm = ({ onEligibilityResult }: Props) => {
 
     // Save verified lead
     try {
-      await supabase.from("car_loan_leads").insert({
-        phone: `91${phone}`,
-        name,
-        pan_number: pan,
-        employment_type: details.employmentType,
-        monthly_income: income,
-        age,
-        existing_emi: existingEMI,
-        loan_amount_requested: parseFloat(details.loanAmount) || null,
-        tenure_months: parseInt(details.tenure),
+      await captureWebsiteLead({
+        name: name || "Car Loan Lead",
+        phone,
         city: details.city || null,
-        buying_timeline: details.buyingTimeline || null,
-        eligibility_status: eligible ? "eligible" : "not_eligible",
-        max_loan_eligible: Math.round(maxLoan),
-        max_emi_capacity: Math.round(maxEMI),
-        credit_score: creditScore,
-        credit_check_provider: "simulated",
-        lead_score: leadScore,
-        lead_priority: leadPriority,
-        status: "new",
-        otp_verified_at: new Date().toISOString(),
+        vertical: "car loan",
         source: "car_loan_page",
+        type: "car_loan_eligibility",
+        priority: leadPriority as "high" | "medium" | "low" | "warm" | "hot" | "normal",
+        message: [
+          `PAN: ${pan}`,
+          `Employment: ${details.employmentType}`,
+          `Income: ${income}`,
+          `Age: ${age}`,
+          `Existing EMI: ${existingEMI}`,
+          details.loanAmount && `Loan requested: ${details.loanAmount}`,
+          `Tenure: ${details.tenure}`,
+          details.buyingTimeline && `Timeline: ${details.buyingTimeline}`,
+          `Eligibility: ${eligible ? "eligible" : "not_eligible"}`,
+          `Max loan: ${Math.round(maxLoan)}`,
+          `Max EMI: ${Math.round(maxEMI)}`,
+          `Credit score: ${creditScore}`,
+        ].filter(Boolean).join(" | "),
       });
     } catch (err) {
       console.error("Lead save error:", err);

@@ -90,17 +90,6 @@ export const EntryLeadCaptureModal = () => {
         ].filter(Boolean).join(" | ") || null,
       });
 
-      // Trigger WhatsApp notification
-      try {
-        await supabase.functions.invoke("whatsapp-send", {
-          body: {
-            phone: `91${formData.phone}`,
-            template: "lead_created",
-            params: { name: formData.name, car: formData.carInterest || "New Car" },
-          },
-        });
-      } catch { /* WhatsApp is best-effort */ }
-
       const { trackLeadConversion } = await import("@/lib/adTracking");
       trackLeadConversion("entry_popup");
 

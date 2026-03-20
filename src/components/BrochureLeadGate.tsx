@@ -84,16 +84,6 @@ export const BrochureLeadGate = ({ brochureUrl, carName, carSlug, children }: Br
         message: `Brochure requested for ${carName}`,
       });
 
-      try {
-        await supabase.functions.invoke("whatsapp-send", {
-          body: {
-            phone: `91${formData.phone}`,
-            template: "lead_created",
-            params: { name: formData.name, car: carName },
-          },
-        });
-      } catch { /* best effort */ }
-
       localStorage.setItem(`gyc_brochure_lead_${carSlug || carName}`, "true");
 
       const { trackLeadConversion } = await import("@/lib/adTracking");

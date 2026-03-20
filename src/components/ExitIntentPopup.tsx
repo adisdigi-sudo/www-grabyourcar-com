@@ -83,16 +83,6 @@ export const ExitIntentPopup = () => {
         message: "Recovered lead from exit intent popup",
       });
 
-      try {
-        await supabase.functions.invoke("whatsapp-send", {
-          body: {
-            phone: `91${formData.phone}`,
-            template: "lead_created",
-            params: { name: formData.name, car: "Priority Delivery" },
-          },
-        });
-      } catch { /* best effort */ }
-
       const { trackLeadConversion } = await import("@/lib/adTracking");
       trackLeadConversion("exit_intent");
 
