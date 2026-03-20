@@ -105,7 +105,13 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
 
   const toggleSelect = (id: string) => setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
-  const sourceLabel = (sl: string | null) => {
+  const sourceLabel = (policy: PolicyRecord) => {
+    // Show "Renewed" with date if the policy is a renewal
+    if (policy.is_renewal || (policy.renewal_count && policy.renewal_count > 0)) {
+      const renewDate = policy.issued_date ? format(new Date(policy.issued_date), "dd MMM yyyy") : "";
+      return <Badge variant="outline" className="text-[9px] bg-blue-100 text-blue-700 border-blue-200">🔄 Renewed {renewDate}</Badge>;
+    }
+    const sl = policy.source_label;
     if (!sl) return null;
     const colors: Record<string, string> = {
       "Won (New)": "bg-emerald-100 text-emerald-700 border-emerald-200",
