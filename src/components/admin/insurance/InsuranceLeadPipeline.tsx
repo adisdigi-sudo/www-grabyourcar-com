@@ -432,7 +432,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
       if (error) throw error;
       if (!data) throw new Error("Lead was not found in the CRM database. Please refresh once.");
 
-      const stage = PIPELINE_STAGES.find(s => s.value === newStage);
+      const stage = ALL_STAGES.find(s => s.value === newStage);
       await supabase.from("insurance_activity_log").insert({
         client_id: clientId,
         activity_type: "stage_change",
