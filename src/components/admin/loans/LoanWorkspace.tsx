@@ -743,8 +743,8 @@ export const LoanWorkspace = () => {
 
       {/* ═══ MAIN LAYOUT: Left Sidebar + Right Content ═══ */}
       <div className="flex gap-4 min-h-[600px]">
-        {/* ── Left Sidebar Panel ── */}
-        <div className="w-[260px] shrink-0 space-y-3">
+        {/* ── Left Sidebar: Nav + EMI Calculator ── */}
+        <div className="w-[270px] shrink-0 space-y-3">
           {/* Navigation */}
           <div className="rounded-xl border bg-card overflow-hidden">
             <div className="px-3 py-2.5 bg-muted/50 border-b">
@@ -791,7 +791,6 @@ export const LoanWorkspace = () => {
               {LOAN_STAGES.map(stage => {
                 const StageIcon = STAGE_ICONS[stage] || Banknote;
                 const sc = stageCounts[stage];
-                const isActive = activeView === 'pipeline';
                 const barWidth = totalApps > 0 ? Math.max((sc.count / totalApps) * 100, 2) : 0;
 
                 return (
@@ -803,7 +802,6 @@ export const LoanWorkspace = () => {
                       "hover:bg-muted/40"
                     )}
                   >
-                    {/* Background fill bar */}
                     <div
                       className={cn("absolute inset-y-0 left-0 opacity-[0.07] transition-all rounded-lg", STAGE_COLORS[stage]?.split(' ')[0])}
                       style={{ width: `${barWidth}%` }}
@@ -832,7 +830,6 @@ export const LoanWorkspace = () => {
                 );
               })}
             </div>
-            {/* Pipeline total */}
             <div className="px-3 py-2 bg-muted/30 border-t flex items-center justify-between">
               <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Total</span>
               <div className="flex items-center gap-2">
@@ -886,14 +883,15 @@ export const LoanWorkspace = () => {
               )}
             </div>
           </div>
+
+          {/* EMI Calculator in Sidebar */}
+          <EMICalculator />
         </div>
 
         {/* ── Right Content Panel ── */}
         <div className="flex-1 min-w-0">
           {activeView === "pipeline" && (
             <div className="space-y-4">
-              <EMICalculator />
-
               {draggingApp && (
                 <div className="text-xs text-center text-muted-foreground bg-muted/50 rounded-lg py-1.5 border border-dashed border-primary/30 animate-pulse">
                   Drop on a stage to move <strong>{draggingApp.customer_name}</strong>
