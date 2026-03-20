@@ -96,14 +96,15 @@ export function InsuranceStatusPipeline() {
   useEffect(() => { fetchClients(); }, []);
 
   const fetchClients = async () => {
-    // Only fetch leads that have been worked on (have a lead_status set)
     const { data } = await supabase
       .from("insurance_clients")
       .select("id, customer_name, phone, email, vehicle_model, vehicle_number, vehicle_make, current_insurer, lead_status, current_premium, lead_source, created_at")
-      .not("lead_status", "is", null)
       .order("created_at", { ascending: false })
       .limit(500);
-    setClients((data || []) as Client[]);
+    setClients(((data || []).map((client) => ({
+      ...client,
+      lead_status: client.lead_status || "new",
+    }))) as Client[]);
   };
 
   const stageCounts = useMemo(() =>

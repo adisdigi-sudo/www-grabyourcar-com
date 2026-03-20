@@ -120,12 +120,13 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
       const { data, error } = await supabase
         .from("insurance_clients")
         .select("id, customer_name, phone, email, city, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_insurer, policy_expiry_date, current_policy_type, ncb_percentage, previous_claim, lead_source, lead_status, assigned_executive, priority, pipeline_stage, contact_attempts, quote_amount, quote_insurer, lost_reason, follow_up_date, current_premium, notes, created_at")
-        .not("pipeline_stage", "is", null)
-        .not("pipeline_stage", "in", '("new_lead","policy_issued")')
         .order("created_at", { ascending: false })
         .limit(1000);
       if (error) throw error;
-      return (data || []) as Client[];
+      return ((data || []).map((client) => ({
+        ...client,
+        pipeline_stage: client.pipeline_stage || "new_lead",
+      }))) as Client[];
     },
   });
 
