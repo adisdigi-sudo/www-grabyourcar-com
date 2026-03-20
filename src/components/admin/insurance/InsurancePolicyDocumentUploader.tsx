@@ -23,13 +23,7 @@ interface InsurancePolicyDocumentUploaderProps {
   onDone?: () => void;
 }
 
-const normalizePolicyNumber = (value: string) => value.replace(/\.[^.]+$/, "").trim().replace(/\s+/g, "-").toUpperCase();
-
-const extractPolicyNumberFromFileName = (fileName: string) => {
-  const base = fileName.replace(/\.[^.]+$/, "").trim();
-  const match = base.match(/[A-Za-z0-9][A-Za-z0-9\/-]{5,}/);
-  return match ? normalizePolicyNumber(match[0]) : "";
-};
+const normalizePolicyNumber = (value: string) => value.trim().replace(/\s+/g, "-").toUpperCase();
 
 export function InsurancePolicyDocumentUploader({
   defaultPolicyId,
@@ -82,9 +76,8 @@ export function InsurancePolicyDocumentUploader({
   const resolvedPolicyNumber = useMemo(() => {
     const manual = normalizePolicyNumber(typedPolicyNumber || "");
     if (manual) return manual;
-    if (docFile) return extractPolicyNumberFromFileName(docFile.name);
     return normalizePolicyNumber(selectedPolicy?.policy_number || "");
-  }, [docFile, selectedPolicy?.policy_number, typedPolicyNumber]);
+  }, [selectedPolicy?.policy_number, typedPolicyNumber]);
 
   const uploadDocument = async () => {
     if (!selectedPolicyId) {
@@ -98,13 +91,7 @@ export function InsurancePolicyDocumentUploader({
 
     const finalPolicyNumber = resolvedPolicyNumber;
     if (!finalPolicyNumber) {
-      toast.error("Policy number is required. Use the PDF file name or enter it manually.");
-      return;
-    }
-
-    const existingPolicyNumber = normalizePolicyNumber(selectedPolicy?.policy_number || "");
-    if (existingPolicyNumber && existingPolicyNumber !== finalPolicyNumber) {
-      toast.error(`Policy number mismatch. Expected ${existingPolicyNumber}. Rename the PDF or enter the same policy number.`);
+      toast.error("Policy number is required. Enter it manually.");
       return;
     }
 
@@ -224,7 +211,6 @@ export function InsurancePolicyDocumentUploader({
                     return;
                   }
                   setDocFile(file);
-                  setTypedPolicyNumber(extractPolicyNumberFromFileName(file.name));
                 }}
               />
               {!docFile && (
@@ -244,7 +230,7 @@ export function InsurancePolicyDocumentUploader({
               className="h-9 text-sm"
             />
             <p className="text-[11px] text-muted-foreground">
-              Save the PDF using the policy number as the file name. If the PDF name does not contain it, enter it here.
+              Enter the new policy number here. This will be saved with the document.
             </p>
           </div>
         </>

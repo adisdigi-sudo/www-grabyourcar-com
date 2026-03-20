@@ -59,11 +59,24 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
     return Array.from(set).sort() as string[];
   }, [policies]);
 
+  // Deduplicate: keep only the latest policy per client_id + vehicle_number combo
+  const deduplicatedPolicies = useMemo(() => {
+    const map = new Map<string, PolicyRecord>();
+    // policies are already sorted by created_at desc, so first occurrence is latest
+    for (const p of policies) {
+      const vehicleKey = p.insurance_clients?.vehicle_number?.replace(/\s+/g, "").toUpperCase() || "no-vehicle";
+      const key = `${p.client_id || "unknown"}_${vehicleKey}`;
+      if (!map.has(key)) {
+        map.set(key, p);
+      }
+    }
+    return Array.from(map.values());
+  }, [policies]);
+
   const filtered = useMemo(() => {
-    let result = policies;
+    let result = deduplicatedPolicies;
     if (partnerFilter !== "all") result = result.filter(p => p.insurer === partnerFilter);
 
-    // Date range filter on issued_date
     if (dateFrom || dateTo) {
       result = result.filter(p => {
         if (!p.issued_date) return false;
@@ -88,11 +101,17 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
       );
     }
     return result;
-  }, [policies, partnerFilter, search, dateFrom, dateTo]);
+  }, [deduplicatedPolicies, partnerFilter, search, dateFrom, dateTo]);
 
   const toggleSelect = (id: string) => setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
-  const sourceLabel = (sl: string | null) => {
+  const sourceLabel = (policy: PolicyRecord) => {
+    // Show "Renewed" with date if the policy is a renewal
+    if (policy.is_renewal || (policy.renewal_count && policy.renewal_count > 0)) {
+      const renewDate = policy.issued_date ? format(new Date(policy.issued_date), "dd MMM yyyy") : "";
+      return <Badge variant="outline" className="text-[9px] bg-blue-100 text-blue-700 border-blue-200">🔄 Renewed {renewDate}</Badge>;
+    }
+    const sl = policy.source_label;
     if (!sl) return null;
     const colors: Record<string, string> = {
       "Won (New)": "bg-emerald-100 text-emerald-700 border-emerald-200",
@@ -216,7 +235,7 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
                       <TableCell className="font-semibold text-xs">{policy.premium_amount ? `₹${policy.premium_amount.toLocaleString("en-IN")}` : "—"}</TableCell>
                       <TableCell className="text-xs">{policy.issued_date ? format(new Date(policy.issued_date), "dd MMM yyyy") : "—"}</TableCell>
                       <TableCell className="text-xs">{policy.expiry_date ? format(new Date(policy.expiry_date), "dd MMM yyyy") : "—"}</TableCell>
-                      <TableCell>{sourceLabel(policy.source_label)}</TableCell>
+                      <TableCell>{sourceLabel(policy)}</TableCell>
                       <TableCell>
                         {policy.policy_document_url ? (
                           <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => window.open(policy.policy_document_url!, "_blank")}>

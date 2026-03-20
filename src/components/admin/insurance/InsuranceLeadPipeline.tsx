@@ -77,8 +77,13 @@ export const PIPELINE_STAGES = [
   { value: "follow_up", label: "Follow-Up", icon: Clock, color: "from-orange-500 to-orange-600", bg: "bg-orange-50 dark:bg-orange-950/30", border: "border-orange-200 dark:border-orange-800", text: "text-orange-700 dark:text-orange-300", dot: "bg-orange-500" },
   { value: "won", label: "Won", icon: CheckCircle2, color: "from-emerald-500 to-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-950/30", border: "border-emerald-200 dark:border-emerald-800", text: "text-emerald-700 dark:text-emerald-300", dot: "bg-emerald-500" },
   { value: "lost", label: "Lost", icon: XCircle, color: "from-slate-400 to-slate-500", bg: "bg-slate-50 dark:bg-slate-900/30", border: "border-slate-200 dark:border-slate-700", text: "text-slate-500 dark:text-slate-400", dot: "bg-slate-400" },
-  { value: "policy_issued", label: "Policy Issued", icon: Shield, color: "from-emerald-600 to-emerald-800", bg: "bg-emerald-50 dark:bg-emerald-950/30", border: "border-emerald-200 dark:border-emerald-800", text: "text-emerald-700 dark:text-emerald-300", dot: "bg-emerald-600" },
 ];
+
+// Hidden stage - won leads that have policy issued go to Policy Book, not shown in pipeline
+const POLICY_ISSUED_STAGE = { value: "policy_issued", label: "Policy Issued", icon: Shield, color: "from-emerald-600 to-emerald-800", bg: "bg-emerald-50 dark:bg-emerald-950/30", border: "border-emerald-200 dark:border-emerald-800", text: "text-emerald-700 dark:text-emerald-300", dot: "bg-emerald-600" };
+
+// All stages including hidden ones for lookups
+const ALL_STAGES = [...PIPELINE_STAGES, POLICY_ISSUED_STAGE];
 
 const STAGE_MAP: Record<string, string> = {
   new_lead: "new_lead",
@@ -359,24 +364,32 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
     });
   }, [selectedClient]);
 
+  // Filter - exclude policy_issued leads from pipeline (they are in Policy Book)
+  const pipelineClients = useMemo(() => {
+    return clients.filter(c => {
+      const stage = normalizeStage(c.pipeline_stage, c.lead_status);
+      return stage !== "policy_issued";
+    });
+  }, [clients]);
+
   // Counts
   const stageCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     PIPELINE_STAGES.forEach(s => { counts[s.value] = 0; });
-    clients.forEach(c => {
+    pipelineClients.forEach(c => {
       const stage = normalizeStage(c.pipeline_stage, c.lead_status);
       if (counts[stage] !== undefined) counts[stage]++;
     });
     return counts;
-  }, [clients]);
+  }, [pipelineClients]);
 
   // Filter
   const filtered = useMemo(() => {
     let result = selectedStage === "all"
-      ? clients
+      ? pipelineClients
       : selectedStage === "retarget"
-        ? clients.filter(c => c.retarget_status === "scheduled")
-        : clients.filter(c => normalizeStage(c.pipeline_stage, c.lead_status) === selectedStage);
+        ? pipelineClients.filter(c => c.retarget_status === "scheduled")
+        : pipelineClients.filter(c => normalizeStage(c.pipeline_stage, c.lead_status) === selectedStage);
     if (search.trim()) {
       const s = search.toLowerCase();
       result = result.filter(c =>
@@ -391,7 +404,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
       );
     }
     return result;
-  }, [clients, selectedStage, search]);
+  }, [pipelineClients, selectedStage, search]);
 
   const retargetCount = useMemo(() => clients.filter(c => c.retarget_status === "scheduled").length, [clients]);
 
@@ -419,7 +432,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
       if (error) throw error;
       if (!data) throw new Error("Lead was not found in the CRM database. Please refresh once.");
 
-      const stage = PIPELINE_STAGES.find(s => s.value === newStage);
+      const stage = ALL_STAGES.find(s => s.value === newStage);
       await supabase.from("insurance_activity_log").insert({
         client_id: clientId,
         activity_type: "stage_change",
@@ -430,7 +443,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
     },
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
-      const stage = PIPELINE_STAGES.find(s => s.value === vars.newStage);
+      const stage = ALL_STAGES.find(s => s.value === vars.newStage);
       toast.success(`Moved to ${stage?.label}`);
 
       const movedClient = clients.find(c => c.id === vars.clientId);
@@ -527,7 +540,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
       {/* Stage Filter Tabs */}
       <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
         <Button size="sm" variant={selectedStage === "all" ? "default" : "outline"} onClick={() => setSelectedStage("all")} className="shrink-0 h-8 text-xs">
-          All ({clients.length})
+          All ({pipelineClients.length})
         </Button>
         {PIPELINE_STAGES.map(stage => {
           const count = stageCounts[stage.value] || 0;
@@ -590,7 +603,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                   </TableCell></TableRow>
                 ) : filtered.map((client, idx) => {
                   const normStage = normalizeStage(client.pipeline_stage, client.lead_status);
-                  const stage = PIPELINE_STAGES.find(s => s.value === normStage) || PIPELINE_STAGES[0];
+                  const stage = ALL_STAGES.find(s => s.value === normStage) || PIPELINE_STAGES[0];
                   const phone = displayPhone(client.phone);
                   const daysToExpiry = client.policy_expiry_date ? differenceInDays(new Date(client.policy_expiry_date), new Date()) : null;
 
@@ -738,7 +751,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
           {filtered.length > 0 && (
             <div className="flex items-center justify-between px-4 py-2 border-t text-xs text-muted-foreground bg-muted/20">
               <span>Showing {filtered.length} leads</span>
-              <span>{stageCounts["won"] + stageCounts["policy_issued"]} won • {stageCounts["lost"]} lost</span>
+              <span>{stageCounts["won"] || 0} won • {stageCounts["lost"] || 0} lost</span>
             </div>
           )}
         </CardContent>
@@ -749,7 +762,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           {selectedClient && (() => {
             const normStage = normalizeStage(selectedClient.pipeline_stage, selectedClient.lead_status);
-            const stage = PIPELINE_STAGES.find(s => s.value === normStage) || PIPELINE_STAGES[0];
+            const stage = ALL_STAGES.find(s => s.value === normStage) || PIPELINE_STAGES[0];
             const phone = displayPhone(selectedClient.phone);
             return (
               <>
