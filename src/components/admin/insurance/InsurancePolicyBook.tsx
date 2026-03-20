@@ -56,6 +56,9 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [uploadPolicyId, setUploadPolicyId] = useState<string | null>(null);
+  const [uploadClientId, setUploadClientId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   const partners = useMemo(() => {
     const set = new Set(policies.map(p => p.insurer).filter(Boolean));
