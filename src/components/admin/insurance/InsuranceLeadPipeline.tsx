@@ -117,34 +117,57 @@ export const normalizeStage = (stage: string | null, leadStatus?: string | null)
 
 const CALL_STATUSES = ["Interested", "Not Interested", "Call Back", "No Answer", "Wrong Number"];
 const LOST_REASONS = ["Too expensive", "Existing agent", "No response", "Not renewing", "Competitor offer", "Other"];
-export const LEAD_SOURCES = ["Meta", "Google Ads", "Referral", "Walk-in", "WhatsApp Broadcast", "Website", "Manual", "Rollover"];
+export const LEAD_SOURCES = ["Meta Lead", "Google Lead", "Referral", "Walk-in Lead", "WhatsApp Lead", "Website Lead", "Manual", "Rollover"];
+
+const normalizeLeadSourceLabel = (source: string | null): string => {
+  if (!source) return "Unknown";
+  const normalized = source.toLowerCase().trim();
+
+  if (
+    normalized.includes("insurebook") ||
+    normalized.includes("rollover") ||
+    normalized.includes("csv_import") ||
+    normalized.includes("csv import") ||
+    source.startsWith("IB_")
+  ) {
+    return "Rollover";
+  }
+
+  if (normalized.includes("whatsapp")) return "WhatsApp Lead";
+  if (normalized.includes("walk")) return "Walk-in Lead";
+  if (normalized.includes("google")) return "Google Lead";
+  if (normalized.includes("meta") || normalized.includes("facebook") || normalized.includes("instagram")) return "Meta Lead";
+  if (normalized.includes("website") || normalized.includes("hero") || normalized.includes("form")) return "Website Lead";
+  if (normalized.includes("referral")) return "Referral";
+  if (normalized.includes("manual")) return "Manual";
+
+  return source.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+};
 
 const SOURCE_COLORS: Record<string, string> = {
-  Meta: "bg-blue-100 text-blue-700 border-blue-200",
-  "Google Ads": "bg-red-100 text-red-700 border-red-200",
+  "Meta Lead": "bg-blue-100 text-blue-700 border-blue-200",
+  "Google Lead": "bg-red-100 text-red-700 border-red-200",
   Referral: "bg-purple-100 text-purple-700 border-purple-200",
-  "Walk-in": "bg-green-100 text-green-700 border-green-200",
-  "WhatsApp Broadcast": "bg-emerald-100 text-emerald-700 border-emerald-200",
-  Website: "bg-indigo-100 text-indigo-700 border-indigo-200",
+  "Walk-in Lead": "bg-green-100 text-green-700 border-green-200",
+  "WhatsApp Lead": "bg-emerald-100 text-emerald-700 border-emerald-200",
+  "Website Lead": "bg-indigo-100 text-indigo-700 border-indigo-200",
   Manual: "bg-gray-100 text-gray-700 border-gray-200",
   Rollover: "bg-violet-100 text-violet-700 border-violet-200",
-  rollover: "bg-violet-100 text-violet-700 border-violet-200",
-  "CSV Import": "bg-violet-100 text-violet-700 border-violet-200",
-  csv_import: "bg-violet-100 text-violet-700 border-violet-200",
 };
 
 export function formatSource(source: string | null, createdAt: string): string {
-  if (!source) return "Unknown";
-  const normalized = source.toLowerCase();
-  const date = format(new Date(createdAt), "dd MMM yyyy");
-  if (["csv_import", "csv import", "rollover", "rollover_data"].includes(normalized)) return `Rollover • ${date}`;
-  if (source.startsWith("IB_") || normalized.includes("insurebook")) return `Rollover • ${date}`;
-  return source;
+  const label = normalizeLeadSourceLabel(source);
+  if (label === "Unknown") return label;
+  if (label === "Rollover") {
+    const date = format(new Date(createdAt), "dd MMM yyyy");
+    return `Rollover • ${date}`;
+  }
+  return label;
 }
 
 const displayPhone = (phone: string | null) => (!phone || phone.startsWith("IB_")) ? null : phone;
 const isLegacyClientId = (id: string) => id.startsWith("legacy-");
-const getSourceColor = (src: string | null) => SOURCE_COLORS[src || ""] || "bg-muted text-muted-foreground border-border";
+const getSourceColor = (src: string | null) => SOURCE_COLORS[normalizeLeadSourceLabel(src)] || "bg-muted text-muted-foreground border-border";
 
 // ── Journey Breadcrumb Component ──
 function JourneyBreadcrumb({ clientId }: { clientId: string }) {
