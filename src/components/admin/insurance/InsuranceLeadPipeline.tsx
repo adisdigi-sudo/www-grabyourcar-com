@@ -418,12 +418,24 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
     });
   }, [selectedClient]);
 
-  // Filter - exclude policy_issued leads from pipeline (they are in Policy Book)
+  // Filter - exclude policy_issued leads from pipeline and deduplicate same lead/vehicle
   const pipelineClients = useMemo(() => {
-    return clients.filter(c => {
-      const stage = normalizeStage(c.pipeline_stage, c.lead_status);
-      return stage !== "policy_issued";
-    });
+    const uniqueLeads = new Map<string, Client>();
+
+    for (const client of clients) {
+      const stage = normalizeStage(client.pipeline_stage, client.lead_status);
+      if (stage === "policy_issued") continue;
+
+      const phoneKey = client.phone?.replace(/\D/g, "") || client.id;
+      const vehicleKey = client.vehicle_number?.replace(/\s+/g, "").toUpperCase() || "no-vehicle";
+      const dedupeKey = `${phoneKey}_${vehicleKey}`;
+
+      if (!uniqueLeads.has(dedupeKey)) {
+        uniqueLeads.set(dedupeKey, client);
+      }
+    }
+
+    return Array.from(uniqueLeads.values());
   }, [clients]);
 
   // Counts
@@ -432,6 +444,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
     PIPELINE_STAGES.forEach(s => { counts[s.value] = 0; });
     pipelineClients.forEach(c => {
       const stage = normalizeStage(c.pipeline_stage, c.lead_status);
+      if (stage === "lost" && c.retarget_status === "scheduled") return;
       if (counts[stage] !== undefined) counts[stage]++;
     });
     return counts;
@@ -443,7 +456,9 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
       ? pipelineClients
       : selectedStage === "retarget"
         ? pipelineClients.filter(c => c.retarget_status === "scheduled")
-        : pipelineClients.filter(c => normalizeStage(c.pipeline_stage, c.lead_status) === selectedStage);
+        : selectedStage === "lost"
+          ? pipelineClients.filter(c => normalizeStage(c.pipeline_stage, c.lead_status) === "lost" && c.retarget_status !== "scheduled")
+          : pipelineClients.filter(c => normalizeStage(c.pipeline_stage, c.lead_status) === selectedStage);
     if (search.trim()) {
       const s = search.toLowerCase();
       result = result.filter(c =>
@@ -464,7 +479,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
     });
   }, [pipelineClients, selectedStage, search]);
 
-  const retargetCount = useMemo(() => clients.filter(c => c.retarget_status === "scheduled").length, [clients]);
+  const retargetCount = useMemo(() => pipelineClients.filter(c => c.retarget_status === "scheduled").length, [pipelineClients]);
 
   // Move mutation
   const moveStage = useMutation({
