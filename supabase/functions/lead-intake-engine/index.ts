@@ -148,7 +148,14 @@ serve(async (req) => {
         name: name !== "Unknown" ? name : undefined,
         email: email || undefined,
         city: city || undefined,
+        source: source || undefined,
         lead_source_type: leadSourceType,
+        status: "New Lead",
+        contacted: false,
+        executive_notified: false,
+        follow_up_alert_sent: false,
+        manager_alerted: false,
+        follow_up_due: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
         last_updated: new Date().toISOString(),
       }).eq("id", record.id);
 
