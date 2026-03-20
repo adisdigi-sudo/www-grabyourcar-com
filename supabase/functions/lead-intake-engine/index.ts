@@ -18,6 +18,12 @@ const corsHeaders = {
 // Order matters: more specific keywords first to avoid false matches (e.g. "car insurance" → Insurance, not Car Sales)
 const VERTICALS = [
   { keyword: "car insurance", tag: "Insurance" },
+  { keyword: "motor insurance", tag: "Insurance" },
+  { keyword: "insurance renewal", tag: "Insurance" },
+  { keyword: "policy renewal", tag: "Insurance" },
+  { keyword: "car-insurance", tag: "Insurance" },
+  { keyword: "motor-insurance", tag: "Insurance" },
+  { keyword: "vehicle-insurance", tag: "Insurance" },
   { keyword: "insurance", tag: "Insurance" },
   { keyword: "car loan", tag: "Loan" },
   { keyword: "loan", tag: "Loan" },
@@ -38,6 +44,36 @@ function classifyVertical(input: string): string {
     if (lower.includes(v.keyword)) return v.tag;
   }
   return "General Enquiry";
+}
+
+function inferLeadSourceType(source: string): string {
+  const normalized = (source || "").toLowerCase();
+  if (normalized.includes("whatsapp")) return "WhatsApp";
+  if (normalized.includes("walk")) return "Walk-in";
+  if (normalized.includes("google")) return "Google";
+  if (normalized.includes("meta") || normalized.includes("facebook") || normalized.includes("instagram")) return "Meta";
+  if (normalized.includes("referral")) return "Referral";
+  if (normalized.includes("website") || normalized.includes("hero") || normalized.includes("form")) return "Website";
+  if (normalized.includes("manual")) return "Manual";
+  return "Organic";
+}
+
+function buildVerticalInput(body: Record<string, any>, source: string, message: string): string {
+  return [
+    body.vertical,
+    body.serviceCategory,
+    body.service_category,
+    body.type,
+    body.body?.vertical,
+    body.body?.interest,
+    body.body?.serviceCategory,
+    body.body?.service_category,
+    body.body?.type,
+    source,
+    message,
+  ]
+    .filter(Boolean)
+    .join(" ");
 }
 
 function cleanPhone(phone: string): string {
