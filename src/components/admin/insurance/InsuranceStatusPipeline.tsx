@@ -75,6 +75,8 @@ export function InsuranceStatusPipeline() {
   const [note, setNote] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [editEmail, setEditEmail] = useState("");
+  const [editVehicleNumber, setEditVehicleNumber] = useState("");
+  const [savingContact, setSavingContact] = useState(false);
   const [viewMode, setViewMode] = useState<"cards" | "kanban">("cards");
   const [converting, setConverting] = useState(false);
   const [showAddPolicy, setShowAddPolicy] = useState(false);
