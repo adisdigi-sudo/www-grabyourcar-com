@@ -384,8 +384,6 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
     const filterByVertical = (item: NavItem) => {
       // Items without verticals tag show everywhere
       if (!item.verticals) return true;
-      // Finance & HR hubs always visible for admins
-      if ((item.id === "finance-hub" || item.id === "hr-hub") && hasFullAccess) return true;
       // If no vertical is active, hide vertical-specific items
       if (!normalizedActiveSlug) return false;
       // Only show if item belongs to active vertical
