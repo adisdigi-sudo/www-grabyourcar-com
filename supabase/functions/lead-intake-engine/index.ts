@@ -310,6 +310,10 @@ async function routeToVerticalTable(
   }
 ) {
   const cleanedPhone = cleanPhone(data.phone);
+  const safeEmail = data.email?.trim() || null;
+  const safeCity = data.city?.trim() || null;
+  const safeName = (data.name && data.name !== "Unknown") ? data.name : null;
+  const safeMessage = data.message?.trim() || null;
   const now = new Date().toISOString();
 
   try {
