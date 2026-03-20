@@ -23,13 +23,7 @@ interface InsurancePolicyDocumentUploaderProps {
   onDone?: () => void;
 }
 
-const normalizePolicyNumber = (value: string) => value.replace(/\.[^.]+$/, "").trim().replace(/\s+/g, "-").toUpperCase();
-
-const extractPolicyNumberFromFileName = (fileName: string) => {
-  const base = fileName.replace(/\.[^.]+$/, "").trim();
-  const match = base.match(/[A-Za-z0-9][A-Za-z0-9\/-]{5,}/);
-  return match ? normalizePolicyNumber(match[0]) : "";
-};
+const normalizePolicyNumber = (value: string) => value.trim().replace(/\s+/g, "-").toUpperCase();
 
 export function InsurancePolicyDocumentUploader({
   defaultPolicyId,
