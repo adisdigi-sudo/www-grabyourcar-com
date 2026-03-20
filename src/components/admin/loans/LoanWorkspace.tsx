@@ -452,6 +452,7 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
             <p className="text-sm text-muted-foreground">Use the Import button above to bulk import leads via CSV</p>
           </div>
         )}
+        {activeView === "emi_calculator" && <EMICalculator />}
       </div>
 
 
