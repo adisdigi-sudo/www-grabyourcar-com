@@ -313,31 +313,6 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
   const [editFields, setEditFields] = useState<Record<string, string>>({});
   const [savingEdit, setSavingEdit] = useState(false);
-  const [newLeadPopup, setNewLeadPopup] = useState<{ name: string; phone: string; source: string } | null>(null);
-
-  // Realtime: listen for new insurance leads
-  useEffect(() => {
-    const channel = supabase
-      .channel("insurance-new-leads")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "insurance_clients" },
-        (payload) => {
-          const newRow = payload.new as any;
-          setNewLeadPopup({
-            name: newRow.customer_name || "Unknown",
-            phone: newRow.phone || "",
-            source: newRow.lead_source || "Unknown",
-          });
-          queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
-          // Auto-hide after 8 seconds
-          setTimeout(() => setNewLeadPopup(null), 8000);
-        }
-      )
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
-  }, [queryClient]);
 
   // Dialogs
   const [showLostDialog, setShowLostDialog] = useState(false);
