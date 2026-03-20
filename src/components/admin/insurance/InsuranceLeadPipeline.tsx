@@ -1115,7 +1115,14 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
         <Dialog open={showUploadPolicy} onOpenChange={setShowUploadPolicy}>
           <DialogContent className="max-w-lg">
             <DialogHeader><DialogTitle>Upload Policy Document</DialogTitle></DialogHeader>
-            <InsurancePolicyDocumentUploader defaultClientId={selectedClient.id} onDone={() => setShowUploadPolicy(false)} />
+            <InsurancePolicyDocumentUploader
+              defaultClientId={selectedClient.id}
+              onDone={() => {
+                setShowUploadPolicy(false);
+                queryClient.invalidateQueries({ queryKey: ["ins-policies-book"] });
+                queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
+              }}
+            />
           </DialogContent>
         </Dialog>
       )}

@@ -166,7 +166,8 @@ export function InsuranceComingRenewals({ policies }: InsuranceComingRenewalsPro
         pipeline_stage: "lost",
         lead_status: "lost",
         lost_reason: lostRemarks,
-        retarget_status: retargetNextYear ? "scheduled" : null,
+        retarget_status: retargetNextYear ? "scheduled" : "none",
+        retargeting_enabled: retargetNextYear,
       }).eq("id", targetPolicy.client_id);
 
       queryClient.invalidateQueries({ queryKey: ["ins-policies-book"] });

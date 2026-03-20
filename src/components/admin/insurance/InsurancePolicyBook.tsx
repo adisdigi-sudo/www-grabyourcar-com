@@ -32,7 +32,9 @@ export type PolicyRecord = {
   policy_document_url: string | null;
   source_label: string | null;
   renewal_count: number | null;
+  previous_policy_id: string | null;
   created_at: string;
+  updated_at?: string;
   insurance_clients: {
     customer_name: string;
     phone: string;
@@ -50,6 +52,57 @@ interface InsurancePolicyBookProps {
 
 const displayPhone = (phone: string | null) => (!phone || phone.startsWith("IB_")) ? null : phone;
 
+const normalizeLeadSourceLabel = (source: string | null): string => {
+  if (!source) return "Unknown";
+  const normalized = source.toLowerCase().trim();
+
+  if (
+    normalized.includes("insurebook") ||
+    normalized.includes("rollover") ||
+    normalized.includes("csv_import") ||
+    normalized.includes("csv import") ||
+    source.startsWith("IB_")
+  ) {
+    return "Rollover";
+  }
+
+  if (normalized.includes("whatsapp")) return "WhatsApp Lead";
+  if (normalized.includes("walk")) return "Walk-in Lead";
+  if (normalized.includes("google")) return "Google Lead";
+  if (normalized.includes("meta") || normalized.includes("facebook") || normalized.includes("instagram")) return "Meta Lead";
+  if (normalized.includes("website") || normalized.includes("hero") || normalized.includes("form")) return "Website Lead";
+  if (normalized.includes("referral")) return "Referral";
+  if (normalized.includes("manual")) return "Manual";
+
+  return source.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
+const isRolloverPolicy = (policy: PolicyRecord) => {
+  const normalizedSourceLabel = (policy.source_label || "").toLowerCase();
+  return normalizedSourceLabel === "rollover" || normalizeLeadSourceLabel(policy.insurance_clients?.lead_source || null) === "Rollover";
+};
+
+const isRenewalPolicy = (policy: PolicyRecord) => {
+  if (isRolloverPolicy(policy)) return false;
+  const normalizedSourceLabel = (policy.source_label || "").toLowerCase();
+  return normalizedSourceLabel === "won (renewal)" || Boolean(policy.previous_policy_id) || (policy.renewal_count || 0) > 0 || policy.status === "renewed";
+};
+
+const sourceBadgeClass = (label: string) => {
+  const colors: Record<string, string> = {
+    "Meta Lead": "bg-blue-100 text-blue-700 border-blue-200",
+    "Google Lead": "bg-red-100 text-red-700 border-red-200",
+    Referral: "bg-purple-100 text-purple-700 border-purple-200",
+    "Walk-in Lead": "bg-green-100 text-green-700 border-green-200",
+    "WhatsApp Lead": "bg-emerald-100 text-emerald-700 border-emerald-200",
+    "Website Lead": "bg-indigo-100 text-indigo-700 border-indigo-200",
+    Manual: "bg-gray-100 text-gray-700 border-gray-200",
+    Rollover: "bg-violet-100 text-violet-700 border-violet-200",
+  };
+
+  return colors[label] || "bg-muted text-muted-foreground border-border";
+};
+
 export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
   const [search, setSearch] = useState("");
   const [partnerFilter, setPartnerFilter] = useState("all");
@@ -65,15 +118,14 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
     return Array.from(set).sort() as string[];
   }, [policies]);
 
-  // Deduplicate: keep only the latest policy per client_id + vehicle_number combo
   const deduplicatedPolicies = useMemo(() => {
     const map = new Map<string, PolicyRecord>();
-    // policies are already sorted by created_at desc, so first occurrence is latest
-    for (const p of policies) {
-      const vehicleKey = p.insurance_clients?.vehicle_number?.replace(/\s+/g, "").toUpperCase() || "no-vehicle";
-      const key = `${p.client_id || "unknown"}_${vehicleKey}`;
+    for (const policy of policies) {
+      const vehicleKey = policy.insurance_clients?.vehicle_number?.replace(/\s+/g, "").toUpperCase();
+      const fallbackKey = policy.client_id || policy.policy_number || policy.id;
+      const key = vehicleKey || fallbackKey;
       if (!map.has(key)) {
-        map.set(key, p);
+        map.set(key, policy);
       }
     }
     return Array.from(map.values());
@@ -86,9 +138,9 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
     if (dateFrom || dateTo) {
       result = result.filter(p => {
         if (!p.issued_date) return false;
-        const d = new Date(p.issued_date);
-        if (dateFrom && d < dateFrom) return false;
-        if (dateTo && d > dateTo) return false;
+        const issuedAt = new Date(p.issued_date);
+        if (dateFrom && issuedAt < dateFrom) return false;
+        if (dateTo && issuedAt > dateTo) return false;
         return true;
       });
     }
@@ -106,25 +158,42 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
         p.plan_name?.toLowerCase().includes(s)
       );
     }
+
     return result;
   }, [deduplicatedPolicies, partnerFilter, search, dateFrom, dateTo]);
 
-  const toggleSelect = (id: string) => setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggleSelect = (id: string) => setSelectedIds(prev => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
 
   const sourceLabel = (policy: PolicyRecord) => {
-    // Show "Renewed" with date if the policy is a renewal
-    if (policy.is_renewal || (policy.renewal_count && policy.renewal_count > 0)) {
-      const renewDate = policy.issued_date ? format(new Date(policy.issued_date), "dd MMM yyyy") : "";
-      return <Badge variant="outline" className="text-[9px] bg-blue-100 text-blue-700 border-blue-200">🔄 Renewed {renewDate}</Badge>;
-    }
-    const sl = policy.source_label;
-    if (!sl) return null;
-    const colors: Record<string, string> = {
-      "Won (New)": "bg-emerald-100 text-emerald-700 border-emerald-200",
-      "Won (Renewal)": "bg-blue-100 text-blue-700 border-blue-200",
-      Rollover: "bg-violet-100 text-violet-700 border-violet-200",
-    };
-    return <Badge variant="outline" className={cn("text-[9px]", colors[sl] || "bg-muted text-muted-foreground")}>{sl}</Badge>;
+    const leadSource = normalizeLeadSourceLabel(policy.insurance_clients?.lead_source || null);
+
+    return (
+      <div className="flex flex-col gap-1">
+        {isRenewalPolicy(policy) ? (
+          <Badge variant="outline" className="text-[9px] bg-blue-100 text-blue-700 border-blue-200">
+            🔄 Renewed {policy.issued_date ? format(new Date(policy.issued_date), "dd MMM yyyy") : ""}
+          </Badge>
+        ) : isRolloverPolicy(policy) ? (
+          <Badge variant="outline" className="text-[9px] bg-violet-100 text-violet-700 border-violet-200">
+            Rollover
+          </Badge>
+        ) : (
+          <Badge variant="outline" className="text-[9px] bg-emerald-100 text-emerald-700 border-emerald-200">
+            Policy Issued
+          </Badge>
+        )}
+
+        {leadSource !== "Unknown" && leadSource !== "Rollover" && (
+          <Badge variant="outline" className={cn("text-[9px] w-fit", sourceBadgeClass(leadSource))}>
+            {leadSource}
+          </Badge>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -141,8 +210,7 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
             {partners.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
           </SelectContent>
         </Select>
-        
-        {/* Date range filter */}
+
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="outline" className="h-9 text-xs gap-1.5">
@@ -167,18 +235,25 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
         </Popover>
 
         {selectedIds.size > 0 && (
-          <Button size="sm" variant="default" className="gap-1.5 text-xs" onClick={() => {
-            const sel = filtered.filter(p => selectedIds.has(p.id));
-            sel.forEach((p, i) => {
-              const ph = p.insurance_clients?.phone;
-              if (ph && !ph.startsWith("IB_")) {
-                const clean = ph.replace(/\D/g, "");
-                const wa = `https://wa.me/${clean.startsWith("91") ? clean : `91${clean}`}?text=${encodeURIComponent(`Hi ${p.insurance_clients?.customer_name || ""}, your policy ${p.policy_number || ""} details are ready.`)}`;
-                setTimeout(() => window.open(wa, "_blank"), i * 500);
-              }
-            });
-            toast.success(`Opening WhatsApp for ${sel.length} clients`);
-          }}><Send className="h-3.5 w-3.5" /> Bulk Send ({selectedIds.size})</Button>
+          <Button
+            size="sm"
+            variant="default"
+            className="gap-1.5 text-xs"
+            onClick={() => {
+              const selected = filtered.filter(p => selectedIds.has(p.id));
+              selected.forEach((policy, index) => {
+                const phone = policy.insurance_clients?.phone;
+                if (phone && !phone.startsWith("IB_")) {
+                  const clean = phone.replace(/\D/g, "");
+                  const wa = `https://wa.me/${clean.startsWith("91") ? clean : `91${clean}`}?text=${encodeURIComponent(`Hi ${policy.insurance_clients?.customer_name || ""}, your policy ${policy.policy_number || ""} details are ready.`)}`;
+                  setTimeout(() => window.open(wa, "_blank"), index * 500);
+                }
+              });
+              toast.success(`Opening WhatsApp for ${selected.length} clients`);
+            }}
+          >
+            <Send className="h-3.5 w-3.5" /> Bulk Send ({selectedIds.size})
+          </Button>
         )}
         <Badge variant="outline" className="text-xs">{filtered.length} policies</Badge>
       </div>
@@ -211,8 +286,8 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
                     <p className="text-sm">No policies found</p>
                   </TableCell></TableRow>
                 ) : filtered.map((policy, idx) => {
-                  const c = policy.insurance_clients;
-                  const phone = displayPhone(c?.phone || null);
+                  const client = policy.insurance_clients;
+                  const phone = displayPhone(client?.phone || null);
                   return (
                     <TableRow key={policy.id} className="text-xs hover:bg-muted/30">
                       <TableCell onClick={e => e.stopPropagation()}><input type="checkbox" className="rounded" checked={selectedIds.has(policy.id)} onChange={() => toggleSelect(policy.id)} /></TableCell>
@@ -223,16 +298,16 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
                             <User className="h-3 w-3 text-white" />
                           </div>
                           <div>
-                            <p className="font-semibold text-xs">{c?.customer_name || "—"}</p>
-                            <p className="text-[10px] text-muted-foreground">{c?.city || ""}</p>
+                            <p className="font-semibold text-xs">{client?.customer_name || "—"}</p>
+                            <p className="text-[10px] text-muted-foreground">{client?.city || ""}</p>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell className="font-mono text-xs">{phone || "—"}</TableCell>
                       <TableCell>
                         <div>
-                          <p className="font-mono font-semibold text-xs">{c?.vehicle_number || "—"}</p>
-                          <p className="text-[10px] text-muted-foreground">{[c?.vehicle_make, c?.vehicle_model].filter(Boolean).join(" ")}</p>
+                          <p className="font-mono font-semibold text-xs">{client?.vehicle_number || "—"}</p>
+                          <p className="text-[10px] text-muted-foreground">{[client?.vehicle_make, client?.vehicle_model].filter(Boolean).join(" ")}</p>
                         </div>
                       </TableCell>
                       <TableCell className="text-xs">{policy.insurer || "—"}</TableCell>
@@ -249,11 +324,11 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
                               <Eye className="h-3 w-3 text-primary" />
                             </Button>
                             <Button variant="ghost" size="icon" className="h-6 w-6" title="Download" onClick={() => {
-                              const a = document.createElement("a");
-                              a.href = policy.policy_document_url!;
-                              a.download = `${policy.policy_number || "policy"}.pdf`;
-                              a.target = "_blank";
-                              a.click();
+                              const anchor = document.createElement("a");
+                              anchor.href = policy.policy_document_url!;
+                              anchor.download = `${policy.policy_number || "policy"}.pdf`;
+                              anchor.target = "_blank";
+                              anchor.click();
                             }}>
                               <Download className="h-3 w-3 text-muted-foreground" />
                             </Button>
@@ -273,7 +348,6 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
         </CardContent>
       </Card>
 
-      {/* Upload Document Dialog */}
       <Dialog open={!!uploadPolicyId} onOpenChange={(open) => { if (!open) { setUploadPolicyId(null); setUploadClientId(null); } }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -286,7 +360,7 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
               onDone={() => {
                 setUploadPolicyId(null);
                 setUploadClientId(null);
-                queryClient.invalidateQueries({ queryKey: ["ins-policies"] });
+                queryClient.invalidateQueries({ queryKey: ["ins-policies-book"] });
               }}
             />
           )}
