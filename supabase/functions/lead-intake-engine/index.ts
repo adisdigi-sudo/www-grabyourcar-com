@@ -481,36 +481,78 @@ async function routeToVerticalTable(
 
       case "Loan": {
         const { data: existingLoan } = await supabase
-          .from("car_loan_leads")
-          .select("id, status")
+          .from("loan_applications")
+          .select("id, stage")
           .in("phone", phoneCandidates)
           .order("created_at", { ascending: false })
           .limit(1);
 
         if (existingLoan?.length) {
-          const { error: loanUpdateErr } = await supabase.from("car_loan_leads").update({
-            name: safeName || undefined,
-            city: safeCity || undefined,
-            source: data.source,
-            notes: safeMessage || undefined,
-            status: "new",
-            preferred_car: data.vehicleModel || undefined,
-            utm_source: data.leadSourceType || data.source || undefined,
+          const recycleStages = ["lost", "disbursed"];
+          const updates: Record<string, any> = {
+            customer_name: safeName || undefined,
+            source: data.source || undefined,
+            remarks: safeMessage || undefined,
+            car_model: data.vehicleModel || undefined,
+            lead_source_tag: data.leadSourceType || data.source || undefined,
             updated_at: now,
-          }).eq("id", existingLoan[0].id);
+            last_activity_at: now,
+          };
+          if (recycleStages.includes(existingLoan[0].stage)) {
+            updates.stage = "new_lead";
+            updates.stage_updated_at = now;
+            updates.call_status = null;
+            updates.lost_reason = null;
+            updates.lost_remarks = null;
+          }
+          const { error: loanUpdateErr } = await supabase.from("loan_applications").update(updates).eq("id", existingLoan[0].id);
           if (loanUpdateErr) throw loanUpdateErr;
         } else {
-          const { error: loanInsertErr } = await supabase.from("car_loan_leads").insert({
-            name: safeName,
+          const { error: loanInsertErr } = await supabase.from("loan_applications").insert({
+            customer_name: requiredName,
             phone: cleanedPhone,
-            city: safeCity,
+            email: safeEmail,
             source: data.source,
-            notes: safeMessage,
-            status: "new",
-            preferred_car: data.vehicleModel || null,
-            utm_source: data.leadSourceType || data.source || null,
+            remarks: safeMessage,
+            stage: "new_lead",
+            priority: "medium",
+            car_model: data.vehicleModel || null,
+            lead_source_tag: data.leadSourceType || data.source || "Website",
           });
           if (loanInsertErr) throw loanInsertErr;
+        }
+
+        // Also keep car_loan_leads in sync for legacy/eligibility data
+        try {
+          const { data: existingCLL } = await supabase
+            .from("car_loan_leads")
+            .select("id")
+            .in("phone", phoneCandidates)
+            .limit(1);
+
+          if (existingCLL?.length) {
+            await supabase.from("car_loan_leads").update({
+              name: safeName || undefined,
+              city: safeCity || undefined,
+              source: data.source,
+              notes: safeMessage || undefined,
+              status: "new",
+              preferred_car: data.vehicleModel || undefined,
+              updated_at: now,
+            }).eq("id", existingCLL[0].id);
+          } else {
+            await supabase.from("car_loan_leads").insert({
+              name: safeName,
+              phone: cleanedPhone,
+              city: safeCity,
+              source: data.source,
+              notes: safeMessage,
+              status: "new",
+              preferred_car: data.vehicleModel || null,
+            });
+          }
+        } catch (e) {
+          console.error("car_loan_leads sync error (non-fatal):", e);
         }
         break;
       }
