@@ -23,7 +23,7 @@ export async function captureInsuranceLead(params: {
 
   // 1. Insert into legacy insurance_leads (backward compatible)
   try {
-    await supabase.from("insurance_leads").insert({
+    const { error: legacyErr } = await supabase.from("insurance_leads").insert({
       phone,
       customer_name: customerName || null,
       email: email || null,
@@ -34,6 +34,7 @@ export async function captureInsuranceLead(params: {
       source,
       notes: notes || null,
     });
+    if (legacyErr) console.error("Legacy insurance_leads insert error:", legacyErr);
   } catch (e) {
     console.error("Legacy insurance_leads insert failed:", e);
   }
