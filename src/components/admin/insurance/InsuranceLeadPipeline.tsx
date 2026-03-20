@@ -231,43 +231,73 @@ function WonPolicyDialog({
     }
     setSaving(true);
     try {
-      // Create policy
+      const nextPolicyNumber = policyNumber.trim().toUpperCase();
+      const nextStartDate = startDate ? format(startDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd");
+      const nextExpiryDate = format(expiryDate, "yyyy-MM-dd");
+
+      const { data: activePolicies, error: activePoliciesError } = await supabase
+        .from("insurance_policies")
+        .select("id, renewal_count")
+        .eq("client_id", client.id)
+        .eq("status", "active")
+        .order("updated_at", { ascending: false });
+
+      if (activePoliciesError) throw activePoliciesError;
+
+      const previousPolicy = activePolicies?.[0] || null;
+      if (activePolicies && activePolicies.length > 0) {
+        const { error: renewError } = await supabase
+          .from("insurance_policies")
+          .update({ status: "renewed", renewal_status: "renewed" })
+          .eq("client_id", client.id)
+          .eq("status", "active");
+
+        if (renewError) throw renewError;
+      }
+
       await supabase.from("insurance_policies").insert({
         client_id: client.id,
-        policy_number: policyNumber.trim().toUpperCase(),
+        policy_number: nextPolicyNumber,
         insurer: insurer.trim(),
         premium_amount: premium ? parseFloat(premium) : null,
-        start_date: startDate ? format(startDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"),
-        expiry_date: format(expiryDate, "yyyy-MM-dd"),
+        start_date: nextStartDate,
+        expiry_date: nextExpiryDate,
         status: "active",
-        is_renewal: false,
+        is_renewal: Boolean(previousPolicy),
+        previous_policy_id: previousPolicy?.id || null,
         issued_date: format(new Date(), "yyyy-MM-dd"),
-        source_label: "Won (New)",
-        renewal_count: 0,
+        source_label: previousPolicy ? "Won (Renewal)" : "Won (New)",
+        renewal_count: previousPolicy ? (previousPolicy.renewal_count || 0) + 1 : 0,
         policy_type: client.current_policy_type || "comprehensive",
       } as any);
 
-      // Update client
       await supabase.from("insurance_clients").update({
         pipeline_stage: "policy_issued",
         lead_status: "won",
-        current_policy_number: policyNumber.trim().toUpperCase(),
+        current_policy_number: nextPolicyNumber,
         current_insurer: insurer.trim(),
         current_premium: premium ? parseFloat(premium) : null,
-        policy_expiry_date: format(expiryDate, "yyyy-MM-dd"),
-        policy_start_date: startDate ? format(startDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"),
+        policy_expiry_date: nextExpiryDate,
+        policy_start_date: nextStartDate,
         renewal_reminder_set: true,
-        renewal_reminder_date: format(expiryDate, "yyyy-MM-dd"),
+        renewal_reminder_date: nextExpiryDate,
         incentive_eligible: true,
+        retarget_status: "none",
+        retargeting_enabled: false,
       }).eq("id", client.id);
 
-      // Log activity
       await supabase.from("insurance_activity_log").insert({
         client_id: client.id,
         activity_type: "stage_change",
-        title: "Pipeline → Won",
-        description: `Policy ${policyNumber} issued by ${insurer}`,
-        metadata: { new_stage: "won", policy_number: policyNumber, insurer, premium } as any,
+        title: previousPolicy ? "Pipeline → Won (Renewal)" : "Pipeline → Won",
+        description: `Policy ${nextPolicyNumber} issued by ${insurer}`,
+        metadata: {
+          new_stage: "policy_issued",
+          policy_number: nextPolicyNumber,
+          insurer,
+          premium,
+          previous_policy_id: previousPolicy?.id || null,
+        } as any,
       });
 
       toast.success("🎉 Policy issued! Added to Policy Book");
