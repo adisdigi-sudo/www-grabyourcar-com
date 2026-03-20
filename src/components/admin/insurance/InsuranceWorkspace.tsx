@@ -316,7 +316,7 @@ export function InsuranceWorkspace() {
 
       {activeView === "pipeline" && <InsuranceLeadPipeline clients={clients} isLoading={isLoading} />}
       {activeView === "policy_book" && <InsurancePolicyBook policies={policies} />}
-      {activeView === "renewals" && <InsuranceComingRenewals policies={polies as PolicyRecord[]} />}
+      {activeView === "renewals" && <InsuranceComingRenewals policies={policies as PolicyRecord[]} />}
       {activeView === "bulk_tools" && <BulkRenewalQuoteGenerator onClose={() => setActiveView("pipeline")} />}
 
       <Dialog open={showAddLead} onOpenChange={setShowAddLead}>
