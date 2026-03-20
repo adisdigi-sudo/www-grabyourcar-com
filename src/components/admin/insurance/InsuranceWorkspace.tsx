@@ -27,74 +27,8 @@ type LegacyInsuranceLead = {
   id: string;
   customer_name: string | null;
   phone: string;
-  email: string | null;
-  vehicle_number: string | null;
-  vehicle_make: string | null;
-  vehicle_model: string | null;
-  vehicle_year: number | null;
-  policy_type: string | null;
-  current_insurer: string | null;
-  policy_expiry: string | null;
   source: string | null;
-  status: string | null;
-  pipeline_stage: string | null;
-  priority: string | null;
-  assigned_executive: string | null;
-  follow_up_date: string | null;
-  contact_attempts: number | null;
-  quote_amount: number | null;
-  quote_insurer: string | null;
-  lost_reason: string | null;
-  ncb_percentage: number | null;
-  previous_claim: boolean | null;
-  notes: string | null;
-  created_at: string;
 };
-
-const normalizePhone = (value: string | null | undefined) => (value || "").replace(/\D/g, "");
-const normalizeVehicle = (value: string | null | undefined) => (value || "").replace(/\s+/g, "").toUpperCase();
-const leadKey = (phone: string | null | undefined, vehicle: string | null | undefined) => `${normalizePhone(phone)}::${normalizeVehicle(vehicle)}`;
-
-const mapLegacyLeadToClient = (lead: LegacyInsuranceLead): Client => ({
-  id: `legacy-${lead.id}`,
-  customer_name: lead.customer_name || "Insurance Lead",
-  phone: lead.phone,
-  email: lead.email,
-  city: null,
-  vehicle_number: lead.vehicle_number,
-  vehicle_make: lead.vehicle_make,
-  vehicle_model: lead.vehicle_model,
-  vehicle_year: lead.vehicle_year,
-  current_insurer: lead.current_insurer,
-  current_policy_type: lead.policy_type,
-  current_premium: null,
-  ncb_percentage: lead.ncb_percentage,
-  previous_claim: lead.previous_claim,
-  policy_expiry_date: lead.policy_expiry,
-  policy_start_date: null,
-  current_policy_number: null,
-  lead_source: lead.source,
-  lead_status: lead.status || "new",
-  assigned_executive: lead.assigned_executive,
-  priority: lead.priority || "medium",
-  pipeline_stage: lead.pipeline_stage || "new_lead",
-  contact_attempts: lead.contact_attempts,
-  quote_amount: lead.quote_amount,
-  quote_insurer: lead.quote_insurer,
-  lost_reason: lead.lost_reason,
-  follow_up_date: lead.follow_up_date,
-  follow_up_time: null,
-  call_status: null,
-  call_remarks: null,
-  renewal_reminder_set: false,
-  renewal_reminder_date: null,
-  incentive_eligible: false,
-  notes: lead.notes,
-  retarget_status: null,
-  journey_last_event: null,
-  journey_last_event_at: null,
-  created_at: lead.created_at,
-});
 
 export function InsuranceWorkspace() {
   const queryClient = useQueryClient();
@@ -137,34 +71,14 @@ export function InsuranceWorkspace() {
   const { data: clients = [], isLoading } = useQuery({
     queryKey: ["ins-workspace-clients"],
     queryFn: async () => {
-      const [clientsRes, legacyRes] = await Promise.all([
-        supabase
-          .from("insurance_clients")
-          .select("id, customer_name, phone, email, city, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_insurer, current_policy_type, current_premium, ncb_percentage, previous_claim, policy_expiry_date, policy_start_date, current_policy_number, lead_source, lead_status, assigned_executive, priority, pipeline_stage, contact_attempts, quote_amount, quote_insurer, lost_reason, follow_up_date, follow_up_time, call_status, call_remarks, renewal_reminder_set, renewal_reminder_date, incentive_eligible, notes, retarget_status, journey_last_event, journey_last_event_at, created_at")
-          .order("created_at", { ascending: false })
-          .limit(1000),
-        supabase
-          .from("insurance_leads")
-          .select("id, customer_name, phone, email, vehicle_number, vehicle_make, vehicle_model, vehicle_year, policy_type, current_insurer, policy_expiry, source, status, pipeline_stage, priority, assigned_executive, follow_up_date, contact_attempts, quote_amount, quote_insurer, lost_reason, ncb_percentage, previous_claim, notes, created_at")
-          .order("created_at", { ascending: false })
-          .limit(1000),
-      ]);
+      const { data, error } = await supabase
+        .from("insurance_clients")
+        .select("id, customer_name, phone, email, city, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_insurer, current_policy_type, current_premium, ncb_percentage, previous_claim, policy_expiry_date, policy_start_date, current_policy_number, lead_source, lead_status, assigned_executive, priority, pipeline_stage, contact_attempts, quote_amount, quote_insurer, lost_reason, follow_up_date, follow_up_time, call_status, call_remarks, renewal_reminder_set, renewal_reminder_date, incentive_eligible, notes, retarget_status, journey_last_event, journey_last_event_at, created_at")
+        .order("created_at", { ascending: false })
+        .limit(1000);
 
-      if (clientsRes.error) throw clientsRes.error;
-      if (legacyRes.error) throw legacyRes.error;
-
-      const primaryClients = (clientsRes.data || []) as Client[];
-      const legacyLeads = (legacyRes.data || []) as LegacyInsuranceLead[];
-      const existingKeys = new Set(primaryClients.map((client) => leadKey(client.phone, client.vehicle_number)));
-
-      const fallbackLegacyClients = legacyLeads
-        .filter((lead) => !!normalizePhone(lead.phone))
-        .filter((lead) => !existingKeys.has(leadKey(lead.phone, lead.vehicle_number)))
-        .map(mapLegacyLeadToClient);
-
-      return [...primaryClients, ...fallbackLegacyClients].sort(
-        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
+      if (error) throw error;
+      return (data || []) as Client[];
     },
   });
 

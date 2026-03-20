@@ -135,6 +135,7 @@ export function formatSource(source: string | null, createdAt: string): string {
 }
 
 const displayPhone = (phone: string | null) => (!phone || phone.startsWith("IB_")) ? null : phone;
+const isLegacyClientId = (id: string) => id.startsWith("legacy-");
 const getSourceColor = (src: string | null) => SOURCE_COLORS[src || ""] || "bg-muted text-muted-foreground border-border";
 
 // ── Journey Breadcrumb Component ──
@@ -395,14 +396,26 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
   // Move mutation
   const moveStage = useMutation({
     mutationFn: async ({ clientId, newStage, extras }: { clientId: string; newStage: string; extras?: Record<string, any> }) => {
+      if (isLegacyClientId(clientId)) {
+        throw new Error("This lead is still syncing. Please refresh and try again.");
+      }
+
       const update: any = { pipeline_stage: newStage, ...extras };
       if (newStage === "smart_calling") {
         const client = clients.find(c => c.id === clientId);
         update.contact_attempts = (client?.contact_attempts || 0) + 1;
         update.last_contacted_at = new Date().toISOString();
       }
-      const { error } = await supabase.from("insurance_clients").update(update).eq("id", clientId);
+
+      const { data, error } = await supabase
+        .from("insurance_clients")
+        .update(update)
+        .eq("id", clientId)
+        .select("id")
+        .maybeSingle();
+
       if (error) throw error;
+      if (!data) throw new Error("Lead was not found in the CRM database. Please refresh once.");
 
       const stage = PIPELINE_STAGES.find(s => s.value === newStage);
       await supabase.from("insurance_activity_log").insert({
@@ -418,7 +431,6 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
       const stage = PIPELINE_STAGES.find(s => s.value === vars.newStage);
       toast.success(`Moved to ${stage?.label}`);
 
-      // Auto-prompt next action
       const movedClient = clients.find(c => c.id === vars.clientId);
       if (movedClient) {
         const nextClient = { ...movedClient, pipeline_stage: vars.newStage };
@@ -785,6 +797,10 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                       disabled={savingEdit}
                       onClick={async () => {
                         if (!selectedClient) return;
+                        if (isLegacyClientId(selectedClient.id)) {
+                          toast.error("This lead is still syncing. Please refresh and try again.");
+                          return;
+                        }
                         setSavingEdit(true);
                         try {
                           const updates: Record<string, any> = {
@@ -809,9 +825,9 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                             .select("id, customer_name, phone, email, city, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_insurer, current_policy_type, current_premium, ncb_percentage, previous_claim, policy_expiry_date, policy_start_date, current_policy_number, lead_source, lead_status, assigned_executive, priority, pipeline_stage, contact_attempts, quote_amount, quote_insurer, lost_reason, follow_up_date, follow_up_time, call_status, call_remarks, renewal_reminder_set, renewal_reminder_date, incentive_eligible, notes, retarget_status, journey_last_event, journey_last_event_at, created_at")
                             .maybeSingle();
                           if (error) throw error;
+                          if (!data) throw new Error("Lead was not found in the CRM database. Please refresh once.");
 
-                          const refreshedClient = (data || { ...selectedClient, ...updates }) as Client;
-                          setSelectedClient(refreshedClient);
+                          setSelectedClient(data as Client);
                           queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
                           toast.success("Lead updated");
                         } catch (e: any) {
