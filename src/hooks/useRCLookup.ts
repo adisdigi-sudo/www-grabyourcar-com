@@ -50,7 +50,7 @@ export function useRCLookup(options: UseRCLookupOptions = {}) {
 
   const lookup = useCallback(async (vehicleNumber: string) => {
     const cleaned = vehicleNumber.replace(/\s+/g, "").toUpperCase();
-    if (!/^[A-Z]{2}\d{1,2}[A-Z]{0,3}\d{4}$/.test(cleaned)) {
+    if (!/^[A-Z]{2,3}\d{0,2}[A-Z]{0,3}\d{3,4}$/.test(cleaned) || cleaned.length < 5) {
       const msg = "Enter a valid vehicle number (e.g., DL01AB1234)";
       setError(msg);
       onError?.(msg);

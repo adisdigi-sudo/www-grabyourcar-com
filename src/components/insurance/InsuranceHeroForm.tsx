@@ -7,7 +7,8 @@ import { captureInsuranceLead } from "@/lib/insuranceLeadCapture";
 
 const PARTNER_URL = "https://pbpci.policybazaar.com/?token=o5aMAq6qZ1tLXTODNpDyVbk4MP6pWDnq6hhpN5u%2BmyJLH9wHcj81JpXwkmKwLPBcDQlOpmql%2FtQgJKjQaQBk%2F6h5%2Bh6wxuKCTAtXRNQ1WBN7m6J2EwinhUfoywZ8E%2B%2BJFZQlcTcGh6a4upMh26MliMAXl%2FqWXTt%2B579hIW3zzfAGZ7aSNJ3WTeVCdfy%2FjJGe%2BQa3M6xdyWiN9%2FuvLVHo9A%3D%3D";
 
-const VEHICLE_REGEX = /^[A-Z]{2}\d{2}[A-Z]{1,2}\d{4}$/;
+// Supports: DL01AB1234, DL1CAJ4534, BH01AA1234, PBW4543 (vintage), etc.
+const VEHICLE_REGEX = /^[A-Z]{2,3}\d{0,2}[A-Z]{0,3}\d{3,4}$/;
 
 const scrollingOffers = [
   { icon: Car, text: "1 Day Free Self-Drive Car" },
@@ -128,7 +129,7 @@ export function InsuranceHeroForm({ policyType = "comprehensive", vehicleLabel =
               onChange={handleVehicleChange}
               className="border-0 shadow-none focus-visible:ring-0 text-sm md:text-lg h-12 md:h-14 bg-transparent uppercase placeholder:normal-case placeholder:text-muted-foreground/50 font-bold tracking-wide"
               autoFocus
-              maxLength={10}
+              maxLength={13}
             />
             {step === 1 && VEHICLE_REGEX.test(vehicleNumber) && (
               <div className="text-primary text-xs font-bold shrink-0">✓</div>
