@@ -14,7 +14,7 @@ import { SmartDatePicker } from "@/components/ui/smart-date-picker";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { format, differenceInDays } from "date-fns";
+import { format, differenceInDays, formatDistanceToNow } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   UserPlus, Phone, FileText, Clock, CheckCircle2, XCircle, Search,
