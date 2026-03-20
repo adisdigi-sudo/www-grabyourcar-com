@@ -334,12 +334,34 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
   const [showUploadPolicy, setShowUploadPolicy] = useState(false);
   const [showWonDialog, setShowWonDialog] = useState(false);
 
+  useEffect(() => {
+    if (!selectedClient) {
+      setEditFields({});
+      return;
+    }
+
+    setEditFields({
+      customer_name: selectedClient.customer_name || "",
+      phone: displayPhone(selectedClient.phone) || "",
+      email: selectedClient.email || "",
+      city: selectedClient.city || "",
+      vehicle_number: selectedClient.vehicle_number || "",
+      vehicle_make: selectedClient.vehicle_make || "",
+      vehicle_model: selectedClient.vehicle_model || "",
+      vehicle_year: selectedClient.vehicle_year ? String(selectedClient.vehicle_year) : "",
+      current_insurer: selectedClient.current_insurer || "",
+      current_policy_number: selectedClient.current_policy_number || "",
+      current_premium: selectedClient.current_premium ? String(selectedClient.current_premium) : "",
+      notes: selectedClient.notes || "",
+    });
+  }, [selectedClient]);
+
   // Counts
   const stageCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     PIPELINE_STAGES.forEach(s => { counts[s.value] = 0; });
     clients.forEach(c => {
-      const stage = normalizeStage(c.pipeline_stage);
+      const stage = normalizeStage(c.pipeline_stage, c.lead_status);
       if (counts[stage] !== undefined) counts[stage]++;
     });
     return counts;
@@ -351,7 +373,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
       ? clients
       : selectedStage === "retarget"
         ? clients.filter(c => c.retarget_status === "scheduled")
-        : clients.filter(c => normalizeStage(c.pipeline_stage) === selectedStage);
+        : clients.filter(c => normalizeStage(c.pipeline_stage, c.lead_status) === selectedStage);
     if (search.trim()) {
       const s = search.toLowerCase();
       result = result.filter(c =>
