@@ -29,6 +29,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { triggerWhatsApp } from "@/lib/whatsappTrigger";
+import { captureWebsiteLead } from "@/lib/websiteLeadCapture";
 import { z } from "zod";
 
 const phoneSchema = z.string().regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit mobile number");
