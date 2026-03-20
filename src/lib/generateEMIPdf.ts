@@ -111,12 +111,26 @@ const darkenColor = (rgb: [number, number, number], amount: number): [number, nu
   Math.max(0, rgb[2] - amount),
 ];
 
+type RGB = [number, number, number];
+
+interface ColorPalette {
+  primary: RGB;
+  primaryLight: RGB;
+  primaryDark: RGB;
+  darkText: RGB;
+  grayText: RGB;
+  lightGray: RGB;
+  white: RGB;
+  watermark: RGB;
+  accent?: RGB;
+}
+
 const STATIC_COLORS = {
-  darkText: [15, 23, 42] as [number, number, number],
-  grayText: [71, 85, 105] as [number, number, number],
-  lightGray: [241, 245, 249] as [number, number, number],
-  white: [255, 255, 255] as [number, number, number],
-  watermark: [229, 231, 235] as [number, number, number],
+  darkText: [15, 23, 42] as RGB,
+  grayText: [71, 85, 105] as RGB,
+  lightGray: [241, 245, 249] as RGB,
+  white: [255, 255, 255] as RGB,
+  watermark: [229, 231, 235] as RGB,
 };
 
 // Proper Indian number formatting: 1,23,45,678
@@ -140,28 +154,243 @@ export const generateEMIPdf = async (data: EMIData, config?: Partial<EMIPDFConfi
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth(); // 210
   const pageHeight = doc.internal.pageSize.getHeight(); // 297
-  const margin = 14;
+  const margin = 16;
   const contentWidth = pageWidth - margin * 2;
-  let y = 0;
 
   const primaryRgb = hexToRgb(COMPANY.primaryColor || "#22c55e");
-  const accentRgb = hexToRgb(COMPANY.accentColor || "#f59e0b");
 
   const C = {
     primary: primaryRgb,
     primaryLight: lightenColor(primaryRgb, 30),
     primaryDark: darkenColor(primaryRgb, 20),
-    accent: accentRgb,
     ...STATIC_COLORS,
   };
 
-  // Footer height reserved
-  const footerH = 28;
-  const footerStartY = pageHeight - footerH;
-  // Max content area
-  const maxY = footerStartY - 8;
+  // Determine if this is a standalone EMI calc or car-specific quote
+  const isStandaloneEMI = !data.carName && !data.onRoadPrice;
 
-  // Determine sections present to calculate spacing
+  if (isStandaloneEMI) {
+    // ============ STANDALONE EMI PDF (Clean reference design) ============
+    generateStandaloneEMIPdf(doc, data, COMPANY, C, pageWidth, pageHeight, margin, contentWidth);
+  } else {
+    // ============ CAR-SPECIFIC QUOTE PDF (Existing complex design) ============
+    generateCarQuotePdf(doc, data, COMPANY, C, pageWidth, pageHeight, margin, contentWidth);
+  }
+
+  // ============ SAVE ============
+  const carSuffix = data.carName ? `_${data.carName.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "")}` : "";
+  const emiSuffix = data.emi > 0 ? `_Rs${Math.round(data.loanPrincipal / 100000)}L_${data.tenure}m` : "";
+  const fileName = isStandaloneEMI
+    ? `EMI_Plan${emiSuffix}_${format(new Date(), "ddMMMyyyy")}.pdf`
+    : `Grabyourcar_Quote${carSuffix}_${format(new Date(), "ddMMMyyyy")}.pdf`;
+  doc.save(fileName);
+};
+
+// ═══════════════════════════════════════════════════════════
+// STANDALONE EMI PDF — Clean, professional single-page design
+// ═══════════════════════════════════════════════════════════
+function generateStandaloneEMIPdf(
+  doc: jsPDF, data: EMIData, COMPANY: EMIPDFConfig,
+  C: ColorPalette, pageWidth: number, pageHeight: number, margin: number, contentWidth: number
+) {
+  let y = 0;
+
+  // ── HEADER ──
+  const headerH = 44;
+  doc.setFillColor(...C.primary);
+  doc.rect(0, 0, pageWidth, headerH, "F");
+
+  doc.setFontSize(22);
+  doc.setTextColor(...C.white);
+  doc.setFont("helvetica", "bold");
+  doc.text("Car Loan EMI Plan", margin, 20);
+
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.text("Professional estimate for customer discussion", margin, 32);
+
+  doc.setFontSize(9);
+  doc.text(`GrabYourCar | ${COMPANY.website}`, pageWidth - margin, 26, { align: "right" });
+
+  y = headerH + 16;
+
+  // ── EMI HERO BOX ──
+  const heroH = 56;
+  const heroX = margin + 16;
+  const heroW = contentWidth - 32;
+
+  // Rounded border box
+  doc.setDrawColor(...C.primary);
+  doc.setLineWidth(1.5);
+  doc.roundedRect(heroX, y, heroW, heroH, 8, 8, "S");
+
+  // Large EMI amount
+  doc.setFontSize(36);
+  doc.setTextColor(...C.primary);
+  doc.setFont("helvetica", "bold");
+  doc.text(`Rs. ${formatIndianNumber(data.emi)}`, pageWidth / 2, y + 28, { align: "center" });
+
+  // Subtitle
+  doc.setFontSize(12);
+  doc.setTextColor(...C.grayText);
+  doc.setFont("helvetica", "normal");
+  doc.text("Estimated Monthly EMI", pageWidth / 2, y + 42, { align: "center" });
+
+  y += heroH + 18;
+
+  // ── LOAN DETAILS TABLE ──
+  const rows = [
+    { label: "Loan Amount", value: `Rs. ${formatIndianNumber(data.loanAmount)}` },
+    { label: "Interest Rate (per annum)", value: `${data.interestRate}%` },
+    { label: "Tenure", value: `${data.tenure} months (${(data.tenure / 12).toFixed(1)} years)` },
+    { label: "Estimated Monthly EMI", value: `Rs. ${formatIndianNumber(data.emi)}` },
+    { label: "Total Interest Payable", value: `Rs. ${formatIndianNumber(data.totalInterest)}` },
+    { label: "Total Amount Payable", value: `Rs. ${formatIndianNumber(data.totalPayment)}` },
+  ];
+
+  const rowH = 14;
+  rows.forEach((row, i) => {
+    const rowY = y + i * rowH;
+
+    // Alternating background
+    if (i % 2 === 0) {
+      doc.setFillColor(245, 247, 250);
+      doc.rect(margin, rowY, contentWidth, rowH, "F");
+    }
+
+    // Left green accent bar
+    doc.setFillColor(...C.primary);
+    doc.rect(margin, rowY, 3, rowH, "F");
+
+    // Label
+    doc.setFontSize(10);
+    doc.setTextColor(60, 60, 60);
+    doc.setFont("helvetica", "normal");
+    doc.text(row.label, margin + 10, rowY + 9);
+
+    // Value
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(30, 30, 30);
+    doc.text(row.value, pageWidth - margin - 6, rowY + 9, { align: "right" });
+  });
+
+  y += rows.length * rowH + 18;
+
+  // ── DOCUMENTS REQUIRED ──
+  doc.setFontSize(14);
+  doc.setTextColor(30, 30, 30);
+  doc.setFont("helvetica", "bold");
+  doc.text("Documents Required", margin, y);
+  y += 8;
+
+  const colW = (contentWidth - 8) / 2;
+  const docBoxH = 100;
+
+  // Individual Applicant box
+  const leftX = margin;
+  doc.setFillColor(...C.primary);
+  doc.roundedRect(leftX, y, colW, 14, 3, 3, "F");
+  doc.setFontSize(9);
+  doc.setTextColor(...C.white);
+  doc.setFont("helvetica", "bold");
+  doc.text("Individual Applicant", leftX + 8, y + 9);
+
+  // Individual items
+  doc.setDrawColor(220, 225, 230);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(leftX, y, colW, docBoxH, 3, 3, "S");
+
+  const individualDocs = [
+    "PAN Card",
+    "Aadhaar Card",
+    "Driving Licence or Passport",
+    "3 months bank statement",
+    "3 salary slips or ITR",
+    "Recent passport-size photo",
+  ];
+
+  doc.setFontSize(8.5);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(60, 60, 60);
+  individualDocs.forEach((item, i) => {
+    const itemY = y + 22 + i * 12;
+    // Circle bullet
+    doc.setDrawColor(...C.primary);
+    doc.setLineWidth(0.5);
+    doc.circle(leftX + 10, itemY, 2, "S");
+    doc.text(item, leftX + 16, itemY + 2.5);
+  });
+
+  // Corporate Applicant box
+  const rightX = margin + colW + 8;
+  doc.setFillColor(...C.primary);
+  doc.roundedRect(rightX, y, colW, 14, 3, 3, "F");
+  doc.setFontSize(9);
+  doc.setTextColor(...C.white);
+  doc.setFont("helvetica", "bold");
+  doc.text("Corporate Applicant", rightX + 8, y + 9);
+
+  doc.setDrawColor(220, 225, 230);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(rightX, y, colW, docBoxH, 3, 3, "S");
+
+  const corporateDocs = [
+    "Company PAN",
+    "GST Certificate or Incorporation proof",
+    "Authorized signatory KYC",
+    "6 months company bank statement",
+    "Latest ITR and financials",
+    "Address proof of company",
+  ];
+
+  doc.setFontSize(8.5);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(60, 60, 60);
+  corporateDocs.forEach((item, i) => {
+    const itemY = y + 22 + i * 12;
+    doc.setDrawColor(...C.primary);
+    doc.setLineWidth(0.5);
+    doc.circle(rightX + 10, itemY, 2, "S");
+    doc.text(item, rightX + 16, itemY + 2.5);
+  });
+
+  y += docBoxH + 16;
+
+  // ── DISCLAIMER ──
+  doc.setDrawColor(200, 205, 210);
+  doc.setLineWidth(0.3);
+  doc.line(margin, y, pageWidth - margin, y);
+  y += 8;
+
+  doc.setFontSize(7.5);
+  doc.setTextColor(120, 120, 120);
+  doc.setFont("helvetica", "normal");
+  doc.text(
+    "This is an indicative EMI estimate. Final loan terms, approval, and EMI may vary by lender policy, profile, and documentation.",
+    margin, y, { maxWidth: contentWidth }
+  );
+
+  // ── FOOTER ──
+  doc.setFontSize(7);
+  doc.setTextColor(140, 140, 140);
+  doc.setFont("helvetica", "normal");
+  doc.text(
+    `Generated on ${format(new Date(), "dd MMM yyyy, hh:mm a")} | GrabYourCar`,
+    margin, pageHeight - 12
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// CAR-SPECIFIC QUOTE PDF — Full detailed design with breakups
+// ═══════════════════════════════════════════════════════════
+function generateCarQuotePdf(
+  doc: jsPDF, data: EMIData, COMPANY: EMIPDFConfig,
+  C: ColorPalette, pageWidth: number, pageHeight: number, margin: number, contentWidth: number
+) {
+  let y = 0;
+  const accentRgb: RGB = hexToRgb(COMPANY.accentColor || "#f59e0b");
+  const CA: ColorPalette & { accent: RGB } = { ...C, accent: accentRgb };
+
   const hasDiscount = data.discount && data.discount.amount > 0;
   const hasEMI = data.emi > 0 && data.tenure > 0;
   const hasOnRoad = !!data.onRoadPrice;
@@ -175,112 +404,100 @@ export const generateEMIPdf = async (data: EMIData, config?: Partial<EMIPDFConfi
     { label: "Handling Charges", value: data.onRoadPrice!.handling },
   ].filter(item => item.value > 0) : [];
 
-  // ============ WATERMARK ============
+  const footerH = 28;
+  const footerStartY = pageHeight - footerH;
+  const maxY = footerStartY - 8;
+
+  // WATERMARK
   doc.setFontSize(48);
   doc.setTextColor(244, 244, 244);
   doc.setFont("helvetica", "bold");
   doc.text("GRABYOURCAR", pageWidth / 2 - 25, pageHeight / 3, { angle: 45 });
   doc.text("GRABYOURCAR", pageWidth / 2 - 25, pageHeight * 0.65, { angle: 45 });
 
-  // ============ HEADER ============
+  // HEADER
   const headerH = 32;
-  doc.setFillColor(...C.primary);
+  doc.setFillColor(...CA.primary);
   doc.rect(0, 0, pageWidth, headerH, "F");
-  doc.setFillColor(...C.primaryDark);
+  doc.setFillColor(...CA.primaryDark);
   doc.rect(0, headerH - 2, pageWidth, 2, "F");
 
-  // Brand
   doc.setFontSize(18);
-  doc.setTextColor(...C.white);
+  doc.setTextColor(...CA.white);
   doc.setFont("helvetica", "bold");
   doc.text(COMPANY.companyName, margin, 14);
   doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
   doc.text(COMPANY.tagline, margin, 21);
 
-  // Contact right
-  doc.setFontSize(7);
   const rX = pageWidth - margin;
+  doc.setFontSize(7);
   doc.text(COMPANY.phone, rX, 11, { align: "right" });
   doc.text(COMPANY.website, rX, 17, { align: "right" });
   doc.text(COMPANY.email, rX, 23, { align: "right" });
 
-  // Badge
-  doc.setFillColor(...C.accent);
+  doc.setFillColor(...CA.accent);
   doc.roundedRect(margin, headerH - 6, 42, 8, 2, 2, "F");
   doc.setFontSize(7);
-  doc.setTextColor(...C.darkText);
+  doc.setTextColor(...CA.darkText);
   doc.setFont("helvetica", "bold");
   doc.text("PRICE ESTIMATE", margin + 21, headerH - 1, { align: "center" });
 
   y = headerH + 8;
 
-  // ============ VEHICLE INFO ============
+  // VEHICLE INFO
   if (data.carName) {
     const cleanName = data.carName.replace(/(\w+)\s+\1/gi, '$1');
     const cardH = 30;
-
     doc.setFillColor(250, 250, 250);
     doc.roundedRect(margin + 1, y + 1, contentWidth, cardH, 3, 3, "F");
-    doc.setFillColor(...C.white);
+    doc.setFillColor(...CA.white);
     doc.roundedRect(margin, y, contentWidth, cardH, 3, 3, "F");
-    doc.setFillColor(...C.primary);
+    doc.setFillColor(...CA.primary);
     doc.roundedRect(margin, y, 4, cardH, 3, 0, "F");
     doc.rect(margin + 2, y, 2, cardH, "F");
 
-    // Label
     doc.setFontSize(6);
-    doc.setTextColor(...C.grayText);
+    doc.setTextColor(...CA.grayText);
     doc.setFont("helvetica", "bold");
     doc.text("VEHICLE DETAILS", margin + 10, y + 6);
 
-    // Car name
     doc.setFontSize(13);
-    doc.setTextColor(...C.darkText);
+    doc.setTextColor(...CA.darkText);
     doc.setFont("helvetica", "bold");
     doc.text(cleanName.toUpperCase(), margin + 10, y + 15);
 
-    // Variant
     if (data.variantName) {
       doc.setFontSize(8);
-      doc.setTextColor(...C.grayText);
+      doc.setTextColor(...CA.grayText);
       doc.setFont("helvetica", "normal");
       doc.text(`Variant: ${data.variantName}`, margin + 10, y + 22);
     }
 
-    // Right side details
     const infoX = pageWidth - margin - 6;
     let infoY = y + 8;
     doc.setFontSize(7);
-    doc.setTextColor(...C.grayText);
+    doc.setTextColor(...CA.grayText);
     doc.setFont("helvetica", "normal");
-    if (data.selectedColor) {
-      doc.text(`Color: ${data.selectedColor}`, infoX, infoY, { align: "right" });
-      infoY += 6;
-    }
-    if (data.selectedCity) {
-      doc.text(`City: ${data.selectedCity}`, infoX, infoY, { align: "right" });
-      infoY += 6;
-    }
+    if (data.selectedColor) { doc.text(`Color: ${data.selectedColor}`, infoX, infoY, { align: "right" }); infoY += 6; }
+    if (data.selectedCity) { doc.text(`City: ${data.selectedCity}`, infoX, infoY, { align: "right" }); infoY += 6; }
     if (hasOnRoad) {
       doc.setFontSize(6);
       doc.text("On-Road Price", infoX, infoY, { align: "right" });
       doc.setFontSize(10);
-      doc.setTextColor(...C.primary);
+      doc.setTextColor(...CA.primary);
       doc.setFont("helvetica", "bold");
       doc.text(formatCurrency(data.onRoadPrice!.onRoadPrice), infoX, infoY + 6, { align: "right" });
     }
-
     y += cardH + 6;
   }
 
-  // ============ ON-ROAD PRICE BREAKUP ============
+  // ON-ROAD PRICE BREAKUP
   if (hasOnRoad) {
-    // Section header
-    doc.setFillColor(...C.primary);
+    doc.setFillColor(...CA.primary);
     doc.roundedRect(margin, y, contentWidth, 7, 2, 2, "F");
     doc.setFontSize(8);
-    doc.setTextColor(...C.white);
+    doc.setTextColor(...CA.white);
     doc.setFont("helvetica", "bold");
     doc.text("ON-ROAD PRICE BREAKUP", margin + 4, y + 5);
     y += 10;
@@ -288,32 +505,31 @@ export const generateEMIPdf = async (data: EMIData, config?: Partial<EMIPDFConfi
     const rowH = 7;
     priceItems.forEach((item, i) => {
       if (i % 2 === 0) {
-        doc.setFillColor(...C.lightGray);
+        doc.setFillColor(...CA.lightGray);
         doc.rect(margin, y - 2.5, contentWidth, rowH, "F");
       }
       doc.setFontSize(8);
-      doc.setTextColor(...C.grayText);
+      doc.setTextColor(...CA.grayText);
       doc.setFont("helvetica", "normal");
       doc.text(item.label, margin + 4, y + 1.5);
-      doc.setTextColor(...C.darkText);
+      doc.setTextColor(...CA.darkText);
       doc.setFont("helvetica", "bold");
       doc.text(formatCurrency(item.value), pageWidth - margin - 4, y + 1.5, { align: "right" });
       y += rowH;
     });
 
-    // Total row
     y += 2;
-    doc.setFillColor(...C.primary);
+    doc.setFillColor(...CA.primary);
     doc.roundedRect(margin, y - 2, contentWidth, 10, 2, 2, "F");
     doc.setFontSize(9);
-    doc.setTextColor(...C.white);
+    doc.setTextColor(...CA.white);
     doc.setFont("helvetica", "bold");
     doc.text("Total On-Road Price", margin + 5, y + 4);
     doc.setFontSize(10);
     doc.text(formatCurrency(data.onRoadPrice!.onRoadPrice), pageWidth - margin - 5, y + 4, { align: "right" });
     y += 14;
 
-    // ============ DISCOUNT ============
+    // DISCOUNT
     if (hasDiscount) {
       const discountLabels: Record<string, string> = {
         cash: "Cash Discount", exchange: "Exchange Bonus", accessory: "Accessory Discount",
@@ -323,41 +539,39 @@ export const generateEMIPdf = async (data: EMIData, config?: Partial<EMIPDFConfi
 
       doc.setFillColor(255, 251, 235);
       doc.roundedRect(margin, y, contentWidth, 22, 3, 3, "F");
-      doc.setFillColor(...C.accent);
+      doc.setFillColor(...CA.accent);
       doc.roundedRect(margin, y, 4, 22, 3, 0, "F");
       doc.rect(margin + 2, y, 2, 22, "F");
 
-      // Badge
-      doc.setFillColor(...C.accent);
+      doc.setFillColor(...CA.accent);
       doc.roundedRect(margin + 10, y + 2, 42, 5, 1, 1, "F");
       doc.setFontSize(5.5);
-      doc.setTextColor(...C.darkText);
+      doc.setTextColor(...CA.darkText);
       doc.setFont("helvetica", "bold");
       doc.text("EXCLUSIVE OFFER", margin + 31, y + 5.5, { align: "center" });
 
       doc.setFontSize(9);
-      doc.setTextColor(...C.darkText);
+      doc.setTextColor(...CA.darkText);
       doc.setFont("helvetica", "bold");
       doc.text(discountLabels[data.discount!.type], margin + 10, y + 14);
 
       doc.setFontSize(12);
-      doc.setTextColor(...C.primary);
+      doc.setTextColor(...CA.primary);
       doc.text(`- ${formatCurrency(data.discount!.amount)}`, pageWidth - margin - 6, y + 14, { align: "right" });
 
       if (data.discount!.remarks) {
         doc.setFontSize(6);
-        doc.setTextColor(...C.grayText);
+        doc.setTextColor(...CA.grayText);
         doc.setFont("helvetica", "italic");
         doc.text(data.discount!.remarks, margin + 10, y + 19);
       }
       y += 26;
 
-      // Final price
       const finalPrice = data.onRoadPrice!.onRoadPrice - data.discount!.amount;
-      doc.setFillColor(...C.primaryDark);
+      doc.setFillColor(...CA.primaryDark);
       doc.roundedRect(margin, y, contentWidth, 10, 2, 2, "F");
       doc.setFontSize(9);
-      doc.setTextColor(...C.white);
+      doc.setTextColor(...CA.white);
       doc.setFont("helvetica", "bold");
       doc.text("YOUR FINAL PRICE (After Discount)", margin + 5, y + 6.5);
       doc.setFontSize(10);
@@ -366,17 +580,16 @@ export const generateEMIPdf = async (data: EMIData, config?: Partial<EMIPDFConfi
     }
   }
 
-  // ============ EMI SECTION ============
+  // EMI SECTION
   if (hasEMI) {
-    // EMI hero box
     const emiBoxH = 30;
-    doc.setFillColor(...C.primaryLight);
+    doc.setFillColor(...CA.primaryLight);
     doc.roundedRect(margin, y, contentWidth, emiBoxH, 4, 4, "F");
-    doc.setFillColor(...C.primary);
+    doc.setFillColor(...CA.primary);
     doc.roundedRect(margin + 2, y + 2, contentWidth - 4, emiBoxH - 4, 3, 3, "F");
 
     doc.setFontSize(8);
-    doc.setTextColor(...C.white);
+    doc.setTextColor(...CA.white);
     doc.setFont("helvetica", "normal");
     doc.text("Your Monthly EMI", pageWidth / 2, y + 9, { align: "center" });
 
@@ -390,9 +603,8 @@ export const generateEMIPdf = async (data: EMIData, config?: Partial<EMIPDFConfi
 
     y += emiBoxH + 5;
 
-    // Loan details grid
     const gridH = 24;
-    doc.setFillColor(...C.lightGray);
+    doc.setFillColor(...CA.lightGray);
     doc.roundedRect(margin, y, contentWidth, gridH, 2, 2, "F");
 
     const colW = contentWidth / 4;
@@ -406,11 +618,11 @@ export const generateEMIPdf = async (data: EMIData, config?: Partial<EMIPDFConfi
     loanItems.forEach((item, i) => {
       const cx = margin + i * colW + colW / 2;
       doc.setFontSize(6);
-      doc.setTextColor(...C.grayText);
+      doc.setTextColor(...CA.grayText);
       doc.setFont("helvetica", "normal");
       doc.text(item.label, cx, y + 8, { align: "center" });
       doc.setFontSize(8);
-      doc.setTextColor(...C.darkText);
+      doc.setTextColor(...CA.darkText);
       doc.setFont("helvetica", "bold");
       doc.text(item.value, cx, y + 16, { align: "center" });
       if (i < 3) {
@@ -421,9 +633,8 @@ export const generateEMIPdf = async (data: EMIData, config?: Partial<EMIPDFConfi
 
     y += gridH + 4;
 
-    // Payment breakdown bar
     doc.setFontSize(7);
-    doc.setTextColor(...C.primary);
+    doc.setTextColor(...CA.primary);
     doc.setFont("helvetica", "bold");
     doc.text("PAYMENT BREAKDOWN", margin, y);
     y += 5;
@@ -431,49 +642,45 @@ export const generateEMIPdf = async (data: EMIData, config?: Partial<EMIPDFConfi
     const principalPct = data.totalPayment > 0 ? (data.loanPrincipal / data.totalPayment) * 100 : 100;
     doc.setFillColor(220, 220, 220);
     doc.roundedRect(margin, y, contentWidth, 7, 2, 2, "F");
-    doc.setFillColor(...C.primary);
+    doc.setFillColor(...CA.primary);
     doc.roundedRect(margin, y, contentWidth * principalPct / 100, 7, 2, 2, "F");
     if (principalPct < 100) {
-      doc.setFillColor(...C.accent);
+      doc.setFillColor(...CA.accent);
       doc.roundedRect(margin + contentWidth * principalPct / 100, y, contentWidth * (100 - principalPct) / 100, 7, 0, 2, "F");
     }
     y += 10;
 
-    // Legend
-    doc.setFillColor(...C.primary);
+    doc.setFillColor(...CA.primary);
     doc.circle(margin + 4, y, 2, "F");
     doc.setFontSize(7);
-    doc.setTextColor(...C.grayText);
+    doc.setTextColor(...CA.grayText);
     doc.setFont("helvetica", "normal");
     doc.text(`Principal: ${formatCurrency(data.loanPrincipal)} (${Math.round(principalPct)}%)`, margin + 9, y + 1.5);
-    doc.setFillColor(...C.accent);
+    doc.setFillColor(...CA.accent);
     doc.circle(pageWidth / 2 + 4, y, 2, "F");
     doc.text(`Interest: ${formatCurrency(data.totalInterest)} (${Math.round(100 - principalPct)}%)`, pageWidth / 2 + 9, y + 1.5);
     y += 7;
 
-    // Partner banks
     doc.setFontSize(7);
-    doc.setTextColor(...C.primary);
+    doc.setTextColor(...CA.primary);
     doc.setFont("helvetica", "bold");
     doc.text("PARTNERED FINANCE BANKS", margin, y);
     y += 4;
     const banks = COMPANY.partnerBanks || ["SBI", "HDFC Bank", "ICICI Bank", "Axis Bank", "Kotak", "IDFC First", "Yes Bank"];
     doc.setFontSize(6);
-    doc.setTextColor(...C.grayText);
+    doc.setTextColor(...CA.grayText);
     doc.setFont("helvetica", "normal");
     doc.text(banks.join("  |  "), pageWidth / 2, y, { align: "center" });
     y += 7;
   }
 
-  // ============ TERMS & CONDITIONS ============
+  // TERMS & CONDITIONS
   const validUntil = format(addDays(new Date(), COMPANY.validityDays || 7), "dd MMM yyyy");
-
-  // Check if terms fit, compress if needed
   const termsH = 22;
   if (y + termsH < maxY) {
     doc.setFillColor(254, 249, 195);
     doc.roundedRect(margin, y, contentWidth, termsH, 2, 2, "F");
-    doc.setFillColor(...C.accent);
+    doc.setFillColor(...CA.accent);
     doc.roundedRect(margin, y, 3, termsH, 2, 0, "F");
 
     doc.setFontSize(7);
@@ -496,10 +703,10 @@ export const generateEMIPdf = async (data: EMIData, config?: Partial<EMIPDFConfi
     y += termsH + 3;
   }
 
-  // Disclaimer
+  // DISCLAIMER
   if (y + 6 < maxY) {
     doc.setFontSize(5.5);
-    doc.setTextColor(...C.grayText);
+    doc.setTextColor(...CA.grayText);
     doc.setFont("helvetica", "italic");
     doc.text(
       COMPANY.disclaimer || "This is an indicative estimate for reference purposes only.",
@@ -508,23 +715,23 @@ export const generateEMIPdf = async (data: EMIData, config?: Partial<EMIPDFConfi
     y += 6;
   }
 
-  // Generated timestamp
+  // Timestamp
   doc.setFontSize(5.5);
-  doc.setTextColor(...C.grayText);
+  doc.setTextColor(...CA.grayText);
   doc.setFont("helvetica", "normal");
   doc.text(
     `Generated on ${format(new Date(), "dd MMM yyyy 'at' hh:mm a")} | Quote ID: GYC-${Date.now().toString().slice(-8)}`,
     pageWidth / 2, maxY, { align: "center" }
   );
 
-  // ============ FOOTER ============
-  doc.setFillColor(...C.primary);
+  // FOOTER
+  doc.setFillColor(...CA.primary);
   doc.rect(0, footerStartY, pageWidth, footerH, "F");
-  doc.setFillColor(...C.accent);
+  doc.setFillColor(...CA.accent);
   doc.rect(0, footerStartY, pageWidth, 1.5, "F");
 
   doc.setFontSize(9);
-  doc.setTextColor(...C.white);
+  doc.setTextColor(...CA.white);
   doc.setFont("helvetica", "bold");
   doc.text(COMPANY.footerCTA || "Get the Best Car Loan - Lowest Interest Rates Guaranteed!", pageWidth / 2, footerStartY + 7, { align: "center" });
 
@@ -547,15 +754,10 @@ export const generateEMIPdf = async (data: EMIData, config?: Partial<EMIPDFConfi
 
   if (COMPANY.founder) {
     doc.setFontSize(6);
-    doc.setTextColor(...C.darkText);
+    doc.setTextColor(...CA.darkText);
     doc.text(`${COMPANY.founder}, ${COMPANY.founderTitle}  |  ${COMPANY.address}`, pageWidth / 2, footerStartY + 22, { align: "center" });
   }
-
-  // ============ SAVE ============
-  const carSuffix = data.carName ? `_${data.carName.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "")}` : "";
-  const fileName = `Grabyourcar_Quote${carSuffix}_${format(new Date(), "ddMMMyyyy")}.pdf`;
-  doc.save(fileName);
-};
+}
 
 // Generate shareable WhatsApp message
 export const generateEMIWhatsAppMessage = (data: EMIData, config?: Partial<EMIPDFConfig>): string => {
