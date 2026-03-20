@@ -534,6 +534,7 @@ async function routeToVerticalTable(
       }
     }
   } catch (e) {
-    console.error(`Vertical routing failed for ${vertical}:`, e);
+    console.error(`Vertical routing FAILED for ${vertical}:`, JSON.stringify(e));
+    throw e; // Let caller handle
   }
 }
