@@ -283,15 +283,21 @@ export const generateInsuranceQuotePdf = (data: InsuranceQuoteData) => {
   doc.setFillColor(...darkGreen);
   doc.rect(0, footerY, pw, 2, "F");
 
+  if (brandLogoUrl) {
+    try {
+      doc.addImage(brandLogoUrl, "PNG", m, footerY + 4, 14, 8);
+    } catch {}
+  }
+
   doc.setFontSize(9);
   doc.setTextColor(...white);
   doc.setFont("helvetica", "bold");
-  doc.text("Grabyourcar Insurance Desk", m, footerY + 9);
+  doc.text("Grabyourcar Insurance Desk", brandLogoUrl ? m + 18 : m, footerY + 9);
 
   doc.setFontSize(7.5);
   doc.setFont("helvetica", "normal");
-  doc.text("Phone: +91 98559 24442  |  Email: hello@grabyourcar.com", m, footerY + 15);
-  doc.text("Web: www.grabyourcar.com", m, footerY + 20);
+  doc.text("Phone: +91 98559 24442  |  Email: hello@grabyourcar.com", brandLogoUrl ? m + 18 : m, footerY + 15);
+  doc.text("Web: www.grabyourcar.com", brandLogoUrl ? m + 18 : m, footerY + 20);
   doc.setFontSize(7);
   doc.text("MS 228, 2nd Floor, DT Mega Mall, Sector 28, Gurugram, Haryana - 122001", pw - m, footerY + 15, { align: "right" });
 
