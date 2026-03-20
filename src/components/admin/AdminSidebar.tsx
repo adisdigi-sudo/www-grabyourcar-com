@@ -90,6 +90,7 @@ const navItems: NavItem[] = [
       { id: "services-loans-after-sales", label: "🤝 After Sales", icon: Users, verticals: ["loans"], allowedRoles: ["super_admin", "admin", "finance"] },
       { id: "services-loans-bulk", label: "🧰 Bulk Tools", icon: Database, verticals: ["loans"], allowedRoles: ["super_admin", "admin", "finance"] },
       { id: "services-emi-pdf", label: "EMI PDF Settings", icon: FileText, verticals: ["loans"], allowedRoles: ["super_admin", "admin", "finance"] },
+      { id: "services-emi-calculator", label: "🧮 EMI Calculator", icon: CreditCard, verticals: ["loans"], allowedRoles: ["super_admin", "admin", "finance"] },
       { id: "services-discounts", label: "Discount Presets", icon: Tags, verticals: ["sales"], allowedRoles: ["super_admin", "admin", "sales"] },
       { id: "services-quote-generator", label: "Manual Quote", icon: FileSignature, verticals: ["sales"], allowedRoles: ["super_admin", "admin", "sales"] },
       { id: "services-pricing", label: "Service Pricing", icon: CreditCard, verticals: ["hsrp", "rental"], allowedRoles: ["super_admin", "admin", "operations"] },

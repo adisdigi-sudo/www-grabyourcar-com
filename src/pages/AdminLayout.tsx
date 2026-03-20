@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
+import EMICalculator from "@/components/EMICalculator";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { useVerticalAccess } from "@/hooks/useVerticalAccess";
 import { useSessionTimeout } from "@/hooks/useSessionTimeout";
@@ -298,6 +299,8 @@ const AdminLayout = () => {
         return <LoanCRMDashboard initialView="after_sales" />;
       case "services-loans-bulk":
         return <LoanCRMDashboard initialView="bulk_tools" />;
+      case "services-emi-calculator":
+        return <EMICalculator />;
       case "services-emi-pdf":
         return <EMIPDFSettings />;
       case "services-discounts":
