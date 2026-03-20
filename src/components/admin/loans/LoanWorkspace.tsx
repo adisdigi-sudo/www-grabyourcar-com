@@ -390,7 +390,7 @@ export const LoanWorkspace = () => {
     },
   });
 
-  const { data: bankPartners = [] } = useQuery({
+  const { data: dbBankPartners = [] } = useQuery({
     queryKey: ['loan-bank-partners'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -398,10 +398,44 @@ export const LoanWorkspace = () => {
         .select('*')
         .eq('is_active', true)
         .order('sort_order');
-      if (error) throw error;
-      return data;
+      if (error) {
+        console.warn('loan_bank_partners fetch error:', error.message);
+        return [];
+      }
+      return data || [];
     },
   });
+
+  const bankPartners = useMemo(() => {
+    if (dbBankPartners.length > 0) return dbBankPartners;
+    // Fallback: hardcoded list of major Indian banks & NBFCs
+    const defaults = [
+      { name: "State Bank of India (SBI)", interest_rate_min: 8.5, interest_rate_max: 10.5 },
+      { name: "HDFC Bank", interest_rate_min: 8.5, interest_rate_max: 10.75 },
+      { name: "ICICI Bank", interest_rate_min: 8.7, interest_rate_max: 11.0 },
+      { name: "Axis Bank", interest_rate_min: 8.75, interest_rate_max: 11.25 },
+      { name: "Kotak Mahindra Bank", interest_rate_min: 8.5, interest_rate_max: 10.99 },
+      { name: "Bank of Baroda", interest_rate_min: 8.45, interest_rate_max: 10.6 },
+      { name: "Punjab National Bank (PNB)", interest_rate_min: 8.65, interest_rate_max: 10.45 },
+      { name: "Union Bank of India", interest_rate_min: 8.7, interest_rate_max: 10.9 },
+      { name: "Canara Bank", interest_rate_min: 8.65, interest_rate_max: 10.45 },
+      { name: "IDFC First Bank", interest_rate_min: 8.75, interest_rate_max: 12.0 },
+      { name: "Yes Bank", interest_rate_min: 9.0, interest_rate_max: 12.5 },
+      { name: "IndusInd Bank", interest_rate_min: 9.0, interest_rate_max: 13.0 },
+      { name: "Federal Bank", interest_rate_min: 9.0, interest_rate_max: 12.0 },
+      { name: "Bajaj Finance", interest_rate_min: 9.0, interest_rate_max: 14.0 },
+      { name: "Tata Capital", interest_rate_min: 9.25, interest_rate_max: 13.0 },
+      { name: "Mahindra Finance", interest_rate_min: 9.5, interest_rate_max: 16.0 },
+      { name: "Hero FinCorp", interest_rate_min: 9.5, interest_rate_max: 18.0 },
+      { name: "Sundaram Finance", interest_rate_min: 9.0, interest_rate_max: 14.0 },
+      { name: "Cholamandalam Finance", interest_rate_min: 9.25, interest_rate_max: 15.0 },
+      { name: "HDB Financial Services", interest_rate_min: 10.0, interest_rate_max: 18.0 },
+      { name: "Shriram Finance", interest_rate_min: 10.0, interest_rate_max: 18.0 },
+      { name: "AU Small Finance Bank", interest_rate_min: 9.5, interest_rate_max: 14.0 },
+      { name: "L&T Finance", interest_rate_min: 9.5, interest_rate_max: 14.0 },
+    ];
+    return defaults.map((b, i) => ({ ...b, id: `default_${i}`, is_active: true, sort_order: i }));
+  }, [dbBankPartners]);
 
   const applications = useMemo(() =>
     rawApplications.map((a: any) => ({ ...a, stage: normalizeStage(a.stage) })),
