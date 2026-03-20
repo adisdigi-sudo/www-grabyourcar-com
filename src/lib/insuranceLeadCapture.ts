@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { submitLeadReliably } from "@/lib/leadIntakeClient";
 import { triggerWhatsApp } from "@/lib/whatsappTrigger";
 
 /**
@@ -28,8 +28,8 @@ export async function captureInsuranceLead(params: {
     notes,
   } = params;
 
-  const { error } = await supabase.functions.invoke("lead-intake-engine", {
-    body: {
+  await submitLeadReliably(
+    {
       name: customerName || "Insurance Lead",
       phone,
       email: email || null,
@@ -57,14 +57,11 @@ export async function captureInsuranceLead(params: {
         vehicleMake: vehicleMake || null,
         vehicleModel: vehicleModel || null,
         policyType: policyType || "comprehensive",
+        serviceCategory: "car-insurance",
       },
     },
-  });
-
-  if (error) {
-    console.error("lead-intake-engine invoke error:", error);
-    throw error;
-  }
+    { enableSubmitLeadFallback: true },
+  );
 
   triggerWhatsApp({
     event: "insurance_inquiry",

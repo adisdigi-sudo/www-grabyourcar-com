@@ -79,8 +79,9 @@ export function InsuranceHeroForm({ policyType = "comprehensive", vehicleLabel =
         policyType,
         source: `insurance_hero_${policyType}`,
       });
-    } catch {
-      // Don't block redirect if lead capture fails transiently
+    } catch (error) {
+      console.error("Insurance hero lead capture failed:", error);
+      toast.warning("We could not confirm lead capture, but your quote flow will continue.");
     }
 
     try {

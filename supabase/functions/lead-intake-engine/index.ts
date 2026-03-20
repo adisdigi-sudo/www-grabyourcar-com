@@ -18,6 +18,12 @@ const corsHeaders = {
 // Order matters: more specific keywords first to avoid false matches (e.g. "car insurance" → Insurance, not Car Sales)
 const VERTICALS = [
   { keyword: "car insurance", tag: "Insurance" },
+  { keyword: "motor insurance", tag: "Insurance" },
+  { keyword: "insurance renewal", tag: "Insurance" },
+  { keyword: "policy renewal", tag: "Insurance" },
+  { keyword: "car-insurance", tag: "Insurance" },
+  { keyword: "motor-insurance", tag: "Insurance" },
+  { keyword: "vehicle-insurance", tag: "Insurance" },
   { keyword: "insurance", tag: "Insurance" },
   { keyword: "car loan", tag: "Loan" },
   { keyword: "loan", tag: "Loan" },
@@ -38,6 +44,36 @@ function classifyVertical(input: string): string {
     if (lower.includes(v.keyword)) return v.tag;
   }
   return "General Enquiry";
+}
+
+function inferLeadSourceType(source: string): string {
+  const normalized = (source || "").toLowerCase();
+  if (normalized.includes("whatsapp")) return "WhatsApp";
+  if (normalized.includes("walk")) return "Walk-in";
+  if (normalized.includes("google")) return "Google";
+  if (normalized.includes("meta") || normalized.includes("facebook") || normalized.includes("instagram")) return "Meta";
+  if (normalized.includes("referral")) return "Referral";
+  if (normalized.includes("website") || normalized.includes("hero") || normalized.includes("form")) return "Website";
+  if (normalized.includes("manual")) return "Manual";
+  return "Organic";
+}
+
+function buildVerticalInput(body: Record<string, any>, source: string, message: string): string {
+  return [
+    body.vertical,
+    body.serviceCategory,
+    body.service_category,
+    body.type,
+    body.body?.vertical,
+    body.body?.interest,
+    body.body?.serviceCategory,
+    body.body?.service_category,
+    body.body?.type,
+    source,
+    message,
+  ]
+    .filter(Boolean)
+    .join(" ");
 }
 
 function cleanPhone(phone: string): string {
@@ -70,10 +106,14 @@ serve(async (req) => {
     const phone = cleanPhone(rawPhone);
     const email = body.email || body.body?.email || "";
     const city = body.city || body.body?.city || "";
-    const verticalInput = body.vertical || body.body?.vertical || body.body?.interest || "General Enquiry";
     const message = body.message_text || body.body?.message || body.message?.text?.body || body.body?.details || "";
     const source = body.source || body.body?.source || (body.message ? "WhatsApp" : "Website");
-    const leadSourceType = body.lead_source_type || body.body?.lead_source_type || body.utm_source || "Organic";
+    const serviceCategory = String(
+      body.serviceCategory || body.service_category || body.body?.serviceCategory || body.body?.service_category || "",
+    ).toLowerCase();
+    const requestedVertical = String(body.vertical || body.body?.vertical || "").toLowerCase();
+    const verticalInput = buildVerticalInput(body, source, message) || "General Enquiry";
+    const leadSourceType = body.lead_source_type || body.body?.lead_source_type || body.utm_source || inferLeadSourceType(source);
     const vehicleNumber = body.vehicleNumber || body.vehicle_number || body.registrationNumber || body.registration_number || body.body?.vehicleNumber || body.body?.vehicle_number || body.body?.registrationNumber || body.body?.registration_number || "";
     const vehicleMake = body.vehicleMake || body.vehicle_make || body.body?.vehicleMake || body.body?.vehicle_make || body.carBrand || body.body?.carBrand || "";
     const vehicleModel = body.vehicleModel || body.vehicle_model || body.body?.vehicleModel || body.body?.vehicle_model || body.carInterest || body.body?.carInterest || "";
@@ -86,7 +126,10 @@ serve(async (req) => {
     }
 
     // === STEP 2: Classify Vertical ===
-    const verticalTag = classifyVertical(verticalInput);
+    const verticalTag =
+      serviceCategory.includes("insurance") || requestedVertical.includes("insurance")
+        ? "Insurance"
+        : classifyVertical(verticalInput);
 
     // === STEP 3: Dedup by Phone ===
     const { data: existing } = await supabase
@@ -112,7 +155,14 @@ serve(async (req) => {
         name: name !== "Unknown" ? name : undefined,
         email: email || undefined,
         city: city || undefined,
+        source: source || undefined,
         lead_source_type: leadSourceType,
+        status: "New Lead",
+        contacted: false,
+        executive_notified: false,
+        follow_up_alert_sent: false,
+        manager_alerted: false,
+        follow_up_due: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
         last_updated: new Date().toISOString(),
       }).eq("id", record.id);
 
