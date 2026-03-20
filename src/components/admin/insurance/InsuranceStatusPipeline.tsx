@@ -572,7 +572,7 @@ export function InsuranceStatusPipeline() {
                 }`}>
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer" onClick={() => { setSelectedClient(client); setEditPhone(phone || ""); setEditEmail(client.email || ""); }}>
+                      <div className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer" onClick={() => { setSelectedClient(client); setEditPhone(phone || ""); setEditEmail(client.email || ""); setEditVehicleNumber(client.vehicle_number || ""); }}>
                         {/* Stage Indicator */}
                         <div className={`h-10 w-10 rounded-xl ${stage.color} flex items-center justify-center shrink-0 shadow-sm`}>
                           <stage.icon className="h-5 w-5 text-white" />
