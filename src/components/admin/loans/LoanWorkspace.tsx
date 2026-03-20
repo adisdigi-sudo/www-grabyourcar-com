@@ -896,6 +896,7 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
   const [lostReason, setLostReason] = useState('');
   const [lostRemarks, setLostRemarks] = useState('');
   const [selectedBank, setSelectedBank] = useState(application?.bank_partner_id || '');
+  const [customBankName, setCustomBankName] = useState('');
   const [interestRate, setInterestRate] = useState(application?.interest_rate?.toString() || '');
   const [tenureMonths, setTenureMonths] = useState(application?.tenure_months?.toString() || '');
   const [emiAmount, setEmiAmount] = useState(application?.emi_amount?.toString() || '');
