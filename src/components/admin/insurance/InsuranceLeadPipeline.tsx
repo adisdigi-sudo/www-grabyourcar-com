@@ -444,7 +444,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
   });
 
   const handleMove = useCallback((client: Client, targetStage: string) => {
-    const currentStage = normalizeStage(client.pipeline_stage);
+    const currentStage = normalizeStage(client.pipeline_stage, client.lead_status);
     if (currentStage === targetStage) return;
     if (targetStage === "won") {
       setPendingMoveClient(client);
