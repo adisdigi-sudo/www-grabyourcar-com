@@ -108,6 +108,10 @@ serve(async (req) => {
     const city = body.city || body.body?.city || "";
     const message = body.message_text || body.body?.message || body.message?.text?.body || body.body?.details || "";
     const source = body.source || body.body?.source || (body.message ? "WhatsApp" : "Website");
+    const serviceCategory = String(
+      body.serviceCategory || body.service_category || body.body?.serviceCategory || body.body?.service_category || "",
+    ).toLowerCase();
+    const requestedVertical = String(body.vertical || body.body?.vertical || "").toLowerCase();
     const verticalInput = buildVerticalInput(body, source, message) || "General Enquiry";
     const leadSourceType = body.lead_source_type || body.body?.lead_source_type || body.utm_source || inferLeadSourceType(source);
     const vehicleNumber = body.vehicleNumber || body.vehicle_number || body.registrationNumber || body.registration_number || body.body?.vehicleNumber || body.body?.vehicle_number || body.body?.registrationNumber || body.body?.registration_number || "";
@@ -122,7 +126,10 @@ serve(async (req) => {
     }
 
     // === STEP 2: Classify Vertical ===
-    const verticalTag = classifyVertical(verticalInput);
+    const verticalTag =
+      serviceCategory.includes("insurance") || requestedVertical.includes("insurance")
+        ? "Insurance"
+        : classifyVertical(verticalInput);
 
     // === STEP 3: Dedup by Phone ===
     const { data: existing } = await supabase
