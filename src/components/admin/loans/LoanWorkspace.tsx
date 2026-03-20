@@ -454,6 +454,9 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
         )}
       </div>
 
+      {/* EMI Calculator */}
+      <EMICalculator />
+
       {/* Stage Detail Modal */}
       {selectedApp && (
         <LoanStageDetailModal
