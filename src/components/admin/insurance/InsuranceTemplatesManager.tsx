@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { MessageSquare, Plus, Trash2, Copy, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { InsurancePdfBrandingManager } from "./InsurancePdfBrandingManager";
 
 const CATEGORIES = [
   "renewal_reminder", "welcome", "policy_issued", "payment", "claim",
