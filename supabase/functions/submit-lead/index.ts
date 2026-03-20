@@ -173,34 +173,42 @@ serve(async (req) => {
     }
 
     if (verticalTag === 'Loan') {
-      const { data: existingLoan } = await supabaseAdmin
-        .from('car_loan_leads')
-        .select('id')
+      const { data: existingLoanApp } = await supabaseAdmin
+        .from('loan_applications')
+        .select('id, stage')
         .in('phone', phoneCandidates)
         .order('created_at', { ascending: false })
         .limit(1);
 
-      if (existingLoan && existingLoan.length > 0) {
-        await supabaseAdmin.from('car_loan_leads').update({
-          name: safeName,
-          city: safeCity,
+      if (existingLoanApp && existingLoanApp.length > 0) {
+        const updates: Record<string, any> = {
+          customer_name: safeName,
           source: body.source?.trim() || 'website',
-          notes: safeMessage,
-          preferred_car: safeCarModel,
-          status: 'new',
+          remarks: safeMessage,
+          car_model: safeCarModel,
+          lead_source_tag: body.lead_source_type || body.source?.trim() || 'Website',
           updated_at: new Date().toISOString(),
-          utm_source: body.lead_source_type || body.source?.trim() || 'Website',
-        }).eq('id', existingLoan[0].id);
+          last_activity_at: new Date().toISOString(),
+        };
+        if (['lost', 'disbursed'].includes(existingLoanApp[0].stage || '')) {
+          updates.stage = 'new_lead';
+          updates.stage_updated_at = new Date().toISOString();
+          updates.call_status = null;
+          updates.lost_reason = null;
+          updates.lost_remarks = null;
+        }
+        await supabaseAdmin.from('loan_applications').update(updates).eq('id', existingLoanApp[0].id);
       } else {
-        await supabaseAdmin.from('car_loan_leads').insert({
-          name: safeName,
+        await supabaseAdmin.from('loan_applications').insert({
+          customer_name: safeName,
           phone,
-          city: safeCity,
+          email: safeEmail,
           source: body.source?.trim() || 'website',
-          notes: safeMessage,
-          preferred_car: safeCarModel,
-          status: 'new',
-          utm_source: body.lead_source_type || body.source?.trim() || 'Website',
+          remarks: safeMessage,
+          stage: 'new_lead',
+          priority: 'medium',
+          car_model: safeCarModel,
+          lead_source_tag: body.lead_source_type || body.source?.trim() || 'Website',
         });
       }
     }
