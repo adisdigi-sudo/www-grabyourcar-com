@@ -290,8 +290,14 @@ const AdminLayout = () => {
         return <InsuranceManagement />;
       case "services-insurance-import":
         return <InsuranceImportExport />;
-      case "services-loans":
-        return <LoanCRMDashboard />;
+      case "services-loans-pipeline":
+        return <LoanCRMDashboard initialView="pipeline" />;
+      case "services-loans-disbursement":
+        return <LoanCRMDashboard initialView="disbursement" />;
+      case "services-loans-after-sales":
+        return <LoanCRMDashboard initialView="after_sales" />;
+      case "services-loans-bulk":
+        return <LoanCRMDashboard initialView="bulk_tools" />;
       case "services-emi-pdf":
         return <EMIPDFSettings />;
       case "services-discounts":
