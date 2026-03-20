@@ -536,6 +536,30 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
 
   return (
     <>
+      {/* New Lead Popup Notification */}
+      {newLeadPopup && (
+        <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2 fade-in duration-300">
+          <Card className="w-80 border-2 border-emerald-400 shadow-xl bg-background">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shrink-0">
+                  <Bell className="h-5 w-5 text-white animate-bounce" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400">🚀 New Lead!</p>
+                  <p className="text-sm font-semibold truncate">{newLeadPopup.name}</p>
+                  <p className="text-xs text-muted-foreground font-mono">{newLeadPopup.phone}</p>
+                  <Badge variant="outline" className="mt-1 text-[10px]">{newLeadPopup.source}</Badge>
+                </div>
+                <Button size="icon" variant="ghost" className="h-6 w-6 shrink-0" onClick={() => setNewLeadPopup(null)}>
+                  <XCircle className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Stage Filter Tabs */}
       <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
         <Button size="sm" variant={selectedStage === "all" ? "default" : "outline"} onClick={() => setSelectedStage("all")} className="shrink-0 h-8 text-xs">
