@@ -503,7 +503,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
   const handleDragOver = (e: React.DragEvent, stage: string) => { e.preventDefault(); setDragOverStage(stage); };
   const handleDrop = (e: React.DragEvent, stage: string) => {
     e.preventDefault();
-    if (draggingClient && normalizeStage(draggingClient.pipeline_stage) !== stage) handleMove(draggingClient, stage);
+    if (draggingClient && normalizeStage(draggingClient.pipeline_stage, draggingClient.lead_status) !== stage) handleMove(draggingClient, stage);
     setDragOverStage(null);
     setDraggingClient(null);
   };
