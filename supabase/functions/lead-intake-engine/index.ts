@@ -163,6 +163,7 @@ serve(async (req) => {
       const updatedMessage = record.message ? `${record.message} | NEW: ${message}` : message;
 
       await supabase.from("automation_lead_tracking").update({
+        vertical: verticalTag,
         multi_vertical_tags: updatedTags,
         message: updatedMessage,
         name: name !== "Unknown" ? name : undefined,
@@ -170,6 +171,7 @@ serve(async (req) => {
         city: city || undefined,
         source: source || undefined,
         lead_source_type: leadSourceType,
+        raw_data: body,
         status: "New Lead",
         contacted: false,
         executive_notified: false,
