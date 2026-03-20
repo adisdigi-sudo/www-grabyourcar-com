@@ -91,13 +91,7 @@ export function InsurancePolicyDocumentUploader({
 
     const finalPolicyNumber = resolvedPolicyNumber;
     if (!finalPolicyNumber) {
-      toast.error("Policy number is required. Use the PDF file name or enter it manually.");
-      return;
-    }
-
-    const existingPolicyNumber = normalizePolicyNumber(selectedPolicy?.policy_number || "");
-    if (existingPolicyNumber && existingPolicyNumber !== finalPolicyNumber) {
-      toast.error(`Policy number mismatch. Expected ${existingPolicyNumber}. Rename the PDF or enter the same policy number.`);
+      toast.error("Policy number is required. Enter it manually.");
       return;
     }
 
