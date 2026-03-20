@@ -69,6 +69,10 @@ serve(async (req) => {
     const message = body.message_text || body.body?.message || body.message?.text?.body || body.body?.details || "";
     const source = body.source || body.body?.source || (body.message ? "WhatsApp" : "Website");
     const leadSourceType = body.lead_source_type || body.body?.lead_source_type || body.utm_source || "Organic";
+    const vehicleNumber = body.vehicleNumber || body.vehicle_number || body.registrationNumber || body.registration_number || body.body?.vehicleNumber || body.body?.vehicle_number || body.body?.registrationNumber || body.body?.registration_number || "";
+    const vehicleMake = body.vehicleMake || body.vehicle_make || body.body?.vehicleMake || body.body?.vehicle_make || body.carBrand || body.body?.carBrand || "";
+    const vehicleModel = body.vehicleModel || body.vehicle_model || body.body?.vehicleModel || body.body?.vehicle_model || body.carInterest || body.body?.carInterest || "";
+    const policyType = body.policyType || body.policy_type || body.body?.policyType || body.body?.policy_type || "";
 
     if (!phone || phone.length < 10) {
       return new Response(JSON.stringify({ error: "Valid phone number required" }), {
@@ -135,7 +139,18 @@ serve(async (req) => {
     }
 
     // === STEP 4: Also insert into vertical-specific tables ===
-    await routeToVerticalTable(supabase, verticalTag, { name, phone, email, city, source, message });
+    await routeToVerticalTable(supabase, verticalTag, {
+      name,
+      phone,
+      email,
+      city,
+      source,
+      message,
+      vehicleNumber,
+      vehicleMake,
+      vehicleModel,
+      policyType,
+    });
 
     // === STEP 5: Notify Executive via WhatsApp (Finbite) ===
     const executivePhone = "+919855924442";
@@ -223,7 +238,18 @@ serve(async (req) => {
 async function routeToVerticalTable(
   supabase: any,
   vertical: string,
-  data: { name: string; phone: string; email: string; city: string; source: string; message: string }
+  data: {
+    name: string;
+    phone: string;
+    email: string;
+    city: string;
+    source: string;
+    message: string;
+    vehicleNumber?: string;
+    vehicleMake?: string;
+    vehicleModel?: string;
+    policyType?: string;
+  }
 ) {
   try {
     switch (vertical) {
@@ -253,6 +279,10 @@ async function routeToVerticalTable(
             city: data.city || undefined,
             lead_source: data.source,
             notes: data.message || undefined,
+            vehicle_number: data.vehicleNumber || undefined,
+            vehicle_make: data.vehicleMake || undefined,
+            vehicle_model: data.vehicleModel || undefined,
+            current_policy_type: data.policyType || undefined,
             pipeline_stage: "new_lead",
             lead_status: "new",
             priority: "medium",
@@ -266,6 +296,10 @@ async function routeToVerticalTable(
             city: data.city || null,
             lead_source: data.source,
             notes: data.message || null,
+            vehicle_number: data.vehicleNumber || null,
+            vehicle_make: data.vehicleMake || null,
+            vehicle_model: data.vehicleModel || null,
+            current_policy_type: data.policyType || null,
             pipeline_stage: "new_lead",
             lead_status: "new",
             priority: "medium",
