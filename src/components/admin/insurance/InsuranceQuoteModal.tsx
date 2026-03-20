@@ -156,12 +156,50 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs font-semibold text-muted-foreground">Insurance Company</Label>
-                <Select value={form.insuranceCompany} onValueChange={v => update("insuranceCompany", v)}>
-                  <SelectTrigger className="h-9 text-sm mt-1"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {INSURERS.map(ins => <SelectItem key={ins} value={ins}>{ins}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                {showCustomInsurer ? (
+                  <div className="flex gap-1 mt-1">
+                    <Input
+                      value={customInsurerInput}
+                      onChange={e => setCustomInsurerInput(e.target.value)}
+                      placeholder="Enter company name"
+                      className="h-9 text-sm flex-1"
+                      autoFocus
+                      onKeyDown={e => {
+                        if (e.key === "Enter" && customInsurerInput.trim()) {
+                          update("insuranceCompany", customInsurerInput.trim());
+                          setShowCustomInsurer(false);
+                        }
+                      }}
+                    />
+                    <Button type="button" size="icon" variant="ghost" className="h-9 w-9 shrink-0" onClick={() => { if (customInsurerInput.trim()) update("insuranceCompany", customInsurerInput.trim()); setShowCustomInsurer(false); }}>
+                      <Check className="h-4 w-4" />
+                    </Button>
+                    <Button type="button" size="icon" variant="ghost" className="h-9 w-9 shrink-0" onClick={() => setShowCustomInsurer(false)}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Select
+                    value={INSURANCE_COMPANIES.includes(form.insuranceCompany) ? form.insuranceCompany : "__custom_current__"}
+                    onValueChange={v => {
+                      if (v === "__add_new__") { setShowCustomInsurer(true); setCustomInsurerInput(""); }
+                      else if (v !== "__custom_current__") update("insuranceCompany", v);
+                    }}
+                  >
+                    <SelectTrigger className="h-9 text-sm mt-1">
+                      <SelectValue>{getShortName(form.insuranceCompany)}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {!INSURANCE_COMPANIES.includes(form.insuranceCompany) && (
+                        <SelectItem value="__custom_current__">{form.insuranceCompany}</SelectItem>
+                      )}
+                      {INSURANCE_COMPANIES.map(ins => <SelectItem key={ins} value={ins}>{ins}</SelectItem>)}
+                      <SelectItem value="__add_new__">
+                        <span className="flex items-center gap-1"><Plus className="h-3 w-3" /> Add Custom Company</span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
               <div>
                 <Label className="text-xs font-semibold text-muted-foreground">Fuel Type</Label>
