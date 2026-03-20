@@ -1015,7 +1015,12 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
           queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
           queryClient.invalidateQueries({ queryKey: ["ins-policies-book"] });
           setShowWonDialog(false);
-          setSelectedClient(null);
+          if (pendingMoveClient) {
+            setSelectedClient(pendingMoveClient);
+            setShowUploadPolicy(true);
+          } else {
+            setSelectedClient(null);
+          }
         }}
       />
 
