@@ -692,15 +692,44 @@ export function InsuranceStatusPipeline() {
                   <Label className="text-xs text-muted-foreground">Email</Label>
                   <Input value={editEmail} onChange={e => setEditEmail(e.target.value)} placeholder="Enter email" className="h-8 text-sm" />
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Vehicle</p>
-                  <p className="text-sm font-mono font-medium">{selectedClient.vehicle_number || "—"}</p>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Vehicle Number</Label>
+                  <Input value={editVehicleNumber} onChange={e => setEditVehicleNumber(e.target.value.toUpperCase())} placeholder="e.g. DL01AB1234" className="h-8 text-sm font-mono uppercase" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Source</p>
                   <p className="text-sm font-medium">{selectedClient.lead_source || "—"}</p>
                 </div>
               </div>
+
+              {/* Save Contact Button */}
+              <Button
+                size="sm"
+                className="w-full gap-2"
+                disabled={savingContact}
+                onClick={async () => {
+                  setSavingContact(true);
+                  try {
+                    const updates: Record<string, any> = {};
+                    if (editPhone !== (displayPhone(selectedClient.phone) || "")) updates.phone = editPhone;
+                    if (editEmail !== (selectedClient.email || "")) updates.email = editEmail || null;
+                    if (editVehicleNumber !== (selectedClient.vehicle_number || "")) updates.vehicle_number = editVehicleNumber || null;
+                    if (Object.keys(updates).length === 0) { toast.info("No changes to save"); setSavingContact(false); return; }
+                    const { error } = await supabase.from("insurance_clients").update(updates).eq("id", selectedClient.id);
+                    if (error) throw error;
+                    toast.success("✅ Details updated!");
+                    fetchClients();
+                    setSelectedClient({ ...selectedClient, ...updates } as any);
+                  } catch (e: any) {
+                    toast.error(e.message || "Failed to save");
+                  } finally {
+                    setSavingContact(false);
+                  }
+                }}
+              >
+                {savingContact ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                {savingContact ? "Saving..." : "Save Changes"}
+              </Button>
 
               {/* Communication Hub + WhatsApp Doc Request */}
               <div className="flex flex-wrap gap-2 py-2 border-y">
