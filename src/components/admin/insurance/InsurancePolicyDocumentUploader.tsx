@@ -76,9 +76,8 @@ export function InsurancePolicyDocumentUploader({
   const resolvedPolicyNumber = useMemo(() => {
     const manual = normalizePolicyNumber(typedPolicyNumber || "");
     if (manual) return manual;
-    if (docFile) return extractPolicyNumberFromFileName(docFile.name);
     return normalizePolicyNumber(selectedPolicy?.policy_number || "");
-  }, [docFile, selectedPolicy?.policy_number, typedPolicyNumber]);
+  }, [selectedPolicy?.policy_number, typedPolicyNumber]);
 
   const uploadDocument = async () => {
     if (!selectedPolicyId) {
