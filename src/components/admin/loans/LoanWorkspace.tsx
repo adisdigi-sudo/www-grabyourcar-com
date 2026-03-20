@@ -721,93 +721,90 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
       />
 
       <div className="min-h-[600px]">
-          {activeView === "pipeline" && (
-            <div className="space-y-4">
-              {draggingApp && (
-                <div className="text-xs text-center text-muted-foreground bg-muted/50 rounded-lg py-1.5 border border-dashed border-primary/30 animate-pulse">
-                  Drop on a stage to move <strong>{draggingApp.customer_name}</strong>
-                </div>
-              )}
+        {activeView === "pipeline" && (
+          <div className="space-y-4">
+            {draggingApp && (
+              <div className="text-xs text-center text-muted-foreground bg-muted/50 rounded-lg py-1.5 border border-dashed border-primary/30 animate-pulse">
+                Drop on a stage to move <strong>{draggingApp.customer_name}</strong>
+              </div>
+            )}
 
-              {/* Kanban Board */}
-              <ScrollArea className="w-full">
-                <div className="flex min-w-max">
-                  {pipelineStages.map((stage, colIdx) => {
-                    const stageApps = applications.filter((a: any) => a.stage === stage);
-                    const stageValue = stageApps.reduce((s: number, a: any) => s + (Number(a.loan_amount) || 0), 0);
-                    const isDragOver = dragOverStage === stage;
-                    const showDropIndicator = draggingApp && isDragOver;
+            <ScrollArea className="w-full">
+              <div className="flex min-w-max">
+                {pipelineStages.map((stage, colIdx) => {
+                  const stageApps = applications.filter((a: any) => a.stage === stage);
+                  const stageValue = stageApps.reduce((s: number, a: any) => s + (Number(a.loan_amount) || 0), 0);
+                  const isDragOver = dragOverStage === stage;
+                  const showDropIndicator = draggingApp && isDragOver;
 
-                    return (
-                      <div key={stage}
-                        className={`w-[260px] shrink-0 flex flex-col ${colIdx > 0 ? 'border-l border-border/40' : ''}`}
-                        onDragOver={e => handleDragOver(e, stage)}
-                        onDragLeave={handleDragLeave}
-                        onDrop={e => handleDrop(e, stage)}>
-                        <div className={`mx-1.5 rounded-lg border p-2.5 mb-2 transition-all ${STAGE_COLORS[stage]} ${showDropIndicator ? 'ring-2 ring-primary scale-[1.02] shadow-lg' : ''}`}>
-                          <div className="flex justify-between items-center">
-                            <span className="font-semibold text-xs">{STAGE_LABELS[stage]}</span>
-                            <Badge variant="secondary" className="text-[10px] h-5">{stageApps.length}</Badge>
-                          </div>
-                          {stageValue > 0 && <p className="text-[10px] mt-1 opacity-70">Rs. {(stageValue / 100000).toFixed(1)}L</p>}
+                  return (
+                    <div key={stage}
+                      className={`w-[260px] shrink-0 flex flex-col ${colIdx > 0 ? 'border-l border-border/40' : ''}`}
+                      onDragOver={e => handleDragOver(e, stage)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={e => handleDrop(e, stage)}>
+                      <div className={`mx-1.5 rounded-lg border p-2.5 mb-2 transition-all ${STAGE_COLORS[stage]} ${showDropIndicator ? 'ring-2 ring-primary scale-[1.02] shadow-lg' : ''}`}>
+                        <div className="flex justify-between items-center">
+                          <span className="font-semibold text-xs">{STAGE_LABELS[stage]}</span>
+                          <Badge variant="secondary" className="text-[10px] h-5">{stageApps.length}</Badge>
                         </div>
-                        <div className={`flex-1 px-1.5 pb-2 min-h-[120px] transition-all ${showDropIndicator ? 'bg-primary/5' : ''}`}>
-                          {stageApps.length === 0 && !showDropIndicator && (
-                            <div className="h-full flex items-center justify-center text-[11px] text-muted-foreground/40 py-8">No leads</div>
-                          )}
-                          {showDropIndicator && stageApps.length === 0 && (
-                            <div className="h-full flex items-center justify-center text-[11px] text-primary/60 py-8 font-medium">Drop here</div>
-                          )}
-                          {stageApps.map((app: any, cardIdx: number) => (
-                            <div key={app.id} className={cardIdx > 0 ? 'border-t border-border/30 pt-2 mt-2' : ''}>
-                              <LoanCard app={app} stage={stage}
-                                onDragStart={handleDragStart} onDragEnd={handleDragEnd}
-                                onClick={handleCardClick} onWhatsApp={handleWhatsApp}
-                                isDragging={draggingApp?.id === app.id} formatAmount={formatAmount} />
-                            </div>
-                          ))}
-                        </div>
+                        {stageValue > 0 && <p className="text-[10px] mt-1 opacity-70">Rs. {(stageValue / 100000).toFixed(1)}L</p>}
                       </div>
-                    );
-                  })}
-
-                  {/* Lost Column */}
-                  <div className="w-[260px] shrink-0 flex flex-col border-l border-border/40"
-                    onDragOver={e => handleDragOver(e, 'lost')}
-                    onDragLeave={handleDragLeave}
-                    onDrop={e => handleDrop(e, 'lost')}>
-                    <div className={`mx-1.5 rounded-lg border p-2.5 mb-2 transition-all ${STAGE_COLORS['lost']} ${dragOverStage === 'lost' && draggingApp ? 'ring-2 ring-red-500 scale-[1.02] shadow-lg' : ''}`}>
-                      <div className="flex justify-between items-center">
-                        <span className="font-semibold text-xs">Lost</span>
-                        <Badge variant="secondary" className="text-[10px] h-5">{lost}</Badge>
+                      <div className={`flex-1 px-1.5 pb-2 min-h-[120px] transition-all ${showDropIndicator ? 'bg-primary/5' : ''}`}>
+                        {stageApps.length === 0 && !showDropIndicator && (
+                          <div className="h-full flex items-center justify-center text-[11px] text-muted-foreground/40 py-8">No leads</div>
+                        )}
+                        {showDropIndicator && stageApps.length === 0 && (
+                          <div className="h-full flex items-center justify-center text-[11px] text-primary/60 py-8 font-medium">Drop here</div>
+                        )}
+                        {stageApps.map((app: any, cardIdx: number) => (
+                          <div key={app.id} className={cardIdx > 0 ? 'border-t border-border/30 pt-2 mt-2' : ''}>
+                            <LoanCard app={app} stage={stage}
+                              onDragStart={handleDragStart} onDragEnd={handleDragEnd}
+                              onClick={handleCardClick} onWhatsApp={handleWhatsApp}
+                              isDragging={draggingApp?.id === app.id} formatAmount={formatAmount} />
+                          </div>
+                        ))}
                       </div>
                     </div>
-                    <div className={`flex-1 px-1.5 pb-2 min-h-[120px] transition-all ${dragOverStage === 'lost' && draggingApp ? 'bg-red-500/5' : ''}`}>
-                      {applications.filter((a: any) => a.stage === 'lost').slice(0, 5).map((app: any, i: number) => (
-                        <div key={app.id} className={i > 0 ? 'border-t border-border/30 pt-2 mt-2' : ''}>
-                          <LoanCard app={app} stage="lost"
-                            onDragStart={handleDragStart} onDragEnd={handleDragEnd}
-                            onClick={handleCardClick} onWhatsApp={handleWhatsApp}
-                            isDragging={draggingApp?.id === app.id} formatAmount={formatAmount} />
-                        </div>
-                      ))}
+                  );
+                })}
+
+                <div className="w-[260px] shrink-0 flex flex-col border-l border-border/40"
+                  onDragOver={e => handleDragOver(e, 'lost')}
+                  onDragLeave={handleDragLeave}
+                  onDrop={e => handleDrop(e, 'lost')}>
+                  <div className={`mx-1.5 rounded-lg border p-2.5 mb-2 transition-all ${STAGE_COLORS['lost']} ${dragOverStage === 'lost' && draggingApp ? 'ring-2 ring-red-500 scale-[1.02] shadow-lg' : ''}`}>
+                    <div className="flex justify-between items-center">
+                      <span className="font-semibold text-xs">Lost</span>
+                      <Badge variant="secondary" className="text-[10px] h-5">{lost}</Badge>
                     </div>
                   </div>
+                  <div className={`flex-1 px-1.5 pb-2 min-h-[120px] transition-all ${dragOverStage === 'lost' && draggingApp ? 'bg-red-500/5' : ''}`}>
+                    {applications.filter((a: any) => a.stage === 'lost').slice(0, 5).map((app: any, i: number) => (
+                      <div key={app.id} className={i > 0 ? 'border-t border-border/30 pt-2 mt-2' : ''}>
+                        <LoanCard app={app} stage="lost"
+                          onDragStart={handleDragStart} onDragEnd={handleDragEnd}
+                          onClick={handleCardClick} onWhatsApp={handleWhatsApp}
+                          isDragging={draggingApp?.id === app.id} formatAmount={formatAmount} />
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <ScrollBar orientation="horizontal" />
-              </ScrollArea>
-            </div>
-          )}
+              </div>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+          </div>
+        )}
 
-          {activeView === "disbursement" && <LoanDisbursementBook applications={applications} />}
-          {activeView === "after_sales" && <LoanAfterSales applications={applications} />}
-          {activeView === "bulk_tools" && (
-            <div className="text-center py-12">
-              <Wrench className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
-              <p className="text-sm text-muted-foreground">Use the Import button above to bulk import leads via CSV</p>
-            </div>
-          )}
-        </div>
+        {activeView === "disbursement" && <LoanDisbursementBook applications={applications} />}
+        {activeView === "after_sales" && <LoanAfterSales applications={applications} />}
+        {activeView === "bulk_tools" && (
+          <div className="text-center py-12">
+            <Wrench className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
+            <p className="text-sm text-muted-foreground">Use the Import button above to bulk import leads via CSV</p>
+          </div>
+        )}
       </div>
 
       {/* Stage Detail Modal */}

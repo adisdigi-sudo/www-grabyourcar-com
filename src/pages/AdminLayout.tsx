@@ -454,7 +454,7 @@ const AdminLayout = () => {
         <div className={cn(
           "mx-auto",
           isMobile ? "max-w-full" : (
-            ["services-insurance", "services-insurance-import", "sales-crm", "loan-crm", "rental-crm", "hsrp-crm", "deals-pipeline", "calling-system", "manager-dashboard"].includes(activeTab)
+            ["services-insurance", "services-insurance-import", "services-loans-pipeline", "services-loans-disbursement", "services-loans-after-sales", "services-loans-bulk", "sales-crm", "loan-crm", "rental-crm", "hsrp-crm", "deals-pipeline", "calling-system", "manager-dashboard"].includes(activeTab)
               ? "max-w-full"
               : "max-w-7xl"
           )
