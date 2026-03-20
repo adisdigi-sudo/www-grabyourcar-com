@@ -403,7 +403,11 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
         c.city?.toLowerCase().includes(s)
       );
     }
-    return result;
+    return [...result].sort((a, b) => {
+      const aTime = new Date(a.updated_at || a.created_at).getTime();
+      const bTime = new Date(b.updated_at || b.created_at).getTime();
+      return bTime - aTime;
+    });
   }, [pipelineClients, selectedStage, search]);
 
   const retargetCount = useMemo(() => clients.filter(c => c.retarget_status === "scheduled").length, [clients]);

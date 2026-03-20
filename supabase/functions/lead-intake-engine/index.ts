@@ -44,6 +44,11 @@ function cleanPhone(phone: string): string {
   return (phone || "").replace(/\D/g, "").replace(/^91/, "");
 }
 
+function normalizeVehicleNumber(vehicleNumber?: string | null): string | null {
+  const normalized = (vehicleNumber || "").toUpperCase().replace(/\s+/g, "").trim();
+  return normalized || null;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -266,43 +271,55 @@ async function routeToVerticalTable(
         });
         break;
       case "Insurance": {
-        const { data: existingClient } = await supabase
-          .from("insurance_clients")
-          .select("id")
-          .eq("phone", data.phone)
-          .limit(1);
+        const normalizedPhone = cleanPhone(data.phone);
+        const normalizedVehicleNumber = normalizeVehicleNumber(data.vehicleNumber);
+        const now = new Date().toISOString();
 
-        if (existingClient && existingClient.length > 0) {
-          await supabase.from("insurance_clients").update({
-            customer_name: data.name,
-            email: data.email || undefined,
-            city: data.city || undefined,
-            lead_source: data.source,
-            notes: data.message || undefined,
-            vehicle_number: data.vehicleNumber || undefined,
-            vehicle_make: data.vehicleMake || undefined,
-            vehicle_model: data.vehicleModel || undefined,
-            current_policy_type: data.policyType || undefined,
-            pipeline_stage: "new_lead",
-            lead_status: "new",
-            priority: "medium",
-            updated_at: new Date().toISOString(),
-          }).eq("id", existingClient[0].id);
+        const { data: candidates, error: fetchError } = await supabase
+          .from("insurance_clients")
+          .select("id, phone, vehicle_number")
+          .eq("phone", normalizedPhone)
+          .order("updated_at", { ascending: false })
+          .order("created_at", { ascending: false })
+          .limit(20);
+
+        if (fetchError) throw fetchError;
+
+        const existingClient = (candidates || []).find((candidate: { vehicle_number?: string | null }) => {
+          if (!normalizedVehicleNumber) return true;
+          return normalizeVehicleNumber(candidate.vehicle_number) === normalizedVehicleNumber;
+        });
+
+        const insurancePayload = {
+          customer_name: data.name,
+          phone: normalizedPhone,
+          email: data.email || null,
+          city: data.city || null,
+          lead_source: data.source,
+          notes: data.message || null,
+          vehicle_number: normalizedVehicleNumber,
+          vehicle_make: data.vehicleMake || null,
+          vehicle_model: data.vehicleModel || null,
+          current_policy_type: data.policyType || null,
+          pipeline_stage: "new_lead",
+          lead_status: "new",
+          priority: "medium",
+          picked_up_by: null,
+          picked_up_at: null,
+          journey_last_event: "lead_received",
+          journey_last_event_at: now,
+          updated_at: now,
+        };
+
+        if (existingClient?.id) {
+          await supabase
+            .from("insurance_clients")
+            .update(insurancePayload)
+            .eq("id", existingClient.id);
         } else {
           await supabase.from("insurance_clients").insert({
-            customer_name: data.name,
-            phone: data.phone,
-            email: data.email || null,
-            city: data.city || null,
-            lead_source: data.source,
-            notes: data.message || null,
-            vehicle_number: data.vehicleNumber || null,
-            vehicle_make: data.vehicleMake || null,
-            vehicle_model: data.vehicleModel || null,
-            current_policy_type: data.policyType || null,
-            pipeline_stage: "new_lead",
-            lead_status: "new",
-            priority: "medium",
+            ...insurancePayload,
+            created_at: now,
           });
         }
         break;
