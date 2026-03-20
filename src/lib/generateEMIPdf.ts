@@ -111,12 +111,26 @@ const darkenColor = (rgb: [number, number, number], amount: number): [number, nu
   Math.max(0, rgb[2] - amount),
 ];
 
+type RGB = [number, number, number];
+
+interface ColorPalette {
+  primary: RGB;
+  primaryLight: RGB;
+  primaryDark: RGB;
+  darkText: RGB;
+  grayText: RGB;
+  lightGray: RGB;
+  white: RGB;
+  watermark: RGB;
+  accent?: RGB;
+}
+
 const STATIC_COLORS = {
-  darkText: [15, 23, 42] as [number, number, number],
-  grayText: [71, 85, 105] as [number, number, number],
-  lightGray: [241, 245, 249] as [number, number, number],
-  white: [255, 255, 255] as [number, number, number],
-  watermark: [229, 231, 235] as [number, number, number],
+  darkText: [15, 23, 42] as RGB,
+  grayText: [71, 85, 105] as RGB,
+  lightGray: [241, 245, 249] as RGB,
+  white: [255, 255, 255] as RGB,
+  watermark: [229, 231, 235] as RGB,
 };
 
 // Proper Indian number formatting: 1,23,45,678
