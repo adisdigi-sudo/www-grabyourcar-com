@@ -45,7 +45,7 @@ const SOURCE_COLORS: Record<string, string> = {
 };
 
 // ─── Main Workspace ───
-type LoanWorkspaceView = "pipeline" | "disbursement" | "after_sales" | "bulk_tools";
+type LoanWorkspaceView = "pipeline" | "disbursement" | "after_sales" | "bulk_tools" | "emi_calculator";
 
 interface LoanWorkspaceProps {
   initialView?: LoanWorkspaceView;

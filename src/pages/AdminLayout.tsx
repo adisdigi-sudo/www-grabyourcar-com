@@ -300,7 +300,7 @@ const AdminLayout = () => {
       case "services-loans-bulk":
         return <LoanCRMDashboard initialView="bulk_tools" />;
       case "services-emi-calculator":
-        return <EMICalculator />;
+        return <LoanCRMDashboard initialView="emi_calculator" />;
       case "services-emi-pdf":
         return <EMIPDFSettings />;
       case "services-discounts":
