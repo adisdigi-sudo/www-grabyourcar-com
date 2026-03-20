@@ -68,8 +68,6 @@ const Index = () => {
         {/* Our Services Category Grid */}
         <CategoryGrid />
         
-        {/* Quick Navigation Links */}
-        <QuickNavigation />
         {/* Dynamic Hero Banners from Admin */}
         <DynamicHeroBanners />
         
