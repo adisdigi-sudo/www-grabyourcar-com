@@ -129,7 +129,7 @@ export function InsuranceHeroForm({ policyType = "comprehensive", vehicleLabel =
               onChange={handleVehicleChange}
               className="border-0 shadow-none focus-visible:ring-0 text-sm md:text-lg h-12 md:h-14 bg-transparent uppercase placeholder:normal-case placeholder:text-muted-foreground/50 font-bold tracking-wide"
               autoFocus
-              maxLength={10}
+              maxLength={13}
             />
             {step === 1 && VEHICLE_REGEX.test(vehicleNumber) && (
               <div className="text-primary text-xs font-bold shrink-0">✓</div>
