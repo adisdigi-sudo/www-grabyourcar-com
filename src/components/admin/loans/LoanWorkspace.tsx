@@ -193,15 +193,52 @@ const EMICalculator = () => {
     const rightH = drawChecklistCard(rightX, "Corporate Applicant", corporateDocs);
     y = listTop + Math.max(leftH, rightH) + 8;
 
-    doc.setDrawColor(209, 213, 219);
-    doc.line(boxX, y, boxX + boxW, y);
+    // Terms & Conditions
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(17, 24, 39);
+    doc.text("Terms and Conditions", boxX, y);
+    doc.setDrawColor(16, 185, 129);
+    doc.setLineWidth(0.5);
+    doc.line(boxX, y + 1.5, boxX + 38, y + 1.5);
+    doc.setLineWidth(0.2);
     y += 6;
 
+    const terms = [
+      "This is an indicative EMI estimate only. Actual EMI, interest rate, and loan amount may vary based on lender policies, applicant credit profile, and prevailing market rates.",
+      "Loan approval is subject to verification of documents, credit score assessment, and the lending institution's internal policies.",
+      "Processing fees, documentation charges, stamp duty, and GST are applicable as per the respective bank or NBFC norms and are not included in this estimate.",
+      "Pre-payment or foreclosure charges may apply as per the lending institution's terms. Borrowers are advised to check the same before availing the loan.",
+      "The interest rate quoted is indicative and may change based on RBI guidelines, lender discretion, or applicant risk profile at the time of disbursement.",
+      "Insurance (vehicle insurance and/or loan protection plan) may be mandatory as per lender requirements and is not included in the EMI calculation above.",
+      "GrabYourCar acts as a loan facilitator and does not directly sanction or disburse loans. All loan decisions are made solely by the partner bank or NBFC.",
+      "This estimate is valid for 7 days from the date of generation. Rates and offers are subject to change without prior notice.",
+      "By proceeding with the loan application, the applicant consents to credit bureau checks and sharing of personal information with the lending partner.",
+      "In case of any dispute, the jurisdiction shall be Gurugram, Haryana, India.",
+    ];
+
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(7);
+    doc.setFontSize(6.5);
     doc.setTextColor(107, 114, 128);
-    doc.text("This is an indicative EMI estimate. Final loan terms, approval, and EMI may vary by lender policy, profile, and documentation.", boxX, y, { maxWidth: boxW });
-    doc.text(`Generated on ${format(new Date(), "dd MMM yyyy, hh:mm a")} | GrabYourCar`, boxX, h - 10);
+
+    terms.forEach((term, i) => {
+      const prefix = `${i + 1}. `;
+      const lines = doc.splitTextToSize(prefix + term, boxW - 4);
+      if (y + lines.length * 3.2 > h - 18) return; // prevent overflow
+      doc.text(lines, boxX + 2, y);
+      y += lines.length * 3.2 + 1;
+    });
+
+    // Footer
+    y = h - 14;
+    doc.setDrawColor(209, 213, 219);
+    doc.line(boxX, y, boxX + boxW, y);
+    y += 4;
+    doc.setFontSize(6.5);
+    doc.setTextColor(107, 114, 128);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Generated on ${format(new Date(), "dd MMM yyyy, hh:mm a")} | GrabYourCar | www.grabyourcar.com | +91 98559 24442`, w / 2, y, { align: "center" });
+    doc.text("Confidential - For customer discussion purposes only", w / 2, y + 3.5, { align: "center" });
 
     doc.save(`EMI_Plan_Rs${Math.round(amount / 100000)}L_${tenure}m.pdf`);
     toast.success("EMI plan PDF downloaded!");
