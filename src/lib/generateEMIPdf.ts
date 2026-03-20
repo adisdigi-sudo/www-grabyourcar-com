@@ -385,7 +385,7 @@ function generateStandaloneEMIPdf(
 // ═══════════════════════════════════════════════════════════
 function generateCarQuotePdf(
   doc: jsPDF, data: EMIData, COMPANY: EMIPDFConfig,
-  C: any, pageWidth: number, pageHeight: number, margin: number, contentWidth: number
+  C: ColorPalette, pageWidth: number, pageHeight: number, margin: number, contentWidth: number
 ) {
   let y = 0;
   const accentRgb = hexToRgb(COMPANY.accentColor || "#f59e0b");
