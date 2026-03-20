@@ -5846,6 +5846,8 @@ export type Database = {
           notes: string | null
           original_lead_id: string | null
           phone: string
+          picked_up_at: string | null
+          picked_up_by: string | null
           pincode: string | null
           pipeline_stage: string | null
           policy_expiry_date: string | null
@@ -5919,6 +5921,8 @@ export type Database = {
           notes?: string | null
           original_lead_id?: string | null
           phone: string
+          picked_up_at?: string | null
+          picked_up_by?: string | null
           pincode?: string | null
           pipeline_stage?: string | null
           policy_expiry_date?: string | null
@@ -5992,6 +5996,8 @@ export type Database = {
           notes?: string | null
           original_lead_id?: string | null
           phone?: string
+          picked_up_at?: string | null
+          picked_up_by?: string | null
           pincode?: string | null
           pipeline_stage?: string | null
           policy_expiry_date?: string | null
