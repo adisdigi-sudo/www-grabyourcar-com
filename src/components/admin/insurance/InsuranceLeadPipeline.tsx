@@ -135,6 +135,7 @@ export function formatSource(source: string | null, createdAt: string): string {
 }
 
 const displayPhone = (phone: string | null) => (!phone || phone.startsWith("IB_")) ? null : phone;
+const isLegacyClientId = (id: string) => id.startsWith("legacy-");
 const getSourceColor = (src: string | null) => SOURCE_COLORS[src || ""] || "bg-muted text-muted-foreground border-border";
 
 // ── Journey Breadcrumb Component ──
