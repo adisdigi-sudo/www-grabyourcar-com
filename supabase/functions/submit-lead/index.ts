@@ -28,7 +28,7 @@ const getPhoneCandidates = (value: string) => {
   const cleaned = cleanPhone(value);
   if (!cleaned) return [];
 
-  return Array.from(new Set([cleaned, `91${cleaned}`, `0${cleaned}']));
+  return Array.from(new Set([cleaned, `91${cleaned}`, `0${cleaned}`]));
 };
 
 function classifyVertical(input: string) {
