@@ -65,6 +65,8 @@ export type Client = {
   retarget_status: string | null;
   journey_last_event: string | null;
   journey_last_event_at: string | null;
+  picked_up_by: string | null;
+  picked_up_at: string | null;
   created_at: string;
 };
 
