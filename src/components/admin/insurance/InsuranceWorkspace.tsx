@@ -23,30 +23,82 @@ import { InsuranceComingRenewals } from "./InsuranceComingRenewals";
 
 type ActiveView = "pipeline" | "policy_book" | "renewals" | "bulk_tools";
 
+type LegacyInsuranceLead = {
+  id: string;
+  customer_name: string | null;
+  phone: string;
+  email: string | null;
+  vehicle_number: string | null;
+  vehicle_make: string | null;
+  vehicle_model: string | null;
+  vehicle_year: number | null;
+  policy_type: string | null;
+  current_insurer: string | null;
+  policy_expiry: string | null;
+  source: string | null;
+  status: string | null;
+  pipeline_stage: string | null;
+  priority: string | null;
+  assigned_executive: string | null;
+  follow_up_date: string | null;
+  contact_attempts: number | null;
+  quote_amount: number | null;
+  quote_insurer: string | null;
+  lost_reason: string | null;
+  ncb_percentage: number | null;
+  previous_claim: boolean | null;
+  notes: string | null;
+  created_at: string;
+};
+
+const normalizePhone = (value: string | null | undefined) => (value || "").replace(/\D/g, "");
+const normalizeVehicle = (value: string | null | undefined) => (value || "").replace(/\s+/g, "").toUpperCase();
+const leadKey = (phone: string | null | undefined, vehicle: string | null | undefined) => `${normalizePhone(phone)}::${normalizeVehicle(vehicle)}`;
+
+const mapLegacyLeadToClient = (lead: LegacyInsuranceLead): Client => ({
+  id: `legacy-${lead.id}`,
+  customer_name: lead.customer_name || "Insurance Lead",
+  phone: lead.phone,
+  email: lead.email,
+  city: null,
+  vehicle_number: lead.vehicle_number,
+  vehicle_make: lead.vehicle_make,
+  vehicle_model: lead.vehicle_model,
+  vehicle_year: lead.vehicle_year,
+  current_insurer: lead.current_insurer,
+  current_policy_type: lead.policy_type,
+  current_premium: null,
+  ncb_percentage: lead.ncb_percentage,
+  previous_claim: lead.previous_claim,
+  policy_expiry_date: lead.policy_expiry,
+  policy_start_date: null,
+  current_policy_number: null,
+  lead_source: lead.source,
+  lead_status: lead.status || "new",
+  assigned_executive: lead.assigned_executive,
+  priority: lead.priority || "medium",
+  pipeline_stage: lead.pipeline_stage || "new_lead",
+  contact_attempts: lead.contact_attempts,
+  quote_amount: lead.quote_amount,
+  quote_insurer: lead.quote_insurer,
+  lost_reason: lead.lost_reason,
+  follow_up_date: lead.follow_up_date,
+  follow_up_time: null,
+  call_status: null,
+  call_remarks: null,
+  renewal_reminder_set: false,
+  renewal_reminder_date: null,
+  incentive_eligible: false,
+  notes: lead.notes,
+  retarget_status: null,
+  journey_last_event: null,
+  journey_last_event_at: null,
+  created_at: lead.created_at,
+});
+
 export function InsuranceWorkspace() {
   const queryClient = useQueryClient();
   const [activeView, setActiveView] = useState<ActiveView>("pipeline");
-
-  useEffect(() => {
-    const channel = supabase
-      .channel("insurance-workspace-new-leads")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "insurance_clients" },
-        (payload) => {
-          const lead = payload.new as Client;
-          queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
-          toast.success("New insurance lead received", {
-            description: [lead.customer_name || "Unknown", lead.phone || "", lead.lead_source || "Unknown"].filter(Boolean).join(" • "),
-          });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [queryClient]);
   const [showImport, setShowImport] = useState(false);
   const [showAddLead, setShowAddLead] = useState(false);
   const [newLead, setNewLead] = useState({
@@ -55,21 +107,67 @@ export function InsuranceWorkspace() {
     lead_source: "Manual", notes: "",
   });
 
-  // Data - CRM leads
+  useEffect(() => {
+    const notifyAndRefresh = (lead: { customer_name?: string | null; phone?: string | null; lead_source?: string | null; source?: string | null }) => {
+      queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
+      toast.success("New insurance lead received", {
+        description: [lead.customer_name || "Unknown", lead.phone || "", lead.lead_source || lead.source || "Unknown"].filter(Boolean).join(" • "),
+      });
+    };
+
+    const channel = supabase
+      .channel("insurance-workspace-live")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "insurance_clients" },
+        (payload) => notifyAndRefresh(payload.new as Client)
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "insurance_leads" },
+        (payload) => notifyAndRefresh(payload.new as LegacyInsuranceLead)
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
   const { data: clients = [], isLoading } = useQuery({
     queryKey: ["ins-workspace-clients"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("insurance_clients")
-        .select("id, customer_name, phone, email, city, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_insurer, current_policy_type, current_premium, ncb_percentage, previous_claim, policy_expiry_date, policy_start_date, current_policy_number, lead_source, lead_status, assigned_executive, priority, pipeline_stage, contact_attempts, quote_amount, quote_insurer, lost_reason, follow_up_date, follow_up_time, call_status, call_remarks, renewal_reminder_set, renewal_reminder_date, incentive_eligible, notes, retarget_status, journey_last_event, journey_last_event_at, created_at")
-        .order("created_at", { ascending: false })
-        .limit(1000);
-      if (error) throw error;
-      return (data || []) as Client[];
+      const [clientsRes, legacyRes] = await Promise.all([
+        supabase
+          .from("insurance_clients")
+          .select("id, customer_name, phone, email, city, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_insurer, current_policy_type, current_premium, ncb_percentage, previous_claim, policy_expiry_date, policy_start_date, current_policy_number, lead_source, lead_status, assigned_executive, priority, pipeline_stage, contact_attempts, quote_amount, quote_insurer, lost_reason, follow_up_date, follow_up_time, call_status, call_remarks, renewal_reminder_set, renewal_reminder_date, incentive_eligible, notes, retarget_status, journey_last_event, journey_last_event_at, created_at")
+          .order("created_at", { ascending: false })
+          .limit(1000),
+        supabase
+          .from("insurance_leads")
+          .select("id, customer_name, phone, email, vehicle_number, vehicle_make, vehicle_model, vehicle_year, policy_type, current_insurer, policy_expiry, source, status, pipeline_stage, priority, assigned_executive, follow_up_date, contact_attempts, quote_amount, quote_insurer, lost_reason, ncb_percentage, previous_claim, notes, created_at")
+          .order("created_at", { ascending: false })
+          .limit(1000),
+      ]);
+
+      if (clientsRes.error) throw clientsRes.error;
+      if (legacyRes.error) throw legacyRes.error;
+
+      const primaryClients = (clientsRes.data || []) as Client[];
+      const legacyLeads = (legacyRes.data || []) as LegacyInsuranceLead[];
+      const existingKeys = new Set(primaryClients.map((client) => leadKey(client.phone, client.vehicle_number)));
+
+      const fallbackLegacyClients = legacyLeads
+        .filter((lead) => !!normalizePhone(lead.phone))
+        .filter((lead) => !existingKeys.has(leadKey(lead.phone, lead.vehicle_number)))
+        .map(mapLegacyLeadToClient);
+
+      return [...primaryClients, ...fallbackLegacyClients].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
     },
   });
 
-  // Data - Policies
   const { data: policies = [] } = useQuery({
     queryKey: ["ins-policies-book"],
     queryFn: async () => {
@@ -83,7 +181,6 @@ export function InsuranceWorkspace() {
     },
   });
 
-  // KPI counts
   const totalLeads = clients.length;
   const wonCount = clients.filter(c => {
     const stage = normalizeStage(c.pipeline_stage, c.lead_status);
@@ -104,7 +201,6 @@ export function InsuranceWorkspace() {
 
   const insNotifications = useMemo(() => buildInsuranceNotifications(clients), [clients]);
 
-  // Add Lead mutation
   const addLead = async () => {
     if (!newLead.phone.trim()) { toast.error("Phone is required"); return; }
     if (!newLead.customer_name.trim()) { toast.error("Name is required"); return; }
@@ -138,7 +234,6 @@ export function InsuranceWorkspace() {
 
   return (
     <div className="space-y-5">
-      {/* KPI Header */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 via-emerald-700 to-emerald-900 p-5 sm:p-6 text-white">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-60" />
         <div className="relative">
@@ -178,7 +273,6 @@ export function InsuranceWorkspace() {
         </div>
       </div>
 
-      {/* 4 View Tabs */}
       <div className="flex gap-2 bg-muted/50 p-1 rounded-xl border">
         {TABS.map(tab => (
           <Button key={tab.key} variant={activeView === tab.key ? "default" : "ghost"} size="sm"
@@ -199,7 +293,6 @@ export function InsuranceWorkspace() {
 
       {insNotifications.length > 0 && <StageNotificationBanner items={insNotifications} />}
 
-      {/* Import Dialog (Rollover) */}
       <LeadImportDialog open={showImport} onOpenChange={setShowImport} title="Rollover Insurance Data"
         templateColumns={["name", "phone", "city", "vehicle_number", "vehicle_make", "vehicle_model", "source"]}
         onImport={async (leads) => {
@@ -221,13 +314,11 @@ export function InsuranceWorkspace() {
         }}
       />
 
-      {/* Tab Content */}
       {activeView === "pipeline" && <InsuranceLeadPipeline clients={clients} isLoading={isLoading} />}
       {activeView === "policy_book" && <InsurancePolicyBook policies={policies} />}
-      {activeView === "renewals" && <InsuranceComingRenewals policies={policies} />}
+      {activeView === "renewals" && <InsuranceComingRenewals policies={policies as PolicyRecord[]} />}
       {activeView === "bulk_tools" && <BulkRenewalQuoteGenerator onClose={() => setActiveView("pipeline")} />}
 
-      {/* Add Lead Dialog */}
       <Dialog open={showAddLead} onOpenChange={setShowAddLead}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle className="flex items-center gap-2"><UserPlus className="h-5 w-5 text-primary" /> Add New Lead</DialogTitle></DialogHeader>
