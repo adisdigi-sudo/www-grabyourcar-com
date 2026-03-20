@@ -189,7 +189,7 @@ export function HSRPUnifiedBookingForm() {
     const cleaned = formData.registrationNumber.replace(/\s+/g, "").toUpperCase();
     if (rcLookupTimer.current) clearTimeout(rcLookupTimer.current);
 
-    if (/^[A-Z]{2}\d{1,2}[A-Z]{0,3}\d{4}$/.test(cleaned) && cleaned !== lastLookedUp.current) {
+    if (/^[A-Z]{2,3}\d{0,2}[A-Z]{0,3}\d{3,4}$/.test(cleaned) && cleaned.length >= 5 && cleaned !== lastLookedUp.current) {
       rcLookupTimer.current = setTimeout(() => {
         lastLookedUp.current = cleaned;
         rcLookup.lookup(cleaned).then((result) => {
