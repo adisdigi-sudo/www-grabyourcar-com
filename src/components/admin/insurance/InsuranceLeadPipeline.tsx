@@ -565,13 +565,14 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/30">
+               <TableRow className="bg-muted/30">
                   <TableHead className="text-[10px] font-bold uppercase w-8">#</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase">Customer</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase">Phone</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase">Vehicle</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase">Insurer</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase">Stage</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase">Picked Up</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase">Source</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase">Lead Time</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase">Expiry</TableHead>
