@@ -191,7 +191,7 @@ export const generateEMIPdf = async (data: EMIData, config?: Partial<EMIPDFConfi
 // ═══════════════════════════════════════════════════════════
 function generateStandaloneEMIPdf(
   doc: jsPDF, data: EMIData, COMPANY: EMIPDFConfig,
-  C: any, pageWidth: number, pageHeight: number, margin: number, contentWidth: number
+  C: ColorPalette, pageWidth: number, pageHeight: number, margin: number, contentWidth: number
 ) {
   let y = 0;
 
