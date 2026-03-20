@@ -797,6 +797,10 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                       disabled={savingEdit}
                       onClick={async () => {
                         if (!selectedClient) return;
+                        if (isLegacyClientId(selectedClient.id)) {
+                          toast.error("This lead is still syncing. Please refresh and try again.");
+                          return;
+                        }
                         setSavingEdit(true);
                         try {
                           const updates: Record<string, any> = {
@@ -821,9 +825,9 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                             .select("id, customer_name, phone, email, city, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_insurer, current_policy_type, current_premium, ncb_percentage, previous_claim, policy_expiry_date, policy_start_date, current_policy_number, lead_source, lead_status, assigned_executive, priority, pipeline_stage, contact_attempts, quote_amount, quote_insurer, lost_reason, follow_up_date, follow_up_time, call_status, call_remarks, renewal_reminder_set, renewal_reminder_date, incentive_eligible, notes, retarget_status, journey_last_event, journey_last_event_at, created_at")
                             .maybeSingle();
                           if (error) throw error;
+                          if (!data) throw new Error("Lead was not found in the CRM database. Please refresh once.");
 
-                          const refreshedClient = (data || { ...selectedClient, ...updates }) as Client;
-                          setSelectedClient(refreshedClient);
+                          setSelectedClient(data as Client);
                           queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
                           toast.success("Lead updated");
                         } catch (e: any) {
