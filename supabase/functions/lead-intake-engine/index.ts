@@ -229,42 +229,71 @@ async function routeToVerticalTable(
     switch (vertical) {
       case "Car Sales":
         await supabase.from("leads").insert({
-          name: data.name,
-          phone: data.phone,
-          email: data.email || null,
-          city: data.city || null,
-          source: data.source,
-          notes: data.message || null,
-        });
-        break;
-      case "Insurance":
-        await supabase.from("insurance_clients").insert({
           customer_name: data.name,
           phone: data.phone,
           email: data.email || null,
           city: data.city || null,
-          lead_source: data.source,
+          source: data.source,
           notes: data.message || null,
+          status: "new",
+          priority: "medium",
         });
         break;
+      case "Insurance": {
+        const { data: existingClient } = await supabase
+          .from("insurance_clients")
+          .select("id")
+          .eq("phone", data.phone)
+          .limit(1);
+
+        if (existingClient && existingClient.length > 0) {
+          await supabase.from("insurance_clients").update({
+            customer_name: data.name,
+            email: data.email || undefined,
+            city: data.city || undefined,
+            lead_source: data.source,
+            notes: data.message || undefined,
+            pipeline_stage: "new_lead",
+            lead_status: "new",
+            priority: "medium",
+            updated_at: new Date().toISOString(),
+          }).eq("id", existingClient[0].id);
+        } else {
+          await supabase.from("insurance_clients").insert({
+            customer_name: data.name,
+            phone: data.phone,
+            email: data.email || null,
+            city: data.city || null,
+            lead_source: data.source,
+            notes: data.message || null,
+            pipeline_stage: "new_lead",
+            lead_status: "new",
+            priority: "medium",
+          });
+        }
+        break;
+      }
       case "Loan":
         await supabase.from("car_loan_leads").insert({
           name: data.name,
           phone: data.phone,
+          email: data.email || null,
           city: data.city || null,
           source: data.source,
           notes: data.message || null,
+          status: "new",
         });
         break;
       default:
-        // General/HSRP/Accessories/Self Drive/Corporate → store in leads with vertical tag
         await supabase.from("leads").insert({
-          name: data.name,
+          customer_name: data.name,
           phone: data.phone,
           email: data.email || null,
           city: data.city || null,
           source: `${data.source} (${vertical})`,
           notes: data.message || null,
+          status: "new",
+          priority: "medium",
         });
         break;
     }

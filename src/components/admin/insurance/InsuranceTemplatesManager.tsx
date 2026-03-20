@@ -120,6 +120,8 @@ export function InsuranceTemplatesManager() {
         <Button size="sm" onClick={() => setIsCreating(true)}><Plus className="h-4 w-4 mr-1" /> New Template</Button>
       </div>
 
+      <InsurancePdfBrandingManager />
+
       {/* Variable Reference */}
       <Card>
         <CardContent className="p-4">
