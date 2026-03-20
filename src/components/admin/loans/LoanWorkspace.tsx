@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import {
-  Banknote, Plus, Phone, Car, GripVertical,
+  Banknote, Plus, Phone, Car, GripVertical, IndianRupee,
   PhoneCall, MessageCircle, CheckCircle2, XCircle, Building2,
   FileText, AlertTriangle, Clock, TrendingUp, Users, FileSpreadsheet,
   BookOpen, HeartHandshake, Wrench
