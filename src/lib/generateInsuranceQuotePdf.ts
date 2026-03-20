@@ -116,24 +116,33 @@ export const generateInsuranceQuotePdf = (data: InsuranceQuoteData) => {
   doc.setFillColor(...darkGreen);
   doc.rect(0, 31, pw, 3, "F");
 
-  // Brand
+  if (brandLogoUrl) {
+    try {
+      doc.addImage(brandLogoUrl, "PNG", m, 7, 26, 14);
+    } catch {}
+  }
+
   doc.setFontSize(22);
   doc.setTextColor(...white);
   doc.setFont("helvetica", "bold");
-  doc.text("GRABYOURCAR", m, 16);
+  doc.text(branding.brandName || "GRABYOURCAR", brandLogoUrl ? m + 30 : m, 16);
 
-  // Tagline
   doc.setFontSize(8.5);
   doc.setFont("helvetica", "normal");
-  doc.text("India's Smarter Way to Buy New Cars", m, 24);
+  doc.text(branding.brandTagline || "India's Smarter Way to Buy New Cars", brandLogoUrl ? m + 30 : m, 24);
 
-  // Website & badge
+  if (insurerLogoUrl) {
+    try {
+      doc.addImage(insurerLogoUrl, "PNG", pw - m - 22, 8, 22, 12);
+    } catch {}
+  }
+
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
-  doc.text("www.grabyourcar.com", pw - m, 16, { align: "right" });
+  doc.text("www.grabyourcar.com", pw - m, insurerLogoUrl ? 24 : 16, { align: "right" });
   doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
-  doc.text("Insurance Desk", pw - m, 24, { align: "right" });
+  doc.text(data.insuranceCompany || "Insurance Desk", pw - m, 29, { align: "right" });
 
   y = 42;
 
