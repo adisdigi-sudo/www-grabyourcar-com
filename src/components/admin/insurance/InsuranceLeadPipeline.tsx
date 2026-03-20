@@ -540,7 +540,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
       {/* Stage Filter Tabs */}
       <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
         <Button size="sm" variant={selectedStage === "all" ? "default" : "outline"} onClick={() => setSelectedStage("all")} className="shrink-0 h-8 text-xs">
-          All ({clients.length})
+          All ({pipelineClients.length})
         </Button>
         {PIPELINE_STAGES.map(stage => {
           const count = stageCounts[stage.value] || 0;
