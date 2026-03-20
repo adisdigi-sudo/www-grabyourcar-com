@@ -311,6 +311,8 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [draggingClient, setDraggingClient] = useState<Client | null>(null);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
+  const [editFields, setEditFields] = useState<Record<string, string>>({});
+  const [savingEdit, setSavingEdit] = useState(false);
 
   // Dialogs
   const [showLostDialog, setShowLostDialog] = useState(false);
