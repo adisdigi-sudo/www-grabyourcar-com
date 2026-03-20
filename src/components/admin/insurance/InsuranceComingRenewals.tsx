@@ -103,8 +103,8 @@ export function InsuranceComingRenewals({ policies }: InsuranceComingRenewalsPro
     }
     setWonSaving(true);
     try {
-      await supabase.from("insurance_policies").update({ status: "renewed" }).eq("id", targetPolicy.id);
-      
+      await supabase.from("insurance_policies").update({ status: "renewed", renewal_status: "renewed" }).eq("id", targetPolicy.id);
+
       const newStart = targetPolicy.expiry_date ? new Date(targetPolicy.expiry_date) : new Date();
       await supabase.from("insurance_policies").insert({
         client_id: targetPolicy.client_id,
@@ -116,6 +116,7 @@ export function InsuranceComingRenewals({ policies }: InsuranceComingRenewalsPro
         expiry_date: format(wonExpiryDate, "yyyy-MM-dd"),
         status: "active",
         is_renewal: true,
+        previous_policy_id: targetPolicy.id,
         issued_date: format(new Date(), "yyyy-MM-dd"),
         source_label: "Won (Renewal)",
         renewal_count: (targetPolicy.renewal_count || 0) + 1,
@@ -130,8 +131,11 @@ export function InsuranceComingRenewals({ policies }: InsuranceComingRenewalsPro
         current_insurer: wonInsurer.trim(),
         current_premium: wonPremium ? parseFloat(wonPremium) : targetPolicy.premium_amount,
         policy_expiry_date: format(wonExpiryDate, "yyyy-MM-dd"),
+        policy_start_date: format(newStart, "yyyy-MM-dd"),
         renewal_reminder_set: true,
         renewal_reminder_date: format(wonExpiryDate, "yyyy-MM-dd"),
+        retarget_status: "none",
+        retargeting_enabled: false,
       }).eq("id", targetPolicy.client_id);
 
       await supabase.from("insurance_activity_log").insert({
@@ -140,7 +144,7 @@ export function InsuranceComingRenewals({ policies }: InsuranceComingRenewalsPro
         activity_type: "stage_change",
         title: "Pipeline → Won (Renewal)",
         description: `Renewal won. New policy ${wonPolicyNumber} by ${wonInsurer}`,
-        metadata: { new_stage: "won", policy_number: wonPolicyNumber, insurer: wonInsurer } as any,
+        metadata: { new_stage: "policy_issued", policy_number: wonPolicyNumber, insurer: wonInsurer, previous_policy_id: targetPolicy.id } as any,
       });
 
       queryClient.invalidateQueries({ queryKey: ["ins-policies-book"] });
@@ -162,7 +166,8 @@ export function InsuranceComingRenewals({ policies }: InsuranceComingRenewalsPro
         pipeline_stage: "lost",
         lead_status: "lost",
         lost_reason: lostRemarks,
-        retarget_status: retargetNextYear ? "scheduled" : null,
+        retarget_status: retargetNextYear ? "scheduled" : "none",
+        retargeting_enabled: retargetNextYear,
       }).eq("id", targetPolicy.client_id);
 
       queryClient.invalidateQueries({ queryKey: ["ins-policies-book"] });

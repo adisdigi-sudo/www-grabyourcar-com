@@ -117,34 +117,57 @@ export const normalizeStage = (stage: string | null, leadStatus?: string | null)
 
 const CALL_STATUSES = ["Interested", "Not Interested", "Call Back", "No Answer", "Wrong Number"];
 const LOST_REASONS = ["Too expensive", "Existing agent", "No response", "Not renewing", "Competitor offer", "Other"];
-export const LEAD_SOURCES = ["Meta", "Google Ads", "Referral", "Walk-in", "WhatsApp Broadcast", "Website", "Manual", "Rollover"];
+export const LEAD_SOURCES = ["Meta Lead", "Google Lead", "Referral", "Walk-in Lead", "WhatsApp Lead", "Website Lead", "Manual", "Rollover"];
+
+const normalizeLeadSourceLabel = (source: string | null): string => {
+  if (!source) return "Unknown";
+  const normalized = source.toLowerCase().trim();
+
+  if (
+    normalized.includes("insurebook") ||
+    normalized.includes("rollover") ||
+    normalized.includes("csv_import") ||
+    normalized.includes("csv import") ||
+    source.startsWith("IB_")
+  ) {
+    return "Rollover";
+  }
+
+  if (normalized.includes("whatsapp")) return "WhatsApp Lead";
+  if (normalized.includes("walk")) return "Walk-in Lead";
+  if (normalized.includes("google")) return "Google Lead";
+  if (normalized.includes("meta") || normalized.includes("facebook") || normalized.includes("instagram")) return "Meta Lead";
+  if (normalized.includes("website") || normalized.includes("hero") || normalized.includes("form")) return "Website Lead";
+  if (normalized.includes("referral")) return "Referral";
+  if (normalized.includes("manual")) return "Manual";
+
+  return source.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+};
 
 const SOURCE_COLORS: Record<string, string> = {
-  Meta: "bg-blue-100 text-blue-700 border-blue-200",
-  "Google Ads": "bg-red-100 text-red-700 border-red-200",
+  "Meta Lead": "bg-blue-100 text-blue-700 border-blue-200",
+  "Google Lead": "bg-red-100 text-red-700 border-red-200",
   Referral: "bg-purple-100 text-purple-700 border-purple-200",
-  "Walk-in": "bg-green-100 text-green-700 border-green-200",
-  "WhatsApp Broadcast": "bg-emerald-100 text-emerald-700 border-emerald-200",
-  Website: "bg-indigo-100 text-indigo-700 border-indigo-200",
+  "Walk-in Lead": "bg-green-100 text-green-700 border-green-200",
+  "WhatsApp Lead": "bg-emerald-100 text-emerald-700 border-emerald-200",
+  "Website Lead": "bg-indigo-100 text-indigo-700 border-indigo-200",
   Manual: "bg-gray-100 text-gray-700 border-gray-200",
   Rollover: "bg-violet-100 text-violet-700 border-violet-200",
-  rollover: "bg-violet-100 text-violet-700 border-violet-200",
-  "CSV Import": "bg-violet-100 text-violet-700 border-violet-200",
-  csv_import: "bg-violet-100 text-violet-700 border-violet-200",
 };
 
 export function formatSource(source: string | null, createdAt: string): string {
-  if (!source) return "Unknown";
-  const normalized = source.toLowerCase();
-  const date = format(new Date(createdAt), "dd MMM yyyy");
-  if (["csv_import", "csv import", "rollover", "rollover_data"].includes(normalized)) return `Rollover • ${date}`;
-  if (source.startsWith("IB_") || normalized.includes("insurebook")) return `Rollover • ${date}`;
-  return source;
+  const label = normalizeLeadSourceLabel(source);
+  if (label === "Unknown") return label;
+  if (label === "Rollover") {
+    const date = format(new Date(createdAt), "dd MMM yyyy");
+    return `Rollover • ${date}`;
+  }
+  return label;
 }
 
 const displayPhone = (phone: string | null) => (!phone || phone.startsWith("IB_")) ? null : phone;
 const isLegacyClientId = (id: string) => id.startsWith("legacy-");
-const getSourceColor = (src: string | null) => SOURCE_COLORS[src || ""] || "bg-muted text-muted-foreground border-border";
+const getSourceColor = (src: string | null) => SOURCE_COLORS[normalizeLeadSourceLabel(src)] || "bg-muted text-muted-foreground border-border";
 
 // ── Journey Breadcrumb Component ──
 function JourneyBreadcrumb({ clientId }: { clientId: string }) {
@@ -208,43 +231,73 @@ function WonPolicyDialog({
     }
     setSaving(true);
     try {
-      // Create policy
+      const nextPolicyNumber = policyNumber.trim().toUpperCase();
+      const nextStartDate = startDate ? format(startDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd");
+      const nextExpiryDate = format(expiryDate, "yyyy-MM-dd");
+
+      const { data: activePolicies, error: activePoliciesError } = await supabase
+        .from("insurance_policies")
+        .select("id, renewal_count")
+        .eq("client_id", client.id)
+        .eq("status", "active")
+        .order("updated_at", { ascending: false });
+
+      if (activePoliciesError) throw activePoliciesError;
+
+      const previousPolicy = activePolicies?.[0] || null;
+      if (activePolicies && activePolicies.length > 0) {
+        const { error: renewError } = await supabase
+          .from("insurance_policies")
+          .update({ status: "renewed", renewal_status: "renewed" })
+          .eq("client_id", client.id)
+          .eq("status", "active");
+
+        if (renewError) throw renewError;
+      }
+
       await supabase.from("insurance_policies").insert({
         client_id: client.id,
-        policy_number: policyNumber.trim().toUpperCase(),
+        policy_number: nextPolicyNumber,
         insurer: insurer.trim(),
         premium_amount: premium ? parseFloat(premium) : null,
-        start_date: startDate ? format(startDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"),
-        expiry_date: format(expiryDate, "yyyy-MM-dd"),
+        start_date: nextStartDate,
+        expiry_date: nextExpiryDate,
         status: "active",
-        is_renewal: false,
+        is_renewal: Boolean(previousPolicy),
+        previous_policy_id: previousPolicy?.id || null,
         issued_date: format(new Date(), "yyyy-MM-dd"),
-        source_label: "Won (New)",
-        renewal_count: 0,
+        source_label: previousPolicy ? "Won (Renewal)" : "Won (New)",
+        renewal_count: previousPolicy ? (previousPolicy.renewal_count || 0) + 1 : 0,
         policy_type: client.current_policy_type || "comprehensive",
       } as any);
 
-      // Update client
       await supabase.from("insurance_clients").update({
         pipeline_stage: "policy_issued",
         lead_status: "won",
-        current_policy_number: policyNumber.trim().toUpperCase(),
+        current_policy_number: nextPolicyNumber,
         current_insurer: insurer.trim(),
         current_premium: premium ? parseFloat(premium) : null,
-        policy_expiry_date: format(expiryDate, "yyyy-MM-dd"),
-        policy_start_date: startDate ? format(startDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"),
+        policy_expiry_date: nextExpiryDate,
+        policy_start_date: nextStartDate,
         renewal_reminder_set: true,
-        renewal_reminder_date: format(expiryDate, "yyyy-MM-dd"),
+        renewal_reminder_date: nextExpiryDate,
         incentive_eligible: true,
+        retarget_status: "none",
+        retargeting_enabled: false,
       }).eq("id", client.id);
 
-      // Log activity
       await supabase.from("insurance_activity_log").insert({
         client_id: client.id,
         activity_type: "stage_change",
-        title: "Pipeline → Won",
-        description: `Policy ${policyNumber} issued by ${insurer}`,
-        metadata: { new_stage: "won", policy_number: policyNumber, insurer, premium } as any,
+        title: previousPolicy ? "Pipeline → Won (Renewal)" : "Pipeline → Won",
+        description: `Policy ${nextPolicyNumber} issued by ${insurer}`,
+        metadata: {
+          new_stage: "policy_issued",
+          policy_number: nextPolicyNumber,
+          insurer,
+          premium,
+          previous_policy_id: previousPolicy?.id || null,
+        } as any,
       });
 
       toast.success("🎉 Policy issued! Added to Policy Book");
@@ -365,12 +418,24 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
     });
   }, [selectedClient]);
 
-  // Filter - exclude policy_issued leads from pipeline (they are in Policy Book)
+  // Filter - exclude policy_issued leads from pipeline and deduplicate same lead/vehicle
   const pipelineClients = useMemo(() => {
-    return clients.filter(c => {
-      const stage = normalizeStage(c.pipeline_stage, c.lead_status);
-      return stage !== "policy_issued";
-    });
+    const uniqueLeads = new Map<string, Client>();
+
+    for (const client of clients) {
+      const stage = normalizeStage(client.pipeline_stage, client.lead_status);
+      if (stage === "policy_issued") continue;
+
+      const phoneKey = client.phone?.replace(/\D/g, "") || client.id;
+      const vehicleKey = client.vehicle_number?.replace(/\s+/g, "").toUpperCase() || "no-vehicle";
+      const dedupeKey = `${phoneKey}_${vehicleKey}`;
+
+      if (!uniqueLeads.has(dedupeKey)) {
+        uniqueLeads.set(dedupeKey, client);
+      }
+    }
+
+    return Array.from(uniqueLeads.values());
   }, [clients]);
 
   // Counts
@@ -379,6 +444,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
     PIPELINE_STAGES.forEach(s => { counts[s.value] = 0; });
     pipelineClients.forEach(c => {
       const stage = normalizeStage(c.pipeline_stage, c.lead_status);
+      if (stage === "lost" && c.retarget_status === "scheduled") return;
       if (counts[stage] !== undefined) counts[stage]++;
     });
     return counts;
@@ -390,7 +456,9 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
       ? pipelineClients
       : selectedStage === "retarget"
         ? pipelineClients.filter(c => c.retarget_status === "scheduled")
-        : pipelineClients.filter(c => normalizeStage(c.pipeline_stage, c.lead_status) === selectedStage);
+        : selectedStage === "lost"
+          ? pipelineClients.filter(c => normalizeStage(c.pipeline_stage, c.lead_status) === "lost" && c.retarget_status !== "scheduled")
+          : pipelineClients.filter(c => normalizeStage(c.pipeline_stage, c.lead_status) === selectedStage);
     if (search.trim()) {
       const s = search.toLowerCase();
       result = result.filter(c =>
@@ -411,7 +479,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
     });
   }, [pipelineClients, selectedStage, search]);
 
-  const retargetCount = useMemo(() => clients.filter(c => c.retarget_status === "scheduled").length, [clients]);
+  const retargetCount = useMemo(() => pipelineClients.filter(c => c.retarget_status === "scheduled").length, [pipelineClients]);
 
   // Move mutation
   const moveStage = useMutation({
@@ -947,7 +1015,12 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
           queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
           queryClient.invalidateQueries({ queryKey: ["ins-policies-book"] });
           setShowWonDialog(false);
-          setSelectedClient(null);
+          if (pendingMoveClient) {
+            setSelectedClient(pendingMoveClient);
+            setShowUploadPolicy(true);
+          } else {
+            setSelectedClient(null);
+          }
         }}
       />
 
@@ -1042,7 +1115,14 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
         <Dialog open={showUploadPolicy} onOpenChange={setShowUploadPolicy}>
           <DialogContent className="max-w-lg">
             <DialogHeader><DialogTitle>Upload Policy Document</DialogTitle></DialogHeader>
-            <InsurancePolicyDocumentUploader defaultClientId={selectedClient.id} onDone={() => setShowUploadPolicy(false)} />
+            <InsurancePolicyDocumentUploader
+              defaultClientId={selectedClient.id}
+              onDone={() => {
+                setShowUploadPolicy(false);
+                queryClient.invalidateQueries({ queryKey: ["ins-policies-book"] });
+                queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
+              }}
+            />
           </DialogContent>
         </Dialog>
       )}
