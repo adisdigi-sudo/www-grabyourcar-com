@@ -586,15 +586,39 @@ export const LoanWorkspace = () => {
 
   const pipelineStages = LOAN_STAGES.filter(s => s !== 'lost');
 
-  const TABS = [
-    { key: "pipeline" as const, label: "Lead Pipeline", icon: Banknote, count: totalApps },
-    { key: "disbursement" as const, label: "Disbursement Book", icon: BookOpen, count: disbursed },
-    { key: "after_sales" as const, label: "After Sales", icon: HeartHandshake, count: 0 },
-    { key: "bulk_tools" as const, label: "Bulk Tools", icon: Wrench, count: 0 },
+  // Stage counts for sidebar
+  const stageCounts = useMemo(() => {
+    const counts: Record<string, { count: number; value: number }> = {};
+    LOAN_STAGES.forEach(s => {
+      const stageApps = applications.filter((a: any) => a.stage === s);
+      counts[s] = {
+        count: stageApps.length,
+        value: stageApps.reduce((sum: number, a: any) => sum + (Number(a.loan_amount) || 0), 0),
+      };
+    });
+    return counts;
+  }, [applications]);
+
+  // Sidebar stage icons
+  const STAGE_ICONS: Record<string, any> = {
+    new_lead: Users,
+    smart_calling: PhoneCall,
+    interested: TrendingUp,
+    offer_shared: Building2,
+    loan_application: FileText,
+    disbursed: CheckCircle2,
+    lost: XCircle,
+  };
+
+  const SIDEBAR_ITEMS = [
+    { key: 'pipeline' as const, label: 'Lead Pipeline', icon: Banknote, description: 'Full Kanban board' },
+    { key: 'disbursement' as const, label: 'Disbursement Book', icon: BookOpen, description: `${disbursed} loans disbursed` },
+    { key: 'after_sales' as const, label: 'After Sales', icon: HeartHandshake, description: 'Follow-up & feedback' },
+    { key: 'bulk_tools' as const, label: 'Bulk Tools', icon: Wrench, description: 'Import & bulk actions' },
   ];
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* KPI Header */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-600 via-teal-700 to-teal-900 p-5 sm:p-6 text-white">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-60" />
@@ -633,19 +657,6 @@ export const LoanWorkspace = () => {
             ))}
           </div>
         </div>
-      </div>
-
-      {/* 4 View Tabs */}
-      <div className="flex gap-2 bg-muted/50 p-1 rounded-xl border">
-        {TABS.map(tab => (
-          <Button key={tab.key} variant={activeView === tab.key ? "default" : "ghost"} size="sm"
-            className={cn("flex-1 gap-1.5 text-xs", activeView === tab.key && "shadow-sm")}
-            onClick={() => setActiveView(tab.key)}>
-            <tab.icon className="h-3.5 w-3.5" />
-            {tab.label}
-            {tab.count > 0 && <Badge variant={activeView === tab.key ? "secondary" : "outline"} className="text-[9px] h-4 px-1">{tab.count}</Badge>}
-          </Button>
-        ))}
       </div>
 
       {loanNotifications.length > 0 && <StageNotificationBanner items={loanNotifications} />}
@@ -730,50 +741,222 @@ export const LoanWorkspace = () => {
         }}
       />
 
-      {/* Tab Content */}
-      {activeView === "pipeline" && (
-        <>
-          <EMICalculator />
-
-          {/* Drag hint */}
-          {draggingApp && (
-            <div className="text-xs text-center text-muted-foreground bg-muted/50 rounded-lg py-1.5 border border-dashed border-primary/30 animate-pulse">
-              Drop on a stage to move <strong>{draggingApp.customer_name}</strong>
+      {/* ═══ MAIN LAYOUT: Left Sidebar + Right Content ═══ */}
+      <div className="flex gap-4 min-h-[600px]">
+        {/* ── Left Sidebar Panel ── */}
+        <div className="w-[260px] shrink-0 space-y-3">
+          {/* Navigation */}
+          <div className="rounded-xl border bg-card overflow-hidden">
+            <div className="px-3 py-2.5 bg-muted/50 border-b">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Navigation</p>
             </div>
-          )}
+            <div className="p-1.5 space-y-0.5">
+              {SIDEBAR_ITEMS.map(item => {
+                const isActive = activeView === item.key;
+                return (
+                  <button
+                    key={item.key}
+                    onClick={() => setActiveView(item.key)}
+                    className={cn(
+                      "w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-left transition-all group",
+                      isActive
+                        ? "bg-emerald-500/10 text-emerald-700 border border-emerald-500/20 shadow-sm"
+                        : "hover:bg-muted/60 text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <div className={cn(
+                      "w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors",
+                      isActive ? "bg-emerald-500 text-white" : "bg-muted group-hover:bg-muted-foreground/10"
+                    )}>
+                      <item.icon className="h-3.5 w-3.5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className={cn("text-xs font-semibold truncate", isActive && "text-emerald-700")}>{item.label}</p>
+                      <p className="text-[9px] text-muted-foreground truncate">{item.description}</p>
+                    </div>
+                    {item.key === 'pipeline' && <Badge variant="secondary" className="text-[9px] h-4 px-1.5 shrink-0">{totalApps}</Badge>}
+                    {item.key === 'disbursement' && <Badge variant="secondary" className="text-[9px] h-4 px-1.5 shrink-0 bg-emerald-500/10 text-emerald-600">{disbursed}</Badge>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-          {/* Kanban Board */}
-          <ScrollArea className="w-full">
-            <div className="flex min-w-max">
-              {pipelineStages.map((stage, colIdx) => {
-                const stageApps = applications.filter((a: any) => a.stage === stage);
-                const stageValue = stageApps.reduce((s: number, a: any) => s + (Number(a.loan_amount) || 0), 0);
-                const isDragOver = dragOverStage === stage;
-                const showDropIndicator = draggingApp && isDragOver;
+          {/* Pipeline Stage Breakdown */}
+          <div className="rounded-xl border bg-card overflow-hidden">
+            <div className="px-3 py-2.5 bg-muted/50 border-b">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Pipeline Stages</p>
+            </div>
+            <div className="p-1.5 space-y-0.5">
+              {LOAN_STAGES.map(stage => {
+                const StageIcon = STAGE_ICONS[stage] || Banknote;
+                const sc = stageCounts[stage];
+                const isActive = activeView === 'pipeline';
+                const barWidth = totalApps > 0 ? Math.max((sc.count / totalApps) * 100, 2) : 0;
 
                 return (
-                  <div key={stage}
-                    className={`w-[280px] shrink-0 flex flex-col ${colIdx > 0 ? 'border-l border-border/40' : ''}`}
-                    onDragOver={e => handleDragOver(e, stage)}
-                    onDragLeave={handleDragLeave}
-                    onDrop={e => handleDrop(e, stage)}>
-                    <div className={`mx-1.5 rounded-lg border p-2.5 mb-2 transition-all ${STAGE_COLORS[stage]} ${showDropIndicator ? 'ring-2 ring-primary scale-[1.02] shadow-lg' : ''}`}>
-                      <div className="flex justify-between items-center">
-                        <span className="font-semibold text-xs">{STAGE_LABELS[stage]}</span>
-                        <Badge variant="secondary" className="text-[10px] h-5">{stageApps.length}</Badge>
+                  <button
+                    key={stage}
+                    onClick={() => setActiveView('pipeline')}
+                    className={cn(
+                      "w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left transition-all group relative overflow-hidden",
+                      "hover:bg-muted/40"
+                    )}
+                  >
+                    {/* Background fill bar */}
+                    <div
+                      className={cn("absolute inset-y-0 left-0 opacity-[0.07] transition-all rounded-lg", STAGE_COLORS[stage]?.split(' ')[0])}
+                      style={{ width: `${barWidth}%` }}
+                    />
+                    <div className="relative flex items-center gap-2 w-full">
+                      <div className={cn("w-6 h-6 rounded-md flex items-center justify-center shrink-0", STAGE_COLORS[stage])}>
+                        <StageIcon className="h-3 w-3" />
                       </div>
-                      {stageValue > 0 && <p className="text-[10px] mt-1 opacity-70">₹{(stageValue / 100000).toFixed(1)}L</p>}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11px] font-medium truncate text-foreground">{STAGE_LABELS[stage]}</p>
+                        {sc.value > 0 && (
+                          <p className="text-[9px] text-muted-foreground">Rs. {(sc.value / 100000).toFixed(1)}L</p>
+                        )}
+                      </div>
+                      <Badge
+                        variant="secondary"
+                        className={cn(
+                          "text-[10px] h-5 min-w-[24px] justify-center shrink-0 font-bold",
+                          sc.count > 0 ? STAGE_COLORS[stage] : "text-muted-foreground/40"
+                        )}
+                      >
+                        {sc.count}
+                      </Badge>
                     </div>
-                    <div className={`flex-1 px-1.5 pb-2 min-h-[120px] transition-all ${showDropIndicator ? 'bg-primary/5' : ''}`}>
-                      {stageApps.length === 0 && !showDropIndicator && (
-                        <div className="h-full flex items-center justify-center text-[11px] text-muted-foreground/40 py-8">No leads</div>
-                      )}
-                      {showDropIndicator && stageApps.length === 0 && (
-                        <div className="h-full flex items-center justify-center text-[11px] text-primary/60 py-8 font-medium">Drop here ✓</div>
-                      )}
-                      {stageApps.map((app: any, cardIdx: number) => (
-                        <div key={app.id} className={cardIdx > 0 ? 'border-t border-border/30 pt-2 mt-2' : ''}>
-                          <LoanCard app={app} stage={stage}
+                  </button>
+                );
+              })}
+            </div>
+            {/* Pipeline total */}
+            <div className="px-3 py-2 bg-muted/30 border-t flex items-center justify-between">
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Total</span>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-muted-foreground">{totalValue > 0 ? `Rs. ${(totalValue / 100000).toFixed(1)}L` : ''}</span>
+                <Badge className="text-[10px] h-5 font-bold bg-foreground/10 text-foreground">{totalApps}</Badge>
+              </div>
+            </div>
+          </div>
+
+          {/* Disbursement Quick Stats */}
+          <div className="rounded-xl border bg-card overflow-hidden">
+            <div className="px-3 py-2.5 bg-emerald-500/5 border-b border-emerald-500/10">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 flex items-center gap-1.5">
+                <IndianRupee className="h-3 w-3" /> Disbursement Summary
+              </p>
+            </div>
+            <div className="p-3 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-muted-foreground">Loans Disbursed</span>
+                <span className="text-sm font-bold text-emerald-600">{disbursed}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-muted-foreground">Total Value</span>
+                <span className="text-sm font-bold text-foreground">Rs. {(totalValue / 100000).toFixed(1)}L</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-muted-foreground">Conversion Rate</span>
+                <span className="text-sm font-bold text-foreground">{totalApps > 0 ? ((disbursed / totalApps) * 100).toFixed(1) : '0'}%</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-muted-foreground">In Pipeline</span>
+                <span className="text-sm font-bold text-amber-600">{inPipeline}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-muted-foreground">Lost Leads</span>
+                <span className="text-sm font-bold text-red-500">{lost}</span>
+              </div>
+              {totalApps > 0 && (
+                <div className="pt-1.5">
+                  <div className="h-2 rounded-full overflow-hidden bg-muted flex">
+                    <div className="bg-emerald-500 transition-all" style={{ width: `${(disbursed / totalApps) * 100}%` }} />
+                    <div className="bg-amber-400 transition-all" style={{ width: `${(inPipeline / totalApps) * 100}%` }} />
+                    <div className="bg-red-400 transition-all" style={{ width: `${(lost / totalApps) * 100}%` }} />
+                  </div>
+                  <div className="flex justify-between mt-1">
+                    <span className="text-[8px] text-emerald-600 flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />Won</span>
+                    <span className="text-[8px] text-amber-600 flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />Pipeline</span>
+                    <span className="text-[8px] text-red-500 flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded-full bg-red-400 inline-block" />Lost</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Right Content Panel ── */}
+        <div className="flex-1 min-w-0">
+          {activeView === "pipeline" && (
+            <div className="space-y-4">
+              <EMICalculator />
+
+              {draggingApp && (
+                <div className="text-xs text-center text-muted-foreground bg-muted/50 rounded-lg py-1.5 border border-dashed border-primary/30 animate-pulse">
+                  Drop on a stage to move <strong>{draggingApp.customer_name}</strong>
+                </div>
+              )}
+
+              {/* Kanban Board */}
+              <ScrollArea className="w-full">
+                <div className="flex min-w-max">
+                  {pipelineStages.map((stage, colIdx) => {
+                    const stageApps = applications.filter((a: any) => a.stage === stage);
+                    const stageValue = stageApps.reduce((s: number, a: any) => s + (Number(a.loan_amount) || 0), 0);
+                    const isDragOver = dragOverStage === stage;
+                    const showDropIndicator = draggingApp && isDragOver;
+
+                    return (
+                      <div key={stage}
+                        className={`w-[260px] shrink-0 flex flex-col ${colIdx > 0 ? 'border-l border-border/40' : ''}`}
+                        onDragOver={e => handleDragOver(e, stage)}
+                        onDragLeave={handleDragLeave}
+                        onDrop={e => handleDrop(e, stage)}>
+                        <div className={`mx-1.5 rounded-lg border p-2.5 mb-2 transition-all ${STAGE_COLORS[stage]} ${showDropIndicator ? 'ring-2 ring-primary scale-[1.02] shadow-lg' : ''}`}>
+                          <div className="flex justify-between items-center">
+                            <span className="font-semibold text-xs">{STAGE_LABELS[stage]}</span>
+                            <Badge variant="secondary" className="text-[10px] h-5">{stageApps.length}</Badge>
+                          </div>
+                          {stageValue > 0 && <p className="text-[10px] mt-1 opacity-70">Rs. {(stageValue / 100000).toFixed(1)}L</p>}
+                        </div>
+                        <div className={`flex-1 px-1.5 pb-2 min-h-[120px] transition-all ${showDropIndicator ? 'bg-primary/5' : ''}`}>
+                          {stageApps.length === 0 && !showDropIndicator && (
+                            <div className="h-full flex items-center justify-center text-[11px] text-muted-foreground/40 py-8">No leads</div>
+                          )}
+                          {showDropIndicator && stageApps.length === 0 && (
+                            <div className="h-full flex items-center justify-center text-[11px] text-primary/60 py-8 font-medium">Drop here</div>
+                          )}
+                          {stageApps.map((app: any, cardIdx: number) => (
+                            <div key={app.id} className={cardIdx > 0 ? 'border-t border-border/30 pt-2 mt-2' : ''}>
+                              <LoanCard app={app} stage={stage}
+                                onDragStart={handleDragStart} onDragEnd={handleDragEnd}
+                                onClick={handleCardClick} onWhatsApp={handleWhatsApp}
+                                isDragging={draggingApp?.id === app.id} formatAmount={formatAmount} />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Lost Column */}
+                  <div className="w-[260px] shrink-0 flex flex-col border-l border-border/40"
+                    onDragOver={e => handleDragOver(e, 'lost')}
+                    onDragLeave={handleDragLeave}
+                    onDrop={e => handleDrop(e, 'lost')}>
+                    <div className={`mx-1.5 rounded-lg border p-2.5 mb-2 transition-all ${STAGE_COLORS['lost']} ${dragOverStage === 'lost' && draggingApp ? 'ring-2 ring-red-500 scale-[1.02] shadow-lg' : ''}`}>
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold text-xs">Lost</span>
+                        <Badge variant="secondary" className="text-[10px] h-5">{lost}</Badge>
+                      </div>
+                    </div>
+                    <div className={`flex-1 px-1.5 pb-2 min-h-[120px] transition-all ${dragOverStage === 'lost' && draggingApp ? 'bg-red-500/5' : ''}`}>
+                      {applications.filter((a: any) => a.stage === 'lost').slice(0, 5).map((app: any, i: number) => (
+                        <div key={app.id} className={i > 0 ? 'border-t border-border/30 pt-2 mt-2' : ''}>
+                          <LoanCard app={app} stage="lost"
                             onDragStart={handleDragStart} onDragEnd={handleDragEnd}
                             onClick={handleCardClick} onWhatsApp={handleWhatsApp}
                             isDragging={draggingApp?.id === app.id} formatAmount={formatAmount} />
@@ -781,45 +964,22 @@ export const LoanWorkspace = () => {
                       ))}
                     </div>
                   </div>
-                );
-              })}
-
-              {/* Lost Column */}
-              <div className="w-[280px] shrink-0 flex flex-col border-l border-border/40"
-                onDragOver={e => handleDragOver(e, 'lost')}
-                onDragLeave={handleDragLeave}
-                onDrop={e => handleDrop(e, 'lost')}>
-                <div className={`mx-1.5 rounded-lg border p-2.5 mb-2 transition-all ${STAGE_COLORS['lost']} ${dragOverStage === 'lost' && draggingApp ? 'ring-2 ring-red-500 scale-[1.02] shadow-lg' : ''}`}>
-                  <div className="flex justify-between items-center">
-                    <span className="font-semibold text-xs">Lost</span>
-                    <Badge variant="secondary" className="text-[10px] h-5">{lost}</Badge>
-                  </div>
                 </div>
-                <div className={`flex-1 px-1.5 pb-2 min-h-[120px] transition-all ${dragOverStage === 'lost' && draggingApp ? 'bg-red-500/5' : ''}`}>
-                  {applications.filter((a: any) => a.stage === 'lost').slice(0, 5).map((app: any, i: number) => (
-                    <div key={app.id} className={i > 0 ? 'border-t border-border/30 pt-2 mt-2' : ''}>
-                      <LoanCard app={app} stage="lost"
-                        onDragStart={handleDragStart} onDragEnd={handleDragEnd}
-                        onClick={handleCardClick} onWhatsApp={handleWhatsApp}
-                        isDragging={draggingApp?.id === app.id} formatAmount={formatAmount} />
-                    </div>
-                  ))}
-                </div>
-              </div>
+                <ScrollBar orientation="horizontal" />
+              </ScrollArea>
             </div>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
-        </>
-      )}
+          )}
 
-      {activeView === "disbursement" && <LoanDisbursementBook applications={applications} />}
-      {activeView === "after_sales" && <LoanAfterSales applications={applications} />}
-      {activeView === "bulk_tools" && (
-        <div className="text-center py-12">
-          <Wrench className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
-          <p className="text-sm text-muted-foreground">Use the Import button above to bulk import leads via CSV</p>
+          {activeView === "disbursement" && <LoanDisbursementBook applications={applications} />}
+          {activeView === "after_sales" && <LoanAfterSales applications={applications} />}
+          {activeView === "bulk_tools" && (
+            <div className="text-center py-12">
+              <Wrench className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
+              <p className="text-sm text-muted-foreground">Use the Import button above to bulk import leads via CSV</p>
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Stage Detail Modal */}
       {selectedApp && (
