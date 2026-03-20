@@ -5,12 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SmartDatePicker } from "@/components/ui/smart-date-picker";
 import { cn } from "@/lib/utils";
-import { format, isWithinInterval } from "date-fns";
+import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, BookOpen, User, PhoneCall, MessageSquare, Eye, CalendarIcon, Send } from "lucide-react";
+import { Search, BookOpen, User, Download, Eye, CalendarIcon, Send, Upload } from "lucide-react";
 import { toast } from "sonner";
+import { InsurancePolicyDocumentUploader } from "./InsurancePolicyDocumentUploader";
+import { useQueryClient } from "@tanstack/react-query";
 
 export type PolicyRecord = {
   id: string;
@@ -53,6 +56,9 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [uploadPolicyId, setUploadPolicyId] = useState<string | null>(null);
+  const [uploadClientId, setUploadClientId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   const partners = useMemo(() => {
     const set = new Set(policies.map(p => p.insurer).filter(Boolean));
@@ -238,10 +244,25 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
                       <TableCell>{sourceLabel(policy)}</TableCell>
                       <TableCell>
                         {policy.policy_document_url ? (
-                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => window.open(policy.policy_document_url!, "_blank")}>
-                            <Eye className="h-3 w-3 text-primary" />
+                          <div className="flex items-center gap-0.5">
+                            <Button variant="ghost" size="icon" className="h-6 w-6" title="View" onClick={() => window.open(policy.policy_document_url!, "_blank")}>
+                              <Eye className="h-3 w-3 text-primary" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-6 w-6" title="Download" onClick={() => {
+                              const a = document.createElement("a");
+                              a.href = policy.policy_document_url!;
+                              a.download = `${policy.policy_number || "policy"}.pdf`;
+                              a.target = "_blank";
+                              a.click();
+                            }}>
+                              <Download className="h-3 w-3 text-muted-foreground" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button variant="ghost" size="icon" className="h-6 w-6" title="Upload Document" onClick={() => { setUploadPolicyId(policy.id); setUploadClientId(policy.client_id); }}>
+                            <Upload className="h-3 w-3 text-amber-500" />
                           </Button>
-                        ) : <span className="text-muted-foreground">—</span>}
+                        )}
                       </TableCell>
                     </TableRow>
                   );
@@ -251,6 +272,26 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Upload Document Dialog */}
+      <Dialog open={!!uploadPolicyId} onOpenChange={(open) => { if (!open) { setUploadPolicyId(null); setUploadClientId(null); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-sm">Upload Policy Document</DialogTitle>
+          </DialogHeader>
+          {uploadPolicyId && (
+            <InsurancePolicyDocumentUploader
+              defaultPolicyId={uploadPolicyId}
+              defaultClientId={uploadClientId || undefined}
+              onDone={() => {
+                setUploadPolicyId(null);
+                setUploadClientId(null);
+                queryClient.invalidateQueries({ queryKey: ["ins-policies"] });
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
