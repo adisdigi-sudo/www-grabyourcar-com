@@ -568,7 +568,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableRow><TableCell colSpan={10} className="text-center py-12 text-muted-foreground">Loading...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={11} className="text-center py-12 text-muted-foreground">Loading...</TableCell></TableRow>
                 ) : filtered.length === 0 ? (
                   <TableRow><TableCell colSpan={10} className="text-center py-12 text-muted-foreground">
                     <Shield className="h-8 w-8 mx-auto mb-2 opacity-30" />
