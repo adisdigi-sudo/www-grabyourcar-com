@@ -1,14 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Car, Shield, Loader2, Zap, Sparkles, Gift, Star, Phone } from "lucide-react";
+import { Car, Shield, Loader2, Zap, Sparkles, Gift, Star } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { captureInsuranceLead } from "@/lib/insuranceLeadCapture";
 
 const PARTNER_URL = "https://pbpci.policybazaar.com/?token=o5aMAq6qZ1tLXTODNpDyVbk4MP6pWDnq6hhpN5u%2BmyJLH9wHcj81JpXwkmKwLPBcDQlOpmql%2FtQgJKjQaQBk%2F6h5%2Bh6wxuKCTAtXRNQ1WBN7m6J2EwinhUfoywZ8E%2B%2BJFZQlcTcGh6a4upMh26MliMAXl%2FqWXTt%2B579hIW3zzfAGZ7aSNJ3WTeVCdfy%2FjJGe%2BQa3M6xdyWiN9%2FuvLVHo9A%3D%3D";
-
-// Supports: DL01AB1234, DL1CAJ4534, BH01AA1234, PBW4543 (vintage), etc.
-const VEHICLE_REGEX = /^[A-Z]{2,3}\d{0,2}[A-Z]{0,3}\d{3,4}$/;
 
 const scrollingOffers = [
   { icon: Car, text: "1 Day Free Self-Drive Car" },
@@ -27,18 +24,38 @@ interface InsuranceHeroFormProps {
 
 export function InsuranceHeroForm({ policyType = "comprehensive", vehicleLabel = "vehicle", compact = false }: InsuranceHeroFormProps) {
   const [step, setStep] = useState<1 | 2>(1);
-  const [vehicleNumber, setVehicleNumber] = useState("");
+  // Segmented vehicle number fields
+  const [state, setState] = useState(""); // e.g. DL, MH, PB
+  const [rtoCode, setRtoCode] = useState(""); // e.g. 01, 1, or empty for vintage
+  const [series, setSeries] = useState(""); // e.g. AB, CAJ, or empty
+  const [number, setNumber] = useState(""); // e.g. 1234, 4343
+
   const [phone, setPhone] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const hasSubmittedRef = useRef(false);
+
+  const stateRef = useRef<HTMLInputElement>(null);
+  const rtoRef = useRef<HTMLInputElement>(null);
+  const seriesRef = useRef<HTMLInputElement>(null);
+  const numberRef = useRef<HTMLInputElement>(null);
   const phoneInputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-advance to step 2 when vehicle number is valid
+  const getFullNumber = useCallback(() => {
+    return `${state}${rtoCode}${series}${number}`.toUpperCase();
+  }, [state, rtoCode, series, number]);
+
+  const isVehicleComplete = useCallback(() => {
+    // Minimum: 2 letter state + at least 3-4 digit number = 5+ chars total
+    const full = getFullNumber();
+    return state.length >= 2 && number.length >= 3 && full.length >= 5;
+  }, [state, number, getFullNumber]);
+
+  // Auto-advance to step 2 when vehicle number is complete
   useEffect(() => {
-    if (step === 1 && VEHICLE_REGEX.test(vehicleNumber)) {
+    if (step === 1 && isVehicleComplete() && number.length >= 4) {
       setStep(2);
     }
-  }, [vehicleNumber, step]);
+  }, [state, rtoCode, series, number, step, isVehicleComplete]);
 
   // Auto-focus phone input when step 2 appears
   useEffect(() => {
@@ -54,12 +71,13 @@ export function InsuranceHeroForm({ policyType = "comprehensive", vehicleLabel =
       hasSubmittedRef.current = true;
       void handleSubmit();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phone, step, isLoading]);
 
   const handleSubmit = async () => {
-    const normalizedVehicleNumber = vehicleNumber.trim().toUpperCase();
+    const fullVehicle = getFullNumber();
 
-    if (!VEHICLE_REGEX.test(normalizedVehicleNumber)) {
+    if (!isVehicleComplete()) {
       hasSubmittedRef.current = false;
       toast.error(`Please enter a valid ${vehicleLabel} registration number`);
       return;
@@ -76,7 +94,7 @@ export function InsuranceHeroForm({ policyType = "comprehensive", vehicleLabel =
     try {
       await captureInsuranceLead({
         phone,
-        vehicleNumber: normalizedVehicleNumber,
+        vehicleNumber: fullVehicle,
         policyType,
         source: `insurance_hero_${policyType}`,
       });
@@ -86,9 +104,9 @@ export function InsuranceHeroForm({ policyType = "comprehensive", vehicleLabel =
     }
 
     try {
-      await navigator.clipboard.writeText(normalizedVehicleNumber);
+      await navigator.clipboard.writeText(fullVehicle);
     } catch {
-      // Clipboard may be unavailable in some browsers
+      // Clipboard may be unavailable
     }
 
     const { trackLeadConversion } = await import("@/lib/adTracking");
@@ -98,14 +116,43 @@ export function InsuranceHeroForm({ policyType = "comprehensive", vehicleLabel =
     window.location.assign(PARTNER_URL);
   };
 
-  const handleVehicleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Only allow alphanumeric characters
-    const value = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
-    setVehicleNumber(value);
-    if (step === 2 && !VEHICLE_REGEX.test(value)) {
-      setStep(1);
-      setPhone("");
-      hasSubmittedRef.current = false;
+  const handleStateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/[^a-zA-Z]/g, "").toUpperCase().slice(0, 3);
+    setState(val);
+    if (val.length >= 2) {
+      setTimeout(() => rtoRef.current?.focus(), 30);
+    }
+  };
+
+  const handleRtoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/\D/g, "").slice(0, 2);
+    setRtoCode(val);
+    if (val.length >= 2) {
+      setTimeout(() => seriesRef.current?.focus(), 30);
+    }
+  };
+
+  const handleSeriesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/[^a-zA-Z]/g, "").toUpperCase().slice(0, 3);
+    setSeries(val);
+    if (val.length >= 2) {
+      setTimeout(() => numberRef.current?.focus(), 30);
+    }
+  };
+
+  const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/\D/g, "").slice(0, 4);
+    setNumber(val);
+  };
+
+  // Handle backspace to go to previous field
+  const handleKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    currentValue: string,
+    prevRef: React.RefObject<HTMLInputElement> | null
+  ) => {
+    if (e.key === "Backspace" && currentValue === "" && prevRef?.current) {
+      prevRef.current.focus();
     }
   };
 
@@ -114,29 +161,111 @@ export function InsuranceHeroForm({ policyType = "comprehensive", vehicleLabel =
     setPhone(e.target.value.replace(/\D/g, "").slice(0, 10));
   };
 
+  const handleResetVehicle = () => {
+    setStep(1);
+    setPhone("");
+    hasSubmittedRef.current = false;
+    setTimeout(() => stateRef.current?.focus(), 100);
+  };
+
+  const fullDisplay = getFullNumber();
+
   return (
     <div className="w-full max-w-4xl mx-auto">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="space-y-5">
         <div className="bg-card rounded-2xl border-2 border-primary/20 p-4 md:p-5 shadow-[0_8px_30px_-12px_hsl(var(--primary)/0.15)] hover:shadow-[0_12px_40px_-12px_hsl(var(--primary)/0.25)] transition-all duration-300 space-y-3">
-          {/* Step 1: Vehicle Registration */}
-          <div className="flex items-center gap-3 px-2">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-              <Car className="h-5 w-5 text-primary" />
+          {/* Step 1: Segmented Vehicle Registration */}
+          <div className="px-2">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                <Car className="h-5 w-5 text-primary" />
+              </div>
+              <span className="text-sm font-semibold text-muted-foreground">Enter {vehicleLabel} number</span>
+              {step === 2 && (
+                <button onClick={handleResetVehicle} className="ml-auto text-xs text-primary font-bold hover:underline active:scale-95 transition-transform">
+                  Edit
+                </button>
+              )}
             </div>
-            <Input
-              placeholder={`Enter ${vehicleLabel} number (e.g. DL01AB1234)`}
-              value={vehicleNumber}
-              onChange={handleVehicleChange}
-              className="border-0 shadow-none focus-visible:ring-0 text-sm md:text-lg h-12 md:h-14 bg-transparent uppercase placeholder:normal-case placeholder:text-muted-foreground/50 font-bold tracking-wide"
-              autoFocus
-              maxLength={13}
-            />
-            {step === 1 && VEHICLE_REGEX.test(vehicleNumber) && (
-              <div className="text-primary text-xs font-bold shrink-0">✓</div>
+
+            {step === 1 ? (
+              <div className="flex items-stretch gap-1.5 md:gap-2">
+                {/* State */}
+                <div className="flex flex-col items-center flex-1 min-w-0">
+                  <Input
+                    ref={stateRef}
+                    placeholder="DL"
+                    value={state}
+                    onChange={handleStateChange}
+                    onKeyDown={(e) => handleKeyDown(e, state, null)}
+                    className="text-center border border-border/60 focus-visible:ring-1 focus-visible:ring-primary text-base md:text-lg h-12 md:h-14 bg-muted/30 uppercase font-bold tracking-widest rounded-xl"
+                    autoFocus
+                    maxLength={3}
+                  />
+                  <span className="text-[10px] text-muted-foreground/60 mt-1 font-medium">State</span>
+                </div>
+
+                <span className="self-center text-muted-foreground/30 font-bold text-lg pt-0 -mt-3">–</span>
+
+                {/* RTO Code */}
+                <div className="flex flex-col items-center flex-1 min-w-0">
+                  <Input
+                    ref={rtoRef}
+                    placeholder="01"
+                    value={rtoCode}
+                    onChange={handleRtoChange}
+                    onKeyDown={(e) => handleKeyDown(e, rtoCode, stateRef)}
+                    className="text-center border border-border/60 focus-visible:ring-1 focus-visible:ring-primary text-base md:text-lg h-12 md:h-14 bg-muted/30 font-bold tracking-widest rounded-xl"
+                    maxLength={2}
+                  />
+                  <span className="text-[10px] text-muted-foreground/60 mt-1 font-medium">RTO</span>
+                </div>
+
+                <span className="self-center text-muted-foreground/30 font-bold text-lg pt-0 -mt-3">–</span>
+
+                {/* Series */}
+                <div className="flex flex-col items-center flex-1 min-w-0">
+                  <Input
+                    ref={seriesRef}
+                    placeholder="AB"
+                    value={series}
+                    onChange={handleSeriesChange}
+                    onKeyDown={(e) => handleKeyDown(e, series, rtoRef)}
+                    className="text-center border border-border/60 focus-visible:ring-1 focus-visible:ring-primary text-base md:text-lg h-12 md:h-14 bg-muted/30 uppercase font-bold tracking-widest rounded-xl"
+                    maxLength={3}
+                  />
+                  <span className="text-[10px] text-muted-foreground/60 mt-1 font-medium">Series</span>
+                </div>
+
+                <span className="self-center text-muted-foreground/30 font-bold text-lg pt-0 -mt-3">–</span>
+
+                {/* Number */}
+                <div className="flex flex-col items-center flex-[1.3] min-w-0">
+                  <Input
+                    ref={numberRef}
+                    placeholder="1234"
+                    value={number}
+                    onChange={handleNumberChange}
+                    onKeyDown={(e) => handleKeyDown(e, number, seriesRef)}
+                    className="text-center border border-border/60 focus-visible:ring-1 focus-visible:ring-primary text-base md:text-lg h-12 md:h-14 bg-muted/30 font-bold tracking-widest rounded-xl"
+                    maxLength={4}
+                  />
+                  <span className="text-[10px] text-muted-foreground/60 mt-1 font-medium">Number</span>
+                </div>
+
+                {isVehicleComplete() && (
+                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="self-center text-primary text-sm font-bold shrink-0 -mt-3">✓</motion.div>
+                )}
+              </div>
+            ) : (
+              /* Show combined number when on step 2 */
+              <div className="flex items-center gap-2 bg-muted/40 rounded-xl px-4 py-3">
+                <span className="text-base md:text-lg font-bold tracking-widest text-foreground">{fullDisplay}</span>
+              </div>
             )}
           </div>
 
-          {/* Step 2: Phone Number — only visible after valid registration */}
+          {/* Step 2: Phone Number */}
           <AnimatePresence>
             {step === 2 && (
               <motion.div
