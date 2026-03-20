@@ -42,15 +42,19 @@ export async function captureInsuranceLead(params: {
   // 2. Upsert into new insurance_clients CRM table (dedupe by phone)
   try {
     // Check if client already exists
-    const { data: existing } = await supabase
+    const { data: existing, error: selectErr } = await supabase
       .from("insurance_clients")
       .select("id")
       .eq("phone", phone)
       .limit(1);
 
+    if (selectErr) {
+      console.error("insurance_clients select error:", selectErr);
+    }
+
     if (existing && existing.length > 0) {
       // Update existing client with latest data
-      await supabase.from("insurance_clients")
+      const { error: updateErr } = await supabase.from("insurance_clients")
         .update({
           customer_name: customerName || undefined,
           vehicle_number: vehicleNumber || undefined,
@@ -60,18 +64,20 @@ export async function captureInsuranceLead(params: {
           notes: notes ? `${notes} (updated from ${source})` : undefined,
         })
         .eq("id", existing[0].id);
+      if (updateErr) console.error("insurance_clients update error:", updateErr);
 
       // Log activity
-      await supabase.from("insurance_activity_log").insert({
+      const { error: actErr } = await supabase.from("insurance_activity_log").insert({
         client_id: existing[0].id,
         activity_type: "lead_created",
         title: `Repeat inquiry from ${source}`,
         description: `Customer submitted another inquiry via ${source}`,
         metadata: { source, policyType, vehicleNumber },
       });
+      if (actErr) console.error("insurance_activity_log insert error:", actErr);
     } else {
       // Create new client
-      const { data: newClient } = await supabase.from("insurance_clients").insert({
+      const { data: newClient, error: insertErr } = await supabase.from("insurance_clients").insert({
         phone,
         customer_name: customerName || null,
         email: email || null,
@@ -86,14 +92,17 @@ export async function captureInsuranceLead(params: {
         priority: "medium",
       }).select("id").single();
 
-      if (newClient) {
-        await supabase.from("insurance_activity_log").insert({
+      if (insertErr) {
+        console.error("insurance_clients insert error:", insertErr);
+      } else if (newClient) {
+        const { error: actErr2 } = await supabase.from("insurance_activity_log").insert({
           client_id: newClient.id,
           activity_type: "lead_created",
           title: "New insurance inquiry",
           description: `Lead captured from ${source}`,
           metadata: { source, policyType, vehicleNumber },
         });
+        if (actErr2) console.error("insurance_activity_log insert error:", actErr2);
       }
     }
   } catch (e) {
