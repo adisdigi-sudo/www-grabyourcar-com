@@ -27,14 +27,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 
-const INSURANCE_COMPANIES = [
-  "ICICI Lombard", "HDFC Ergo", "Bajaj Allianz", "New India Assurance",
-  "United India", "Oriental Insurance", "National Insurance", "Tata AIG",
-  "Reliance General", "SBI General", "Cholamandalam MS", "Future Generali",
-  "Royal Sundaram", "Bharti AXA", "Liberty General", "Magma HDI",
-  "Navi General", "Digit Insurance", "Acko General", "Kotak General",
-  "Star Health", "Care Health", "Iffco Tokio", "Shriram General",
-];
+import { INSURANCE_COMPANIES, getShortName } from "@/lib/insuranceCompanies";
 
 const POLICY_TYPES = ["Comprehensive", "Third Party", "Own Damage", "Standalone OD"];
 const FUEL_TYPES = ["Petrol", "Diesel", "CNG", "Electric", "Hybrid"];
