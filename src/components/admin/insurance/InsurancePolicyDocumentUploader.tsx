@@ -230,7 +230,7 @@ export function InsurancePolicyDocumentUploader({
               className="h-9 text-sm"
             />
             <p className="text-[11px] text-muted-foreground">
-              Save the PDF using the policy number as the file name. If the PDF name does not contain it, enter it here.
+              Enter the new policy number here. This will be saved with the document.
             </p>
           </div>
         </>
