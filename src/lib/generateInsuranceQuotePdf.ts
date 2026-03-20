@@ -35,6 +35,10 @@ export const generateInsuranceQuotePdf = (data: InsuranceQuoteData) => {
   const m = 15;
   const contentW = pw - 2 * m;
 
+  const branding = loadInsurancePdfBrandingCache();
+  const insurerLogoUrl = data.insurerLogoUrl || resolveInsurerLogo(data.insuranceCompany, branding);
+  const brandLogoUrl = branding.grabyourcarLogoUrl;
+
   const green: [number, number, number] = [34, 197, 94];
   const darkGreen: [number, number, number] = [22, 163, 74];
   const lightGreen: [number, number, number] = [220, 252, 231];
@@ -42,7 +46,6 @@ export const generateInsuranceQuotePdf = (data: InsuranceQuoteData) => {
   const gray: [number, number, number] = [100, 116, 139];
   const white: [number, number, number] = [255, 255, 255];
 
-  // Footer height reserved
   const footerH = 24;
   const footerY = ph - footerH;
 
