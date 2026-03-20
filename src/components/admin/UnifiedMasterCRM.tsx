@@ -29,7 +29,7 @@ import { InsuranceImportExport } from "./insurance/InsuranceImportExport";
 import { InsuranceCrossSellEngine } from "./insurance/InsuranceCrossSellEngine";
 import { InsuranceAutomationPanel } from "./insurance/InsuranceAutomationPanel";
 import { InsuranceTemplatesManager } from "./insurance/InsuranceTemplatesManager";
-import { InsuranceStatusPipeline } from "./insurance/InsuranceStatusPipeline";
+import { InsurancePipelineBoard } from "./insurance/InsurancePipelineBoard";
 import { InsuranceReportsModule } from "./insurance/InsuranceReportsModule";
 import { InsuranceVehicleDocValidity } from "./insurance/InsuranceVehicleDocValidity";
 import { InsuranceManageAgents } from "./insurance/InsuranceManageAgents";
@@ -296,7 +296,7 @@ function InsuranceVerticalWorkspace() {
       case "clients": return <InsuranceClientsManager />;
       case "policies": return <InsurancePoliciesManager />;
       case "renewals": return <InsuranceRenewalsEngine />;
-      case "pipeline": return <InsuranceStatusPipeline />;
+      case "pipeline": return <InsurancePipelineBoard />;
       case "tasks": return <InsuranceTasksManager />;
       case "commissions": return <InsuranceCommissionsTracker />;
       case "documents": return <InsuranceDocumentVault />;

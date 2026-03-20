@@ -120,12 +120,13 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
       const { data, error } = await supabase
         .from("insurance_clients")
         .select("id, customer_name, phone, email, city, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_insurer, policy_expiry_date, current_policy_type, ncb_percentage, previous_claim, lead_source, lead_status, assigned_executive, priority, pipeline_stage, contact_attempts, quote_amount, quote_insurer, lost_reason, follow_up_date, current_premium, notes, created_at")
-        .not("pipeline_stage", "is", null)
-        .not("pipeline_stage", "in", '("new_lead","policy_issued")')
         .order("created_at", { ascending: false })
         .limit(1000);
       if (error) throw error;
-      return (data || []) as Client[];
+      return ((data || []).map((client) => ({
+        ...client,
+        pipeline_stage: client.pipeline_stage || "new_lead",
+      }))) as Client[];
     },
   });
 
@@ -943,25 +944,50 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
             const saveEdits = async () => {
               setSavingEdit(true);
               try {
+                const normalizedPhone = (editFields.phone || selectedClient.phone || "").replace(/\D/g, "");
+                const normalizedVehicleNumber = (editFields.vehicle_number || "")
+                  .replace(/[^A-Z0-9]/gi, "")
+                  .toUpperCase();
+
                 const updates: Record<string, any> = {
-                  customer_name: editFields.customer_name || null,
-                  phone: editFields.phone || selectedClient.phone,
-                  email: editFields.email || null,
-                  city: editFields.city || null,
-                  vehicle_number: editFields.vehicle_number || null,
-                  vehicle_make: editFields.vehicle_make || null,
-                  vehicle_model: editFields.vehicle_model || null,
+                  customer_name: editFields.customer_name?.trim() || null,
+                  phone: normalizedPhone || selectedClient.phone,
+                  email: editFields.email?.trim() || null,
+                  city: editFields.city?.trim() || null,
+                  vehicle_number: normalizedVehicleNumber || null,
+                  vehicle_make: editFields.vehicle_make?.trim() || null,
+                  vehicle_model: editFields.vehicle_model?.trim() || null,
                   vehicle_year: editFields.vehicle_year ? Number(editFields.vehicle_year) : null,
-                  current_insurer: editFields.current_insurer || null,
-                  current_policy_type: editFields.current_policy_type || null,
+                  current_insurer: editFields.current_insurer?.trim() || null,
+                  current_policy_type: editFields.current_policy_type?.trim() || null,
                   current_premium: editFields.current_premium ? Number(editFields.current_premium) : null,
                   ncb_percentage: editFields.ncb_percentage ? Number(editFields.ncb_percentage) : null,
                 };
-                const { error } = await supabase.from("insurance_clients").update(updates).eq("id", selectedClient.id);
+                const { data, error } = await supabase
+                  .from("insurance_clients")
+                  .update(updates)
+                  .eq("id", selectedClient.id)
+                  .select("id, customer_name, phone, email, city, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_insurer, policy_expiry_date, current_policy_type, ncb_percentage, previous_claim, lead_source, lead_status, assigned_executive, priority, pipeline_stage, contact_attempts, quote_amount, quote_insurer, lost_reason, follow_up_date, current_premium, notes, created_at")
+                  .maybeSingle();
                 if (error) throw error;
+                const refreshedClient = (data ? { ...data, pipeline_stage: data.pipeline_stage || "new_lead" } : { ...selectedClient, ...updates }) as Client;
                 toast.success("✅ Lead details updated!");
                 queryClient.invalidateQueries({ queryKey: ["insurance-pipeline-clients"] });
-                setSelectedClient({ ...selectedClient, ...updates });
+                setSelectedClient(refreshedClient);
+                setEditFields({
+                  customer_name: refreshedClient.customer_name || "",
+                  phone: refreshedClient.phone || "",
+                  email: refreshedClient.email || "",
+                  city: refreshedClient.city || "",
+                  vehicle_number: refreshedClient.vehicle_number || "",
+                  vehicle_make: refreshedClient.vehicle_make || "",
+                  vehicle_model: refreshedClient.vehicle_model || "",
+                  vehicle_year: refreshedClient.vehicle_year ? String(refreshedClient.vehicle_year) : "",
+                  current_insurer: refreshedClient.current_insurer || "",
+                  current_policy_type: refreshedClient.current_policy_type || "",
+                  current_premium: refreshedClient.current_premium ? String(refreshedClient.current_premium) : "",
+                  ncb_percentage: refreshedClient.ncb_percentage ? String(refreshedClient.ncb_percentage) : "",
+                });
               } catch (e: any) {
                 toast.error(e.message || "Failed to save");
               } finally {

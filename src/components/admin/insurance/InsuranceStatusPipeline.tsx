@@ -96,14 +96,15 @@ export function InsuranceStatusPipeline() {
   useEffect(() => { fetchClients(); }, []);
 
   const fetchClients = async () => {
-    // Only fetch leads that have been worked on (have a lead_status set)
     const { data } = await supabase
       .from("insurance_clients")
       .select("id, customer_name, phone, email, vehicle_model, vehicle_number, vehicle_make, current_insurer, lead_status, current_premium, lead_source, created_at")
-      .not("lead_status", "is", null)
       .order("created_at", { ascending: false })
       .limit(500);
-    setClients((data || []) as Client[]);
+    setClients(((data || []).map((client) => ({
+      ...client,
+      lead_status: client.lead_status || "new",
+    }))) as Client[]);
   };
 
   const stageCounts = useMemo(() =>
@@ -686,7 +687,7 @@ export function InsuranceStatusPipeline() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">Mobile</Label>
-                  <Input value={editPhone} onChange={e => setEditPhone(e.target.value)} placeholder="Enter mobile" className="h-8 text-sm" />
+                  <Input value={editPhone} onChange={e => setEditPhone(e.target.value.replace(/\D/g, "").slice(0, 10))} placeholder="Enter mobile" className="h-8 text-sm" />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">Email</Label>
@@ -710,16 +711,27 @@ export function InsuranceStatusPipeline() {
                 onClick={async () => {
                   setSavingContact(true);
                   try {
+                    const normalizedPhone = editPhone.replace(/\D/g, "");
+                    const normalizedVehicleNumber = editVehicleNumber.replace(/[^A-Z0-9]/gi, "").toUpperCase();
                     const updates: Record<string, any> = {};
-                    if (editPhone !== (displayPhone(selectedClient.phone) || "")) updates.phone = editPhone;
+                    if (normalizedPhone !== (displayPhone(selectedClient.phone) || "")) updates.phone = normalizedPhone;
                     if (editEmail !== (selectedClient.email || "")) updates.email = editEmail || null;
-                    if (editVehicleNumber !== (selectedClient.vehicle_number || "")) updates.vehicle_number = editVehicleNumber || null;
+                    if (normalizedVehicleNumber !== (selectedClient.vehicle_number || "")) updates.vehicle_number = normalizedVehicleNumber || null;
                     if (Object.keys(updates).length === 0) { toast.info("No changes to save"); setSavingContact(false); return; }
-                    const { error } = await supabase.from("insurance_clients").update(updates).eq("id", selectedClient.id);
+                    const { data, error } = await supabase
+                      .from("insurance_clients")
+                      .update(updates)
+                      .eq("id", selectedClient.id)
+                      .select("id, customer_name, phone, email, vehicle_model, vehicle_number, vehicle_make, current_insurer, lead_status, current_premium, lead_source, created_at")
+                      .maybeSingle();
                     if (error) throw error;
                     toast.success("✅ Details updated!");
                     fetchClients();
-                    setSelectedClient({ ...selectedClient, ...updates } as any);
+                    const refreshedClient = (data ? { ...data, lead_status: data.lead_status || "new" } : { ...selectedClient, ...updates }) as Client;
+                    setSelectedClient(refreshedClient);
+                    setEditPhone(refreshedClient.phone || "");
+                    setEditEmail(refreshedClient.email || "");
+                    setEditVehicleNumber(refreshedClient.vehicle_number || "");
                   } catch (e: any) {
                     toast.error(e.message || "Failed to save");
                   } finally {
