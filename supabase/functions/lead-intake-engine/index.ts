@@ -288,7 +288,9 @@ serve(async (req) => {
 });
 
 /**
- * Route lead into the appropriate vertical-specific table
+ * Route lead into the appropriate vertical-specific table.
+ * Uses phone-based dedup for all verticals to prevent duplicates while
+ * recycling returning leads to the top of the pipeline.
  */
 async function routeToVerticalTable(
   supabase: any,
@@ -304,45 +306,120 @@ async function routeToVerticalTable(
     vehicleMake?: string;
     vehicleModel?: string;
     policyType?: string;
+    leadSourceType?: string;
   }
 ) {
+  const cleanedPhone = cleanPhone(data.phone);
+  const now = new Date().toISOString();
+
   try {
     switch (vertical) {
-      case "Car Sales":
-        await supabase.from("leads").insert({
-          customer_name: data.name,
-          phone: data.phone,
-          email: data.email || null,
-          city: data.city || null,
-          source: data.source,
-          notes: data.message || null,
-          status: "new",
-          priority: "medium",
-        });
+      case "Car Sales": {
+        // Route to BOTH leads table AND sales_pipeline for CRM visibility
+        // 1) leads table (legacy central intake)
+        const { data: existingLead } = await supabase
+          .from("leads")
+          .select("id")
+          .eq("phone", cleanedPhone)
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+        if (existingLead?.length) {
+          await supabase.from("leads").update({
+            name: data.name !== "Unknown" ? data.name : undefined,
+            customer_name: data.name !== "Unknown" ? data.name : undefined,
+            email: data.email || undefined,
+            city: data.city || undefined,
+            source: data.source,
+            notes: data.message || undefined,
+            status: "new",
+            car_brand: data.vehicleMake || undefined,
+            car_model: data.vehicleModel || undefined,
+            updated_at: now,
+          }).eq("id", existingLead[0].id);
+        } else {
+          await supabase.from("leads").insert({
+            name: data.name || "Car Sales Lead",
+            customer_name: data.name || "Car Sales Lead",
+            phone: cleanedPhone,
+            email: data.email || null,
+            city: data.city || null,
+            source: data.source,
+            notes: data.message || null,
+            status: "new",
+            priority: "medium",
+            car_brand: data.vehicleMake || null,
+            car_model: data.vehicleModel || null,
+          });
+        }
+
+        // 2) sales_pipeline for Sales CRM workspace
+        const { data: existingSales } = await supabase
+          .from("sales_pipeline")
+          .select("id, pipeline_stage")
+          .eq("phone", cleanedPhone)
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+        if (existingSales?.length) {
+          // Recycle to new_lead only if lost or old
+          const recycleStages = ["lost", "after_sales"];
+          const updates: Record<string, any> = {
+            customer_name: data.name !== "Unknown" ? data.name : undefined,
+            email: data.email || undefined,
+            city: data.city || undefined,
+            source: data.source,
+            inquiry_remarks: data.message || undefined,
+            car_brand: data.vehicleMake || undefined,
+            car_model: data.vehicleModel || undefined,
+            updated_at: now,
+            last_activity_at: now,
+          };
+          if (recycleStages.includes(existingSales[0].pipeline_stage)) {
+            updates.pipeline_stage = "new_lead";
+            updates.call_status = null;
+            updates.call_attempts = 0;
+            updates.lost_reason = null;
+            updates.lost_remarks = null;
+          }
+          await supabase.from("sales_pipeline").update(updates).eq("id", existingSales[0].id);
+        } else {
+          await supabase.from("sales_pipeline").insert({
+            customer_name: data.name || "Car Sales Lead",
+            phone: cleanedPhone,
+            email: data.email || null,
+            city: data.city || null,
+            source: data.source,
+            inquiry_remarks: data.message || null,
+            pipeline_stage: "new_lead",
+            car_brand: data.vehicleMake || null,
+            car_model: data.vehicleModel || null,
+          });
+        }
         break;
+      }
+
       case "Insurance": {
-        const normalizedPhone = cleanPhone(data.phone);
         const normalizedVehicleNumber = normalizeVehicleNumber(data.vehicleNumber);
-        const now = new Date().toISOString();
 
         const { data: candidates, error: fetchError } = await supabase
           .from("insurance_clients")
           .select("id, phone, vehicle_number")
-          .eq("phone", normalizedPhone)
+          .eq("phone", cleanedPhone)
           .order("updated_at", { ascending: false })
           .order("created_at", { ascending: false })
           .limit(20);
 
         if (fetchError) throw fetchError;
 
-        const existingClient = (candidates || []).find((candidate: { vehicle_number?: string | null }) => {
+        const existingClient = (candidates || []).find((c: { vehicle_number?: string | null }) => {
           if (!normalizedVehicleNumber) return true;
-          return normalizeVehicleNumber(candidate.vehicle_number) === normalizedVehicleNumber;
+          return normalizeVehicleNumber(c.vehicle_number) === normalizedVehicleNumber;
         });
 
         const insurancePayload = {
           customer_name: data.name,
-          phone: normalizedPhone,
+          phone: cleanedPhone,
           email: data.email || null,
           city: data.city || null,
           lead_source: data.source,
@@ -362,41 +439,88 @@ async function routeToVerticalTable(
         };
 
         if (existingClient?.id) {
-          await supabase
-            .from("insurance_clients")
-            .update(insurancePayload)
-            .eq("id", existingClient.id);
+          await supabase.from("insurance_clients").update(insurancePayload).eq("id", existingClient.id);
         } else {
-          await supabase.from("insurance_clients").insert({
-            ...insurancePayload,
-            created_at: now,
+          await supabase.from("insurance_clients").insert({ ...insurancePayload, created_at: now });
+        }
+        break;
+      }
+
+      case "Loan": {
+        const { data: existingLoan } = await supabase
+          .from("car_loan_leads")
+          .select("id, status")
+          .eq("phone", cleanedPhone)
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+        if (existingLoan?.length) {
+          await supabase.from("car_loan_leads").update({
+            name: data.name !== "Unknown" ? data.name : undefined,
+            email: data.email || undefined,
+            city: data.city || undefined,
+            source: data.source,
+            notes: data.message || undefined,
+            status: "new",
+            preferred_car: data.vehicleModel || undefined,
+            updated_at: now,
+          }).eq("id", existingLoan[0].id);
+        } else {
+          await supabase.from("car_loan_leads").insert({
+            name: data.name || null,
+            phone: cleanedPhone,
+            email: data.email || null,
+            city: data.city || null,
+            source: data.source,
+            notes: data.message || null,
+            status: "new",
+            preferred_car: data.vehicleModel || null,
           });
         }
         break;
       }
-      case "Loan":
-        await supabase.from("car_loan_leads").insert({
-          name: data.name,
-          phone: data.phone,
-          email: data.email || null,
-          city: data.city || null,
-          source: data.source,
-          notes: data.message || null,
-          status: "new",
-        });
+
+      case "Self Drive":
+      case "HSRP":
+      case "Accessories":
+      case "Corporate":
+      default: {
+        // All other verticals go to the central leads table
+        const { data: existingLead } = await supabase
+          .from("leads")
+          .select("id")
+          .eq("phone", cleanedPhone)
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+        if (existingLead?.length) {
+          await supabase.from("leads").update({
+            name: data.name !== "Unknown" ? data.name : undefined,
+            customer_name: data.name !== "Unknown" ? data.name : undefined,
+            email: data.email || undefined,
+            city: data.city || undefined,
+            source: `${data.source} (${vertical})`,
+            notes: data.message || undefined,
+            status: "new",
+            service_category: vertical.toLowerCase().replace(/\s+/g, "_"),
+            updated_at: now,
+          }).eq("id", existingLead[0].id);
+        } else {
+          await supabase.from("leads").insert({
+            name: data.name || `${vertical} Lead`,
+            customer_name: data.name || `${vertical} Lead`,
+            phone: cleanedPhone,
+            email: data.email || null,
+            city: data.city || null,
+            source: `${data.source} (${vertical})`,
+            notes: data.message || null,
+            status: "new",
+            priority: "medium",
+            service_category: vertical.toLowerCase().replace(/\s+/g, "_"),
+          });
+        }
         break;
-      default:
-        await supabase.from("leads").insert({
-          customer_name: data.name,
-          phone: data.phone,
-          email: data.email || null,
-          city: data.city || null,
-          source: `${data.source} (${vertical})`,
-          notes: data.message || null,
-          status: "new",
-          priority: "medium",
-        });
-        break;
+      }
     }
   } catch (e) {
     console.error(`Vertical routing failed for ${vertical}:`, e);
