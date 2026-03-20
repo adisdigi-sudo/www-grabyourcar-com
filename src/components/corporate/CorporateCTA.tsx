@@ -5,8 +5,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Phone, Mail, ArrowRight, CheckCircle, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { WhatsAppCTA, whatsappMessages } from "@/components/WhatsAppCTA";
+import { captureWebsiteLead } from "@/lib/websiteLeadCapture";
 
 export const CorporateCTA = () => {
   const [formData, setFormData] = useState({
@@ -42,19 +42,18 @@ export const CorporateCTA = () => {
     setIsSubmitting(true);
 
     try {
-      const { error } = await supabase.functions.invoke("submit-lead", {
-        body: {
-          name: `${formData.companyName} - ${formData.contactPerson}`,
-          phone: formData.phone,
-          email: formData.email,
-          city: formData.city,
-          carInterest: `Corporate Fleet: ${formData.fleetSize} vehicles - ${formData.carPreference}`,
-          message: formData.message,
-          type: "corporate",
-        },
+      await captureWebsiteLead({
+        name: `${formData.companyName} - ${formData.contactPerson}`,
+        phone: formData.phone,
+        email: formData.email,
+        city: formData.city,
+        carInterest: `Corporate Fleet: ${formData.fleetSize} vehicles - ${formData.carPreference}`,
+        source: "corporate_cta",
+        vertical: "corporate",
+        type: "corporate",
+        priority: "high",
+        message: formData.message || `Corporate enquiry for ${formData.fleetSize || "multiple"} vehicles`,
       });
-
-      if (error) throw error;
 
       const { trackLeadConversion } = await import("@/lib/adTracking");
       trackLeadConversion("corporate_enquiry");

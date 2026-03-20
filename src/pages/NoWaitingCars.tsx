@@ -8,11 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Zap, Phone, Shield, Clock, CheckCircle, Loader2, Car, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
-import { trackLeadConversion, getUTMFields } from "@/lib/adTracking";
+import { trackLeadConversion } from "@/lib/adTracking";
 import { PHONE_NUMBER, getWhatsAppLink } from "@/config/contact";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { captureWebsiteLead } from "@/lib/websiteLeadCapture";
 
 const NoWaitingCars = () => {
   const navigate = useNavigate();
@@ -42,17 +43,15 @@ const NoWaitingCars = () => {
     }
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.from("leads").insert({
-        name: name.trim(),
-        customer_name: name.trim(),
-        phone: phone.trim(),
+      await captureWebsiteLead({
+        name,
+        phone,
         source: "no_waiting_cars_landing",
-        lead_type: "high_intent",
-        status: "new",
+        vertical: "car",
+        type: "high_intent",
         priority: "high",
-        ...getUTMFields(),
+        message: "Ready stock car lead from no waiting page",
       });
-      if (error) throw error;
       trackLeadConversion("no_waiting_cars");
       navigate(`/thank-you?source=no-waiting&car=Ready+Stock`);
     } catch {

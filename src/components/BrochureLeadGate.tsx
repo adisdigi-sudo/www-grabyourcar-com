@@ -6,11 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { FileText, Shield, Loader2, CheckCircle, Download } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-
 import { z } from "zod";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
+import { captureWebsiteLead } from "@/lib/websiteLeadCapture";
 
 const formSchema = z.object({
   name: z.string().trim().min(2, "Name is required").max(100),
@@ -73,19 +72,17 @@ export const BrochureLeadGate = ({ brochureUrl, carName, carSlug, children }: Br
     // Submit directly without OTP
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.from("leads").insert({
-        name: formData.name.trim(),
-        customer_name: formData.name.trim(),
-        phone: formData.phone.trim(),
-        city: formData.city.trim(),
-        car_model: carName,
+      await captureWebsiteLead({
+        name: formData.name,
+        phone: formData.phone,
+        city: formData.city,
+        carInterest: carName,
         source: "brochure_download",
-        lead_type: "brochure",
-        status: "new",
+        vertical: "car",
+        type: "brochure",
         priority: "medium",
+        message: `Brochure requested for ${carName}`,
       });
-
-      if (error) throw error;
 
       try {
         await supabase.functions.invoke("whatsapp-send", {
