@@ -54,8 +54,11 @@ const ALL_ADDONS = [
 const FUEL_TYPES = ["Petrol", "Diesel", "CNG", "Electric", "Hybrid", "LPG"];
 
 export default function InsuranceQuoteModal({ open, onOpenChange, client, policy, onQuoteSent }: Props) {
+  const [showCustomInsurer, setShowCustomInsurer] = useState(false);
+  const [customInsurerInput, setCustomInsurerInput] = useState("");
+
   const [form, setForm] = useState(() => ({
-    insuranceCompany: policy?.insurer || client.current_insurer || "ICICI Lombard",
+    insuranceCompany: policy?.insurer || client.current_insurer || "ICICI Lombard General Insurance Co Ltd",
     policyType: policy?.policy_type || client.current_policy_type || "comprehensive",
     idv: policy?.idv || 500000,
     fuelType: "Petrol",
