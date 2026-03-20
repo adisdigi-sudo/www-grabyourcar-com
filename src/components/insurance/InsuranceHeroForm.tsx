@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from "react";
-import { motion } from "framer-motion";
-import { Car, Shield, Loader2, Zap, Sparkles, Gift, Star } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Car, Shield, Loader2, Zap, Sparkles, Gift, Star, Phone } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { captureInsuranceLead } from "@/lib/insuranceLeadCapture";
 
 const PARTNER_URL = "https://pbpci.policybazaar.com/?token=o5aMAq6qZ1tLXTODNpDyVbk4MP6pWDnq6hhpN5u%2BmyJLH9wHcj81JpXwkmKwLPBcDQlOpmql%2FtQgJKjQaQBk%2F6h5%2Bh6wxuKCTAtXRNQ1WBN7m6J2EwinhUfoywZ8E%2B%2BJFZQlcTcGh6a4upMh26MliMAXl%2FqWXTt%2B579hIW3zzfAGZ7aSNJ3WTeVCdfy%2FjJGe%2BQa3M6xdyWiN9%2FuvLVHo9A%3D%3D";
+
+const VEHICLE_REGEX = /^[A-Z]{2}\d{2}[A-Z]{1,2}\d{4}$/;
 
 const scrollingOffers = [
   { icon: Car, text: "1 Day Free Self-Drive Car" },
@@ -23,35 +25,48 @@ interface InsuranceHeroFormProps {
 }
 
 export function InsuranceHeroForm({ policyType = "comprehensive", vehicleLabel = "vehicle", compact = false }: InsuranceHeroFormProps) {
+  const [step, setStep] = useState<1 | 2>(1);
   const [vehicleNumber, setVehicleNumber] = useState("");
   const [phone, setPhone] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const hasSubmittedRef = useRef(false);
+  const phoneInputRef = useRef<HTMLInputElement>(null);
 
+  // Auto-advance to step 2 when vehicle number is valid
   useEffect(() => {
-    if (hasSubmittedRef.current || isLoading) return;
+    if (step === 1 && VEHICLE_REGEX.test(vehicleNumber)) {
+      setStep(2);
+    }
+  }, [vehicleNumber, step]);
 
-    const phoneValid = /^[6-9]\d{9}$/.test(phone);
-    const vehicleValid = vehicleNumber.trim().length >= 4;
+  // Auto-focus phone input when step 2 appears
+  useEffect(() => {
+    if (step === 2) {
+      setTimeout(() => phoneInputRef.current?.focus(), 150);
+    }
+  }, [step]);
 
-    if (phoneValid && vehicleValid) {
+  // Auto-submit when phone is valid
+  useEffect(() => {
+    if (step !== 2 || hasSubmittedRef.current || isLoading) return;
+    if (/^[6-9]\d{9}$/.test(phone)) {
       hasSubmittedRef.current = true;
       void handleSubmit();
     }
-  }, [phone, vehicleNumber, isLoading]);
+  }, [phone, step, isLoading]);
 
   const handleSubmit = async () => {
     const normalizedVehicleNumber = vehicleNumber.trim().toUpperCase();
 
-    if (!/^[6-9]\d{9}$/.test(phone)) {
+    if (!VEHICLE_REGEX.test(normalizedVehicleNumber)) {
       hasSubmittedRef.current = false;
-      toast.error("Please enter a valid 10-digit mobile number");
+      toast.error(`Please enter a valid ${vehicleLabel} registration number`);
       return;
     }
 
-    if (normalizedVehicleNumber.length < 4) {
+    if (!/^[6-9]\d{9}$/.test(phone)) {
       hasSubmittedRef.current = false;
-      toast.error(`Please enter a valid ${vehicleLabel} number`);
+      toast.error("Please enter a valid 10-digit mobile number");
       return;
     }
 
@@ -81,10 +96,27 @@ export function InsuranceHeroForm({ policyType = "comprehensive", vehicleLabel =
     window.location.assign(PARTNER_URL);
   };
 
+  const handleVehicleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Only allow alphanumeric characters
+    const value = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+    setVehicleNumber(value);
+    if (step === 2 && !VEHICLE_REGEX.test(value)) {
+      setStep(1);
+      setPhone("");
+      hasSubmittedRef.current = false;
+    }
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    hasSubmittedRef.current = false;
+    setPhone(e.target.value.replace(/\D/g, "").slice(0, 10));
+  };
+
   return (
     <div className="w-full max-w-4xl mx-auto">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="space-y-5">
         <div className="bg-card rounded-2xl border-2 border-primary/20 p-4 md:p-5 shadow-[0_8px_30px_-12px_hsl(var(--primary)/0.15)] hover:shadow-[0_12px_40px_-12px_hsl(var(--primary)/0.25)] transition-all duration-300 space-y-3">
+          {/* Step 1: Vehicle Registration */}
           <div className="flex items-center gap-3 px-2">
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
               <Car className="h-5 w-5 text-primary" />
@@ -92,31 +124,42 @@ export function InsuranceHeroForm({ policyType = "comprehensive", vehicleLabel =
             <Input
               placeholder={`Enter ${vehicleLabel} number (e.g. DL01AB1234)`}
               value={vehicleNumber}
-              onChange={(e) => {
-                hasSubmittedRef.current = false;
-                setVehicleNumber(e.target.value.toUpperCase());
-              }}
+              onChange={handleVehicleChange}
               className="border-0 shadow-none focus-visible:ring-0 text-sm md:text-lg h-12 md:h-14 bg-transparent uppercase placeholder:normal-case placeholder:text-muted-foreground/50 font-bold tracking-wide"
               autoFocus
+              maxLength={10}
             />
+            {step === 1 && VEHICLE_REGEX.test(vehicleNumber) && (
+              <div className="text-primary text-xs font-bold shrink-0">✓</div>
+            )}
           </div>
 
-          <div className="border-t border-border/50" />
-
-          <div className="flex items-center gap-3 px-2">
-            <div className="flex items-center bg-muted rounded-xl px-3 py-2.5 text-sm font-bold text-muted-foreground shrink-0">+91</div>
-            <Input
-              type="tel"
-              placeholder="10-digit mobile number"
-              value={phone}
-              onChange={(e) => {
-                hasSubmittedRef.current = false;
-                setPhone(e.target.value.replace(/\D/g, "").slice(0, 10));
-              }}
-              className="border-0 shadow-none focus-visible:ring-0 text-sm md:text-lg h-12 md:h-14 bg-transparent placeholder:text-muted-foreground/50 font-bold"
-            />
-            {isLoading && <Loader2 className="h-5 w-5 animate-spin text-primary shrink-0" />}
-          </div>
+          {/* Step 2: Phone Number — only visible after valid registration */}
+          <AnimatePresence>
+            {step === 2 && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.25 }}
+              >
+                <div className="border-t border-border/50" />
+                <div className="flex items-center gap-3 px-2 pt-3">
+                  <div className="flex items-center bg-muted rounded-xl px-3 py-2.5 text-sm font-bold text-muted-foreground shrink-0">+91</div>
+                  <Input
+                    ref={phoneInputRef}
+                    type="tel"
+                    placeholder="10-digit mobile number"
+                    value={phone}
+                    onChange={handlePhoneChange}
+                    className="border-0 shadow-none focus-visible:ring-0 text-sm md:text-lg h-12 md:h-14 bg-transparent placeholder:text-muted-foreground/50 font-bold"
+                    maxLength={10}
+                  />
+                  {isLoading && <Loader2 className="h-5 w-5 animate-spin text-primary shrink-0" />}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-muted-foreground">
