@@ -235,7 +235,7 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
                       <TableCell className="font-semibold text-xs">{policy.premium_amount ? `₹${policy.premium_amount.toLocaleString("en-IN")}` : "—"}</TableCell>
                       <TableCell className="text-xs">{policy.issued_date ? format(new Date(policy.issued_date), "dd MMM yyyy") : "—"}</TableCell>
                       <TableCell className="text-xs">{policy.expiry_date ? format(new Date(policy.expiry_date), "dd MMM yyyy") : "—"}</TableCell>
-                      <TableCell>{sourceLabel(policy.source_label)}</TableCell>
+                      <TableCell>{sourceLabel(policy)}</TableCell>
                       <TableCell>
                         {policy.policy_document_url ? (
                           <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => window.open(policy.policy_document_url!, "_blank")}>
