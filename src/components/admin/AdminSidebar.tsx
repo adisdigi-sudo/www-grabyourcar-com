@@ -370,7 +370,7 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
   const { activeVertical, setActiveVertical } = useVerticalAccess();
   const { signOut } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
-  const [openSections, setOpenSections] = useState<string[]>(["cars", "website"]);
+  const [openSections, setOpenSections] = useState<string[]>(["services", "cars", "website"]);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
