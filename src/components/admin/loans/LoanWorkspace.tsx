@@ -398,10 +398,16 @@ const SOURCE_COLORS: Record<string, string> = {
 };
 
 // ─── Main Workspace ───
-export const LoanWorkspace = () => {
+type LoanWorkspaceView = "pipeline" | "disbursement" | "after_sales" | "bulk_tools";
+
+interface LoanWorkspaceProps {
+  initialView?: LoanWorkspaceView;
+}
+
+export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [activeView, setActiveView] = useState<"pipeline" | "disbursement" | "after_sales" | "bulk_tools">("pipeline");
+  const [activeView, setActiveView] = useState<LoanWorkspaceView>(initialView);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [selectedApp, setSelectedApp] = useState<any>(null);
   const [showStageModal, setShowStageModal] = useState(false);
