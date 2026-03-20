@@ -291,7 +291,7 @@ const navItems: NavItem[] = [
   { id: "roles", label: "👥 User Roles", icon: UserCog, verticals: ["marketing"], allowedRoles: ["super_admin", "admin"] },
   { id: "settings", label: "⚙️ Site Settings", icon: Settings, verticals: ["marketing"], allowedRoles: ["super_admin", "admin"] },
 
-  // ── Accounts & Finance — shows in accounts vertical + always for admins ──
+  // ── Accounts & Finance — shows only in accounts vertical ──
   { 
     id: "finance-hub", 
     label: "💰 Accounts & Finance", 
@@ -309,7 +309,7 @@ const navItems: NavItem[] = [
     ]
   },
 
-  // ── HR & Office Culture — shows in hr vertical + always for admins ──
+  // ── HR & Office Culture — shows only in hr vertical ──
   { 
     id: "hr-hub", 
     label: "👥 HR & Office", 
