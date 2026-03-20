@@ -4,6 +4,7 @@ import { Header } from "@/components/Header";
 import { PromoBanner } from "@/components/PromoBanner";
 import { RivianHero } from "@/components/RivianHero";
 import { CategoryGrid } from "@/components/CategoryGrid";
+import { QuickNavigation } from "@/components/QuickNavigation";
 import { CarListings } from "@/components/CarListings";
 import EMICalculator from "@/components/EMICalculator";
 import { LeadForm } from "@/components/LeadForm";
