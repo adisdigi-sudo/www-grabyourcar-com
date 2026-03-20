@@ -79,12 +79,33 @@ export const PIPELINE_STAGES = [
 ];
 
 const STAGE_MAP: Record<string, string> = {
-  new_lead: "new_lead", contact_attempted: "smart_calling", requirement_collected: "smart_calling",
-  quote_shared: "quote_shared", follow_up: "follow_up", won: "won", lost: "lost",
-  policy_issued: "policy_issued", smart_calling: "smart_calling",
+  new_lead: "new_lead",
+  new: "new_lead",
+  contact_attempted: "smart_calling",
+  requirement_collected: "smart_calling",
+  smart_calling: "smart_calling",
+  contacted: "smart_calling",
+  in_process: "smart_calling",
+  quote_shared: "quote_shared",
+  follow_up: "follow_up",
+  interested: "follow_up",
+  hot_prospect: "follow_up",
+  won: "won",
+  converted: "won",
+  policy_issued: "policy_issued",
+  lost: "lost",
+  not_interested: "lost",
 };
 
-export const normalizeStage = (stage: string | null): string => STAGE_MAP[stage || "new_lead"] || "new_lead";
+export const normalizeStage = (stage: string | null, leadStatus?: string | null): string => {
+  const normalizedStage = stage ? STAGE_MAP[stage] : undefined;
+  if (normalizedStage) return normalizedStage;
+
+  const normalizedLeadStatus = leadStatus ? STAGE_MAP[leadStatus] : undefined;
+  if (normalizedLeadStatus) return normalizedLeadStatus;
+
+  return "new_lead";
+};
 
 const CALL_STATUSES = ["Interested", "Not Interested", "Call Back", "No Answer", "Wrong Number"];
 const LOST_REASONS = ["Too expensive", "Existing agent", "No response", "Not renewing", "Competitor offer", "Other"];
