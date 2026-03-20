@@ -457,7 +457,7 @@ export function HSRPUnifiedBookingForm() {
     ? vehicleCategories.find(c => c.value === formData.vehicleCategory)
     : null;
   const cleanedRegistration = formData.registrationNumber.replace(/\s+/g, "").toUpperCase();
-  const hasValidRegistration = /^[A-Z]{2}\d{1,2}[A-Z]{0,3}\d{4}$/.test(cleanedRegistration);
+  const hasValidRegistration = /^[A-Z]{2,3}\d{0,2}[A-Z]{0,3}\d{3,4}$/.test(cleanedRegistration) && cleanedRegistration.length >= 5;
 
   return (
     <form
