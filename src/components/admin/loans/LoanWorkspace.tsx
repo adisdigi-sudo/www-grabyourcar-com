@@ -1085,15 +1085,22 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
               <div className="flex items-center gap-2 text-violet-700 text-sm font-medium"><Building2 className="h-4 w-4" /> Share Offer — Bank Partners</div>
               <div>
                 <Label>Select Bank/NBFC *</Label>
-                <Select value={selectedBank} onValueChange={setSelectedBank}>
+                <Select value={selectedBank} onValueChange={(v) => { setSelectedBank(v); if (v !== '__custom__') setCustomBankName(''); }}>
                   <SelectTrigger><SelectValue placeholder="Choose bank partner" /></SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-h-[280px]">
                     {bankPartners.map((b: any) => (
                       <SelectItem key={b.id} value={b.id}>{b.name} {b.interest_rate_min ? `(${b.interest_rate_min}%-${b.interest_rate_max}%)` : ''}</SelectItem>
                     ))}
+                    <SelectItem value="__custom__">+ Add Custom Bank/NBFC</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+              {selectedBank === '__custom__' && (
+                <div>
+                  <Label>Custom Bank/NBFC Name *</Label>
+                  <Input placeholder="Enter bank or NBFC name" value={customBankName} onChange={e => setCustomBankName(e.target.value)} />
+                </div>
+              )}
               <div className="grid grid-cols-3 gap-3">
                 <div><Label>Interest %</Label><Input type="number" step="0.1" value={interestRate} onChange={e => setInterestRate(e.target.value)} /></div>
                 <div><Label>Tenure (months)</Label><Input type="number" value={tenureMonths} onChange={e => setTenureMonths(e.target.value)} /></div>
