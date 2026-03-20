@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +26,27 @@ type ActiveView = "pipeline" | "policy_book" | "renewals" | "bulk_tools";
 export function InsuranceWorkspace() {
   const queryClient = useQueryClient();
   const [activeView, setActiveView] = useState<ActiveView>("pipeline");
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("insurance-workspace-new-leads")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "insurance_clients" },
+        (payload) => {
+          const lead = payload.new as Client;
+          queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
+          toast.success("New insurance lead received", {
+            description: [lead.customer_name || "Unknown", lead.phone || "", lead.lead_source || "Unknown"].filter(Boolean).join(" • "),
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
   const [showImport, setShowImport] = useState(false);
   const [showAddLead, setShowAddLead] = useState(false);
   const [newLead, setNewLead] = useState({
