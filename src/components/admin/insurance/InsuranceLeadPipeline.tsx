@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -79,12 +79,33 @@ export const PIPELINE_STAGES = [
 ];
 
 const STAGE_MAP: Record<string, string> = {
-  new_lead: "new_lead", contact_attempted: "smart_calling", requirement_collected: "smart_calling",
-  quote_shared: "quote_shared", follow_up: "follow_up", won: "won", lost: "lost",
-  policy_issued: "policy_issued", smart_calling: "smart_calling",
+  new_lead: "new_lead",
+  new: "new_lead",
+  contact_attempted: "smart_calling",
+  requirement_collected: "smart_calling",
+  smart_calling: "smart_calling",
+  contacted: "smart_calling",
+  in_process: "smart_calling",
+  quote_shared: "quote_shared",
+  follow_up: "follow_up",
+  interested: "follow_up",
+  hot_prospect: "follow_up",
+  won: "won",
+  converted: "won",
+  policy_issued: "policy_issued",
+  lost: "lost",
+  not_interested: "lost",
 };
 
-export const normalizeStage = (stage: string | null): string => STAGE_MAP[stage || "new_lead"] || "new_lead";
+export const normalizeStage = (stage: string | null, leadStatus?: string | null): string => {
+  const normalizedStage = stage ? STAGE_MAP[stage] : undefined;
+  if (normalizedStage) return normalizedStage;
+
+  const normalizedLeadStatus = leadStatus ? STAGE_MAP[leadStatus] : undefined;
+  if (normalizedLeadStatus) return normalizedLeadStatus;
+
+  return "new_lead";
+};
 
 const CALL_STATUSES = ["Interested", "Not Interested", "Call Back", "No Answer", "Wrong Number"];
 const LOST_REASONS = ["Too expensive", "Existing agent", "No response", "Not renewing", "Competitor offer", "Other"];
@@ -290,6 +311,8 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [draggingClient, setDraggingClient] = useState<Client | null>(null);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
+  const [editFields, setEditFields] = useState<Record<string, string>>({});
+  const [savingEdit, setSavingEdit] = useState(false);
 
   // Dialogs
   const [showLostDialog, setShowLostDialog] = useState(false);
@@ -311,12 +334,34 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
   const [showUploadPolicy, setShowUploadPolicy] = useState(false);
   const [showWonDialog, setShowWonDialog] = useState(false);
 
+  useEffect(() => {
+    if (!selectedClient) {
+      setEditFields({});
+      return;
+    }
+
+    setEditFields({
+      customer_name: selectedClient.customer_name || "",
+      phone: displayPhone(selectedClient.phone) || "",
+      email: selectedClient.email || "",
+      city: selectedClient.city || "",
+      vehicle_number: selectedClient.vehicle_number || "",
+      vehicle_make: selectedClient.vehicle_make || "",
+      vehicle_model: selectedClient.vehicle_model || "",
+      vehicle_year: selectedClient.vehicle_year ? String(selectedClient.vehicle_year) : "",
+      current_insurer: selectedClient.current_insurer || "",
+      current_policy_number: selectedClient.current_policy_number || "",
+      current_premium: selectedClient.current_premium ? String(selectedClient.current_premium) : "",
+      notes: selectedClient.notes || "",
+    });
+  }, [selectedClient]);
+
   // Counts
   const stageCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     PIPELINE_STAGES.forEach(s => { counts[s.value] = 0; });
     clients.forEach(c => {
-      const stage = normalizeStage(c.pipeline_stage);
+      const stage = normalizeStage(c.pipeline_stage, c.lead_status);
       if (counts[stage] !== undefined) counts[stage]++;
     });
     return counts;
@@ -328,7 +373,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
       ? clients
       : selectedStage === "retarget"
         ? clients.filter(c => c.retarget_status === "scheduled")
-        : clients.filter(c => normalizeStage(c.pipeline_stage) === selectedStage);
+        : clients.filter(c => normalizeStage(c.pipeline_stage, c.lead_status) === selectedStage);
     if (search.trim()) {
       const s = search.toLowerCase();
       result = result.filter(c =>
@@ -399,7 +444,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
   });
 
   const handleMove = useCallback((client: Client, targetStage: string) => {
-    const currentStage = normalizeStage(client.pipeline_stage);
+    const currentStage = normalizeStage(client.pipeline_stage, client.lead_status);
     if (currentStage === targetStage) return;
     if (targetStage === "won") {
       setPendingMoveClient(client);
@@ -458,7 +503,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
   const handleDragOver = (e: React.DragEvent, stage: string) => { e.preventDefault(); setDragOverStage(stage); };
   const handleDrop = (e: React.DragEvent, stage: string) => {
     e.preventDefault();
-    if (draggingClient && normalizeStage(draggingClient.pipeline_stage) !== stage) handleMove(draggingClient, stage);
+    if (draggingClient && normalizeStage(draggingClient.pipeline_stage, draggingClient.lead_status) !== stage) handleMove(draggingClient, stage);
     setDragOverStage(null);
     setDraggingClient(null);
   };
@@ -528,7 +573,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                     <p className="text-sm">No leads found</p>
                   </TableCell></TableRow>
                 ) : filtered.map((client, idx) => {
-                  const normStage = normalizeStage(client.pipeline_stage);
+                  const normStage = normalizeStage(client.pipeline_stage, client.lead_status);
                   const stage = PIPELINE_STAGES.find(s => s.value === normStage) || PIPELINE_STAGES[0];
                   const phone = displayPhone(client.phone);
                   const daysToExpiry = client.policy_expiry_date ? differenceInDays(new Date(client.policy_expiry_date), new Date()) : null;
@@ -642,7 +687,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
       <Dialog open={!!selectedClient && !showLostDialog && !showCallingDialog && !showFollowUpDialog && !showQuoteModal && !showUploadPolicy && !showWonDialog} onOpenChange={(o) => { if (!o) setSelectedClient(null); }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           {selectedClient && (() => {
-            const normStage = normalizeStage(selectedClient.pipeline_stage);
+            const normStage = normalizeStage(selectedClient.pipeline_stage, selectedClient.lead_status);
             const stage = PIPELINE_STAGES.find(s => s.value === normStage) || PIPELINE_STAGES[0];
             const phone = displayPhone(selectedClient.phone);
             return (
@@ -674,29 +719,104 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                     {selectedClient.incentive_eligible && <Badge className="bg-amber-100 text-amber-700 border-amber-200">⭐ Incentive</Badge>}
                   </div>
 
-                  {/* Customer Details */}
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div><span className="text-muted-foreground text-xs">Mobile:</span> <span className="font-medium">{phone || "—"}</span></div>
-                    <div><span className="text-muted-foreground text-xs">Email:</span> <span className="font-medium">{selectedClient.email || "—"}</span></div>
-                    <div><span className="text-muted-foreground text-xs">City:</span> <span className="font-medium">{selectedClient.city || "—"}</span></div>
-                    <div><span className="text-muted-foreground text-xs">Vehicle:</span> <span className="font-mono font-semibold">{selectedClient.vehicle_number || "—"}</span></div>
-                    <div><span className="text-muted-foreground text-xs">Model:</span> <span className="font-medium">{[selectedClient.vehicle_make, selectedClient.vehicle_model].filter(Boolean).join(" ") || "—"}</span></div>
-                    <div><span className="text-muted-foreground text-xs">Insurer:</span> <span className="font-medium">{selectedClient.current_insurer || "—"}</span></div>
-                    <div><span className="text-muted-foreground text-xs">Policy No:</span> <span className="font-mono">{selectedClient.current_policy_number || "—"}</span></div>
-                    <div><span className="text-muted-foreground text-xs">Premium:</span> <span className="font-medium">{selectedClient.current_premium ? `₹${selectedClient.current_premium.toLocaleString("en-IN")}` : "—"}</span></div>
-                  </div>
-
-                  {/* Call/Follow-up Activity */}
-                  {(selectedClient.call_status || selectedClient.follow_up_date || selectedClient.lost_reason) && (
-                    <div className="bg-muted/20 rounded-lg p-3 text-sm space-y-1">
-                      {selectedClient.call_status && <p><span className="text-muted-foreground text-xs">Last Call:</span> {selectedClient.call_status}</p>}
-                      {selectedClient.call_remarks && <p className="text-xs text-muted-foreground italic">{selectedClient.call_remarks}</p>}
-                      {selectedClient.follow_up_date && <p><span className="text-muted-foreground text-xs">Follow-up:</span> {format(new Date(selectedClient.follow_up_date), "dd MMM yyyy")} {selectedClient.follow_up_time || ""}</p>}
-                      {selectedClient.lost_reason && <p><span className="text-muted-foreground text-xs">Lost:</span> {selectedClient.lost_reason}</p>}
+                  {/* Editable Lead Details */}
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase">Lead Details</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Name</Label>
+                        <Input value={editFields.customer_name || ""} onChange={e => setEditFields(f => ({ ...f, customer_name: e.target.value }))} className="h-8 text-sm" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Mobile</Label>
+                        <Input value={editFields.phone || ""} onChange={e => setEditFields(f => ({ ...f, phone: e.target.value.replace(/\D/g, "").slice(0, 10) }))} className="h-8 text-sm" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Email</Label>
+                        <Input value={editFields.email || ""} onChange={e => setEditFields(f => ({ ...f, email: e.target.value }))} className="h-8 text-sm" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">City</Label>
+                        <Input value={editFields.city || ""} onChange={e => setEditFields(f => ({ ...f, city: e.target.value }))} className="h-8 text-sm" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Vehicle Number</Label>
+                        <Input value={editFields.vehicle_number || ""} onChange={e => setEditFields(f => ({ ...f, vehicle_number: e.target.value.replace(/[^A-Z0-9]/gi, "").toUpperCase() }))} className="h-8 text-sm font-mono uppercase" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Vehicle Make</Label>
+                        <Input value={editFields.vehicle_make || ""} onChange={e => setEditFields(f => ({ ...f, vehicle_make: e.target.value }))} className="h-8 text-sm" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Vehicle Model</Label>
+                        <Input value={editFields.vehicle_model || ""} onChange={e => setEditFields(f => ({ ...f, vehicle_model: e.target.value }))} className="h-8 text-sm" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Vehicle Year</Label>
+                        <Input type="number" value={editFields.vehicle_year || ""} onChange={e => setEditFields(f => ({ ...f, vehicle_year: e.target.value.replace(/\D/g, "").slice(0, 4) }))} className="h-8 text-sm" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Insurer</Label>
+                        <Input value={editFields.current_insurer || ""} onChange={e => setEditFields(f => ({ ...f, current_insurer: e.target.value }))} className="h-8 text-sm" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Policy No</Label>
+                        <Input value={editFields.current_policy_number || ""} onChange={e => setEditFields(f => ({ ...f, current_policy_number: e.target.value.toUpperCase() }))} className="h-8 text-sm font-mono uppercase" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Premium</Label>
+                        <Input type="number" value={editFields.current_premium || ""} onChange={e => setEditFields(f => ({ ...f, current_premium: e.target.value.replace(/[^\d.]/g, "") }))} className="h-8 text-sm" />
+                      </div>
                     </div>
-                  )}
+                    <div className="space-y-1">
+                      <Label className="text-[11px] text-muted-foreground">Notes</Label>
+                      <Textarea value={editFields.notes || ""} onChange={e => setEditFields(f => ({ ...f, notes: e.target.value }))} className="min-h-20 text-sm" />
+                    </div>
+                    <Button
+                      size="sm"
+                      className="w-full"
+                      disabled={savingEdit}
+                      onClick={async () => {
+                        if (!selectedClient) return;
+                        setSavingEdit(true);
+                        try {
+                          const updates: Record<string, any> = {
+                            customer_name: editFields.customer_name?.trim() || null,
+                            phone: editFields.phone || selectedClient.phone,
+                            email: editFields.email?.trim() || null,
+                            city: editFields.city?.trim() || null,
+                            vehicle_number: editFields.vehicle_number?.trim() || null,
+                            vehicle_make: editFields.vehicle_make?.trim() || null,
+                            vehicle_model: editFields.vehicle_model?.trim() || null,
+                            vehicle_year: editFields.vehicle_year ? Number(editFields.vehicle_year) : null,
+                            current_insurer: editFields.current_insurer?.trim() || null,
+                            current_policy_number: editFields.current_policy_number?.trim() || null,
+                            current_premium: editFields.current_premium ? Number(editFields.current_premium) : null,
+                            notes: editFields.notes?.trim() || null,
+                          };
 
-                  {selectedClient.notes && <p className="text-sm text-muted-foreground bg-muted/30 rounded-lg p-2">{selectedClient.notes}</p>}
+                          const { data, error } = await supabase
+                            .from("insurance_clients")
+                            .update(updates)
+                            .eq("id", selectedClient.id)
+                            .select("id, customer_name, phone, email, city, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_insurer, current_policy_type, current_premium, ncb_percentage, previous_claim, policy_expiry_date, policy_start_date, current_policy_number, lead_source, lead_status, assigned_executive, priority, pipeline_stage, contact_attempts, quote_amount, quote_insurer, lost_reason, follow_up_date, follow_up_time, call_status, call_remarks, renewal_reminder_set, renewal_reminder_date, incentive_eligible, notes, retarget_status, journey_last_event, journey_last_event_at, created_at")
+                            .maybeSingle();
+                          if (error) throw error;
+
+                          const refreshedClient = (data || { ...selectedClient, ...updates }) as Client;
+                          setSelectedClient(refreshedClient);
+                          queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
+                          toast.success("Lead updated");
+                        } catch (e: any) {
+                          toast.error(e.message || "Failed to save");
+                        } finally {
+                          setSavingEdit(false);
+                        }
+                      }}
+                    >
+                      {savingEdit ? "Saving..." : "Save Changes"}
+                    </Button>
+                  </div>
 
                   {/* Actions */}
                   <div className="flex flex-wrap gap-2 pt-2 border-t">
