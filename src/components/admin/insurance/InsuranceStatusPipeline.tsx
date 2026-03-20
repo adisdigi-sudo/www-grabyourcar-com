@@ -687,7 +687,7 @@ export function InsuranceStatusPipeline() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">Mobile</Label>
-                  <Input value={editPhone} onChange={e => setEditPhone(e.target.value)} placeholder="Enter mobile" className="h-8 text-sm" />
+                  <Input value={editPhone} onChange={e => setEditPhone(e.target.value.replace(/\D/g, "").slice(0, 10))} placeholder="Enter mobile" className="h-8 text-sm" />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">Email</Label>

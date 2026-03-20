@@ -296,7 +296,7 @@ function InsuranceVerticalWorkspace() {
       case "clients": return <InsuranceClientsManager />;
       case "policies": return <InsurancePoliciesManager />;
       case "renewals": return <InsuranceRenewalsEngine />;
-      case "pipeline": return <InsuranceStatusPipeline />;
+      case "pipeline": return <InsurancePipelineBoard />;
       case "tasks": return <InsuranceTasksManager />;
       case "commissions": return <InsuranceCommissionsTracker />;
       case "documents": return <InsuranceDocumentVault />;
