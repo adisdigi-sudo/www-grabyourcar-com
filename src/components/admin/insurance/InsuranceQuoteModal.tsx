@@ -8,8 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Download, MessageCircle, Mail, Copy, FileText, Shield, IndianRupee } from "lucide-react";
+import { Download, MessageCircle, Mail, Copy, FileText, Shield, IndianRupee, Plus, Check, X } from "lucide-react";
 import { generateInsuranceQuotePdf, InsuranceQuoteData } from "@/lib/generateInsuranceQuotePdf";
+import { INSURANCE_COMPANIES, getShortName } from "@/lib/insuranceCompanies";
 
 interface ClientData {
   customer_name: string | null;
@@ -42,14 +43,6 @@ interface Props {
   policy?: PolicyData | null;
   onQuoteSent?: () => void;
 }
-
-const INSURERS = [
-  "ICICI Lombard", "HDFC ERGO", "Bajaj Allianz", "New India Assurance",
-  "United India Insurance", "Oriental Insurance", "National Insurance",
-  "Tata AIG", "Reliance General", "SBI General", "Cholamandalam MS",
-  "Bharti AXA", "Royal Sundaram", "Acko", "Digit Insurance",
-  "Kotak General", "Iffco Tokio", "Magma HDI", "Liberty General",
-];
 
 const ALL_ADDONS = [
   "Zero Depreciation", "Consumables Cover", "Engine Protection",
