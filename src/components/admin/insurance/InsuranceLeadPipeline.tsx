@@ -666,6 +666,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                             <UserPlus className="h-2.5 w-2.5" /> Pick Up
                           </Button>
                         )}
+                      </TableCell>
                       <TableCell>
                         <Badge variant="outline" className={cn("text-[9px]", getSourceColor(client.lead_source))}>
                           {formatSource(client.lead_source, client.created_at)}
