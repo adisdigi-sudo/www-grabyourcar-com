@@ -85,7 +85,10 @@ const navItems: NavItem[] = [
       { id: "services-api-partners", label: "🔗 API Partners", icon: Globe, verticals: ["rental"], allowedRoles: ["super_admin", "admin"] },
       { id: "services-insurance", label: "🛡️ Insurance CRM", icon: FileText, verticals: ["insurance"], allowedRoles: ["super_admin", "admin", "insurance"] },
       { id: "services-insurance-import", label: "📥 Insurance Import", icon: Database, verticals: ["insurance"], allowedRoles: ["super_admin", "admin", "insurance"] },
-      { id: "services-loans", label: "💰 Car Loans CRM", icon: CreditCard, verticals: ["loans"], allowedRoles: ["super_admin", "admin", "finance"] },
+      { id: "services-loans-pipeline", label: "💰 Loan Pipeline", icon: CreditCard, verticals: ["loans"], allowedRoles: ["super_admin", "admin", "finance"] },
+      { id: "services-loans-disbursement", label: "📘 Disbursement Book", icon: FileText, verticals: ["loans"], allowedRoles: ["super_admin", "admin", "finance"] },
+      { id: "services-loans-after-sales", label: "🤝 After Sales", icon: Users, verticals: ["loans"], allowedRoles: ["super_admin", "admin", "finance"] },
+      { id: "services-loans-bulk", label: "🧰 Bulk Tools", icon: Database, verticals: ["loans"], allowedRoles: ["super_admin", "admin", "finance"] },
       { id: "services-emi-pdf", label: "EMI PDF Settings", icon: FileText, verticals: ["loans"], allowedRoles: ["super_admin", "admin", "finance"] },
       { id: "services-discounts", label: "Discount Presets", icon: Tags, verticals: ["sales"], allowedRoles: ["super_admin", "admin", "sales"] },
       { id: "services-quote-generator", label: "Manual Quote", icon: FileSignature, verticals: ["sales"], allowedRoles: ["super_admin", "admin", "sales"] },
@@ -367,7 +370,7 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
   const { activeVertical, setActiveVertical } = useVerticalAccess();
   const { signOut } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
-  const [openSections, setOpenSections] = useState<string[]>(["cars", "website"]);
+  const [openSections, setOpenSections] = useState<string[]>(["services", "cars", "website"]);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
