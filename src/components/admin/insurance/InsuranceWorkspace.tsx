@@ -64,8 +64,11 @@ export function InsuranceWorkspace() {
 
   // KPI counts
   const totalLeads = clients.length;
-  const wonCount = clients.filter(c => normalizeStage(c.pipeline_stage) === "won" || normalizeStage(c.pipeline_stage) === "policy_issued").length;
-  const lostCount = clients.filter(c => normalizeStage(c.pipeline_stage) === "lost").length;
+  const wonCount = clients.filter(c => {
+    const stage = normalizeStage(c.pipeline_stage, c.lead_status);
+    return stage === "won" || stage === "policy_issued";
+  }).length;
+  const lostCount = clients.filter(c => normalizeStage(c.pipeline_stage, c.lead_status) === "lost").length;
   const inPipeline = totalLeads - wonCount - lostCount;
   const convRate = totalLeads > 0 ? ((wonCount / totalLeads) * 100).toFixed(1) : "0";
   const activePolicies = policies.filter(p => p.status === "active").length;
