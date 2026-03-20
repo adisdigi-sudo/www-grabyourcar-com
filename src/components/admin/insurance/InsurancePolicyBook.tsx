@@ -59,11 +59,24 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
     return Array.from(set).sort() as string[];
   }, [policies]);
 
+  // Deduplicate: keep only the latest policy per client_id + vehicle_number combo
+  const deduplicatedPolicies = useMemo(() => {
+    const map = new Map<string, PolicyRecord>();
+    // policies are already sorted by created_at desc, so first occurrence is latest
+    for (const p of policies) {
+      const vehicleKey = p.insurance_clients?.vehicle_number?.replace(/\s+/g, "").toUpperCase() || "no-vehicle";
+      const key = `${p.client_id || "unknown"}_${vehicleKey}`;
+      if (!map.has(key)) {
+        map.set(key, p);
+      }
+    }
+    return Array.from(map.values());
+  }, [policies]);
+
   const filtered = useMemo(() => {
-    let result = policies;
+    let result = deduplicatedPolicies;
     if (partnerFilter !== "all") result = result.filter(p => p.insurer === partnerFilter);
 
-    // Date range filter on issued_date
     if (dateFrom || dateTo) {
       result = result.filter(p => {
         if (!p.issued_date) return false;
@@ -88,7 +101,7 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
       );
     }
     return result;
-  }, [policies, partnerFilter, search, dateFrom, dateTo]);
+  }, [deduplicatedPolicies, partnerFilter, search, dateFrom, dateTo]);
 
   const toggleSelect = (id: string) => setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
