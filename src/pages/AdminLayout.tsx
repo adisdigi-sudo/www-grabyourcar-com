@@ -299,10 +299,8 @@ const AdminLayout = () => {
         return <LoanCRMDashboard initialView="after_sales" />;
       case "services-loans-bulk":
         return <LoanCRMDashboard initialView="bulk_tools" />;
-      case "services-emi-calculator": {
-        const EMICalc = require("@/components/EMICalculator").default;
-        return <EMICalc />;
-      }
+      case "services-emi-calculator":
+        return <EMICalculator />;
       case "services-emi-pdf":
         return <EMIPDFSettings />;
       case "services-discounts":
