@@ -77,60 +77,134 @@ const EMICalculator = () => {
   const handleDownloadPDF = () => {
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
     const w = doc.internal.pageSize.getWidth();
-    doc.setFillColor(16, 185, 129);
-    doc.rect(0, 0, w, 50, "F");
-    doc.setFillColor(13, 148, 103);
-    doc.rect(0, 45, w, 5, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(22);
-    doc.setFont("helvetica", "bold");
-    doc.text("Car Loan EMI Plan", w / 2, 22, { align: "center" });
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.text("GrabYourCar - Your Trusted Auto Finance Partner", w / 2, 32, { align: "center" });
-    doc.text("www.grabyourcar.com", w / 2, 40, { align: "center" });
+    const h = doc.internal.pageSize.getHeight();
+    const boxX = 16;
+    const boxW = w - 32;
+    const formatRs = (value: number) => `Rs. ${Math.round(value).toLocaleString("en-IN")}`;
 
-    let y = 65;
-    doc.setTextColor(60, 60, 60);
-    const boxX = 20; const boxW = w - 40;
-    doc.setFillColor(240, 253, 244);
-    doc.roundedRect(boxX, y, boxW, 40, 4, 4, "F");
-    doc.setDrawColor(16, 185, 129);
-    doc.roundedRect(boxX, y, boxW, 40, 4, 4, "S");
-    doc.setFontSize(28);
+    doc.setFillColor(16, 185, 129);
+    doc.rect(0, 0, w, 26, "F");
+    doc.setFillColor(5, 150, 105);
+    doc.rect(0, 26, w, 3, "F");
+
+    doc.setTextColor(255, 255, 255);
     doc.setFont("helvetica", "bold");
+    doc.setFontSize(19);
+    doc.text("Car Loan EMI Plan", boxX, 14);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.text("Professional estimate for customer discussion", boxX, 20);
+    doc.text("GrabYourCar | www.grabyourcar.com", w - boxX, 20, { align: "right" });
+
+    let y = 38;
+
+    doc.setFillColor(240, 253, 244);
+    doc.setDrawColor(16, 185, 129);
+    doc.roundedRect(boxX, y, boxW, 28, 4, 4, "FD");
     doc.setTextColor(16, 185, 129);
-    doc.text(fmt(emi), w / 2, y + 20, { align: "center" });
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(24);
+    doc.text(formatRs(emi), w / 2, y + 14, { align: "center" });
+    doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
-    doc.setTextColor(100, 100, 100);
-    doc.text("Monthly EMI", w / 2, y + 30, { align: "center" });
-    y += 55;
+    doc.setTextColor(75, 85, 99);
+    doc.text("Estimated Monthly EMI", w / 2, y + 22, { align: "center" });
+    y += 38;
 
     const rows = [
-      ["Loan Amount", fmt(amount)],
-      ["Interest Rate (p.a.)", `${rate}%`],
+      ["Loan Amount", formatRs(amount)],
+      ["Interest Rate (per annum)", `${rate}%`],
       ["Tenure", `${tenure} months (${(tenure / 12).toFixed(1)} years)`],
-      ["Monthly EMI", fmt(emi)],
-      ["Total Interest Payable", fmt(totalInterest)],
-      ["Total Amount Payable", fmt(totalPayable)],
+      ["Estimated Monthly EMI", formatRs(emi)],
+      ["Total Interest Payable", formatRs(totalInterest)],
+      ["Total Amount Payable", formatRs(totalPayable)],
     ];
 
+    doc.setFontSize(9);
     rows.forEach(([label, value], i) => {
-      const rowY = y + i * 14;
-      if (i % 2 === 0) { doc.setFillColor(248, 250, 252); doc.rect(boxX, rowY - 4, boxW, 14, "F"); }
-      doc.setFontSize(11); doc.setFont("helvetica", "normal"); doc.setTextColor(80, 80, 80);
-      doc.text(label, boxX + 8, rowY + 4);
-      doc.setFont("helvetica", "bold"); doc.setTextColor(30, 30, 30);
-      doc.text(value, boxX + boxW - 8, rowY + 4, { align: "right" });
+      const rowY = y + i * 11;
+      if (i % 2 === 0) {
+        doc.setFillColor(248, 250, 252);
+        doc.rect(boxX, rowY - 4, boxW, 10, "F");
+      }
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(75, 85, 99);
+      doc.text(label, boxX + 6, rowY + 2);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(17, 24, 39);
+      doc.text(value, boxX + boxW - 6, rowY + 2, { align: "right" });
     });
 
-    y += rows.length * 14 + 15;
-    doc.setDrawColor(200, 200, 200); doc.line(boxX, y, boxX + boxW, y); y += 10;
-    doc.setFontSize(8); doc.setFont("helvetica", "normal"); doc.setTextColor(150, 150, 150);
-    doc.text("* This is an indicative EMI calculation. Actual EMI may vary based on bank/NBFC terms.", boxX, y);
-    doc.text(`Generated on ${format(new Date(), "dd MMM yyyy, hh:mm a")} | GrabYourCar`, boxX, y + 6);
+    y += rows.length * 11 + 8;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(17, 24, 39);
+    doc.text("Documents Required", boxX, y);
+    y += 4;
+
+    const columnGap = 8;
+    const columnW = (boxW - columnGap) / 2;
+    const leftX = boxX;
+    const rightX = boxX + columnW + columnGap;
+    const listTop = y;
+
+    const drawChecklistCard = (x: number, title: string, items: string[]) => {
+      const cardH = 8 + items.length * 5 + 4;
+      doc.setFillColor(249, 250, 251);
+      doc.setDrawColor(209, 213, 219);
+      doc.roundedRect(x, listTop, columnW, cardH, 3, 3, "FD");
+      doc.setFillColor(16, 185, 129);
+      doc.roundedRect(x, listTop, columnW, 7, 3, 3, "F");
+      doc.rect(x, listTop + 4, columnW, 3, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.text(title, x + 4, listTop + 5);
+      doc.setTextColor(55, 65, 81);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
+      items.forEach((item, index) => {
+        const itemY = listTop + 12 + index * 5;
+        doc.circle(x + 4, itemY - 1, 0.8, "S");
+        doc.text(item, x + 8, itemY);
+      });
+      return cardH;
+    };
+
+    const individualDocs = [
+      "PAN Card",
+      "Aadhaar Card",
+      "Driving Licence or Passport",
+      "3 months bank statement",
+      "3 salary slips or ITR",
+      "Recent passport-size photo",
+    ];
+    const corporateDocs = [
+      "Company PAN",
+      "GST Certificate or Incorporation proof",
+      "Authorized signatory KYC",
+      "6 months company bank statement",
+      "Latest ITR and financials",
+      "Address proof of company",
+    ];
+
+    const leftH = drawChecklistCard(leftX, "Individual Applicant", individualDocs);
+    const rightH = drawChecklistCard(rightX, "Corporate Applicant", corporateDocs);
+    y = listTop + Math.max(leftH, rightH) + 8;
+
+    doc.setDrawColor(209, 213, 219);
+    doc.line(boxX, y, boxX + boxW, y);
+    y += 6;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(107, 114, 128);
+    doc.text("This is an indicative EMI estimate. Final loan terms, approval, and EMI may vary by lender policy, profile, and documentation.", boxX, y, { maxWidth: boxW });
+    doc.text(`Generated on ${format(new Date(), "dd MMM yyyy, hh:mm a")} | GrabYourCar`, boxX, h - 10);
+
     doc.save(`EMI_Plan_Rs${Math.round(amount / 100000)}L_${tenure}m.pdf`);
-    toast.success("EMI Plan PDF downloaded!");
+    toast.success("EMI plan PDF downloaded!");
   };
 
   return (
