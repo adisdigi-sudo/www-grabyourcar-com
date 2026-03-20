@@ -470,16 +470,17 @@ async function routeToVerticalTable(
             updated_at: now,
           }).eq("id", existingLoan[0].id);
         } else {
-          await supabase.from("car_loan_leads").insert({
-            name: data.name || null,
+          const { error: loanInsertErr } = await supabase.from("car_loan_leads").insert({
+            name: safeName,
             phone: cleanedPhone,
-            email: data.email || null,
-            city: data.city || null,
+            email: safeEmail,
+            city: safeCity,
             source: data.source,
-            notes: data.message || null,
+            notes: safeMessage,
             status: "new",
             preferred_car: data.vehicleModel || null,
           });
+          if (loanInsertErr) console.error("Loan insert error:", loanInsertErr);
         }
         break;
       }
