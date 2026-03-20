@@ -947,15 +947,18 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
   };
 
   const handleOfferSave = () => {
+    const isCustom = selectedBank === '__custom__';
     if (!selectedBank) { toast.error("Select a bank partner"); return; }
+    if (isCustom && !customBankName.trim()) { toast.error("Enter custom bank/NBFC name"); return; }
+    const bankName = isCustom ? customBankName.trim() : (bankPartners.find((b: any) => b.id === selectedBank)?.name || '');
     updateMutation.mutate({
-      bank_partner_id: selectedBank,
-      lender_name: bankPartners.find((b: any) => b.id === selectedBank)?.name || '',
+      bank_partner_id: isCustom ? null : selectedBank,
+      lender_name: bankName,
       interest_rate: interestRate ? Number(interestRate) : null,
       tenure_months: tenureMonths ? Number(tenureMonths) : null,
       emi_amount: emiAmount ? Number(emiAmount) : null,
       stage: 'offer_shared',
-      remarks: remarks || `Offer shared: ${bankPartners.find((b: any) => b.id === selectedBank)?.name}`,
+      remarks: remarks || `Offer shared: ${bankName}`,
     });
   };
 
