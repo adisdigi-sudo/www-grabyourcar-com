@@ -5,12 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SmartDatePicker } from "@/components/ui/smart-date-picker";
 import { cn } from "@/lib/utils";
-import { format, isWithinInterval } from "date-fns";
+import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, BookOpen, User, PhoneCall, MessageSquare, Eye, CalendarIcon, Send } from "lucide-react";
+import { Search, BookOpen, User, Download, Eye, CalendarIcon, Send, Upload } from "lucide-react";
 import { toast } from "sonner";
+import { InsurancePolicyDocumentUploader } from "./InsurancePolicyDocumentUploader";
+import { useQueryClient } from "@tanstack/react-query";
 
 export type PolicyRecord = {
   id: string;
