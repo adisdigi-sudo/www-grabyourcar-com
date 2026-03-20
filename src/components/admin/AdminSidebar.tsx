@@ -309,7 +309,7 @@ const navItems: NavItem[] = [
     ]
   },
 
-  // ── HR & Office Culture — shows in hr vertical + always for admins ──
+  // ── HR & Office Culture — shows only in hr vertical ──
   { 
     id: "hr-hub", 
     label: "👥 HR & Office", 
