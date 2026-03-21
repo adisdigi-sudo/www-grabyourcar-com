@@ -16,6 +16,22 @@ const STORAGE_KEY = "gyc_entry_lead_captured";
 const DISMISS_KEY = "gyc_entry_lead_dismissed";
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
+const getStoredValue = (key: string) => {
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+
+const setStoredValue = (key: string, value: string) => {
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // ignore blocked storage
+  }
+};
+
 const formSchema = z.object({
   name: z.string().trim().min(2, "Name is required").max(100),
   phone: z.string().regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit number"),
@@ -41,8 +57,8 @@ export const EntryLeadCaptureModal = () => {
 
   useEffect(() => {
     // Check if already captured or dismissed within 7 days
-    const captured = localStorage.getItem(STORAGE_KEY);
-    const dismissed = localStorage.getItem(DISMISS_KEY);
+    const captured = getStoredValue(STORAGE_KEY);
+    const dismissed = getStoredValue(DISMISS_KEY);
 
     if (captured) return;
     if (dismissed) {
@@ -56,7 +72,7 @@ export const EntryLeadCaptureModal = () => {
 
   const handleDismiss = useCallback(() => {
     setIsOpen(false);
-    localStorage.setItem(DISMISS_KEY, Date.now().toString());
+    setStoredValue(DISMISS_KEY, Date.now().toString());
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -94,7 +110,7 @@ export const EntryLeadCaptureModal = () => {
       trackLeadConversion("entry_popup");
 
       confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
-      localStorage.setItem(STORAGE_KEY, "true");
+      setStoredValue(STORAGE_KEY, "true");
       setIsSubmitted(true);
 
       setTimeout(() => setIsOpen(false), 3000);
