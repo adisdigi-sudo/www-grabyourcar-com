@@ -7,6 +7,10 @@ export const usePageViewTracking = () => {
   const location = useLocation();
 
   useEffect(() => {
-    trackPageView(location.pathname + location.search);
+    try {
+      trackPageView(location.pathname + location.search);
+    } catch (error) {
+      console.warn("[AdTracking] Page view effect failed", error);
+    }
   }, [location.pathname, location.search]);
 };

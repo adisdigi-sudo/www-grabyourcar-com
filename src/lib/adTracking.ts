@@ -12,8 +12,22 @@ declare global {
   }
 }
 
-const DEBUG = () => localStorage.getItem("debug_ads") === "true";
-const log = (...args: any[]) => { if (DEBUG()) console.log("[AdTracking]", ...args); };
+const isBrowser = () => typeof window !== "undefined";
+
+const safeStorageGet = (key: string): string | null => {
+  if (!isBrowser()) return null;
+
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+
+const DEBUG = () => safeStorageGet("debug_ads") === "true";
+const log = (...args: any[]) => {
+  if (DEBUG()) console.log("[AdTracking]", ...args);
+};
 
 let _cfg: AdTrackingConfig | null = null;
 
@@ -25,7 +39,7 @@ const ensureConfig = async (): Promise<AdTrackingConfig | null> => {
 
 /* ─── Google Ads conversion ─── */
 const gtagConversion = (conversionLabel: string, extras?: Record<string, any>) => {
-  if (!conversionLabel) return;
+  if (!conversionLabel || !isBrowser()) return;
   if (window.gtag) {
     window.gtag("event", "conversion", { send_to: conversionLabel, ...extras });
     log("gtag conversion →", conversionLabel, extras);
@@ -34,6 +48,7 @@ const gtagConversion = (conversionLabel: string, extras?: Record<string, any>) =
 
 /* ─── Meta Pixel event ─── */
 const fbqTrack = (event: string, params?: Record<string, any>) => {
+  if (!isBrowser()) return;
   if (window.fbq) {
     window.fbq("track", event, params);
     log("fbq track →", event, params);
@@ -42,13 +57,19 @@ const fbqTrack = (event: string, params?: Record<string, any>) => {
 
 /* ─── Page view (SPA route change) ─── */
 export const trackPageView = (url: string) => {
-  if (window.gtag) {
-    window.gtag("event", "page_view", { page_path: url });
+  if (!isBrowser()) return;
+
+  try {
+    if (window.gtag) {
+      window.gtag("event", "page_view", { page_path: url });
+    }
+    if (window.fbq) {
+      window.fbq("track", "PageView");
+    }
+    log("pageView →", url);
+  } catch (error) {
+    console.warn("[AdTracking] Failed to track page view", error);
   }
-  if (window.fbq) {
-    window.fbq("track", "PageView");
-  }
-  log("pageView →", url);
 };
 
 /* ─── Lead form conversion ─── */
@@ -83,6 +104,16 @@ export const trackCallConversion = async () => {
 
 /* ─── UTM parameter capture ─── */
 export const captureUTMParams = (): Record<string, string | null> => {
+  if (!isBrowser()) {
+    return {
+      utm_source: null,
+      utm_medium: null,
+      utm_campaign: null,
+      utm_term: null,
+      utm_content: null,
+    };
+  }
+
   const params = new URLSearchParams(window.location.search);
   return {
     utm_source: params.get("utm_source"),
@@ -105,9 +136,15 @@ export const getUTMFields = () => {
 
 /** Initialize dynamic gtag config (call once on app load) */
 export const initDynamicTracking = async () => {
+  if (!isBrowser()) return;
+
   const cfg = await ensureConfig();
-  if (cfg?.google_ads_id && window.gtag) {
-    window.gtag("config", cfg.google_ads_id, { send_page_view: false });
-    log("Dynamic gtag config →", cfg.google_ads_id);
+  try {
+    if (cfg?.google_ads_id && window.gtag) {
+      window.gtag("config", cfg.google_ads_id, { send_page_view: false });
+      log("Dynamic gtag config →", cfg.google_ads_id);
+    }
+  } catch (error) {
+    console.warn("[AdTracking] Failed to initialize tracking", error);
   }
 };

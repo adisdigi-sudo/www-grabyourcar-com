@@ -90,7 +90,13 @@ const RealtimeSyncProvider = ({ children }: { children: React.ReactNode }) => {
 
 const PageViewTracker = () => {
   usePageViewTracking();
-  useEffect(() => { initDynamicTracking(); }, []);
+
+  useEffect(() => {
+    initDynamicTracking().catch((error) => {
+      console.warn("[AdTracking] Startup tracking init failed", error);
+    });
+  }, []);
+
   return null;
 };
 
