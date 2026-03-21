@@ -1,8 +1,7 @@
 import { createRoot } from "react-dom/client";
+import { useEffect, useState } from "react";
 import { ThemeProvider } from "next-themes";
 import { HelmetProvider } from "react-helmet-async";
-import { Analytics } from "@vercel/analytics/react";
-import { SpeedInsights } from "@vercel/speed-insights/react";
 import "./index.css";
 import App from "./App";
 import { AppErrorBoundary } from "@/components/AppErrorBoundary";
@@ -17,11 +16,52 @@ const handleDynamicImportFailure = (error: unknown) => {
   recoverFromChunkLoadError("global_chunk_recovery");
 };
 
+const SafeTelemetry = () => {
+  const [telemetry, setTelemetry] = useState<null | {
+    Analytics: React.ComponentType;
+    SpeedInsights: React.ComponentType;
+  }>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    Promise.all([
+      import("@vercel/analytics/react"),
+      import("@vercel/speed-insights/react"),
+    ])
+      .then(([analyticsModule, speedInsightsModule]) => {
+        if (cancelled) return;
+
+        setTelemetry({
+          Analytics: analyticsModule.Analytics,
+          SpeedInsights: speedInsightsModule.SpeedInsights,
+        });
+      })
+      .catch((error) => {
+        console.warn("[Bootstrap] Telemetry disabled after startup failure", error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!telemetry) return null;
+
+  const { Analytics, SpeedInsights } = telemetry;
+
+  return (
+    <>
+      <Analytics />
+      <SpeedInsights />
+    </>
+  );
+};
+
 window.addEventListener(
   "error",
   (event) => {
-    // Only handle script/module loading errors, not runtime errors
-    if (event.filename && (event.filename.endsWith('.js') || event.filename.endsWith('.mjs'))) {
+    if (event.filename && (event.filename.endsWith(".js") || event.filename.endsWith(".mjs"))) {
       handleDynamicImportFailure(event.error ?? event.message);
     }
   },
@@ -29,7 +69,6 @@ window.addEventListener(
 );
 
 window.addEventListener("unhandledrejection", (event) => {
-  // Only recover from genuine dynamic import failures
   if (isDynamicImportError(event.reason)) {
     console.warn("[ChunkRecovery] Unhandled rejection from dynamic import:", event.reason);
     handleDynamicImportFailure(event.reason);
@@ -43,11 +82,19 @@ window.addEventListener("vite:preloadError", (event) => {
 });
 
 // Block search-engine indexing on .lovable.app domains
-if (window.location.hostname.endsWith(".lovable.app")) {
-  const noindex = document.createElement("meta");
-  noindex.name = "robots";
-  noindex.content = "noindex, nofollow";
-  document.head.appendChild(noindex);
+try {
+  if (window.location.hostname.endsWith(".lovable.app")) {
+    const existingNoindex = document.querySelector('meta[name="robots"]');
+
+    if (!existingNoindex) {
+      const noindex = document.createElement("meta");
+      noindex.name = "robots";
+      noindex.content = "noindex, nofollow";
+      document.head.appendChild(noindex);
+    }
+  }
+} catch (error) {
+  console.warn("[Bootstrap] Failed to append robots meta tag", error);
 }
 
 const rootElement = document.getElementById("root");
@@ -103,17 +150,16 @@ const renderBootstrapFailure = (error: unknown) => {
 
 try {
   root.render(
-    <HelmetProvider>
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-        <AppErrorBoundary>
+    <AppErrorBoundary>
+      <HelmetProvider>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <>
             <App />
-            <Analytics />
-            <SpeedInsights />
+            <SafeTelemetry />
           </>
-        </AppErrorBoundary>
-      </ThemeProvider>
-    </HelmetProvider>
+        </ThemeProvider>
+      </HelmetProvider>
+    </AppErrorBoundary>
   );
 } catch (error) {
   renderBootstrapFailure(error);
