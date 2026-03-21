@@ -10,11 +10,49 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
   },
   build: {
+    chunkSizeWarningLimit: 1200,
     rollupOptions: {
       output: {
-        inlineDynamicImports: true,
         entryFileNames: "assets/[name]-[hash].js",
         chunkFileNames: "assets/[name]-[hash].js",
+        manualChunks: (id) => {
+          if (!id.includes("node_modules")) {
+            return undefined;
+          }
+
+          if (id.includes("react-dom") || id.includes("react/jsx-runtime") || id.includes("react")) {
+            return "react-core";
+          }
+
+          if (id.includes("react-router-dom")) {
+            return "router";
+          }
+
+          if (id.includes("@tanstack/react-query") || id.includes("@supabase/supabase-js")) {
+            return "data";
+          }
+
+          if (
+            id.includes("@radix-ui") ||
+            id.includes("class-variance-authority") ||
+            id.includes("clsx") ||
+            id.includes("tailwind-merge") ||
+            id.includes("sonner") ||
+            id.includes("lucide-react")
+          ) {
+            return "ui";
+          }
+
+          if (id.includes("framer-motion") || id.includes("embla-carousel") || id.includes("recharts")) {
+            return "visuals";
+          }
+
+          if (id.includes("leaflet") || id.includes("react-leaflet")) {
+            return "maps";
+          }
+
+          return "vendor";
+        },
         assetFileNames: (assetInfo) => {
           if (assetInfo.name?.endsWith(".css")) {
             return "assets/[name]-[hash][extname]";
