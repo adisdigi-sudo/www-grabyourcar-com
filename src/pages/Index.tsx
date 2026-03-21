@@ -1,32 +1,30 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { GlobalSEO } from "@/components/seo/GlobalSEO";
 import { Header } from "@/components/Header";
-import { PromoBanner } from "@/components/PromoBanner";
 import { RivianHero } from "@/components/RivianHero";
 import { CategoryGrid } from "@/components/CategoryGrid";
-
-import { CarListings } from "@/components/CarListings";
-import EMICalculator from "@/components/EMICalculator";
-import { LeadForm } from "@/components/LeadForm";
-import { Testimonials } from "@/components/Testimonials";
-import { TrustBadges } from "@/components/TrustBadges";
-import { Footer } from "@/components/Footer";
-import { FloatingCTA } from "@/components/FloatingCTA";
-import { CustomerStories } from "@/components/CustomerStories";
-import { DealerLocatorWidget } from "@/components/DealerLocatorWidget";
-import { CrossSellWidget } from "@/components/CrossSellWidget";
-import { HomepageSEOContent } from "@/components/HomepageSEOContent";
-import { EntryLeadCaptureModal } from "@/components/EntryLeadCaptureModal";
-import { ExitIntentPopup } from "@/components/ExitIntentPopup";
 import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
 
-import {
-  DynamicHeroBanners,
-  DynamicPromoBanners,
-  DynamicFeaturedCars,
-  DynamicTestimonials,
-  DynamicCTABanners,
-} from "@/components/DynamicHomepageContent";
+// Lazy-load below-the-fold sections to reduce initial bundle
+const CarListings = lazy(() => import("@/components/CarListings").then(m => ({ default: m.CarListings })));
+const EMICalculator = lazy(() => import("@/components/EMICalculator"));
+const LeadForm = lazy(() => import("@/components/LeadForm").then(m => ({ default: m.LeadForm })));
+const Testimonials = lazy(() => import("@/components/Testimonials").then(m => ({ default: m.Testimonials })));
+const TrustBadges = lazy(() => import("@/components/TrustBadges").then(m => ({ default: m.TrustBadges })));
+const Footer = lazy(() => import("@/components/Footer").then(m => ({ default: m.Footer })));
+const FloatingCTA = lazy(() => import("@/components/FloatingCTA").then(m => ({ default: m.FloatingCTA })));
+const CustomerStories = lazy(() => import("@/components/CustomerStories").then(m => ({ default: m.CustomerStories })));
+const DealerLocatorWidget = lazy(() => import("@/components/DealerLocatorWidget").then(m => ({ default: m.DealerLocatorWidget })));
+const CrossSellWidget = lazy(() => import("@/components/CrossSellWidget").then(m => ({ default: m.CrossSellWidget })));
+const HomepageSEOContent = lazy(() => import("@/components/HomepageSEOContent").then(m => ({ default: m.HomepageSEOContent })));
+const EntryLeadCaptureModal = lazy(() => import("@/components/EntryLeadCaptureModal").then(m => ({ default: m.EntryLeadCaptureModal })));
+const ExitIntentPopup = lazy(() => import("@/components/ExitIntentPopup").then(m => ({ default: m.ExitIntentPopup })));
+const DynamicHeroBanners = lazy(() => import("@/components/DynamicHomepageContent").then(m => ({ default: m.DynamicHeroBanners })));
+const DynamicPromoBanners = lazy(() => import("@/components/DynamicHomepageContent").then(m => ({ default: m.DynamicPromoBanners })));
+const DynamicFeaturedCars = lazy(() => import("@/components/DynamicHomepageContent").then(m => ({ default: m.DynamicFeaturedCars })));
+const DynamicTestimonials = lazy(() => import("@/components/DynamicHomepageContent").then(m => ({ default: m.DynamicTestimonials })));
+const DynamicCTABanners = lazy(() => import("@/components/DynamicHomepageContent").then(m => ({ default: m.DynamicCTABanners })));
+
 // Clean Rivian layout — fresh build v2
 
 const Index = () => {
@@ -77,97 +75,100 @@ const Index = () => {
           <CategoryGrid />
         </SectionErrorBoundary>
         
-        {/* Dynamic Hero Banners from Admin */}
-        <SectionErrorBoundary sectionName="dynamic-hero-banners" fallback={null}>
-          <DynamicHeroBanners />
-        </SectionErrorBoundary>
-        
-        {/* Dynamic Promo Banners from Admin */}
-        <SectionErrorBoundary sectionName="dynamic-promo-banners" fallback={null}>
-          <DynamicPromoBanners />
-        </SectionErrorBoundary>
-        
-        {/* Dynamic Featured Cars from Admin */}
-        <SectionErrorBoundary sectionName="dynamic-featured-cars" fallback={null}>
-          <DynamicFeaturedCars />
-        </SectionErrorBoundary>
-        
-        {/* Featured Car Listings */}
-        <SectionErrorBoundary sectionName="car-listings">
-          <CarListings />
-        </SectionErrorBoundary>
-
-        {/* Cross-Sell Services */}
-        <div className="container mx-auto px-4">
-          <SectionErrorBoundary sectionName="cross-sell-widget" fallback={null}>
-            <CrossSellWidget context="home" title="Complete Your Car Buying Journey" maxItems={4} />
+        <Suspense fallback={null}>
+          {/* Dynamic Hero Banners from Admin */}
+          <SectionErrorBoundary sectionName="dynamic-hero-banners" fallback={null}>
+            <DynamicHeroBanners />
           </SectionErrorBoundary>
-        </div>
-        
-        {/* Nearby Dealer Locator */}
-        <SectionErrorBoundary sectionName="dealer-locator-widget" fallback={null}>
-          <DealerLocatorWidget />
-        </SectionErrorBoundary>
-         
-        {/* EMI Calculator */}
-        <SectionErrorBoundary sectionName="emi-calculator">
-          <EMICalculator onGetQuote={handleGetLoanQuote} />
-        </SectionErrorBoundary>
-        
-        {/* Dynamic CTA Banners from Admin */}
-        <SectionErrorBoundary sectionName="dynamic-cta-banners" fallback={null}>
-          <DynamicCTABanners />
-        </SectionErrorBoundary>
-        
-        {/* Lead Capture Form */}
-        <SectionErrorBoundary sectionName="lead-form">
-          <LeadForm prefillCarInterest={loanPrefill} />
-        </SectionErrorBoundary>
-        
-        {/* Customer Testimonials */}
-        <SectionErrorBoundary sectionName="testimonials">
-          <Testimonials />
-        </SectionErrorBoundary>
-        
-        {/* Dynamic Testimonials from Admin */}
-        <SectionErrorBoundary sectionName="dynamic-testimonials" fallback={null}>
-          <DynamicTestimonials />
-        </SectionErrorBoundary>
-        
-         {/* Customer Stories with Delivery Photos */}
-         <SectionErrorBoundary sectionName="customer-stories">
-           <CustomerStories />
-         </SectionErrorBoundary>
-         
-        {/* Trust Badges */}
-        <SectionErrorBoundary sectionName="trust-badges">
-          <TrustBadges />
-        </SectionErrorBoundary>
-        
-        {/* Crawlable SEO Content — 1000+ words of keyword-rich text */}
-        <SectionErrorBoundary sectionName="homepage-seo-content" fallback={null}>
-          <HomepageSEOContent />
-        </SectionErrorBoundary>
+          
+          {/* Dynamic Promo Banners from Admin */}
+          <SectionErrorBoundary sectionName="dynamic-promo-banners" fallback={null}>
+            <DynamicPromoBanners />
+          </SectionErrorBoundary>
+          
+          {/* Dynamic Featured Cars from Admin */}
+          <SectionErrorBoundary sectionName="dynamic-featured-cars" fallback={null}>
+            <DynamicFeaturedCars />
+          </SectionErrorBoundary>
+          
+          {/* Featured Car Listings */}
+          <SectionErrorBoundary sectionName="car-listings">
+            <CarListings />
+          </SectionErrorBoundary>
+
+          {/* Cross-Sell Services */}
+          <div className="container mx-auto px-4">
+            <SectionErrorBoundary sectionName="cross-sell-widget" fallback={null}>
+              <CrossSellWidget context="home" title="Complete Your Car Buying Journey" maxItems={4} />
+            </SectionErrorBoundary>
+          </div>
+          
+          {/* Nearby Dealer Locator */}
+          <SectionErrorBoundary sectionName="dealer-locator-widget" fallback={null}>
+            <DealerLocatorWidget />
+          </SectionErrorBoundary>
+           
+          {/* EMI Calculator */}
+          <SectionErrorBoundary sectionName="emi-calculator">
+            <EMICalculator onGetQuote={handleGetLoanQuote} />
+          </SectionErrorBoundary>
+          
+          {/* Dynamic CTA Banners from Admin */}
+          <SectionErrorBoundary sectionName="dynamic-cta-banners" fallback={null}>
+            <DynamicCTABanners />
+          </SectionErrorBoundary>
+          
+          {/* Lead Capture Form */}
+          <SectionErrorBoundary sectionName="lead-form">
+            <LeadForm prefillCarInterest={loanPrefill} />
+          </SectionErrorBoundary>
+          
+          {/* Customer Testimonials */}
+          <SectionErrorBoundary sectionName="testimonials">
+            <Testimonials />
+          </SectionErrorBoundary>
+          
+          {/* Dynamic Testimonials from Admin */}
+          <SectionErrorBoundary sectionName="dynamic-testimonials" fallback={null}>
+            <DynamicTestimonials />
+          </SectionErrorBoundary>
+          
+          {/* Customer Stories with Delivery Photos */}
+          <SectionErrorBoundary sectionName="customer-stories">
+            <CustomerStories />
+          </SectionErrorBoundary>
+           
+          {/* Trust Badges */}
+          <SectionErrorBoundary sectionName="trust-badges">
+            <TrustBadges />
+          </SectionErrorBoundary>
+          
+          {/* Crawlable SEO Content — 1000+ words of keyword-rich text */}
+          <SectionErrorBoundary sectionName="homepage-seo-content" fallback={null}>
+            <HomepageSEOContent />
+          </SectionErrorBoundary>
+        </Suspense>
       </main>
       
       {/* Footer */}
-      <SectionErrorBoundary sectionName="footer" fallback={null}>
-        <Footer />
-      </SectionErrorBoundary>
-      
-      {/* Floating WhatsApp & Call Buttons */}
-      <SectionErrorBoundary sectionName="floating-cta" fallback={null}>
-        <FloatingCTA />
-      </SectionErrorBoundary>
-      
-      {/* Lead Capture Modals */}
-      
-      <SectionErrorBoundary sectionName="entry-lead-capture-modal" fallback={null}>
-        <EntryLeadCaptureModal />
-      </SectionErrorBoundary>
-      <SectionErrorBoundary sectionName="exit-intent-popup" fallback={null}>
-        <ExitIntentPopup />
-      </SectionErrorBoundary>
+      <Suspense fallback={null}>
+        <SectionErrorBoundary sectionName="footer" fallback={null}>
+          <Footer />
+        </SectionErrorBoundary>
+        
+        {/* Floating WhatsApp & Call Buttons */}
+        <SectionErrorBoundary sectionName="floating-cta" fallback={null}>
+          <FloatingCTA />
+        </SectionErrorBoundary>
+        
+        {/* Lead Capture Modals */}
+        <SectionErrorBoundary sectionName="entry-lead-capture-modal" fallback={null}>
+          <EntryLeadCaptureModal />
+        </SectionErrorBoundary>
+        <SectionErrorBoundary sectionName="exit-intent-popup" fallback={null}>
+          <ExitIntentPopup />
+        </SectionErrorBoundary>
+      </Suspense>
       </div>
     </>
   );
