@@ -5,6 +5,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import App from "./App.tsx";
 import "./index.css";
+import { AppErrorBoundary } from "@/components/AppErrorBoundary";
 import {
   isDynamicImportError,
   recoverFromChunkLoadError,
@@ -56,11 +57,13 @@ if (window.location.hostname.endsWith(".lovable.app")) {
 createRoot(document.getElementById("root")!).render(
   <HelmetProvider>
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <>
-        <App />
-        <Analytics />
-        <SpeedInsights />
-      </>
+      <AppErrorBoundary>
+        <>
+          <App />
+          <Analytics />
+          <SpeedInsights />
+        </>
+      </AppErrorBoundary>
     </ThemeProvider>
   </HelmetProvider>
 );

@@ -34,7 +34,7 @@ function lazyRetry<T extends ComponentType<any>>(
   );
 }
 
-const Index = lazyRetry(() => import("./pages/Index"));
+import Index from "./pages/Index";
 const Cars = lazyRetry(() => import("./pages/Cars"));
 const CarImages = lazyRetry(() => import("./pages/CarImages"));
 const FeaturesSpecs = lazyRetry(() => import("./pages/FeaturesSpecs"));
