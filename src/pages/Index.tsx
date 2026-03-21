@@ -19,7 +19,11 @@ const CrossSellWidget = lazy(() => import("@/components/CrossSellWidget").then(m
 const HomepageSEOContent = lazy(() => import("@/components/HomepageSEOContent").then(m => ({ default: m.HomepageSEOContent })));
 const EntryLeadCaptureModal = lazy(() => import("@/components/EntryLeadCaptureModal").then(m => ({ default: m.EntryLeadCaptureModal })));
 const ExitIntentPopup = lazy(() => import("@/components/ExitIntentPopup").then(m => ({ default: m.ExitIntentPopup })));
-const DynamicHomepageContent = lazy(() => import("@/components/DynamicHomepageContent"));
+const DynamicHeroBanners = lazy(() => import("@/components/DynamicHomepageContent").then(m => ({ default: m.DynamicHeroBanners })));
+const DynamicPromoBanners = lazy(() => import("@/components/DynamicHomepageContent").then(m => ({ default: m.DynamicPromoBanners })));
+const DynamicFeaturedCars = lazy(() => import("@/components/DynamicHomepageContent").then(m => ({ default: m.DynamicFeaturedCars })));
+const DynamicTestimonials = lazy(() => import("@/components/DynamicHomepageContent").then(m => ({ default: m.DynamicTestimonials })));
+const DynamicCTABanners = lazy(() => import("@/components/DynamicHomepageContent").then(m => ({ default: m.DynamicCTABanners })));
 
 // Clean Rivian layout — fresh build v2
 
