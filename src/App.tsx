@@ -1,4 +1,4 @@
-import { Suspense, lazy, ComponentType, useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,68 +13,48 @@ import { AdminSubdomainRouter } from "@/components/AdminSubdomainRouter";
 import { isAdminSubdomain } from "@/hooks/useAdminSubdomain";
 import { useGlobalRealtimeSync } from "@/hooks/useRealtimeSync";
 import { VerticalProvider } from "@/hooks/useVerticalAccess";
-import {
-  isDynamicImportError,
-  recoverFromChunkLoadError,
-  resetChunkLoadRecovery,
-} from "@/lib/chunkLoadRecovery";
+import { resetChunkLoadRecovery } from "@/lib/chunkLoadRecovery";
 import { usePageViewTracking } from "@/hooks/usePageViewTracking";
 import { initDynamicTracking } from "@/lib/adTracking";
 import { FloatingCallButton } from "@/components/FloatingCallButton";
 import { CookieConsentBanner } from "@/components/CookieConsentBanner";
-
-// Retry wrapper for lazy imports — handles stale chunk errors after deployments
-function lazyRetry<T extends ComponentType<any>>(
-  factory: () => Promise<{ default: T }>
-): React.LazyExoticComponent<T> {
-  return lazy(() =>
-    factory().catch((err) => {
-      if (isDynamicImportError(err) && recoverFromChunkLoadError("route_chunk_recovery")) {
-        return new Promise(() => {});
-      }
-
-      throw err;
-    })
-  );
-}
-
-const Cars = lazyRetry(() => import("./pages/Cars"));
-const Index = lazyRetry(() => import("./pages/Index"));
-const CarImages = lazyRetry(() => import("./pages/CarImages"));
-const FeaturesSpecs = lazyRetry(() => import("./pages/FeaturesSpecs"));
-const Brochures = lazyRetry(() => import("./pages/Brochures"));
-const CarLoan = lazyRetry(() => import("./pages/CarLoan"));
-const CarDetail = lazyRetry(() => import("./pages/CarDetail"));
-const CarOnRoadPrice = lazyRetry(() => import("./pages/CarOnRoadPrice"));
-const CompareCars = lazyRetry(() => import("./pages/CompareCards"));
-const CarInsurance = lazyRetry(() => import("./pages/CarInsurance"));
-const CorporateBuying = lazyRetry(() => import("./pages/CorporateBuying"));
-const Accessories = lazyRetry(() => import("./pages/Accessories"));
-const AccessoryWishlist = lazyRetry(() => import("./pages/AccessoryWishlist"));
-const Blog = lazyRetry(() => import("./pages/Blog"));
-const BlogPost = lazyRetry(() => import("./pages/BlogPost"));
-const Auth = lazyRetry(() => import("./pages/Auth"));
-const MyFavorites = lazyRetry(() => import("./pages/MyFavorites"));
-const MyBookings = lazyRetry(() => import("./pages/MyBookings"));
-const MyOrders = lazyRetry(() => import("./pages/MyOrders"));
-const CarFinder = lazyRetry(() => import("./pages/CarFinder"));
-const SelfDriveRentals = lazyRetry(() => import("./pages/SelfDriveRentals"));
-const HSRP = lazyRetry(() => import("./pages/HSRP"));
-const UpcomingCars = lazyRetry(() => import("./pages/UpcomingCars"));
-const AutoNews = lazyRetry(() => import("./pages/AutoNews"));
-const DealerLocator = lazyRetry(() => import("./pages/DealerLocator"));
-const About = lazyRetry(() => import("./pages/About"));
-const AutoIntelligence = lazyRetry(() => import("./pages/AutoIntelligence"));
-const HoliGreeting = lazyRetry(() => import("./pages/HoliGreeting"));
-const VehicleLookup = lazyRetry(() => import("./pages/VehicleLookup"));
-const ThankYou = lazyRetry(() => import("./pages/ThankYou"));
-const NoWaitingCars = lazyRetry(() => import("./pages/NoWaitingCars"));
-const BestCarDeals = lazyRetry(() => import("./pages/BestCarDeals"));
-const AdminLayout = lazyRetry(() => import("./pages/AdminLayout"));
-const AdminAuth = lazyRetry(() => import("./pages/AdminAuth"));
-const AdminResetPassword = lazyRetry(() => import("./pages/AdminResetPassword"));
-const WorkspaceSelector = lazyRetry(() => import("./pages/WorkspaceSelector"));
-const NotFound = lazyRetry(() => import("./pages/NotFound"));
+import Cars from "./pages/Cars";
+import Index from "./pages/Index";
+import CarImages from "./pages/CarImages";
+import FeaturesSpecs from "./pages/FeaturesSpecs";
+import Brochures from "./pages/Brochures";
+import CarLoan from "./pages/CarLoan";
+import CarDetail from "./pages/CarDetail";
+import CarOnRoadPrice from "./pages/CarOnRoadPrice";
+import CompareCars from "./pages/CompareCards";
+import CarInsurance from "./pages/CarInsurance";
+import CorporateBuying from "./pages/CorporateBuying";
+import Accessories from "./pages/Accessories";
+import AccessoryWishlist from "./pages/AccessoryWishlist";
+import Blog from "./pages/Blog";
+import BlogPost from "./pages/BlogPost";
+import Auth from "./pages/Auth";
+import MyFavorites from "./pages/MyFavorites";
+import MyBookings from "./pages/MyBookings";
+import MyOrders from "./pages/MyOrders";
+import CarFinder from "./pages/CarFinder";
+import SelfDriveRentals from "./pages/SelfDriveRentals";
+import HSRP from "./pages/HSRP";
+import UpcomingCars from "./pages/UpcomingCars";
+import AutoNews from "./pages/AutoNews";
+import DealerLocator from "./pages/DealerLocator";
+import About from "./pages/About";
+import AutoIntelligence from "./pages/AutoIntelligence";
+import HoliGreeting from "./pages/HoliGreeting";
+import VehicleLookup from "./pages/VehicleLookup";
+import ThankYou from "./pages/ThankYou";
+import NoWaitingCars from "./pages/NoWaitingCars";
+import BestCarDeals from "./pages/BestCarDeals";
+import AdminLayout from "./pages/AdminLayout";
+import AdminAuth from "./pages/AdminAuth";
+import AdminResetPassword from "./pages/AdminResetPassword";
+import WorkspaceSelector from "./pages/WorkspaceSelector";
+import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
   defaultOptions: {
