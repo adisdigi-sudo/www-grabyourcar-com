@@ -1,32 +1,26 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { GlobalSEO } from "@/components/seo/GlobalSEO";
 import { Header } from "@/components/Header";
-import { PromoBanner } from "@/components/PromoBanner";
 import { RivianHero } from "@/components/RivianHero";
 import { CategoryGrid } from "@/components/CategoryGrid";
-
-import { CarListings } from "@/components/CarListings";
-import EMICalculator from "@/components/EMICalculator";
-import { LeadForm } from "@/components/LeadForm";
-import { Testimonials } from "@/components/Testimonials";
-import { TrustBadges } from "@/components/TrustBadges";
-import { Footer } from "@/components/Footer";
-import { FloatingCTA } from "@/components/FloatingCTA";
-import { CustomerStories } from "@/components/CustomerStories";
-import { DealerLocatorWidget } from "@/components/DealerLocatorWidget";
-import { CrossSellWidget } from "@/components/CrossSellWidget";
-import { HomepageSEOContent } from "@/components/HomepageSEOContent";
-import { EntryLeadCaptureModal } from "@/components/EntryLeadCaptureModal";
-import { ExitIntentPopup } from "@/components/ExitIntentPopup";
 import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
 
-import {
-  DynamicHeroBanners,
-  DynamicPromoBanners,
-  DynamicFeaturedCars,
-  DynamicTestimonials,
-  DynamicCTABanners,
-} from "@/components/DynamicHomepageContent";
+// Lazy-load below-the-fold sections to reduce initial bundle
+const CarListings = lazy(() => import("@/components/CarListings").then(m => ({ default: m.CarListings })));
+const EMICalculator = lazy(() => import("@/components/EMICalculator"));
+const LeadForm = lazy(() => import("@/components/LeadForm").then(m => ({ default: m.LeadForm })));
+const Testimonials = lazy(() => import("@/components/Testimonials").then(m => ({ default: m.Testimonials })));
+const TrustBadges = lazy(() => import("@/components/TrustBadges").then(m => ({ default: m.TrustBadges })));
+const Footer = lazy(() => import("@/components/Footer").then(m => ({ default: m.Footer })));
+const FloatingCTA = lazy(() => import("@/components/FloatingCTA").then(m => ({ default: m.FloatingCTA })));
+const CustomerStories = lazy(() => import("@/components/CustomerStories").then(m => ({ default: m.CustomerStories })));
+const DealerLocatorWidget = lazy(() => import("@/components/DealerLocatorWidget").then(m => ({ default: m.DealerLocatorWidget })));
+const CrossSellWidget = lazy(() => import("@/components/CrossSellWidget").then(m => ({ default: m.CrossSellWidget })));
+const HomepageSEOContent = lazy(() => import("@/components/HomepageSEOContent").then(m => ({ default: m.HomepageSEOContent })));
+const EntryLeadCaptureModal = lazy(() => import("@/components/EntryLeadCaptureModal").then(m => ({ default: m.EntryLeadCaptureModal })));
+const ExitIntentPopup = lazy(() => import("@/components/ExitIntentPopup").then(m => ({ default: m.ExitIntentPopup })));
+const DynamicHomepageContent = lazy(() => import("@/components/DynamicHomepageContent"));
+
 // Clean Rivian layout — fresh build v2
 
 const Index = () => {
