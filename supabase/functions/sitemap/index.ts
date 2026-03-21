@@ -58,6 +58,12 @@ Deno.serve(async (req) => {
       .eq("status", "published")
       .order("updated_at", { ascending: false });
 
+    // Fetch car brands for brand listing pages
+    const { data: brands } = await supabase
+      .from("car_brands")
+      .select("slug, updated_at")
+      .eq("is_active", true)
+      .order("name", { ascending: true });
 
     const today = new Date().toISOString().split("T")[0];
 
