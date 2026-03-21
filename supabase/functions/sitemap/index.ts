@@ -139,9 +139,26 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Add brand listing pages
+    if (brands && brands.length > 0) {
+      for (const brand of brands) {
+        const lastmod = brand.updated_at
+          ? new Date(brand.updated_at).toISOString().split("T")[0]
+          : today;
+
+        xml += `  <url>
+    <loc>${BASE_URL}/cars?brand=${brand.slug}</loc>
+    <lastmod>${lastmod}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+`;
+      }
+    }
+
     xml += `</urlset>`;
 
-    console.log(`Generated sitemap with ${staticPages.length} static + ${cars?.length || 0} car + ${blogs?.length || 0} blog pages`);
+    console.log(`Generated sitemap with ${staticPages.length} static + ${cars?.length || 0} car + ${blogs?.length || 0} blog + ${brands?.length || 0} brand pages`);
 
     return new Response(xml, {
       headers: {
