@@ -13,11 +13,11 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       output: {
         inlineDynamicImports: true,
-        entryFileNames: "assets/app.js",
-        chunkFileNames: "assets/[name].js",
+        entryFileNames: "assets/[name]-[hash].js",
+        chunkFileNames: "assets/[name]-[hash].js",
         assetFileNames: (assetInfo) => {
           if (assetInfo.name?.endsWith(".css")) {
-            return "assets/app.css";
+            return "assets/[name]-[hash][extname]";
           }
 
           return "assets/[name]-[hash][extname]";
