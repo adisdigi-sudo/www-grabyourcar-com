@@ -147,6 +147,17 @@ const SuperAdminUserManager = lazy(() =>
 const UserManagementDashboard = lazy(() =>
   import("@/components/admin/UserManagementDashboard").then((module) => ({ default: module.UserManagementDashboard })),
 );
+const AIContentManagement = lazy(() =>
+  import("@/components/admin/AIContentManagement").then((module) => ({ default: module.AIContentManagement })),
+);
+const DiscountManagement = lazy(() =>
+  import("@/components/admin/DiscountManagement").then((module) => ({ default: module.DiscountManagement })),
+);
+const LaunchesManagement = lazy(() =>
+  import("@/components/admin/LaunchesManagement").then((module) => ({ default: module.LaunchesManagement })),
+);
+const WhatsAppTemplateManager = lazy(() => import("@/components/admin/WhatsAppTemplateManager"));
+const EmailAutomationManager = lazy(() => import("@/components/admin/EmailAutomationManager"));
 const InsuranceDashboard = lazy(() =>
   import("@/components/admin/verticals/InsuranceDashboard").then((module) => ({ default: module.InsuranceDashboard })),
 );
