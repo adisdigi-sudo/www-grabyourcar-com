@@ -15,6 +15,22 @@ const DISMISS_KEY = "gyc_exit_intent_dismissed";
 const CAPTURED_KEY = "gyc_exit_intent_captured";
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
+const getStoredValue = (key: string) => {
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+
+const setStoredValue = (key: string, value: string) => {
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // ignore blocked storage
+  }
+};
+
 const formSchema = z.object({
   name: z.string().trim().min(2, "Name is required").max(100),
   phone: z.string().regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit number"),
@@ -28,10 +44,10 @@ export const ExitIntentPopup = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    const captured = localStorage.getItem(CAPTURED_KEY);
+    const captured = getStoredValue(CAPTURED_KEY);
     if (captured) return;
 
-    const dismissed = localStorage.getItem(DISMISS_KEY);
+    const dismissed = getStoredValue(DISMISS_KEY);
     if (dismissed && Date.now() - parseInt(dismissed, 10) < SEVEN_DAYS_MS) return;
 
     const handleMouseLeave = (e: MouseEvent) => {
@@ -55,7 +71,7 @@ export const ExitIntentPopup = () => {
 
   const handleDismiss = useCallback(() => {
     setIsOpen(false);
-    localStorage.setItem(DISMISS_KEY, Date.now().toString());
+    setStoredValue(DISMISS_KEY, Date.now().toString());
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -87,7 +103,7 @@ export const ExitIntentPopup = () => {
       trackLeadConversion("exit_intent");
 
       confetti({ particleCount: 60, spread: 50, origin: { y: 0.6 } });
-      localStorage.setItem(CAPTURED_KEY, "true");
+      setStoredValue(CAPTURED_KEY, "true");
       setIsSubmitted(true);
       setTimeout(() => setIsOpen(false), 3000);
     } catch {
