@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { CartProvider } from "@/hooks/useCart";
 import { CompareProvider } from "@/hooks/useCompare";
@@ -74,6 +74,22 @@ const queryClient = new QueryClient({
 const RealtimeSyncProvider = ({ children }: { children: React.ReactNode }) => {
   useGlobalRealtimeSync();
   return <>{children}</>;
+};
+
+const LegacyRouteHandler = () => {
+  const location = useLocation();
+
+  const normalizedPath = decodeURIComponent(location.pathname)
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_]+/g, "-")
+    .replace(/-+/g, "-");
+
+  if (normalizedPath === "/no-waiting") {
+    return <Navigate to={`/no-waiting-cars${location.search}${location.hash}`} replace />;
+  }
+
+  return <NotFound />;
 };
 
 const PageViewTracker = () => {
@@ -161,7 +177,7 @@ const App = () => (
                         <Route path="/thank-you" element={<ThankYou />} />
                         <Route path="/no-waiting-cars" element={<NoWaitingCars />} />
                         <Route path="/best-car-deals" element={<BestCarDeals />} />
-                        <Route path="*" element={<NotFound />} />
+                        <Route path="*" element={<LegacyRouteHandler />} />
                       </Routes>
                       {!isAdminSubdomain() && (
                         <>
