@@ -1,132 +1,251 @@
-import { useState, useEffect } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
-import EMICalculator from "@/components/EMICalculator";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { useVerticalAccess } from "@/hooks/useVerticalAccess";
 import { useSessionTimeout } from "@/hooks/useSessionTimeout";
 import { cn } from "@/lib/utils";
 import { logAdminActivity } from "@/lib/adminActivityLogger";
-
-// Admin Components
-import { AdminSidebar } from "@/components/admin/AdminSidebar";
-import { AdminDashboard } from "@/components/admin/AdminDashboard";
-import { LeadManagement } from "@/components/admin/LeadManagement";
-import { HomepageManagement } from "@/components/admin/HomepageManagement";
-import { HSRPVerticalWorkspace } from "@/components/admin/verticals/HSRPVerticalWorkspace";
-import { SalesWorkspace } from "@/components/admin/sales/SalesWorkspace";
-import { CarDataManagement } from "@/components/admin/CarDataManagement";
-import { RoleManagement } from "@/components/admin/RoleManagement";
-import { AIContentManagement } from "@/components/admin/AIContentManagement";
-import { UnifiedCarManagement } from "@/components/admin/UnifiedCarManagement";
-import { RentalManagement } from "@/components/admin/RentalManagement";
-import { SelfDriveWorkspace } from "@/components/admin/rentals/SelfDriveWorkspace";
-import { AccessoriesManagement } from "@/components/admin/AccessoriesManagement";
-import { WebsiteSettings } from "@/components/admin/WebsiteSettings";
-import { AdTrackingSettings } from "@/components/admin/AdTrackingSettings";
-import { WhatsAppManagement } from "@/components/admin/WhatsAppManagement";
-import { BlogManagement } from "@/components/admin/BlogManagement";
-import { NotificationCenter } from "@/components/admin/NotificationCenter";
-import { SEOBuilder } from "@/components/admin/SEOBuilder";
-import { BrandingSettings } from "@/components/admin/BrandingSettings";
-// VariantPricingManagement consolidated into UnifiedCarManagement
-import { APIIntegrationPortal } from "@/components/admin/APIIntegrationPortal";
-import { EmailMarketingManagement } from "@/components/admin/EmailMarketingManagement";
-import { AIContentHub } from "@/components/admin/AIContentHub";
-import { BulkDataManager } from "@/components/admin/BulkDataManager";
-import { ServiceCategoriesManager } from "@/components/admin/ServiceCategoriesManager";
-import { WebsiteContentManagement } from "@/components/admin/WebsiteContentManagement";
-import { SocialProofManagement } from "@/components/admin/SocialProofManagement";
-import { IntegrationsManagement } from "@/components/admin/IntegrationsManagement";
-import { OffersManagement } from "@/components/admin/OffersManagement";
-import { AutoIntelligenceSettings } from "@/components/admin/AutoIntelligenceSettings";
-import CrossSellManagement from "@/components/admin/CrossSellManagement";
-import EMIPDFSettings from "@/components/admin/EMIPDFSettings";
-import { CarColorManagement } from "@/components/admin/CarColorManagement";
-import { CarImageSyncManager } from "@/components/admin/CarImageSyncManager";
-import { CarImageScrapingManager } from "@/components/admin/CarImageScrapingManager";
-import { ManualQuoteGenerator } from "@/components/admin/ManualQuoteGenerator";
-import { DiscountManagement } from "@/components/admin/DiscountManagement";
-import { LaunchesManagement } from "@/components/admin/LaunchesManagement";
-import { ProfileSettings } from "@/components/admin/ProfileSettings";
-import { TeamUserManagement } from "@/components/admin/TeamUserManagement";
-import { AICarEntryGenerator } from "@/components/admin/AICarEntryGenerator";
-import BulkCarUploader from "@/components/admin/BulkCarUploader";
-import WhatsAppTemplateManager from "@/components/admin/WhatsAppTemplateManager";
-import EmailAutomationManager from "@/components/admin/EmailAutomationManager";
-import StateCityPricingManager from "@/components/admin/StateCityPricingManager";
-import { MarketingCommandCenter } from "@/components/admin/marketing";
-import { HoliBulkShare } from "@/components/admin/HoliBulkShare";
-import VehicleAttributesManager from "@/components/admin/VehicleAttributesManager";
-import DriverBookingsManagement from "@/components/admin/DriverBookingsManagement";
-import APIPartnersManagement from "@/components/admin/APIPartnersManagement";
-import { DealerManagement } from "@/components/admin/DealerManagement";
-import BrandsManagement from "@/components/admin/BrandsManagement";
-import QuickTextImporter from "@/components/admin/QuickTextImporter";
-import URLDataScraper from "@/components/admin/URLDataScraper";
-import SiteSettingsManager from "@/components/admin/SiteSettingsManager";
-import BannersManager from "@/components/admin/BannersManager";
-import TestimonialsManager from "@/components/admin/TestimonialsManager";
-import FAQManager from "@/components/admin/FAQManager";
-import ServicePricingManager from "@/components/admin/ServicePricingManager";
-import { HeroSlidesManagement } from "@/components/admin/HeroSlidesManagement";
-import PartnersManager from "@/components/admin/PartnersManager";
-import { InsuranceManagement } from "@/components/admin/InsuranceManagement";
-import { InsuranceImportExport } from "@/components/admin/insurance/InsuranceImportExport";
-import { UnifiedMasterCRM } from "@/components/admin/UnifiedMasterCRM";
-import { UnifiedCustomerProfile } from "@/components/admin/unified/UnifiedCustomerProfile";
-import { CrossVerticalIntelligence } from "@/components/admin/unified/CrossVerticalIntelligence";
-import { JourneyAutomationPanel } from "@/components/admin/JourneyAutomationPanel";
-import { RevenueIntelligenceDashboard } from "@/components/admin/RevenueIntelligenceDashboard";
-import { LoanCRMDashboard } from "@/components/admin/LoanCRMDashboard";
-import { LeadScoringDashboard } from "@/components/admin/LeadScoringDashboard";
-import { ClientManagement } from "@/components/admin/ClientManagement";
-import { LeadImportManager } from "@/components/admin/LeadImportManager";
-import { DataExportEngine } from "@/components/admin/DataExportEngine";
-import { SuperAdminUserManager } from "@/components/admin/SuperAdminUserManager";
-import { UserManagementDashboard } from "@/components/admin/UserManagementDashboard";
-import { InsuranceDashboard } from "@/components/admin/verticals/InsuranceDashboard";
-import { SalesDashboard } from "@/components/admin/verticals/SalesDashboard";
-import { RentalDashboard } from "@/components/admin/verticals/RentalDashboard";
-import { HSRPDashboard } from "@/components/admin/verticals/HSRPDashboard";
-import { AccessoriesDashboard } from "@/components/admin/verticals/AccessoriesDashboard";
-import { MarketingDashboard } from "@/components/admin/verticals/MarketingDashboard";
-import { CallingDashboard } from "@/components/admin/calling/CallingDashboard";
-import { ManagerDashboard } from "@/components/admin/ManagerDashboard";
-import TeamEngagement from "@/components/admin/TeamEngagement";
-import ErrorPrevention from "@/components/admin/ErrorPrevention";
-import WorkflowEngine from "@/components/admin/WorkflowEngine";
-import AutomationCommandCenter from "@/components/admin/AutomationCommandCenter";
-import { LeadRoutingManager } from "@/components/admin/LeadRoutingManager";
-import { AccountsFinanceWorkspace } from "@/components/admin/finance/AccountsFinanceWorkspace";
-import { HRWorkspace } from "@/components/admin/hr/HRWorkspace";
-import { CarDatabaseWorkspace } from "@/components/admin/car-database/CarDatabaseWorkspace";
-import { OpenAPIPortal } from "@/components/admin/OpenAPIPortal";
-import SuperAdminIncentiveWorkspace from "@/components/admin/incentives/SuperAdminIncentiveWorkspace";
-import { HREmployeeManagement } from "@/components/admin/hr/HREmployeeManagement";
-import { HROnboarding } from "@/components/admin/hr/HROnboarding";
-import { HRKPIManagement } from "@/components/admin/hr/HRKPIManagement";
-import { HRTemplates } from "@/components/admin/hr/HRTemplates";
-import { DocumentVault } from "@/components/admin/documents/DocumentVault";
-import { SalesIncentiveDashboard } from "@/components/admin/incentives/SalesIncentiveDashboard";
-import { IncentivePayoutApproval } from "@/components/admin/finance/IncentivePayoutApproval";
-import { DealsPipeline } from "@/components/admin/deals/DealsPipeline";
-import { CRMAssistant } from "@/components/admin/CRMAssistant";
-
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
 
+const AdminSidebar = lazy(() =>
+  import("@/components/admin/AdminSidebar").then((module) => ({ default: module.AdminSidebar })),
+);
+const AdminDashboard = lazy(() =>
+  import("@/components/admin/AdminDashboard").then((module) => ({ default: module.AdminDashboard })),
+);
+const LeadManagement = lazy(() =>
+  import("@/components/admin/LeadManagement").then((module) => ({ default: module.LeadManagement })),
+);
+const HomepageManagement = lazy(() =>
+  import("@/components/admin/HomepageManagement").then((module) => ({ default: module.HomepageManagement })),
+);
+const HSRPVerticalWorkspace = lazy(() =>
+  import("@/components/admin/verticals/HSRPVerticalWorkspace").then((module) => ({ default: module.HSRPVerticalWorkspace })),
+);
+const SalesWorkspace = lazy(() =>
+  import("@/components/admin/sales/SalesWorkspace").then((module) => ({ default: module.SalesWorkspace })),
+);
+const SelfDriveWorkspace = lazy(() =>
+  import("@/components/admin/rentals/SelfDriveWorkspace").then((module) => ({ default: module.SelfDriveWorkspace })),
+);
+const AccessoriesManagement = lazy(() =>
+  import("@/components/admin/AccessoriesManagement").then((module) => ({ default: module.AccessoriesManagement })),
+);
+const WebsiteSettings = lazy(() =>
+  import("@/components/admin/WebsiteSettings").then((module) => ({ default: module.WebsiteSettings })),
+);
+const AdTrackingSettings = lazy(() =>
+  import("@/components/admin/AdTrackingSettings").then((module) => ({ default: module.AdTrackingSettings })),
+);
+const WhatsAppManagement = lazy(() =>
+  import("@/components/admin/WhatsAppManagement").then((module) => ({ default: module.WhatsAppManagement })),
+);
+const BlogManagement = lazy(() =>
+  import("@/components/admin/BlogManagement").then((module) => ({ default: module.BlogManagement })),
+);
+const NotificationCenter = lazy(() =>
+  import("@/components/admin/NotificationCenter").then((module) => ({ default: module.NotificationCenter })),
+);
+const SEOBuilder = lazy(() =>
+  import("@/components/admin/SEOBuilder").then((module) => ({ default: module.SEOBuilder })),
+);
+const BrandingSettings = lazy(() =>
+  import("@/components/admin/BrandingSettings").then((module) => ({ default: module.BrandingSettings })),
+);
+const APIIntegrationPortal = lazy(() =>
+  import("@/components/admin/APIIntegrationPortal").then((module) => ({ default: module.APIIntegrationPortal })),
+);
+const EmailMarketingManagement = lazy(() =>
+  import("@/components/admin/EmailMarketingManagement").then((module) => ({ default: module.EmailMarketingManagement })),
+);
+const AIContentHub = lazy(() =>
+  import("@/components/admin/AIContentHub").then((module) => ({ default: module.AIContentHub })),
+);
+const BulkDataManager = lazy(() =>
+  import("@/components/admin/BulkDataManager").then((module) => ({ default: module.BulkDataManager })),
+);
+const WebsiteContentManagement = lazy(() =>
+  import("@/components/admin/WebsiteContentManagement").then((module) => ({ default: module.WebsiteContentManagement })),
+);
+const SocialProofManagement = lazy(() =>
+  import("@/components/admin/SocialProofManagement").then((module) => ({ default: module.SocialProofManagement })),
+);
+const IntegrationsManagement = lazy(() =>
+  import("@/components/admin/IntegrationsManagement").then((module) => ({ default: module.IntegrationsManagement })),
+);
+const OffersManagement = lazy(() =>
+  import("@/components/admin/OffersManagement").then((module) => ({ default: module.OffersManagement })),
+);
+const AutoIntelligenceSettings = lazy(() =>
+  import("@/components/admin/AutoIntelligenceSettings").then((module) => ({ default: module.AutoIntelligenceSettings })),
+);
+const CrossSellManagement = lazy(() => import("@/components/admin/CrossSellManagement"));
+const EMIPDFSettings = lazy(() => import("@/components/admin/EMIPDFSettings"));
+const ManualQuoteGenerator = lazy(() =>
+  import("@/components/admin/ManualQuoteGenerator").then((module) => ({ default: module.ManualQuoteGenerator })),
+);
+const ProfileSettings = lazy(() =>
+  import("@/components/admin/ProfileSettings").then((module) => ({ default: module.ProfileSettings })),
+);
+const MarketingCommandCenter = lazy(() =>
+  import("@/components/admin/marketing").then((module) => ({ default: module.MarketingCommandCenter })),
+);
+const HoliBulkShare = lazy(() =>
+  import("@/components/admin/HoliBulkShare").then((module) => ({ default: module.HoliBulkShare })),
+);
+const DriverBookingsManagement = lazy(() => import("@/components/admin/DriverBookingsManagement"));
+const APIPartnersManagement = lazy(() => import("@/components/admin/APIPartnersManagement"));
+const DealerManagement = lazy(() =>
+  import("@/components/admin/DealerManagement").then((module) => ({ default: module.DealerManagement })),
+);
+const SiteSettingsManager = lazy(() => import("@/components/admin/SiteSettingsManager"));
+const BannersManager = lazy(() => import("@/components/admin/BannersManager"));
+const TestimonialsManager = lazy(() => import("@/components/admin/TestimonialsManager"));
+const FAQManager = lazy(() => import("@/components/admin/FAQManager"));
+const ServicePricingManager = lazy(() => import("@/components/admin/ServicePricingManager"));
+const HeroSlidesManagement = lazy(() =>
+  import("@/components/admin/HeroSlidesManagement").then((module) => ({ default: module.HeroSlidesManagement })),
+);
+const PartnersManager = lazy(() => import("@/components/admin/PartnersManager"));
+const InsuranceManagement = lazy(() =>
+  import("@/components/admin/InsuranceManagement").then((module) => ({ default: module.InsuranceManagement })),
+);
+const InsuranceImportExport = lazy(() =>
+  import("@/components/admin/insurance/InsuranceImportExport").then((module) => ({ default: module.InsuranceImportExport })),
+);
+const UnifiedCustomerProfile = lazy(() =>
+  import("@/components/admin/unified/UnifiedCustomerProfile").then((module) => ({ default: module.UnifiedCustomerProfile })),
+);
+const CrossVerticalIntelligence = lazy(() =>
+  import("@/components/admin/unified/CrossVerticalIntelligence").then((module) => ({ default: module.CrossVerticalIntelligence })),
+);
+const JourneyAutomationPanel = lazy(() =>
+  import("@/components/admin/JourneyAutomationPanel").then((module) => ({ default: module.JourneyAutomationPanel })),
+);
+const RevenueIntelligenceDashboard = lazy(() =>
+  import("@/components/admin/RevenueIntelligenceDashboard").then((module) => ({ default: module.RevenueIntelligenceDashboard })),
+);
+const LoanCRMDashboard = lazy(() =>
+  import("@/components/admin/LoanCRMDashboard").then((module) => ({ default: module.LoanCRMDashboard })),
+);
+const LeadScoringDashboard = lazy(() =>
+  import("@/components/admin/LeadScoringDashboard").then((module) => ({ default: module.LeadScoringDashboard })),
+);
+const ClientManagement = lazy(() =>
+  import("@/components/admin/ClientManagement").then((module) => ({ default: module.ClientManagement })),
+);
+const LeadImportManager = lazy(() =>
+  import("@/components/admin/LeadImportManager").then((module) => ({ default: module.LeadImportManager })),
+);
+const DataExportEngine = lazy(() =>
+  import("@/components/admin/DataExportEngine").then((module) => ({ default: module.DataExportEngine })),
+);
+const SuperAdminUserManager = lazy(() =>
+  import("@/components/admin/SuperAdminUserManager").then((module) => ({ default: module.SuperAdminUserManager })),
+);
+const UserManagementDashboard = lazy(() =>
+  import("@/components/admin/UserManagementDashboard").then((module) => ({ default: module.UserManagementDashboard })),
+);
+const AIContentManagement = lazy(() =>
+  import("@/components/admin/AIContentManagement").then((module) => ({ default: module.AIContentManagement })),
+);
+const DiscountManagement = lazy(() =>
+  import("@/components/admin/DiscountManagement").then((module) => ({ default: module.DiscountManagement })),
+);
+const LaunchesManagement = lazy(() =>
+  import("@/components/admin/LaunchesManagement").then((module) => ({ default: module.LaunchesManagement })),
+);
+const WhatsAppTemplateManager = lazy(() => import("@/components/admin/WhatsAppTemplateManager"));
+const EmailAutomationManager = lazy(() => import("@/components/admin/EmailAutomationManager"));
+const InsuranceDashboard = lazy(() =>
+  import("@/components/admin/verticals/InsuranceDashboard").then((module) => ({ default: module.InsuranceDashboard })),
+);
+const SalesDashboard = lazy(() =>
+  import("@/components/admin/verticals/SalesDashboard").then((module) => ({ default: module.SalesDashboard })),
+);
+const RentalDashboard = lazy(() =>
+  import("@/components/admin/verticals/RentalDashboard").then((module) => ({ default: module.RentalDashboard })),
+);
+const HSRPDashboard = lazy(() =>
+  import("@/components/admin/verticals/HSRPDashboard").then((module) => ({ default: module.HSRPDashboard })),
+);
+const AccessoriesDashboard = lazy(() =>
+  import("@/components/admin/verticals/AccessoriesDashboard").then((module) => ({ default: module.AccessoriesDashboard })),
+);
+const MarketingDashboard = lazy(() =>
+  import("@/components/admin/verticals/MarketingDashboard").then((module) => ({ default: module.MarketingDashboard })),
+);
+const CallingDashboard = lazy(() =>
+  import("@/components/admin/calling/CallingDashboard").then((module) => ({ default: module.CallingDashboard })),
+);
+const ManagerDashboard = lazy(() =>
+  import("@/components/admin/ManagerDashboard").then((module) => ({ default: module.ManagerDashboard })),
+);
+const TeamEngagement = lazy(() => import("@/components/admin/TeamEngagement"));
+const ErrorPrevention = lazy(() => import("@/components/admin/ErrorPrevention"));
+const WorkflowEngine = lazy(() => import("@/components/admin/WorkflowEngine"));
+const AutomationCommandCenter = lazy(() => import("@/components/admin/AutomationCommandCenter"));
+const LeadRoutingManager = lazy(() =>
+  import("@/components/admin/LeadRoutingManager").then((module) => ({ default: module.LeadRoutingManager })),
+);
+const AccountsFinanceWorkspace = lazy(() =>
+  import("@/components/admin/finance/AccountsFinanceWorkspace").then((module) => ({ default: module.AccountsFinanceWorkspace })),
+);
+const HRWorkspace = lazy(() =>
+  import("@/components/admin/hr/HRWorkspace").then((module) => ({ default: module.HRWorkspace })),
+);
+const CarDatabaseWorkspace = lazy(() =>
+  import("@/components/admin/car-database/CarDatabaseWorkspace").then((module) => ({ default: module.CarDatabaseWorkspace })),
+);
+const OpenAPIPortal = lazy(() =>
+  import("@/components/admin/OpenAPIPortal").then((module) => ({ default: module.OpenAPIPortal })),
+);
+const SuperAdminIncentiveWorkspace = lazy(() => import("@/components/admin/incentives/SuperAdminIncentiveWorkspace"));
+const HREmployeeManagement = lazy(() =>
+  import("@/components/admin/hr/HREmployeeManagement").then((module) => ({ default: module.HREmployeeManagement })),
+);
+const HROnboarding = lazy(() =>
+  import("@/components/admin/hr/HROnboarding").then((module) => ({ default: module.HROnboarding })),
+);
+const HRKPIManagement = lazy(() =>
+  import("@/components/admin/hr/HRKPIManagement").then((module) => ({ default: module.HRKPIManagement })),
+);
+const HRTemplates = lazy(() =>
+  import("@/components/admin/hr/HRTemplates").then((module) => ({ default: module.HRTemplates })),
+);
+const DocumentVault = lazy(() =>
+  import("@/components/admin/documents/DocumentVault").then((module) => ({ default: module.DocumentVault })),
+);
+const SalesIncentiveDashboard = lazy(() =>
+  import("@/components/admin/incentives/SalesIncentiveDashboard").then((module) => ({ default: module.SalesIncentiveDashboard })),
+);
+const IncentivePayoutApproval = lazy(() =>
+  import("@/components/admin/finance/IncentivePayoutApproval").then((module) => ({ default: module.IncentivePayoutApproval })),
+);
+const DealsPipeline = lazy(() =>
+  import("@/components/admin/deals/DealsPipeline").then((module) => ({ default: module.DealsPipeline })),
+);
+const CRMAssistant = lazy(() =>
+  import("@/components/admin/CRMAssistant").then((module) => ({ default: module.CRMAssistant })),
+);
+
+const AdminPanelLoader = ({ className }: { className?: string }) => (
+  <div className={cn("flex min-h-[240px] items-center justify-center", className)}>
+    <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
+  </div>
+);
+
 const AdminLayout = () => {
   const navigate = useNavigate();
-  const { user, isLoading, isAdmin, roles } = useAdminAuth();
+  const { user, isLoading, roles } = useAdminAuth();
   const { activeVertical } = useVerticalAccess();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isMobile, setIsMobile] = useState(false);
-
-  // Auto-logout after 10 minutes of inactivity
-  useSessionTimeout(!isLoading && !!user);
   const [isTablet, setIsTablet] = useState(false);
 
-  // Handle responsive breakpoints
+  useSessionTimeout(!isLoading && !!user);
+
   useEffect(() => {
     const handleResize = () => {
       const width = window.innerWidth;
@@ -135,37 +254,32 @@ const AdminLayout = () => {
     };
 
     handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Log admin dashboard access
   useEffect(() => {
     if (user && !isLoading) {
-      logAdminActivity({ action: 'view_dashboard' });
+      logAdminActivity({ action: "view_dashboard" });
     }
   }, [user, isLoading]);
 
-  // Redirect if not authenticated
   if (!isLoading && !user) {
     return <Navigate to="/crm-auth" replace />;
   }
 
-  // Redirect to workspace selector if no vertical selected
   if (!isLoading && user && !activeVertical) {
     return <Navigate to="/workspace" replace />;
   }
 
-  // Show loading state
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
   }
 
-  // Check admin access
   const hasAdminAccess = roles.length > 0;
 
   if (!hasAdminAccess) {
@@ -174,12 +288,11 @@ const AdminLayout = () => {
         <Shield className="h-16 w-16 text-muted-foreground mb-4" />
         <h1 className="text-2xl font-bold mb-2">Access Denied</h1>
         <p className="text-muted-foreground mb-4 text-center">You don't have permission to access the admin panel.</p>
-        <Button onClick={() => navigate('/')}>Go to Homepage</Button>
+        <Button onClick={() => navigate("/")}>Go to Homepage</Button>
       </div>
     );
   }
 
-  // Render content based on active tab
   const renderContent = () => {
     switch (activeTab) {
       case "dashboard": {
@@ -213,8 +326,13 @@ const AdminLayout = () => {
         return <ClientManagement verticalSlug={activeVertical?.slug} />;
       case "lead-import": {
         const importVerticalMap: Record<string, string> = {
-          sales: "car_inquiry", insurance: "insurance", loans: "finance",
-          hsrp: "hsrp", rental: "rental", accessories: "accessories", corporate: "corporate",
+          sales: "car_inquiry",
+          insurance: "insurance",
+          loans: "finance",
+          hsrp: "hsrp",
+          rental: "rental",
+          accessories: "accessories",
+          corporate: "corporate",
         };
         const importCat = activeVertical?.slug ? importVerticalMap[activeVertical.slug] : undefined;
         return <LeadImportManager verticalCategory={importCat} />;
@@ -433,40 +551,57 @@ const AdminLayout = () => {
 
   return (
     <div className="min-h-screen bg-muted/30">
-      {/* Sidebar */}
-      <AdminSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <Suspense fallback={<AdminPanelLoader className="min-h-screen" />}>
+        <AdminSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      </Suspense>
 
-      {/* Notification Bell - Responsive positioning */}
-      <div className={cn(
-        "fixed z-50",
-        isMobile ? "top-3 right-3" : "top-4 right-4 md:right-6"
-      )}>
-        <NotificationCenter />
+      <div className={cn("fixed z-50", isMobile ? "top-3 right-3" : "top-4 right-4 md:right-6")}>
+        <Suspense fallback={null}>
+          <NotificationCenter />
+        </Suspense>
       </div>
 
-      {/* Main Content - Responsive margins and padding */}
-      <main className={cn(
-        "transition-all duration-300 min-h-screen",
-        // Mobile: no left margin, top padding for header
-        isMobile && "ml-0 pt-16 px-3 pb-4",
-        // Tablet: collapsed sidebar width
-        isTablet && "ml-16 p-4 pt-4",
-        // Desktop: full sidebar width
-        !isMobile && !isTablet && "md:ml-64 p-6"
-      )}>
-        <div className={cn(
-          "mx-auto",
-          isMobile ? "max-w-full" : (
-            ["services-insurance", "services-insurance-import", "services-loans-pipeline", "services-loans-disbursement", "services-loans-after-sales", "services-loans-bulk", "sales-crm", "loan-crm", "rental-crm", "hsrp-crm", "deals-pipeline", "calling-system", "manager-dashboard"].includes(activeTab)
+      <main
+        className={cn(
+          "transition-all duration-300 min-h-screen",
+          isMobile && "ml-0 pt-16 px-3 pb-4",
+          isTablet && "ml-16 p-4 pt-4",
+          !isMobile && !isTablet && "md:ml-64 p-6",
+        )}
+      >
+        <div
+          className={cn(
+            "mx-auto",
+            isMobile
               ? "max-w-full"
-              : "max-w-7xl"
-          )
-        )}>
-          {renderContent()}
+              : [
+                    "services-insurance",
+                    "services-insurance-import",
+                    "services-loans-pipeline",
+                    "services-loans-disbursement",
+                    "services-loans-after-sales",
+                    "services-loans-bulk",
+                    "sales-crm",
+                    "loan-crm",
+                    "rental-crm",
+                    "hsrp-crm",
+                    "deals-pipeline",
+                    "calling-system",
+                    "manager-dashboard",
+                  ].includes(activeTab)
+                ? "max-w-full"
+                : "max-w-7xl",
+          )}
+        >
+          <Suspense fallback={<AdminPanelLoader />}>
+            {renderContent()}
+          </Suspense>
         </div>
       </main>
-      {/* CRM AI Assistant Overlay */}
-      <CRMAssistant />
+
+      <Suspense fallback={null}>
+        <CRMAssistant />
+      </Suspense>
     </div>
   );
 };
