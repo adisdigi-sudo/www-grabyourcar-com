@@ -21,14 +21,33 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-export const CartProvider = ({ children }: { children: ReactNode }) => {
-  const [items, setItems] = useState<CartItem[]>(() => {
-    const saved = localStorage.getItem('cart');
+const loadStoredCart = (): CartItem[] => {
+  if (typeof window === 'undefined') return [];
+
+  try {
+    const saved = window.localStorage.getItem('cart');
     return saved ? JSON.parse(saved) : [];
-  });
+  } catch (error) {
+    console.warn('[Cart] Failed to read local cart storage, using empty cart.', error);
+    return [];
+  }
+};
+
+const persistCart = (items: CartItem[]) => {
+  if (typeof window === 'undefined') return;
+
+  try {
+    window.localStorage.setItem('cart', JSON.stringify(items));
+  } catch (error) {
+    console.warn('[Cart] Failed to persist cart storage.', error);
+  }
+};
+
+export const CartProvider = ({ children }: { children: ReactNode }) => {
+  const [items, setItems] = useState<CartItem[]>(loadStoredCart);
 
   useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(items));
+    persistCart(items);
   }, [items]);
 
   const addToCart = (item: Omit<CartItem, 'quantity'>) => {
