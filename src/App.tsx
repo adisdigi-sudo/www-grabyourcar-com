@@ -23,11 +23,6 @@ import { initDynamicTracking } from "@/lib/adTracking";
 import { FloatingCallButton } from "@/components/FloatingCallButton";
 import { CookieConsentBanner } from "@/components/CookieConsentBanner";
 import Index from "./pages/Index";
-import AdminLayout from "./pages/AdminLayout";
-import AdminAuth from "./pages/AdminAuth";
-import AdminResetPassword from "./pages/AdminResetPassword";
-import WorkspaceSelector from "./pages/WorkspaceSelector";
-import NotFound from "./pages/NotFound";
 
 // Retry wrapper for lazy imports — handles stale chunk errors after deployments
 function lazyRetry<T extends ComponentType<any>>(
@@ -75,6 +70,11 @@ const VehicleLookup = lazyRetry(() => import("./pages/VehicleLookup"));
 const ThankYou = lazyRetry(() => import("./pages/ThankYou"));
 const NoWaitingCars = lazyRetry(() => import("./pages/NoWaitingCars"));
 const BestCarDeals = lazyRetry(() => import("./pages/BestCarDeals"));
+const AdminLayout = lazyRetry(() => import("./pages/AdminLayout"));
+const AdminAuth = lazyRetry(() => import("./pages/AdminAuth"));
+const AdminResetPassword = lazyRetry(() => import("./pages/AdminResetPassword"));
+const WorkspaceSelector = lazyRetry(() => import("./pages/WorkspaceSelector"));
+const NotFound = lazyRetry(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
