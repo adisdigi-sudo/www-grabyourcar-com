@@ -148,6 +148,27 @@ const Index = () => {
             <HomepageSEOContent />
           </SectionErrorBoundary>
         </Suspense>
+      </main>
+      
+      {/* Footer */}
+      <Suspense fallback={null}>
+        <SectionErrorBoundary sectionName="footer" fallback={null}>
+          <Footer />
+        </SectionErrorBoundary>
+        
+        {/* Floating WhatsApp & Call Buttons */}
+        <SectionErrorBoundary sectionName="floating-cta" fallback={null}>
+          <FloatingCTA />
+        </SectionErrorBoundary>
+        
+        {/* Lead Capture Modals */}
+        <SectionErrorBoundary sectionName="entry-lead-capture-modal" fallback={null}>
+          <EntryLeadCaptureModal />
+        </SectionErrorBoundary>
+        <SectionErrorBoundary sectionName="exit-intent-popup" fallback={null}>
+          <ExitIntentPopup />
+        </SectionErrorBoundary>
+      </Suspense>
       </div>
     </>
   );
