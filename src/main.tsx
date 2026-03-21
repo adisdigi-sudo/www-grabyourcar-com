@@ -5,6 +5,33 @@ import { HelmetProvider } from "react-helmet-async";
 import "./index.css";
 import App from "./App";
 import { AppErrorBoundary } from "@/components/AppErrorBoundary";
+import { isDynamicImportError, recoverFromChunkLoadError } from "@/lib/chunkLoadRecovery";
+
+let hasTriggeredChunkRecovery = false;
+
+const attemptChunkRecovery = (error: unknown, source: string) => {
+  if (hasTriggeredChunkRecovery || !isDynamicImportError(error)) {
+    return false;
+  }
+
+  hasTriggeredChunkRecovery = recoverFromChunkLoadError();
+
+  if (hasTriggeredChunkRecovery) {
+    console.warn("[Bootstrap] Attempting chunk recovery", { source, error });
+  }
+
+  return hasTriggeredChunkRecovery;
+};
+
+if (typeof window !== "undefined") {
+  window.addEventListener("error", (event) => {
+    attemptChunkRecovery(event.error ?? event.message, "window.error");
+  });
+
+  window.addEventListener("unhandledrejection", (event) => {
+    attemptChunkRecovery(event.reason, "window.unhandledrejection");
+  });
+}
 
 const SafeTelemetry = () => {
   const [telemetry, setTelemetry] = useState<null | {
