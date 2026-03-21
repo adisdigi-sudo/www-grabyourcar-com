@@ -22,6 +22,12 @@ import { usePageViewTracking } from "@/hooks/usePageViewTracking";
 import { initDynamicTracking } from "@/lib/adTracking";
 import { FloatingCallButton } from "@/components/FloatingCallButton";
 import { CookieConsentBanner } from "@/components/CookieConsentBanner";
+import Index from "./pages/Index";
+import AdminLayout from "./pages/AdminLayout";
+import AdminAuth from "./pages/AdminAuth";
+import AdminResetPassword from "./pages/AdminResetPassword";
+import WorkspaceSelector from "./pages/WorkspaceSelector";
+import NotFound from "./pages/NotFound";
 
 // Retry wrapper for lazy imports — handles stale chunk errors after deployments
 function lazyRetry<T extends ComponentType<any>>(
@@ -38,7 +44,6 @@ function lazyRetry<T extends ComponentType<any>>(
   );
 }
 
-const Index = lazyRetry(() => import("./pages/Index"));
 const Cars = lazyRetry(() => import("./pages/Cars"));
 const CarImages = lazyRetry(() => import("./pages/CarImages"));
 const FeaturesSpecs = lazyRetry(() => import("./pages/FeaturesSpecs"));
@@ -58,16 +63,11 @@ const MyFavorites = lazyRetry(() => import("./pages/MyFavorites"));
 const MyBookings = lazyRetry(() => import("./pages/MyBookings"));
 const MyOrders = lazyRetry(() => import("./pages/MyOrders"));
 const CarFinder = lazyRetry(() => import("./pages/CarFinder"));
-const AdminLayout = lazyRetry(() => import("./pages/AdminLayout"));
-const AdminAuth = lazyRetry(() => import("./pages/AdminAuth"));
-const AdminResetPassword = lazyRetry(() => import("./pages/AdminResetPassword"));
-const WorkspaceSelector = lazyRetry(() => import("./pages/WorkspaceSelector"));
 const SelfDriveRentals = lazyRetry(() => import("./pages/SelfDriveRentals"));
 const HSRP = lazyRetry(() => import("./pages/HSRP"));
 const UpcomingCars = lazyRetry(() => import("./pages/UpcomingCars"));
 const AutoNews = lazyRetry(() => import("./pages/AutoNews"));
 const DealerLocator = lazyRetry(() => import("./pages/DealerLocator"));
-const NotFound = lazyRetry(() => import("./pages/NotFound"));
 const About = lazyRetry(() => import("./pages/About"));
 const AutoIntelligence = lazyRetry(() => import("./pages/AutoIntelligence"));
 const HoliGreeting = lazyRetry(() => import("./pages/HoliGreeting"));
@@ -96,6 +96,11 @@ const PageViewTracker = () => {
   usePageViewTracking();
 
   useEffect(() => {
+    console.info("[AppBootstrap] Root route shell mounted", {
+      href: window.location.href,
+      hostname: window.location.hostname,
+      path: window.location.pathname,
+    });
     resetChunkLoadRecovery("global_chunk_recovery");
     resetChunkLoadRecovery("route_chunk_recovery");
     resetChunkLoadRecovery("bootstrap_chunk_recovery");
