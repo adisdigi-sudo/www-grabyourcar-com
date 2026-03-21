@@ -3,7 +3,6 @@ import { ThemeProvider } from "next-themes";
 import { HelmetProvider } from "react-helmet-async";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
-import App from "./App.tsx";
 import "./index.css";
 import { AppErrorBoundary } from "@/components/AppErrorBoundary";
 import {
@@ -54,16 +53,71 @@ if (window.location.hostname.endsWith(".lovable.app")) {
   document.head.appendChild(noindex);
 }
 
-createRoot(document.getElementById("root")!).render(
-  <HelmetProvider>
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <AppErrorBoundary>
-        <>
-          <App />
-          <Analytics />
-          <SpeedInsights />
-        </>
-      </AppErrorBoundary>
-    </ThemeProvider>
-  </HelmetProvider>
+const rootElement = document.getElementById("root");
+
+if (!rootElement) {
+  throw new Error("Root element #root was not found");
+}
+
+const root = createRoot(rootElement);
+
+const BootstrapFailure = ({ canRetry }: { canRetry: boolean }) => (
+  <div className="min-h-screen bg-background text-foreground flex items-center justify-center px-6">
+    <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-8 shadow-sm text-center space-y-5">
+      <div className="space-y-2">
+        <h1 className="text-2xl font-semibold">Page failed to start</h1>
+        <p className="text-sm text-muted-foreground">
+          We hit a loading problem before the app could open.
+          {canRetry ? " Refresh once to load the latest version." : " Please reopen the site in a fresh tab."}
+        </p>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => window.location.reload()}
+        className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+      >
+        Refresh page
+      </button>
+    </div>
+  </div>
 );
+
+const renderBootstrapFailure = (error: unknown) => {
+  const canRetry = isDynamicImportError(error) && recoverFromChunkLoadError("bootstrap_chunk_recovery", 2);
+
+  console.error("[Bootstrap] App failed before mount", {
+    error,
+    href: window.location.href,
+    hostname: window.location.hostname,
+    canRetry,
+  });
+
+  if (canRetry) return;
+
+  root.render(
+    <HelmetProvider>
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <BootstrapFailure canRetry={false} />
+      </ThemeProvider>
+    </HelmetProvider>
+  );
+};
+
+import("./App.tsx")
+  .then(({ default: App }) => {
+    root.render(
+      <HelmetProvider>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <AppErrorBoundary>
+            <>
+              <App />
+              <Analytics />
+              <SpeedInsights />
+            </>
+          </AppErrorBoundary>
+        </ThemeProvider>
+      </HelmetProvider>
+    );
+  })
+  .catch(renderBootstrapFailure);
