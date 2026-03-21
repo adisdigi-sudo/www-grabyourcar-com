@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Helmet } from "react-helmet-async";
+import { GlobalSEO } from "@/components/seo/GlobalSEO";
 import { 
   Car, Calendar, IndianRupee, Sparkles, Clock, Zap, 
   RefreshCw, Filter, ChevronRight, Star, Fuel, Settings
