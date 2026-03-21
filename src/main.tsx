@@ -4,6 +4,7 @@ import { HelmetProvider } from "react-helmet-async";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import "./index.css";
+import App from "./App";
 import { AppErrorBoundary } from "@/components/AppErrorBoundary";
 import {
   isDynamicImportError,
@@ -104,20 +105,20 @@ const renderBootstrapFailure = (error: unknown) => {
   );
 };
 
-import("./App.tsx")
-  .then(({ default: App }) => {
-    root.render(
-      <HelmetProvider>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <AppErrorBoundary>
-            <>
-              <App />
-              <Analytics />
-              <SpeedInsights />
-            </>
-          </AppErrorBoundary>
-        </ThemeProvider>
-      </HelmetProvider>
-    );
-  })
-  .catch(renderBootstrapFailure);
+try {
+  root.render(
+    <HelmetProvider>
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <AppErrorBoundary>
+          <>
+            <App />
+            <Analytics />
+            <SpeedInsights />
+          </>
+        </AppErrorBoundary>
+      </ThemeProvider>
+    </HelmetProvider>
+  );
+} catch (error) {
+  renderBootstrapFailure(error);
+}
