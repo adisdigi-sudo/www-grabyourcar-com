@@ -18,6 +18,7 @@ import { initDynamicTracking } from "@/lib/adTracking";
 import { FloatingCallButton } from "@/components/FloatingCallButton";
 import { CookieConsentBanner } from "@/components/CookieConsentBanner";
 import { resetChunkLoadRecovery } from "@/lib/chunkLoadRecovery";
+import { SiteStructuredData } from "@/components/seo/SiteStructuredData";
 
 // Only the homepage is statically imported for fastest first paint
 import Index from "./pages/Index";
