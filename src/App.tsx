@@ -116,6 +116,7 @@ const App = () => (
                       </div>
                     }
                   >
+                    <SiteStructuredData />
                     <PageViewTracker />
                     <AdminSubdomainRouter>
                       <Routes>
