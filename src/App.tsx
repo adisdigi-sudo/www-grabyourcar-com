@@ -13,7 +13,6 @@ import { AdminSubdomainRouter } from "@/components/AdminSubdomainRouter";
 import { isAdminSubdomain } from "@/hooks/useAdminSubdomain";
 import { useGlobalRealtimeSync } from "@/hooks/useRealtimeSync";
 import { VerticalProvider } from "@/hooks/useVerticalAccess";
-import { resetChunkLoadRecovery } from "@/lib/chunkLoadRecovery";
 import { usePageViewTracking } from "@/hooks/usePageViewTracking";
 import { initDynamicTracking } from "@/lib/adTracking";
 import { FloatingCallButton } from "@/components/FloatingCallButton";
@@ -59,14 +58,13 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 30, // 30 seconds default
+      staleTime: 1000 * 30,
       refetchOnWindowFocus: true,
       refetchOnReconnect: true,
     },
   },
 });
 
-// Component to initialize global real-time sync + page view tracking
 const RealtimeSyncProvider = ({ children }: { children: React.ReactNode }) => {
   useGlobalRealtimeSync();
   return <>{children}</>;
@@ -81,9 +79,6 @@ const PageViewTracker = () => {
       hostname: window.location.hostname,
       path: window.location.pathname,
     });
-    resetChunkLoadRecovery("global_chunk_recovery");
-    resetChunkLoadRecovery("route_chunk_recovery");
-    resetChunkLoadRecovery("bootstrap_chunk_recovery");
   }, []);
 
   useEffect(() => {
@@ -101,79 +96,77 @@ const App = () => (
       <CartProvider>
         <CompareProvider>
           <VerticalProvider>
-          <RealtimeSyncProvider>
-            <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Suspense
-                fallback={
-                  <div className="min-h-screen flex items-center justify-center bg-background">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-                  </div>
-                }
-              >
-                <PageViewTracker />
-                <AdminSubdomainRouter>
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/cars" element={<Cars />} />
-                    <Route path="/car-images" element={<CarImages />} />
-                    <Route path="/features-specs" element={<FeaturesSpecs />} />
-                    <Route path="/brochures" element={<Brochures />} />
-                    <Route path="/car-loans" element={<CarLoan />} />
-                    <Route path="/car/:slug" element={<CarDetail />} />
-                    <Route path="/cars/:slug" element={<CarDetail />} />
-                    <Route path="/car/:slug/on-road-price" element={<CarOnRoadPrice />} />
-                    <Route path="/cars/:slug/on-road-price" element={<CarOnRoadPrice />} />
-                    <Route path="/compare" element={<CompareCars />} />
-                    <Route path="/car-insurance" element={<CarInsurance />} />
-                    <Route path="/corporate" element={<CorporateBuying />} />
-                    <Route path="/accessories" element={<Accessories />} />
-                    <Route path="/accessory-wishlist" element={<AccessoryWishlist />} />
-                    <Route path="/blog" element={<Blog />} />
-                    <Route path="/blog/:slug" element={<BlogPost />} />
-                    <Route path="/auth" element={<Auth />} />
-                    <Route path="/favorites" element={<MyFavorites />} />
-                    <Route path="/my-bookings" element={<MyBookings />} />
-                    <Route path="/my-orders" element={<MyOrders />} />
-                    <Route path="/car-finder" element={<CarFinder />} />
-                    <Route path="/crm" element={<AdminLayout />} />
-                    <Route path="/crm-auth" element={<AdminAuth />} />
-                    <Route path="/crm-reset-password" element={<AdminResetPassword />} />
-                    <Route path="/admin" element={<Navigate to="/crm" replace />} />
-                    <Route path="/admin-auth" element={<Navigate to="/crm-auth" replace />} />
-                    <Route path="/admin-reset-password" element={<Navigate to="/crm-reset-password" replace />} />
-                    <Route path="/workspace" element={<WorkspaceSelector />} />
-                    <Route path="/self-drive" element={<SelfDriveRentals />} />
-                    <Route path="/hsrp" element={<HSRP />} />
-                    <Route path="/upcoming-cars" element={<UpcomingCars />} />
-                    <Route path="/auto-news" element={<AutoNews />} />
-                    <Route path="/dealers" element={<DealerLocator />} />
-                    <Route path="/about" element={<About />} />
-                    <Route path="/auto-intelligence" element={<AutoIntelligence />} />
-                    <Route path="/holi" element={<HoliGreeting />} />
-                    <Route path="/vehicle-lookup" element={<VehicleLookup />} />
-                    <Route path="/thank-you" element={<ThankYou />} />
-                    <Route path="/no-waiting-cars" element={<NoWaitingCars />} />
-                    <Route path="/best-car-deals" element={<BestCarDeals />} />
-                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                  {/* Only show floating elements on main site, not admin subdomain */}
-                  {!isAdminSubdomain() && (
-                    <>
-                      <FloatingCompareBar />
-                      <WhatsAppFloatingButton />
-                      <FloatingCallButton />
-                      <CookieConsentBanner />
-                    </>
-                  )}
-                </AdminSubdomainRouter>
-              </Suspense>
-            </BrowserRouter>
-            </TooltipProvider>
-          </RealtimeSyncProvider>
+            <RealtimeSyncProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Sonner />
+                <BrowserRouter>
+                  <Suspense
+                    fallback={
+                      <div className="min-h-screen flex items-center justify-center bg-background">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+                      </div>
+                    }
+                  >
+                    <PageViewTracker />
+                    <AdminSubdomainRouter>
+                      <Routes>
+                        <Route path="/" element={<Index />} />
+                        <Route path="/cars" element={<Cars />} />
+                        <Route path="/car-images" element={<CarImages />} />
+                        <Route path="/features-specs" element={<FeaturesSpecs />} />
+                        <Route path="/brochures" element={<Brochures />} />
+                        <Route path="/car-loans" element={<CarLoan />} />
+                        <Route path="/car/:slug" element={<CarDetail />} />
+                        <Route path="/cars/:slug" element={<CarDetail />} />
+                        <Route path="/car/:slug/on-road-price" element={<CarOnRoadPrice />} />
+                        <Route path="/cars/:slug/on-road-price" element={<CarOnRoadPrice />} />
+                        <Route path="/compare" element={<CompareCars />} />
+                        <Route path="/car-insurance" element={<CarInsurance />} />
+                        <Route path="/corporate" element={<CorporateBuying />} />
+                        <Route path="/accessories" element={<Accessories />} />
+                        <Route path="/accessory-wishlist" element={<AccessoryWishlist />} />
+                        <Route path="/blog" element={<Blog />} />
+                        <Route path="/blog/:slug" element={<BlogPost />} />
+                        <Route path="/auth" element={<Auth />} />
+                        <Route path="/favorites" element={<MyFavorites />} />
+                        <Route path="/my-bookings" element={<MyBookings />} />
+                        <Route path="/my-orders" element={<MyOrders />} />
+                        <Route path="/car-finder" element={<CarFinder />} />
+                        <Route path="/crm" element={<AdminLayout />} />
+                        <Route path="/crm-auth" element={<AdminAuth />} />
+                        <Route path="/crm-reset-password" element={<AdminResetPassword />} />
+                        <Route path="/admin" element={<Navigate to="/crm" replace />} />
+                        <Route path="/admin-auth" element={<Navigate to="/crm-auth" replace />} />
+                        <Route path="/admin-reset-password" element={<Navigate to="/crm-reset-password" replace />} />
+                        <Route path="/workspace" element={<WorkspaceSelector />} />
+                        <Route path="/self-drive" element={<SelfDriveRentals />} />
+                        <Route path="/hsrp" element={<HSRP />} />
+                        <Route path="/upcoming-cars" element={<UpcomingCars />} />
+                        <Route path="/auto-news" element={<AutoNews />} />
+                        <Route path="/dealers" element={<DealerLocator />} />
+                        <Route path="/about" element={<About />} />
+                        <Route path="/auto-intelligence" element={<AutoIntelligence />} />
+                        <Route path="/holi" element={<HoliGreeting />} />
+                        <Route path="/vehicle-lookup" element={<VehicleLookup />} />
+                        <Route path="/thank-you" element={<ThankYou />} />
+                        <Route path="/no-waiting-cars" element={<NoWaitingCars />} />
+                        <Route path="/best-car-deals" element={<BestCarDeals />} />
+                        <Route path="*" element={<NotFound />} />
+                      </Routes>
+                      {!isAdminSubdomain() && (
+                        <>
+                          <FloatingCompareBar />
+                          <WhatsAppFloatingButton />
+                          <FloatingCallButton />
+                          <CookieConsentBanner />
+                        </>
+                      )}
+                    </AdminSubdomainRouter>
+                  </Suspense>
+                </BrowserRouter>
+              </TooltipProvider>
+            </RealtimeSyncProvider>
           </VerticalProvider>
         </CompareProvider>
       </CartProvider>
