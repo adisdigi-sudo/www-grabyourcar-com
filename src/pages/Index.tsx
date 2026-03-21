@@ -75,97 +75,79 @@ const Index = () => {
           <CategoryGrid />
         </SectionErrorBoundary>
         
-        {/* Dynamic Hero Banners from Admin */}
-        <SectionErrorBoundary sectionName="dynamic-hero-banners" fallback={null}>
-          <DynamicHeroBanners />
-        </SectionErrorBoundary>
-        
-        {/* Dynamic Promo Banners from Admin */}
-        <SectionErrorBoundary sectionName="dynamic-promo-banners" fallback={null}>
-          <DynamicPromoBanners />
-        </SectionErrorBoundary>
-        
-        {/* Dynamic Featured Cars from Admin */}
-        <SectionErrorBoundary sectionName="dynamic-featured-cars" fallback={null}>
-          <DynamicFeaturedCars />
-        </SectionErrorBoundary>
-        
-        {/* Featured Car Listings */}
-        <SectionErrorBoundary sectionName="car-listings">
-          <CarListings />
-        </SectionErrorBoundary>
-
-        {/* Cross-Sell Services */}
-        <div className="container mx-auto px-4">
-          <SectionErrorBoundary sectionName="cross-sell-widget" fallback={null}>
-            <CrossSellWidget context="home" title="Complete Your Car Buying Journey" maxItems={4} />
+        <Suspense fallback={null}>
+          {/* Dynamic Hero Banners from Admin */}
+          <SectionErrorBoundary sectionName="dynamic-hero-banners" fallback={null}>
+            <DynamicHeroBanners />
           </SectionErrorBoundary>
-        </div>
-        
-        {/* Nearby Dealer Locator */}
-        <SectionErrorBoundary sectionName="dealer-locator-widget" fallback={null}>
-          <DealerLocatorWidget />
-        </SectionErrorBoundary>
-         
-        {/* EMI Calculator */}
-        <SectionErrorBoundary sectionName="emi-calculator">
-          <EMICalculator onGetQuote={handleGetLoanQuote} />
-        </SectionErrorBoundary>
-        
-        {/* Dynamic CTA Banners from Admin */}
-        <SectionErrorBoundary sectionName="dynamic-cta-banners" fallback={null}>
-          <DynamicCTABanners />
-        </SectionErrorBoundary>
-        
-        {/* Lead Capture Form */}
-        <SectionErrorBoundary sectionName="lead-form">
-          <LeadForm prefillCarInterest={loanPrefill} />
-        </SectionErrorBoundary>
-        
-        {/* Customer Testimonials */}
-        <SectionErrorBoundary sectionName="testimonials">
-          <Testimonials />
-        </SectionErrorBoundary>
-        
-        {/* Dynamic Testimonials from Admin */}
-        <SectionErrorBoundary sectionName="dynamic-testimonials" fallback={null}>
-          <DynamicTestimonials />
-        </SectionErrorBoundary>
-        
-         {/* Customer Stories with Delivery Photos */}
-         <SectionErrorBoundary sectionName="customer-stories">
-           <CustomerStories />
-         </SectionErrorBoundary>
-         
-        {/* Trust Badges */}
-        <SectionErrorBoundary sectionName="trust-badges">
-          <TrustBadges />
-        </SectionErrorBoundary>
-        
-        {/* Crawlable SEO Content — 1000+ words of keyword-rich text */}
-        <SectionErrorBoundary sectionName="homepage-seo-content" fallback={null}>
-          <HomepageSEOContent />
-        </SectionErrorBoundary>
-      </main>
-      
-      {/* Footer */}
-      <SectionErrorBoundary sectionName="footer" fallback={null}>
-        <Footer />
-      </SectionErrorBoundary>
-      
-      {/* Floating WhatsApp & Call Buttons */}
-      <SectionErrorBoundary sectionName="floating-cta" fallback={null}>
-        <FloatingCTA />
-      </SectionErrorBoundary>
-      
-      {/* Lead Capture Modals */}
-      
-      <SectionErrorBoundary sectionName="entry-lead-capture-modal" fallback={null}>
-        <EntryLeadCaptureModal />
-      </SectionErrorBoundary>
-      <SectionErrorBoundary sectionName="exit-intent-popup" fallback={null}>
-        <ExitIntentPopup />
-      </SectionErrorBoundary>
+          
+          {/* Dynamic Promo Banners from Admin */}
+          <SectionErrorBoundary sectionName="dynamic-promo-banners" fallback={null}>
+            <DynamicPromoBanners />
+          </SectionErrorBoundary>
+          
+          {/* Dynamic Featured Cars from Admin */}
+          <SectionErrorBoundary sectionName="dynamic-featured-cars" fallback={null}>
+            <DynamicFeaturedCars />
+          </SectionErrorBoundary>
+          
+          {/* Featured Car Listings */}
+          <SectionErrorBoundary sectionName="car-listings">
+            <CarListings />
+          </SectionErrorBoundary>
+
+          {/* Cross-Sell Services */}
+          <div className="container mx-auto px-4">
+            <SectionErrorBoundary sectionName="cross-sell-widget" fallback={null}>
+              <CrossSellWidget context="home" title="Complete Your Car Buying Journey" maxItems={4} />
+            </SectionErrorBoundary>
+          </div>
+          
+          {/* Nearby Dealer Locator */}
+          <SectionErrorBoundary sectionName="dealer-locator-widget" fallback={null}>
+            <DealerLocatorWidget />
+          </SectionErrorBoundary>
+           
+          {/* EMI Calculator */}
+          <SectionErrorBoundary sectionName="emi-calculator">
+            <EMICalculator onGetQuote={handleGetLoanQuote} />
+          </SectionErrorBoundary>
+          
+          {/* Dynamic CTA Banners from Admin */}
+          <SectionErrorBoundary sectionName="dynamic-cta-banners" fallback={null}>
+            <DynamicCTABanners />
+          </SectionErrorBoundary>
+          
+          {/* Lead Capture Form */}
+          <SectionErrorBoundary sectionName="lead-form">
+            <LeadForm prefillCarInterest={loanPrefill} />
+          </SectionErrorBoundary>
+          
+          {/* Customer Testimonials */}
+          <SectionErrorBoundary sectionName="testimonials">
+            <Testimonials />
+          </SectionErrorBoundary>
+          
+          {/* Dynamic Testimonials from Admin */}
+          <SectionErrorBoundary sectionName="dynamic-testimonials" fallback={null}>
+            <DynamicTestimonials />
+          </SectionErrorBoundary>
+          
+          {/* Customer Stories with Delivery Photos */}
+          <SectionErrorBoundary sectionName="customer-stories">
+            <CustomerStories />
+          </SectionErrorBoundary>
+           
+          {/* Trust Badges */}
+          <SectionErrorBoundary sectionName="trust-badges">
+            <TrustBadges />
+          </SectionErrorBoundary>
+          
+          {/* Crawlable SEO Content — 1000+ words of keyword-rich text */}
+          <SectionErrorBoundary sectionName="homepage-seo-content" fallback={null}>
+            <HomepageSEOContent />
+          </SectionErrorBoundary>
+        </Suspense>
       </div>
     </>
   );
