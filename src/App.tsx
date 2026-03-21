@@ -22,7 +22,6 @@ import { usePageViewTracking } from "@/hooks/usePageViewTracking";
 import { initDynamicTracking } from "@/lib/adTracking";
 import { FloatingCallButton } from "@/components/FloatingCallButton";
 import { CookieConsentBanner } from "@/components/CookieConsentBanner";
-import Index from "./pages/Index";
 
 // Retry wrapper for lazy imports — handles stale chunk errors after deployments
 function lazyRetry<T extends ComponentType<any>>(
@@ -40,6 +39,7 @@ function lazyRetry<T extends ComponentType<any>>(
 }
 
 const Cars = lazyRetry(() => import("./pages/Cars"));
+const Index = lazyRetry(() => import("./pages/Index"));
 const CarImages = lazyRetry(() => import("./pages/CarImages"));
 const FeaturesSpecs = lazyRetry(() => import("./pages/FeaturesSpecs"));
 const Brochures = lazyRetry(() => import("./pages/Brochures"));
