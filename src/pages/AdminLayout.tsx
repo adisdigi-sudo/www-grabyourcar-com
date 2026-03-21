@@ -422,7 +422,7 @@ const AdminLayout = () => {
       case "services-emi-pdf":
         return <EMIPDFSettings />;
       case "services-discounts":
-        return <ManualQuoteGenerator />;
+        return <DiscountManagement />;
       case "services-quote-generator":
         return <ManualQuoteGenerator />;
       case "ecommerce-accessories":
@@ -433,9 +433,9 @@ const AdminLayout = () => {
       case "content-blog":
         return <BlogManagement />;
       case "content-news":
-        return <AIContentHub />;
+        return <AIContentManagement />;
       case "content-launches":
-        return <AIContentHub />;
+        return <LaunchesManagement />;
       case "content-ai":
         return <AIContentHub />;
       case "content-intelligence":
@@ -455,9 +455,9 @@ const AdminLayout = () => {
       case "integrations-whatsapp":
         return <WhatsAppManagement />;
       case "marketing-templates":
-        return <WhatsAppManagement />;
+        return <WhatsAppTemplateManager />;
       case "marketing-automation":
-        return <EmailMarketingManagement />;
+        return <EmailAutomationManager />;
       case "integrations-shipping":
         return <IntegrationsManagement />;
       case "integrations-payments":
