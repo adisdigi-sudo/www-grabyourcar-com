@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Helmet } from "react-helmet-async";
+import { GlobalSEO } from "@/components/seo/GlobalSEO";
 import { 
   Newspaper, Clock, User, Tag, RefreshCw, Sparkles, 
   ArrowRight, TrendingUp, Zap, Car, Lightbulb, BarChart3
@@ -131,10 +131,13 @@ export default function AutoNews() {
 
   return (
     <>
-      <Helmet>
-        <title>Auto News India | Latest Car News & Updates | GrabYourCar</title>
-        <meta name="description" content="Get the latest automotive news, car reviews, industry updates, and EV news from India. AI-powered news curation for car enthusiasts." />
-      </Helmet>
+      <GlobalSEO
+        pageKey="auto_news"
+        title="Auto News India | Latest Car News & Updates | GrabYourCar"
+        description="Get the latest automotive news, car reviews, industry updates, and EV news from India. AI-powered news curation for car enthusiasts."
+        path="/auto-news"
+        keywords="auto news India, car news, automotive updates, EV news, car reviews India"
+      />
 
       <Header />
 

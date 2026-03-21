@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Helmet } from "react-helmet-async";
+import { GlobalSEO } from "@/components/seo/GlobalSEO";
 import { 
   Car, Calendar, IndianRupee, Sparkles, Clock, Zap, 
   RefreshCw, Filter, ChevronRight, Star, Fuel, Settings
@@ -105,10 +105,13 @@ export default function UpcomingCars() {
 
   return (
     <>
-      <Helmet>
-        <title>Upcoming Cars in India 2025-2026 | GrabYourCar</title>
-        <meta name="description" content="Discover upcoming car launches in India. Get the latest updates on new car models, expected prices, and launch dates from top brands." />
-      </Helmet>
+      <GlobalSEO
+        pageKey="upcoming_cars"
+        title="Upcoming Cars in India 2025-2026 | GrabYourCar"
+        description="Discover upcoming car launches in India. Get the latest updates on new car models, expected prices, and launch dates from top brands."
+        path="/upcoming-cars"
+        keywords="upcoming cars India, new car launches 2025, 2026 cars, expected car prices India"
+      />
 
       <Header />
 
