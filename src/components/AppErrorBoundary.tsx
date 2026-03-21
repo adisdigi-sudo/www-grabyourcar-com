@@ -1,6 +1,7 @@
 import { Component, ErrorInfo, ReactNode } from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { isDynamicImportError, recoverFromChunkLoadError } from "@/lib/chunkLoadRecovery";
 
 interface AppErrorBoundaryProps {
   children: ReactNode;
@@ -20,6 +21,21 @@ export class AppErrorBoundary extends Component<AppErrorBoundaryProps, AppErrorB
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    if (isDynamicImportError(error)) {
+      const recovered = recoverFromChunkLoadError();
+
+      console.warn("[AppErrorBoundary] Dynamic import error detected", {
+        error,
+        href: window.location.href,
+        hostname: window.location.hostname,
+        recovered,
+      });
+
+      if (recovered) {
+        return;
+      }
+    }
+
     console.error("[AppErrorBoundary] Uncaught app error", {
       error,
       errorInfo,

@@ -17,6 +17,7 @@ import { usePageViewTracking } from "@/hooks/usePageViewTracking";
 import { initDynamicTracking } from "@/lib/adTracking";
 import { FloatingCallButton } from "@/components/FloatingCallButton";
 import { CookieConsentBanner } from "@/components/CookieConsentBanner";
+import { resetChunkLoadRecovery } from "@/lib/chunkLoadRecovery";
 
 // Only the homepage is statically imported for fastest first paint
 import Index from "./pages/Index";
@@ -78,6 +79,8 @@ const PageViewTracker = () => {
   usePageViewTracking();
 
   useEffect(() => {
+    resetChunkLoadRecovery();
+
     console.info("[AppBootstrap] Root route shell mounted", {
       href: window.location.href,
       hostname: window.location.hostname,
