@@ -1,9 +1,8 @@
+import { Suspense, lazy, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { useEffect, useState } from "react";
 import { ThemeProvider } from "next-themes";
 import { HelmetProvider } from "react-helmet-async";
 import "./index.css";
-import App from "./App";
 import { AppErrorBoundary } from "@/components/AppErrorBoundary";
 import {
   isDynamicImportError,
@@ -15,6 +14,8 @@ const handleDynamicImportFailure = (error: unknown) => {
   console.warn("[ChunkRecovery] Dynamic import error detected, attempting recovery:", error);
   recoverFromChunkLoadError("global_chunk_recovery");
 };
+
+const LazyApp = lazy(() => import("./App"));
 
 const SafeTelemetry = () => {
   const [telemetry, setTelemetry] = useState<null | {
@@ -127,6 +128,15 @@ const BootstrapFailure = ({ canRetry }: { canRetry: boolean }) => (
   </div>
 );
 
+const BootstrapLoading = () => (
+  <div className="min-h-screen bg-background text-foreground flex items-center justify-center px-6">
+    <div className="flex flex-col items-center gap-4 text-center">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-primary" />
+      <p className="text-sm text-muted-foreground">Loading the latest version…</p>
+    </div>
+  </div>
+);
+
 const renderBootstrapFailure = (error: unknown) => {
   const canRetry = isDynamicImportError(error) && recoverFromChunkLoadError("bootstrap_chunk_recovery", 2);
 
@@ -153,10 +163,10 @@ try {
     <AppErrorBoundary>
       <HelmetProvider>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <>
-            <App />
+          <Suspense fallback={<BootstrapLoading />}>
+            <LazyApp />
             <SafeTelemetry />
-          </>
+          </Suspense>
         </ThemeProvider>
       </HelmetProvider>
     </AppErrorBoundary>
