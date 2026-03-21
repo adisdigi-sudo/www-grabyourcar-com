@@ -9,7 +9,6 @@ import { AppErrorBoundary } from "@/components/AppErrorBoundary";
 import {
   isDynamicImportError,
   recoverFromChunkLoadError,
-  resetChunkLoadRecovery,
 } from "@/lib/chunkLoadRecovery";
 
 const handleDynamicImportFailure = (error: unknown) => {
@@ -37,14 +36,11 @@ window.addEventListener("unhandledrejection", (event) => {
   }
 });
 
-window.addEventListener(
-  "load",
-  () => {
-    resetChunkLoadRecovery("global_chunk_recovery");
-    resetChunkLoadRecovery("route_chunk_recovery");
-  },
-  { once: true }
-);
+window.addEventListener("vite:preloadError", (event) => {
+  event.preventDefault();
+  console.warn("[ChunkRecovery] Vite preload error detected, attempting recovery.");
+  recoverFromChunkLoadError("global_chunk_recovery");
+});
 
 // Block search-engine indexing on .lovable.app domains
 if (window.location.hostname.endsWith(".lovable.app")) {

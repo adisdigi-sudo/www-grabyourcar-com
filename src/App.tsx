@@ -13,7 +13,11 @@ import { AdminSubdomainRouter } from "@/components/AdminSubdomainRouter";
 import { isAdminSubdomain } from "@/hooks/useAdminSubdomain";
 import { useGlobalRealtimeSync } from "@/hooks/useRealtimeSync";
 import { VerticalProvider } from "@/hooks/useVerticalAccess";
-import { isDynamicImportError, recoverFromChunkLoadError } from "@/lib/chunkLoadRecovery";
+import {
+  isDynamicImportError,
+  recoverFromChunkLoadError,
+  resetChunkLoadRecovery,
+} from "@/lib/chunkLoadRecovery";
 import { usePageViewTracking } from "@/hooks/usePageViewTracking";
 import { initDynamicTracking } from "@/lib/adTracking";
 import { FloatingCallButton } from "@/components/FloatingCallButton";
@@ -90,6 +94,12 @@ const RealtimeSyncProvider = ({ children }: { children: React.ReactNode }) => {
 
 const PageViewTracker = () => {
   usePageViewTracking();
+
+  useEffect(() => {
+    resetChunkLoadRecovery("global_chunk_recovery");
+    resetChunkLoadRecovery("route_chunk_recovery");
+    resetChunkLoadRecovery("bootstrap_chunk_recovery");
+  }, []);
 
   useEffect(() => {
     initDynamicTracking().catch((error) => {
