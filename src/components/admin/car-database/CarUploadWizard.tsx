@@ -534,6 +534,36 @@ export const CarUploadWizard = () => {
               <Input value={form.name} onChange={e => update('name', e.target.value)} placeholder="e.g. Swift, Creta, Nexon, Fortuner" className="h-11 text-base" autoFocus />
             </div>
 
+            {/* ═══ AI AUTO-FILL BUTTON ═══ */}
+            {form.brand && form.name && (
+              <div className="border-2 border-dashed border-primary/30 rounded-xl p-4 bg-primary/5 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-bold">AI Auto-Fill</span>
+                  <Badge variant="secondary" className="text-[9px] h-4">Beta</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Let AI fetch all variants, specs, colors & pricing for <strong>{form.brand} {form.name}</strong> automatically
+                </p>
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="gap-2 w-full"
+                  disabled={isAutoFilling}
+                  onClick={() => runAutoFill()}
+                >
+                  {isAutoFilling ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" />Fetching data from AI...</>
+                  ) : (
+                    <><Sparkles className="h-4 w-4" />Auto-Fill Everything with AI</>
+                  )}
+                </Button>
+                {autoFillError && (
+                  <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3" />{autoFillError}</p>
+                )}
+              </div>
+            )}
+
             <div>
               <label className="text-xs font-semibold mb-1.5 block">Body Type</label>
               <div className="flex flex-wrap gap-1.5">
