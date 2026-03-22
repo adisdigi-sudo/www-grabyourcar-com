@@ -70,6 +70,7 @@ export const CarPricingConfigurator = ({ car, colors: dbColors }: CarPricingConf
   const [showAccessories, setShowAccessories] = useState(false);
   const [selectedAccessories, setSelectedAccessories] = useState<string[]>([]);
   const [showEMIModal, setShowEMIModal] = useState(false);
+  const [selectedFuel, setSelectedFuel] = useState("All");
 
   // Fetch EMI PDF settings
   const { config: emiPdfConfig } = useEMIPDFSettings();
@@ -81,7 +82,21 @@ export const CarPricingConfigurator = ({ car, colors: dbColors }: CarPricingConf
     return car?.colors || [];
   }, [dbColors, car?.colors]);
 
-  const currentVariant = car.variants[selectedVariant];
+  // Fuel type filtering
+  const fuelTypes = useMemo(() => extractFuelTypes(car.variants), [car.variants]);
+  const filteredVariants = useMemo(() => {
+    if (selectedFuel === "All" || fuelTypes.length <= 1) return car.variants;
+    return car.variants.filter(v => (v.fuelType || "") === selectedFuel);
+  }, [car.variants, selectedFuel, fuelTypes]);
+
+  // Reset variant selection when fuel changes
+  const handleFuelChange = (fuel: string) => {
+    setSelectedFuel(fuel);
+    setSelectedVariant(0);
+  };
+
+  // Map selectedVariant to the actual variant in filtered list
+  const currentVariant = filteredVariants[selectedVariant] || car.variants[0];
   const exShowroomPrice = currentVariant?.priceNumeric || (parseFloat(car.price.match(/[\d.]+/)?.[0] || "0") * 100000);
   const breakup = calculateStatePriceBreakup(exShowroomPrice, selectedState);
   
