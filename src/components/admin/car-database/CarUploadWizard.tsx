@@ -1041,6 +1041,11 @@ export const CarUploadWizard = () => {
               <h3 className="text-lg font-bold">Specifications</h3>
               <p className="text-xs text-muted-foreground">Fill what you have — blank fields are skipped. <strong>This step is optional</strong>, you can click Next.</p>
             </div>
+            <div className="flex justify-center">
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => generateField('specifications')} disabled={generatingField === 'specifications'}>
+                {generatingField === 'specifications' ? <><Loader2 className="h-4 w-4 animate-spin" />Generating specs...</> : <><Sparkles className="h-4 w-4" />Auto-Fill All Specs with AI</>}
+              </Button>
+            </div>
             {['engine', 'dimensions', 'performance', 'features', 'safety'].map(cat => {
               const catSpecs = form.specifications.filter(s => s.category === cat);
               if (!catSpecs.length) return null;
