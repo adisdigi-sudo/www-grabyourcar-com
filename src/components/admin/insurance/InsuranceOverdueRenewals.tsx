@@ -72,7 +72,7 @@ export function InsuranceOverdueRenewals({ policies, clients }: Props) {
     // Filter by reason
     if (filterReason !== "all") {
       if (filterReason === "unmarked") {
-        items = items.filter(i => !i.clientData?.overdue_reason);
+        items = items.filter(i => !(i.clientData as any)?.overdue_reason);
       } else {
         items = items.filter(i => (i.clientData as any)?.overdue_reason === filterReason);
       }
