@@ -115,34 +115,88 @@ const formatINR = (num: number) => {
   return `₹${num.toLocaleString('en-IN')}`;
 };
 
-// ─── Searchable Combobox ───
+// ─── Searchable Combobox with Custom Input ───
 const SearchCombobox = ({ value, onChange, options, placeholder }: { value: string; onChange: (v: string) => void; options: string[]; placeholder: string }) => {
   const [open, setOpen] = useState(false);
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="outline" role="combobox" className="w-full justify-between h-11 font-normal text-sm">
-          <span className="truncate">{value || placeholder}</span>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+  const [customMode, setCustomMode] = useState(false);
+  const [customVal, setCustomVal] = useState('');
+  const isCustom = value && !options.includes(value);
+
+  if (customMode || isCustom) {
+    return (
+      <div className="flex gap-1.5">
+        <Input value={isCustom && !customMode ? value : customVal} onChange={e => setCustomVal(e.target.value)} placeholder="Type custom value..." className="h-11 text-sm flex-1" autoFocus />
+        <Button size="sm" variant="default" className="h-11 px-3" onClick={() => { if (customVal.trim()) { onChange(customVal.trim()); setCustomMode(false); setCustomVal(''); } }}>
+          <Check className="h-4 w-4" />
         </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-64 p-0" align="start">
-        <Command>
-          <CommandInput placeholder="Search..." className="h-9" />
-          <CommandList>
-            <CommandEmpty>Not found.</CommandEmpty>
-            <CommandGroup className="max-h-60 overflow-auto">
-              {options.map(o => (
-                <CommandItem key={o} value={o} onSelect={() => { onChange(o); setOpen(false); }}>
-                  <Check className={cn("mr-2 h-4 w-4", value === o ? "opacity-100" : "opacity-0")} />
-                  {o}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+        <Button size="sm" variant="outline" className="h-11 px-3" onClick={() => { setCustomMode(false); setCustomVal(''); if (isCustom) onChange(''); }}>✕</Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex gap-1.5">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button variant="outline" role="combobox" className="flex-1 justify-between h-11 font-normal text-sm">
+            <span className="truncate">{value || placeholder}</span>
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-64 p-0" align="start">
+          <Command>
+            <CommandInput placeholder="Search..." className="h-9" />
+            <CommandList>
+              <CommandEmpty>
+                <button className="w-full text-left px-2 py-1.5 text-xs text-primary hover:underline" onClick={() => { setOpen(false); setCustomMode(true); }}>
+                  + Add custom value
+                </button>
+              </CommandEmpty>
+              <CommandGroup className="max-h-60 overflow-auto">
+                {options.map(o => (
+                  <CommandItem key={o} value={o} onSelect={() => { onChange(o); setOpen(false); }}>
+                    <Check className={cn("mr-2 h-4 w-4", value === o ? "opacity-100" : "opacity-0")} />
+                    {o}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      <Button size="sm" variant="ghost" className="h-11 px-2 text-[10px] text-muted-foreground shrink-0" onClick={() => setCustomMode(true)} title="Add custom">
+        <Plus className="h-3.5 w-3.5" />
+      </Button>
+    </div>
+  );
+};
+
+// ─── Select with Custom "Other" option ───
+const SelectWithCustom = ({ value, onChange, options, placeholder, className: cls }: { value: string; onChange: (v: string) => void; options: string[]; placeholder?: string; className?: string }) => {
+  const [customMode, setCustomMode] = useState(false);
+  const [customVal, setCustomVal] = useState('');
+  const isCustom = value && !options.includes(value) && value !== '_none';
+
+  if (customMode || isCustom) {
+    return (
+      <div className="flex gap-1">
+        <Input value={isCustom && !customMode ? value : customVal} onChange={e => setCustomVal(e.target.value)} placeholder="Custom..." className={cn("text-xs flex-1", cls || 'h-9')} autoFocus />
+        <Button size="icon" variant="default" className={cn("shrink-0", cls || 'h-9 w-9')} onClick={() => { if (customVal.trim()) { onChange(customVal.trim()); setCustomMode(false); setCustomVal(''); } }}><Check className="h-3 w-3" /></Button>
+        <Button size="icon" variant="ghost" className={cn("shrink-0", cls || 'h-9 w-9')} onClick={() => { setCustomMode(false); setCustomVal(''); if (isCustom) onChange(options[0] || ''); }}>✕</Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex gap-1">
+      <Select value={options.includes(value) ? value : '__other'} onValueChange={v => { if (v === '__other') { setCustomMode(true); } else { onChange(v); } }}>
+        <SelectTrigger className={cn(cls || 'h-9')}><SelectValue placeholder={placeholder} /></SelectTrigger>
+        <SelectContent>
+          {options.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+          <SelectItem value="__other" className="text-primary font-medium">+ Custom</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
   );
 };
 
