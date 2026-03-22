@@ -1171,21 +1171,41 @@ export const CarUploadWizard = () => {
             {/* Pros / Cons / Highlights */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
-                <div className="flex items-center gap-1 mb-1"><ThumbsUp className="h-3 w-3 text-emerald-500" /><span className="text-xs font-semibold">Pros</span></div>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-1"><ThumbsUp className="h-3 w-3 text-emerald-500" /><span className="text-xs font-semibold">Pros</span></div>
+                  <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[9px] gap-0.5 text-primary" onClick={() => generateField('pros')} disabled={generatingField === 'pros'}>
+                    {generatingField === 'pros' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}AI
+                  </Button>
+                </div>
                 <Textarea value={form.pros} onChange={e => update('pros', e.target.value)} placeholder={"Great mileage\nSpacious cabin"} className="min-h-[90px] text-xs" />
               </div>
               <div>
-                <div className="flex items-center gap-1 mb-1"><ThumbsDown className="h-3 w-3 text-red-500" /><span className="text-xs font-semibold">Cons</span></div>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-1"><ThumbsDown className="h-3 w-3 text-red-500" /><span className="text-xs font-semibold">Cons</span></div>
+                  <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[9px] gap-0.5 text-primary" onClick={() => generateField('cons')} disabled={generatingField === 'cons'}>
+                    {generatingField === 'cons' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}AI
+                  </Button>
+                </div>
                 <Textarea value={form.cons} onChange={e => update('cons', e.target.value)} placeholder={"No diesel option\nSmall boot"} className="min-h-[90px] text-xs" />
               </div>
               <div>
-                <div className="flex items-center gap-1 mb-1"><Star className="h-3 w-3 text-amber-500" /><span className="text-xs font-semibold">Key Highlights</span></div>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-1"><Star className="h-3 w-3 text-amber-500" /><span className="text-xs font-semibold">Key Highlights</span></div>
+                  <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[9px] gap-0.5 text-primary" onClick={() => generateField('key_highlights')} disabled={generatingField === 'key_highlights'}>
+                    {generatingField === 'key_highlights' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}AI
+                  </Button>
+                </div>
                 <Textarea value={form.key_highlights} onChange={e => update('key_highlights', e.target.value)} placeholder={"Best mileage\n6 Airbags"} className="min-h-[90px] text-xs" />
               </div>
             </div>
 
             <div>
-              <label className="text-xs font-semibold mb-1 block">Competitors (comma separated)</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-semibold">Competitors (comma separated)</label>
+                <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[9px] gap-0.5 text-primary" onClick={() => generateField('competitors')} disabled={generatingField === 'competitors'}>
+                  {generatingField === 'competitors' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}AI
+                </Button>
+              </div>
               <Input value={form.competitors} onChange={e => update('competitors', e.target.value)} placeholder="hyundai-i20, tata-altroz" className="h-9 text-xs font-mono" />
             </div>
 
