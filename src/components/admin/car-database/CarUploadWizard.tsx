@@ -212,6 +212,52 @@ export const CarUploadWizard = () => {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isAutoFilling, setIsAutoFilling] = useState(false);
   const [autoFillError, setAutoFillError] = useState<string | null>(null);
+  const [generatingField, setGeneratingField] = useState<string | null>(null);
+
+  const generateField = useCallback(async (field: string) => {
+    if (!form.brand || !form.name) { toast.error('Enter brand and car name first'); return; }
+    setGeneratingField(field);
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-car-content', {
+        body: {
+          brand: form.brand, model: form.name, body_type: form.body_type,
+          fuel_types: form.fuel_types, transmission_types: form.transmission_types,
+          variants: form.variants.map(v => ({ name: v.name, ex_showroom: v.ex_showroom })),
+          specifications: form.specifications.filter(s => s.value),
+          field,
+        },
+      });
+      if (error) throw new Error(error.message);
+      if (!data?.success) throw new Error(data?.error || 'AI returned no data');
+
+      const content = data.content;
+      switch (field) {
+        case 'overview': update('overview', content); break;
+        case 'tagline': update('tagline', content); break;
+        case 'pros': update('pros', content); break;
+        case 'cons': update('cons', content); break;
+        case 'key_highlights': update('key_highlights', content); break;
+        case 'competitors': update('competitors', content); break;
+        case 'specifications':
+          if (Array.isArray(content)) {
+            setForm(prev => ({
+              ...prev,
+              specifications: SPEC_TEMPLATES.map(t => {
+                const aiSpec = content.find((s: any) => s.category === t.category && s.label === t.label);
+                const existing = prev.specifications.find(s => s.category === t.category && s.label === t.label);
+                return { category: t.category, label: t.label, value: existing?.value || aiSpec?.value || '' };
+              }),
+            }));
+          }
+          break;
+      }
+      toast.success(`✨ ${field.replace('_', ' ')} generated!`);
+    } catch (err: any) {
+      toast.error(`AI generation failed: ${err.message}`);
+    } finally {
+      setGeneratingField(null);
+    }
+  }, [form.brand, form.name, form.body_type, form.fuel_types, form.transmission_types, form.variants, form.specifications, update]);
 
   const runAutoFill = useCallback(async () => {
     if (!form.brand || !form.name) return;
