@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import { FuelTypeTabs, extractFuelTypes } from "@/components/FuelTypeTabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -69,6 +70,7 @@ export const CarPricingConfigurator = ({ car, colors: dbColors }: CarPricingConf
   const [showAccessories, setShowAccessories] = useState(false);
   const [selectedAccessories, setSelectedAccessories] = useState<string[]>([]);
   const [showEMIModal, setShowEMIModal] = useState(false);
+  const [selectedFuel, setSelectedFuel] = useState("All");
 
   // Fetch EMI PDF settings
   const { config: emiPdfConfig } = useEMIPDFSettings();
@@ -80,7 +82,21 @@ export const CarPricingConfigurator = ({ car, colors: dbColors }: CarPricingConf
     return car?.colors || [];
   }, [dbColors, car?.colors]);
 
-  const currentVariant = car.variants[selectedVariant];
+  // Fuel type filtering
+  const fuelTypes = useMemo(() => extractFuelTypes(car.variants), [car.variants]);
+  const filteredVariants = useMemo(() => {
+    if (selectedFuel === "All" || fuelTypes.length <= 1) return car.variants;
+    return car.variants.filter(v => (v.fuelType || "") === selectedFuel);
+  }, [car.variants, selectedFuel, fuelTypes]);
+
+  // Reset variant selection when fuel changes
+  const handleFuelChange = (fuel: string) => {
+    setSelectedFuel(fuel);
+    setSelectedVariant(0);
+  };
+
+  // Map selectedVariant to the actual variant in filtered list
+  const currentVariant = filteredVariants[selectedVariant] || car.variants[0];
   const exShowroomPrice = currentVariant?.priceNumeric || (parseFloat(car.price.match(/[\d.]+/)?.[0] || "0") * 100000);
   const breakup = calculateStatePriceBreakup(exShowroomPrice, selectedState);
   
@@ -165,6 +181,16 @@ export const CarPricingConfigurator = ({ car, colors: dbColors }: CarPricingConf
 
         <CardContent className="p-5 md:p-6 space-y-5">
           {/* Selectors */}
+          {/* Fuel Type Tabs */}
+          {fuelTypes.length > 1 && (
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Fuel Type
+              </label>
+              <FuelTypeTabs fuelTypes={fuelTypes} selected={selectedFuel} onChange={handleFuelChange} showAll={true} />
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
@@ -178,7 +204,7 @@ export const CarPricingConfigurator = ({ car, colors: dbColors }: CarPricingConf
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {car.variants.map((variant, index) => (
+                  {filteredVariants.map((variant, index) => (
                     <SelectItem key={index} value={index.toString()} className="py-3">
                       <div className="flex flex-col items-start">
                         <span className="font-medium">{variant.name}</span>

@@ -39,7 +39,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { FuelTypeTabs, extractFuelTypes } from "@/components/FuelTypeTabs";
 import { calculateStatePriceBreakup, stateRates } from "@/data/statePricing";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEMIPDFSettings } from "@/hooks/useEMIPDFSettings";
@@ -95,6 +96,19 @@ export const PriceSummaryCard = ({
   const [selectedAccessories, setSelectedAccessories] = useState<string[]>([]);
   const [showFullBreakup, setShowFullBreakup] = useState(false);
   const [showEMIModal, setShowEMIModal] = useState(false);
+  const [selectedFuel, setSelectedFuel] = useState("All");
+
+  // Fuel type filtering
+  const fuelTypes = useMemo(() => extractFuelTypes(variants), [variants]);
+  const filteredVariants = useMemo(() => {
+    if (selectedFuel === "All" || fuelTypes.length <= 1) return variants;
+    return variants.filter(v => (v.fuelType || "") === selectedFuel);
+  }, [variants, selectedFuel, fuelTypes]);
+
+  const handleFuelChange = (fuel: string) => {
+    setSelectedFuel(fuel);
+    onVariantChange(0);
+  };
   
   // Fetch EMI PDF settings from backend
   const { config: emiPdfConfig } = useEMIPDFSettings();
@@ -161,6 +175,16 @@ export const PriceSummaryCard = ({
       <CardContent className="p-4 md:p-5 space-y-4">
         {/* Variant Selection */}
         <div className="space-y-3">
+          {/* Fuel Type Tabs */}
+          {fuelTypes.length > 1 && (
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Fuel Type
+              </label>
+              <FuelTypeTabs fuelTypes={fuelTypes} selected={selectedFuel} onChange={handleFuelChange} showAll={true} size="sm" />
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
@@ -174,7 +198,7 @@ export const PriceSummaryCard = ({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {variants.map((variant, index) => (
+                  {filteredVariants.map((variant, index) => (
                     <SelectItem key={index} value={index.toString()} className="py-2">
                       <div className="flex flex-col items-start">
                         <span className="font-medium">{variant.name}</span>
