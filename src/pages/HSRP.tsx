@@ -87,43 +87,6 @@ const faqs = [
 
 const HSRP = () => {
   const { data: pricing } = useHSRPPricing();
-  const [trackingNumber, setTrackingNumber] = useState("");
-  const [isTracking, setIsTracking] = useState(false);
-  const [trackingResult, setTrackingResult] = useState<any>(null);
-
-  const handleServiceSelect = () => {
-    document.getElementById("booking-section")?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  const handleTrackOrder = async () => {
-    if (!trackingNumber.trim()) {
-      toast.error("Please enter your order/booking number");
-      return;
-    }
-
-    setIsTracking(true);
-    setTrackingResult(null);
-
-    try {
-      const { data, error } = await supabase
-        .from("hsrp_bookings")
-        .select("*")
-        .or(`tracking_id.eq.${trackingNumber},registration_number.ilike.${trackingNumber}`)
-        .maybeSingle();
-
-      if (error || !data) {
-        toast.error("No booking found with this order number");
-        setTrackingResult({ found: false });
-      } else {
-        setTrackingResult({ found: true, booking: data });
-        toast.success("Booking found!");
-      }
-    } catch {
-      toast.error("Failed to track order. Please try again.");
-    } finally {
-      setIsTracking(false);
-    }
-  };
 
   return (
     <>
