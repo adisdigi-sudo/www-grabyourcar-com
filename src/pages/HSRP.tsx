@@ -423,6 +423,9 @@ const HSRP = () => {
           </div>
         </section>
 
+        {/* Customer Testimonials */}
+        <HSRPTestimonials />
+
         {/* Cross-Sell Services */}
         <section className="py-12 bg-muted/30">
           <div className="container mx-auto px-4">
