@@ -725,10 +725,7 @@ export const CarUploadWizard = () => {
                       </div>
                       <div>
                         <label className="text-[10px] font-medium text-muted-foreground mb-1 flex items-center gap-1"><User className="h-3 w-3" />Ownership</label>
-                        <Select value={v.ownership_type || 'individual'} onValueChange={val => { const vs = [...form.variants]; vs[vi] = recalcVariant({ ...vs[vi], ownership_type: val }); update('variants', vs); }}>
-                          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                          <SelectContent><SelectItem value="individual">👤 Individual</SelectItem><SelectItem value="corporate">🏢 Corporate</SelectItem></SelectContent>
-                        </Select>
+                        <SelectWithCustom value={v.ownership_type || 'individual'} onChange={val => { const vs = [...form.variants]; vs[vi] = recalcVariant({ ...vs[vi], ownership_type: val }); update('variants', vs); }} options={['individual', 'corporate']} className="h-8" />
                       </div>
                     </div>
 
