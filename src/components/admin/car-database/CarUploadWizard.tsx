@@ -687,100 +687,101 @@ export const CarUploadWizard = () => {
               const groups = Array.from(fuelGroups.entries());
               const showHeaders = groups.length > 1;
 
-            {form.variants.map((v, vi) => {
-              const stateCities = getCitiesForState(v.state_code);
-              return (
-                <div key={vi} className="border rounded-xl bg-card overflow-hidden">
-                  {/* Header */}
-                  <div className="flex items-center justify-between px-4 py-2 bg-muted/30 border-b">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary" className="text-[10px] font-mono">#{vi + 1}</Badge>
-                      <span className="text-sm font-semibold">{v.name || 'Untitled Variant'}</span>
-                      {v.on_road_price && <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 text-[10px]">{formatINR(Number(v.on_road_price))}</Badge>}
+              return groups.map(([fuelType, indices]) => (
+                <div key={fuelType} className="space-y-4">
+                  {showHeaders && (
+                    <div className="flex items-center gap-2 px-2 pt-2">
+                      <Badge variant="outline" className="text-xs font-semibold">⛽ {fuelType} Variants</Badge>
+                      <span className="text-xs text-muted-foreground">{indices.length} variant{indices.length > 1 ? 's' : ''}</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => duplicateVariant(vi)} title="Duplicate"><Copy className="h-3.5 w-3.5" /></Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => update('variants', form.variants.filter((_, j) => j !== vi))}><Trash2 className="h-3.5 w-3.5" /></Button>
-                    </div>
-                  </div>
-
-                  <div className="p-4 space-y-3">
-                    {/* Row 1: Name + Ex-showroom */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Variant Name *</label>
-                        <Input value={v.name} onChange={e => { const vs = [...form.variants]; vs[vi] = { ...vs[vi], name: e.target.value }; update('variants', vs); }} placeholder="e.g. LXi, VXi, ZXi+" className="h-10" autoFocus={vi === form.variants.length - 1} />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Ex-Showroom Price ₹ *</label>
-                        <Input value={v.ex_showroom} onChange={e => {
-                          const val = e.target.value.replace(/\D/g, '');
-                          const vs = [...form.variants]; vs[vi] = recalcVariant({ ...vs[vi], ex_showroom: val }); update('variants', vs);
-                        }} placeholder="649000" className="h-10 font-mono" />
-                        {v.ex_showroom && <span className="text-[10px] text-primary font-medium">{formatINR(Number(v.ex_showroom))}</span>}
-                      </div>
-                    </div>
-
-                    {/* Row 2: Fuel + Transmission */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Fuel Type</label>
-                        <SelectWithCustom value={v.fuel_type} onChange={val => { const vs = [...form.variants]; vs[vi] = recalcVariant({ ...vs[vi], fuel_type: val }); update('variants', vs); }} options={FUEL_OPTIONS} className="h-9" />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Transmission</label>
-                        <SelectWithCustom value={v.transmission} onChange={val => { const vs = [...form.variants]; vs[vi] = { ...vs[vi], transmission: val }; update('variants', vs); }} options={TRANSMISSION_OPTIONS} className="h-9" />
-                      </div>
-                    </div>
-
-                    {/* Row 3: RTO Context — State/City/Ownership */}
-                    <div className="grid grid-cols-3 gap-3 p-2.5 rounded-lg bg-muted/20 border border-dashed border-muted-foreground/15">
-                      <div>
-                        <label className="text-[10px] font-medium text-muted-foreground mb-1 flex items-center gap-1"><MapPin className="h-3 w-3" />State</label>
-                        <Select value={v.state_code || 'DL'} onValueChange={val => { const vs = [...form.variants]; vs[vi] = recalcVariant({ ...vs[vi], state_code: val, city: '' }); update('variants', vs); }}>
-                          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                          <SelectContent>{availableStates.length > 0 ? availableStates.map(s => <SelectItem key={s.code} value={s.code}>{s.name}</SelectItem>) : <SelectItem value="DL">Delhi</SelectItem>}</SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-medium text-muted-foreground mb-1 flex items-center gap-1"><Building2 className="h-3 w-3" />City</label>
-                        <Select value={v.city || '_none'} onValueChange={val => { const vs = [...form.variants]; vs[vi] = recalcVariant({ ...vs[vi], city: val === '_none' ? '' : val }); update('variants', vs); }}>
-                          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Default" /></SelectTrigger>
-                          <SelectContent><SelectItem value="_none">Default</SelectItem>{stateCities.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-medium text-muted-foreground mb-1 flex items-center gap-1"><User className="h-3 w-3" />Ownership</label>
-                        <SelectWithCustom value={v.ownership_type || 'individual'} onChange={val => { const vs = [...form.variants]; vs[vi] = recalcVariant({ ...vs[vi], ownership_type: val }); update('variants', vs); }} options={['individual', 'corporate']} className="h-8" />
-                      </div>
-                    </div>
-
-                    {/* Row 4: Auto-calculated breakup */}
-                    {v.ex_showroom && Number(v.ex_showroom) > 0 && (
-                      <div className="grid grid-cols-4 gap-2 text-center">
-                        {[
-                          { label: 'RTO', val: v.rto, color: 'text-blue-600' },
-                          { label: 'Insurance', val: v.insurance, color: 'text-orange-600' },
-                          { label: 'TCS (1%)', val: v.tcs, color: 'text-purple-600' },
-                          { label: 'On-Road', val: v.on_road_price, color: 'text-emerald-700 font-bold' },
-                        ].map(item => (
-                          <div key={item.label} className="rounded-lg bg-muted/30 p-2">
-                            <div className="text-[9px] text-muted-foreground">{item.label}</div>
-                            <div className={cn("text-xs font-semibold", item.color)}>{item.val ? formatINR(Number(item.val)) : '—'}</div>
+                  )}
+                  {indices.map(vi => {
+                    const v = form.variants[vi];
+                    const stateCities = getCitiesForState(v.state_code);
+                    return (
+                      <div key={vi} className="border rounded-xl bg-card overflow-hidden">
+                        <div className="flex items-center justify-between px-4 py-2 bg-muted/30 border-b">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary" className="text-[10px] font-mono">#{vi + 1}</Badge>
+                            <span className="text-sm font-semibold">{v.name || 'Untitled Variant'}</span>
+                            {v.on_road_price && <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 text-[10px]">{formatINR(Number(v.on_road_price))}</Badge>}
                           </div>
-                        ))}
+                          <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => duplicateVariant(vi)} title="Duplicate"><Copy className="h-3.5 w-3.5" /></Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => update('variants', form.variants.filter((_, j) => j !== vi))}><Trash2 className="h-3.5 w-3.5" /></Button>
+                          </div>
+                        </div>
+                        <div className="p-4 space-y-3">
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Variant Name *</label>
+                              <Input value={v.name} onChange={e => { const vs = [...form.variants]; vs[vi] = { ...vs[vi], name: e.target.value }; update('variants', vs); }} placeholder="e.g. LXi, VXi, ZXi+" className="h-10" autoFocus={vi === form.variants.length - 1} />
+                            </div>
+                            <div>
+                              <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Ex-Showroom Price ₹ *</label>
+                              <Input value={v.ex_showroom} onChange={e => {
+                                const val = e.target.value.replace(/\D/g, '');
+                                const vs = [...form.variants]; vs[vi] = recalcVariant({ ...vs[vi], ex_showroom: val }); update('variants', vs);
+                              }} placeholder="649000" className="h-10 font-mono" />
+                              {v.ex_showroom && <span className="text-[10px] text-primary font-medium">{formatINR(Number(v.ex_showroom))}</span>}
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Fuel Type</label>
+                              <SelectWithCustom value={v.fuel_type} onChange={val => { const vs = [...form.variants]; vs[vi] = recalcVariant({ ...vs[vi], fuel_type: val }); update('variants', vs); }} options={FUEL_OPTIONS} className="h-9" />
+                            </div>
+                            <div>
+                              <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Transmission</label>
+                              <SelectWithCustom value={v.transmission} onChange={val => { const vs = [...form.variants]; vs[vi] = { ...vs[vi], transmission: val }; update('variants', vs); }} options={TRANSMISSION_OPTIONS} className="h-9" />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-3 gap-3 p-2.5 rounded-lg bg-muted/20 border border-dashed border-muted-foreground/15">
+                            <div>
+                              <label className="text-[10px] font-medium text-muted-foreground mb-1 flex items-center gap-1"><MapPin className="h-3 w-3" />State</label>
+                              <Select value={v.state_code || 'DL'} onValueChange={val => { const vs = [...form.variants]; vs[vi] = recalcVariant({ ...vs[vi], state_code: val, city: '' }); update('variants', vs); }}>
+                                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                                <SelectContent>{availableStates.length > 0 ? availableStates.map(s => <SelectItem key={s.code} value={s.code}>{s.name}</SelectItem>) : <SelectItem value="DL">Delhi</SelectItem>}</SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <label className="text-[10px] font-medium text-muted-foreground mb-1 flex items-center gap-1"><Building2 className="h-3 w-3" />City</label>
+                              <Select value={v.city || '_none'} onValueChange={val => { const vs = [...form.variants]; vs[vi] = recalcVariant({ ...vs[vi], city: val === '_none' ? '' : val }); update('variants', vs); }}>
+                                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Default" /></SelectTrigger>
+                                <SelectContent><SelectItem value="_none">Default</SelectItem>{stateCities.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <label className="text-[10px] font-medium text-muted-foreground mb-1 flex items-center gap-1"><User className="h-3 w-3" />Ownership</label>
+                              <SelectWithCustom value={v.ownership_type || 'individual'} onChange={val => { const vs = [...form.variants]; vs[vi] = recalcVariant({ ...vs[vi], ownership_type: val }); update('variants', vs); }} options={['individual', 'corporate']} className="h-8" />
+                            </div>
+                          </div>
+                          {v.ex_showroom && Number(v.ex_showroom) > 0 && (
+                            <div className="grid grid-cols-4 gap-2 text-center">
+                              {[
+                                { label: 'RTO', val: v.rto, color: 'text-blue-600' },
+                                { label: 'Insurance', val: v.insurance, color: 'text-orange-600' },
+                                { label: 'TCS (1%)', val: v.tcs, color: 'text-purple-600' },
+                                { label: 'On-Road', val: v.on_road_price, color: 'text-emerald-700 font-bold' },
+                              ].map(item => (
+                                <div key={item.label} className="rounded-lg bg-muted/30 p-2">
+                                  <div className="text-[9px] text-muted-foreground">{item.label}</div>
+                                  <div className={cn("text-xs font-semibold", item.color)}>{item.val ? formatINR(Number(item.val)) : '—'}</div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          <div>
+                            <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Key Features (comma separated)</label>
+                            <Input value={v.features} onChange={e => { const vs = [...form.variants]; vs[vi] = { ...vs[vi], features: e.target.value }; update('variants', vs); }} placeholder="AC, ABS, 4 Airbags, Sunroof" className="h-9 text-xs" />
+                          </div>
+                        </div>
                       </div>
-                    )}
-
-                    {/* Features */}
-                    <div>
-                      <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Key Features (comma separated)</label>
-                      <Input value={v.features} onChange={e => { const vs = [...form.variants]; vs[vi] = { ...vs[vi], features: e.target.value }; update('variants', vs); }} placeholder="AC, ABS, 4 Airbags, Sunroof" className="h-9 text-xs" />
-                    </div>
-                  </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
+              ));
+            })()}
           </div>
         )}
 
