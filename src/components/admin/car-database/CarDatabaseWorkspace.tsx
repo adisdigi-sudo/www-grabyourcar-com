@@ -84,6 +84,8 @@ export const CarDatabaseWorkspace = () => {
       {/* Content */}
       {activeTab === 'upload' && <CarUploadWizard />}
 
+      {activeTab === 'bulk' && <BulkCSVUpload />}
+
       {activeTab === 'scraper' && (
         <div className="flex-1 overflow-auto p-4"><CarDatabaseScraper /></div>
       )}
