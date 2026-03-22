@@ -18,7 +18,7 @@ import { BulkCSVUpload } from "./BulkCSVUpload";
 
 export const CarDatabaseWorkspace = () => {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<'upload' | 'manage' | 'scraper'>('upload');
+  const [activeTab, setActiveTab] = useState<'upload' | 'bulk' | 'manage' | 'scraper'>('upload');
   const [searchFilter, setSearchFilter] = useState("");
   const [brandFilter, setBrandFilter] = useState("All");
 
