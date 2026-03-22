@@ -987,15 +987,7 @@ export const CarUploadWizard = () => {
                 <div key={oi} className="flex flex-wrap items-center gap-2 bg-card rounded-lg border p-2 mb-2">
                   <Input value={offer.title} onChange={e => { const os = [...form.offers]; os[oi] = { ...os[oi], title: e.target.value }; update('offers', os); }} placeholder="Title" className="h-8 w-32 text-xs" />
                   <Input value={offer.discount} onChange={e => { const os = [...form.offers]; os[oi] = { ...os[oi], discount: e.target.value }; update('offers', os); }} placeholder="₹25,000" className="h-8 w-20 text-xs" />
-                  <Select value={offer.offer_type} onValueChange={v => { const os = [...form.offers]; os[oi] = { ...os[oi], offer_type: v }; update('offers', os); }}>
-                    <SelectTrigger className="h-8 w-28 text-[10px]"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="cashback">Cash</SelectItem>
-                      <SelectItem value="exchange">Exchange</SelectItem>
-                      <SelectItem value="accessory">Accessories</SelectItem>
-                      <SelectItem value="finance">Finance</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <SelectWithCustom value={offer.offer_type} onChange={v => { const os = [...form.offers]; os[oi] = { ...os[oi], offer_type: v }; update('offers', os); }} options={['cashback','exchange','accessory','finance']} className="h-8" />
                   <Input value={offer.description} onChange={e => { const os = [...form.offers]; os[oi] = { ...os[oi], description: e.target.value }; update('offers', os); }} placeholder="Description" className="h-8 flex-1 text-xs min-w-[100px]" />
                   <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => update('offers', form.offers.filter((_, j) => j !== oi))}><Trash2 className="h-3.5 w-3.5" /></Button>
                 </div>
