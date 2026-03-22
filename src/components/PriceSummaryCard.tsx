@@ -39,7 +39,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { FuelTypeTabs, extractFuelTypes } from "@/components/FuelTypeTabs";
 import { calculateStatePriceBreakup, stateRates } from "@/data/statePricing";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEMIPDFSettings } from "@/hooks/useEMIPDFSettings";
