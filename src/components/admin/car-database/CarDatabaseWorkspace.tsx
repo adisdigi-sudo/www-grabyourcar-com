@@ -65,6 +65,7 @@ export const CarDatabaseWorkspace = () => {
       <div className="border-b bg-muted/30 px-4 py-2 flex items-center gap-2">
         {[
           { id: 'upload' as const, label: 'Upload Car', icon: Plus },
+          { id: 'bulk' as const, label: 'Bulk CSV/Excel', icon: Car },
           { id: 'manage' as const, label: 'Manage Cars', icon: Database },
           { id: 'scraper' as const, label: 'URL Scraper', icon: Globe },
         ].map(tab => (
