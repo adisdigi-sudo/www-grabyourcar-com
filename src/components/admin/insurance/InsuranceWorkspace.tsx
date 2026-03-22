@@ -115,6 +115,10 @@ export function InsuranceWorkspace() {
     const now = new Date();
     return policies.filter(p => p.expiry_date && p.status !== "renewed" && differenceInDays(new Date(p.expiry_date), now) >= 0 && differenceInDays(new Date(p.expiry_date), now) <= 7).length;
   }, [policies]);
+  const overdueCount = useMemo(() => {
+    const now = new Date();
+    return policies.filter(p => p.expiry_date && p.status !== "renewed" && differenceInDays(new Date(p.expiry_date), now) < 0).length;
+  }, [policies]);
 
   const insNotifications = useMemo(() => buildInsuranceNotifications(clients), [clients]);
 
