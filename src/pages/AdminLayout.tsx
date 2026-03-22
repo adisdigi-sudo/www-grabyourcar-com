@@ -6,6 +6,7 @@ import { useSessionTimeout } from "@/hooks/useSessionTimeout";
 import { cn } from "@/lib/utils";
 import { logAdminActivity } from "@/lib/adminActivityLogger";
 import { Button } from "@/components/ui/button";
+import { AdminRenderBoundary } from "@/components/admin/shared/AdminRenderBoundary";
 import { Shield } from "lucide-react";
 
 const AdminSidebar = lazy(() =>
@@ -552,12 +553,16 @@ const AdminLayout = () => {
   return (
     <div className="min-h-screen bg-muted/30">
       <Suspense fallback={<AdminPanelLoader className="min-h-screen" />}>
-        <AdminSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+        <AdminRenderBoundary contextLabel="CRM sidebar">
+          <AdminSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+        </AdminRenderBoundary>
       </Suspense>
 
       <div className={cn("fixed z-50", isMobile ? "top-3 right-3" : "top-4 right-4 md:right-6")}>
         <Suspense fallback={null}>
-          <NotificationCenter />
+          <AdminRenderBoundary fallback={null} contextLabel="Notifications center">
+            <NotificationCenter />
+          </AdminRenderBoundary>
         </Suspense>
       </div>
 
@@ -593,14 +598,21 @@ const AdminLayout = () => {
                 : "max-w-7xl",
           )}
         >
-          <Suspense fallback={<AdminPanelLoader />}>
-            {renderContent()}
-          </Suspense>
+          <AdminRenderBoundary
+            key={`${activeVertical?.id ?? "no-vertical"}:${activeTab}`}
+            contextLabel="CRM workspace"
+          >
+            <Suspense fallback={<AdminPanelLoader />}>
+              {renderContent()}
+            </Suspense>
+          </AdminRenderBoundary>
         </div>
       </main>
 
       <Suspense fallback={null}>
-        <CRMAssistant />
+        <AdminRenderBoundary fallback={null} contextLabel="CRM assistant">
+          <CRMAssistant />
+        </AdminRenderBoundary>
       </Suspense>
     </div>
   );
