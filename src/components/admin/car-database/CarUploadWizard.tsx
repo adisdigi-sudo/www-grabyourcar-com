@@ -699,10 +699,7 @@ export const CarUploadWizard = () => {
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Fuel Type</label>
-                        <Select value={v.fuel_type} onValueChange={val => { const vs = [...form.variants]; vs[vi] = recalcVariant({ ...vs[vi], fuel_type: val }); update('variants', vs); }}>
-                          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                          <SelectContent>{FUEL_OPTIONS.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent>
-                        </Select>
+                        <SelectWithCustom value={v.fuel_type} onChange={val => { const vs = [...form.variants]; vs[vi] = recalcVariant({ ...vs[vi], fuel_type: val }); update('variants', vs); }} options={FUEL_OPTIONS} className="h-9" />
                       </div>
                       <div>
                         <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Transmission</label>
