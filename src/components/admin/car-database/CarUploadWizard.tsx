@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -14,9 +14,9 @@ import { invalidateCarQueries } from "@/lib/queryInvalidation";
 import { useRoadTaxRules, calculateOnRoadPrice } from "@/hooks/useRoadTaxEngine";
 import {
   Check, ChevronsUpDown, ChevronRight, ChevronLeft,
-  Car, Palette, Layers, Gauge, Image as ImageIcon, FileText, Tag, Star,
+  Car, Palette, Layers, Gauge, Image as ImageIcon, FileText,
   Plus, Trash2, Upload, Save, ThumbsUp, ThumbsDown, CheckCircle2,
-  AlertCircle, Loader2, Eye, Lock, ArrowRight, Sparkles, MapPin, Building2, User, FileUp, Link2
+  AlertCircle, Loader2, ArrowRight, Sparkles, MapPin, Building2, User, FileUp, Link2, Star, Tag, Eye, Copy
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -24,16 +24,15 @@ import { cn } from "@/lib/utils";
 const BODY_TYPES = ['Hatchback','Sedan','Compact SUV','Mid-Size SUV','Full-Size SUV','MPV','MUV','Coupe','Convertible','Pickup','Electric','Luxury','Crossover'];
 const FUEL_OPTIONS = ['Petrol','Diesel','Electric','Hybrid','CNG','LPG'];
 const TRANSMISSION_OPTIONS = ['Manual','Automatic','AMT','CVT','DCT','iMT'];
-const OWNERSHIP_TYPES = ['individual', 'corporate'];
 
 const STEPS = [
-  { id: 'basic', label: 'Car Identity', icon: Car, desc: 'Brand, model & basic details' },
-  { id: 'variants', label: 'Variants & Pricing', icon: Layers, desc: 'Add all variants with pricing' },
-  { id: 'colors', label: 'Colors & Images', icon: Palette, desc: 'Colors with car images' },
-  { id: 'specs', label: 'Specifications', icon: Gauge, desc: 'Engine, dimensions & features' },
-  { id: 'gallery', label: 'Gallery', icon: ImageIcon, desc: 'Hero & gallery photos' },
-  { id: 'content', label: 'Content & Offers', icon: FileText, desc: 'Overview, brochure, offers' },
-  { id: 'review', label: 'Review & Save', icon: CheckCircle2, desc: 'Final check & publish' },
+  { id: 'basic', label: 'Car Info', icon: Car, desc: 'Brand & model name' },
+  { id: 'variants', label: 'Variants', icon: Layers, desc: 'Pricing & variants' },
+  { id: 'colors', label: 'Colors', icon: Palette, desc: 'Colors & images' },
+  { id: 'specs', label: 'Specs', icon: Gauge, desc: 'Technical details' },
+  { id: 'gallery', label: 'Gallery', icon: ImageIcon, desc: 'Photos' },
+  { id: 'content', label: 'Content', icon: FileText, desc: 'Details & offers' },
+  { id: 'review', label: 'Save', icon: CheckCircle2, desc: 'Review & publish' },
 ];
 
 const SPEC_TEMPLATES = [
@@ -77,12 +76,10 @@ const SPEC_TEMPLATES = [
 interface CarVariant {
   name: string; price: string; price_numeric: string; fuel_type: string; transmission: string;
   ex_showroom: string; rto: string; insurance: string; tcs: string; on_road_price: string;
-  features: string;
-  // RTO calc context
-  state_code: string; city: string; ownership_type: string;
+  features: string; state_code: string; city: string; ownership_type: string;
 }
 interface CarColor { name: string; hex_code: string; image_url: string; file?: File }
-interface CarImage { url: string; alt_text: string; is_primary: boolean; file?: File; color_name?: string }
+interface CarImage { url: string; alt_text: string; is_primary: boolean; file?: File }
 interface CarSpec { category: string; label: string; value: string }
 interface CarOffer { title: string; description: string; discount: string; offer_type: string; valid_till: string }
 interface CarBrochureEntry { title: string; url: string; file?: File; variant_name: string; language: string }
@@ -93,14 +90,9 @@ interface CarFormData {
   tagline: string; overview: string; availability: string; launch_date: string;
   fuel_types: string[]; transmission_types: string[];
   is_hot: boolean; is_new: boolean; is_upcoming: boolean; is_bestseller: boolean;
-  variants: CarVariant[];
-  colors: CarColor[];
-  images: CarImage[];
-  specifications: CarSpec[];
-  offers: CarOffer[];
-  brochures: CarBrochureEntry[];
-  pros: string; cons: string; key_highlights: string; competitors: string;
-  brochure_url: string;
+  variants: CarVariant[]; colors: CarColor[]; images: CarImage[];
+  specifications: CarSpec[]; offers: CarOffer[]; brochures: CarBrochureEntry[];
+  pros: string; cons: string; key_highlights: string; competitors: string; brochure_url: string;
 }
 
 const generateSlug = (brand: string, name: string) =>
@@ -129,7 +121,7 @@ const SearchCombobox = ({ value, onChange, options, placeholder }: { value: stri
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" role="combobox" className="w-full justify-between h-10 font-normal">
+        <Button variant="outline" role="combobox" className="w-full justify-between h-11 font-normal text-sm">
           <span className="truncate">{value || placeholder}</span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -163,12 +155,10 @@ export const CarUploadWizard = () => {
   const [highestStep, setHighestStep] = useState(0);
   const [form, setForm] = useState<CarFormData>(emptyForm());
   const [isSaving, setIsSaving] = useState(false);
-  const [stepErrors, setStepErrors] = useState<Record<number, string[]>>({});
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
-  // Road tax rules for RTO calculation
   const { data: roadTaxRules } = useRoadTaxRules();
 
-  // Available states from road tax rules
   const availableStates = useMemo(() => {
     if (!roadTaxRules) return [];
     const stateMap = new Map<string, string>();
@@ -176,7 +166,6 @@ export const CarUploadWizard = () => {
     return Array.from(stateMap.entries()).map(([code, name]) => ({ code, name })).sort((a, b) => a.name.localeCompare(b.name));
   }, [roadTaxRules]);
 
-  // Available cities for a given state
   const getCitiesForState = useCallback((stateCode: string) => {
     if (!roadTaxRules) return [];
     return [...new Set(roadTaxRules.filter(r => r.state_code === stateCode && r.city).map(r => r.city!))].sort();
@@ -208,38 +197,28 @@ export const CarUploadWizard = () => {
     });
   };
 
-  // Recalculate on-road price using road tax engine
   const recalcVariant = useCallback((variant: CarVariant): CarVariant => {
     const ex = Number(variant.ex_showroom) || 0;
     if (ex === 0 || !roadTaxRules?.length) return variant;
-
-    const breakup = calculateOnRoadPrice(
-      roadTaxRules,
-      ex,
-      variant.state_code || 'DL',
-      variant.fuel_type?.toLowerCase() || 'petrol',
-      variant.ownership_type || 'individual',
-      variant.city || undefined
-    );
-
-    return {
-      ...variant,
-      price_numeric: String(ex),
-      rto: String(breakup.roadTax),
-      insurance: String(breakup.insurance),
-      tcs: String(breakup.tcs),
-      on_road_price: String(breakup.onRoadPrice),
-    };
+    const breakup = calculateOnRoadPrice(roadTaxRules, ex, variant.state_code || 'DL', variant.fuel_type?.toLowerCase() || 'petrol', variant.ownership_type || 'individual', variant.city || undefined);
+    return { ...variant, price_numeric: String(ex), rto: String(breakup.roadTax), insurance: String(breakup.insurance), tcs: String(breakup.tcs), on_road_price: String(breakup.onRoadPrice) };
   }, [roadTaxRules]);
 
-  // ─── Step Validation ───
+  // Auto-derive price range from variants
+  const autoPriceRange = useMemo(() => {
+    const prices = form.variants.map(v => Number(v.ex_showroom)).filter(p => p > 0).sort((a, b) => a - b);
+    if (prices.length === 0) return '';
+    if (prices.length === 1) return formatINR(prices[0]);
+    return `${formatINR(prices[0])} - ${formatINR(prices[prices.length - 1])}`;
+  }, [form.variants]);
+
+  // ─── Validation ───
   const validateStep = useCallback((stepIdx: number): string[] => {
     const errors: string[] = [];
     switch (stepIdx) {
       case 0:
         if (!form.brand.trim()) errors.push('Select a brand');
         if (!form.name.trim()) errors.push('Enter car name');
-        if (!form.body_type) errors.push('Select body type');
         break;
       case 1:
         if (form.variants.length === 0) errors.push('Add at least 1 variant');
@@ -250,28 +229,19 @@ export const CarUploadWizard = () => {
         break;
       case 2:
         if (form.colors.length === 0) errors.push('Add at least 1 color');
-        form.colors.forEach((c, i) => {
-          if (!c.name.trim()) errors.push(`Color ${i + 1}: Name required`);
-        });
         break;
-      case 3: break;
-      case 4:
-        if (form.images.length === 0) errors.push('Add at least 1 image (hero image)');
-        if (form.images.length > 0 && !form.images.some(i => i.is_primary)) errors.push('Mark one image as Hero');
-        break;
-      case 5: break;
-      case 6: break;
+      // Steps 3-5 are optional
     }
     return errors;
   }, [form]);
 
   const currentErrors = useMemo(() => validateStep(step), [validateStep, step]);
-  const canProceedToNext = currentErrors.length === 0;
+  const canProceed = currentErrors.length === 0;
 
   const stepStatus = useMemo(() => {
     return STEPS.map((_, i) => {
-      const errs = validateStep(i);
       if (i > highestStep) return 'locked' as const;
+      const errs = validateStep(i);
       if (errs.length === 0) return 'complete' as const;
       if (i === step) return 'current' as const;
       return 'incomplete' as const;
@@ -284,17 +254,16 @@ export const CarUploadWizard = () => {
   }, [stepStatus]);
 
   const goNext = () => {
-    if (!canProceedToNext) {
-      setStepErrors(prev => ({ ...prev, [step]: currentErrors }));
-      toast.error(currentErrors[0]);
-      return;
+    if (!canProceed) { toast.error(currentErrors[0]); return; }
+    // Auto-fill price range from variants when leaving step 1
+    if (step === 1 && autoPriceRange && !form.price_range) {
+      const lowestPrice = form.variants.map(v => Number(v.ex_showroom)).filter(p => p > 0).sort((a, b) => a - b)[0];
+      setForm(prev => ({ ...prev, price_range: autoPriceRange, price_numeric: lowestPrice ? String(lowestPrice) : prev.price_numeric }));
     }
-    setStepErrors(prev => ({ ...prev, [step]: [] }));
-    const nextStep = step + 1;
-    setStep(nextStep);
-    setHighestStep(prev => Math.max(prev, nextStep));
+    const next = step + 1;
+    setStep(next);
+    setHighestStep(prev => Math.max(prev, next));
   };
-
   const goBack = () => setStep(Math.max(0, step - 1));
   const goToStep = (idx: number) => { if (idx <= highestStep) setStep(idx); };
 
@@ -304,16 +273,12 @@ export const CarUploadWizard = () => {
     const path = `${carSlug}/${prefix}-${Date.now()}.${ext}`;
     const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true });
     if (error) throw error;
-    const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(path);
-    return publicUrl;
+    return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
   };
 
   // ─── Save ───
   const handleSave = async () => {
-    if (!form.name.trim() || !form.brand.trim()) {
-      toast.error('Car name and brand are required');
-      return;
-    }
+    if (!form.name.trim() || !form.brand.trim()) { toast.error('Car name and brand are required'); return; }
     setIsSaving(true);
     try {
       const slug = form.slug || generateSlug(form.brand, form.name);
@@ -322,11 +287,11 @@ export const CarUploadWizard = () => {
 
       const carPayload = {
         slug, name: form.name.trim(), brand: form.brand, body_type: form.body_type,
-        price_range: form.price_range || null, price_numeric: form.price_numeric ? Number(form.price_numeric) : null,
+        price_range: form.price_range || autoPriceRange || null,
+        price_numeric: form.price_numeric ? Number(form.price_numeric) : null,
         original_price: form.original_price || null, discount: form.discount || null,
         tagline: form.tagline || null, overview: form.overview || null,
-        availability: form.availability || 'Available',
-        launch_date: form.launch_date || null,
+        availability: form.availability || 'Available', launch_date: form.launch_date || null,
         fuel_types: form.fuel_types.length ? form.fuel_types : null,
         transmission_types: form.transmission_types.length ? form.transmission_types : null,
         is_hot: form.is_hot, is_new: form.is_new, is_upcoming: form.is_upcoming, is_bestseller: form.is_bestseller,
@@ -411,21 +376,14 @@ export const CarUploadWizard = () => {
       }
 
       // Save brochures
-      if (form.brochures.length > 0) {
-        for (const b of form.brochures) {
-          let url = b.url;
-          if (b.file) {
-            url = await uploadFile(b.file, slug, `brochure-${b.title.replace(/\s+/g, '-').toLowerCase()}`, 'brochures');
-          }
-          if (url) {
-            await supabase.from('car_brochures').insert({
-              car_id: carId,
-              title: b.title || `${form.name} Brochure`,
-              url,
-              variant_name: b.variant_name || null,
-              language: b.language || 'English',
-            });
-          }
+      for (const b of form.brochures) {
+        let url = b.url;
+        if (b.file) url = await uploadFile(b.file, slug, `brochure-${b.title.replace(/\s+/g, '-').toLowerCase()}`, 'brochures');
+        if (url) {
+          await supabase.from('car_brochures').insert({
+            car_id: carId, title: b.title || `${form.name} Brochure`, url,
+            variant_name: b.variant_name || null, language: b.language || 'English',
+          });
         }
       }
 
@@ -442,341 +400,318 @@ export const CarUploadWizard = () => {
     }
   };
 
+  // ─── Quick add variant ───
+  const addVariant = () => update('variants', [...form.variants, {
+    name: '', price: '', price_numeric: '', fuel_type: form.fuel_types[0] || 'Petrol',
+    transmission: form.transmission_types[0] || 'Manual',
+    ex_showroom: '', rto: '', insurance: '', tcs: '', on_road_price: '', features: '',
+    state_code: 'DL', city: '', ownership_type: 'individual',
+  }]);
+
+  const duplicateVariant = (vi: number) => {
+    const src = form.variants[vi];
+    update('variants', [...form.variants, { ...src, name: src.name + ' (Copy)' }]);
+    toast.success('Variant duplicated');
+  };
+
   // ═══ RENDER ═══
   return (
     <div className="flex flex-col h-full bg-background">
-      {/* ─── Top Progress Bar ─── */}
-      <div className="border-b bg-card px-6 py-4">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h2 className="text-sm font-bold flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-primary" />
-              {form.name ? `Adding: ${form.brand} ${form.name}` : 'New Car Upload'}
-            </h2>
-            <p className="text-[11px] text-muted-foreground mt-0.5">Complete each step to publish the car to your website</p>
+      {/* ─── Compact Progress Header ─── */}
+      <div className="border-b bg-card px-4 py-3">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-sm font-bold flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-primary" />
+            {form.name ? `${form.brand} ${form.name}` : 'Add New Car'}
+          </h2>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground font-medium">Step {step + 1}/{STEPS.length}</span>
+            <Badge variant={overallProgress === 100 ? "default" : "outline"} className="text-[10px] font-bold">{overallProgress}%</Badge>
           </div>
-          <Badge variant={overallProgress === 100 ? "default" : "outline"} className="text-xs font-bold">
-            {overallProgress}% Complete
-          </Badge>
         </div>
-        <Progress value={overallProgress} className="h-2" />
+        <Progress value={overallProgress} className="h-1.5 mb-2" />
 
-        {/* Step indicators */}
-        <div className="flex items-center mt-4 gap-1">
+        {/* Minimal step dots */}
+        <div className="flex items-center gap-1">
           {STEPS.map((s, i) => {
             const status = stepStatus[i];
-            const Icon = s.icon;
             return (
-              <div key={s.id} className="flex items-center flex-1">
-                <button
-                  onClick={() => goToStep(i)}
-                  disabled={status === 'locked'}
-                  className={cn(
-                    "flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[11px] font-semibold transition-all w-full",
-                    step === i && "bg-primary text-primary-foreground shadow-sm",
-                    step !== i && status === 'complete' && "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 hover:bg-emerald-200",
-                    step !== i && status === 'incomplete' && "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 hover:bg-amber-100",
-                    status === 'locked' && "bg-muted/50 text-muted-foreground/50 cursor-not-allowed",
-                  )}
-                >
-                  {status === 'complete' && step !== i ? (
-                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
-                  ) : status === 'locked' ? (
-                    <Lock className="h-3 w-3 shrink-0" />
-                  ) : (
-                    <Icon className="h-3.5 w-3.5 shrink-0" />
-                  )}
-                  <span className="truncate hidden lg:inline">{s.label}</span>
-                  <span className="lg:hidden">{i + 1}</span>
-                </button>
-                {i < STEPS.length - 1 && (
-                  <ChevronRight className={cn("h-3 w-3 shrink-0 mx-0.5", status === 'complete' ? "text-emerald-500" : "text-muted-foreground/30")} />
+              <button
+                key={s.id}
+                onClick={() => goToStep(i)}
+                disabled={status === 'locked'}
+                className={cn(
+                  "flex-1 h-8 rounded-md text-[10px] font-semibold transition-all flex items-center justify-center gap-1",
+                  step === i && "bg-primary text-primary-foreground shadow-sm",
+                  step !== i && status === 'complete' && "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+                  step !== i && status !== 'complete' && status !== 'locked' && "bg-muted/50 text-muted-foreground",
+                  status === 'locked' && "bg-muted/20 text-muted-foreground/30 cursor-not-allowed",
                 )}
-              </div>
+              >
+                {status === 'complete' && step !== i ? <CheckCircle2 className="h-3 w-3" /> : <s.icon className="h-3 w-3" />}
+                <span className="hidden md:inline">{s.label}</span>
+              </button>
             );
           })}
         </div>
       </div>
 
       {/* ─── Step Content ─── */}
-      <div className="flex-1 overflow-y-auto p-6">
-        {/* Validation errors banner */}
-        {stepErrors[step]?.length > 0 && (
-          <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm space-y-1">
-            {stepErrors[step].map((err, i) => (
-              <div key={i} className="flex items-center gap-2"><AlertCircle className="h-3.5 w-3.5 shrink-0" />{err}</div>
-            ))}
-          </div>
-        )}
+      <div className="flex-1 overflow-y-auto p-4 md:p-6">
 
-        {/* STEP 0: Basic Identity */}
+        {/* ════ STEP 0: Just Brand + Name + Body Type ════ */}
         {step === 0 && (
-          <div className="max-w-3xl mx-auto space-y-6">
-            <div className="text-center mb-6">
-              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                <Car className="h-7 w-7 text-primary" />
+          <div className="max-w-lg mx-auto space-y-5">
+            <div className="text-center mb-4">
+              <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-2">
+                <Car className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="text-lg font-bold">Let's start with car identity</h3>
-              <p className="text-sm text-muted-foreground">Select the brand and enter the model name to begin</p>
+              <h3 className="text-lg font-bold">Which car are you adding?</h3>
+              <p className="text-xs text-muted-foreground mt-1">Just 3 fields to start — everything else comes later</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-semibold mb-1.5 block">Brand <span className="text-destructive">*</span></label>
-                <SearchCombobox value={form.brand} onChange={v => update('brand', v)} options={dbBrands || []} placeholder="Select Brand..." />
-              </div>
-              <div>
-                <label className="text-xs font-semibold mb-1.5 block">Car Name <span className="text-destructive">*</span></label>
-                <Input value={form.name} onChange={e => update('name', e.target.value)} placeholder="e.g. Swift, Creta, Nexon" className="h-10" />
-              </div>
+            <div>
+              <label className="text-xs font-semibold mb-1.5 block">Brand <span className="text-destructive">*</span></label>
+              <SearchCombobox value={form.brand} onChange={v => update('brand', v)} options={dbBrands || []} placeholder="Select brand..." />
             </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className="text-xs font-semibold mb-1.5 block">Body Type <span className="text-destructive">*</span></label>
-                <SearchCombobox value={form.body_type} onChange={v => update('body_type', v)} options={BODY_TYPES} placeholder="Select..." />
-              </div>
-              <div>
-                <label className="text-xs font-semibold mb-1.5 block">Slug (auto)</label>
-                <Input value={form.slug} onChange={e => update('slug', e.target.value)} className="h-10 font-mono text-xs" />
-              </div>
-              <div>
-                <label className="text-xs font-semibold mb-1.5 block">Availability</label>
-                <Select value={form.availability} onValueChange={v => update('availability', v)}>
-                  <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Available">Available</SelectItem>
-                    <SelectItem value="Coming Soon">Coming Soon</SelectItem>
-                    <SelectItem value="Discontinued">Discontinued</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+
+            <div>
+              <label className="text-xs font-semibold mb-1.5 block">Car Name <span className="text-destructive">*</span></label>
+              <Input value={form.name} onChange={e => update('name', e.target.value)} placeholder="e.g. Swift, Creta, Nexon, Fortuner" className="h-11 text-base" autoFocus />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-semibold mb-1.5 block">Price Range (Display)</label>
-                <Input value={form.price_range} onChange={e => update('price_range', e.target.value)} placeholder="₹6.49L - ₹9.64L" className="h-10" />
-              </div>
-              <div>
-                <label className="text-xs font-semibold mb-1.5 block">Starting Price (Numeric)</label>
-                <Input value={form.price_numeric} onChange={e => update('price_numeric', e.target.value.replace(/\D/g, ''))} placeholder="649000" className="h-10 font-mono" />
-                {form.price_numeric && <span className="text-[10px] text-muted-foreground mt-0.5 block">{formatINR(Number(form.price_numeric))}</span>}
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-semibold mb-1.5 block">Original Price</label>
-                <Input value={form.original_price} onChange={e => update('original_price', e.target.value)} placeholder="₹7.00L (before discount)" className="h-10" />
-              </div>
-              <div>
-                <label className="text-xs font-semibold mb-1.5 block">Discount</label>
-                <Input value={form.discount} onChange={e => update('discount', e.target.value)} placeholder="₹25,000" className="h-10" />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-semibold mb-1.5 block">Tagline</label>
-                <Input value={form.tagline} onChange={e => update('tagline', e.target.value)} placeholder="Play Bold. Drive Smart." className="h-10" />
-              </div>
-              <div>
-                <label className="text-xs font-semibold mb-1.5 block">Launch Date</label>
-                <Input type="date" value={form.launch_date} onChange={e => update('launch_date', e.target.value)} className="h-10" />
+
+            <div>
+              <label className="text-xs font-semibold mb-1.5 block">Body Type</label>
+              <div className="flex flex-wrap gap-1.5">
+                {BODY_TYPES.map(bt => (
+                  <button key={bt} onClick={() => update('body_type', bt)}
+                    className={cn("px-3 py-1.5 rounded-full text-xs font-medium border transition-all",
+                      form.body_type === bt ? "bg-primary text-primary-foreground border-primary" : "bg-muted/40 text-muted-foreground border-border hover:bg-accent"
+                    )}>{bt}</button>
+                ))}
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-6">
+            {/* Fuel & Transmission chips */}
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-semibold mb-2 block">Fuel Types</label>
-                <div className="flex flex-wrap gap-2">
+                <label className="text-xs font-semibold mb-1.5 block">Fuel Types</label>
+                <div className="flex flex-wrap gap-1.5">
                   {FUEL_OPTIONS.map(f => (
-                    <button key={f} type="button" onClick={() => toggleArrayValue('fuel_types', f)}
-                      className={cn("px-3 py-1.5 rounded-full text-xs font-medium border transition-all",
-                        form.fuel_types.includes(f) ? "bg-primary text-primary-foreground border-primary" : "bg-muted/50 text-muted-foreground border-border hover:bg-accent"
+                    <button key={f} onClick={() => toggleArrayValue('fuel_types', f)}
+                      className={cn("px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all",
+                        form.fuel_types.includes(f) ? "bg-primary text-primary-foreground border-primary" : "bg-muted/40 text-muted-foreground border-border hover:bg-accent"
                       )}>{f}</button>
                   ))}
                 </div>
               </div>
               <div>
-                <label className="text-xs font-semibold mb-2 block">Transmission Types</label>
-                <div className="flex flex-wrap gap-2">
+                <label className="text-xs font-semibold mb-1.5 block">Transmission</label>
+                <div className="flex flex-wrap gap-1.5">
                   {TRANSMISSION_OPTIONS.map(t => (
-                    <button key={t} type="button" onClick={() => toggleArrayValue('transmission_types', t)}
-                      className={cn("px-3 py-1.5 rounded-full text-xs font-medium border transition-all",
-                        form.transmission_types.includes(t) ? "bg-primary text-primary-foreground border-primary" : "bg-muted/50 text-muted-foreground border-border hover:bg-accent"
+                    <button key={t} onClick={() => toggleArrayValue('transmission_types', t)}
+                      className={cn("px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all",
+                        form.transmission_types.includes(t) ? "bg-primary text-primary-foreground border-primary" : "bg-muted/40 text-muted-foreground border-border hover:bg-accent"
                       )}>{t}</button>
                   ))}
                 </div>
               </div>
             </div>
 
+            {/* Tags */}
             <div>
-              <label className="text-xs font-semibold mb-2 block">Tags / Flags</label>
+              <label className="text-xs font-semibold mb-1.5 block">Tags</label>
               <div className="flex flex-wrap gap-2">
                 {[
-                  { key: 'is_hot', label: '🔥 Hot', color: 'bg-red-100 border-red-300 text-red-700' },
-                  { key: 'is_new', label: '✨ New', color: 'bg-blue-100 border-blue-300 text-blue-700' },
-                  { key: 'is_upcoming', label: '🚀 Upcoming', color: 'bg-purple-100 border-purple-300 text-purple-700' },
-                  { key: 'is_bestseller', label: '⭐ Bestseller', color: 'bg-amber-100 border-amber-300 text-amber-700' },
+                  { key: 'is_hot', label: '🔥 Hot', active: 'bg-red-100 border-red-300 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
+                  { key: 'is_new', label: '✨ New', active: 'bg-blue-100 border-blue-300 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
+                  { key: 'is_upcoming', label: '🚀 Upcoming', active: 'bg-purple-100 border-purple-300 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
+                  { key: 'is_bestseller', label: '⭐ Bestseller', active: 'bg-amber-100 border-amber-300 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
                 ].map(flag => (
-                  <button key={flag.key} type="button" onClick={() => update(flag.key as any, !form[flag.key as keyof CarFormData])}
+                  <button key={flag.key} onClick={() => update(flag.key as any, !form[flag.key as keyof CarFormData])}
                     className={cn("px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all",
-                      form[flag.key as keyof CarFormData] ? flag.color : "bg-muted/30 text-muted-foreground border-border"
+                      form[flag.key as keyof CarFormData] ? flag.active : "bg-muted/30 text-muted-foreground border-border"
                     )}>{flag.label}</button>
                 ))}
               </div>
             </div>
+
+            {/* Optional advanced — collapsed by default */}
+            <button onClick={() => setShowAdvanced(!showAdvanced)} className="text-xs text-primary font-medium hover:underline">
+              {showAdvanced ? '▲ Hide' : '▼ Show'} optional details (tagline, slug, pricing)
+            </button>
+            {showAdvanced && (
+              <div className="space-y-3 p-3 rounded-lg border border-dashed border-muted-foreground/20 bg-muted/20">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Slug (auto)</label>
+                    <Input value={form.slug} onChange={e => update('slug', e.target.value)} className="h-9 font-mono text-xs" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Availability</label>
+                    <Select value={form.availability} onValueChange={v => update('availability', v)}>
+                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Available">Available</SelectItem>
+                        <SelectItem value="Coming Soon">Coming Soon</SelectItem>
+                        <SelectItem value="Discontinued">Discontinued</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Tagline</label>
+                    <Input value={form.tagline} onChange={e => update('tagline', e.target.value)} placeholder="Play Bold. Drive Smart." className="h-9 text-sm" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Launch Date</label>
+                    <Input type="date" value={form.launch_date} onChange={e => update('launch_date', e.target.value)} className="h-9" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Price Range</label>
+                    <Input value={form.price_range} onChange={e => update('price_range', e.target.value)} placeholder="Auto-filled from variants" className="h-9 text-xs" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Original Price</label>
+                    <Input value={form.original_price} onChange={e => update('original_price', e.target.value)} placeholder="₹7.00L" className="h-9 text-xs" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Discount</label>
+                    <Input value={form.discount} onChange={e => update('discount', e.target.value)} placeholder="₹25,000" className="h-9 text-xs" />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
-        {/* STEP 1: Variants & Pricing with State/City/Ownership RTO */}
+        {/* ════ STEP 1: Variants ════ */}
         {step === 1 && (
           <div className="max-w-4xl mx-auto space-y-4">
-            <div className="text-center mb-4">
-              <h3 className="text-lg font-bold">Add Variants & Pricing</h3>
-              <p className="text-sm text-muted-foreground">Add all variants — select state, city & ownership type for accurate RTO calculation</p>
+            <div className="text-center mb-2">
+              <h3 className="text-lg font-bold">Add Variants for {form.brand} {form.name}</h3>
+              <p className="text-xs text-muted-foreground">Enter ex-showroom price → RTO, Insurance, TCS auto-calculate</p>
             </div>
-            <div className="flex justify-center mb-4">
-              <Button onClick={() => update('variants', [...form.variants, {
-                name: '', price: '', price_numeric: '', fuel_type: 'Petrol', transmission: 'Manual',
-                ex_showroom: '', rto: '', insurance: '', tcs: '', on_road_price: '', features: '',
-                state_code: 'DL', city: '', ownership_type: 'individual',
-              }])}>
-                <Plus className="h-4 w-4 mr-1" />Add Variant
+
+            <div className="flex items-center justify-center gap-2">
+              <Button onClick={addVariant} size="sm" className="gap-1.5">
+                <Plus className="h-4 w-4" />Add Variant
               </Button>
+              {form.variants.length > 0 && (
+                <span className="text-xs text-muted-foreground">{form.variants.length} variant{form.variants.length > 1 ? 's' : ''} added</span>
+              )}
             </div>
+
             {form.variants.length === 0 && (
-              <div className="border-2 border-dashed border-primary/30 rounded-xl p-10 text-center bg-primary/5">
-                <Layers className="h-10 w-10 text-primary/50 mx-auto mb-3" />
-                <p className="text-sm font-semibold text-foreground">No variants added yet</p>
-                <p className="text-xs text-muted-foreground mt-1">Click "Add Variant" above to add LXi, VXi, ZXi etc.</p>
-                <p className="text-[10px] text-destructive mt-2">⚠️ At least 1 variant is required to proceed</p>
+              <div className="border-2 border-dashed border-primary/20 rounded-xl p-8 text-center bg-primary/5">
+                <Layers className="h-8 w-8 text-primary/40 mx-auto mb-2" />
+                <p className="text-sm font-semibold">No variants yet</p>
+                <p className="text-xs text-muted-foreground mt-1">Add variants like LXi, VXi, ZXi+</p>
+                <Button onClick={addVariant} size="sm" className="mt-3 gap-1.5"><Plus className="h-4 w-4" />Add First Variant</Button>
               </div>
             )}
+
             {form.variants.map((v, vi) => {
               const stateCities = getCitiesForState(v.state_code);
               return (
-                <div key={vi} className="border rounded-xl p-4 bg-card space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Badge variant="outline" className="font-mono text-[10px]">Variant {vi + 1}</Badge>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => update('variants', form.variants.filter((_, j) => j !== vi))}><Trash2 className="h-4 w-4" /></Button>
-                  </div>
-                  {/* Name, Display Price, Ex-Showroom */}
-                  <div className="grid grid-cols-3 gap-3">
-                    <div>
-                      <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Variant Name *</label>
-                      <Input value={v.name} onChange={e => { const vs = [...form.variants]; vs[vi] = { ...vs[vi], name: e.target.value }; update('variants', vs); }} placeholder="LXi / VXi / ZXi+" className="h-9 text-sm" />
+                <div key={vi} className="border rounded-xl bg-card overflow-hidden">
+                  {/* Header */}
+                  <div className="flex items-center justify-between px-4 py-2 bg-muted/30 border-b">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary" className="text-[10px] font-mono">#{vi + 1}</Badge>
+                      <span className="text-sm font-semibold">{v.name || 'Untitled Variant'}</span>
+                      {v.on_road_price && <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 text-[10px]">{formatINR(Number(v.on_road_price))}</Badge>}
                     </div>
-                    <div>
-                      <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Display Price</label>
-                      <Input value={v.price} onChange={e => { const vs = [...form.variants]; vs[vi] = { ...vs[vi], price: e.target.value }; update('variants', vs); }} placeholder="₹6.49 Lakh*" className="h-9 text-sm" />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Ex-Showroom ₹ *</label>
-                      <Input value={v.ex_showroom} onChange={e => {
-                        const val = e.target.value.replace(/\D/g, '');
-                        const vs = [...form.variants];
-                        vs[vi] = recalcVariant({ ...vs[vi], ex_showroom: val });
-                        update('variants', vs);
-                      }} placeholder="649000" className="h-9 text-sm font-mono" />
-                      {v.ex_showroom && <span className="text-[10px] text-muted-foreground">{formatINR(Number(v.ex_showroom))}</span>}
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => duplicateVariant(vi)} title="Duplicate"><Copy className="h-3.5 w-3.5" /></Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => update('variants', form.variants.filter((_, j) => j !== vi))}><Trash2 className="h-3.5 w-3.5" /></Button>
                     </div>
                   </div>
 
-                  {/* State, City, Ownership — RTO Customization */}
-                  <div className="grid grid-cols-3 gap-3 p-3 rounded-lg bg-muted/30 border border-dashed border-muted-foreground/20">
-                    <div>
-                      <label className="text-[10px] font-medium text-muted-foreground mb-1 flex items-center gap-1"><MapPin className="h-3 w-3" />State (RTO)</label>
-                      <Select value={v.state_code || 'DL'} onValueChange={val => {
-                        const vs = [...form.variants];
-                        vs[vi] = recalcVariant({ ...vs[vi], state_code: val, city: '' });
-                        update('variants', vs);
-                      }}>
-                        <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {availableStates.map(s => (
-                            <SelectItem key={s.code} value={s.code}>{s.name}</SelectItem>
-                          ))}
-                          {availableStates.length === 0 && <SelectItem value="DL">Delhi</SelectItem>}
-                        </SelectContent>
-                      </Select>
+                  <div className="p-4 space-y-3">
+                    {/* Row 1: Name + Ex-showroom */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Variant Name *</label>
+                        <Input value={v.name} onChange={e => { const vs = [...form.variants]; vs[vi] = { ...vs[vi], name: e.target.value }; update('variants', vs); }} placeholder="e.g. LXi, VXi, ZXi+" className="h-10" autoFocus={vi === form.variants.length - 1} />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Ex-Showroom Price ₹ *</label>
+                        <Input value={v.ex_showroom} onChange={e => {
+                          const val = e.target.value.replace(/\D/g, '');
+                          const vs = [...form.variants]; vs[vi] = recalcVariant({ ...vs[vi], ex_showroom: val }); update('variants', vs);
+                        }} placeholder="649000" className="h-10 font-mono" />
+                        {v.ex_showroom && <span className="text-[10px] text-primary font-medium">{formatINR(Number(v.ex_showroom))}</span>}
+                      </div>
                     </div>
-                    <div>
-                      <label className="text-[10px] font-medium text-muted-foreground mb-1 flex items-center gap-1"><Building2 className="h-3 w-3" />City (Optional)</label>
-                      <Select value={v.city || '_none'} onValueChange={val => {
-                        const vs = [...form.variants];
-                        vs[vi] = recalcVariant({ ...vs[vi], city: val === '_none' ? '' : val });
-                        update('variants', vs);
-                      }}>
-                        <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="State default" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="_none">State default</SelectItem>
-                          {stateCities.map(c => (
-                            <SelectItem key={c} value={c}>{c}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-medium text-muted-foreground mb-1 flex items-center gap-1"><User className="h-3 w-3" />Ownership</label>
-                      <Select value={v.ownership_type || 'individual'} onValueChange={val => {
-                        const vs = [...form.variants];
-                        vs[vi] = recalcVariant({ ...vs[vi], ownership_type: val });
-                        update('variants', vs);
-                      }}>
-                        <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="individual">👤 Individual</SelectItem>
-                          <SelectItem value="corporate">🏢 Corporate</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
 
-                  {/* Price Breakup */}
-                  <div className="grid grid-cols-4 gap-3">
-                    <div>
-                      <label className="text-[10px] font-medium text-muted-foreground mb-1 block">RTO / Road Tax</label>
-                      <Input value={v.rto} readOnly className="h-9 text-sm font-mono bg-muted/30" />
-                      {v.rto && <span className="text-[10px] text-muted-foreground">{formatINR(Number(v.rto))}</span>}
+                    {/* Row 2: Fuel + Transmission */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Fuel Type</label>
+                        <Select value={v.fuel_type} onValueChange={val => { const vs = [...form.variants]; vs[vi] = recalcVariant({ ...vs[vi], fuel_type: val }); update('variants', vs); }}>
+                          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                          <SelectContent>{FUEL_OPTIONS.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Transmission</label>
+                        <Select value={v.transmission} onValueChange={val => { const vs = [...form.variants]; vs[vi] = { ...vs[vi], transmission: val }; update('variants', vs); }}>
+                          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                          <SelectContent>{TRANSMISSION_OPTIONS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                    <div>
-                      <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Insurance (3%)</label>
-                      <Input value={v.insurance} readOnly className="h-9 text-sm font-mono bg-muted/30" />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-medium text-muted-foreground mb-1 block">TCS (1%)</label>
-                      <Input value={v.tcs} readOnly className="h-9 text-sm font-mono bg-muted/30" />
-                      {v.tcs === '0' && <span className="text-[10px] text-emerald-600">✓ Always 1%</span>}
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-medium text-muted-foreground mb-1 block">On-Road ₹</label>
-                      <Input value={v.on_road_price} readOnly className="h-9 text-sm font-mono font-bold bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200" />
-                      {v.on_road_price && <span className="text-[10px] text-emerald-600 font-semibold">{formatINR(Number(v.on_road_price))}</span>}
-                    </div>
-                  </div>
 
-                  {/* Fuel, Transmission, Features */}
-                  <div className="grid grid-cols-3 gap-3">
-                    <div>
-                      <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Fuel Type</label>
-                      <Select value={v.fuel_type} onValueChange={val => {
-                        const vs = [...form.variants];
-                        vs[vi] = recalcVariant({ ...vs[vi], fuel_type: val });
-                        update('variants', vs);
-                      }}>
-                        <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                        <SelectContent>{FUEL_OPTIONS.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent>
-                      </Select>
+                    {/* Row 3: RTO Context — State/City/Ownership */}
+                    <div className="grid grid-cols-3 gap-3 p-2.5 rounded-lg bg-muted/20 border border-dashed border-muted-foreground/15">
+                      <div>
+                        <label className="text-[10px] font-medium text-muted-foreground mb-1 flex items-center gap-1"><MapPin className="h-3 w-3" />State</label>
+                        <Select value={v.state_code || 'DL'} onValueChange={val => { const vs = [...form.variants]; vs[vi] = recalcVariant({ ...vs[vi], state_code: val, city: '' }); update('variants', vs); }}>
+                          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>{availableStates.length > 0 ? availableStates.map(s => <SelectItem key={s.code} value={s.code}>{s.name}</SelectItem>) : <SelectItem value="DL">Delhi</SelectItem>}</SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-medium text-muted-foreground mb-1 flex items-center gap-1"><Building2 className="h-3 w-3" />City</label>
+                        <Select value={v.city || '_none'} onValueChange={val => { const vs = [...form.variants]; vs[vi] = recalcVariant({ ...vs[vi], city: val === '_none' ? '' : val }); update('variants', vs); }}>
+                          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Default" /></SelectTrigger>
+                          <SelectContent><SelectItem value="_none">Default</SelectItem>{stateCities.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-medium text-muted-foreground mb-1 flex items-center gap-1"><User className="h-3 w-3" />Ownership</label>
+                        <Select value={v.ownership_type || 'individual'} onValueChange={val => { const vs = [...form.variants]; vs[vi] = recalcVariant({ ...vs[vi], ownership_type: val }); update('variants', vs); }}>
+                          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent><SelectItem value="individual">👤 Individual</SelectItem><SelectItem value="corporate">🏢 Corporate</SelectItem></SelectContent>
+                        </Select>
+                      </div>
                     </div>
+
+                    {/* Row 4: Auto-calculated breakup */}
+                    {v.ex_showroom && Number(v.ex_showroom) > 0 && (
+                      <div className="grid grid-cols-4 gap-2 text-center">
+                        {[
+                          { label: 'RTO', val: v.rto, color: 'text-blue-600' },
+                          { label: 'Insurance', val: v.insurance, color: 'text-orange-600' },
+                          { label: 'TCS (1%)', val: v.tcs, color: 'text-purple-600' },
+                          { label: 'On-Road', val: v.on_road_price, color: 'text-emerald-700 font-bold' },
+                        ].map(item => (
+                          <div key={item.label} className="rounded-lg bg-muted/30 p-2">
+                            <div className="text-[9px] text-muted-foreground">{item.label}</div>
+                            <div className={cn("text-xs font-semibold", item.color)}>{item.val ? formatINR(Number(item.val)) : '—'}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Features */}
                     <div>
-                      <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Transmission</label>
-                      <Select value={v.transmission} onValueChange={val => { const vs = [...form.variants]; vs[vi] = { ...vs[vi], transmission: val }; update('variants', vs); }}>
-                        <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                        <SelectContent>{TRANSMISSION_OPTIONS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Features (comma separated)</label>
-                      <Input value={v.features} onChange={e => { const vs = [...form.variants]; vs[vi] = { ...vs[vi], features: e.target.value }; update('variants', vs); }} placeholder="AC, ABS, 4 Airbags" className="h-9 text-sm" />
+                      <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Key Features (comma separated)</label>
+                      <Input value={v.features} onChange={e => { const vs = [...form.variants]; vs[vi] = { ...vs[vi], features: e.target.value }; update('variants', vs); }} placeholder="AC, ABS, 4 Airbags, Sunroof" className="h-9 text-xs" />
                     </div>
                   </div>
                 </div>
@@ -785,83 +720,70 @@ export const CarUploadWizard = () => {
           </div>
         )}
 
-        {/* STEP 2: Colors & Color-Linked Images */}
+        {/* ════ STEP 2: Colors with linked images ════ */}
         {step === 2 && (
-          <div className="max-w-4xl mx-auto space-y-4">
-            <div className="text-center mb-4">
-              <h3 className="text-lg font-bold">Colors & Color Images</h3>
-              <p className="text-sm text-muted-foreground">Add each available color — <strong>each color must have its own car image</strong></p>
+          <div className="max-w-3xl mx-auto space-y-4">
+            <div className="text-center mb-2">
+              <h3 className="text-lg font-bold">Colors for {form.brand} {form.name}</h3>
+              <p className="text-xs text-muted-foreground">Add each color + upload car photo in that color</p>
             </div>
-            <div className="flex justify-center mb-4">
-              <Button onClick={() => update('colors', [...form.colors, { name: '', hex_code: '#000000', image_url: '' }])}>
-                <Plus className="h-4 w-4 mr-1" />Add Color
+
+            <div className="flex justify-center">
+              <Button onClick={() => update('colors', [...form.colors, { name: '', hex_code: '#000000', image_url: '' }])} size="sm" className="gap-1.5">
+                <Plus className="h-4 w-4" />Add Color
               </Button>
             </div>
+
             {form.colors.length === 0 && (
-              <div className="border-2 border-dashed border-primary/30 rounded-xl p-10 text-center bg-primary/5">
-                <Palette className="h-10 w-10 text-primary/50 mx-auto mb-3" />
-                <p className="text-sm font-semibold">No colors added yet</p>
-                <p className="text-xs text-muted-foreground mt-1">Add colors like "Napoli Black", "Pearl Arctic White"</p>
-                <p className="text-[10px] text-destructive mt-2">⚠️ At least 1 color is required to proceed</p>
+              <div className="border-2 border-dashed border-primary/20 rounded-xl p-8 text-center bg-primary/5">
+                <Palette className="h-8 w-8 text-primary/40 mx-auto mb-2" />
+                <p className="text-sm font-semibold">No colors yet</p>
+                <Button onClick={() => update('colors', [...form.colors, { name: '', hex_code: '#000000', image_url: '' }])} size="sm" className="mt-3 gap-1.5"><Plus className="h-4 w-4" />Add First Color</Button>
               </div>
             )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {form.colors.map((color, ci) => (
-                <div key={ci} className="border rounded-xl p-4 bg-card space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg border-2 shadow-sm" style={{ backgroundColor: color.hex_code }} />
-                      <div>
-                        <span className="text-xs font-bold">{color.name || `Color ${ci + 1}`}</span>
-                        <span className="text-[10px] font-mono text-muted-foreground block">{color.hex_code}</span>
-                      </div>
-                    </div>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => update('colors', form.colors.filter((_, j) => j !== ci))}><Trash2 className="h-4 w-4" /></Button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Color Name *</label>
-                      <Input value={color.name} onChange={e => { const cols = [...form.colors]; cols[ci] = { ...cols[ci], name: e.target.value }; update('colors', cols); }} placeholder="Napoli Black" className="h-9" />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Hex Code</label>
-                      <div className="flex items-center gap-2">
-                        <input type="color" value={color.hex_code} onChange={e => { const cols = [...form.colors]; cols[ci] = { ...cols[ci], hex_code: e.target.value }; update('colors', cols); }} className="w-9 h-9 rounded-lg border cursor-pointer shrink-0" />
-                        <Input value={color.hex_code} onChange={e => { const cols = [...form.colors]; cols[ci] = { ...cols[ci], hex_code: e.target.value }; update('colors', cols); }} className="h-9 font-mono text-xs" />
-                      </div>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-medium text-muted-foreground mb-1.5 flex items-center gap-1">
-                      <ImageIcon className="h-3 w-3" />
-                      Car Image in <strong className="text-primary">{color.name || 'This Color'}</strong> <span className="text-destructive">*</span>
-                    </label>
+                <div key={ci} className="border rounded-xl overflow-hidden bg-card">
+                  {/* Color image preview area */}
+                  <div className="relative h-36 bg-muted flex items-center justify-center">
                     {(color.image_url || color.file) ? (
-                      <div className="relative group rounded-lg overflow-hidden border bg-muted h-36">
+                      <>
                         <img src={color.file ? URL.createObjectURL(color.file) : color.image_url} className="w-full h-full object-cover" alt={color.name} />
-                        <div className="absolute top-2 left-2">
-                          <Badge className="bg-black/70 text-white text-[9px]">{color.name || 'Color'} Image</Badge>
-                        </div>
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                          <label className="cursor-pointer bg-white/90 text-black px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-white">
+                        <div className="absolute inset-0 bg-black/30 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                          <label className="cursor-pointer bg-white/90 text-black px-3 py-1.5 rounded-lg text-xs font-semibold">
                             Replace
                             <input type="file" accept="image/*" className="hidden" onChange={e => { const file = e.target.files?.[0]; if (file) { const cols = [...form.colors]; cols[ci] = { ...cols[ci], file, image_url: '' }; update('colors', cols); } }} />
                           </label>
                           <button onClick={() => { const cols = [...form.colors]; cols[ci] = { ...cols[ci], file: undefined, image_url: '' }; update('colors', cols); }} className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold">Remove</button>
                         </div>
-                      </div>
+                      </>
                     ) : (
-                      <div className="flex gap-2">
-                        <label className="flex-1 cursor-pointer border-2 border-dashed border-primary/30 rounded-lg p-4 text-center hover:bg-primary/5 transition-colors">
-                          <Upload className="h-5 w-5 text-primary mx-auto mb-1" />
-                          <span className="text-xs text-primary font-semibold">Upload {color.name || 'Color'} Image</span>
-                          <span className="text-[10px] text-muted-foreground block">PNG, JPG up to 5MB</span>
-                          <input type="file" accept="image/*" className="hidden" onChange={e => { const file = e.target.files?.[0]; if (file) { const cols = [...form.colors]; cols[ci] = { ...cols[ci], file }; update('colors', cols); } }} />
-                        </label>
-                        <div className="flex-1">
-                          <Input value={color.image_url} onChange={e => { const cols = [...form.colors]; cols[ci] = { ...cols[ci], image_url: e.target.value, file: undefined }; update('colors', cols); }} placeholder="Or paste URL..." className="h-full text-xs" />
-                        </div>
+                      <label className="cursor-pointer text-center p-4 w-full h-full flex flex-col items-center justify-center hover:bg-primary/5 transition-colors">
+                        <Upload className="h-6 w-6 text-primary/50 mb-1" />
+                        <span className="text-xs text-primary font-semibold">Upload {color.name || 'car'} image</span>
+                        <span className="text-[10px] text-muted-foreground">Click to browse</span>
+                        <input type="file" accept="image/*" className="hidden" onChange={e => { const file = e.target.files?.[0]; if (file) { const cols = [...form.colors]; cols[ci] = { ...cols[ci], file }; update('colors', cols); } }} />
+                      </label>
+                    )}
+                    {/* Color swatch badge */}
+                    <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-white/90 dark:bg-black/70 rounded-full px-2 py-1">
+                      <div className="w-4 h-4 rounded-full border" style={{ backgroundColor: color.hex_code }} />
+                      <span className="text-[10px] font-semibold">{color.name || `Color ${ci + 1}`}</span>
+                    </div>
+                  </div>
+
+                  <div className="p-3 space-y-2">
+                    <div className="grid grid-cols-[1fr_auto] gap-2">
+                      <Input value={color.name} onChange={e => { const cols = [...form.colors]; cols[ci] = { ...cols[ci], name: e.target.value }; update('colors', cols); }} placeholder="Color name, e.g. Napoli Black" className="h-9 text-sm" />
+                      <div className="flex items-center gap-1">
+                        <input type="color" value={color.hex_code} onChange={e => { const cols = [...form.colors]; cols[ci] = { ...cols[ci], hex_code: e.target.value }; update('colors', cols); }} className="w-9 h-9 rounded-lg border cursor-pointer" />
+                        <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive" onClick={() => update('colors', form.colors.filter((_, j) => j !== ci))}><Trash2 className="h-4 w-4" /></Button>
                       </div>
+                    </div>
+                    {/* URL fallback */}
+                    {!color.file && (
+                      <Input value={color.image_url} onChange={e => { const cols = [...form.colors]; cols[ci] = { ...cols[ci], image_url: e.target.value }; update('colors', cols); }} placeholder="Or paste image URL" className="h-8 text-[11px]" />
                     )}
                   </div>
                 </div>
@@ -870,28 +792,28 @@ export const CarUploadWizard = () => {
           </div>
         )}
 
-        {/* STEP 3: Specifications */}
+        {/* ════ STEP 3: Specs (optional) ════ */}
         {step === 3 && (
-          <div className="max-w-4xl mx-auto space-y-5">
-            <div className="text-center mb-4">
-              <h3 className="text-lg font-bold">Technical Specifications</h3>
-              <p className="text-sm text-muted-foreground">Fill in available specs — blank fields won't be saved. This step is optional.</p>
+          <div className="max-w-4xl mx-auto space-y-4">
+            <div className="text-center mb-2">
+              <h3 className="text-lg font-bold">Specifications</h3>
+              <p className="text-xs text-muted-foreground">Fill what you have — blank fields are skipped. <strong>This step is optional</strong>, you can click Next.</p>
             </div>
             {['engine', 'dimensions', 'performance', 'features', 'safety'].map(cat => {
               const catSpecs = form.specifications.filter(s => s.category === cat);
               if (!catSpecs.length) return null;
-              const catLabel = { engine: '🔧 Engine', dimensions: '📐 Dimensions', performance: '⚡ Performance', features: '🎯 Features', safety: '🛡️ Safety' }[cat];
+              const icons: Record<string, string> = { engine: '🔧', dimensions: '📐', performance: '⚡', features: '🎯', safety: '🛡️' };
               return (
-                <div key={cat} className="border rounded-xl p-4 bg-card">
-                  <h5 className="text-xs font-bold mb-3">{catLabel}</h5>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                <div key={cat} className="border rounded-xl p-3 bg-card">
+                  <h5 className="text-xs font-bold mb-2 capitalize">{icons[cat]} {cat}</h5>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                     {catSpecs.map(spec => {
                       const gi = form.specifications.indexOf(spec);
                       const tpl = SPEC_TEMPLATES.find(t => t.category === cat && t.label === spec.label);
                       return (
                         <div key={gi}>
-                          <label className="text-[10px] font-medium text-muted-foreground mb-1 block">{spec.label}</label>
-                          <Input value={spec.value} onChange={e => { const ss = [...form.specifications]; ss[gi] = { ...ss[gi], value: e.target.value }; update('specifications', ss); }} placeholder={tpl?.placeholder || ''} className="h-9 text-sm" />
+                          <label className="text-[10px] font-medium text-muted-foreground mb-0.5 block">{spec.label}</label>
+                          <Input value={spec.value} onChange={e => { const ss = [...form.specifications]; ss[gi] = { ...ss[gi], value: e.target.value }; update('specifications', ss); }} placeholder={tpl?.placeholder || ''} className="h-8 text-xs" />
                         </div>
                       );
                     })}
@@ -902,52 +824,53 @@ export const CarUploadWizard = () => {
           </div>
         )}
 
-        {/* STEP 4: Gallery */}
+        {/* ════ STEP 4: Gallery ════ */}
         {step === 4 && (
-          <div className="max-w-4xl mx-auto space-y-4">
-            <div className="text-center mb-4">
-              <h3 className="text-lg font-bold">Gallery Images</h3>
-              <p className="text-sm text-muted-foreground">Upload hero image (shown on car cards) and additional gallery photos</p>
+          <div className="max-w-3xl mx-auto space-y-4">
+            <div className="text-center mb-2">
+              <h3 className="text-lg font-bold">Gallery Photos</h3>
+              <p className="text-xs text-muted-foreground">Upload hero image + additional gallery. <strong>Optional — color images already uploaded above.</strong></p>
             </div>
-            <div className="flex justify-center mb-4">
-              <Button onClick={() => update('images', [...form.images, { url: '', alt_text: '', is_primary: form.images.length === 0, file: undefined }])}>
-                <Plus className="h-4 w-4 mr-1" />Add Image
+            <div className="flex justify-center">
+              <Button onClick={() => update('images', [...form.images, { url: '', alt_text: '', is_primary: form.images.length === 0, file: undefined }])} size="sm" className="gap-1.5">
+                <Plus className="h-4 w-4" />Add Image
               </Button>
             </div>
+
             {form.images.length === 0 && (
-              <div className="border-2 border-dashed border-primary/30 rounded-xl p-10 text-center bg-primary/5">
-                <ImageIcon className="h-10 w-10 text-primary/50 mx-auto mb-3" />
-                <p className="text-sm font-semibold">No gallery images added</p>
-                <p className="text-xs text-muted-foreground mt-1">First image is automatically set as hero</p>
-                <p className="text-[10px] text-destructive mt-2">⚠️ At least 1 image is required to proceed</p>
+              <div className="border-2 border-dashed border-muted-foreground/15 rounded-xl p-8 text-center bg-muted/10">
+                <ImageIcon className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">No gallery images — this is optional</p>
+                <p className="text-xs text-muted-foreground mt-1">Color images you added in Step 3 will show on the website</p>
               </div>
             )}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {form.images.map((img, ii) => (
                 <div key={ii} className="border rounded-xl overflow-hidden bg-card">
-                  <div className="relative h-40 bg-muted flex items-center justify-center">
+                  <div className="relative h-32 bg-muted flex items-center justify-center">
                     {(img.url || img.file) ? (
                       <img src={img.file ? URL.createObjectURL(img.file) : img.url} className="w-full h-full object-cover" alt="" />
                     ) : (
-                      <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                      <ImageIcon className="h-6 w-6 text-muted-foreground/30" />
                     )}
-                    {img.is_primary && <Badge className="absolute top-2 left-2 bg-primary text-[10px]">★ Hero Image</Badge>}
+                    {img.is_primary && <Badge className="absolute top-2 left-2 bg-primary text-[9px]">★ Hero</Badge>}
                   </div>
-                  <div className="p-3 space-y-2">
-                    <div className="flex gap-2">
-                      <label className="flex-1 cursor-pointer text-center py-1.5 rounded-lg border border-dashed border-primary/40 text-xs font-semibold text-primary hover:bg-primary/5">
-                        <Upload className="h-3.5 w-3.5 inline mr-1" />Upload
+                  <div className="p-2 space-y-1.5">
+                    <div className="flex gap-1.5">
+                      <label className="cursor-pointer text-center py-1 rounded border border-dashed border-primary/30 text-[10px] font-semibold text-primary hover:bg-primary/5 flex-1">
+                        <Upload className="h-3 w-3 inline mr-0.5" />Upload
                         <input type="file" accept="image/*" className="hidden" onChange={e => { const file = e.target.files?.[0]; if (file) { const imgs = [...form.images]; imgs[ii] = { ...imgs[ii], file, url: '' }; update('images', imgs); } }} />
                       </label>
-                      <Input value={img.url} onChange={e => { const imgs = [...form.images]; imgs[ii] = { ...imgs[ii], url: e.target.value, file: undefined }; update('images', imgs); }} placeholder="Paste URL" className="h-8 text-xs flex-1" />
+                      <Input value={img.url} onChange={e => { const imgs = [...form.images]; imgs[ii] = { ...imgs[ii], url: e.target.value, file: undefined }; update('images', imgs); }} placeholder="URL" className="h-7 text-[10px] flex-1" />
                     </div>
-                    <Input value={img.alt_text} onChange={e => { const imgs = [...form.images]; imgs[ii] = { ...imgs[ii], alt_text: e.target.value }; update('images', imgs); }} placeholder="Alt text (SEO)" className="h-8 text-xs" />
+                    <Input value={img.alt_text} onChange={e => { const imgs = [...form.images]; imgs[ii] = { ...imgs[ii], alt_text: e.target.value }; update('images', imgs); }} placeholder="Alt text" className="h-7 text-[10px]" />
                     <div className="flex items-center justify-between">
-                      <button type="button" onClick={() => { const imgs = form.images.map((im, j) => ({ ...im, is_primary: j === ii })); update('images', imgs); }}
-                        className={cn("text-[10px] font-bold px-2.5 py-1 rounded-md border", img.is_primary ? "bg-primary text-primary-foreground border-primary" : "text-muted-foreground border-border hover:bg-accent")}>
-                        {img.is_primary ? '★ Hero' : 'Set as Hero'}
+                      <button onClick={() => { const imgs = form.images.map((im, j) => ({ ...im, is_primary: j === ii })); update('images', imgs); }}
+                        className={cn("text-[10px] font-bold px-2 py-0.5 rounded border", img.is_primary ? "bg-primary text-primary-foreground" : "text-muted-foreground border-border hover:bg-accent")}>
+                        {img.is_primary ? '★ Hero' : 'Set Hero'}
                       </button>
-                      <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => update('images', form.images.filter((_, j) => j !== ii))}><Trash2 className="h-3.5 w-3.5" /></Button>
+                      <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => update('images', form.images.filter((_, j) => j !== ii))}><Trash2 className="h-3 w-3" /></Button>
                     </div>
                   </div>
                 </div>
@@ -956,199 +879,176 @@ export const CarUploadWizard = () => {
           </div>
         )}
 
-        {/* STEP 5: Content, Brochures & Offers */}
+        {/* ════ STEP 5: Content, Brochures & Offers ════ */}
         {step === 5 && (
-          <div className="max-w-4xl mx-auto space-y-6">
-            <div className="text-center mb-4">
-              <h3 className="text-lg font-bold">Content, Brochures & Offers</h3>
-              <p className="text-sm text-muted-foreground">Add overview, brochures (upload or URL), pros/cons, and dealer offers</p>
-            </div>
-            <div>
-              <label className="text-xs font-semibold mb-1.5 block">Overview / Description</label>
-              <Textarea value={form.overview} onChange={e => update('overview', e.target.value)} placeholder="The all-new car offers best-in-class mileage..." className="min-h-[120px]" />
+          <div className="max-w-3xl mx-auto space-y-5">
+            <div className="text-center mb-2">
+              <h3 className="text-lg font-bold">Content & Offers</h3>
+              <p className="text-xs text-muted-foreground">Add description, brochure, pros/cons — <strong>all optional</strong></p>
             </div>
 
-            {/* Brochure Section */}
-            <div className="border rounded-xl p-4 bg-card space-y-3">
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-bold flex items-center gap-1.5"><FileUp className="h-4 w-4 text-primary" />Brochures</h4>
-                <Button size="sm" variant="outline" onClick={() => update('brochures', [...form.brochures, { title: '', url: '', variant_name: '', language: 'English' }])}>
-                  <Plus className="h-4 w-4 mr-1" />Add Brochure
+            <div>
+              <label className="text-xs font-semibold mb-1 block">Overview / Description</label>
+              <Textarea value={form.overview} onChange={e => update('overview', e.target.value)} placeholder="Describe the car in 2-3 sentences..." className="min-h-[100px] text-sm" />
+            </div>
+
+            {/* Brochure quick section */}
+            <div className="border rounded-xl p-3 bg-card space-y-2">
+              <h4 className="text-xs font-bold flex items-center gap-1.5"><FileUp className="h-3.5 w-3.5 text-primary" />Brochure</h4>
+              <div className="flex gap-2 items-center">
+                <Input value={form.brochure_url} onChange={e => update('brochure_url', e.target.value)} placeholder="Paste brochure PDF URL" className="h-9 text-sm flex-1" />
+                <span className="text-[10px] text-muted-foreground">or</span>
+                <Button size="sm" variant="outline" onClick={() => update('brochures', [...form.brochures, { title: `${form.name} Brochure`, url: '', variant_name: '', language: 'English' }])} className="gap-1 shrink-0">
+                  <Plus className="h-3.5 w-3.5" />Upload
                 </Button>
               </div>
-
-              {/* Legacy single brochure URL */}
-              <div>
-                <label className="text-[10px] font-medium text-muted-foreground mb-1 flex items-center gap-1"><Link2 className="h-3 w-3" />Main Brochure URL (quick link)</label>
-                <Input value={form.brochure_url} onChange={e => update('brochure_url', e.target.value)} placeholder="https://oem.com/brochure.pdf" className="h-9 text-sm" />
-              </div>
-
-              {form.brochures.length === 0 && (
-                <div className="text-center py-4 text-xs text-muted-foreground">
-                  <FileUp className="h-6 w-6 mx-auto mb-1 opacity-40" />
-                  No brochures added yet. You can upload PDF files or paste URLs.
-                </div>
-              )}
-
-              {form.brochures.map((brochure, bi) => (
-                <div key={bi} className="flex flex-col gap-2 bg-muted/30 rounded-lg border p-3">
-                  <div className="flex items-center gap-2">
-                    <Input value={brochure.title} onChange={e => { const bs = [...form.brochures]; bs[bi] = { ...bs[bi], title: e.target.value }; update('brochures', bs); }} placeholder="Brochure Title" className="h-9 flex-1 text-sm" />
-                    <Select value={brochure.language || 'English'} onValueChange={v => { const bs = [...form.brochures]; bs[bi] = { ...bs[bi], language: v }; update('brochures', bs); }}>
-                      <SelectTrigger className="h-9 w-28 text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="English">English</SelectItem>
-                        <SelectItem value="Hindi">Hindi</SelectItem>
-                        <SelectItem value="Tamil">Tamil</SelectItem>
-                        <SelectItem value="Telugu">Telugu</SelectItem>
-                        <SelectItem value="Marathi">Marathi</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive shrink-0" onClick={() => update('brochures', form.brochures.filter((_, j) => j !== bi))}><Trash2 className="h-4 w-4" /></Button>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Input value={brochure.variant_name} onChange={e => { const bs = [...form.brochures]; bs[bi] = { ...bs[bi], variant_name: e.target.value }; update('brochures', bs); }} placeholder="Variant (optional)" className="h-9 w-40 text-xs" />
-                    <div className="flex gap-2 flex-1">
-                      <label className="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-primary/40 text-xs font-semibold text-primary hover:bg-primary/5 shrink-0">
-                        <Upload className="h-3.5 w-3.5" />Upload PDF
-                        <input type="file" accept=".pdf,.doc,.docx" className="hidden" onChange={e => {
-                          const file = e.target.files?.[0];
-                          if (file) { const bs = [...form.brochures]; bs[bi] = { ...bs[bi], file, url: file.name }; update('brochures', bs); }
-                        }} />
-                      </label>
-                      <Input value={brochure.file ? brochure.file.name : brochure.url} onChange={e => { const bs = [...form.brochures]; bs[bi] = { ...bs[bi], url: e.target.value, file: undefined }; update('brochures', bs); }} placeholder="Or paste brochure URL" className="h-9 text-xs flex-1" />
-                    </div>
-                  </div>
-                  {brochure.file && (
-                    <Badge variant="outline" className="w-fit text-[10px]">📎 {brochure.file.name} ({(brochure.file.size / 1024 / 1024).toFixed(1)} MB)</Badge>
-                  )}
+              {form.brochures.map((b, bi) => (
+                <div key={bi} className="flex items-center gap-2 bg-muted/20 rounded-lg p-2">
+                  <Input value={b.title} onChange={e => { const bs = [...form.brochures]; bs[bi] = { ...bs[bi], title: e.target.value }; update('brochures', bs); }} placeholder="Title" className="h-8 text-xs flex-1" />
+                  <Select value={b.language || 'English'} onValueChange={v => { const bs = [...form.brochures]; bs[bi] = { ...bs[bi], language: v }; update('brochures', bs); }}>
+                    <SelectTrigger className="h-8 w-24 text-[10px]"><SelectValue /></SelectTrigger>
+                    <SelectContent>{['English','Hindi','Tamil','Telugu','Marathi'].map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent>
+                  </Select>
+                  <label className="cursor-pointer px-2 py-1 rounded border border-dashed border-primary/30 text-[10px] text-primary font-semibold hover:bg-primary/5 shrink-0">
+                    {b.file ? `📎 ${b.file.name.slice(0, 15)}` : '📄 Upload PDF'}
+                    <input type="file" accept=".pdf,.doc,.docx" className="hidden" onChange={e => { const file = e.target.files?.[0]; if (file) { const bs = [...form.brochures]; bs[bi] = { ...bs[bi], file, url: file.name }; update('brochures', bs); } }} />
+                  </label>
+                  {!b.file && <Input value={b.url} onChange={e => { const bs = [...form.brochures]; bs[bi] = { ...bs[bi], url: e.target.value }; update('brochures', bs); }} placeholder="URL" className="h-8 text-[10px] flex-1" />}
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive shrink-0" onClick={() => update('brochures', form.brochures.filter((_, j) => j !== bi))}><Trash2 className="h-3.5 w-3.5" /></Button>
                 </div>
               ))}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Pros / Cons / Highlights */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
-                <div className="flex items-center gap-1.5 mb-1.5"><ThumbsUp className="h-3.5 w-3.5 text-emerald-500" /><span className="text-xs font-semibold">Pros (one per line)</span></div>
-                <Textarea value={form.pros} onChange={e => update('pros', e.target.value)} placeholder={"Great mileage\nSpacious cabin\n6 Airbags standard"} className="min-h-[120px] text-sm" />
+                <div className="flex items-center gap-1 mb-1"><ThumbsUp className="h-3 w-3 text-emerald-500" /><span className="text-xs font-semibold">Pros</span></div>
+                <Textarea value={form.pros} onChange={e => update('pros', e.target.value)} placeholder={"Great mileage\nSpacious cabin"} className="min-h-[90px] text-xs" />
               </div>
               <div>
-                <div className="flex items-center gap-1.5 mb-1.5"><ThumbsDown className="h-3.5 w-3.5 text-red-500" /><span className="text-xs font-semibold">Cons (one per line)</span></div>
-                <Textarea value={form.cons} onChange={e => update('cons', e.target.value)} placeholder={"No diesel option\nBasic interior\nSmall boot"} className="min-h-[120px] text-sm" />
+                <div className="flex items-center gap-1 mb-1"><ThumbsDown className="h-3 w-3 text-red-500" /><span className="text-xs font-semibold">Cons</span></div>
+                <Textarea value={form.cons} onChange={e => update('cons', e.target.value)} placeholder={"No diesel option\nSmall boot"} className="min-h-[90px] text-xs" />
               </div>
               <div>
-                <div className="flex items-center gap-1.5 mb-1.5"><Star className="h-3.5 w-3.5 text-amber-500" /><span className="text-xs font-semibold">Key Highlights (one per line)</span></div>
-                <Textarea value={form.key_highlights} onChange={e => update('key_highlights', e.target.value)} placeholder={"Best mileage in segment\n6 Airbags\nSunroof available"} className="min-h-[120px] text-sm" />
+                <div className="flex items-center gap-1 mb-1"><Star className="h-3 w-3 text-amber-500" /><span className="text-xs font-semibold">Key Highlights</span></div>
+                <Textarea value={form.key_highlights} onChange={e => update('key_highlights', e.target.value)} placeholder={"Best mileage\n6 Airbags"} className="min-h-[90px] text-xs" />
               </div>
-            </div>
-            <div>
-              <label className="text-xs font-semibold mb-1.5 block">Competitors (comma separated slugs)</label>
-              <Input value={form.competitors} onChange={e => update('competitors', e.target.value)} placeholder="hyundai-i20, tata-altroz" className="font-mono text-xs" />
             </div>
 
-            <div className="border-t pt-4">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="text-sm font-bold flex items-center gap-1.5"><Tag className="h-4 w-4" />Dealer Offers</h4>
-                <Button size="sm" variant="outline" onClick={() => update('offers', [...form.offers, { title: '', description: '', discount: '', offer_type: 'cashback', valid_till: '' }])}>
-                  <Plus className="h-4 w-4 mr-1" />Add Offer
+            <div>
+              <label className="text-xs font-semibold mb-1 block">Competitors (comma separated)</label>
+              <Input value={form.competitors} onChange={e => update('competitors', e.target.value)} placeholder="hyundai-i20, tata-altroz" className="h-9 text-xs font-mono" />
+            </div>
+
+            {/* Offers */}
+            <div className="border-t pt-3">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-xs font-bold flex items-center gap-1"><Tag className="h-3.5 w-3.5" />Dealer Offers</h4>
+                <Button size="sm" variant="outline" onClick={() => update('offers', [...form.offers, { title: '', description: '', discount: '', offer_type: 'cashback', valid_till: '' }])} className="gap-1 text-xs h-7">
+                  <Plus className="h-3.5 w-3.5" />Add Offer
                 </Button>
               </div>
               {form.offers.map((offer, oi) => (
-                <div key={oi} className="flex items-center gap-2 bg-card rounded-lg border p-3 mb-2">
-                  <Input value={offer.title} onChange={e => { const os = [...form.offers]; os[oi] = { ...os[oi], title: e.target.value }; update('offers', os); }} placeholder="Cash Discount" className="h-9 w-36" />
-                  <Input value={offer.discount} onChange={e => { const os = [...form.offers]; os[oi] = { ...os[oi], discount: e.target.value }; update('offers', os); }} placeholder="₹25,000" className="h-9 w-24" />
+                <div key={oi} className="flex flex-wrap items-center gap-2 bg-card rounded-lg border p-2 mb-2">
+                  <Input value={offer.title} onChange={e => { const os = [...form.offers]; os[oi] = { ...os[oi], title: e.target.value }; update('offers', os); }} placeholder="Title" className="h-8 w-32 text-xs" />
+                  <Input value={offer.discount} onChange={e => { const os = [...form.offers]; os[oi] = { ...os[oi], discount: e.target.value }; update('offers', os); }} placeholder="₹25,000" className="h-8 w-20 text-xs" />
                   <Select value={offer.offer_type} onValueChange={v => { const os = [...form.offers]; os[oi] = { ...os[oi], offer_type: v }; update('offers', os); }}>
-                    <SelectTrigger className="h-9 w-32"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-8 w-28 text-[10px]"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="cashback">Cash Discount</SelectItem>
-                      <SelectItem value="exchange">Exchange Bonus</SelectItem>
+                      <SelectItem value="cashback">Cash</SelectItem>
+                      <SelectItem value="exchange">Exchange</SelectItem>
                       <SelectItem value="accessory">Accessories</SelectItem>
                       <SelectItem value="finance">Finance</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Input value={offer.description} onChange={e => { const os = [...form.offers]; os[oi] = { ...os[oi], description: e.target.value }; update('offers', os); }} placeholder="Description" className="h-9 flex-1" />
-                  <Input type="date" value={offer.valid_till} onChange={e => { const os = [...form.offers]; os[oi] = { ...os[oi], valid_till: e.target.value }; update('offers', os); }} className="h-9 w-36" />
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => update('offers', form.offers.filter((_, j) => j !== oi))}><Trash2 className="h-4 w-4" /></Button>
+                  <Input value={offer.description} onChange={e => { const os = [...form.offers]; os[oi] = { ...os[oi], description: e.target.value }; update('offers', os); }} placeholder="Description" className="h-8 flex-1 text-xs min-w-[100px]" />
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => update('offers', form.offers.filter((_, j) => j !== oi))}><Trash2 className="h-3.5 w-3.5" /></Button>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* STEP 6: Review */}
+        {/* ════ STEP 6: Review ════ */}
         {step === 6 && (
-          <div className="max-w-3xl mx-auto space-y-4">
-            <div className="text-center mb-6">
-              <div className="w-14 h-14 rounded-2xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mx-auto mb-3">
-                <CheckCircle2 className="h-7 w-7 text-emerald-600 dark:text-emerald-400" />
+          <div className="max-w-2xl mx-auto space-y-4">
+            <div className="text-center mb-4">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mx-auto mb-2">
+                <CheckCircle2 className="h-6 w-6 text-emerald-600" />
               </div>
-              <h3 className="text-lg font-bold">Review & Publish</h3>
-              <p className="text-sm text-muted-foreground">Review everything before saving to the website</p>
+              <h3 className="text-lg font-bold">Ready to Save!</h3>
+              <p className="text-xs text-muted-foreground">Review your data below, then hit Save</p>
             </div>
 
-            <div className="border rounded-xl p-5 bg-card">
-              <h4 className="text-sm font-bold mb-4 flex items-center gap-2"><Eye className="h-4 w-4" />Car Summary</h4>
-              <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
-                <div className="flex justify-between"><span className="text-muted-foreground">Brand</span><span className="font-semibold">{form.brand || '—'}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Car Name</span><span className="font-semibold">{form.name || '—'}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Slug</span><span className="font-mono text-xs">{form.slug || '—'}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Body Type</span><span>{form.body_type}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Price Range</span><span>{form.price_range || '—'}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Availability</span><span>{form.availability}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Fuel Types</span><span>{form.fuel_types.join(', ')}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Transmission</span><span>{form.transmission_types.join(', ')}</span></div>
+            {/* Summary card */}
+            <div className="border rounded-xl p-4 bg-card">
+              <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
+                {[
+                  ['Brand', form.brand],
+                  ['Car Name', form.name],
+                  ['Body Type', form.body_type],
+                  ['Slug', form.slug],
+                  ['Fuel', form.fuel_types.join(', ')],
+                  ['Transmission', form.transmission_types.join(', ')],
+                  ['Price Range', form.price_range || autoPriceRange || '—'],
+                  ['Availability', form.availability],
+                ].map(([label, val]) => (
+                  <div key={label as string} className="flex justify-between py-0.5 border-b border-dashed border-muted/50">
+                    <span className="text-muted-foreground text-xs">{label}</span>
+                    <span className="font-medium text-xs">{val || '—'}</span>
+                  </div>
+                ))}
               </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            {/* Counts */}
+            <div className="grid grid-cols-5 gap-2">
               {[
-                { label: 'Variants', count: form.variants.length, icon: Layers, color: 'text-blue-600' },
-                { label: 'Colors', count: form.colors.length, icon: Palette, color: 'text-purple-600' },
-                { label: 'Gallery', count: form.images.length, icon: ImageIcon, color: 'text-emerald-600' },
-                { label: 'Specs', count: form.specifications.filter(s => s.value).length, icon: Gauge, color: 'text-amber-600' },
-                { label: 'Brochures', count: form.brochures.length + (form.brochure_url ? 1 : 0), icon: FileUp, color: 'text-pink-600' },
+                { label: 'Variants', count: form.variants.length, Icon: Layers, color: 'text-blue-600' },
+                { label: 'Colors', count: form.colors.length, Icon: Palette, color: 'text-purple-600' },
+                { label: 'Gallery', count: form.images.length, Icon: ImageIcon, color: 'text-emerald-600' },
+                { label: 'Specs', count: form.specifications.filter(s => s.value).length, Icon: Gauge, color: 'text-amber-600' },
+                { label: 'Brochures', count: form.brochures.length + (form.brochure_url ? 1 : 0), Icon: FileUp, color: 'text-pink-600' },
               ].map(item => (
-                <div key={item.label} className="border rounded-xl p-3 bg-card text-center">
-                  <item.icon className={cn("h-5 w-5 mx-auto mb-1", item.color)} />
-                  <div className="text-lg font-bold">{item.count}</div>
-                  <div className="text-[10px] text-muted-foreground">{item.label}</div>
+                <div key={item.label} className="border rounded-lg p-2 text-center bg-card">
+                  <item.Icon className={cn("h-4 w-4 mx-auto mb-0.5", item.color)} />
+                  <div className="text-base font-bold">{item.count}</div>
+                  <div className="text-[9px] text-muted-foreground">{item.label}</div>
                 </div>
               ))}
             </div>
 
             {form.variants.length === 0 && (
-              <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-sm dark:bg-amber-950/20 dark:border-amber-800 dark:text-amber-400">
-                <AlertCircle className="h-4 w-4" />No variants — pricing details won't show on website
+              <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-xs dark:bg-amber-950/20 dark:border-amber-800 dark:text-amber-400">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" />No variants added — go back to Step 2 to add pricing
               </div>
             )}
 
             <Button size="lg" className="w-full gap-2 h-12 text-base font-bold" onClick={handleSave} disabled={isSaving || !form.name || !form.brand}>
-              {isSaving ? <><Loader2 className="h-5 w-5 animate-spin" />Saving to database...</> : <><Save className="h-5 w-5" />Save & Publish to Website</>}
+              {isSaving ? <><Loader2 className="h-5 w-5 animate-spin" />Saving...</> : <><Save className="h-5 w-5" />Save & Publish</>}
             </Button>
           </div>
         )}
       </div>
 
-      {/* ─── Bottom Navigation ─── */}
-      <div className="border-t bg-card px-6 py-3 flex items-center justify-between">
-        <Button variant="outline" onClick={goBack} disabled={step === 0} className="gap-1.5">
+      {/* ─── Bottom Nav ─── */}
+      <div className="border-t bg-card px-4 py-2.5 flex items-center justify-between">
+        <Button variant="outline" size="sm" onClick={goBack} disabled={step === 0} className="gap-1">
           <ChevronLeft className="h-4 w-4" />Back
         </Button>
 
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span className="font-semibold">{step + 1}</span>
-          <span>of</span>
-          <span className="font-semibold">{STEPS.length}</span>
-          <span>— {STEPS[step].label}</span>
+        <div className="text-[11px] text-muted-foreground">
+          <span className="font-bold">{step + 1}</span> of {STEPS.length} — {STEPS[step].label}
+          {step >= 3 && step <= 5 && <span className="ml-1.5 text-primary font-medium">(optional)</span>}
         </div>
 
         {step < STEPS.length - 1 ? (
-          <Button onClick={goNext} className="gap-1.5 min-w-[140px]">
-            Next Step<ArrowRight className="h-4 w-4" />
+          <Button onClick={goNext} size="sm" className="gap-1 min-w-[120px]">
+            {canProceed ? 'Next' : 'Complete to proceed'}<ArrowRight className="h-4 w-4" />
           </Button>
         ) : (
-          <Button onClick={handleSave} disabled={isSaving || !form.name || !form.brand} className="gap-1.5 min-w-[140px]">
-            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            Save & Publish
+          <Button onClick={handleSave} disabled={isSaving} size="sm" className="gap-1 min-w-[120px]">
+            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}Save
           </Button>
         )}
       </div>
