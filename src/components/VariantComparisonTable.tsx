@@ -97,11 +97,11 @@ export const VariantComparisonTable = ({
         <ScrollArea className="w-full">
           <div className="min-w-[600px]">
             {/* Header Row - Variant Names */}
-            <div className="grid border-b border-border bg-muted/50" style={{ gridTemplateColumns: `200px repeat(${variants.length}, minmax(160px, 1fr))` }}>
+            <div className="grid border-b border-border bg-muted/50" style={{ gridTemplateColumns: `200px repeat(${displayVariants.length}, minmax(160px, 1fr))` }}>
               <div className="p-4 font-semibold text-sm text-muted-foreground sticky left-0 bg-muted/50 z-10">
                 Feature
               </div>
-              {variants.map((variant, index) => (
+              {displayVariants.map((variant, index) => (
                 <div
                   key={index}
                   className={cn(
@@ -130,11 +130,11 @@ export const VariantComparisonTable = ({
             </div>
 
             {/* Price Row */}
-            <div className="grid border-b border-border bg-gradient-to-r from-primary/5 to-success/5" style={{ gridTemplateColumns: `200px repeat(${variants.length}, minmax(160px, 1fr))` }}>
+            <div className="grid border-b border-border bg-gradient-to-r from-primary/5 to-success/5" style={{ gridTemplateColumns: `200px repeat(${displayVariants.length}, minmax(160px, 1fr))` }}>
               <div className="p-4 font-semibold text-sm text-foreground sticky left-0 bg-gradient-to-r from-primary/5 to-transparent z-10">
                 Ex-Showroom Price
               </div>
-              {variants.map((variant, index) => {
+              {displayVariants.map((variant, index) => {
                 const price = getNumericPrice(variant);
                 return (
                   <div key={index} className="p-4 text-center">
@@ -151,7 +151,7 @@ export const VariantComparisonTable = ({
             </div>
 
             {/* On-Road Price Row with State Selector */}
-            <div className="grid border-b border-border bg-success/5" style={{ gridTemplateColumns: `200px repeat(${variants.length}, minmax(160px, 1fr))` }}>
+            <div className="grid border-b border-border bg-success/5" style={{ gridTemplateColumns: `200px repeat(${displayVariants.length}, minmax(160px, 1fr))` }}>
               <div className="p-4 sticky left-0 bg-success/5 z-10">
                 <div className="flex flex-col gap-2">
                   <span className="font-semibold text-sm text-foreground flex items-center gap-1">
@@ -172,7 +172,7 @@ export const VariantComparisonTable = ({
                   </Select>
                 </div>
               </div>
-              {variants.map((variant, index) => {
+              {displayVariants.map((variant, index) => {
                 const price = getNumericPrice(variant);
                 const breakup = calculateStatePriceBreakup(price, selectedState);
                 const selectedStateName = stateRates.find(s => s.code === selectedState)?.name || "Delhi";
@@ -188,7 +188,7 @@ export const VariantComparisonTable = ({
             </div>
 
             {/* Toggle for City-wise Comparison */}
-            <div className="grid border-b border-border bg-muted/30" style={{ gridTemplateColumns: `200px repeat(${variants.length}, minmax(160px, 1fr))` }}>
+            <div className="grid border-b border-border bg-muted/30" style={{ gridTemplateColumns: `200px repeat(${displayVariants.length}, minmax(160px, 1fr))` }}>
               <div className="p-2 sticky left-0 bg-muted/30 z-10">
                 <Button
                   variant="ghost"
@@ -200,7 +200,7 @@ export const VariantComparisonTable = ({
                   {showStatePricing ? "Hide" : "Compare"} City Prices
                 </Button>
               </div>
-              {variants.map((_, index) => (
+              {displayVariants.map((_, index) => (
                 <div key={index} className="p-2" />
               ))}
             </div>
@@ -213,7 +213,7 @@ export const VariantComparisonTable = ({
                   "grid border-b border-border/50",
                   selectedState === city.code ? "bg-primary/5" : "bg-card"
                 )}
-                style={{ gridTemplateColumns: `200px repeat(${variants.length}, minmax(160px, 1fr))` }}
+                style={{ gridTemplateColumns: `200px repeat(${displayVariants.length}, minmax(160px, 1fr))` }}
               >
                 <div 
                   className={cn(
@@ -228,7 +228,7 @@ export const VariantComparisonTable = ({
                     <Badge variant="default" className="text-[10px] px-1.5 py-0">Selected</Badge>
                   )}
                 </div>
-                {variants.map((variant, variantIndex) => {
+                {displayVariants.map((variant, variantIndex) => {
                   const price = getNumericPrice(variant);
                   const breakup = calculateStatePriceBreakup(price, city.code);
                   return (
@@ -253,12 +253,12 @@ export const VariantComparisonTable = ({
                   "grid border-b border-border/50",
                   featureIndex % 2 === 0 ? "bg-card" : "bg-muted/20"
                 )}
-                style={{ gridTemplateColumns: `200px repeat(${variants.length}, minmax(160px, 1fr))` }}
+                style={{ gridTemplateColumns: `200px repeat(${displayVariants.length}, minmax(160px, 1fr))` }}
               >
                 <div className="p-3 text-sm text-foreground sticky left-0 z-10" style={{ backgroundColor: featureIndex % 2 === 0 ? 'hsl(var(--card))' : 'hsl(var(--muted) / 0.2)' }}>
                   {feature}
                 </div>
-                {variants.map((variant, variantIndex) => {
+                {displayVariants.map((variant, variantIndex) => {
                   const hasFeature = variant.features.includes(feature);
                   return (
                     <div key={variantIndex} className="p-3 flex items-center justify-center">
