@@ -703,10 +703,7 @@ export const CarUploadWizard = () => {
                       </div>
                       <div>
                         <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Transmission</label>
-                        <Select value={v.transmission} onValueChange={val => { const vs = [...form.variants]; vs[vi] = { ...vs[vi], transmission: val }; update('variants', vs); }}>
-                          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                          <SelectContent>{TRANSMISSION_OPTIONS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-                        </Select>
+                        <SelectWithCustom value={v.transmission} onChange={val => { const vs = [...form.variants]; vs[vi] = { ...vs[vi], transmission: val }; update('variants', vs); }} options={TRANSMISSION_OPTIONS} className="h-9" />
                       </div>
                     </div>
 
