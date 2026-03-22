@@ -210,6 +210,9 @@ const SelfDriveRentals = () => {
           </div>
         </section>
 
+        {/* Document Requirements Bar */}
+        <RentalDocRequirements />
+
         {/* Filters */}
         <section className="py-6 border-b border-border">
           <div className="container mx-auto px-4">
