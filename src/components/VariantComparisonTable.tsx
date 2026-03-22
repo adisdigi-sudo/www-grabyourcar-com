@@ -37,9 +37,17 @@ export const VariantComparisonTable = ({
   const [showFullTable, setShowFullTable] = useState(false);
   const [selectedState, setSelectedState] = useState("DL");
   const [showStatePricing, setShowStatePricing] = useState(false);
+  const [selectedFuel, setSelectedFuel] = useState("All");
 
-  // Extract all unique features across all variants
-  const allFeatures = [...new Set(variants.flatMap((v) => v.features))];
+  // Fuel type filtering
+  const fuelTypes = useMemo(() => extractFuelTypes(variants), [variants]);
+  const displayVariants = useMemo(() => {
+    if (selectedFuel === "All" || fuelTypes.length <= 1) return variants;
+    return variants.filter(v => (v.fuelType || "") === selectedFuel);
+  }, [variants, selectedFuel, fuelTypes]);
+
+  // Extract all unique features across displayed variants
+  const allFeatures = [...new Set(displayVariants.flatMap((v) => v.features))];
 
   // Group features for display (show top 8 initially)
   const displayedFeatures = showFullTable ? allFeatures : allFeatures.slice(0, 8);
