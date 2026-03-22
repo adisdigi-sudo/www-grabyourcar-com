@@ -643,25 +643,68 @@ export const CarUploadWizard = () => {
               <p className="text-xs text-muted-foreground">Enter ex-showroom price → RTO, Insurance, TCS auto-calculate</p>
             </div>
 
+            {/* Bulk Variant Template */}
+            <div className="border rounded-xl bg-muted/20 p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" />
+                <span className="text-sm font-semibold">Quick Add Variant Templates</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Select a fuel type to auto-generate common Indian variant names</p>
+              
+              <div className="flex flex-wrap gap-2">
+                {(form.fuel_types.length > 0 ? form.fuel_types : FUEL_OPTIONS.slice(0, 3)).map(fuel => {
+                  // Brand-aware Indian variant name templates
+                  const brandTemplates: Record<string, string[]> = {
+                    'Maruti Suzuki': ['LXi', 'VXi', 'ZXi', 'ZXi+', 'Alpha'],
+                    'Tata': ['Smart', 'Pure', 'Adventure', 'Accomplished', 'Creative', 'Fearless'],
+                    'Hyundai': ['E', 'EX', 'S', 'SX', 'SX(O)', 'Asta'],
+                    'Mahindra': ['MX', 'AX3', 'AX5', 'AX7', 'AX7L'],
+                    'Kia': ['HTE', 'HTK', 'HTK+', 'HTX', 'HTX+', 'GTX+'],
+                    'Toyota': ['E', 'G', 'S', 'V', 'VX', 'ZX'],
+                    'Honda': ['E', 'S', 'V', 'VX', 'ZX'],
+                  };
+                  const defaultNames = ['LX', 'VX', 'ZX', 'ZX+', 'Top'];
+                  const variantNames = brandTemplates[form.brand] || defaultNames;
+
+                  return (
+                    <Button key={fuel} variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => {
+                      const newVariants = variantNames.map(n => ({
+                        name: `${n} ${fuel}`, price: '', price_numeric: '', fuel_type: fuel,
+                        transmission: form.transmission_types[0] || 'Manual',
+                        ex_showroom: '', rto: '', insurance: '', tcs: '', on_road_price: '', features: '',
+                        state_code: 'DL', city: '', ownership_type: 'individual',
+                      }));
+                      update('variants', [...form.variants, ...newVariants]);
+                      toast.success(`Added ${variantNames.length} ${fuel} variants (${variantNames.join(', ')})`);
+                    }}>
+                      <Plus className="h-3 w-3" />{fuel} ({(brandTemplates[form.brand] || defaultNames).length} variants)
+                    </Button>
+                  );
+                })}
+              </div>
+
+              {form.brand && (
+                <p className="text-[10px] text-muted-foreground">
+                  Template: {form.brand} → {(() => {
+                    const bt: Record<string, string[]> = {
+                      'Maruti Suzuki': ['LXi', 'VXi', 'ZXi', 'ZXi+', 'Alpha'],
+                      'Tata': ['Smart', 'Pure', 'Adventure', 'Accomplished', 'Creative', 'Fearless'],
+                      'Hyundai': ['E', 'EX', 'S', 'SX', 'SX(O)', 'Asta'],
+                      'Mahindra': ['MX', 'AX3', 'AX5', 'AX7', 'AX7L'],
+                      'Kia': ['HTE', 'HTK', 'HTK+', 'HTX', 'HTX+', 'GTX+'],
+                      'Toyota': ['E', 'G', 'S', 'V', 'VX', 'ZX'],
+                      'Honda': ['E', 'S', 'V', 'VX', 'ZX'],
+                    };
+                    return (bt[form.brand] || ['LX', 'VX', 'ZX', 'ZX+', 'Top']).join(', ');
+                  })()}
+                </p>
+              )}
+            </div>
+
             <div className="flex items-center justify-center gap-2 flex-wrap">
               <Button onClick={addVariant} size="sm" className="gap-1.5">
-                <Plus className="h-4 w-4" />Add Variant
+                <Plus className="h-4 w-4" />Add Single Variant
               </Button>
-              {form.fuel_types.length > 1 && form.fuel_types.map(fuel => (
-                <Button key={fuel} variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => {
-                  const commonNames = ['Base', 'Mid', 'Top', 'Premium'];
-                  const newVariants = commonNames.map(n => ({
-                    name: `${n} ${fuel}`, price: '', price_numeric: '', fuel_type: fuel,
-                    transmission: form.transmission_types[0] || 'Manual',
-                    ex_showroom: '', rto: '', insurance: '', tcs: '', on_road_price: '', features: '',
-                    state_code: 'DL', city: '', ownership_type: 'individual',
-                  }));
-                  update('variants', [...form.variants, ...newVariants]);
-                  toast.success(`Added 4 ${fuel} variants`);
-                }}>
-                  <Plus className="h-3 w-3" />Quick Add {fuel}
-                </Button>
-              ))}
               {form.variants.length > 0 && (
                 <span className="text-xs text-muted-foreground">{form.variants.length} variant{form.variants.length > 1 ? 's' : ''} added</span>
               )}
@@ -671,7 +714,7 @@ export const CarUploadWizard = () => {
               <div className="border-2 border-dashed border-primary/20 rounded-xl p-8 text-center bg-primary/5">
                 <Layers className="h-8 w-8 text-primary/40 mx-auto mb-2" />
                 <p className="text-sm font-semibold">No variants yet</p>
-                <p className="text-xs text-muted-foreground mt-1">Add variants like LXi, VXi, ZXi+</p>
+                <p className="text-xs text-muted-foreground mt-1">Use templates above or add manually</p>
                 <Button onClick={addVariant} size="sm" className="mt-3 gap-1.5"><Plus className="h-4 w-4" />Add First Variant</Button>
               </div>
             )}
