@@ -2,9 +2,11 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, CheckCircle2, ShoppingCart, LayoutDashboard } from "lucide-react";
+import { Shield, CheckCircle2, ShoppingCart, LayoutDashboard, Search, ClipboardCheck } from "lucide-react";
 import { HSRPWorkspace } from "../hsrp/HSRPWorkspace";
 import { HSRPAbandonedCarts } from "../hsrp/HSRPAbandonedCarts";
+import { HSRPOrderTracker } from "@/components/hsrp/HSRPOrderTracker";
+import { HSRPComplianceChecker } from "@/components/hsrp/HSRPComplianceChecker";
 
 export function HSRPVerticalWorkspace() {
   const [tab, setTab] = useState("pipeline");
@@ -38,12 +40,34 @@ export function HSRPVerticalWorkspace() {
           <TabsTrigger value="abandoned" className="gap-1.5">
             <ShoppingCart className="h-4 w-4" /> Abandoned Carts
           </TabsTrigger>
+          <TabsTrigger value="tools" className="gap-1.5">
+            <ClipboardCheck className="h-4 w-4" /> Customer Tools
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="pipeline">
           <HSRPWorkspace />
         </TabsContent>
         <TabsContent value="abandoned">
           <HSRPAbandonedCarts />
+        </TabsContent>
+        <TabsContent value="tools" className="space-y-4">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="mb-4 flex items-start gap-3">
+                <div className="rounded-xl bg-primary/10 p-2">
+                  <Search className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-foreground">Public HSRP tools</h3>
+                  <p className="text-sm text-muted-foreground">Use the same tracking and compliance widgets customers see on the site.</p>
+                </div>
+              </div>
+              <div className="grid gap-4 xl:grid-cols-2">
+                <HSRPOrderTracker />
+                <HSRPComplianceChecker />
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

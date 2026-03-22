@@ -49,6 +49,7 @@ import { LoansVerticalWorkspace } from "./verticals/LoansVerticalWorkspace";
 import { AccessoriesVerticalWorkspace } from "./verticals/AccessoriesVerticalWorkspace";
 import { HSRPVerticalWorkspace } from "./verticals/HSRPVerticalWorkspace";
 import { RentalVerticalWorkspace } from "./verticals/RentalVerticalWorkspace";
+import { FleetVerticalWorkspace } from "./verticals/FleetVerticalWorkspace";
 type Vertical = "overview" | "insurance" | "car-sales" | "loans" | "accessories" | "hsrp" | "rentals" | "fleet";
 
 const VERTICALS = [
@@ -125,7 +126,7 @@ export function UnifiedMasterCRM() {
       {vertical === "accessories" && <AccessoriesVerticalWorkspace />}
       {vertical === "hsrp" && <HSRPVerticalWorkspace />}
       {vertical === "rentals" && <RentalVerticalWorkspace />}
-      {vertical === "fleet" && <RentalVerticalWorkspace />}
+      {vertical === "fleet" && <FleetVerticalWorkspace />}
     </div>
   );
 }
