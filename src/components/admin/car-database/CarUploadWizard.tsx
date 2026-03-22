@@ -643,10 +643,25 @@ export const CarUploadWizard = () => {
               <p className="text-xs text-muted-foreground">Enter ex-showroom price → RTO, Insurance, TCS auto-calculate</p>
             </div>
 
-            <div className="flex items-center justify-center gap-2">
+            <div className="flex items-center justify-center gap-2 flex-wrap">
               <Button onClick={addVariant} size="sm" className="gap-1.5">
                 <Plus className="h-4 w-4" />Add Variant
               </Button>
+              {form.fuel_types.length > 1 && form.fuel_types.map(fuel => (
+                <Button key={fuel} variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => {
+                  const commonNames = ['Base', 'Mid', 'Top', 'Premium'];
+                  const newVariants = commonNames.map(n => ({
+                    name: `${n} ${fuel}`, price: '', price_numeric: '', fuel_type: fuel,
+                    transmission: form.transmission_types[0] || 'Manual',
+                    ex_showroom: '', rto: '', insurance: '', tcs: '', on_road_price: '', features: '',
+                    state_code: 'DL', city: '', ownership_type: 'individual',
+                  }));
+                  update('variants', [...form.variants, ...newVariants]);
+                  toast.success(`Added 4 ${fuel} variants`);
+                }}>
+                  <Plus className="h-3 w-3" />Quick Add {fuel}
+                </Button>
+              ))}
               {form.variants.length > 0 && (
                 <span className="text-xs text-muted-foreground">{form.variants.length} variant{form.variants.length > 1 ? 's' : ''} added</span>
               )}
@@ -660,6 +675,17 @@ export const CarUploadWizard = () => {
                 <Button onClick={addVariant} size="sm" className="mt-3 gap-1.5"><Plus className="h-4 w-4" />Add First Variant</Button>
               </div>
             )}
+
+            {/* Group variants by fuel type visually */}
+            {(() => {
+              const fuelGroups = new Map<string, number[]>();
+              form.variants.forEach((v, i) => {
+                const fuel = v.fuel_type || 'Other';
+                if (!fuelGroups.has(fuel)) fuelGroups.set(fuel, []);
+                fuelGroups.get(fuel)!.push(i);
+              });
+              const groups = Array.from(fuelGroups.entries());
+              const showHeaders = groups.length > 1;
 
             {form.variants.map((v, vi) => {
               const stateCities = getCitiesForState(v.state_code);
