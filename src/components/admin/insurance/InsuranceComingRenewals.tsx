@@ -70,7 +70,7 @@ export function InsuranceComingRenewals({ policies }: InsuranceComingRenewalsPro
     let all = policies.filter(p => {
       if (!p.expiry_date || p.status === "renewed") return false;
       const d = differenceInDays(new Date(p.expiry_date), now);
-      return d >= -30 && d <= 90; // Include recently expired too
+      return d >= 0 && d <= 90; // Only upcoming, overdue handled in separate tab
     });
 
     if (window_ !== "all") {

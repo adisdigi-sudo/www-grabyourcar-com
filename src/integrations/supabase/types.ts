@@ -5845,6 +5845,9 @@ export type Database = {
           ncb_percentage: number | null
           notes: string | null
           original_lead_id: string | null
+          overdue_custom_reason: string | null
+          overdue_marked_at: string | null
+          overdue_reason: string | null
           phone: string
           picked_up_at: string | null
           picked_up_by: string | null
@@ -5920,6 +5923,9 @@ export type Database = {
           ncb_percentage?: number | null
           notes?: string | null
           original_lead_id?: string | null
+          overdue_custom_reason?: string | null
+          overdue_marked_at?: string | null
+          overdue_reason?: string | null
           phone: string
           picked_up_at?: string | null
           picked_up_by?: string | null
@@ -5995,6 +6001,9 @@ export type Database = {
           ncb_percentage?: number | null
           notes?: string | null
           original_lead_id?: string | null
+          overdue_custom_reason?: string | null
+          overdue_marked_at?: string | null
+          overdue_reason?: string | null
           phone?: string
           picked_up_at?: string | null
           picked_up_by?: string | null

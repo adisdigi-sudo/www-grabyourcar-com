@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { differenceInDays } from "date-fns";
 import {
   UserPlus, Clock, CheckCircle2, XCircle, Shield, TrendingUp,
-  Plus, RefreshCw, FileSpreadsheet, BookOpen, CalendarClock, Wrench
+  Plus, RefreshCw, FileSpreadsheet, BookOpen, CalendarClock, Wrench, AlertTriangle
 } from "lucide-react";
 import { LeadImportDialog } from "../shared/LeadImportDialog";
 import { StageNotificationBanner, buildInsuranceNotifications } from "../shared/StageNotificationBanner";
@@ -20,8 +20,9 @@ import { BulkRenewalQuoteGenerator } from "./BulkRenewalQuoteGenerator";
 import { InsuranceLeadPipeline, normalizeStage, LEAD_SOURCES, type Client } from "./InsuranceLeadPipeline";
 import { InsurancePolicyBook, type PolicyRecord } from "./InsurancePolicyBook";
 import { InsuranceComingRenewals } from "./InsuranceComingRenewals";
+import { InsuranceOverdueRenewals } from "./InsuranceOverdueRenewals";
 
-type ActiveView = "pipeline" | "policy_book" | "renewals" | "bulk_tools";
+type ActiveView = "pipeline" | "policy_book" | "renewals" | "overdue" | "bulk_tools";
 
 type LegacyInsuranceLead = {
   id: string;
@@ -73,7 +74,7 @@ export function InsuranceWorkspace() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("insurance_clients")
-        .select("id, customer_name, phone, email, city, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_insurer, current_policy_type, current_premium, ncb_percentage, previous_claim, policy_expiry_date, policy_start_date, current_policy_number, lead_source, lead_status, assigned_executive, priority, pipeline_stage, contact_attempts, quote_amount, quote_insurer, lost_reason, follow_up_date, follow_up_time, call_status, call_remarks, renewal_reminder_set, renewal_reminder_date, incentive_eligible, notes, retarget_status, journey_last_event, journey_last_event_at, picked_up_by, picked_up_at, created_at, updated_at")
+        .select("id, customer_name, phone, email, city, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_insurer, current_policy_type, current_premium, ncb_percentage, previous_claim, policy_expiry_date, policy_start_date, current_policy_number, lead_source, lead_status, assigned_executive, priority, pipeline_stage, contact_attempts, quote_amount, quote_insurer, lost_reason, follow_up_date, follow_up_time, call_status, call_remarks, renewal_reminder_set, renewal_reminder_date, incentive_eligible, notes, retarget_status, journey_last_event, journey_last_event_at, picked_up_by, picked_up_at, overdue_reason, overdue_custom_reason, overdue_marked_at, created_at, updated_at")
         .order("updated_at", { ascending: false })
         .order("created_at", { ascending: false })
         .limit(1000);
@@ -114,6 +115,10 @@ export function InsuranceWorkspace() {
     const now = new Date();
     return policies.filter(p => p.expiry_date && p.status !== "renewed" && differenceInDays(new Date(p.expiry_date), now) >= 0 && differenceInDays(new Date(p.expiry_date), now) <= 7).length;
   }, [policies]);
+  const overdueCount = useMemo(() => {
+    const now = new Date();
+    return policies.filter(p => p.expiry_date && p.status !== "renewed" && differenceInDays(new Date(p.expiry_date), now) < 0).length;
+  }, [policies]);
 
   const insNotifications = useMemo(() => buildInsuranceNotifications(clients), [clients]);
 
@@ -145,6 +150,7 @@ export function InsuranceWorkspace() {
     { key: "pipeline" as const, label: "Lead Pipeline", icon: Shield, count: totalLeads, urgent: false },
     { key: "policy_book" as const, label: "Policy Book", icon: BookOpen, count: activePolicies, urgent: false },
     { key: "renewals" as const, label: "Coming Renewals", icon: CalendarClock, count: renewalsDue, urgent: urgentRenewals > 0 },
+    { key: "overdue" as const, label: "Overdue", icon: AlertTriangle, count: overdueCount, urgent: overdueCount > 0 },
     { key: "bulk_tools" as const, label: "Bulk Tools", icon: Wrench, count: 0, urgent: false },
   ];
 
@@ -233,6 +239,7 @@ export function InsuranceWorkspace() {
       {activeView === "pipeline" && <InsuranceLeadPipeline clients={clients} isLoading={isLoading} />}
       {activeView === "policy_book" && <InsurancePolicyBook policies={policies} />}
       {activeView === "renewals" && <InsuranceComingRenewals policies={policies as PolicyRecord[]} />}
+      {activeView === "overdue" && <InsuranceOverdueRenewals policies={policies as PolicyRecord[]} clients={clients} />}
       {activeView === "bulk_tools" && <BulkRenewalQuoteGenerator onClose={() => setActiveView("pipeline")} />}
 
       <Dialog open={showAddLead} onOpenChange={setShowAddLead}>
