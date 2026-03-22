@@ -603,14 +603,7 @@ export const CarUploadWizard = () => {
                   </div>
                   <div>
                     <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Availability</label>
-                    <Select value={form.availability} onValueChange={v => update('availability', v)}>
-                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Available">Available</SelectItem>
-                        <SelectItem value="Coming Soon">Coming Soon</SelectItem>
-                        <SelectItem value="Discontinued">Discontinued</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <SelectWithCustom value={form.availability} onChange={v => update('availability', v)} options={['Available', 'Coming Soon', 'Discontinued']} className="h-9" />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
