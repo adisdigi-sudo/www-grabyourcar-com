@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, ReactNode, useCallback, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
@@ -35,10 +35,41 @@ interface VerticalContextType {
 }
 
 const VerticalContext = createContext<VerticalContextType | undefined>(undefined);
+const ACTIVE_VERTICAL_STORAGE_KEY = "gyc_active_vertical_id";
+
+const getStoredActiveVerticalId = () => {
+  if (typeof window === "undefined") return null;
+
+  try {
+    return window.localStorage.getItem(ACTIVE_VERTICAL_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+};
+
+const setStoredActiveVerticalId = (verticalId: string | null) => {
+  if (typeof window === "undefined") return;
+
+  try {
+    if (verticalId) {
+      window.localStorage.setItem(ACTIVE_VERTICAL_STORAGE_KEY, verticalId);
+      return;
+    }
+
+    window.localStorage.removeItem(ACTIVE_VERTICAL_STORAGE_KEY);
+  } catch {
+    // ignore blocked storage
+  }
+};
 
 export const VerticalProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
-  const [activeVertical, setActiveVertical] = useState<BusinessVertical | null>(null);
+  const [activeVertical, setActiveVerticalState] = useState<BusinessVertical | null>(null);
+
+  const setActiveVertical = useCallback((vertical: BusinessVertical | null) => {
+    setActiveVerticalState(vertical);
+    setStoredActiveVerticalId(vertical?.id ?? null);
+  }, []);
 
   // Fetch all verticals
   const { data: allVerticals = [], isLoading: verticalsLoading } = useQuery({
@@ -123,6 +154,39 @@ export const VerticalProvider = ({ children }: { children: ReactNode }) => {
   const availableVerticals = isAdminUser
     ? allVerticals
     : allVerticals.filter(v => userAccess.includes(v.id));
+
+  useEffect(() => {
+    if (!user?.id) {
+      setActiveVerticalState(null);
+      setStoredActiveVerticalId(null);
+      return;
+    }
+
+    if (verticalsLoading || accessLoading) return;
+
+    if (activeVertical && availableVerticals.some(v => v.id === activeVertical.id)) {
+      return;
+    }
+
+    const storedId = getStoredActiveVerticalId();
+    const storedVertical = storedId
+      ? availableVerticals.find(v => v.id === storedId) ?? null
+      : null;
+
+    if (storedVertical) {
+      setActiveVerticalState(storedVertical);
+      return;
+    }
+
+    if (availableVerticals.length === 1) {
+      setActiveVertical(availableVerticals[0]);
+      return;
+    }
+
+    if (activeVertical && !availableVerticals.some(v => v.id === activeVertical.id)) {
+      setActiveVertical(null);
+    }
+  }, [user?.id, verticalsLoading, accessLoading, availableVerticals, activeVertical, setActiveVertical]);
 
   // Check if user is manager in currently active vertical
   const isManagerInVertical = isAdminUser || (
