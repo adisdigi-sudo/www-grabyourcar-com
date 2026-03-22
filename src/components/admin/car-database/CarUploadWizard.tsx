@@ -115,34 +115,88 @@ const formatINR = (num: number) => {
   return `₹${num.toLocaleString('en-IN')}`;
 };
 
-// ─── Searchable Combobox ───
+// ─── Searchable Combobox with Custom Input ───
 const SearchCombobox = ({ value, onChange, options, placeholder }: { value: string; onChange: (v: string) => void; options: string[]; placeholder: string }) => {
   const [open, setOpen] = useState(false);
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="outline" role="combobox" className="w-full justify-between h-11 font-normal text-sm">
-          <span className="truncate">{value || placeholder}</span>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+  const [customMode, setCustomMode] = useState(false);
+  const [customVal, setCustomVal] = useState('');
+  const isCustom = value && !options.includes(value);
+
+  if (customMode || isCustom) {
+    return (
+      <div className="flex gap-1.5">
+        <Input value={isCustom && !customMode ? value : customVal} onChange={e => setCustomVal(e.target.value)} placeholder="Type custom value..." className="h-11 text-sm flex-1" autoFocus />
+        <Button size="sm" variant="default" className="h-11 px-3" onClick={() => { if (customVal.trim()) { onChange(customVal.trim()); setCustomMode(false); setCustomVal(''); } }}>
+          <Check className="h-4 w-4" />
         </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-64 p-0" align="start">
-        <Command>
-          <CommandInput placeholder="Search..." className="h-9" />
-          <CommandList>
-            <CommandEmpty>Not found.</CommandEmpty>
-            <CommandGroup className="max-h-60 overflow-auto">
-              {options.map(o => (
-                <CommandItem key={o} value={o} onSelect={() => { onChange(o); setOpen(false); }}>
-                  <Check className={cn("mr-2 h-4 w-4", value === o ? "opacity-100" : "opacity-0")} />
-                  {o}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+        <Button size="sm" variant="outline" className="h-11 px-3" onClick={() => { setCustomMode(false); setCustomVal(''); if (isCustom) onChange(''); }}>✕</Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex gap-1.5">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button variant="outline" role="combobox" className="flex-1 justify-between h-11 font-normal text-sm">
+            <span className="truncate">{value || placeholder}</span>
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-64 p-0" align="start">
+          <Command>
+            <CommandInput placeholder="Search..." className="h-9" />
+            <CommandList>
+              <CommandEmpty>
+                <button className="w-full text-left px-2 py-1.5 text-xs text-primary hover:underline" onClick={() => { setOpen(false); setCustomMode(true); }}>
+                  + Add custom value
+                </button>
+              </CommandEmpty>
+              <CommandGroup className="max-h-60 overflow-auto">
+                {options.map(o => (
+                  <CommandItem key={o} value={o} onSelect={() => { onChange(o); setOpen(false); }}>
+                    <Check className={cn("mr-2 h-4 w-4", value === o ? "opacity-100" : "opacity-0")} />
+                    {o}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      <Button size="sm" variant="ghost" className="h-11 px-2 text-[10px] text-muted-foreground shrink-0" onClick={() => setCustomMode(true)} title="Add custom">
+        <Plus className="h-3.5 w-3.5" />
+      </Button>
+    </div>
+  );
+};
+
+// ─── Select with Custom "Other" option ───
+const SelectWithCustom = ({ value, onChange, options, placeholder, className: cls }: { value: string; onChange: (v: string) => void; options: string[]; placeholder?: string; className?: string }) => {
+  const [customMode, setCustomMode] = useState(false);
+  const [customVal, setCustomVal] = useState('');
+  const isCustom = value && !options.includes(value) && value !== '_none';
+
+  if (customMode || isCustom) {
+    return (
+      <div className="flex gap-1">
+        <Input value={isCustom && !customMode ? value : customVal} onChange={e => setCustomVal(e.target.value)} placeholder="Custom..." className={cn("text-xs flex-1", cls || 'h-9')} autoFocus />
+        <Button size="icon" variant="default" className={cn("shrink-0", cls || 'h-9 w-9')} onClick={() => { if (customVal.trim()) { onChange(customVal.trim()); setCustomMode(false); setCustomVal(''); } }}><Check className="h-3 w-3" /></Button>
+        <Button size="icon" variant="ghost" className={cn("shrink-0", cls || 'h-9 w-9')} onClick={() => { setCustomMode(false); setCustomVal(''); if (isCustom) onChange(options[0] || ''); }}>✕</Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex gap-1">
+      <Select value={options.includes(value) ? value : '__other'} onValueChange={v => { if (v === '__other') { setCustomMode(true); } else { onChange(v); } }}>
+        <SelectTrigger className={cn(cls || 'h-9')}><SelectValue placeholder={placeholder} /></SelectTrigger>
+        <SelectContent>
+          {options.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+          <SelectItem value="__other" className="text-primary font-medium">+ Custom</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
   );
 };
 
@@ -549,14 +603,7 @@ export const CarUploadWizard = () => {
                   </div>
                   <div>
                     <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Availability</label>
-                    <Select value={form.availability} onValueChange={v => update('availability', v)}>
-                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Available">Available</SelectItem>
-                        <SelectItem value="Coming Soon">Coming Soon</SelectItem>
-                        <SelectItem value="Discontinued">Discontinued</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <SelectWithCustom value={form.availability} onChange={v => update('availability', v)} options={['Available', 'Coming Soon', 'Discontinued']} className="h-9" />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -652,17 +699,11 @@ export const CarUploadWizard = () => {
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Fuel Type</label>
-                        <Select value={v.fuel_type} onValueChange={val => { const vs = [...form.variants]; vs[vi] = recalcVariant({ ...vs[vi], fuel_type: val }); update('variants', vs); }}>
-                          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                          <SelectContent>{FUEL_OPTIONS.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent>
-                        </Select>
+                        <SelectWithCustom value={v.fuel_type} onChange={val => { const vs = [...form.variants]; vs[vi] = recalcVariant({ ...vs[vi], fuel_type: val }); update('variants', vs); }} options={FUEL_OPTIONS} className="h-9" />
                       </div>
                       <div>
                         <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Transmission</label>
-                        <Select value={v.transmission} onValueChange={val => { const vs = [...form.variants]; vs[vi] = { ...vs[vi], transmission: val }; update('variants', vs); }}>
-                          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                          <SelectContent>{TRANSMISSION_OPTIONS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-                        </Select>
+                        <SelectWithCustom value={v.transmission} onChange={val => { const vs = [...form.variants]; vs[vi] = { ...vs[vi], transmission: val }; update('variants', vs); }} options={TRANSMISSION_OPTIONS} className="h-9" />
                       </div>
                     </div>
 
@@ -684,10 +725,7 @@ export const CarUploadWizard = () => {
                       </div>
                       <div>
                         <label className="text-[10px] font-medium text-muted-foreground mb-1 flex items-center gap-1"><User className="h-3 w-3" />Ownership</label>
-                        <Select value={v.ownership_type || 'individual'} onValueChange={val => { const vs = [...form.variants]; vs[vi] = recalcVariant({ ...vs[vi], ownership_type: val }); update('variants', vs); }}>
-                          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                          <SelectContent><SelectItem value="individual">👤 Individual</SelectItem><SelectItem value="corporate">🏢 Corporate</SelectItem></SelectContent>
-                        </Select>
+                        <SelectWithCustom value={v.ownership_type || 'individual'} onChange={val => { const vs = [...form.variants]; vs[vi] = recalcVariant({ ...vs[vi], ownership_type: val }); update('variants', vs); }} options={['individual', 'corporate']} className="h-8" />
                       </div>
                     </div>
 
@@ -905,10 +943,7 @@ export const CarUploadWizard = () => {
               {form.brochures.map((b, bi) => (
                 <div key={bi} className="flex items-center gap-2 bg-muted/20 rounded-lg p-2">
                   <Input value={b.title} onChange={e => { const bs = [...form.brochures]; bs[bi] = { ...bs[bi], title: e.target.value }; update('brochures', bs); }} placeholder="Title" className="h-8 text-xs flex-1" />
-                  <Select value={b.language || 'English'} onValueChange={v => { const bs = [...form.brochures]; bs[bi] = { ...bs[bi], language: v }; update('brochures', bs); }}>
-                    <SelectTrigger className="h-8 w-24 text-[10px]"><SelectValue /></SelectTrigger>
-                    <SelectContent>{['English','Hindi','Tamil','Telugu','Marathi'].map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent>
-                  </Select>
+                  <SelectWithCustom value={b.language || 'English'} onChange={v => { const bs = [...form.brochures]; bs[bi] = { ...bs[bi], language: v }; update('brochures', bs); }} options={['English','Hindi','Tamil','Telugu','Marathi','Kannada','Bengali','Gujarati']} className="h-8" />
                   <label className="cursor-pointer px-2 py-1 rounded border border-dashed border-primary/30 text-[10px] text-primary font-semibold hover:bg-primary/5 shrink-0">
                     {b.file ? `📎 ${b.file.name.slice(0, 15)}` : '📄 Upload PDF'}
                     <input type="file" accept=".pdf,.doc,.docx" className="hidden" onChange={e => { const file = e.target.files?.[0]; if (file) { const bs = [...form.brochures]; bs[bi] = { ...bs[bi], file, url: file.name }; update('brochures', bs); } }} />
@@ -952,15 +987,7 @@ export const CarUploadWizard = () => {
                 <div key={oi} className="flex flex-wrap items-center gap-2 bg-card rounded-lg border p-2 mb-2">
                   <Input value={offer.title} onChange={e => { const os = [...form.offers]; os[oi] = { ...os[oi], title: e.target.value }; update('offers', os); }} placeholder="Title" className="h-8 w-32 text-xs" />
                   <Input value={offer.discount} onChange={e => { const os = [...form.offers]; os[oi] = { ...os[oi], discount: e.target.value }; update('offers', os); }} placeholder="₹25,000" className="h-8 w-20 text-xs" />
-                  <Select value={offer.offer_type} onValueChange={v => { const os = [...form.offers]; os[oi] = { ...os[oi], offer_type: v }; update('offers', os); }}>
-                    <SelectTrigger className="h-8 w-28 text-[10px]"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="cashback">Cash</SelectItem>
-                      <SelectItem value="exchange">Exchange</SelectItem>
-                      <SelectItem value="accessory">Accessories</SelectItem>
-                      <SelectItem value="finance">Finance</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <SelectWithCustom value={offer.offer_type} onChange={v => { const os = [...form.offers]; os[oi] = { ...os[oi], offer_type: v }; update('offers', os); }} options={['cashback','exchange','accessory','finance']} className="h-8" />
                   <Input value={offer.description} onChange={e => { const os = [...form.offers]; os[oi] = { ...os[oi], description: e.target.value }; update('offers', os); }} placeholder="Description" className="h-8 flex-1 text-xs min-w-[100px]" />
                   <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => update('offers', form.offers.filter((_, j) => j !== oi))}><Trash2 className="h-3.5 w-3.5" /></Button>
                 </div>
