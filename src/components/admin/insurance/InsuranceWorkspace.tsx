@@ -20,8 +20,9 @@ import { BulkRenewalQuoteGenerator } from "./BulkRenewalQuoteGenerator";
 import { InsuranceLeadPipeline, normalizeStage, LEAD_SOURCES, type Client } from "./InsuranceLeadPipeline";
 import { InsurancePolicyBook, type PolicyRecord } from "./InsurancePolicyBook";
 import { InsuranceComingRenewals } from "./InsuranceComingRenewals";
+import { InsuranceOverdueRenewals } from "./InsuranceOverdueRenewals";
 
-type ActiveView = "pipeline" | "policy_book" | "renewals" | "bulk_tools";
+type ActiveView = "pipeline" | "policy_book" | "renewals" | "overdue" | "bulk_tools";
 
 type LegacyInsuranceLead = {
   id: string;
