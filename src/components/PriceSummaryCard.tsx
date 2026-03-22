@@ -96,6 +96,19 @@ export const PriceSummaryCard = ({
   const [selectedAccessories, setSelectedAccessories] = useState<string[]>([]);
   const [showFullBreakup, setShowFullBreakup] = useState(false);
   const [showEMIModal, setShowEMIModal] = useState(false);
+  const [selectedFuel, setSelectedFuel] = useState("All");
+
+  // Fuel type filtering
+  const fuelTypes = useMemo(() => extractFuelTypes(variants), [variants]);
+  const filteredVariants = useMemo(() => {
+    if (selectedFuel === "All" || fuelTypes.length <= 1) return variants;
+    return variants.filter(v => (v.fuelType || "") === selectedFuel);
+  }, [variants, selectedFuel, fuelTypes]);
+
+  const handleFuelChange = (fuel: string) => {
+    setSelectedFuel(fuel);
+    onVariantChange(0);
+  };
   
   // Fetch EMI PDF settings from backend
   const { config: emiPdfConfig } = useEMIPDFSettings();
