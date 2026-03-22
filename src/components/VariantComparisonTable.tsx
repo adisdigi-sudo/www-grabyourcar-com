@@ -60,7 +60,7 @@ export const VariantComparisonTable = ({
   };
 
   // Calculate price difference from base variant
-  const basePrice = getNumericPrice(variants[0]);
+  const basePrice = getNumericPrice(displayVariants[0] || variants[0]);
 
   const formatPriceDiff = (price: number): string => {
     const diff = price - basePrice;

@@ -175,6 +175,16 @@ export const PriceSummaryCard = ({
       <CardContent className="p-4 md:p-5 space-y-4">
         {/* Variant Selection */}
         <div className="space-y-3">
+          {/* Fuel Type Tabs */}
+          {fuelTypes.length > 1 && (
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Fuel Type
+              </label>
+              <FuelTypeTabs fuelTypes={fuelTypes} selected={selectedFuel} onChange={handleFuelChange} showAll={true} size="sm" />
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
@@ -188,7 +198,7 @@ export const PriceSummaryCard = ({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {variants.map((variant, index) => (
+                  {filteredVariants.map((variant, index) => (
                     <SelectItem key={index} value={index.toString()} className="py-2">
                       <div className="flex flex-col items-start">
                         <span className="font-medium">{variant.name}</span>

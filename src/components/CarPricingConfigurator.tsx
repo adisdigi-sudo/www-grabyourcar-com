@@ -181,6 +181,16 @@ export const CarPricingConfigurator = ({ car, colors: dbColors }: CarPricingConf
 
         <CardContent className="p-5 md:p-6 space-y-5">
           {/* Selectors */}
+          {/* Fuel Type Tabs */}
+          {fuelTypes.length > 1 && (
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Fuel Type
+              </label>
+              <FuelTypeTabs fuelTypes={fuelTypes} selected={selectedFuel} onChange={handleFuelChange} showAll={true} />
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
@@ -194,7 +204,7 @@ export const CarPricingConfigurator = ({ car, colors: dbColors }: CarPricingConf
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {car.variants.map((variant, index) => (
+                  {filteredVariants.map((variant, index) => (
                     <SelectItem key={index} value={index.toString()} className="py-3">
                       <div className="flex flex-col items-start">
                         <span className="font-medium">{variant.name}</span>
