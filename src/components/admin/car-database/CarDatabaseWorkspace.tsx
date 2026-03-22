@@ -14,6 +14,7 @@ import {
 import { cn } from "@/lib/utils";
 import { CarDatabaseScraper } from "./CarDatabaseScraper";
 import { CarUploadWizard } from "./CarUploadWizard";
+import { BulkCSVUpload } from "./BulkCSVUpload";
 
 export const CarDatabaseWorkspace = () => {
   const queryClient = useQueryClient();
