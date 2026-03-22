@@ -11,6 +11,8 @@ import { RentalBookingModal } from "@/components/rentals/RentalBookingModal";
 import { RentalServiceTabs } from "@/components/rentals/RentalServiceTabs";
 import { RentalVehicleCard } from "@/components/rentals/RentalVehicleCard";
 import { DriverBookingModal } from "@/components/rentals/DriverBookingModal";
+import { RentalPolicies } from "@/components/rentals/RentalPolicies";
+import { RentalDocRequirements } from "@/components/rentals/RentalDocRequirements";
 import { useRentalServices, useRentalVehicles, RentalVehicle, RentalService } from "@/hooks/useRentalServices";
 
 // Fallback static data for when DB is empty
