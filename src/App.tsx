@@ -22,6 +22,7 @@ import { SiteStructuredData } from "@/components/seo/SiteStructuredData";
 
 // Only the homepage is statically imported for fastest first paint
 import Index from "./pages/Index";
+import AdminLayout from "./pages/AdminLayout";
 import AdminAuth from "./pages/AdminAuth";
 import AdminResetPassword from "./pages/AdminResetPassword";
 import WorkspaceSelector from "./pages/WorkspaceSelector";
@@ -58,7 +59,6 @@ const VehicleLookup = lazy(() => import("./pages/VehicleLookup"));
 const ThankYou = lazy(() => import("./pages/ThankYou"));
 const NoWaitingCars = lazy(() => import("./pages/NoWaitingCars"));
 const BestCarDeals = lazy(() => import("./pages/BestCarDeals"));
-const AdminLayout = lazy(() => import("./pages/AdminLayout"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
