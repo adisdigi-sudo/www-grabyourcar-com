@@ -14,10 +14,11 @@ import {
 import { cn } from "@/lib/utils";
 import { CarDatabaseScraper } from "./CarDatabaseScraper";
 import { CarUploadWizard } from "./CarUploadWizard";
+import { BulkCSVUpload } from "./BulkCSVUpload";
 
 export const CarDatabaseWorkspace = () => {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<'upload' | 'manage' | 'scraper'>('upload');
+  const [activeTab, setActiveTab] = useState<'upload' | 'bulk' | 'manage' | 'scraper'>('upload');
   const [searchFilter, setSearchFilter] = useState("");
   const [brandFilter, setBrandFilter] = useState("All");
 
@@ -64,6 +65,7 @@ export const CarDatabaseWorkspace = () => {
       <div className="border-b bg-muted/30 px-4 py-2 flex items-center gap-2">
         {[
           { id: 'upload' as const, label: 'Upload Car', icon: Plus },
+          { id: 'bulk' as const, label: 'Bulk CSV/Excel', icon: Car },
           { id: 'manage' as const, label: 'Manage Cars', icon: Database },
           { id: 'scraper' as const, label: 'URL Scraper', icon: Globe },
         ].map(tab => (
@@ -81,6 +83,8 @@ export const CarDatabaseWorkspace = () => {
 
       {/* Content */}
       {activeTab === 'upload' && <CarUploadWizard />}
+
+      {activeTab === 'bulk' && <BulkCSVUpload />}
 
       {activeTab === 'scraper' && (
         <div className="flex-1 overflow-auto p-4"><CarDatabaseScraper /></div>

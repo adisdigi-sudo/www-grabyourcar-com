@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -210,6 +210,56 @@ export const CarUploadWizard = () => {
   const [form, setForm] = useState<CarFormData>(emptyForm());
   const [isSaving, setIsSaving] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [isAutoFilling, setIsAutoFilling] = useState(false);
+  const [autoFillError, setAutoFillError] = useState<string | null>(null);
+
+  const runAutoFill = useCallback(async () => {
+    if (!form.brand || !form.name) return;
+    setIsAutoFilling(true);
+    setAutoFillError(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-car-autofill', {
+        body: { brand: form.brand, model: form.name },
+      });
+      if (error) throw new Error(error.message);
+      if (!data?.success) throw new Error(data?.error || 'AI returned no data');
+
+      const ai = data.data;
+      setForm(prev => ({
+        ...prev,
+        body_type: ai.body_type || prev.body_type,
+        tagline: ai.tagline || prev.tagline,
+        overview: ai.overview || prev.overview,
+        fuel_types: ai.fuel_types?.length ? ai.fuel_types : prev.fuel_types,
+        transmission_types: ai.transmission_types?.length ? ai.transmission_types : prev.transmission_types,
+        is_hot: ai.is_hot ?? prev.is_hot,
+        is_new: ai.is_new ?? prev.is_new,
+        is_upcoming: ai.is_upcoming ?? prev.is_upcoming,
+        is_bestseller: ai.is_bestseller ?? prev.is_bestseller,
+        pros: ai.pros || prev.pros,
+        cons: ai.cons || prev.cons,
+        key_highlights: ai.key_highlights || prev.key_highlights,
+        variants: ai.variants?.map((v: any) => ({
+          name: v.name || '', price: '', price_numeric: String(v.ex_showroom || ''),
+          fuel_type: v.fuel_type || 'Petrol', transmission: v.transmission || 'Manual',
+          ex_showroom: String(v.ex_showroom || ''), rto: '', insurance: '', tcs: '', on_road_price: '',
+          features: v.features || '', state_code: 'DL', city: '', ownership_type: 'individual',
+        })) || prev.variants,
+        colors: ai.colors?.map((c: any) => ({
+          name: c.name || '', hex_code: c.hex_code || '#000000', image_url: '',
+        })) || prev.colors,
+        specifications: ai.specifications?.length
+          ? ai.specifications.map((s: any) => ({ category: s.category, label: s.label, value: s.value }))
+          : prev.specifications,
+      }));
+      toast.success(`🎉 AI filled ${ai.variants?.length || 0} variants, ${ai.colors?.length || 0} colors, ${ai.specifications?.length || 0} specs!`);
+    } catch (err: any) {
+      setAutoFillError(err.message || 'Failed to auto-fill');
+      toast.error('AI auto-fill failed: ' + (err.message || 'Unknown error'));
+    } finally {
+      setIsAutoFilling(false);
+    }
+  }, [form.brand, form.name]);
 
   const { data: roadTaxRules } = useRoadTaxRules();
 
@@ -533,6 +583,36 @@ export const CarUploadWizard = () => {
               <label className="text-xs font-semibold mb-1.5 block">Car Name <span className="text-destructive">*</span></label>
               <Input value={form.name} onChange={e => update('name', e.target.value)} placeholder="e.g. Swift, Creta, Nexon, Fortuner" className="h-11 text-base" autoFocus />
             </div>
+
+            {/* ═══ AI AUTO-FILL BUTTON ═══ */}
+            {form.brand && form.name && (
+              <div className="border-2 border-dashed border-primary/30 rounded-xl p-4 bg-primary/5 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-bold">AI Auto-Fill</span>
+                  <Badge variant="secondary" className="text-[9px] h-4">Beta</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Let AI fetch all variants, specs, colors & pricing for <strong>{form.brand} {form.name}</strong> automatically
+                </p>
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="gap-2 w-full"
+                  disabled={isAutoFilling}
+                  onClick={() => runAutoFill()}
+                >
+                  {isAutoFilling ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" />Fetching data from AI...</>
+                  ) : (
+                    <><Sparkles className="h-4 w-4" />Auto-Fill Everything with AI</>
+                  )}
+                </Button>
+                {autoFillError && (
+                  <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3" />{autoFillError}</p>
+                )}
+              </div>
+            )}
 
             <div>
               <label className="text-xs font-semibold mb-1.5 block">Body Type</label>
