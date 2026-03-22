@@ -36,6 +36,9 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { CrossSellWidget } from "@/components/CrossSellWidget";
 import { HSRPUnifiedBookingForm } from "@/components/hsrp/HSRPUnifiedBookingForm";
+import { HSRPOrderTracker } from "@/components/hsrp/HSRPOrderTracker";
+import { HSRPComplianceChecker } from "@/components/hsrp/HSRPComplianceChecker";
+import { HSRPTestimonials } from "@/components/hsrp/HSRPTestimonials";
 import { useHSRPPricing, formatPrice } from "@/hooks/useHSRPPricing";
 
 const benefits = [
