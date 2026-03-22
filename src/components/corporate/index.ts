@@ -12,3 +12,6 @@ export { CorporateSocialProof } from "./CorporateSocialProof";
 export { CorporateCTA } from "./CorporateCTA";
 export { CorporateProcessTimeline } from "./CorporateProcessTimeline";
 export { CorporateScrollProgress } from "./CorporateScrollProgress";
+export { FleetRequirementBuilder } from "./FleetRequirementBuilder";
+export { LeaseVsBuyCalculator } from "./LeaseVsBuyCalculator";
+export { CorporatePricingTiers } from "./CorporatePricingTiers";
