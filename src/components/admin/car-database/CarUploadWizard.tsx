@@ -212,6 +212,9 @@ export const CarUploadWizard = () => {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isAutoFilling, setIsAutoFilling] = useState(false);
   const [autoFillError, setAutoFillError] = useState<string | null>(null);
+  const [generatingField, setGeneratingField] = useState<string | null>(null);
+
+
 
   const runAutoFill = useCallback(async () => {
     if (!form.brand || !form.name) return;
@@ -293,6 +296,52 @@ export const CarUploadWizard = () => {
       return updated;
     });
   }, []);
+
+  const generateField = useCallback(async (field: string) => {
+    if (!form.brand || !form.name) { toast.error('Enter brand and car name first'); return; }
+    setGeneratingField(field);
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-car-content', {
+        body: {
+          brand: form.brand, model: form.name, body_type: form.body_type,
+          fuel_types: form.fuel_types, transmission_types: form.transmission_types,
+          variants: form.variants.map(v => ({ name: v.name, ex_showroom: v.ex_showroom })),
+          specifications: form.specifications.filter(s => s.value),
+          field,
+        },
+      });
+      if (error) throw new Error(error.message);
+      if (!data?.success) throw new Error(data?.error || 'AI returned no data');
+
+      const content = data.content;
+      switch (field) {
+        case 'overview': update('overview', content); break;
+        case 'tagline': update('tagline', content); break;
+        case 'pros': update('pros', content); break;
+        case 'cons': update('cons', content); break;
+        case 'key_highlights': update('key_highlights', content); break;
+        case 'competitors': update('competitors', content); break;
+        case 'specifications':
+          if (Array.isArray(content)) {
+            setForm(prev => ({
+              ...prev,
+              specifications: SPEC_TEMPLATES.map(t => {
+                const aiSpec = content.find((s: any) => s.category === t.category && s.label === t.label);
+                const existing = prev.specifications.find(s => s.category === t.category && s.label === t.label);
+                return { category: t.category, label: t.label, value: existing?.value || aiSpec?.value || '' };
+              }),
+            }));
+          }
+          break;
+      }
+      toast.success(`✨ ${field.replace(/_/g, ' ')} generated!`);
+    } catch (err: any) {
+      toast.error(`AI generation failed: ${err.message}`);
+    } finally {
+      setGeneratingField(null);
+    }
+  }, [form.brand, form.name, form.body_type, form.fuel_types, form.transmission_types, form.variants, form.specifications, update]);
+
 
   const toggleArrayValue = (field: 'fuel_types' | 'transmission_types', val: string) => {
     setForm(prev => {
@@ -688,7 +737,12 @@ export const CarUploadWizard = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Tagline</label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[10px] font-medium text-muted-foreground">Tagline</label>
+                      <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[9px] gap-1 text-primary" onClick={() => generateField('tagline')} disabled={generatingField === 'tagline'}>
+                        {generatingField === 'tagline' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}AI
+                      </Button>
+                    </div>
                     <Input value={form.tagline} onChange={e => update('tagline', e.target.value)} placeholder="Play Bold. Drive Smart." className="h-9 text-sm" />
                   </div>
                   <div>
@@ -987,6 +1041,11 @@ export const CarUploadWizard = () => {
               <h3 className="text-lg font-bold">Specifications</h3>
               <p className="text-xs text-muted-foreground">Fill what you have — blank fields are skipped. <strong>This step is optional</strong>, you can click Next.</p>
             </div>
+            <div className="flex justify-center">
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => generateField('specifications')} disabled={generatingField === 'specifications'}>
+                {generatingField === 'specifications' ? <><Loader2 className="h-4 w-4 animate-spin" />Generating specs...</> : <><Sparkles className="h-4 w-4" />Auto-Fill All Specs with AI</>}
+              </Button>
+            </div>
             {['engine', 'dimensions', 'performance', 'features', 'safety'].map(cat => {
               const catSpecs = form.specifications.filter(s => s.category === cat);
               if (!catSpecs.length) return null;
@@ -1074,9 +1133,23 @@ export const CarUploadWizard = () => {
               <h3 className="text-lg font-bold">Content & Offers</h3>
               <p className="text-xs text-muted-foreground">Add description, brochure, pros/cons — <strong>all optional</strong></p>
             </div>
+            <div className="flex justify-center">
+              <Button variant="outline" size="sm" className="gap-1.5" disabled={!!generatingField} onClick={async () => {
+                for (const f of ['overview', 'pros', 'cons', 'key_highlights', 'competitors'] as const) {
+                  await generateField(f);
+                }
+              }}>
+                {generatingField ? <><Loader2 className="h-4 w-4 animate-spin" />Generating {generatingField?.replace(/_/g, ' ')}...</> : <><Sparkles className="h-4 w-4" />Generate All Content with AI</>}
+              </Button>
+            </div>
 
             <div>
-              <label className="text-xs font-semibold mb-1 block">Overview / Description</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-semibold">Overview / Description</label>
+                <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px] gap-1 text-primary" onClick={() => generateField('overview')} disabled={generatingField === 'overview'}>
+                  {generatingField === 'overview' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}Generate with AI
+                </Button>
+              </div>
               <Textarea value={form.overview} onChange={e => update('overview', e.target.value)} placeholder="Describe the car in 2-3 sentences..." className="min-h-[100px] text-sm" />
             </div>
 
@@ -1107,21 +1180,41 @@ export const CarUploadWizard = () => {
             {/* Pros / Cons / Highlights */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
-                <div className="flex items-center gap-1 mb-1"><ThumbsUp className="h-3 w-3 text-emerald-500" /><span className="text-xs font-semibold">Pros</span></div>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-1"><ThumbsUp className="h-3 w-3 text-emerald-500" /><span className="text-xs font-semibold">Pros</span></div>
+                  <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[9px] gap-0.5 text-primary" onClick={() => generateField('pros')} disabled={generatingField === 'pros'}>
+                    {generatingField === 'pros' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}AI
+                  </Button>
+                </div>
                 <Textarea value={form.pros} onChange={e => update('pros', e.target.value)} placeholder={"Great mileage\nSpacious cabin"} className="min-h-[90px] text-xs" />
               </div>
               <div>
-                <div className="flex items-center gap-1 mb-1"><ThumbsDown className="h-3 w-3 text-red-500" /><span className="text-xs font-semibold">Cons</span></div>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-1"><ThumbsDown className="h-3 w-3 text-red-500" /><span className="text-xs font-semibold">Cons</span></div>
+                  <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[9px] gap-0.5 text-primary" onClick={() => generateField('cons')} disabled={generatingField === 'cons'}>
+                    {generatingField === 'cons' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}AI
+                  </Button>
+                </div>
                 <Textarea value={form.cons} onChange={e => update('cons', e.target.value)} placeholder={"No diesel option\nSmall boot"} className="min-h-[90px] text-xs" />
               </div>
               <div>
-                <div className="flex items-center gap-1 mb-1"><Star className="h-3 w-3 text-amber-500" /><span className="text-xs font-semibold">Key Highlights</span></div>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-1"><Star className="h-3 w-3 text-amber-500" /><span className="text-xs font-semibold">Key Highlights</span></div>
+                  <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[9px] gap-0.5 text-primary" onClick={() => generateField('key_highlights')} disabled={generatingField === 'key_highlights'}>
+                    {generatingField === 'key_highlights' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}AI
+                  </Button>
+                </div>
                 <Textarea value={form.key_highlights} onChange={e => update('key_highlights', e.target.value)} placeholder={"Best mileage\n6 Airbags"} className="min-h-[90px] text-xs" />
               </div>
             </div>
 
             <div>
-              <label className="text-xs font-semibold mb-1 block">Competitors (comma separated)</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-semibold">Competitors (comma separated)</label>
+                <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[9px] gap-0.5 text-primary" onClick={() => generateField('competitors')} disabled={generatingField === 'competitors'}>
+                  {generatingField === 'competitors' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}AI
+                </Button>
+              </div>
               <Input value={form.competitors} onChange={e => update('competitors', e.target.value)} placeholder="hyundai-i20, tata-altroz" className="h-9 text-xs font-mono" />
             </div>
 
