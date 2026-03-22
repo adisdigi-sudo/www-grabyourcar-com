@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef } from "react";
+import { useState, useMemo, useCallback, forwardRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -294,7 +294,10 @@ export function SelfDriveWorkspace() {
 }
 
 // ─── Card ───────────────────────────────────────────────────────────────
-function RentalCard({ booking, onDragStart, onDragEnd, onClick, isDragging }: any) {
+const RentalCard = forwardRef<HTMLDivElement, any>(function RentalCard(
+  { booking, onDragStart, onDragEnd, onClick, isDragging }: any,
+  ref,
+) {
   const customerName = booking.customer_name || booking.notes?.match(/Imported:\s*(.+?)\s*-/)?.[1] || "";
   const customerPhone = booking.phone || booking.notes?.match(/-\s*(\d{10})/)?.[1] || "";
 
@@ -307,7 +310,7 @@ function RentalCard({ booking, onDragStart, onDragEnd, onClick, isDragging }: an
   };
 
   return (
-    <Card draggable onDragStart={e => onDragStart(e, booking)} onDragEnd={onDragEnd} onClick={onClick}
+    <Card ref={ref} draggable onDragStart={e => onDragStart(e, booking)} onDragEnd={onDragEnd} onClick={onClick}
       className={`border-border/50 hover:shadow-md transition-all cursor-grab active:cursor-grabbing group ${isDragging ? "opacity-30 scale-95" : ""}`}>
       <CardContent className="p-2.5 space-y-1.5">
         <div className="flex justify-between items-start">
@@ -349,7 +352,7 @@ function RentalCard({ booking, onDragStart, onDragEnd, onClick, isDragging }: an
       </CardContent>
     </Card>
   );
-}
+});
 
 // ─── Add Dialog ─────────────────────────────────────────────────────────
 function AddRentalDialog({ open, onOpenChange, vehicles, userId }: any) {

@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Car, CheckCircle2, CalendarDays, Users, Globe } from "lucide-react";
-import { RentalManagement } from "../RentalManagement";
+import { SelfDriveWorkspace } from "../rentals/SelfDriveWorkspace";
 import DriverBookingsManagement from "../DriverBookingsManagement";
 import APIPartnersManagement from "../APIPartnersManagement";
 
@@ -18,10 +18,10 @@ export function RentalVerticalWorkspace() {
 
   const renderContent = () => {
     switch (activeTab) {
-      case "rentals": return <RentalManagement />;
+      case "rentals": return <SelfDriveWorkspace />;
       case "drivers": return <DriverBookingsManagement />;
       case "partners": return <APIPartnersManagement />;
-      default: return <RentalManagement />;
+      default: return <SelfDriveWorkspace />;
     }
   };
 
@@ -36,7 +36,7 @@ export function RentalVerticalWorkspace() {
               </div>
               <div>
                 <h2 className="font-bold text-lg">Self-Drive Rental & Fleet</h2>
-                <p className="text-xs text-muted-foreground">Fleet Management, Bookings, Drivers & API Partners</p>
+                <p className="text-xs text-muted-foreground">Pipeline, bookings, driver operations, and partner integrations</p>
               </div>
             </div>
             <Badge className="bg-cyan-100 text-cyan-700 dark:bg-cyan-950 dark:text-cyan-300 border-0">
