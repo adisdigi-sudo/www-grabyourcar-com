@@ -261,6 +261,9 @@ const SelfDriveRentals = () => {
           </div>
         </section>
 
+        {/* Rental Policies */}
+        <RentalPolicies />
+
         {/* Contact CTA */}
         <section className="py-12 bg-primary/5">
           <div className="container mx-auto px-4 text-center">
