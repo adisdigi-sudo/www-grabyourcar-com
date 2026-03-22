@@ -9,27 +9,21 @@ import { Badge } from "@/components/ui/badge";
 import { WhatsAppCTA, whatsappMessages } from "@/components/WhatsAppCTA";
 import { 
   Car, 
-  Search, 
   Shield, 
   CheckCircle2, 
   FileText, 
   Clock, 
   MapPin, 
   Phone, 
-  AlertCircle,
   Calendar,
   Home,
-  Loader2,
   Package,
   Sparkles,
   IndianRupee,
   Bike,
   Truck,
-  CreditCard
 } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { CrossSellWidget } from "@/components/CrossSellWidget";
 import { HSRPUnifiedBookingForm } from "@/components/hsrp/HSRPUnifiedBookingForm";
 import { HSRPOrderTracker } from "@/components/hsrp/HSRPOrderTracker";
