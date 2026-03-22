@@ -11,6 +11,8 @@ import { RentalBookingModal } from "@/components/rentals/RentalBookingModal";
 import { RentalServiceTabs } from "@/components/rentals/RentalServiceTabs";
 import { RentalVehicleCard } from "@/components/rentals/RentalVehicleCard";
 import { DriverBookingModal } from "@/components/rentals/DriverBookingModal";
+import { RentalPolicies } from "@/components/rentals/RentalPolicies";
+import { RentalDocRequirements } from "@/components/rentals/RentalDocRequirements";
 import { useRentalServices, useRentalVehicles, RentalVehicle, RentalService } from "@/hooks/useRentalServices";
 
 // Fallback static data for when DB is empty
@@ -208,6 +210,9 @@ const SelfDriveRentals = () => {
           </div>
         </section>
 
+        {/* Document Requirements Bar */}
+        <RentalDocRequirements />
+
         {/* Filters */}
         <section className="py-6 border-b border-border">
           <div className="container mx-auto px-4">
@@ -255,6 +260,9 @@ const SelfDriveRentals = () => {
             )}
           </div>
         </section>
+
+        {/* Rental Policies */}
+        <RentalPolicies />
 
         {/* Contact CTA */}
         <section className="py-12 bg-primary/5">

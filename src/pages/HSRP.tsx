@@ -4,38 +4,32 @@ import { Footer } from "@/components/Footer";
 import { ServiceBanner } from "@/components/ServiceBanner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { WhatsAppCTA, whatsappMessages } from "@/components/WhatsAppCTA";
 import { 
   Car, 
-  Search, 
   Shield, 
+  Search,
   CheckCircle2, 
   FileText, 
   Clock, 
   MapPin, 
   Phone, 
-  AlertCircle,
   Calendar,
   Home,
-  Loader2,
   Package,
   Sparkles,
   IndianRupee,
   Bike,
   Truck,
-  CreditCard
 } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { CrossSellWidget } from "@/components/CrossSellWidget";
 import { HSRPUnifiedBookingForm } from "@/components/hsrp/HSRPUnifiedBookingForm";
+import { HSRPOrderTracker } from "@/components/hsrp/HSRPOrderTracker";
+import { HSRPComplianceChecker } from "@/components/hsrp/HSRPComplianceChecker";
+import { HSRPTestimonials } from "@/components/hsrp/HSRPTestimonials";
 import { useHSRPPricing, formatPrice } from "@/hooks/useHSRPPricing";
 
 const benefits = [
@@ -84,43 +78,6 @@ const faqs = [
 
 const HSRP = () => {
   const { data: pricing } = useHSRPPricing();
-  const [trackingNumber, setTrackingNumber] = useState("");
-  const [isTracking, setIsTracking] = useState(false);
-  const [trackingResult, setTrackingResult] = useState<any>(null);
-
-  const handleServiceSelect = () => {
-    document.getElementById("booking-section")?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  const handleTrackOrder = async () => {
-    if (!trackingNumber.trim()) {
-      toast.error("Please enter your order/booking number");
-      return;
-    }
-
-    setIsTracking(true);
-    setTrackingResult(null);
-
-    try {
-      const { data, error } = await supabase
-        .from("hsrp_bookings")
-        .select("*")
-        .or(`tracking_id.eq.${trackingNumber},registration_number.ilike.${trackingNumber}`)
-        .maybeSingle();
-
-      if (error || !data) {
-        toast.error("No booking found with this order number");
-        setTrackingResult({ found: false });
-      } else {
-        setTrackingResult({ found: true, booking: data });
-        toast.success("Booking found!");
-      }
-    } catch {
-      toast.error("Failed to track order. Please try again.");
-    } finally {
-      setIsTracking(false);
-    }
-  };
 
   return (
     <>
@@ -244,57 +201,11 @@ const HSRP = () => {
 
               {/* Sidebar - Track Order & Info */}
               <div id="track" className="space-y-4 md:space-y-6">
-                {/* Track Order Card */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <Search className="h-5 w-5 text-primary" />
-                      Track Your Order
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="trackingNumber">Order ID / Reg. Number</Label>
-                        <div className="flex flex-col gap-2 sm:flex-row">
-                          <Input
-                            id="trackingNumber"
-                            placeholder="e.g., HSRP12345 or DL01AB1234"
-                            value={trackingNumber}
-                            onChange={(e) => setTrackingNumber(e.target.value)}
-                            className="min-w-0"
-                          />
-                          <Button type="button" onClick={handleTrackOrder} disabled={isTracking} className="w-full sm:w-auto">
-                            {isTracking ? <Loader2 className="h-4 w-4 animate-spin" /> : "Track"}
-                          </Button>
-                        </div>
-                      </div>
+                {/* Enhanced Order Tracker */}
+                <HSRPOrderTracker />
 
-                      {trackingResult?.found && (
-                        <div className="rounded-lg border border-primary/20 bg-primary/10 p-4">
-                          <div className="mb-2 flex items-center gap-2 text-primary">
-                            <CheckCircle2 className="h-5 w-5" />
-                            <span className="font-semibold">Order Found</span>
-                          </div>
-                          <div className="space-y-1 text-sm">
-                            <p><strong>Status:</strong> {trackingResult.booking.order_status}</p>
-                            <p><strong>Vehicle:</strong> {trackingResult.booking.registration_number}</p>
-                            <p><strong>Service:</strong> {trackingResult.booking.service_type}</p>
-                          </div>
-                        </div>
-                      )}
-
-                      {trackingResult && !trackingResult.found && (
-                        <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4">
-                          <div className="flex items-center gap-2 text-destructive">
-                            <AlertCircle className="h-5 w-5" />
-                            <span>No order found with this ID</span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
+                {/* Compliance Checker */}
+                <HSRPComplianceChecker />
 
                 {/* Benefits Card */}
                 <Card>
@@ -465,6 +376,9 @@ const HSRP = () => {
             </div>
           </div>
         </section>
+
+        {/* Customer Testimonials */}
+        <HSRPTestimonials />
 
         {/* Cross-Sell Services */}
         <section className="py-12 bg-muted/30">

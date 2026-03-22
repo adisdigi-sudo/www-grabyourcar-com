@@ -16,6 +16,9 @@ import {
   CorporateCTA,
   CorporateProcessTimeline,
   CorporateScrollProgress,
+  FleetRequirementBuilder,
+  LeaseVsBuyCalculator,
+  CorporatePricingTiers,
 } from "@/components/corporate";
 
 const CorporateBuying = () => {
@@ -46,6 +49,23 @@ const CorporateBuying = () => {
 
       {/* Process Timeline */}
       <CorporateProcessTimeline />
+
+      {/* Pricing Tiers */}
+      <CorporatePricingTiers />
+
+      {/* Fleet Requirement Builder */}
+      <section className="py-16 md:py-20 bg-muted/30">
+        <div className="container mx-auto px-4 max-w-5xl">
+          <FleetRequirementBuilder />
+        </div>
+      </section>
+
+      {/* Lease vs Buy Calculator */}
+      <section className="py-16 md:py-20">
+        <div className="container mx-auto px-4 max-w-5xl">
+          <LeaseVsBuyCalculator />
+        </div>
+      </section>
 
       {/* Why Choose Us */}
       <CorporateWhyChoose />

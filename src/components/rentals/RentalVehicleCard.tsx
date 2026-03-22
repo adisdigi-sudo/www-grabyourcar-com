@@ -91,6 +91,29 @@ export const RentalVehicleCard = ({ vehicle, serviceType, onBook }: RentalVehicl
           )}
         </div>
 
+        {/* Pricing Details */}
+        <div className="px-4 py-2 flex flex-wrap gap-2 border-t border-border/50">
+          {serviceType === 'self-drive' && (
+            <>
+              <Badge variant="outline" className="text-[10px] border-primary/20 text-muted-foreground">300 KM/day</Badge>
+              <Badge variant="outline" className="text-[10px] border-primary/20 text-muted-foreground">Fuel not included</Badge>
+              <Badge variant="outline" className="text-[10px] border-primary/20 text-muted-foreground">₹5K-10K deposit</Badge>
+            </>
+          )}
+          {serviceType === 'with-driver' && (
+            <>
+              <Badge variant="outline" className="text-[10px] border-primary/20 text-muted-foreground">Driver included</Badge>
+              <Badge variant="outline" className="text-[10px] border-primary/20 text-muted-foreground">Fuel extra</Badge>
+            </>
+          )}
+          {serviceType === 'outstation' && (
+            <>
+              <Badge variant="outline" className="text-[10px] border-primary/20 text-muted-foreground">Driver + Fuel</Badge>
+              <Badge variant="outline" className="text-[10px] border-primary/20 text-muted-foreground">Min 250 KM/day</Badge>
+            </>
+          )}
+        </div>
+
         {/* Location */}
         {vehicle.location && (
           <div className="px-4 py-2 flex items-center gap-1.5 text-sm text-muted-foreground border-t border-border/50">
