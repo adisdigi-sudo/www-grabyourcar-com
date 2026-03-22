@@ -16,9 +16,11 @@ export const useCars = (options?: {
   bodyType?: string;
   isUpcoming?: boolean;
   useDatabase?: boolean;
+  enabled?: boolean;
 }) => {
   const queryClient = useQueryClient();
   const useDatabase = options?.useDatabase ?? true; // Default to database now
+  const enabled = options?.enabled ?? true;
 
   const query = useQuery({
     queryKey: ['cars', options],
@@ -30,13 +32,14 @@ export const useCars = (options?: {
         isUpcoming: options?.isUpcoming
       });
     },
+    enabled,
     staleTime: 1000 * 30, // 30 seconds - shorter for real-time feel
     refetchOnWindowFocus: true,
   });
 
   // Real-time subscription for cars and related tables
   useEffect(() => {
-    if (!useDatabase) return;
+    if (!useDatabase || !enabled) return;
 
     const tables = ['cars', 'car_images', 'car_colors', 'car_variants', 'car_specifications', 'car_features', 'car_brochures', 'car_offers'];
     const channels = tables.map(table =>
@@ -57,7 +60,7 @@ export const useCars = (options?: {
     return () => {
       channels.forEach(ch => supabase.removeChannel(ch));
     };
-  }, [useDatabase, queryClient]);
+  }, [enabled, useDatabase, queryClient]);
 
   return query;
 };

@@ -76,6 +76,19 @@ const RealtimeSyncProvider = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+const ADMIN_ROUTE_PREFIXES = [
+  "/crm",
+  "/crm-auth",
+  "/crm-reset-password",
+  "/workspace",
+  "/admin",
+  "/admin-auth",
+  "/admin-reset-password",
+];
+
+const isAdminRoutePath = (pathname: string) =>
+  ADMIN_ROUTE_PREFIXES.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+
 const LegacyRouteHandler = () => {
   const location = useLocation();
 
@@ -93,6 +106,9 @@ const LegacyRouteHandler = () => {
 };
 
 const PageViewTracker = () => {
+  const location = useLocation();
+  const isAdminExperience = isAdminSubdomain() || isAdminRoutePath(location.pathname);
+
   usePageViewTracking();
 
   useEffect(() => {
@@ -106,12 +122,44 @@ const PageViewTracker = () => {
   }, []);
 
   useEffect(() => {
+    if (isAdminExperience) {
+      return;
+    }
+
     initDynamicTracking().catch((error) => {
       console.warn("[AdTracking] Startup tracking init failed", error);
     });
-  }, []);
+  }, [isAdminExperience]);
 
   return null;
+};
+
+const RouteAwareStructuredData = () => {
+  const location = useLocation();
+
+  if (isAdminSubdomain() || isAdminRoutePath(location.pathname)) {
+    return null;
+  }
+
+  return <SiteStructuredData />;
+};
+
+const RouteAwareChrome = () => {
+  const location = useLocation();
+  const isAdminExperience = isAdminSubdomain() || isAdminRoutePath(location.pathname);
+
+  if (isAdminExperience) {
+    return null;
+  }
+
+  return (
+    <>
+      <FloatingCompareBar />
+      <WhatsAppFloatingButton />
+      <FloatingCallButton />
+      <CookieConsentBanner />
+    </>
+  );
 };
 
 const App = () => (
@@ -132,7 +180,7 @@ const App = () => (
                       </div>
                     }
                   >
-                    <SiteStructuredData />
+                    <RouteAwareStructuredData />
                     <PageViewTracker />
                     <AdminSubdomainRouter>
                       <Routes>
@@ -179,14 +227,7 @@ const App = () => (
                         <Route path="/best-car-deals" element={<BestCarDeals />} />
                         <Route path="*" element={<LegacyRouteHandler />} />
                       </Routes>
-                      {!isAdminSubdomain() && (
-                        <>
-                          <FloatingCompareBar />
-                          <WhatsAppFloatingButton />
-                          <FloatingCallButton />
-                          <CookieConsentBanner />
-                        </>
-                      )}
+                      <RouteAwareChrome />
                     </AdminSubdomainRouter>
                   </Suspense>
                 </BrowserRouter>

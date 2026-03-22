@@ -63,6 +63,16 @@ export function useGlobalRealtimeSync() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
+    const isAdminPath =
+      typeof window !== 'undefined' &&
+      ['/crm', '/crm-auth', '/crm-reset-password', '/workspace', '/admin', '/admin-auth', '/admin-reset-password'].some(
+        (path) => window.location.pathname === path || window.location.pathname.startsWith(`${path}/`)
+      );
+
+    if (isAdminPath) {
+      return;
+    }
+
     console.log('[Realtime] Setting up global sync...');
     
     const channels = REALTIME_TABLES.map(table => {
