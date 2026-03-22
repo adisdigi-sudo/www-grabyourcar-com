@@ -10,6 +10,7 @@ import { WhatsAppCTA, whatsappMessages } from "@/components/WhatsAppCTA";
 import { 
   Car, 
   Shield, 
+  Search,
   CheckCircle2, 
   FileText, 
   Clock, 
