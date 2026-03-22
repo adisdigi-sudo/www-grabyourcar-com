@@ -943,10 +943,7 @@ export const CarUploadWizard = () => {
               {form.brochures.map((b, bi) => (
                 <div key={bi} className="flex items-center gap-2 bg-muted/20 rounded-lg p-2">
                   <Input value={b.title} onChange={e => { const bs = [...form.brochures]; bs[bi] = { ...bs[bi], title: e.target.value }; update('brochures', bs); }} placeholder="Title" className="h-8 text-xs flex-1" />
-                  <Select value={b.language || 'English'} onValueChange={v => { const bs = [...form.brochures]; bs[bi] = { ...bs[bi], language: v }; update('brochures', bs); }}>
-                    <SelectTrigger className="h-8 w-24 text-[10px]"><SelectValue /></SelectTrigger>
-                    <SelectContent>{['English','Hindi','Tamil','Telugu','Marathi'].map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent>
-                  </Select>
+                  <SelectWithCustom value={b.language || 'English'} onChange={v => { const bs = [...form.brochures]; bs[bi] = { ...bs[bi], language: v }; update('brochures', bs); }} options={['English','Hindi','Tamil','Telugu','Marathi','Kannada','Bengali','Gujarati']} className="h-8" />
                   <label className="cursor-pointer px-2 py-1 rounded border border-dashed border-primary/30 text-[10px] text-primary font-semibold hover:bg-primary/5 shrink-0">
                     {b.file ? `📎 ${b.file.name.slice(0, 15)}` : '📄 Upload PDF'}
                     <input type="file" accept=".pdf,.doc,.docx" className="hidden" onChange={e => { const file = e.target.files?.[0]; if (file) { const bs = [...form.brochures]; bs[bi] = { ...bs[bi], file, url: file.name }; update('brochures', bs); } }} />
