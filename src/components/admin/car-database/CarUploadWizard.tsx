@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -11,11 +11,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { toast } from "sonner";
 import { invalidateCarQueries } from "@/lib/queryInvalidation";
+import { useRoadTaxRules, calculateOnRoadPrice } from "@/hooks/useRoadTaxEngine";
 import {
   Check, ChevronsUpDown, ChevronRight, ChevronLeft,
   Car, Palette, Layers, Gauge, Image as ImageIcon, FileText, Tag, Star,
   Plus, Trash2, Upload, Save, ThumbsUp, ThumbsDown, CheckCircle2,
-  AlertCircle, Loader2, Eye, Lock, ArrowRight, Sparkles
+  AlertCircle, Loader2, Eye, Lock, ArrowRight, Sparkles, MapPin, Building2, User, FileUp, Link2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +24,7 @@ import { cn } from "@/lib/utils";
 const BODY_TYPES = ['Hatchback','Sedan','Compact SUV','Mid-Size SUV','Full-Size SUV','MPV','MUV','Coupe','Convertible','Pickup','Electric','Luxury','Crossover'];
 const FUEL_OPTIONS = ['Petrol','Diesel','Electric','Hybrid','CNG','LPG'];
 const TRANSMISSION_OPTIONS = ['Manual','Automatic','AMT','CVT','DCT','iMT'];
+const OWNERSHIP_TYPES = ['individual', 'corporate'];
 
 const STEPS = [
   { id: 'basic', label: 'Car Identity', icon: Car, desc: 'Brand, model & basic details' },
@@ -30,7 +32,7 @@ const STEPS = [
   { id: 'colors', label: 'Colors & Images', icon: Palette, desc: 'Colors with car images' },
   { id: 'specs', label: 'Specifications', icon: Gauge, desc: 'Engine, dimensions & features' },
   { id: 'gallery', label: 'Gallery', icon: ImageIcon, desc: 'Hero & gallery photos' },
-  { id: 'content', label: 'Content & Offers', icon: FileText, desc: 'Overview, pros/cons, offers' },
+  { id: 'content', label: 'Content & Offers', icon: FileText, desc: 'Overview, brochure, offers' },
   { id: 'review', label: 'Review & Save', icon: CheckCircle2, desc: 'Final check & publish' },
 ];
 
@@ -76,11 +78,14 @@ interface CarVariant {
   name: string; price: string; price_numeric: string; fuel_type: string; transmission: string;
   ex_showroom: string; rto: string; insurance: string; tcs: string; on_road_price: string;
   features: string;
+  // RTO calc context
+  state_code: string; city: string; ownership_type: string;
 }
 interface CarColor { name: string; hex_code: string; image_url: string; file?: File }
-interface CarImage { url: string; alt_text: string; is_primary: boolean; file?: File }
+interface CarImage { url: string; alt_text: string; is_primary: boolean; file?: File; color_name?: string }
 interface CarSpec { category: string; label: string; value: string }
 interface CarOffer { title: string; description: string; discount: string; offer_type: string; valid_till: string }
+interface CarBrochureEntry { title: string; url: string; file?: File; variant_name: string; language: string }
 
 interface CarFormData {
   name: string; brand: string; slug: string; body_type: string;
@@ -93,22 +98,13 @@ interface CarFormData {
   images: CarImage[];
   specifications: CarSpec[];
   offers: CarOffer[];
+  brochures: CarBrochureEntry[];
   pros: string; cons: string; key_highlights: string; competitors: string;
   brochure_url: string;
 }
 
 const generateSlug = (brand: string, name: string) =>
   `${brand}-${name}`.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-
-const autoCalcOnRoad = (exShowroom: string) => {
-  const ex = Number(exShowroom) || 0;
-  if (ex === 0) return { rto: '', insurance: '', tcs: '', on_road_price: '' };
-  const rto = Math.round(ex * 0.08);
-  const insurance = Math.round(ex * 0.035);
-  const tcs = ex > 1000000 ? Math.round(ex * 0.01) : 0;
-  const onRoad = ex + rto + insurance + tcs + 500 + 1000 + 15000;
-  return { rto: String(rto), insurance: String(insurance), tcs: String(tcs), on_road_price: String(onRoad) };
-};
 
 const emptyForm = (): CarFormData => ({
   name: '', brand: '', slug: '', body_type: 'Hatchback',
@@ -118,7 +114,7 @@ const emptyForm = (): CarFormData => ({
   is_hot: false, is_new: true, is_upcoming: false, is_bestseller: false,
   variants: [], colors: [], images: [],
   specifications: SPEC_TEMPLATES.map(t => ({ category: t.category, label: t.label, value: '' })),
-  offers: [], pros: '', cons: '', key_highlights: '', competitors: '', brochure_url: '',
+  offers: [], brochures: [], pros: '', cons: '', key_highlights: '', competitors: '', brochure_url: '',
 });
 
 const formatINR = (num: number) => {
@@ -169,6 +165,23 @@ export const CarUploadWizard = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [stepErrors, setStepErrors] = useState<Record<number, string[]>>({});
 
+  // Road tax rules for RTO calculation
+  const { data: roadTaxRules } = useRoadTaxRules();
+
+  // Available states from road tax rules
+  const availableStates = useMemo(() => {
+    if (!roadTaxRules) return [];
+    const stateMap = new Map<string, string>();
+    roadTaxRules.forEach(r => stateMap.set(r.state_code, r.state_name));
+    return Array.from(stateMap.entries()).map(([code, name]) => ({ code, name })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [roadTaxRules]);
+
+  // Available cities for a given state
+  const getCitiesForState = useCallback((stateCode: string) => {
+    if (!roadTaxRules) return [];
+    return [...new Set(roadTaxRules.filter(r => r.state_code === stateCode && r.city).map(r => r.city!))].sort();
+  }, [roadTaxRules]);
+
   const { data: dbBrands } = useQuery({
     queryKey: ['car-brands-names'],
     queryFn: async () => {
@@ -195,6 +208,30 @@ export const CarUploadWizard = () => {
     });
   };
 
+  // Recalculate on-road price using road tax engine
+  const recalcVariant = useCallback((variant: CarVariant): CarVariant => {
+    const ex = Number(variant.ex_showroom) || 0;
+    if (ex === 0 || !roadTaxRules?.length) return variant;
+
+    const breakup = calculateOnRoadPrice(
+      roadTaxRules,
+      ex,
+      variant.state_code || 'DL',
+      variant.fuel_type?.toLowerCase() || 'petrol',
+      variant.ownership_type || 'individual',
+      variant.city || undefined
+    );
+
+    return {
+      ...variant,
+      price_numeric: String(ex),
+      rto: String(breakup.roadTax),
+      insurance: String(breakup.insurance),
+      tcs: String(breakup.tcs),
+      on_road_price: String(breakup.onRoadPrice),
+    };
+  }, [roadTaxRules]);
+
   // ─── Step Validation ───
   const validateStep = useCallback((stepIdx: number): string[] => {
     const errors: string[] = [];
@@ -217,16 +254,13 @@ export const CarUploadWizard = () => {
           if (!c.name.trim()) errors.push(`Color ${i + 1}: Name required`);
         });
         break;
-      case 3: // specs - optional, no hard requirement
-        break;
+      case 3: break;
       case 4:
         if (form.images.length === 0) errors.push('Add at least 1 image (hero image)');
         if (form.images.length > 0 && !form.images.some(i => i.is_primary)) errors.push('Mark one image as Hero');
         break;
-      case 5: // content - optional
-        break;
-      case 6: // review
-        break;
+      case 5: break;
+      case 6: break;
     }
     return errors;
   }, [form]);
@@ -262,18 +296,15 @@ export const CarUploadWizard = () => {
   };
 
   const goBack = () => setStep(Math.max(0, step - 1));
-
-  const goToStep = (idx: number) => {
-    if (idx <= highestStep) setStep(idx);
-  };
+  const goToStep = (idx: number) => { if (idx <= highestStep) setStep(idx); };
 
   // ─── Upload helper ───
-  const uploadFile = async (file: File, carSlug: string, prefix: string): Promise<string> => {
+  const uploadFile = async (file: File, carSlug: string, prefix: string, bucket = 'car-images'): Promise<string> => {
     const ext = file.name.split('.').pop() || 'jpg';
     const path = `${carSlug}/${prefix}-${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from('car-images').upload(path, file, { upsert: true });
+    const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true });
     if (error) throw error;
-    const { data: { publicUrl } } = supabase.storage.from('car-images').getPublicUrl(path);
+    const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(path);
     return publicUrl;
   };
 
@@ -313,6 +344,7 @@ export const CarUploadWizard = () => {
           supabase.from('car_variants').delete().eq('car_id', existing.id),
           supabase.from('car_specifications').delete().eq('car_id', existing.id),
           supabase.from('car_offers').delete().eq('car_id', existing.id),
+          supabase.from('car_brochures').delete().eq('car_id', existing.id),
         ]);
         const { error } = await supabase.from('cars').update(carPayload).eq('id', existing.id);
         if (error) throw error;
@@ -323,6 +355,7 @@ export const CarUploadWizard = () => {
         carId = carData.id;
       }
 
+      // Save images
       if (form.images.length > 0) {
         const imgs = [];
         for (let i = 0; i < form.images.length; i++) {
@@ -334,6 +367,7 @@ export const CarUploadWizard = () => {
         if (imgs.length) await supabase.from('car_images').insert(imgs);
       }
 
+      // Save colors
       if (form.colors.length > 0) {
         const cols = [];
         for (let i = 0; i < form.colors.length; i++) {
@@ -345,6 +379,7 @@ export const CarUploadWizard = () => {
         if (cols.length) await supabase.from('car_colors').insert(cols);
       }
 
+      // Save variants
       if (form.variants.length > 0) {
         const vars = form.variants.filter(v => v.name.trim()).map((v, i) => ({
           car_id: carId, name: v.name, price: v.price || v.ex_showroom,
@@ -359,11 +394,13 @@ export const CarUploadWizard = () => {
         if (vars.length) await supabase.from('car_variants').insert(vars);
       }
 
+      // Save specs
       const allSpecs = form.specifications.filter(s => s.value.trim()).map((s, i) => ({
         car_id: carId, category: s.category, label: s.label, value: s.value, sort_order: i + 1,
       }));
       if (allSpecs.length) await supabase.from('car_specifications').insert(allSpecs);
 
+      // Save offers
       if (form.offers.length > 0) {
         const offs = form.offers.filter(o => o.title.trim()).map((o, i) => ({
           car_id: carId, title: o.title, description: o.description || null,
@@ -371,6 +408,25 @@ export const CarUploadWizard = () => {
           is_active: true, sort_order: i + 1,
         }));
         if (offs.length) await supabase.from('car_offers').insert(offs);
+      }
+
+      // Save brochures
+      if (form.brochures.length > 0) {
+        for (const b of form.brochures) {
+          let url = b.url;
+          if (b.file) {
+            url = await uploadFile(b.file, slug, `brochure-${b.title.replace(/\s+/g, '-').toLowerCase()}`, 'brochures');
+          }
+          if (url) {
+            await supabase.from('car_brochures').insert({
+              car_id: carId,
+              title: b.title || `${form.name} Brochure`,
+              url,
+              variant_name: b.variant_name || null,
+              language: b.language || 'English',
+            });
+          }
+        }
       }
 
       invalidateCarQueries(queryClient);
@@ -571,15 +627,19 @@ export const CarUploadWizard = () => {
           </div>
         )}
 
-        {/* STEP 1: Variants */}
+        {/* STEP 1: Variants & Pricing with State/City/Ownership RTO */}
         {step === 1 && (
           <div className="max-w-4xl mx-auto space-y-4">
             <div className="text-center mb-4">
               <h3 className="text-lg font-bold">Add Variants & Pricing</h3>
-              <p className="text-sm text-muted-foreground">Add all variants (LXi, VXi, ZXi etc.) — enter ex-showroom price for auto price breakup</p>
+              <p className="text-sm text-muted-foreground">Add all variants — select state, city & ownership type for accurate RTO calculation</p>
             </div>
             <div className="flex justify-center mb-4">
-              <Button onClick={() => update('variants', [...form.variants, { name: '', price: '', price_numeric: '', fuel_type: 'Petrol', transmission: 'Manual', ex_showroom: '', rto: '', insurance: '', tcs: '', on_road_price: '', features: '' }])}>
+              <Button onClick={() => update('variants', [...form.variants, {
+                name: '', price: '', price_numeric: '', fuel_type: 'Petrol', transmission: 'Manual',
+                ex_showroom: '', rto: '', insurance: '', tcs: '', on_road_price: '', features: '',
+                state_code: 'DL', city: '', ownership_type: 'individual',
+              }])}>
                 <Plus className="h-4 w-4 mr-1" />Add Variant
               </Button>
             </div>
@@ -591,80 +651,146 @@ export const CarUploadWizard = () => {
                 <p className="text-[10px] text-destructive mt-2">⚠️ At least 1 variant is required to proceed</p>
               </div>
             )}
-            {form.variants.map((v, vi) => (
-              <div key={vi} className="border rounded-xl p-4 bg-card space-y-3">
-                <div className="flex items-center justify-between">
-                  <Badge variant="outline" className="font-mono text-[10px]">Variant {vi + 1}</Badge>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => update('variants', form.variants.filter((_, j) => j !== vi))}><Trash2 className="h-4 w-4" /></Button>
+            {form.variants.map((v, vi) => {
+              const stateCities = getCitiesForState(v.state_code);
+              return (
+                <div key={vi} className="border rounded-xl p-4 bg-card space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Badge variant="outline" className="font-mono text-[10px]">Variant {vi + 1}</Badge>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => update('variants', form.variants.filter((_, j) => j !== vi))}><Trash2 className="h-4 w-4" /></Button>
+                  </div>
+                  {/* Name, Display Price, Ex-Showroom */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Variant Name *</label>
+                      <Input value={v.name} onChange={e => { const vs = [...form.variants]; vs[vi] = { ...vs[vi], name: e.target.value }; update('variants', vs); }} placeholder="LXi / VXi / ZXi+" className="h-9 text-sm" />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Display Price</label>
+                      <Input value={v.price} onChange={e => { const vs = [...form.variants]; vs[vi] = { ...vs[vi], price: e.target.value }; update('variants', vs); }} placeholder="₹6.49 Lakh*" className="h-9 text-sm" />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Ex-Showroom ₹ *</label>
+                      <Input value={v.ex_showroom} onChange={e => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        const vs = [...form.variants];
+                        vs[vi] = recalcVariant({ ...vs[vi], ex_showroom: val });
+                        update('variants', vs);
+                      }} placeholder="649000" className="h-9 text-sm font-mono" />
+                      {v.ex_showroom && <span className="text-[10px] text-muted-foreground">{formatINR(Number(v.ex_showroom))}</span>}
+                    </div>
+                  </div>
+
+                  {/* State, City, Ownership — RTO Customization */}
+                  <div className="grid grid-cols-3 gap-3 p-3 rounded-lg bg-muted/30 border border-dashed border-muted-foreground/20">
+                    <div>
+                      <label className="text-[10px] font-medium text-muted-foreground mb-1 flex items-center gap-1"><MapPin className="h-3 w-3" />State (RTO)</label>
+                      <Select value={v.state_code || 'DL'} onValueChange={val => {
+                        const vs = [...form.variants];
+                        vs[vi] = recalcVariant({ ...vs[vi], state_code: val, city: '' });
+                        update('variants', vs);
+                      }}>
+                        <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {availableStates.map(s => (
+                            <SelectItem key={s.code} value={s.code}>{s.name}</SelectItem>
+                          ))}
+                          {availableStates.length === 0 && <SelectItem value="DL">Delhi</SelectItem>}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-medium text-muted-foreground mb-1 flex items-center gap-1"><Building2 className="h-3 w-3" />City (Optional)</label>
+                      <Select value={v.city || '_none'} onValueChange={val => {
+                        const vs = [...form.variants];
+                        vs[vi] = recalcVariant({ ...vs[vi], city: val === '_none' ? '' : val });
+                        update('variants', vs);
+                      }}>
+                        <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="State default" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="_none">State default</SelectItem>
+                          {stateCities.map(c => (
+                            <SelectItem key={c} value={c}>{c}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-medium text-muted-foreground mb-1 flex items-center gap-1"><User className="h-3 w-3" />Ownership</label>
+                      <Select value={v.ownership_type || 'individual'} onValueChange={val => {
+                        const vs = [...form.variants];
+                        vs[vi] = recalcVariant({ ...vs[vi], ownership_type: val });
+                        update('variants', vs);
+                      }}>
+                        <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="individual">👤 Individual</SelectItem>
+                          <SelectItem value="corporate">🏢 Corporate</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {/* Price Breakup */}
+                  <div className="grid grid-cols-4 gap-3">
+                    <div>
+                      <label className="text-[10px] font-medium text-muted-foreground mb-1 block">RTO / Road Tax</label>
+                      <Input value={v.rto} readOnly className="h-9 text-sm font-mono bg-muted/30" />
+                      {v.rto && <span className="text-[10px] text-muted-foreground">{formatINR(Number(v.rto))}</span>}
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Insurance (3%)</label>
+                      <Input value={v.insurance} readOnly className="h-9 text-sm font-mono bg-muted/30" />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-medium text-muted-foreground mb-1 block">TCS (1%)</label>
+                      <Input value={v.tcs} readOnly className="h-9 text-sm font-mono bg-muted/30" />
+                      {v.tcs === '0' && <span className="text-[10px] text-emerald-600">✓ Always 1%</span>}
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-medium text-muted-foreground mb-1 block">On-Road ₹</label>
+                      <Input value={v.on_road_price} readOnly className="h-9 text-sm font-mono font-bold bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200" />
+                      {v.on_road_price && <span className="text-[10px] text-emerald-600 font-semibold">{formatINR(Number(v.on_road_price))}</span>}
+                    </div>
+                  </div>
+
+                  {/* Fuel, Transmission, Features */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Fuel Type</label>
+                      <Select value={v.fuel_type} onValueChange={val => {
+                        const vs = [...form.variants];
+                        vs[vi] = recalcVariant({ ...vs[vi], fuel_type: val });
+                        update('variants', vs);
+                      }}>
+                        <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                        <SelectContent>{FUEL_OPTIONS.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Transmission</label>
+                      <Select value={v.transmission} onValueChange={val => { const vs = [...form.variants]; vs[vi] = { ...vs[vi], transmission: val }; update('variants', vs); }}>
+                        <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                        <SelectContent>{TRANSMISSION_OPTIONS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Features (comma separated)</label>
+                      <Input value={v.features} onChange={e => { const vs = [...form.variants]; vs[vi] = { ...vs[vi], features: e.target.value }; update('variants', vs); }} placeholder="AC, ABS, 4 Airbags" className="h-9 text-sm" />
+                    </div>
+                  </div>
                 </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Variant Name *</label>
-                    <Input value={v.name} onChange={e => { const vs = [...form.variants]; vs[vi] = { ...vs[vi], name: e.target.value }; update('variants', vs); }} placeholder="LXi / VXi / ZXi+" className="h-9 text-sm" />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Display Price</label>
-                    <Input value={v.price} onChange={e => { const vs = [...form.variants]; vs[vi] = { ...vs[vi], price: e.target.value }; update('variants', vs); }} placeholder="₹6.49 Lakh*" className="h-9 text-sm" />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Ex-Showroom ₹ * (auto-calc)</label>
-                    <Input value={v.ex_showroom} onChange={e => {
-                      const val = e.target.value.replace(/\D/g, '');
-                      const calc = autoCalcOnRoad(val);
-                      const vs = [...form.variants]; vs[vi] = { ...vs[vi], ex_showroom: val, price_numeric: val, ...calc }; update('variants', vs);
-                    }} placeholder="649000" className="h-9 text-sm font-mono" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-4 gap-3">
-                  <div>
-                    <label className="text-[10px] font-medium text-muted-foreground mb-1 block">RTO</label>
-                    <Input value={v.rto} readOnly className="h-9 text-sm font-mono bg-muted/30" />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Insurance</label>
-                    <Input value={v.insurance} readOnly className="h-9 text-sm font-mono bg-muted/30" />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-medium text-muted-foreground mb-1 block">TCS</label>
-                    <Input value={v.tcs} readOnly className="h-9 text-sm font-mono bg-muted/30" />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-medium text-muted-foreground mb-1 block">On-Road ₹</label>
-                    <Input value={v.on_road_price} readOnly className="h-9 text-sm font-mono font-bold bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200" />
-                    {v.on_road_price && <span className="text-[10px] text-emerald-600 font-semibold">{formatINR(Number(v.on_road_price))}</span>}
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Fuel Type</label>
-                    <Select value={v.fuel_type} onValueChange={val => { const vs = [...form.variants]; vs[vi] = { ...vs[vi], fuel_type: val }; update('variants', vs); }}>
-                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                      <SelectContent>{FUEL_OPTIONS.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Transmission</label>
-                    <Select value={v.transmission} onValueChange={val => { const vs = [...form.variants]; vs[vi] = { ...vs[vi], transmission: val }; update('variants', vs); }}>
-                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                      <SelectContent>{TRANSMISSION_OPTIONS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Features (comma separated)</label>
-                    <Input value={v.features} onChange={e => { const vs = [...form.variants]; vs[vi] = { ...vs[vi], features: e.target.value }; update('variants', vs); }} placeholder="AC, ABS, 4 Airbags" className="h-9 text-sm" />
-                  </div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
-        {/* STEP 2: Colors */}
+        {/* STEP 2: Colors & Color-Linked Images */}
         {step === 2 && (
           <div className="max-w-4xl mx-auto space-y-4">
             <div className="text-center mb-4">
               <h3 className="text-lg font-bold">Colors & Color Images</h3>
-              <p className="text-sm text-muted-foreground">Add each available color with hex code and upload a car image in that color</p>
+              <p className="text-sm text-muted-foreground">Add each available color — <strong>each color must have its own car image</strong></p>
             </div>
             <div className="flex justify-center mb-4">
               <Button onClick={() => update('colors', [...form.colors, { name: '', hex_code: '#000000', image_url: '' }])}>
@@ -706,10 +832,16 @@ export const CarUploadWizard = () => {
                     </div>
                   </div>
                   <div>
-                    <label className="text-[10px] font-medium text-muted-foreground mb-1.5 block">Car Image in This Color</label>
+                    <label className="text-[10px] font-medium text-muted-foreground mb-1.5 flex items-center gap-1">
+                      <ImageIcon className="h-3 w-3" />
+                      Car Image in <strong className="text-primary">{color.name || 'This Color'}</strong> <span className="text-destructive">*</span>
+                    </label>
                     {(color.image_url || color.file) ? (
                       <div className="relative group rounded-lg overflow-hidden border bg-muted h-36">
                         <img src={color.file ? URL.createObjectURL(color.file) : color.image_url} className="w-full h-full object-cover" alt={color.name} />
+                        <div className="absolute top-2 left-2">
+                          <Badge className="bg-black/70 text-white text-[9px]">{color.name || 'Color'} Image</Badge>
+                        </div>
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                           <label className="cursor-pointer bg-white/90 text-black px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-white">
                             Replace
@@ -722,7 +854,7 @@ export const CarUploadWizard = () => {
                       <div className="flex gap-2">
                         <label className="flex-1 cursor-pointer border-2 border-dashed border-primary/30 rounded-lg p-4 text-center hover:bg-primary/5 transition-colors">
                           <Upload className="h-5 w-5 text-primary mx-auto mb-1" />
-                          <span className="text-xs text-primary font-semibold">Upload Image</span>
+                          <span className="text-xs text-primary font-semibold">Upload {color.name || 'Color'} Image</span>
                           <span className="text-[10px] text-muted-foreground block">PNG, JPG up to 5MB</span>
                           <input type="file" accept="image/*" className="hidden" onChange={e => { const file = e.target.files?.[0]; if (file) { const cols = [...form.colors]; cols[ci] = { ...cols[ci], file }; update('colors', cols); } }} />
                         </label>
@@ -824,17 +956,76 @@ export const CarUploadWizard = () => {
           </div>
         )}
 
-        {/* STEP 5: Content & Offers */}
+        {/* STEP 5: Content, Brochures & Offers */}
         {step === 5 && (
           <div className="max-w-4xl mx-auto space-y-6">
             <div className="text-center mb-4">
-              <h3 className="text-lg font-bold">Content & Offers</h3>
-              <p className="text-sm text-muted-foreground">Add overview, pros/cons, highlights, and dealer offers. This step is optional.</p>
+              <h3 className="text-lg font-bold">Content, Brochures & Offers</h3>
+              <p className="text-sm text-muted-foreground">Add overview, brochures (upload or URL), pros/cons, and dealer offers</p>
             </div>
             <div>
               <label className="text-xs font-semibold mb-1.5 block">Overview / Description</label>
               <Textarea value={form.overview} onChange={e => update('overview', e.target.value)} placeholder="The all-new car offers best-in-class mileage..." className="min-h-[120px]" />
             </div>
+
+            {/* Brochure Section */}
+            <div className="border rounded-xl p-4 bg-card space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-bold flex items-center gap-1.5"><FileUp className="h-4 w-4 text-primary" />Brochures</h4>
+                <Button size="sm" variant="outline" onClick={() => update('brochures', [...form.brochures, { title: '', url: '', variant_name: '', language: 'English' }])}>
+                  <Plus className="h-4 w-4 mr-1" />Add Brochure
+                </Button>
+              </div>
+
+              {/* Legacy single brochure URL */}
+              <div>
+                <label className="text-[10px] font-medium text-muted-foreground mb-1 flex items-center gap-1"><Link2 className="h-3 w-3" />Main Brochure URL (quick link)</label>
+                <Input value={form.brochure_url} onChange={e => update('brochure_url', e.target.value)} placeholder="https://oem.com/brochure.pdf" className="h-9 text-sm" />
+              </div>
+
+              {form.brochures.length === 0 && (
+                <div className="text-center py-4 text-xs text-muted-foreground">
+                  <FileUp className="h-6 w-6 mx-auto mb-1 opacity-40" />
+                  No brochures added yet. You can upload PDF files or paste URLs.
+                </div>
+              )}
+
+              {form.brochures.map((brochure, bi) => (
+                <div key={bi} className="flex flex-col gap-2 bg-muted/30 rounded-lg border p-3">
+                  <div className="flex items-center gap-2">
+                    <Input value={brochure.title} onChange={e => { const bs = [...form.brochures]; bs[bi] = { ...bs[bi], title: e.target.value }; update('brochures', bs); }} placeholder="Brochure Title" className="h-9 flex-1 text-sm" />
+                    <Select value={brochure.language || 'English'} onValueChange={v => { const bs = [...form.brochures]; bs[bi] = { ...bs[bi], language: v }; update('brochures', bs); }}>
+                      <SelectTrigger className="h-9 w-28 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="English">English</SelectItem>
+                        <SelectItem value="Hindi">Hindi</SelectItem>
+                        <SelectItem value="Tamil">Tamil</SelectItem>
+                        <SelectItem value="Telugu">Telugu</SelectItem>
+                        <SelectItem value="Marathi">Marathi</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive shrink-0" onClick={() => update('brochures', form.brochures.filter((_, j) => j !== bi))}><Trash2 className="h-4 w-4" /></Button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Input value={brochure.variant_name} onChange={e => { const bs = [...form.brochures]; bs[bi] = { ...bs[bi], variant_name: e.target.value }; update('brochures', bs); }} placeholder="Variant (optional)" className="h-9 w-40 text-xs" />
+                    <div className="flex gap-2 flex-1">
+                      <label className="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-primary/40 text-xs font-semibold text-primary hover:bg-primary/5 shrink-0">
+                        <Upload className="h-3.5 w-3.5" />Upload PDF
+                        <input type="file" accept=".pdf,.doc,.docx" className="hidden" onChange={e => {
+                          const file = e.target.files?.[0];
+                          if (file) { const bs = [...form.brochures]; bs[bi] = { ...bs[bi], file, url: file.name }; update('brochures', bs); }
+                        }} />
+                      </label>
+                      <Input value={brochure.file ? brochure.file.name : brochure.url} onChange={e => { const bs = [...form.brochures]; bs[bi] = { ...bs[bi], url: e.target.value, file: undefined }; update('brochures', bs); }} placeholder="Or paste brochure URL" className="h-9 text-xs flex-1" />
+                    </div>
+                  </div>
+                  {brochure.file && (
+                    <Badge variant="outline" className="w-fit text-[10px]">📎 {brochure.file.name} ({(brochure.file.size / 1024 / 1024).toFixed(1)} MB)</Badge>
+                  )}
+                </div>
+              ))}
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <div className="flex items-center gap-1.5 mb-1.5"><ThumbsUp className="h-3.5 w-3.5 text-emerald-500" /><span className="text-xs font-semibold">Pros (one per line)</span></div>
@@ -849,15 +1040,9 @@ export const CarUploadWizard = () => {
                 <Textarea value={form.key_highlights} onChange={e => update('key_highlights', e.target.value)} placeholder={"Best mileage in segment\n6 Airbags\nSunroof available"} className="min-h-[120px] text-sm" />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-semibold mb-1.5 block">Brochure URL</label>
-                <Input value={form.brochure_url} onChange={e => update('brochure_url', e.target.value)} placeholder="https://oem.com/brochure.pdf" />
-              </div>
-              <div>
-                <label className="text-xs font-semibold mb-1.5 block">Competitors (comma separated slugs)</label>
-                <Input value={form.competitors} onChange={e => update('competitors', e.target.value)} placeholder="hyundai-i20, tata-altroz" className="font-mono text-xs" />
-              </div>
+            <div>
+              <label className="text-xs font-semibold mb-1.5 block">Competitors (comma separated slugs)</label>
+              <Input value={form.competitors} onChange={e => update('competitors', e.target.value)} placeholder="hyundai-i20, tata-altroz" className="font-mono text-xs" />
             </div>
 
             <div className="border-t pt-4">
@@ -914,12 +1099,13 @@ export const CarUploadWizard = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               {[
                 { label: 'Variants', count: form.variants.length, icon: Layers, color: 'text-blue-600' },
                 { label: 'Colors', count: form.colors.length, icon: Palette, color: 'text-purple-600' },
                 { label: 'Gallery', count: form.images.length, icon: ImageIcon, color: 'text-emerald-600' },
                 { label: 'Specs', count: form.specifications.filter(s => s.value).length, icon: Gauge, color: 'text-amber-600' },
+                { label: 'Brochures', count: form.brochures.length + (form.brochure_url ? 1 : 0), icon: FileUp, color: 'text-pink-600' },
               ].map(item => (
                 <div key={item.label} className="border rounded-xl p-3 bg-card text-center">
                   <item.icon className={cn("h-5 w-5 mx-auto mb-1", item.color)} />
