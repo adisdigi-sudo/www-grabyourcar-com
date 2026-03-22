@@ -1133,6 +1133,15 @@ export const CarUploadWizard = () => {
               <h3 className="text-lg font-bold">Content & Offers</h3>
               <p className="text-xs text-muted-foreground">Add description, brochure, pros/cons — <strong>all optional</strong></p>
             </div>
+            <div className="flex justify-center">
+              <Button variant="outline" size="sm" className="gap-1.5" disabled={!!generatingField} onClick={async () => {
+                for (const f of ['overview', 'pros', 'cons', 'key_highlights', 'competitors'] as const) {
+                  await generateField(f);
+                }
+              }}>
+                {generatingField ? <><Loader2 className="h-4 w-4 animate-spin" />Generating {generatingField?.replace(/_/g, ' ')}...</> : <><Sparkles className="h-4 w-4" />Generate All Content with AI</>}
+              </Button>
+            </div>
 
             <div>
               <div className="flex items-center justify-between mb-1">
