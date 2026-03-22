@@ -88,7 +88,7 @@ const AdminResetPassword = () => {
       // Sign out and redirect to login
       setTimeout(async () => {
         await supabase.auth.signOut();
-        navigate("/admin-auth");
+        navigate("/crm-auth");
       }, 2000);
 
     } catch (error) {
@@ -205,7 +205,7 @@ const AdminResetPassword = () => {
                   <p className="text-muted-foreground text-sm mb-6">
                     This password reset link is invalid or has expired. Please request a new one.
                   </p>
-                  <Button onClick={() => navigate("/admin-auth")} className="w-full">
+                  <Button onClick={() => navigate("/crm-auth")} className="w-full">
                     Back to Login
                   </Button>
                 </CardContent>
