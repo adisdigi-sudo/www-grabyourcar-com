@@ -99,7 +99,7 @@ export function InsuranceOverdueRenewals({ policies, clients }: Props) {
   }, [policies, clients, search, sort, filterReason]);
 
   const summary = useMemo(() => {
-    const unmarked = overdueItems.filter(i => !i.clientData?.overdue_reason).length;
+    const unmarked = overdueItems.filter(i => !(i.clientData as any)?.overdue_reason).length;
     const marked = overdueItems.filter(i => (i.clientData as any)?.overdue_reason).length;
     const critical = overdueItems.filter(i => i.daysOverdue > 30).length;
     return { total: overdueItems.length, unmarked, marked, critical };
