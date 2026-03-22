@@ -1135,7 +1135,12 @@ export const CarUploadWizard = () => {
             </div>
 
             <div>
-              <label className="text-xs font-semibold mb-1 block">Overview / Description</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-semibold">Overview / Description</label>
+                <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px] gap-1 text-primary" onClick={() => generateField('overview')} disabled={generatingField === 'overview'}>
+                  {generatingField === 'overview' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}Generate with AI
+                </Button>
+              </div>
               <Textarea value={form.overview} onChange={e => update('overview', e.target.value)} placeholder="Describe the car in 2-3 sentences..." className="min-h-[100px] text-sm" />
             </div>
 
