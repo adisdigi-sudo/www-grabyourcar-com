@@ -247,57 +247,11 @@ const HSRP = () => {
 
               {/* Sidebar - Track Order & Info */}
               <div id="track" className="space-y-4 md:space-y-6">
-                {/* Track Order Card */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <Search className="h-5 w-5 text-primary" />
-                      Track Your Order
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="trackingNumber">Order ID / Reg. Number</Label>
-                        <div className="flex flex-col gap-2 sm:flex-row">
-                          <Input
-                            id="trackingNumber"
-                            placeholder="e.g., HSRP12345 or DL01AB1234"
-                            value={trackingNumber}
-                            onChange={(e) => setTrackingNumber(e.target.value)}
-                            className="min-w-0"
-                          />
-                          <Button type="button" onClick={handleTrackOrder} disabled={isTracking} className="w-full sm:w-auto">
-                            {isTracking ? <Loader2 className="h-4 w-4 animate-spin" /> : "Track"}
-                          </Button>
-                        </div>
-                      </div>
+                {/* Enhanced Order Tracker */}
+                <HSRPOrderTracker />
 
-                      {trackingResult?.found && (
-                        <div className="rounded-lg border border-primary/20 bg-primary/10 p-4">
-                          <div className="mb-2 flex items-center gap-2 text-primary">
-                            <CheckCircle2 className="h-5 w-5" />
-                            <span className="font-semibold">Order Found</span>
-                          </div>
-                          <div className="space-y-1 text-sm">
-                            <p><strong>Status:</strong> {trackingResult.booking.order_status}</p>
-                            <p><strong>Vehicle:</strong> {trackingResult.booking.registration_number}</p>
-                            <p><strong>Service:</strong> {trackingResult.booking.service_type}</p>
-                          </div>
-                        </div>
-                      )}
-
-                      {trackingResult && !trackingResult.found && (
-                        <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4">
-                          <div className="flex items-center gap-2 text-destructive">
-                            <AlertCircle className="h-5 w-5" />
-                            <span>No order found with this ID</span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
+                {/* Compliance Checker */}
+                <HSRPComplianceChecker />
 
                 {/* Benefits Card */}
                 <Card>
