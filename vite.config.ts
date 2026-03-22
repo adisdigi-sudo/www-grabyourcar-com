@@ -32,12 +32,19 @@ export default defineConfig(({ mode }) => ({
             return "data";
           }
 
+          if (id.includes("sonner")) {
+            return "notifications";
+          }
+
+          if (id.includes("next-themes")) {
+            return "theme";
+          }
+
           if (
             id.includes("@radix-ui") ||
             id.includes("class-variance-authority") ||
             id.includes("clsx") ||
             id.includes("tailwind-merge") ||
-            id.includes("sonner") ||
             id.includes("lucide-react")
           ) {
             return "ui";
