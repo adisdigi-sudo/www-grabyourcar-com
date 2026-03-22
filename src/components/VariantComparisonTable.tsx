@@ -79,13 +79,19 @@ export const VariantComparisonTable = ({
               Variant Comparison
             </CardTitle>
             <p className="text-sm text-muted-foreground mt-1">
-              Compare {variants.length} variants of {carBrand} {carName}
+              Compare {displayVariants.length} variants of {carBrand} {carName}
             </p>
           </div>
           <Badge variant="secondary" className="text-sm">
-            {variants.length} Variants
+            {displayVariants.length} Variants
           </Badge>
         </div>
+        {/* Fuel Type Filter */}
+        {fuelTypes.length > 1 && (
+          <div className="mt-3">
+            <FuelTypeTabs fuelTypes={fuelTypes} selected={selectedFuel} onChange={setSelectedFuel} showAll={true} />
+          </div>
+        )}
       </CardHeader>
       <CardContent className="p-0">
         <ScrollArea className="w-full">
