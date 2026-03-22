@@ -184,7 +184,7 @@ export const useAdminNotifications = () => {
         .gte('next_followup_at', now.toISOString())
         .lte('next_followup_at', oneHourFromNow.toISOString())
         .not('status', 'in', '("converted","lost")')
-        .order('next_follow_up_at', { ascending: true })
+        .order('next_followup_at', { ascending: true })
         .limit(3);
 
       if (!upcomingError && upcomingLeads && upcomingLeads.length > 0) {
