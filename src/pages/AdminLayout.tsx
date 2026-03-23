@@ -24,8 +24,8 @@ const HomepageManagement = lazy(() =>
 const HSRPVerticalWorkspace = lazy(() =>
   import("@/components/admin/verticals/HSRPVerticalWorkspace").then((module) => ({ default: module.HSRPVerticalWorkspace })),
 );
-const SalesWorkspace = lazy(() =>
-  import("@/components/admin/sales/SalesWorkspace").then((module) => ({ default: module.SalesWorkspace })),
+const SalesVerticalWorkspace = lazy(() =>
+  import("@/components/admin/verticals/SalesVerticalWorkspace").then((module) => ({ default: module.SalesVerticalWorkspace })),
 );
 const SelfDriveWorkspace = lazy(() =>
   import("@/components/admin/rentals/SelfDriveWorkspace").then((module) => ({ default: module.SelfDriveWorkspace })),
@@ -305,7 +305,7 @@ const AdminLayout = () => {
       case "dashboard": {
         const slug = activeVertical?.slug;
         if (slug === "insurance") return <InsuranceDashboard onNavigate={setActiveTab} />;
-        if (slug === "sales") return <SalesDashboard onNavigate={setActiveTab} />;
+        if (slug === "sales") return <SalesVerticalWorkspace />;
         if (slug === "rental") return <RentalVerticalWorkspace />;
         if (slug === "hsrp") return <HSRPVerticalWorkspace />;
         if (slug === "corporate" || slug === "fleet") return <FleetVerticalWorkspace />;
@@ -317,7 +317,7 @@ const AdminLayout = () => {
         return <AdminDashboard />;
       }
       case "sales-crm":
-        return <SalesWorkspace />;
+        return <SalesVerticalWorkspace />;
       case "loan-crm":
         return <LoanCRMDashboard />;
       case "unified-crm":
