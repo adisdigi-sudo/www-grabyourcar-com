@@ -351,12 +351,12 @@ const navItems: NavItem[] = [
     allowedRoles: ["super_admin", "admin"],
   },
 
-  // ── Deals Pipeline — visible across verticals for admin/sales ──
+  // ── Deals Pipeline — sales/loans/accounts verticals ──
   { 
     id: "deals-pipeline", 
     label: "📋 Deals Pipeline", 
     icon: FileText,
-    verticals: ["all"],
+    verticals: ["sales", "insurance", "loans", "accounts", "dealer-network"],
     allowedRoles: ["super_admin", "admin", "sales", "finance"],
   },
 
