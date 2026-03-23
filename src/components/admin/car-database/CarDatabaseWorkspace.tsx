@@ -22,6 +22,7 @@ export const CarDatabaseWorkspace = () => {
   const [activeTab, setActiveTab] = useState<'upload' | 'bulk' | 'manage' | 'scraper'>('upload');
   const [searchFilter, setSearchFilter] = useState("");
   const [brandFilter, setBrandFilter] = useState("All");
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const { data: dbBrands } = useQuery({
     queryKey: ['car-brands-names'],
