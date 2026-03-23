@@ -19,7 +19,8 @@ import {
   Package,
   Eye
 } from "lucide-react";
-import { accessoriesData, categories, Accessory } from "@/data/accessoriesData";
+import { useAccessoriesCatalog } from "@/hooks/useAccessoriesCatalog";
+import type { AccessoryCatalogProduct } from "@/lib/accessoriesCatalog";
 import { useCart } from "@/hooks/useCart";
 import { useAccessoryWishlist } from "@/hooks/useAccessoryWishlist";
 import { useAuth } from "@/hooks/useAuth";
@@ -39,13 +40,14 @@ const Accessories = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("featured");
   const [addedItems, setAddedItems] = useState<number[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<Accessory | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<AccessoryCatalogProduct | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const { addToCart } = useCart();
   const { isInWishlist, toggleWishlist, wishlist } = useAccessoryWishlist();
   const { user } = useAuth();
+  const { products, categories } = useAccessoriesCatalog();
 
-  const filteredProducts = accessoriesData
+  const filteredProducts = products
     .filter(product => {
       const matchesCategory = selectedCategory === "All" || product.category === selectedCategory;
       const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -65,7 +67,7 @@ const Accessories = () => {
       }
     });
 
-  const handleAddToCart = (product: Accessory) => {
+  const handleAddToCart = (product: AccessoryCatalogProduct) => {
     addToCart({
       id: product.id,
       name: product.name,
@@ -97,7 +99,7 @@ const Accessories = () => {
     }
   };
 
-  const handleViewDetails = (product: Accessory) => {
+  const handleViewDetails = (product: AccessoryCatalogProduct) => {
     setSelectedProduct(product);
     setDetailModalOpen(true);
   };
