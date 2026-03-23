@@ -66,7 +66,8 @@ export const DocumentVault = () => {
         .upload(path, file);
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage.from("hr-documents").getPublicUrl(path);
+      // Use signed URL for private bucket
+      const { data: signedData } = await supabase.storage.from("hr-documents").createSignedUrl(path, 31536000);
 
       const { error } = await (supabase.from("document_vault") as any).insert({
         title: form.title || file.name,
