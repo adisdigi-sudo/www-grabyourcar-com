@@ -9,6 +9,7 @@ import {
   Tags,
   Repeat,
   Settings,
+  Truck,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -20,12 +21,14 @@ import { AccessoriesCustomersPanel } from "./AccessoriesCustomersPanel";
 import { AccessoriesDiscountCodesPanel } from "./AccessoriesDiscountCodesPanel";
 import { AccessoriesCrossSellPanel } from "./AccessoriesCrossSellPanel";
 import { AccessoriesSettingsPanel } from "./AccessoriesSettingsPanel";
+import { AccessoriesTrackingPanel } from "./AccessoriesTrackingPanel";
 
 const SIDEBAR_ITEMS = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "products", label: "Products", icon: Package },
   { id: "categories", label: "Categories", icon: Grid3X3 },
   { id: "orders", label: "Orders", icon: ShoppingCart },
+  { id: "tracking", label: "Tracking", icon: Truck },
   { id: "customers", label: "Customers", icon: Users },
   { id: "discounts", label: "Discount Codes", icon: Tags },
   { id: "crosssell", label: "Cross-Sell", icon: Repeat },
