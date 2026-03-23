@@ -117,7 +117,7 @@ export function AccessoriesEcommerceWorkspace() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto p-4 md:p-6">
+      <main className="flex-1 overflow-auto p-4 md:p-6 min-w-0">
         <div className="flex items-center justify-between mb-4">
           <div />
           <PreviewToggleButton isOpen={previewOpen} onToggle={() => setPreviewOpen(!previewOpen)} />
