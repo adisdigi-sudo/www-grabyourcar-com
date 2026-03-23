@@ -124,19 +124,16 @@ export function InsuranceWorkspace() {
   const lostCount = clients.filter(c => normalizeStage(c.pipeline_stage, c.lead_status) === "lost").length;
   const inPipeline = totalLeads - wonCount - lostCount;
   const convRate = totalLeads > 0 ? ((wonCount / totalLeads) * 100).toFixed(1) : "0";
-  const activePolicies = policies.filter(p => p.status === "active").length;
+  const activePolicies = runningPolicies.filter(p => p.status === "active").length;
   const renewalsDue = useMemo(() => {
     const now = new Date();
-    return policies.filter(p => p.expiry_date && p.status !== "renewed" && differenceInDays(new Date(p.expiry_date), now) >= 0 && differenceInDays(new Date(p.expiry_date), now) <= 60).length;
-  }, [policies]);
+    return runningPolicies.filter(p => p.expiry_date && p.status !== "renewed" && differenceInDays(new Date(p.expiry_date), now) >= 0 && differenceInDays(new Date(p.expiry_date), now) <= 60).length;
+  }, [runningPolicies]);
   const urgentRenewals = useMemo(() => {
     const now = new Date();
-    return policies.filter(p => p.expiry_date && p.status !== "renewed" && differenceInDays(new Date(p.expiry_date), now) >= 0 && differenceInDays(new Date(p.expiry_date), now) <= 7).length;
-  }, [policies]);
-  const overdueCount = useMemo(() => {
-    const now = new Date();
-    return policies.filter(p => p.expiry_date && p.status !== "renewed" && differenceInDays(new Date(p.expiry_date), now) < 0).length;
-  }, [policies]);
+    return runningPolicies.filter(p => p.expiry_date && p.status !== "renewed" && differenceInDays(new Date(p.expiry_date), now) >= 0 && differenceInDays(new Date(p.expiry_date), now) <= 7).length;
+  }, [runningPolicies]);
+  const overdueCount = overduePolicies.length;
 
   const insNotifications = useMemo(() => buildInsuranceNotifications(clients), [clients]);
 
