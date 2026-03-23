@@ -303,7 +303,7 @@ const navItems: NavItem[] = [
   { id: "roles", label: "👥 User Roles", icon: UserCog, verticals: ["marketing"], allowedRoles: ["super_admin", "admin"] },
   { id: "settings", label: "⚙️ Site Settings", icon: Settings, verticals: ["marketing"], allowedRoles: ["super_admin", "admin"] },
 
-  // ── Accounts & Finance — shows only in accounts vertical ──
+  // ── Accounts & Finance (Zoho Books style) ──
   { 
     id: "finance-hub", 
     label: "💰 Accounts & Finance", 
@@ -311,37 +311,37 @@ const navItems: NavItem[] = [
     verticals: ["accounts"],
     allowedRoles: ["super_admin", "admin", "finance"],
     children: [
-      { id: "accounts-finance", label: "📊 Finance Overview", icon: BarChart3 },
-      { id: "accounts-intelligence", label: "🧠 Financial Intelligence", icon: BarChart3 },
-      { id: "accounts-accounting", label: "📒 Tally Accounting", icon: CreditCard },
-      { id: "accounts-revenue", label: "💵 Revenue Entries", icon: CreditCard },
+      { id: "accounts-dashboard", label: "📊 Dashboard", icon: BarChart3 },
+      { id: "accounts-invoices", label: "📄 Invoices", icon: FileText },
       { id: "accounts-expenses", label: "📤 Expenses", icon: CreditCard },
-      { id: "accounts-commissions", label: "🏆 Commissions", icon: CreditCard },
-      { id: "accounts-payouts", label: "💳 Payouts", icon: CreditCard },
+      { id: "accounts-bills", label: "🧾 Bills (Payables)", icon: FileText },
+      { id: "accounts-banking", label: "🏦 Banking", icon: CreditCard },
+      { id: "accounts-chart", label: "📒 Chart of Accounts", icon: CreditCard },
+      { id: "accounts-journal", label: "📓 Journal Entries", icon: FileText },
+      { id: "accounts-reports", label: "📊 Reports & P&L", icon: BarChart3 },
       { id: "accounts-incentive-payouts", label: "🎯 Incentive Payouts", icon: Trophy },
       { id: "accounts-documents", label: "📂 Documents", icon: FileText },
     ]
   },
 
-  // ── HR & Office Culture — shows only in hr vertical ──
+  // ── HR System (10 Sub-Modules) ──
   { 
     id: "hr-hub", 
-    label: "👥 HR & Office", 
+    label: "👥 HR Management", 
     icon: Users,
     verticals: ["hr"],
     allowedRoles: ["super_admin", "admin"],
     children: [
-      { id: "hr-workspace", label: "📊 HR Overview", icon: BarChart3 },
-      { id: "hr-directory", label: "👥 Team Directory", icon: Users },
-      { id: "hr-employees", label: "🧑‍💼 Employee Mgmt", icon: UserCog },
-      { id: "hr-onboarding", label: "🚀 Onboarding", icon: Rocket },
-      { id: "hr-payroll", label: "💰 Payroll & Payslips", icon: CreditCard },
-      { id: "hr-kpi", label: "🎯 KPI & Targets", icon: BarChart3 },
-      { id: "hr-templates", label: "📝 Templates", icon: FileText },
-      { id: "hr-attendance", label: "📋 Attendance", icon: CalendarDays },
-      { id: "hr-leaves", label: "🏖️ Leave Management", icon: CalendarDays },
-      { id: "hr-documents", label: "📂 Documents", icon: FileText },
-      { id: "hr-announcements", label: "📢 Announcements", icon: FileText },
+      { id: "hr-core", label: "🧑‍💼 Core HR", icon: Users },
+      { id: "hr-recruitment", label: "📋 Recruitment", icon: FileText },
+      { id: "hr-workforce", label: "📊 Workforce", icon: BarChart3 },
+      { id: "hr-attendance", label: "⏰ Attendance", icon: CalendarDays },
+      { id: "hr-payroll", label: "💰 Payroll", icon: CreditCard },
+      { id: "hr-expense", label: "🧾 Expense Claims", icon: CreditCard },
+      { id: "hr-performance", label: "⭐ Performance", icon: BarChart3 },
+      { id: "hr-engagement", label: "🎉 Engagement", icon: FileText },
+      { id: "hr-assets", label: "💻 Assets", icon: Package },
+      { id: "hr-helpdesk", label: "🎧 Helpdesk", icon: FileText },
     ]
   },
 

@@ -546,50 +546,53 @@ const AdminLayout = () => {
         return <DealerManagement initialTab="inventory" />;
       case "dealer-broadcast":
         return <DealerManagement initialTab="broadcast" />;
-      case "accounts-finance":
-        return <AccountsFinanceWorkspace initialTab="overview" />;
-      case "accounts-intelligence":
-        return <FinancialIntelligenceDashboard />;
-      case "accounts-accounting":
-        return <AccountsDeepWorkspace initialTab="overview" />;
-      case "accounts-revenue":
-        return <AccountsFinanceWorkspace initialTab="revenue" />;
+      // ── Accounts (Zoho Books style) ──
+      case "accounts-dashboard":
+        return <AccountsDashboard />;
+      case "accounts-invoices":
+        return <AccountsInvoicesModule />;
       case "accounts-expenses":
-        return <AccountsFinanceWorkspace initialTab="expenses" />;
-      case "accounts-commissions":
-        return <AccountsFinanceWorkspace initialTab="commissions" />;
-      case "accounts-payouts":
-        return <AccountsFinanceWorkspace initialTab="payouts" />;
-      case "hr-workspace":
-        return <HRWorkspace initialTab="overview" />;
-      case "hr-directory":
-        return <HRWorkspace initialTab="directory" />;
+        return <AccountsExpensesModule />;
+      case "accounts-bills":
+        return <AccountsBillsModule />;
+      case "accounts-banking":
+        return <AccountsBankingModule />;
+      case "accounts-chart":
+        return <AccountsChartOfAccounts />;
+      case "accounts-journal":
+        return <AccountsDeepWorkspace initialTab="journal" />;
+      case "accounts-reports":
+        return <FinancialIntelligenceDashboard />;
+      case "accounts-incentive-payouts":
+        return <IncentivePayoutApproval />;
+      case "accounts-documents":
+      case "document-vault":
+        return <DocumentVault />;
+      // ── HR (10 sub-modules) ──
+      case "hr-core":
+        return <HRCoreModule />;
+      case "hr-recruitment":
+        return <HRRecruitmentModule />;
+      case "hr-workforce":
+        return <HRWorkforceModule />;
       case "hr-attendance":
-        return <HRWorkspace initialTab="attendance" />;
-      case "hr-leaves":
-        return <HRWorkspace initialTab="leaves" />;
-      case "hr-announcements":
-        return <HRWorkspace initialTab="culture" />;
+        return <HRAttendanceModule />;
+      case "hr-payroll":
+        return <HRPayrollModule />;
+      case "hr-expense":
+        return <HRExpenseModule />;
+      case "hr-performance":
+        return <HRPerformanceModule />;
+      case "hr-engagement":
+        return <HREngagementModule />;
+      case "hr-assets":
+        return <HRAssetModule />;
+      case "hr-helpdesk":
+        return <HRHelpdeskModule />;
       case "incentive-management":
         return <SuperAdminIncentiveWorkspace />;
       case "incentive-my-dashboard":
         return <SalesIncentiveDashboard />;
-      case "hr-employees":
-        return <HREmployeeManagement />;
-      case "hr-onboarding":
-        return <HROnboarding />;
-      case "hr-payroll":
-        return <HRDeepWorkspace initialTab="payroll" />;
-      case "hr-kpi":
-        return <HRKPIManagement />;
-      case "hr-templates":
-        return <HRTemplates />;
-      case "hr-documents":
-      case "accounts-documents":
-      case "document-vault":
-        return <DocumentVault />;
-      case "accounts-incentive-payouts":
-        return <IncentivePayoutApproval />;
       case "deals-pipeline":
         return <DealsPipeline />;
       default:
