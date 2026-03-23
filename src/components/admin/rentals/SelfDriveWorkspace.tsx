@@ -259,8 +259,8 @@ export function SelfDriveWorkspace() {
 
   return (
     <div className="flex h-full min-h-[calc(100vh-4rem)]">
-      <div className={cn("flex-1 overflow-auto", previewOpen ? "max-w-[55%]" : "w-full")}>
-        <div className="space-y-4 p-1">
+      <div className={cn("flex-1 overflow-auto p-1", previewOpen ? "max-w-[55%]" : "w-full")}>
+      <div className="space-y-4">
       {/* KPI Row */}
       <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
         {[
