@@ -307,13 +307,41 @@ export const AccountsDeepWorkspace = ({ initialTab = "overview" }: { initialTab?
                           {inv.status}
                         </Badge>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="flex gap-1">
                         {inv.status !== "paid" && (
                           <Button size="sm" variant="ghost" className="h-6 text-[10px] text-emerald-600"
                             onClick={() => updateInvoiceStatus.mutate({ id: inv.id, status: "paid" })}>
-                            <CheckCircle2 className="h-3 w-3 mr-1" /> Mark Paid
+                            <CheckCircle2 className="h-3 w-3 mr-1" /> Paid
                           </Button>
                         )}
+                        <Button size="sm" variant="ghost" className="h-6 text-[10px]"
+                          onClick={() => {
+                            import("@/lib/generateInvoicePDF").then(({ generateInvoicePDF }) => {
+                              generateInvoicePDF({
+                                invoice_number: inv.invoice_number,
+                                invoice_date: inv.invoice_date,
+                                due_date: inv.due_date,
+                                client_name: inv.client_name || inv.customer_name,
+                                client_phone: inv.client_phone,
+                                client_email: inv.client_email,
+                                client_address: inv.client_address,
+                                gstin: inv.gstin,
+                                items: inv.items,
+                                subtotal: inv.subtotal,
+                                tax_amount: inv.tax_amount,
+                                discount_amount: inv.discount_amount,
+                                total_amount: inv.total_amount,
+                                amount_paid: inv.amount_paid,
+                                balance_due: inv.balance_due,
+                                description: inv.description,
+                                vertical_name: inv.vertical_name,
+                                notes: inv.notes,
+                                invoice_type: inv.invoice_type,
+                              });
+                            });
+                          }}>
+                          <Download className="h-3 w-3 mr-1" /> PDF
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
