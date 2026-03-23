@@ -115,8 +115,9 @@ const navItems: NavItem[] = [
     ]
   },
 
-  // ── Omnichannel Inbox — all verticals ──
+  // ── Omnichannel Inbox — operational verticals only ──
   { id: "d2c-inbox", label: "📨 Omni Inbox", icon: MessageSquare, badge: "New",
+    verticals: ["sales", "insurance", "rental", "hsrp", "accessories", "dealer-network", "marketing", "loans"],
     allowedRoles: ["super_admin", "admin", "sales", "operations"] },
 
   // ── Dealer Network — dedicated vertical ──
@@ -350,21 +351,21 @@ const navItems: NavItem[] = [
     allowedRoles: ["super_admin", "admin"],
   },
 
-  // ── Deals Pipeline — visible across verticals for admin/sales ──
+  // ── Deals Pipeline — sales/loans/accounts verticals ──
   { 
     id: "deals-pipeline", 
     label: "📋 Deals Pipeline", 
     icon: FileText,
-    verticals: ["all"],
+    verticals: ["sales", "insurance", "loans", "accounts", "dealer-network"],
     allowedRoles: ["super_admin", "admin", "sales", "finance"],
   },
 
-  // ── Incentive Management — visible to all roles ──
+  // ── Incentive Management — operational + accounts verticals ──
   { 
     id: "incentive-hub", 
     label: "🏆 Incentives", 
     icon: Trophy,
-    verticals: ["all"],
+    verticals: ["sales", "insurance", "loans", "accounts", "rental", "hsrp", "accessories", "dealer-network", "marketing"],
     children: [
       { id: "incentive-management", label: "🏆 Admin Dashboard", icon: Trophy, allowedRoles: ["super_admin"] },
       { id: "incentive-my-dashboard", label: "💰 My Incentives", icon: CreditCard },
