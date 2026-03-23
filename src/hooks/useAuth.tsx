@@ -2,6 +2,8 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
+const AUTH_BOOTSTRAP_TIMEOUT_MS = 8000;
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -20,19 +22,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, nextSession) => {
+    let isMounted = true;
+
+    const safeSetAuthState = (nextSession: Session | null) => {
+      if (!isMounted) return;
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
       setLoading(false);
-    });
+    };
 
-    supabase.auth.getSession().then(({ data: { session: activeSession } }) => {
-      setSession(activeSession);
-      setUser(activeSession?.user ?? null);
+    const bootstrapTimeout = window.setTimeout(() => {
+      if (!isMounted) return;
+
+      console.warn("[Auth] Session bootstrap timed out; continuing with safe fallback state");
       setLoading(false);
+    }, AUTH_BOOTSTRAP_TIMEOUT_MS);
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, nextSession) => {
+      safeSetAuthState(nextSession);
     });
 
-    return () => subscription.unsubscribe();
+    supabase.auth
+      .getSession()
+      .then(({ data: { session: activeSession } }) => {
+        safeSetAuthState(activeSession);
+      })
+      .catch((error) => {
+        console.warn("[Auth] Failed to restore session during bootstrap", error);
+
+        if (!isMounted) return;
+        setSession(null);
+        setUser(null);
+        setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+      window.clearTimeout(bootstrapTimeout);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signInWithPhone = async (phone: string) => {
