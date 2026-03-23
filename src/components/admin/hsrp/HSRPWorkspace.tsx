@@ -58,6 +58,10 @@ export function HSRPWorkspace() {
   const [showModal, setShowModal] = useState(false);
   const [dragOver, setDragOver] = useState<string | null>(null);
   const [dragging, setDragging] = useState<any>(null);
+  const [prevCount, setPrevCount] = useState<number | null>(null);
+
+  // ── Real-time updates ──
+  useRealtimeTable('hsrp_bookings', ['hsrp-pipeline']);
 
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ["hsrp-pipeline"],
