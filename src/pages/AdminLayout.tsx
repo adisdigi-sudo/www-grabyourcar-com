@@ -338,8 +338,8 @@ const AdminLayout = () => {
         if (slug === "accessories") return <AccessoriesEcommerceWorkspace />;
         if (slug === "marketing") return <MarketingDashboard onNavigate={setActiveTab} />;
         if (slug === "loans") return <LoanCRMDashboard />;
-        if (slug === "accounts") return <AccountsFinanceWorkspace />;
-        if (slug === "hr") return <HRWorkspace />;
+        if (slug === "accounts") return <AccountsDashboard />;
+        if (slug === "hr") return <HRCoreModule />;
         return <AdminDashboard />;
       }
       case "sales-crm":
