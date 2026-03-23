@@ -62,7 +62,8 @@ export const CarDatabaseWorkspace = () => {
   ) || [];
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex h-full min-h-[calc(100vh-4rem)]">
+      <div className={cn("flex-1 flex flex-col bg-background", previewOpen ? "max-w-[55%]" : "w-full")}>
       {/* Top Nav */}
       <div className="border-b bg-muted/30 px-4 py-2 flex items-center gap-2">
         {[
@@ -81,6 +82,9 @@ export const CarDatabaseWorkspace = () => {
         {activeTab === 'manage' && (
           <Badge variant="outline" className="ml-auto text-[10px] h-5">{filteredExisting.length} cars in database</Badge>
         )}
+        <div className="ml-auto">
+          <PreviewToggleButton isOpen={previewOpen} onToggle={() => setPreviewOpen(!previewOpen)} />
+        </div>
       </div>
 
       {/* Content */}
