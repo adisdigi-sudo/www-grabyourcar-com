@@ -299,11 +299,11 @@ export function AgreementManagement() {
                 onClick={() => { setSelected(agr); setShowDetail(true); }}>
                 <CardContent className="py-3">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
                       <div className={`p-2 rounded-lg ${agr.status === "signed" ? "bg-emerald-100 dark:bg-emerald-950" : "bg-primary/10"}`}>
                         <SIcon className={`h-4 w-4 ${agr.status === "signed" ? "text-emerald-600" : "text-primary"}`} />
                       </div>
-                      <div>
+                      <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="font-semibold text-sm">{agr.customer_name}</span>
                           <Badge className={`text-[10px] ${STATUS_COLORS[agr.status] || STATUS_COLORS.draft}`}>
@@ -316,9 +316,40 @@ export function AgreementManagement() {
                           {agr.vehicle_name && <><span>•</span><span>{agr.vehicle_name}</span></>}
                           {agr.client_signed_at && <><span>•</span><span>Signed {format(new Date(agr.client_signed_at), "dd MMM")}</span></>}
                         </div>
+                        {/* Journey Tracker */}
+                        <div className="flex items-center gap-0.5 mt-1.5">
+                          {[
+                            { key: "draft", label: "Created" },
+                            { key: "sent", label: "Sent" },
+                            { key: "viewed", label: "Opened" },
+                            { key: "signed", label: "Signed" },
+                          ].map((s, i, arr) => {
+                            const statusOrder = ["draft", "sent", "viewed", "signed"];
+                            const currentIdx = statusOrder.indexOf(agr.status);
+                            const stepIdx = statusOrder.indexOf(s.key);
+                            const isCompleted = stepIdx <= currentIdx;
+                            const isCurrent = stepIdx === currentIdx;
+                            return (
+                              <div key={s.key} className="flex items-center gap-0.5">
+                                <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${
+                                  isCompleted
+                                    ? isCurrent
+                                      ? "bg-primary text-primary-foreground"
+                                      : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                                    : "bg-muted text-muted-foreground"
+                                }`}>
+                                  {s.label}
+                                </span>
+                                {i < arr.length - 1 && (
+                                  <span className={`text-[8px] ${isCompleted ? "text-emerald-500" : "text-muted-foreground/40"}`}>→</span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                    <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
                       {agr.status === "draft" && (
                         <>
                           <Button size="sm" variant="ghost" onClick={() => openEdit(agr)} title="Edit">
