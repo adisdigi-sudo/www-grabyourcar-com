@@ -488,42 +488,209 @@ function RentalDetailModal({ open, onOpenChange, booking, vehicles, partners, on
   const handleGenerateAgreement = () => {
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
     const w = doc.internal.pageSize.getWidth();
+    const h = doc.internal.pageSize.getHeight();
+    const mx = 18; const cw = w - mx * 2;
+    const customerName = booking.customer_name || "___________________";
+    const customerPhone = booking.phone || "___________________";
+    const today = format(new Date(), "dd MMMM yyyy");
 
-    doc.setFillColor(37, 99, 235); doc.rect(0, 0, w, 45, "F");
-    doc.setTextColor(255, 255, 255); doc.setFontSize(20); doc.setFont("helvetica", "bold");
-    doc.text("Self-Drive Rental Agreement", w / 2, 20, { align: "center" });
-    doc.setFontSize(10); doc.setFont("helvetica", "normal");
-    doc.text("GrabYourCar - www.grabyourcar.com", w / 2, 32, { align: "center" });
+    // ── Page 1: Header + Booking Details + Core Terms ──
+    doc.setFillColor(15, 23, 42); doc.rect(0, 0, w, 52, "F");
+    doc.setTextColor(255, 255, 255); doc.setFontSize(18); doc.setFont("helvetica", "bold");
+    doc.text("SELF-DRIVE CAR RENTAL AGREEMENT", w / 2, 18, { align: "center" });
+    doc.setFontSize(9); doc.setFont("helvetica", "normal");
+    doc.text("GrabYourCar Pvt. Ltd. | www.grabyourcar.com | support@grabyourcar.com", w / 2, 28, { align: "center" });
+    doc.setDrawColor(59, 130, 246); doc.setLineWidth(0.8); doc.line(mx, 34, w - mx, 34);
+    doc.setFontSize(8);
+    doc.text(`Agreement Date: ${today}`, mx, 42);
+    doc.text(`Ref: GYC-${booking.id.slice(0, 8).toUpperCase()}`, w - mx, 42, { align: "right" });
 
-    let y = 60;
-    const bx = 20; const bw = w - 40;
-    doc.setTextColor(60, 60, 60);
+    let y = 62;
+    const section = (title: string) => {
+      doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(15, 23, 42);
+      doc.text(title, mx, y); y += 2;
+      doc.setDrawColor(59, 130, 246); doc.setLineWidth(0.5); doc.line(mx, y, mx + 60, y); y += 6;
+      doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(50, 50, 50);
+    };
+    const addLine = (text: string, indent = 0) => {
+      const lines = doc.splitTextToSize(text, cw - indent);
+      if (y + lines.length * 4.5 > h - 20) { doc.addPage(); y = 20; }
+      doc.text(lines, mx + indent, y); y += lines.length * 4.5;
+    };
+    const addRow = (label: string, value: string) => {
+      doc.setFont("helvetica", "normal"); doc.setTextColor(100, 100, 100);
+      doc.text(label, mx + 4, y);
+      doc.setFont("helvetica", "bold"); doc.setTextColor(15, 23, 42);
+      doc.text(value, mx + cw - 4, y, { align: "right" }); y += 7;
+    };
 
-    const rows = [
-      ["Booking ID", booking.id.slice(0, 12)],
+    // Parties
+    section("1. PARTIES TO THE AGREEMENT");
+    addLine(`This Self-Drive Car Rental Agreement ("Agreement") is entered into on ${today} between:`);
+    y += 2;
+    addLine(`LESSOR: GrabYourCar Pvt. Ltd., having its registered office at Delhi NCR, India ("Company").`, 4);
+    y += 1;
+    addLine(`LESSEE: ${customerName}, Contact: ${customerPhone}, Email: ${booking.email || "N/A"}, DL No: ${booking.driver_license_number || "N/A"} ("Customer").`, 4);
+    y += 4;
+
+    // Booking Details
+    section("2. VEHICLE & BOOKING DETAILS");
+    const detailRows: [string, string][] = [
+      ["Booking Reference", `GYC-${booking.id.slice(0, 8).toUpperCase()}`],
       ["Vehicle", `${booking.vehicle_name} (${booking.vehicle_type})`],
-      ["Pickup", `${booking.pickup_date} at ${booking.pickup_time} - ${booking.pickup_location}`],
-      ["Drop-off", `${booking.dropoff_date} at ${booking.dropoff_time} - ${booking.dropoff_location}`],
-      ["Duration", `${booking.total_days} day(s)`],
-      ["Daily Rate", `Rs.${(booking.daily_rate || 0).toLocaleString("en-IN")}`],
-      ["Total Amount", `Rs.${(booking.total_amount || 0).toLocaleString("en-IN")}`],
-      ["Security Deposit", `Rs.${(booking.security_deposit || 0).toLocaleString("en-IN")}`],
-      ["Payment Status", booking.payment_status],
-      ["DL Number", booking.driver_license_number || "-"],
+      ["Pickup Date & Time", `${booking.pickup_date || "-"} at ${booking.pickup_time || "-"}`],
+      ["Pickup Location", booking.pickup_location || "-"],
+      ["Drop-off Date & Time", `${booking.dropoff_date || "-"} at ${booking.dropoff_time || "-"}`],
+      ["Drop-off Location", booking.dropoff_location || "-"],
+      ["Rental Duration", `${booking.total_days || 1} day(s)`],
+      ["Daily Rate", `Rs. ${(booking.daily_rate || 0).toLocaleString("en-IN")}`],
+      ["Total Rental Amount", `Rs. ${(booking.total_amount || 0).toLocaleString("en-IN")}`],
+      ["Security Deposit", `Rs. ${(booking.security_deposit || 5000).toLocaleString("en-IN")}`],
+      ["Driving License No.", booking.driver_license_number || "To be provided"],
     ];
+    doc.setFillColor(248, 250, 252); doc.rect(mx, y - 3, cw, detailRows.length * 7 + 4, "F");
+    doc.setDrawColor(226, 232, 240); doc.rect(mx, y - 3, cw, detailRows.length * 7 + 4, "S");
+    detailRows.forEach(([l, v]) => addRow(l, v));
+    y += 6;
 
-    rows.forEach(([label, value], i) => {
-      const ry = y + i * 12;
-      if (i % 2 === 0) { doc.setFillColor(248, 250, 252); doc.rect(bx, ry - 4, bw, 12, "F"); }
-      doc.setFontSize(10); doc.setFont("helvetica", "normal"); doc.setTextColor(80, 80, 80);
-      doc.text(label, bx + 6, ry + 4);
-      doc.setFont("helvetica", "bold"); doc.setTextColor(30, 30, 30);
-      doc.text(value, bx + bw - 6, ry + 4, { align: "right" });
-    });
+    // Terms
+    section("3. ELIGIBILITY & DOCUMENTATION");
+    const eligibility = [
+      "The Customer must be at least 21 years of age with a valid Indian driving license (original, not learner's permit).",
+      "The Customer must present valid government-issued photo ID (Aadhaar, Passport, or Voter ID) at the time of pickup.",
+      "The Company reserves the right to refuse rental if the Customer fails to produce valid documents or appears unfit to drive.",
+      "International customers must present a valid International Driving Permit (IDP) along with their passport.",
+    ];
+    eligibility.forEach((t, i) => { addLine(`${i + 1}. ${t}`, 4); y += 1; });
+    y += 3;
 
-    y += rows.length * 12 + 20;
-    doc.setFontSize(8); doc.setTextColor(150, 150, 150);
-    doc.text(`Generated on ${format(new Date(), "dd MMM yyyy")} | GrabYourCar`, bx, y);
+    section("4. RENTAL CHARGES & PAYMENT TERMS");
+    const payment = [
+      `The total rental charge is Rs. ${(booking.total_amount || 0).toLocaleString("en-IN")} for ${booking.total_days || 1} day(s) at Rs. ${(booking.daily_rate || 0).toLocaleString("en-IN")}/day.`,
+      `A refundable security deposit of Rs. ${(booking.security_deposit || 5000).toLocaleString("en-IN")} is payable at the time of vehicle pickup via cash, UPI, or card.`,
+      "The security deposit will be refunded within 7 working days of vehicle return, subject to inspection and deductions (if any).",
+      "Late return beyond 2 hours of the scheduled drop-off time will incur an additional day's rental charge.",
+      "Fuel charges are borne by the Customer. The vehicle will be provided with a certain fuel level and must be returned at the same level. Shortfall will be charged at Rs. 150/litre.",
+    ];
+    payment.forEach((t, i) => { addLine(`${i + 1}. ${t}`, 4); y += 1; });
+    y += 3;
+
+    section("5. KILOMETRE LIMIT & EXCESS CHARGES");
+    const km = [
+      "The rental includes a daily kilometre allowance of 250 KM per day.",
+      "Excess kilometres will be charged at Rs. 12/KM for hatchbacks/sedans and Rs. 15/KM for SUVs/MUVs.",
+      "Odometer readings will be recorded at pickup and return; any tampering will result in forfeiture of the security deposit.",
+    ];
+    km.forEach((t, i) => { addLine(`${i + 1}. ${t}`, 4); y += 1; });
+    y += 3;
+
+    // ── Page 2: Detailed Legal Terms ──
+    if (y > h - 80) { doc.addPage(); y = 20; }
+
+    section("6. VEHICLE USAGE RESTRICTIONS");
+    const usage = [
+      "The vehicle shall be used solely for lawful, personal transportation within Indian territory.",
+      "The vehicle shall NOT be used for: (a) racing, rallying, or speed testing; (b) towing another vehicle; (c) sub-letting or re-renting; (d) transporting hazardous materials; (e) driving under the influence of alcohol or drugs; (f) driving on unpaved/off-road terrain unless the vehicle is designated for such use.",
+      "Only the Customer named in this Agreement (or an additional driver approved in writing) may operate the vehicle.",
+      "Smoking inside the vehicle is strictly prohibited. A cleaning charge of Rs. 2,000 will apply for violations.",
+      "Pets are not permitted inside the vehicle without prior written consent and an additional cleaning deposit of Rs. 1,500.",
+    ];
+    usage.forEach((t, i) => { addLine(`${i + 1}. ${t}`, 4); y += 1; });
+    y += 3;
+
+    section("7. INSURANCE & LIABILITY");
+    const insurance = [
+      "The vehicle is covered under a comprehensive motor insurance policy. However, the Customer shall be liable for any damage not covered by insurance, including but not limited to: tyre damage, undercarriage damage, interior damage, and windscreen cracks.",
+      "In case of an accident, the Customer must immediately: (a) inform the Company; (b) file an FIR with the nearest police station; (c) not move the vehicle until instructed.",
+      "The Customer shall bear the insurance excess/deductible amount (up to Rs. 15,000) for any claim arising from their usage period.",
+      "The Company shall not be liable for any loss of personal belongings left in the vehicle.",
+      "Third-party liability arising from the Customer's negligence shall be the sole responsibility of the Customer.",
+    ];
+    insurance.forEach((t, i) => { addLine(`${i + 1}. ${t}`, 4); y += 1; });
+    y += 3;
+
+    section("8. BREAKDOWN & ROADSIDE ASSISTANCE");
+    const breakdown = [
+      "In case of mechanical breakdown (not caused by Customer negligence), the Company will arrange for roadside assistance or a replacement vehicle within a reasonable time.",
+      "If the breakdown is caused by Customer negligence (wrong fuel, overheating due to ignored warnings, etc.), the Customer shall bear all repair and towing costs.",
+      "The Customer must not attempt any repairs without prior authorization from the Company.",
+    ];
+    breakdown.forEach((t, i) => { addLine(`${i + 1}. ${t}`, 4); y += 1; });
+    y += 3;
+
+    section("9. TRAFFIC VIOLATIONS & FINES");
+    const fines = [
+      "The Customer is solely responsible for all traffic violations, challans, and fines incurred during the rental period.",
+      "If the Company receives any challan post-return, the amount will be deducted from the security deposit or invoiced separately.",
+      "Toll charges, parking fees, and inter-state permits are the Customer's responsibility.",
+    ];
+    fines.forEach((t, i) => { addLine(`${i + 1}. ${t}`, 4); y += 1; });
+    y += 3;
+
+    section("10. VEHICLE RETURN & INSPECTION");
+    const returnTerms = [
+      "The vehicle must be returned at the agreed location, date, and time in the same condition as received (subject to normal wear and tear).",
+      "A joint inspection will be conducted at pickup and return. Any pre-existing damage will be documented.",
+      "Deductions from the security deposit may include: damage repairs, excess KM charges, fuel shortfall, cleaning charges, late return penalty, and outstanding challans.",
+      "If the vehicle is not returned within 24 hours of the scheduled time without prior intimation, the Company reserves the right to report the vehicle as stolen and take legal action.",
+    ];
+    returnTerms.forEach((t, i) => { addLine(`${i + 1}. ${t}`, 4); y += 1; });
+    y += 3;
+
+    section("11. CANCELLATION & REFUND POLICY");
+    const cancellation = [
+      "Cancellation 48+ hours before pickup: Full refund of advance payment.",
+      "Cancellation 24-48 hours before pickup: 50% refund.",
+      "Cancellation less than 24 hours or no-show: No refund.",
+      "Early return of the vehicle does not entitle the Customer to a pro-rata refund unless agreed in writing.",
+    ];
+    cancellation.forEach((t, i) => { addLine(`${i + 1}. ${t}`, 4); y += 1; });
+    y += 3;
+
+    section("12. INDEMNIFICATION");
+    addLine("The Customer agrees to indemnify and hold harmless GrabYourCar Pvt. Ltd., its directors, employees, and agents from any claims, damages, losses, or expenses arising from the Customer's use of the vehicle, including but not limited to third-party claims, bodily injury, property damage, and legal fees.");
+    y += 3;
+
+    section("13. GOVERNING LAW & JURISDICTION");
+    addLine("This Agreement shall be governed by and construed in accordance with the laws of India. Any disputes arising out of or in connection with this Agreement shall be subject to the exclusive jurisdiction of the courts of Delhi, India.");
+    y += 3;
+
+    section("14. FORCE MAJEURE");
+    addLine("Neither party shall be liable for failure to perform obligations due to events beyond reasonable control, including natural disasters, government actions, pandemics, civil unrest, or any other force majeure event.");
+    y += 6;
+
+    // Signature Block
+    if (y > h - 60) { doc.addPage(); y = 20; }
+    doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.3); doc.line(mx, y, w - mx, y); y += 8;
+    section("ACKNOWLEDGEMENT & SIGNATURES");
+    addLine("By signing below, the Customer acknowledges that they have read, understood, and agree to all terms and conditions stated in this Agreement.");
+    y += 12;
+
+    // Signature boxes
+    const sigW = (cw - 10) / 2;
+    doc.setDrawColor(180, 180, 180); doc.setLineWidth(0.3);
+    // Lessor
+    doc.rect(mx, y, sigW, 35, "S");
+    doc.setFont("helvetica", "bold"); doc.setFontSize(8); doc.setTextColor(80, 80, 80);
+    doc.text("FOR GRABYOURCAR PVT. LTD.", mx + 4, y + 6);
+    doc.setFont("helvetica", "normal"); doc.setFontSize(7);
+    doc.text("Authorized Signatory", mx + 4, y + 12);
+    doc.text("Date: " + today, mx + 4, y + 30);
+    // Lessee
+    const sx2 = mx + sigW + 10;
+    doc.rect(sx2, y, sigW, 35, "S");
+    doc.setFont("helvetica", "bold"); doc.setFontSize(8);
+    doc.text("CUSTOMER / LESSEE", sx2 + 4, y + 6);
+    doc.setFont("helvetica", "normal"); doc.setFontSize(7);
+    doc.text(`Name: ${customerName}`, sx2 + 4, y + 12);
+    doc.text(`Phone: ${customerPhone}`, sx2 + 4, y + 18);
+    doc.text(`DL: ${booking.driver_license_number || "___________"}`, sx2 + 4, y + 24);
+    doc.text("Signature: _______________", sx2 + 4, y + 30);
+
+    y += 42;
+    doc.setFontSize(6); doc.setTextColor(160, 160, 160);
+    doc.text("This is a computer-generated document. The terms herein are legally binding upon acceptance.", mx, y);
+    doc.text(`Generated: ${today} | GrabYourCar Pvt. Ltd. | CIN: UXXXXX2024PTCXXXXXX`, mx, y + 4);
 
     doc.save(`Rental_Agreement_${booking.id.slice(0, 8)}.pdf`);
     setAgreementGenerated(true);
