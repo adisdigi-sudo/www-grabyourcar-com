@@ -309,7 +309,7 @@ const AdminLayout = () => {
         if (slug === "rental") return <RentalVerticalWorkspace />;
         if (slug === "hsrp") return <HSRPVerticalWorkspace />;
         if (slug === "corporate" || slug === "fleet") return <FleetVerticalWorkspace />;
-        if (slug === "accessories") return <AccessoriesDashboard />;
+        if (slug === "accessories") return <AccessoriesEcommerceWorkspace />;
         if (slug === "marketing") return <MarketingDashboard onNavigate={setActiveTab} />;
         if (slug === "loans") return <LoanCRMDashboard />;
         if (slug === "accounts") return <AccountsFinanceWorkspace />;
