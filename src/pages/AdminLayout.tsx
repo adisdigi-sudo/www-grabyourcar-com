@@ -543,6 +543,10 @@ const AdminLayout = () => {
         return <DealerManagement initialTab="broadcast" />;
       case "accounts-finance":
         return <AccountsFinanceWorkspace initialTab="overview" />;
+      case "accounts-intelligence":
+        return <FinancialIntelligenceDashboard />;
+      case "accounts-accounting":
+        return <AccountsDeepWorkspace initialTab="overview" />;
       case "accounts-revenue":
         return <AccountsFinanceWorkspace initialTab="revenue" />;
       case "accounts-expenses":
