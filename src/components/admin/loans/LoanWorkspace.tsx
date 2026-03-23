@@ -72,6 +72,19 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
   // ── Real-time subscription for live updates ──
   useRealtimeTable('loan_applications', ['loan-applications']);
 
+  // Fetch data
+  const { data: rawApplications = [] } = useQuery({
+    queryKey: ['loan-applications'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('loan_applications')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
   // ── New lead toast notification ──
   useEffect(() => {
     if (prevLeadCount === null) {
@@ -89,17 +102,6 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
     }
     setPrevLeadCount(rawApplications.length);
   }, [rawApplications.length]);
-  const { data: rawApplications = [] } = useQuery({
-    queryKey: ['loan-applications'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('loan_applications')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-  });
 
   const { data: dbBankPartners = [] } = useQuery({
     queryKey: ['loan-bank-partners'],
