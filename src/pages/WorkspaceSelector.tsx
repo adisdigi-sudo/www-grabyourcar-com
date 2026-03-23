@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useVerticalAccess, BusinessVertical } from "@/hooks/useVerticalAccess";
@@ -27,6 +27,11 @@ const WorkspaceSelector = () => {
   const { availableVerticals, setActiveVertical, isLoading: verticalLoading, teamMember } = useVerticalAccess();
   const { isSuperAdmin } = useAdminAuth();
 
+  const sortedVerticals = useMemo(
+    () => [...availableVerticals].sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999)),
+    [availableVerticals],
+  );
+
   useEffect(() => {
     if (!authLoading && !user) {
       navigate("/crm-auth");
@@ -35,11 +40,11 @@ const WorkspaceSelector = () => {
 
   // If only 1 vertical available, auto-select it
   useEffect(() => {
-    if (!authLoading && !verticalLoading && user && availableVerticals.length === 1) {
-      setActiveVertical(availableVerticals[0]);
+    if (!authLoading && !verticalLoading && user && sortedVerticals.length === 1) {
+      setActiveVertical(sortedVerticals[0]);
       navigate("/crm");
     }
-  }, [authLoading, verticalLoading, user, availableVerticals]);
+  }, [authLoading, verticalLoading, user, sortedVerticals, setActiveVertical, navigate]);
 
   const handleSelectVertical = (vertical: BusinessVertical) => {
     setActiveVertical(vertical);
@@ -102,7 +107,7 @@ const WorkspaceSelector = () => {
             transition={{ delay: 0.2 }}
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
           >
-            {availableVerticals.map((vertical, i) => {
+            {sortedVerticals.map((vertical, i) => {
               const Icon = iconMap[vertical.icon || "Shield"] || Shield;
               return (
                 <motion.div
@@ -131,7 +136,7 @@ const WorkspaceSelector = () => {
             })}
           </motion.div>
 
-          {availableVerticals.length === 0 && (
+          {sortedVerticals.length === 0 && (
             <div className="text-center py-12">
               <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold">No Workspaces Assigned</h3>

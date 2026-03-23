@@ -40,6 +40,10 @@ const SafeTelemetry = () => {
   }>(null);
 
   useEffect(() => {
+    if (import.meta.env.DEV) {
+      return;
+    }
+
     let cancelled = false;
 
     Promise.all([
@@ -63,7 +67,7 @@ const SafeTelemetry = () => {
     };
   }, []);
 
-  if (!telemetry) return null;
+  if (import.meta.env.DEV || !telemetry) return null;
 
   const { Analytics, SpeedInsights } = telemetry;
 
