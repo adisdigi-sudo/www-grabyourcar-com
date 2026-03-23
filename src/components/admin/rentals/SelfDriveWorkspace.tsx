@@ -317,6 +317,7 @@ export function SelfDriveWorkspace() {
           <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">{completed} Completed</Badge>
         </div>
         <div className="flex gap-2 items-center">
+          <PreviewToggleButton isOpen={previewOpen} onToggle={() => setPreviewOpen(!previewOpen)} />
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input placeholder="Search name, phone, vehicle..." className="pl-8 h-8 w-48 text-xs"
