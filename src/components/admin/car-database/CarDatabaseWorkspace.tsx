@@ -160,6 +160,13 @@ export const CarDatabaseWorkspace = () => {
           </ScrollArea>
         </div>
       )}
+      </div>
+      <AdminLivePreview
+        previewPath="/cars"
+        label="Car Database Preview"
+        isOpen={previewOpen}
+        onToggle={() => setPreviewOpen(false)}
+      />
     </div>
   );
 };
