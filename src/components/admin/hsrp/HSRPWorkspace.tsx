@@ -73,6 +73,16 @@ export function HSRPWorkspace() {
     },
   });
 
+  // ── New booking toast ──
+  useEffect(() => {
+    if (prevCount === null) { setPrevCount(bookings.length); return; }
+    if (bookings.length > prevCount) {
+      const newest = bookings[0];
+      if (newest) toast(`🆕 New HSRP Booking! ${newest.owner_name || ""} - ${newest.registration_number || ""}`);
+    }
+    setPrevCount(bookings.length);
+  }, [bookings.length]);
+
   // KPI
   const stageCounts = STAGES.reduce((acc, s) => {
     acc[s.value] = bookings.filter((b: any) => b.pipeline_stage === s.value).length;
