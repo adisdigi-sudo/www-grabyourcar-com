@@ -30,8 +30,8 @@ const SalesVerticalWorkspace = lazy(() =>
 const SelfDriveWorkspace = lazy(() =>
   import("@/components/admin/rentals/SelfDriveWorkspace").then((module) => ({ default: module.SelfDriveWorkspace })),
 );
-const AccessoriesManagement = lazy(() =>
-  import("@/components/admin/AccessoriesManagement").then((module) => ({ default: module.AccessoriesManagement })),
+const AccessoriesEcommerceWorkspace = lazy(() =>
+  import("@/components/admin/accessories/AccessoriesEcommerceWorkspace").then((module) => ({ default: module.AccessoriesEcommerceWorkspace })),
 );
 const WebsiteSettings = lazy(() =>
   import("@/components/admin/WebsiteSettings").then((module) => ({ default: module.WebsiteSettings })),
@@ -309,7 +309,7 @@ const AdminLayout = () => {
         if (slug === "rental") return <RentalVerticalWorkspace />;
         if (slug === "hsrp") return <HSRPVerticalWorkspace />;
         if (slug === "corporate" || slug === "fleet") return <FleetVerticalWorkspace />;
-        if (slug === "accessories") return <AccessoriesDashboard />;
+        if (slug === "accessories") return <AccessoriesEcommerceWorkspace />;
         if (slug === "marketing") return <MarketingDashboard onNavigate={setActiveTab} />;
         if (slug === "loans") return <LoanCRMDashboard />;
         if (slug === "accounts") return <AccountsFinanceWorkspace />;
@@ -435,7 +435,7 @@ const AdminLayout = () => {
         return <ManualQuoteGenerator />;
       case "ecommerce-accessories":
       case "ecommerce-orders":
-        return <AccessoriesManagement />;
+        return <AccessoriesEcommerceWorkspace />;
       case "ecommerce-crosssell":
         return <CrossSellManagement />;
       case "content-blog":
