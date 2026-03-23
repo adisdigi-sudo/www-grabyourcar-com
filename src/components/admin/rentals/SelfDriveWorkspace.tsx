@@ -79,6 +79,7 @@ export function SelfDriveWorkspace() {
   const [prevBookingCount, setPrevBookingCount] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStage, setFilterStage] = useState<string>("all");
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   useRealtimeTable('rental_bookings', ['rental-pipeline']);
 
