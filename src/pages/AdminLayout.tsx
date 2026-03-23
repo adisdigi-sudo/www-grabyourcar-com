@@ -573,6 +573,8 @@ const AdminLayout = () => {
         return <HREmployeeManagement />;
       case "hr-onboarding":
         return <HROnboarding />;
+      case "hr-payroll":
+        return <HRDeepWorkspace initialTab="payroll" />;
       case "hr-kpi":
         return <HRKPIManagement />;
       case "hr-templates":
