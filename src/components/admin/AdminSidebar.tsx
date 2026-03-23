@@ -312,6 +312,8 @@ const navItems: NavItem[] = [
     allowedRoles: ["super_admin", "admin", "finance"],
     children: [
       { id: "accounts-finance", label: "📊 Finance Overview", icon: BarChart3 },
+      { id: "accounts-intelligence", label: "🧠 Financial Intelligence", icon: BarChart3 },
+      { id: "accounts-accounting", label: "📒 Tally Accounting", icon: CreditCard },
       { id: "accounts-revenue", label: "💵 Revenue Entries", icon: CreditCard },
       { id: "accounts-expenses", label: "📤 Expenses", icon: CreditCard },
       { id: "accounts-commissions", label: "🏆 Commissions", icon: CreditCard },
@@ -333,6 +335,7 @@ const navItems: NavItem[] = [
       { id: "hr-directory", label: "👥 Team Directory", icon: Users },
       { id: "hr-employees", label: "🧑‍💼 Employee Mgmt", icon: UserCog },
       { id: "hr-onboarding", label: "🚀 Onboarding", icon: Rocket },
+      { id: "hr-payroll", label: "💰 Payroll & Payslips", icon: CreditCard },
       { id: "hr-kpi", label: "🎯 KPI & Targets", icon: BarChart3 },
       { id: "hr-templates", label: "📝 Templates", icon: FileText },
       { id: "hr-attendance", label: "📋 Attendance", icon: CalendarDays },

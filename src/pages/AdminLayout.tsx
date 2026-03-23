@@ -211,6 +211,15 @@ const LeadRoutingManager = lazy(() =>
 const AccountsFinanceWorkspace = lazy(() =>
   import("@/components/admin/finance/AccountsFinanceWorkspace").then((module) => ({ default: module.AccountsFinanceWorkspace })),
 );
+const AccountsDeepWorkspace = lazy(() =>
+  import("@/components/admin/finance/AccountsDeepWorkspace").then((module) => ({ default: module.AccountsDeepWorkspace })),
+);
+const FinancialIntelligenceDashboard = lazy(() =>
+  import("@/components/admin/finance/FinancialIntelligenceDashboard").then((module) => ({ default: module.FinancialIntelligenceDashboard })),
+);
+const HRDeepWorkspace = lazy(() =>
+  import("@/components/admin/hr/HRDeepWorkspace").then((module) => ({ default: module.HRDeepWorkspace })),
+);
 const HRWorkspace = lazy(() =>
   import("@/components/admin/hr/HRWorkspace").then((module) => ({ default: module.HRWorkspace })),
 );
@@ -534,6 +543,10 @@ const AdminLayout = () => {
         return <DealerManagement initialTab="broadcast" />;
       case "accounts-finance":
         return <AccountsFinanceWorkspace initialTab="overview" />;
+      case "accounts-intelligence":
+        return <FinancialIntelligenceDashboard />;
+      case "accounts-accounting":
+        return <AccountsDeepWorkspace initialTab="overview" />;
       case "accounts-revenue":
         return <AccountsFinanceWorkspace initialTab="revenue" />;
       case "accounts-expenses":
@@ -560,6 +573,8 @@ const AdminLayout = () => {
         return <HREmployeeManagement />;
       case "hr-onboarding":
         return <HROnboarding />;
+      case "hr-payroll":
+        return <HRDeepWorkspace initialTab="payroll" />;
       case "hr-kpi":
         return <HRKPIManagement />;
       case "hr-templates":
