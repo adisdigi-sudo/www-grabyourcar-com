@@ -450,6 +450,14 @@ const AdminLayout = () => {
         return <AccessoriesEcommerceWorkspace />;
       case "ecommerce-crosssell":
         return <CrossSellManagement />;
+      case "d2c-rto":
+        return <RTOSuitePage />;
+      case "d2c-returns":
+        return <ReturnManagementPage />;
+      case "d2c-checkout":
+        return <CheckoutPageD2C />;
+      case "d2c-inbox":
+        return <OmniInboxPage />;
       case "content-blog":
         return <BlogManagement />;
       case "content-news":

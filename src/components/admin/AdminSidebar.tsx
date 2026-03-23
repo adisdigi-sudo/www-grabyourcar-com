@@ -109,8 +109,15 @@ const navItems: NavItem[] = [
       { id: "ecommerce-accessories", label: "Accessories", icon: Package },
       { id: "ecommerce-orders", label: "Orders", icon: FileText },
       { id: "ecommerce-crosssell", label: "Cross-Sell", icon: Tags },
+      { id: "d2c-rto", label: "🛡️ RTO Suite", icon: Shield },
+      { id: "d2c-returns", label: "↩️ Returns", icon: Package },
+      { id: "d2c-checkout", label: "🛒 1Checkout", icon: CreditCard },
     ]
   },
+
+  // ── Omnichannel Inbox — all verticals ──
+  { id: "d2c-inbox", label: "📨 Omni Inbox", icon: MessageSquare, badge: "New",
+    allowedRoles: ["super_admin", "admin", "sales", "operations"] },
 
   // ── Dealer Network — dedicated vertical ──
   { 
