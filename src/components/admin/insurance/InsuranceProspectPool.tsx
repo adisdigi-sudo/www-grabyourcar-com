@@ -18,8 +18,9 @@ import {
   PhoneCall, MessageSquare, Mail, Clock, Plus, Filter,
   Database, UserCheck, UserX, PhoneOff, CalendarClock, RotateCcw,
   Trophy, XCircle, StickyNote, Eye, Trash2, Upload,
-  TrendingUp, Target, Flame, ChevronLeft, ChevronRight, Loader2, Car
+  TrendingUp, Target, Flame, ChevronLeft, ChevronRight, Loader2, Car, Check
 } from "lucide-react";
+import { INSURANCE_COMPANIES } from "@/lib/insuranceCompanies";
 import { BulkProspectImportButton } from "./BulkProspectImport";
 
 const STATUSES = [
@@ -679,7 +680,31 @@ export function InsuranceProspectPool() {
                 </div>
                 {rcLookup.error && <p className="text-[10px] text-destructive mt-0.5">{rcLookup.error}</p>}
               </div>
-              <div><Label className="text-xs">Insurer</Label><Input value={form.insurer} onChange={e => setForm(f => ({ ...f, insurer: e.target.value }))} /></div>
+              <div>
+                <Label className="text-xs">Insurer</Label>
+                {form.insurer && !INSURANCE_COMPANIES.includes(form.insurer) ? (
+                  <div className="flex gap-1 items-center">
+                    <Input value={form.insurer} onChange={e => setForm(f => ({ ...f, insurer: e.target.value }))} className="h-9 text-sm flex-1" placeholder="Type custom insurer name" data-custom-insurer />
+                    <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => setForm(f => ({ ...f, insurer: "" }))} title="Clear">
+                      <XCircle className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Select value={form.insurer || ""} onValueChange={v => {
+                    if (v === "__add_custom__") {
+                      setForm(f => ({ ...f, insurer: " " }));
+                    } else {
+                      setForm(f => ({ ...f, insurer: v }));
+                    }
+                  }}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="Select insurer" /></SelectTrigger>
+                    <SelectContent className="max-h-[200px]">
+                      {INSURANCE_COMPANIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                      <SelectItem value="__add_custom__">+ Add Custom Company</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label className="text-xs">Expiry Date</Label><Input type="date" value={form.expiry_date} onChange={e => setForm(f => ({ ...f, expiry_date: e.target.value }))} /></div>
