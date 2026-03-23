@@ -317,7 +317,7 @@ const AdminLayout = () => {
         return <AdminDashboard />;
       }
       case "sales-crm":
-        return <SalesWorkspace />;
+        return <SalesVerticalWorkspace />;
       case "loan-crm":
         return <LoanCRMDashboard />;
       case "unified-crm":
