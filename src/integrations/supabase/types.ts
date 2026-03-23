@@ -16,11 +16,15 @@ export type Database = {
     Tables: {
       accessory_orders: {
         Row: {
+          courier_name: string | null
+          courier_tracking_url: string | null
           created_at: string
+          delivered_at: string | null
           delivery_fee: number
           discount_amount: number | null
           discount_applied_by: string | null
           discount_reason: string | null
+          estimated_delivery: string | null
           id: string
           items: Json
           notes: string | null
@@ -28,6 +32,7 @@ export type Database = {
           order_status: string
           payment_id: string | null
           payment_status: string
+          shipped_at: string | null
           shipping_address: string
           shipping_city: string
           shipping_email: string | null
@@ -37,15 +42,21 @@ export type Database = {
           shipping_state: string
           subtotal: number
           total_amount: number
+          tracking_number: string | null
+          tracking_updates: Json | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          courier_name?: string | null
+          courier_tracking_url?: string | null
           created_at?: string
+          delivered_at?: string | null
           delivery_fee?: number
           discount_amount?: number | null
           discount_applied_by?: string | null
           discount_reason?: string | null
+          estimated_delivery?: string | null
           id?: string
           items: Json
           notes?: string | null
@@ -53,6 +64,7 @@ export type Database = {
           order_status?: string
           payment_id?: string | null
           payment_status?: string
+          shipped_at?: string | null
           shipping_address: string
           shipping_city: string
           shipping_email?: string | null
@@ -62,15 +74,21 @@ export type Database = {
           shipping_state: string
           subtotal: number
           total_amount: number
+          tracking_number?: string | null
+          tracking_updates?: Json | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          courier_name?: string | null
+          courier_tracking_url?: string | null
           created_at?: string
+          delivered_at?: string | null
           delivery_fee?: number
           discount_amount?: number | null
           discount_applied_by?: string | null
           discount_reason?: string | null
+          estimated_delivery?: string | null
           id?: string
           items?: Json
           notes?: string | null
@@ -78,6 +96,7 @@ export type Database = {
           order_status?: string
           payment_id?: string | null
           payment_status?: string
+          shipped_at?: string | null
           shipping_address?: string
           shipping_city?: string
           shipping_email?: string | null
@@ -87,6 +106,8 @@ export type Database = {
           shipping_state?: string
           subtotal?: number
           total_amount?: number
+          tracking_number?: string | null
+          tracking_updates?: Json | null
           updated_at?: string
           user_id?: string
         }
@@ -8806,6 +8827,44 @@ export type Database = {
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "navigation_menu"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_tracking_history: {
+        Row: {
+          created_at: string | null
+          id: string
+          location: string | null
+          message: string | null
+          order_id: string
+          status: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          location?: string | null
+          message?: string | null
+          order_id: string
+          status: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          location?: string | null
+          message?: string | null
+          order_id?: string
+          status?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_tracking_history_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "accessory_orders"
             referencedColumns: ["id"]
           },
         ]
