@@ -12,7 +12,9 @@ export function useAccessoriesCatalog() {
   const settingsQuery = useAdminSettings(ACCESSORIES_SETTINGS_KEY);
 
   const catalog = useMemo(() => {
-    const settingValue = settingsQuery.data?.setting_value;
+    const settingValue = Array.isArray(settingsQuery.data)
+      ? undefined
+      : settingsQuery.data?.setting_value;
     return settingValue ? normalizeAccessoriesCatalog(settingValue) : getDefaultAccessoriesCatalog();
   }, [settingsQuery.data]);
 

@@ -11,6 +11,8 @@ const AI_MODELS = [
   "openai/gpt-5-mini",
 ];
 
+const IMAGE_MODEL = "google/gemini-3.1-flash-image-preview";
+
 async function callAI(messages: Array<{ role: string; content: string }>, apiKey: string): Promise<string> {
   for (const model of AI_MODELS) {
     try {
@@ -63,7 +65,7 @@ async function generateImage(prompt: string, apiKey: string): Promise<string | n
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-3.1-flash-image-preview",
+        model: IMAGE_MODEL,
         messages: [{ role: "user", content: prompt }],
         modalities: ["image", "text"],
       }),
@@ -74,6 +76,26 @@ async function generateImage(prompt: string, apiKey: string): Promise<string | n
   } catch { return null; }
 }
 
+async function generateMultipleImages(prompt: string, apiKey: string, imageCount = 3): Promise<string[]> {
+  const shotVariants = [
+    "Front-facing hero angle, centered composition, clean studio lighting.",
+    "Three-quarter angle showing depth and form, premium commercial photography.",
+    "Close-up detail shot highlighting finish, texture, and build quality.",
+    "Lifestyle in-car usage shot while keeping the product clearly visible.",
+  ];
+
+  const images: string[] = [];
+  const total = Math.min(Math.max(imageCount || 1, 1), 4);
+
+  for (let index = 0; index < total; index += 1) {
+    const variantPrompt = `${prompt} ${shotVariants[index] || shotVariants[0]}`;
+    const image = await generateImage(variantPrompt, apiKey);
+    if (image) images.push(image);
+  }
+
+  return images;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -81,7 +103,7 @@ serve(async (req) => {
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
 
-    const { action, category, name, description, features } = await req.json();
+    const { action, category, name, description, features, imagePrompt, imageCount, userIdea } = await req.json();
 
     if (action === "generate_name") {
       const result = await callAI([
@@ -123,6 +145,23 @@ serve(async (req) => {
       });
     }
 
+    if (action === "generate_image_prompt") {
+      const result = await callAI([
+        {
+          role: "system",
+          content: "You are an expert e-commerce product art director. Turn messy user requests into one precise image-generation prompt for a car accessory product photo. Return ONLY the final prompt. Make it specific about product appearance, angle, lighting, background, realism, and what must or must not appear. Keep it under 120 words.",
+        },
+        {
+          role: "user",
+          content: `Create a polished image prompt for this product. Category: ${category || 'General'}. Name: ${name || 'Car Accessory'}. Description: ${description || 'Not provided'}. Features: ${features || 'Not provided'}. User idea: ${userIdea || 'Professional clean product photos for website listing'}.`,
+        },
+      ], apiKey);
+
+      return new Response(JSON.stringify({ prompt: result.replace(/^"|"$/g, '') }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (action === "auto_fill_all") {
       const toolDef = {
         name: "fill_product",
@@ -132,17 +171,20 @@ serve(async (req) => {
           properties: {
             name: { type: "string", description: "Professional product name, under 60 chars" },
             description: { type: "string", description: "SEO-friendly description, 2-3 sentences" },
+            fullDescription: { type: "string", description: "Detailed description for the product detail page, 4-6 sentences" },
             features: { type: "string", description: "Comma-separated key features, 4-6 items" },
             badge: { type: "string", description: "Short badge label, 1-2 words (e.g. Bestseller, New, Hot Deal)" },
+            slug: { type: "string", description: "SEO-friendly slug in lowercase with hyphens only" },
+            imagePrompt: { type: "string", description: "Professional image generation prompt for this product" },
             price: { type: "number", description: "Suggested MRP in INR (Indian Rupees), realistic market price" },
             originalPrice: { type: "number", description: "Original/strikethrough price in INR, slightly higher than price" },
           },
-          required: ["name", "description", "features", "badge", "price", "originalPrice"],
+          required: ["name", "description", "fullDescription", "features", "badge", "slug", "imagePrompt", "price", "originalPrice"],
           additionalProperties: false,
         },
       };
       const result = await callAIJSON([
-        { role: "system", content: "You are an expert product manager for an Indian car accessories e-commerce store (GrabYourCar). Generate complete, realistic product details. Prices should be in Indian Rupees (INR) and reflect real Indian market pricing." },
+        { role: "system", content: "You are an expert product manager for an Indian car accessories e-commerce store (GrabYourCar). Generate complete, realistic product details. Prices should be in Indian Rupees (INR) and reflect real Indian market pricing. Write everything in a professional, sales-ready tone." },
         { role: "user", content: `Generate complete product details for a car accessory in the "${category || 'General'}" category.${name ? ` Product hint: ${name}` : ''}${description ? ` Description hint: ${description}` : ''}` },
       ], apiKey, toolDef);
       return new Response(JSON.stringify({ product: result }), {
@@ -150,11 +192,11 @@ serve(async (req) => {
       });
     }
 
-    if (action === "generate_image") {
-      const prompt = `Professional product photography of a car accessory: ${name || category || 'car accessory'}. Clean white background, studio lighting, high-quality e-commerce product photo style. No text or watermarks. On a clean white background.`;
-      const imageUrl = await generateImage(prompt, apiKey);
-      if (!imageUrl) throw new Error("Image generation failed");
-      return new Response(JSON.stringify({ image: imageUrl }), {
+    if (action === "generate_image" || action === "generate_images") {
+      const prompt = imagePrompt || `Professional product photography of a car accessory: ${name || category || 'car accessory'}. Clean white background, studio lighting, high-quality e-commerce product photo style. No text or watermarks. Show the product clearly and realistically.`;
+      const images = await generateMultipleImages(prompt, apiKey, Number(imageCount) || (action === "generate_images" ? 3 : 1));
+      if (!images.length) throw new Error("Image generation failed");
+      return new Response(JSON.stringify({ image: images[0], images, prompt }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
