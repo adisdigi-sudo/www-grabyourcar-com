@@ -60,6 +60,10 @@ export function SelfDriveWorkspace() {
   const [showModal, setShowModal] = useState(false);
   const [dragOver, setDragOver] = useState<string | null>(null);
   const [dragging, setDragging] = useState<any>(null);
+  const [prevBookingCount, setPrevBookingCount] = useState<number | null>(null);
+
+  // ── Real-time updates ──
+  useRealtimeTable('rental_bookings', ['rental-pipeline']);
 
   // Fetch bookings
   const { data: bookings = [], isLoading } = useQuery({
