@@ -591,12 +591,13 @@ export const HRDeepWorkspace = ({ initialTab = "overview" }: { initialTab?: stri
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div><Label className="text-xs">Special Allow.</Label><Input type="number" value={form.special_allowance || ""} onChange={e => setForm(f => ({ ...f, special_allowance: e.target.value }))} /></div>
-              <div><Label className="text-xs">Bonus</Label><Input type="number" value={form.bonus || ""} onChange={e => setForm(f => ({ ...f, bonus: e.target.value }))} /></div>
-              <div><Label className="text-xs">Other Deductions</Label><Input type="number" value={form.deductions || ""} onChange={e => setForm(f => ({ ...f, deductions: e.target.value }))} /></div>
+              <div><Label className="text-xs">PF Deduction</Label><Input type="number" value={form.pf_deduction || ""} onChange={e => setForm(f => ({ ...f, pf_deduction: e.target.value }))} /></div>
+              <div><Label className="text-xs">ESI Deduction</Label><Input type="number" value={form.esi_deduction || ""} onChange={e => setForm(f => ({ ...f, esi_deduction: e.target.value }))} /></div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div><Label className="text-xs">TDS</Label><Input type="number" value={form.tds || ""} onChange={e => setForm(f => ({ ...f, tds: e.target.value }))} /></div>
-              <div><Label className="text-xs">PF</Label><Input type="number" value={form.pf || ""} onChange={e => setForm(f => ({ ...f, pf: e.target.value }))} /></div>
+              <div><Label className="text-xs">Prof. Tax</Label><Input type="number" value={form.professional_tax || ""} onChange={e => setForm(f => ({ ...f, professional_tax: e.target.value }))} /></div>
+              <div><Label className="text-xs">Other Deductions</Label><Input type="number" value={form.other_deductions || ""} onChange={e => setForm(f => ({ ...f, other_deductions: e.target.value }))} /></div>
             </div>
             <Button onClick={() => addPayroll.mutate(form)} disabled={!form.employee_name || !form.basic_salary || addPayroll.isPending} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white">
               {addPayroll.isPending ? "Saving..." : "Add Payroll Entry"}
