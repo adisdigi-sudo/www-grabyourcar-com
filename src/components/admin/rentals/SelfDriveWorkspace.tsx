@@ -526,7 +526,8 @@ function RentalDetailModal({ open, onOpenChange, booking, vehicles, partners, on
     doc.text(`Generated on ${format(new Date(), "dd MMM yyyy")} | GrabYourCar`, bx, y);
 
     doc.save(`Rental_Agreement_${booking.id.slice(0, 8)}.pdf`);
-    toast.success("Agreement PDF downloaded!");
+    setAgreementGenerated(true);
+    toast.success("Agreement PDF downloaded! Customer must approve before booking.");
   };
 
   const handleShareWhatsApp = async () => {
