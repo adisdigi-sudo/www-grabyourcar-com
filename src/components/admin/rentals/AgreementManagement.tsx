@@ -19,8 +19,8 @@ import { format } from "date-fns";
 import jsPDF from "jspdf";
 import {
   FileText, Plus, Send, Eye, Edit, CheckCircle2, Clock, XCircle,
-  History, MessageCircle, Copy, Search, Download, RefreshCw, Pen,
-  Calendar, MapPin, CreditCard, Phone, Car, ExternalLink, AlertTriangle,
+  History, Copy, Search, Download, RefreshCw,
+  ExternalLink, ShieldCheck,
 } from "lucide-react";
 
 const STATUS_COLORS: Record<string, string> = {

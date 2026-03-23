@@ -26,6 +26,8 @@ export interface RentalAgreement {
   client_signature_type: string | null;
   client_signature_data: string | null;
   client_signed_name: string | null;
+  client_ip_address: string | null;
+  client_user_agent: string | null;
   admin_signed_at: string | null;
   admin_signed_by: string | null;
   created_by: string | null;
