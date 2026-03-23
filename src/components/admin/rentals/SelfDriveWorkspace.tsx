@@ -382,6 +382,14 @@ export function SelfDriveWorkspace() {
           onUpdate={(updates: any) => updateMutation.mutate({ id: selected.id, updates })} />
       )}
     </div>
+      </div>
+      <AdminLivePreview
+        previewPath="/self-drive"
+        label="Self-Drive Rentals Preview"
+        isOpen={previewOpen}
+        onToggle={() => setPreviewOpen(false)}
+      />
+    </div>
   );
 }
 
