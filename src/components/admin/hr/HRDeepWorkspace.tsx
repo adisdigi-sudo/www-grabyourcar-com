@@ -450,10 +450,41 @@ export const HRDeepWorkspace = ({ initialTab = "overview" }: { initialTab?: stri
                       <TableCell>
                         <Badge className={`text-[9px] ${p.status === "paid" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>{p.status}</Badge>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="flex gap-1">
                         {p.status !== "paid" && (
-                          <Button size="sm" variant="ghost" className="h-6 text-[10px] text-emerald-600" onClick={() => updatePayrollStatus.mutate({ id: p.id, status: "paid" })}>Mark Paid</Button>
+                          <Button size="sm" variant="ghost" className="h-6 text-[10px] text-emerald-600" onClick={() => updatePayrollStatus.mutate({ id: p.id, status: "paid" })}>Paid</Button>
                         )}
+                        <Button size="sm" variant="ghost" className="h-6 text-[10px]"
+                          onClick={() => {
+                            import("@/lib/generatePayslipPDF").then(({ generatePayslipPDF }) => {
+                              generatePayslipPDF({
+                                id: p.id,
+                                employee_name: p.employee_name,
+                                employee_id: p.employee_id,
+                                department: p.department,
+                                designation: p.designation,
+                                payroll_month: p.payroll_month || p.pay_period,
+                                basic_salary: Number(p.basic_salary || 0),
+                                hra: Number(p.hra || 0),
+                                da: Number(p.da || 0),
+                                special_allowance: Number(p.special_allowance || 0),
+                                other_allowances: Number(p.other_allowances || 0),
+                                gross_salary: Number(p.gross_salary || 0),
+                                pf_deduction: Number(p.pf_deduction || 0),
+                                esi_deduction: Number(p.esi_deduction || 0),
+                                tds: Number(p.tds || 0),
+                                professional_tax: Number(p.professional_tax || 0),
+                                other_deductions: Number(p.other_deductions || 0),
+                                total_deductions: Number(p.total_deductions || 0),
+                                net_salary: Number(p.net_salary || 0),
+                                payment_mode: p.payment_mode,
+                                payment_date: p.payment_date,
+                                bank_account: p.bank_account,
+                              });
+                            });
+                          }}>
+                          <Download className="h-3 w-3 mr-1" /> Payslip
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
