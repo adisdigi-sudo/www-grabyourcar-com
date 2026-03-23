@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Fuel, Settings2, Users, Calendar, MapPin, User, Navigation } from "lucide-react";
 import { RentalVehicle } from "@/hooks/useRentalServices";
+import { captureRentalJourneyStep } from "@/lib/rentalJourney";
 
 interface RentalVehicleCardProps {
   vehicle: RentalVehicle;
@@ -132,7 +133,16 @@ export const RentalVehicleCard = ({ vehicle, serviceType, onBook }: RentalVehicl
           <Button
             variant="cta"
             size="sm"
-            onClick={() => onBook(vehicle)}
+            onClick={() => {
+              captureRentalJourneyStep("vehicle_selected", {
+                vehicleId: vehicle.id,
+                vehicleName: vehicle.name,
+                serviceType,
+                location: vehicle.location,
+                amount: price.amount,
+              });
+              onBook(vehicle);
+            }}
             disabled={!vehicle.is_available}
             className="gap-1.5"
           >
