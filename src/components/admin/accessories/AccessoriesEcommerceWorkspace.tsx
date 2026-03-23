@@ -22,6 +22,7 @@ import { AccessoriesDiscountCodesPanel } from "./AccessoriesDiscountCodesPanel";
 import { AccessoriesCrossSellPanel } from "./AccessoriesCrossSellPanel";
 import { AccessoriesSettingsPanel } from "./AccessoriesSettingsPanel";
 import { AccessoriesTrackingPanel } from "./AccessoriesTrackingPanel";
+import { AdminLivePreview, PreviewToggleButton } from "../shared/AdminLivePreview";
 
 const SIDEBAR_ITEMS = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -40,6 +41,7 @@ type PanelId = (typeof SIDEBAR_ITEMS)[number]["id"];
 export function AccessoriesEcommerceWorkspace() {
   const [activePanel, setActivePanel] = useState<PanelId>("dashboard");
   const [collapsed, setCollapsed] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const renderPanel = () => {
     switch (activePanel) {
@@ -115,7 +117,21 @@ export function AccessoriesEcommerceWorkspace() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto p-4 md:p-6">{renderPanel()}</main>
+      <main className="flex-1 overflow-auto p-4 md:p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div />
+          <PreviewToggleButton isOpen={previewOpen} onToggle={() => setPreviewOpen(!previewOpen)} />
+        </div>
+        {renderPanel()}
+      </main>
+
+      {/* Live Preview Panel */}
+      <AdminLivePreview
+        previewPath="/accessories"
+        label="Accessories Store Preview"
+        isOpen={previewOpen}
+        onToggle={() => setPreviewOpen(false)}
+      />
     </div>
   );
 }
