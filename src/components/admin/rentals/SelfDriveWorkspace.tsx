@@ -611,7 +611,7 @@ function RentalDetailModal({ open, onOpenChange, booking, vehicles, partners, on
         {/* ─── Stage: Offer Shared ──────────────── */}
         {currentStage === "offer_shared" && (
           <div className="space-y-3 p-4 rounded-lg border bg-violet-500/5 border-violet-500/20">
-            <h3 className="font-semibold text-sm flex items-center gap-2"><Tag className="h-4 w-4" /> Share Offer & Quote</h3>
+            <h3 className="font-semibold text-sm flex items-center gap-2"><Tag className="h-4 w-4" /> Share Offer & Agreement</h3>
             {booking.notes && (
               <div className="rounded-lg border bg-background p-3 max-h-32 overflow-y-auto">
                 <p className="text-[10px] text-muted-foreground font-medium uppercase mb-1">Chat / Remarks History</p>
@@ -620,15 +620,33 @@ function RentalDetailModal({ open, onOpenChange, booking, vehicles, partners, on
             )}
             <div className="grid grid-cols-2 gap-2">
               <Button variant="outline" size="sm" className="gap-1.5" onClick={handleGenerateAgreement}>
-                <Download className="h-3.5 w-3.5" /> Download Agreement
+                <Download className="h-3.5 w-3.5" /> {agreementGenerated ? "✅ Agreement Downloaded" : "Download Agreement"}
               </Button>
               <Button variant="outline" size="sm" className="gap-1.5 text-emerald-600" onClick={handleShareWhatsApp}>
                 <Share2 className="h-3.5 w-3.5" /> Share on WhatsApp
               </Button>
             </div>
-            <Button size="sm" className="w-full gap-2" onClick={() => { onUpdate({ pipeline_stage: "partner_escalation" }); toast.success("Moved to Partner Escalation"); }}>
+            {/* Agreement Approval Gate */}
+            <div className="rounded-lg border bg-amber-500/10 border-amber-500/20 p-3 space-y-2">
+              <p className="text-xs font-semibold text-amber-700 flex items-center gap-1.5">
+                <AlertTriangle className="h-3.5 w-3.5" /> Legal Agreement Required
+              </p>
+              <p className="text-[10px] text-muted-foreground">Customer must review and approve the rental agreement before proceeding to booking.</p>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={agreementApproved} onChange={e => setAgreementApproved(e.target.checked)}
+                  className="rounded border-amber-500 text-amber-600 focus:ring-amber-500 h-4 w-4" disabled={!agreementGenerated} />
+                <span className="text-xs font-medium">Customer has approved the rental agreement</span>
+              </label>
+            </div>
+            <Button size="sm" className="w-full gap-2" disabled={!agreementGenerated || !agreementApproved}
+              onClick={() => { onUpdate({ pipeline_stage: "partner_escalation" }); toast.success("Moved to Partner Escalation"); }}>
               <Send className="h-4 w-4" /> Escalate to Partner
             </Button>
+            {(!agreementGenerated || !agreementApproved) && (
+              <p className="text-[10px] text-destructive text-center">
+                {!agreementGenerated ? "⚠ Generate agreement first" : "⚠ Customer approval required before proceeding"}
+              </p>
+            )}
           </div>
         )}
 
