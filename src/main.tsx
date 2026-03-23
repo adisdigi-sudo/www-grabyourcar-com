@@ -6,8 +6,11 @@ import "./index.css";
 import App from "./App";
 import { AppErrorBoundary } from "@/components/AppErrorBoundary";
 import { isDynamicImportError, recoverFromChunkLoadError } from "@/lib/chunkLoadRecovery";
+import { Loader2, WifiOff } from "lucide-react";
 
 let hasTriggeredChunkRecovery = false;
+
+const DEV_SERVER_STATUS_EVENT = "lovable:dev-server-status";
 
 const attemptChunkRecovery = (error: unknown, source: string) => {
   if (hasTriggeredChunkRecovery || !isDynamicImportError(error)) {
@@ -32,6 +35,104 @@ if (typeof window !== "undefined") {
     attemptChunkRecovery(event.reason, "window.unhandledrejection");
   });
 }
+
+if (import.meta.hot && typeof window !== "undefined") {
+  import.meta.hot.on("vite:ws:disconnect", () => {
+    window.dispatchEvent(
+      new CustomEvent(DEV_SERVER_STATUS_EVENT, {
+        detail: { status: "disconnected" as const },
+      }),
+    );
+  });
+
+  import.meta.hot.on("vite:ws:connect", () => {
+    window.dispatchEvent(
+      new CustomEvent(DEV_SERVER_STATUS_EVENT, {
+        detail: { status: "connected" as const },
+      }),
+    );
+  });
+
+  import.meta.hot.on("vite:beforeFullReload", () => {
+    window.dispatchEvent(
+      new CustomEvent(DEV_SERVER_STATUS_EVENT, {
+        detail: { status: "reloading" as const },
+      }),
+    );
+  });
+}
+
+const DevServerStatusOverlay = () => {
+  const [status, setStatus] = useState<"idle" | "disconnected" | "connected" | "reloading">("idle");
+
+  useEffect(() => {
+    if (!import.meta.env.DEV || typeof window === "undefined") {
+      return;
+    }
+
+    let connectedTimer: number | null = null;
+
+    const handleStatus = (event: Event) => {
+      const nextStatus = (event as CustomEvent<{ status?: "disconnected" | "connected" | "reloading" }>).detail?.status;
+      if (!nextStatus) return;
+
+      setStatus(nextStatus);
+
+      if (connectedTimer) {
+        window.clearTimeout(connectedTimer);
+        connectedTimer = null;
+      }
+
+      if (nextStatus === "connected") {
+        connectedTimer = window.setTimeout(() => setStatus("idle"), 1200);
+      }
+    };
+
+    window.addEventListener(DEV_SERVER_STATUS_EVENT, handleStatus as EventListener);
+
+    return () => {
+      window.removeEventListener(DEV_SERVER_STATUS_EVENT, handleStatus as EventListener);
+      if (connectedTimer) {
+        window.clearTimeout(connectedTimer);
+      }
+    };
+  }, []);
+
+  if (!import.meta.env.DEV || status === "idle") return null;
+
+  const copy =
+    status === "disconnected"
+      ? {
+          title: "Reconnecting preview",
+          description: "The dev server restarted while applying changes. Your CRM will resume automatically.",
+          icon: WifiOff,
+        }
+      : status === "reloading"
+        ? {
+            title: "Refreshing latest changes",
+            description: "Reloading the newest CRM bundle now.",
+            icon: Loader2,
+          }
+        : {
+            title: "Preview restored",
+            description: "Connection recovered successfully.",
+            icon: Loader2,
+          };
+
+  const Icon = copy.icon;
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-background/95 px-6 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 text-center text-card-foreground shadow-sm">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <Icon className={`h-6 w-6 ${status !== "disconnected" ? "animate-spin" : ""}`} />
+        </div>
+        <h2 className="text-lg font-semibold">{copy.title}</h2>
+        <p className="mt-2 text-sm text-muted-foreground">{copy.description}</p>
+      </div>
+    </div>
+  );
+};
 
 const SafeTelemetry = () => {
   const [telemetry, setTelemetry] = useState<null | {
@@ -106,6 +207,7 @@ createRoot(rootElement).render(
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <App />
         <SafeTelemetry />
+        <DevServerStatusOverlay />
       </ThemeProvider>
     </HelmetProvider>
   </AppErrorBoundary>
