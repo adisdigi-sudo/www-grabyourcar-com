@@ -60,6 +60,7 @@ const ThankYou = lazy(() => import("./pages/ThankYou"));
 const NoWaitingCars = lazy(() => import("./pages/NoWaitingCars"));
 const BestCarDeals = lazy(() => import("./pages/BestCarDeals"));
 const AgreementSignPage = lazy(() => import("./pages/AgreementSignPage"));
+const TrackOrder = lazy(() => import("./pages/TrackOrder"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({

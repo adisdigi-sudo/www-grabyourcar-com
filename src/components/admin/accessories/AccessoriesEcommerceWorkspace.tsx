@@ -51,6 +51,8 @@ export function AccessoriesEcommerceWorkspace() {
         return <AccessoriesCategoriesPanel />;
       case "orders":
         return <AccessoriesOrdersPanel />;
+      case "tracking":
+        return <AccessoriesTrackingPanel />;
       case "customers":
         return <AccessoriesCustomersPanel />;
       case "discounts":
