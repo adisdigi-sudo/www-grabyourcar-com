@@ -131,23 +131,28 @@ export const HRDeepWorkspace = ({ initialTab = "overview" }: { initialTab?: stri
       const hra = Number(entry.hra || 0);
       const da = Number(entry.da || 0);
       const special = Number(entry.special_allowance || 0);
-      const bonus = Number(entry.bonus || 0);
-      const deductions = Number(entry.deductions || 0);
+      const otherAllow = Number(entry.other_allowances || 0);
+      const gross = basic + hra + da + special + otherAllow;
+      const pf = Number(entry.pf_deduction || 0);
+      const esi = Number(entry.esi_deduction || 0);
       const tds = Number(entry.tds || 0);
-      const pf = Number(entry.pf || 0);
-      const gross = basic + hra + da + special + bonus;
-      const totalDeductions = deductions + tds + pf;
-      const net = gross - totalDeductions;
+      const profTax = Number(entry.professional_tax || 0);
+      const otherDed = Number(entry.other_deductions || 0);
+      const totalDed = pf + esi + tds + profTax + otherDed;
+      const net = gross - totalDed;
 
       const { error } = await supabase.from("payroll_records").insert({
         employee_name: entry.employee_name,
         employee_id: entry.employee_id || null,
         department: entry.department,
-        pay_period: currentMonth,
-        basic_salary: basic, hra, da, special_allowance: special, bonus,
-        deductions, tds, pf, gross_salary: gross, net_salary: net,
+        designation: entry.designation || null,
+        payroll_month: currentMonth,
+        basic_salary: basic, hra, da, special_allowance: special,
+        other_allowances: otherAllow, gross_salary: gross,
+        pf_deduction: pf, esi_deduction: esi, tds, professional_tax: profTax,
+        other_deductions: otherDed, total_deductions: totalDed, net_salary: net,
         payment_mode: entry.payment_mode || "bank_transfer",
-        status: "pending",
+        payment_status: "pending",
       } as any);
       if (error) throw error;
     },
