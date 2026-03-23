@@ -208,21 +208,26 @@ const AutomationCommandCenter = lazy(() => import("@/components/admin/Automation
 const LeadRoutingManager = lazy(() =>
   import("@/components/admin/LeadRoutingManager").then((module) => ({ default: module.LeadRoutingManager })),
 );
-const AccountsFinanceWorkspace = lazy(() =>
-  import("@/components/admin/finance/AccountsFinanceWorkspace").then((module) => ({ default: module.AccountsFinanceWorkspace })),
-);
-const AccountsDeepWorkspace = lazy(() =>
-  import("@/components/admin/finance/AccountsDeepWorkspace").then((module) => ({ default: module.AccountsDeepWorkspace })),
-);
-const FinancialIntelligenceDashboard = lazy(() =>
-  import("@/components/admin/finance/FinancialIntelligenceDashboard").then((module) => ({ default: module.FinancialIntelligenceDashboard })),
-);
-const HRDeepWorkspace = lazy(() =>
-  import("@/components/admin/hr/HRDeepWorkspace").then((module) => ({ default: module.HRDeepWorkspace })),
-);
-const HRWorkspace = lazy(() =>
-  import("@/components/admin/hr/HRWorkspace").then((module) => ({ default: module.HRWorkspace })),
-);
+// Accounts modules (Zoho Books style)
+const AccountsDashboard = lazy(() => import("@/components/admin/finance/AccountsDashboard").then(m => ({ default: m.AccountsDashboard })));
+const AccountsInvoicesModule = lazy(() => import("@/components/admin/finance/AccountsInvoicesModule").then(m => ({ default: m.AccountsInvoicesModule })));
+const AccountsExpensesModule = lazy(() => import("@/components/admin/finance/AccountsExpensesModule").then(m => ({ default: m.AccountsExpensesModule })));
+const AccountsBillsModule = lazy(() => import("@/components/admin/finance/AccountsBillsModule").then(m => ({ default: m.AccountsBillsModule })));
+const AccountsBankingModule = lazy(() => import("@/components/admin/finance/AccountsBankingModule").then(m => ({ default: m.AccountsBankingModule })));
+const AccountsChartOfAccounts = lazy(() => import("@/components/admin/finance/AccountsChartOfAccounts").then(m => ({ default: m.AccountsChartOfAccounts })));
+const AccountsDeepWorkspace = lazy(() => import("@/components/admin/finance/AccountsDeepWorkspace").then(m => ({ default: m.AccountsDeepWorkspace })));
+const FinancialIntelligenceDashboard = lazy(() => import("@/components/admin/finance/FinancialIntelligenceDashboard").then(m => ({ default: m.FinancialIntelligenceDashboard })));
+// HR modules (10 sub-modules)
+const HRCoreModule = lazy(() => import("@/components/admin/hr/HRCoreModule").then(m => ({ default: m.HRCoreModule })));
+const HRRecruitmentModule = lazy(() => import("@/components/admin/hr/HRRecruitmentModule").then(m => ({ default: m.HRRecruitmentModule })));
+const HRWorkforceModule = lazy(() => import("@/components/admin/hr/HRWorkforceModule").then(m => ({ default: m.HRWorkforceModule })));
+const HRAttendanceModule = lazy(() => import("@/components/admin/hr/HRAttendanceModule").then(m => ({ default: m.HRAttendanceModule })));
+const HRPayrollModule = lazy(() => import("@/components/admin/hr/HRPayrollModule").then(m => ({ default: m.HRPayrollModule })));
+const HRExpenseModule = lazy(() => import("@/components/admin/hr/HRExpenseModule").then(m => ({ default: m.HRExpenseModule })));
+const HRPerformanceModule = lazy(() => import("@/components/admin/hr/HRPerformanceModule").then(m => ({ default: m.HRPerformanceModule })));
+const HREngagementModule = lazy(() => import("@/components/admin/hr/HREngagementModule").then(m => ({ default: m.HREngagementModule })));
+const HRAssetModule = lazy(() => import("@/components/admin/hr/HRAssetModule").then(m => ({ default: m.HRAssetModule })));
+const HRHelpdeskModule = lazy(() => import("@/components/admin/hr/HRHelpdeskModule").then(m => ({ default: m.HRHelpdeskModule })));
 const CarDatabaseWorkspace = lazy(() =>
   import("@/components/admin/car-database/CarDatabaseWorkspace").then((module) => ({ default: module.CarDatabaseWorkspace })),
 );
@@ -541,50 +546,53 @@ const AdminLayout = () => {
         return <DealerManagement initialTab="inventory" />;
       case "dealer-broadcast":
         return <DealerManagement initialTab="broadcast" />;
-      case "accounts-finance":
-        return <AccountsFinanceWorkspace initialTab="overview" />;
-      case "accounts-intelligence":
-        return <FinancialIntelligenceDashboard />;
-      case "accounts-accounting":
-        return <AccountsDeepWorkspace initialTab="overview" />;
-      case "accounts-revenue":
-        return <AccountsFinanceWorkspace initialTab="revenue" />;
+      // ── Accounts (Zoho Books style) ──
+      case "accounts-dashboard":
+        return <AccountsDashboard />;
+      case "accounts-invoices":
+        return <AccountsInvoicesModule />;
       case "accounts-expenses":
-        return <AccountsFinanceWorkspace initialTab="expenses" />;
-      case "accounts-commissions":
-        return <AccountsFinanceWorkspace initialTab="commissions" />;
-      case "accounts-payouts":
-        return <AccountsFinanceWorkspace initialTab="payouts" />;
-      case "hr-workspace":
-        return <HRWorkspace initialTab="overview" />;
-      case "hr-directory":
-        return <HRWorkspace initialTab="directory" />;
+        return <AccountsExpensesModule />;
+      case "accounts-bills":
+        return <AccountsBillsModule />;
+      case "accounts-banking":
+        return <AccountsBankingModule />;
+      case "accounts-chart":
+        return <AccountsChartOfAccounts />;
+      case "accounts-journal":
+        return <AccountsDeepWorkspace initialTab="journal" />;
+      case "accounts-reports":
+        return <FinancialIntelligenceDashboard />;
+      case "accounts-incentive-payouts":
+        return <IncentivePayoutApproval />;
+      case "accounts-documents":
+      case "document-vault":
+        return <DocumentVault />;
+      // ── HR (10 sub-modules) ──
+      case "hr-core":
+        return <HRCoreModule />;
+      case "hr-recruitment":
+        return <HRRecruitmentModule />;
+      case "hr-workforce":
+        return <HRWorkforceModule />;
       case "hr-attendance":
-        return <HRWorkspace initialTab="attendance" />;
-      case "hr-leaves":
-        return <HRWorkspace initialTab="leaves" />;
-      case "hr-announcements":
-        return <HRWorkspace initialTab="culture" />;
+        return <HRAttendanceModule />;
+      case "hr-payroll":
+        return <HRPayrollModule />;
+      case "hr-expense":
+        return <HRExpenseModule />;
+      case "hr-performance":
+        return <HRPerformanceModule />;
+      case "hr-engagement":
+        return <HREngagementModule />;
+      case "hr-assets":
+        return <HRAssetModule />;
+      case "hr-helpdesk":
+        return <HRHelpdeskModule />;
       case "incentive-management":
         return <SuperAdminIncentiveWorkspace />;
       case "incentive-my-dashboard":
         return <SalesIncentiveDashboard />;
-      case "hr-employees":
-        return <HREmployeeManagement />;
-      case "hr-onboarding":
-        return <HROnboarding />;
-      case "hr-payroll":
-        return <HRDeepWorkspace initialTab="payroll" />;
-      case "hr-kpi":
-        return <HRKPIManagement />;
-      case "hr-templates":
-        return <HRTemplates />;
-      case "hr-documents":
-      case "accounts-documents":
-      case "document-vault":
-        return <DocumentVault />;
-      case "accounts-incentive-payouts":
-        return <IncentivePayoutApproval />;
       case "deals-pipeline":
         return <DealsPipeline />;
       default:
