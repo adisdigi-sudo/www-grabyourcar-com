@@ -479,6 +479,8 @@ function RentalDetailModal({ open, onOpenChange, booking, vehicles, partners, on
   const [partnerId, setPartnerId] = useState("");
   const [feedbackRating, setFeedbackRating] = useState(0);
   const [feedbackText, setFeedbackText] = useState("");
+  const [agreementGenerated, setAgreementGenerated] = useState(!!booking.agreement_url);
+  const [agreementApproved, setAgreementApproved] = useState(false);
 
   const currentStage = booking._targetStage || booking.pipeline_stage;
   const stageConfig = STAGES.find(s => s.value === currentStage);
