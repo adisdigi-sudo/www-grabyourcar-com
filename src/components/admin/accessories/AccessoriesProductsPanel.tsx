@@ -13,6 +13,8 @@ import {
 import { toast } from "sonner";
 import { Plus, Search, Edit, Trash2, Image, Star } from "lucide-react";
 import { AccessoryProductForm, ProductFormData } from "./AccessoryProductForm";
+import { useAccessoriesCatalog } from "@/hooks/useAccessoriesCatalog";
+import { createAccessorySlug } from "@/lib/accessoriesCatalog";
 
 const DEFAULT_CATEGORIES = [
   "HSRP Frames", "Car Covers", "Seat Covers", "Floor Mats",
@@ -24,11 +26,15 @@ const DEFAULT_CATEGORIES = [
 interface Product {
   id: number;
   name: string;
+  slug: string;
   description: string;
+  fullDescription: string;
   category: string;
   price: number;
   originalPrice?: number;
   image: string;
+  images: string[];
+  imagePrompt?: string;
   inStock: boolean;
   rating: number;
   reviews: number;
@@ -44,16 +50,23 @@ const INITIAL_PRODUCTS: Product[] = [
 ];
 
 export function AccessoriesProductsPanel() {
-  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
-  const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
+  const { catalog, saveCatalog, isSaving } = useAccessoriesCatalog();
+  const [products, setProducts] = useState<Product[]>(catalog.products.length ? (catalog.products as Product[]) : INITIAL_PRODUCTS.map((p) => ({ ...p, slug: createAccessorySlug(p.name), fullDescription: p.description, images: [p.image], imagePrompt: undefined })));
+  const [categories, setCategories] = useState<string[]>(catalog.categories.length ? catalog.categories : DEFAULT_CATEGORIES);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [form, setForm] = useState<ProductFormData>({
-    name: "", description: "", category: "Other", price: 0, originalPrice: 0,
-    image: "", inStock: true, features: "", badge: "",
+    name: "", slug: "", description: "", fullDescription: "", category: "Other", price: 0, originalPrice: 0,
+    image: "", images: [], imagePrompt: "", inStock: true, features: "", badge: "",
   });
+
+  const persistCatalog = async (nextProducts: Product[], nextCategories: string[]) => {
+    setProducts(nextProducts);
+    setCategories(nextCategories);
+    await saveCatalog({ products: nextProducts, categories: nextCategories });
+  };
 
   const filtered = products.filter((p) => {
     const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase());
@@ -61,15 +74,19 @@ export function AccessoriesProductsPanel() {
     return matchSearch && matchCat;
   });
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const newProduct: Product = {
       id: editProduct?.id || Date.now(),
       name: form.name,
+      slug: form.slug || createAccessorySlug(form.name),
       description: form.description,
+      fullDescription: form.fullDescription || form.description,
       category: form.category,
       price: form.price,
       originalPrice: form.originalPrice || undefined,
       image: form.image || "/placeholder.svg",
+      images: form.images.length ? form.images : [form.image || "/placeholder.svg"],
+      imagePrompt: form.imagePrompt || undefined,
       inStock: form.inStock,
       rating: editProduct?.rating || 0,
       reviews: editProduct?.reviews || 0,
@@ -77,21 +94,28 @@ export function AccessoriesProductsPanel() {
       badge: form.badge || undefined,
     };
 
-    if (editProduct) {
-      setProducts((prev) => prev.map((p) => (p.id === editProduct.id ? newProduct : p)));
-      toast.success("Product updated");
-    } else {
-      setProducts((prev) => [...prev, newProduct]);
-      toast.success("Product added");
+    try {
+      if (editProduct) {
+        const nextProducts = products.map((p) => (p.id === editProduct.id ? newProduct : p));
+        await persistCatalog(nextProducts, categories);
+        toast.success("Product updated");
+      } else {
+        const nextProducts = [...products, newProduct];
+        await persistCatalog(nextProducts, categories);
+        toast.success("Product added");
+      }
+      setShowDialog(false);
+      setEditProduct(null);
+    } catch {
+      toast.error("Failed to save product to website catalog");
+      return;
     }
-    setShowDialog(false);
-    setEditProduct(null);
   };
 
   const openEdit = (p: Product) => {
     setForm({
-      name: p.name, description: p.description, category: p.category,
-      price: p.price, originalPrice: p.originalPrice || 0, image: p.image,
+      name: p.name, slug: p.slug, description: p.description, fullDescription: p.fullDescription, category: p.category,
+      price: p.price, originalPrice: p.originalPrice || 0, image: p.image, images: p.images || [p.image], imagePrompt: p.imagePrompt || "",
       inStock: p.inStock, features: p.features.join(", "), badge: p.badge || "",
     });
     setEditProduct(p);
@@ -99,21 +123,30 @@ export function AccessoriesProductsPanel() {
   };
 
   const openAdd = () => {
-    setForm({ name: "", description: "", category: "Other", price: 0, originalPrice: 0, image: "", inStock: true, features: "", badge: "" });
+    setForm({ name: "", slug: "", description: "", fullDescription: "", category: "Other", price: 0, originalPrice: 0, image: "", images: [], imagePrompt: "", inStock: true, features: "", badge: "" });
     setEditProduct(null);
     setShowDialog(true);
   };
 
-  const handleAddCategory = (cat: string) => {
-    setCategories((prev) => [...prev, cat]);
+  const handleAddCategory = async (cat: string) => {
+    const nextCategories = [...categories, cat];
+    try {
+      await persistCatalog(products, nextCategories);
+    } catch {
+      toast.error("Failed to save category");
+    }
   };
 
-  const handleDeleteCategory = (cat: string) => {
-    setCategories((prev) => prev.filter((c) => c !== cat));
-    if (form.category === cat) {
-      setForm({ ...form, category: "Other" });
+  const handleDeleteCategory = async (cat: string) => {
+    const nextCategories = categories.filter((c) => c !== cat);
+    const nextProducts = products.map((product) => product.category === cat ? { ...product, category: "Other" } : product);
+    if (form.category === cat) setForm({ ...form, category: "Other" });
+    try {
+      await persistCatalog(nextProducts, nextCategories);
+      toast.success(`Category "${cat}" removed`);
+    } catch {
+      toast.error("Failed to delete category");
     }
-    toast.success(`Category "${cat}" removed`);
   };
 
   return (
@@ -179,7 +212,15 @@ export function AccessoriesProductsPanel() {
                   <Edit className="h-3 w-3 mr-1" /> Edit
                 </Button>
                 <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive"
-                  onClick={() => { setProducts((prev) => prev.filter((x) => x.id !== p.id)); toast.success("Product removed"); }}>
+                  onClick={async () => {
+                    try {
+                      const nextProducts = products.filter((x) => x.id !== p.id);
+                      await persistCatalog(nextProducts, categories);
+                      toast.success("Product removed");
+                    } catch {
+                      toast.error("Failed to remove product");
+                    }
+                  }}>
                   <Trash2 className="h-3 w-3" />
                 </Button>
               </div>

@@ -20,19 +20,23 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Sparkles, Loader2, Plus, X, Wand2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Sparkles, Loader2, Plus, X, Wand2, ImagePlus } from "lucide-react";
+import { invokeAccessoryAI } from "@/lib/accessoryAi";
 
 export interface ProductFormData {
   name: string;
   description: string;
+  fullDescription: string;
   category: string;
   price: number;
   originalPrice: number;
   image: string;
+  images: string[];
+  imagePrompt: string;
   inStock: boolean;
   features: string;
   badge: string;
+  slug: string;
 }
 
 interface Props {
@@ -53,24 +57,24 @@ export function AccessoryProductForm({
   const [aiLoading, setAiLoading] = useState<string | null>(null);
   const [newCat, setNewCat] = useState("");
   const [showCatManager, setShowCatManager] = useState(false);
+  const [ideaText, setIdeaText] = useState("");
 
   const callAI = async (action: string) => {
     setAiLoading(action);
     try {
-      const { data, error } = await supabase.functions.invoke("accessory-ai-helper", {
-        body: {
-          action,
-          category: form.category,
-          name: form.name,
-          description: form.description,
-          features: form.features,
-        },
+      const data = await invokeAccessoryAI({
+        action,
+        category: form.category,
+        name: form.name,
+        description: form.description,
+        features: form.features,
+        imagePrompt: form.imagePrompt,
+        imageCount: 4,
+        userIdea: ideaText,
       });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
 
       if (action === "generate_name" && data.name) {
-        setForm({ ...form, name: data.name });
+        setForm({ ...form, name: data.name, slug: data.name.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-') });
         toast.success("AI name generated!");
       } else if (action === "generate_description" && data.description) {
         setForm({ ...form, description: data.description });
@@ -81,17 +85,23 @@ export function AccessoryProductForm({
       } else if (action === "generate_badge" && data.badge) {
         setForm({ ...form, badge: data.badge });
         toast.success("AI badge generated!");
+      } else if (action === "generate_image_prompt" && data.prompt) {
+        setForm({ ...form, imagePrompt: data.prompt });
+        toast.success("AI prompt generated!");
       } else if (action === "generate_image" && data.image) {
-        setForm({ ...form, image: data.image });
-        toast.success("AI image generated!");
+        setForm({ ...form, image: data.image, images: data.images || [data.image], imagePrompt: data.prompt || form.imagePrompt });
+        toast.success("AI product images generated!");
       } else if (action === "auto_fill_all" && data.product) {
         const p = data.product;
         setForm({
           ...form,
           name: p.name || form.name,
           description: p.description || form.description,
+          fullDescription: p.fullDescription || form.fullDescription || p.description || form.description,
           features: p.features || form.features,
           badge: p.badge || form.badge,
+          slug: p.slug || form.slug,
+          imagePrompt: p.imagePrompt || form.imagePrompt,
           price: p.price || form.price,
           originalPrice: p.originalPrice || form.originalPrice,
         });
@@ -129,6 +139,8 @@ export function AccessoryProductForm({
       {label}
     </Button>
   );
+
+  const slugValue = form.slug || (form.name ? form.name.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-') : '');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -217,7 +229,7 @@ export function AccessoryProductForm({
               <Label>Product Name</Label>
               <AIButton action="generate_name" label="AI Generate" />
             </div>
-            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Premium Car Cover" />
+            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value, slug: e.target.value.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-') })} placeholder="e.g. Premium Car Cover" />
           </div>
 
           {/* Description with AI */}
@@ -227,6 +239,11 @@ export function AccessoryProductForm({
               <AIButton action="generate_description" label="AI Generate" />
             </div>
             <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} placeholder="Professional product description..." />
+          </div>
+
+          <div>
+            <Label className="mb-1 block">Full Description</Label>
+            <Textarea value={form.fullDescription} onChange={(e) => setForm({ ...form, fullDescription: e.target.value })} rows={4} placeholder="Detailed product page copy..." />
           </div>
 
           {/* Features with AI */}
@@ -257,7 +274,7 @@ export function AccessoryProductForm({
             <div>
               <Label className="mb-1 block">Slug (auto)</Label>
               <Input
-                value={form.name ? form.name.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-') : ''}
+                value={slugValue}
                 readOnly
                 className="bg-muted/50 text-muted-foreground"
                 placeholder="auto-generated-from-name"
@@ -280,13 +297,33 @@ export function AccessoryProductForm({
           {/* Image with AI generation */}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <Label>Product Image</Label>
-              <AIButton action="generate_image" label="AI Generate" />
+              <Label>Product Images</Label>
+              <AIButton action="generate_image" label="Generate 4 AI Images" />
             </div>
-            <Input value={form.image} onChange={(e) => setForm({ ...form, image: e.target.value })} placeholder="Image URL or generate with AI" />
-            {form.image && form.image !== "/placeholder.svg" && (
-              <div className="mt-2 rounded-lg border overflow-hidden h-32 bg-muted flex items-center justify-center">
-                <img src={form.image} alt="Preview" className="max-h-full max-w-full object-contain" />
+            <div className="space-y-2">
+              <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                <Input value={ideaText} onChange={(e) => setIdeaText(e.target.value)} placeholder="Type rough idea like: black premium cover for SUV, realistic product image" />
+                <Button type="button" variant="outline" onClick={() => callAI("generate_image_prompt")} disabled={!!aiLoading} className="gap-2">
+                  {aiLoading === "generate_image_prompt" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                  AI Prompt
+                </Button>
+              </div>
+              <Textarea value={form.imagePrompt} onChange={(e) => setForm({ ...form, imagePrompt: e.target.value })} rows={3} placeholder="AI image prompt for exact product look, angle and background" />
+              <Input value={form.image} onChange={(e) => setForm({ ...form, image: e.target.value, images: [e.target.value, ...form.images.filter((img) => img !== e.target.value)] })} placeholder="Primary image URL or generate with AI" />
+            </div>
+            {form.images.length > 0 && form.images.some((img) => img && img !== "/placeholder.svg") && (
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {form.images.filter((img) => img && img !== "/placeholder.svg").map((img, index) => (
+                  <button
+                    key={`${img}-${index}`}
+                    type="button"
+                    onClick={() => setForm({ ...form, image: img })}
+                    className={`rounded-lg border overflow-hidden bg-muted aspect-square ${form.image === img ? 'ring-2 ring-primary' : ''}`}
+                    title="Set as primary image"
+                  >
+                    <img src={img} alt={`Product preview ${index + 1}`} className="h-full w-full object-cover" />
+                  </button>
+                ))}
               </div>
             )}
           </div>
