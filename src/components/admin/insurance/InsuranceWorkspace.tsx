@@ -84,7 +84,7 @@ export function InsuranceWorkspace() {
     },
   });
 
-  const { data: policies = [] } = useQuery({
+  const { data: allPolicies = [] } = useQuery({
     queryKey: ["ins-policies-book"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -97,6 +97,24 @@ export function InsuranceWorkspace() {
       return (data || []) as PolicyRecord[];
     },
   });
+
+  // Split policies into running (Policy Book) vs overdue (expired)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const runningPolicies = useMemo(() =>
+    allPolicies.filter(p => {
+      if (p.status === "renewed") return true; // renewed records stay in book as historical
+      if (!p.expiry_date) return true; // no expiry = show in book
+      return new Date(p.expiry_date) >= today;
+    }), [allPolicies, today.toDateString()]
+  );
+  const overduePolicies = useMemo(() =>
+    allPolicies.filter(p => {
+      if (p.status === "renewed") return false;
+      if (!p.expiry_date) return false;
+      return new Date(p.expiry_date) < today;
+    }), [allPolicies, today.toDateString()]
+  );
 
   const totalLeads = clients.length;
   const wonCount = clients.filter(c => {
