@@ -31,6 +31,32 @@ async function callAI(messages: Array<{ role: string; content: string }>, apiKey
   throw new Error("All AI models failed");
 }
 
+async function callAIJSON(messages: Array<{ role: string; content: string }>, apiKey: string, toolDef: any): Promise<any> {
+  for (const model of AI_MODELS) {
+    try {
+      const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model, messages, temperature: 0.7, max_tokens: 1500,
+          tools: [{ type: "function", function: toolDef }],
+          tool_choice: { type: "function", function: { name: toolDef.name } },
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+        if (toolCall?.function?.arguments) {
+          return JSON.parse(toolCall.function.arguments);
+        }
+      }
+      if (res.status === 429) continue;
+      if (res.status === 402) throw new Error("AI credits exhausted. Please add funds.");
+    } catch (e) { if ((e as Error).message.includes("credits")) throw e; }
+  }
+  throw new Error("All AI models failed");
+}
+
 async function generateImage(prompt: string, apiKey: string): Promise<string | null> {
   try {
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -73,6 +99,53 @@ serve(async (req) => {
         { role: "user", content: `Write a product description for: "${name || 'Car Accessory'}" in category "${category || 'General'}".${features ? ` Key features: ${features}` : ''}` },
       ], apiKey);
       return new Response(JSON.stringify({ description: result.replace(/^["']|["']$/g, '') }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "generate_features") {
+      const result = await callAI([
+        { role: "system", content: "You are a product specialist for car accessories. Generate 4-6 key product features/highlights. Return ONLY a comma-separated list like: Feature1, Feature2, Feature3. No numbering, no bullets, no extra text." },
+        { role: "user", content: `Generate key features for: "${name || 'Car Accessory'}" in category "${category || 'General'}".${description ? ` Description: ${description}` : ''}` },
+      ], apiKey);
+      return new Response(JSON.stringify({ features: result.replace(/^["']|["']$/g, '') }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "generate_badge") {
+      const result = await callAI([
+        { role: "system", content: "You are a marketing expert. Suggest ONE short product badge label (1-2 words max) for an e-commerce product card. Examples: Bestseller, New, Hot Deal, Premium, Top Rated, Limited, Staff Pick. Return ONLY the badge text, nothing else." },
+        { role: "user", content: `Suggest a badge for: "${name || 'Car Accessory'}" in "${category || 'General'}".${description ? ` ${description}` : ''}` },
+      ], apiKey);
+      return new Response(JSON.stringify({ badge: result.replace(/^["']|["']$/g, '') }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "auto_fill_all") {
+      const toolDef = {
+        name: "fill_product",
+        description: "Generate complete product details for a car accessory",
+        parameters: {
+          type: "object",
+          properties: {
+            name: { type: "string", description: "Professional product name, under 60 chars" },
+            description: { type: "string", description: "SEO-friendly description, 2-3 sentences" },
+            features: { type: "string", description: "Comma-separated key features, 4-6 items" },
+            badge: { type: "string", description: "Short badge label, 1-2 words (e.g. Bestseller, New, Hot Deal)" },
+            price: { type: "number", description: "Suggested MRP in INR (Indian Rupees), realistic market price" },
+            originalPrice: { type: "number", description: "Original/strikethrough price in INR, slightly higher than price" },
+          },
+          required: ["name", "description", "features", "badge", "price", "originalPrice"],
+          additionalProperties: false,
+        },
+      };
+      const result = await callAIJSON([
+        { role: "system", content: "You are an expert product manager for an Indian car accessories e-commerce store (GrabYourCar). Generate complete, realistic product details. Prices should be in Indian Rupees (INR) and reflect real Indian market pricing." },
+        { role: "user", content: `Generate complete product details for a car accessory in the "${category || 'General'}" category.${name ? ` Product hint: ${name}` : ''}${description ? ` Description hint: ${description}` : ''}` },
+      ], apiKey, toolDef);
+      return new Response(JSON.stringify({ product: result }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

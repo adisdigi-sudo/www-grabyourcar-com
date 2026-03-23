@@ -13,13 +13,9 @@ import {
 } from "lucide-react";
 
 interface AdminLivePreviewProps {
-  /** The public URL path to preview, e.g. "/accessories" */
   previewPath: string;
-  /** Label shown in the preview header */
   label?: string;
-  /** Whether the preview panel is visible */
   isOpen: boolean;
-  /** Toggle visibility */
   onToggle: () => void;
 }
 
@@ -55,7 +51,10 @@ export function AdminLivePreview({
   if (!isOpen) return null;
 
   return (
-    <div className="flex flex-col border-l border-border bg-muted/30 h-full min-w-[320px]" style={{ width: "45%" }}>
+    <div
+      className="flex flex-col border-l border-border bg-muted/30 shrink-0"
+      style={{ width: "45%", height: "calc(100vh - 4rem)" }}
+    >
       {/* Preview Header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-card shrink-0">
         <div className="flex items-center gap-2">
@@ -66,7 +65,6 @@ export function AdminLivePreview({
           </span>
         </div>
         <div className="flex items-center gap-1">
-          {/* Viewport toggles */}
           {([
             { mode: "mobile" as ViewportMode, icon: Smartphone },
             { mode: "tablet" as ViewportMode, icon: Tablet },
@@ -114,13 +112,17 @@ export function AdminLivePreview({
       </div>
 
       {/* Iframe Container */}
-      <div className="flex-1 overflow-auto flex justify-center bg-muted/50 p-2">
+      <div className="flex-1 overflow-hidden flex justify-center bg-muted/50 p-2">
         <div
           className={cn(
-            "bg-background rounded-lg shadow-sm border border-border overflow-hidden transition-all duration-300 h-full",
+            "bg-background rounded-lg shadow-sm border border-border overflow-hidden transition-all duration-300",
             viewport !== "desktop" && "mx-auto"
           )}
-          style={{ width: VIEWPORT_WIDTHS[viewport], maxWidth: "100%" }}
+          style={{
+            width: VIEWPORT_WIDTHS[viewport],
+            maxWidth: "100%",
+            height: "100%",
+          }}
         >
           <iframe
             ref={iframeRef}
@@ -129,6 +131,7 @@ export function AdminLivePreview({
             className="w-full h-full border-0"
             title={label}
             sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+            style={{ minHeight: "100%" }}
           />
         </div>
       </div>

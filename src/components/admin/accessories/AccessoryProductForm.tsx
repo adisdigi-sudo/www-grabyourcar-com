@@ -20,7 +20,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Sparkles, Loader2, Plus, X, ImageIcon } from "lucide-react";
+import { Sparkles, Loader2, Plus, X, Wand2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface ProductFormData {
@@ -75,9 +75,27 @@ export function AccessoryProductForm({
       } else if (action === "generate_description" && data.description) {
         setForm({ ...form, description: data.description });
         toast.success("AI description generated!");
+      } else if (action === "generate_features" && data.features) {
+        setForm({ ...form, features: data.features });
+        toast.success("AI features generated!");
+      } else if (action === "generate_badge" && data.badge) {
+        setForm({ ...form, badge: data.badge });
+        toast.success("AI badge generated!");
       } else if (action === "generate_image" && data.image) {
         setForm({ ...form, image: data.image });
         toast.success("AI image generated!");
+      } else if (action === "auto_fill_all" && data.product) {
+        const p = data.product;
+        setForm({
+          ...form,
+          name: p.name || form.name,
+          description: p.description || form.description,
+          features: p.features || form.features,
+          badge: p.badge || form.badge,
+          price: p.price || form.price,
+          originalPrice: p.originalPrice || form.originalPrice,
+        });
+        toast.success("All fields auto-filled by AI!");
       }
     } catch (e: any) {
       toast.error(e.message || "AI generation failed");
@@ -98,6 +116,20 @@ export function AccessoryProductForm({
     toast.success(`Category "${trimmed}" added`);
   };
 
+  const AIButton = ({ action, label }: { action: string; label: string }) => (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      className="h-6 text-[11px] gap-1 text-primary hover:text-primary"
+      onClick={() => callAI(action)}
+      disabled={!!aiLoading}
+    >
+      {aiLoading === action ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+      {label}
+    </Button>
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
@@ -110,46 +142,21 @@ export function AccessoryProductForm({
           </DialogTitle>
         </DialogHeader>
 
+        {/* Auto-Fill All Button */}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-full gap-2 border-primary/30 text-primary hover:bg-primary/5"
+          onClick={() => callAI("auto_fill_all")}
+          disabled={!!aiLoading}
+        >
+          {aiLoading === "auto_fill_all" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+          Auto-Fill Everything with AI
+        </Button>
+
         <div className="grid gap-3">
-          {/* Name with AI */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <Label>Product Name</Label>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-6 text-[11px] gap-1 text-primary"
-                onClick={() => callAI("generate_name")}
-                disabled={aiLoading === "generate_name"}
-              >
-                {aiLoading === "generate_name" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                Generate with AI
-              </Button>
-            </div>
-            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Premium Car Cover" />
-          </div>
-
-          {/* Description with AI */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <Label>Description</Label>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-6 text-[11px] gap-1 text-primary"
-                onClick={() => callAI("generate_description")}
-                disabled={aiLoading === "generate_description"}
-              >
-                {aiLoading === "generate_description" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                Generate with AI
-              </Button>
-            </div>
-            <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} placeholder="Professional product description..." />
-          </div>
-
-          {/* Category with custom management */}
+          {/* Category (select first so AI uses it) */}
           <div>
             <div className="flex items-center justify-between mb-1">
               <Label>Category</Label>
@@ -160,7 +167,7 @@ export function AccessoryProductForm({
                 className="h-6 text-[11px] gap-1"
                 onClick={() => setShowCatManager(!showCatManager)}
               >
-                <Plus className="h-3 w-3" /> Manage Categories
+                <Plus className="h-3 w-3" /> Manage
               </Button>
             </div>
             <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
@@ -186,7 +193,7 @@ export function AccessoryProductForm({
                     <Plus className="h-3 w-3" />
                   </Button>
                 </div>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
                   {categories.map((c) => (
                     <Badge key={c} variant="outline" className="gap-1 text-[11px] pr-1">
                       {c}
@@ -204,17 +211,61 @@ export function AccessoryProductForm({
             )}
           </div>
 
+          {/* Name with AI */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <Label>Product Name</Label>
+              <AIButton action="generate_name" label="AI Generate" />
+            </div>
+            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Premium Car Cover" />
+          </div>
+
+          {/* Description with AI */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <Label>Description</Label>
+              <AIButton action="generate_description" label="AI Generate" />
+            </div>
+            <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} placeholder="Professional product description..." />
+          </div>
+
+          {/* Features with AI */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <Label>Features (comma-separated)</Label>
+              <AIButton action="generate_features" label="AI Generate" />
+            </div>
+            <Input value={form.features} onChange={(e) => setForm({ ...form, features: e.target.value })} placeholder="Waterproof, UV Protection, Dust Resistant" />
+            {form.features && (
+              <div className="flex flex-wrap gap-1 mt-1.5">
+                {form.features.split(",").map((f) => f.trim()).filter(Boolean).map((f, i) => (
+                  <Badge key={i} variant="secondary" className="text-[10px]">{f}</Badge>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Badge with AI */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label>Badge (optional)</Label>
+              <div className="flex items-center justify-between mb-1">
+                <Label>Badge</Label>
+                <AIButton action="generate_badge" label="AI" />
+              </div>
               <Input value={form.badge} onChange={(e) => setForm({ ...form, badge: e.target.value })} placeholder="e.g. Bestseller" />
             </div>
             <div>
-              <Label>Features (comma-separated)</Label>
-              <Input value={form.features} onChange={(e) => setForm({ ...form, features: e.target.value })} placeholder="Waterproof, UV" />
+              <Label className="mb-1 block">Slug (auto)</Label>
+              <Input
+                value={form.name ? form.name.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-') : ''}
+                readOnly
+                className="bg-muted/50 text-muted-foreground"
+                placeholder="auto-generated-from-name"
+              />
             </div>
           </div>
 
+          {/* Pricing */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Price (₹)</Label>
@@ -230,17 +281,7 @@ export function AccessoryProductForm({
           <div>
             <div className="flex items-center justify-between mb-1">
               <Label>Product Image</Label>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-6 text-[11px] gap-1 text-primary"
-                onClick={() => callAI("generate_image")}
-                disabled={aiLoading === "generate_image"}
-              >
-                {aiLoading === "generate_image" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                Generate with AI
-              </Button>
+              <AIButton action="generate_image" label="AI Generate" />
             </div>
             <Input value={form.image} onChange={(e) => setForm({ ...form, image: e.target.value })} placeholder="Image URL or generate with AI" />
             {form.image && form.image !== "/placeholder.svg" && (
