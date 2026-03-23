@@ -9250,31 +9250,60 @@ export type Database = {
       }
       rental_bookings: {
         Row: {
+          aadhaar_back_url: string | null
+          aadhaar_front_url: string | null
+          abandoned_at: string | null
+          abandoned_step: string | null
+          address_proof_url: string | null
           agreement_url: string | null
+          assigned_vehicle_color: string | null
+          assigned_vehicle_number: string | null
           call_attempts: number | null
           call_remarks: string | null
           call_status: string | null
           created_at: string | null
           customer_name: string | null
           daily_rate: number
+          damage_charges: number | null
+          damage_report: Json | null
+          deposit_refund_amount: number | null
+          deposit_refund_status: string | null
           discount_amount: number | null
           discount_applied_by: string | null
           discount_reason: string | null
+          dl_back_url: string | null
+          dl_front_url: string | null
+          documents_status: Json | null
           driver_license_number: string | null
           dropoff_date: string
           dropoff_location: string
           dropoff_time: string
           email: string | null
+          extra_km_charges: number | null
           feedback_rating: number | null
           feedback_text: string | null
+          final_settlement_amount: number | null
           follow_up_date: string | null
           follow_up_time: string | null
+          fuel_level_end: string | null
+          fuel_level_start: string | null
+          handover_at: string | null
+          handover_by: string | null
+          handover_photos: string[] | null
           id: string
           incentive_eligible: boolean | null
+          is_abandoned: boolean | null
+          kyc_verified: boolean | null
+          kyc_verified_at: string | null
+          kyc_verified_by: string | null
           last_activity_at: string | null
+          late_return_charges: number | null
           lost_reason: string | null
           lost_remarks: string | null
           notes: string | null
+          odometer_end: number | null
+          odometer_start: number | null
+          page_referrer: string | null
           partner_address: string | null
           partner_name: string | null
           partner_phone: string | null
@@ -9282,12 +9311,20 @@ export type Database = {
           payment_id: string | null
           payment_status: string
           phone: string | null
+          picked_up_by: string | null
           pickup_date: string
           pickup_location: string
           pickup_time: string
           pipeline_stage: string | null
+          recovery_attempted: boolean | null
+          recovery_attempted_at: string | null
           remarks_history: Json | null
+          return_inspected_by: string | null
+          return_photos: string[] | null
+          returned_at: string | null
           security_deposit: number | null
+          selfie_url: string | null
+          session_duration_seconds: number | null
           source: string | null
           status: string
           subtotal: number
@@ -9295,36 +9332,69 @@ export type Database = {
           total_days: number
           updated_at: string | null
           user_id: string
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
           vehicle_image: string | null
           vehicle_name: string
           vehicle_type: string
+          website_journey: Json | null
         }
         Insert: {
+          aadhaar_back_url?: string | null
+          aadhaar_front_url?: string | null
+          abandoned_at?: string | null
+          abandoned_step?: string | null
+          address_proof_url?: string | null
           agreement_url?: string | null
+          assigned_vehicle_color?: string | null
+          assigned_vehicle_number?: string | null
           call_attempts?: number | null
           call_remarks?: string | null
           call_status?: string | null
           created_at?: string | null
           customer_name?: string | null
           daily_rate: number
+          damage_charges?: number | null
+          damage_report?: Json | null
+          deposit_refund_amount?: number | null
+          deposit_refund_status?: string | null
           discount_amount?: number | null
           discount_applied_by?: string | null
           discount_reason?: string | null
+          dl_back_url?: string | null
+          dl_front_url?: string | null
+          documents_status?: Json | null
           driver_license_number?: string | null
           dropoff_date: string
           dropoff_location: string
           dropoff_time: string
           email?: string | null
+          extra_km_charges?: number | null
           feedback_rating?: number | null
           feedback_text?: string | null
+          final_settlement_amount?: number | null
           follow_up_date?: string | null
           follow_up_time?: string | null
+          fuel_level_end?: string | null
+          fuel_level_start?: string | null
+          handover_at?: string | null
+          handover_by?: string | null
+          handover_photos?: string[] | null
           id?: string
           incentive_eligible?: boolean | null
+          is_abandoned?: boolean | null
+          kyc_verified?: boolean | null
+          kyc_verified_at?: string | null
+          kyc_verified_by?: string | null
           last_activity_at?: string | null
+          late_return_charges?: number | null
           lost_reason?: string | null
           lost_remarks?: string | null
           notes?: string | null
+          odometer_end?: number | null
+          odometer_start?: number | null
+          page_referrer?: string | null
           partner_address?: string | null
           partner_name?: string | null
           partner_phone?: string | null
@@ -9332,12 +9402,20 @@ export type Database = {
           payment_id?: string | null
           payment_status?: string
           phone?: string | null
+          picked_up_by?: string | null
           pickup_date: string
           pickup_location: string
           pickup_time: string
           pipeline_stage?: string | null
+          recovery_attempted?: boolean | null
+          recovery_attempted_at?: string | null
           remarks_history?: Json | null
+          return_inspected_by?: string | null
+          return_photos?: string[] | null
+          returned_at?: string | null
           security_deposit?: number | null
+          selfie_url?: string | null
+          session_duration_seconds?: number | null
           source?: string | null
           status?: string
           subtotal: number
@@ -9345,36 +9423,69 @@ export type Database = {
           total_days: number
           updated_at?: string | null
           user_id: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
           vehicle_image?: string | null
           vehicle_name: string
           vehicle_type: string
+          website_journey?: Json | null
         }
         Update: {
+          aadhaar_back_url?: string | null
+          aadhaar_front_url?: string | null
+          abandoned_at?: string | null
+          abandoned_step?: string | null
+          address_proof_url?: string | null
           agreement_url?: string | null
+          assigned_vehicle_color?: string | null
+          assigned_vehicle_number?: string | null
           call_attempts?: number | null
           call_remarks?: string | null
           call_status?: string | null
           created_at?: string | null
           customer_name?: string | null
           daily_rate?: number
+          damage_charges?: number | null
+          damage_report?: Json | null
+          deposit_refund_amount?: number | null
+          deposit_refund_status?: string | null
           discount_amount?: number | null
           discount_applied_by?: string | null
           discount_reason?: string | null
+          dl_back_url?: string | null
+          dl_front_url?: string | null
+          documents_status?: Json | null
           driver_license_number?: string | null
           dropoff_date?: string
           dropoff_location?: string
           dropoff_time?: string
           email?: string | null
+          extra_km_charges?: number | null
           feedback_rating?: number | null
           feedback_text?: string | null
+          final_settlement_amount?: number | null
           follow_up_date?: string | null
           follow_up_time?: string | null
+          fuel_level_end?: string | null
+          fuel_level_start?: string | null
+          handover_at?: string | null
+          handover_by?: string | null
+          handover_photos?: string[] | null
           id?: string
           incentive_eligible?: boolean | null
+          is_abandoned?: boolean | null
+          kyc_verified?: boolean | null
+          kyc_verified_at?: string | null
+          kyc_verified_by?: string | null
           last_activity_at?: string | null
+          late_return_charges?: number | null
           lost_reason?: string | null
           lost_remarks?: string | null
           notes?: string | null
+          odometer_end?: number | null
+          odometer_start?: number | null
+          page_referrer?: string | null
           partner_address?: string | null
           partner_name?: string | null
           partner_phone?: string | null
@@ -9382,12 +9493,20 @@ export type Database = {
           payment_id?: string | null
           payment_status?: string
           phone?: string | null
+          picked_up_by?: string | null
           pickup_date?: string
           pickup_location?: string
           pickup_time?: string
           pipeline_stage?: string | null
+          recovery_attempted?: boolean | null
+          recovery_attempted_at?: string | null
           remarks_history?: Json | null
+          return_inspected_by?: string | null
+          return_photos?: string[] | null
+          returned_at?: string | null
           security_deposit?: number | null
+          selfie_url?: string | null
+          session_duration_seconds?: number | null
           source?: string | null
           status?: string
           subtotal?: number
@@ -9395,9 +9514,13 @@ export type Database = {
           total_days?: number
           updated_at?: string | null
           user_id?: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
           vehicle_image?: string | null
           vehicle_name?: string
           vehicle_type?: string
+          website_journey?: Json | null
         }
         Relationships: []
       }
