@@ -9097,6 +9097,157 @@ export type Database = {
           },
         ]
       }
+      rental_agreement_history: {
+        Row: {
+          action: string
+          action_by: string | null
+          agreement_id: string
+          created_at: string | null
+          details: Json | null
+          id: string
+          ip_address: string | null
+        }
+        Insert: {
+          action: string
+          action_by?: string | null
+          agreement_id: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+        }
+        Update: {
+          action?: string
+          action_by?: string | null
+          agreement_id?: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rental_agreement_history_agreement_id_fkey"
+            columns: ["agreement_id"]
+            isOneToOne: false
+            referencedRelation: "rental_agreements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rental_agreements: {
+        Row: {
+          admin_signed_at: string | null
+          admin_signed_by: string | null
+          agreement_number: string | null
+          booking_id: string | null
+          client_ip_address: string | null
+          client_signature_data: string | null
+          client_signature_type: string | null
+          client_signed_at: string | null
+          client_signed_name: string | null
+          client_user_agent: string | null
+          client_viewed_at: string | null
+          created_at: string | null
+          created_by: string | null
+          customer_email: string | null
+          customer_name: string
+          customer_phone: string
+          dropoff_date: string | null
+          dropoff_location: string | null
+          id: string
+          notes: string | null
+          pickup_date: string | null
+          pickup_location: string | null
+          rental_amount: number | null
+          security_deposit: number | null
+          share_token: string | null
+          shared_at: string | null
+          shared_via_whatsapp: boolean | null
+          status: string
+          terms_html: string
+          updated_at: string | null
+          vehicle_name: string | null
+          vehicle_number: string | null
+        }
+        Insert: {
+          admin_signed_at?: string | null
+          admin_signed_by?: string | null
+          agreement_number?: string | null
+          booking_id?: string | null
+          client_ip_address?: string | null
+          client_signature_data?: string | null
+          client_signature_type?: string | null
+          client_signed_at?: string | null
+          client_signed_name?: string | null
+          client_user_agent?: string | null
+          client_viewed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          customer_email?: string | null
+          customer_name: string
+          customer_phone: string
+          dropoff_date?: string | null
+          dropoff_location?: string | null
+          id?: string
+          notes?: string | null
+          pickup_date?: string | null
+          pickup_location?: string | null
+          rental_amount?: number | null
+          security_deposit?: number | null
+          share_token?: string | null
+          shared_at?: string | null
+          shared_via_whatsapp?: boolean | null
+          status?: string
+          terms_html: string
+          updated_at?: string | null
+          vehicle_name?: string | null
+          vehicle_number?: string | null
+        }
+        Update: {
+          admin_signed_at?: string | null
+          admin_signed_by?: string | null
+          agreement_number?: string | null
+          booking_id?: string | null
+          client_ip_address?: string | null
+          client_signature_data?: string | null
+          client_signature_type?: string | null
+          client_signed_at?: string | null
+          client_signed_name?: string | null
+          client_user_agent?: string | null
+          client_viewed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          customer_email?: string | null
+          customer_name?: string
+          customer_phone?: string
+          dropoff_date?: string | null
+          dropoff_location?: string | null
+          id?: string
+          notes?: string | null
+          pickup_date?: string | null
+          pickup_location?: string | null
+          rental_amount?: number | null
+          security_deposit?: number | null
+          share_token?: string | null
+          shared_at?: string | null
+          shared_via_whatsapp?: boolean | null
+          status?: string
+          terms_html?: string
+          updated_at?: string | null
+          vehicle_name?: string | null
+          vehicle_number?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rental_agreements_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "rental_bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rental_bookings: {
         Row: {
           agreement_url: string | null
@@ -9249,6 +9400,74 @@ export type Database = {
           vehicle_type?: string
         }
         Relationships: []
+      }
+      rental_kyc_documents: {
+        Row: {
+          agreement_id: string | null
+          created_at: string | null
+          customer_name: string | null
+          customer_phone: string
+          document_back_url: string | null
+          document_front_url: string | null
+          document_number: string | null
+          document_type: string
+          extracted_data: Json | null
+          id: string
+          rejection_reason: string | null
+          surepass_response: Json | null
+          updated_at: string | null
+          verification_status: string
+          verified_at: string | null
+          verified_by: string | null
+          verified_via: string | null
+        }
+        Insert: {
+          agreement_id?: string | null
+          created_at?: string | null
+          customer_name?: string | null
+          customer_phone: string
+          document_back_url?: string | null
+          document_front_url?: string | null
+          document_number?: string | null
+          document_type: string
+          extracted_data?: Json | null
+          id?: string
+          rejection_reason?: string | null
+          surepass_response?: Json | null
+          updated_at?: string | null
+          verification_status?: string
+          verified_at?: string | null
+          verified_by?: string | null
+          verified_via?: string | null
+        }
+        Update: {
+          agreement_id?: string | null
+          created_at?: string | null
+          customer_name?: string | null
+          customer_phone?: string
+          document_back_url?: string | null
+          document_front_url?: string | null
+          document_number?: string | null
+          document_type?: string
+          extracted_data?: Json | null
+          id?: string
+          rejection_reason?: string | null
+          surepass_response?: Json | null
+          updated_at?: string | null
+          verification_status?: string
+          verified_at?: string | null
+          verified_by?: string | null
+          verified_via?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rental_kyc_documents_agreement_id_fkey"
+            columns: ["agreement_id"]
+            isOneToOne: false
+            referencedRelation: "rental_agreements"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       rental_services: {
         Row: {

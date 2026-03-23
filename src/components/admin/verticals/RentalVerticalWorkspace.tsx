@@ -2,10 +2,12 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Car, CheckCircle2, CalendarDays, Users, Globe } from "lucide-react";
+import { Car, CheckCircle2, Users, Globe, FileText, ShieldCheck } from "lucide-react";
 import { SelfDriveWorkspace } from "../rentals/SelfDriveWorkspace";
 import DriverBookingsManagement from "../DriverBookingsManagement";
 import APIPartnersManagement from "../APIPartnersManagement";
+import { AgreementManagement } from "../rentals/AgreementManagement";
+import { KYCVerificationPanel } from "../rentals/KYCVerificationPanel";
 
 export function RentalVerticalWorkspace() {
   const [activeTab, setActiveTab] = useState("rentals");
@@ -13,6 +15,8 @@ export function RentalVerticalWorkspace() {
   const tabs = [
     { id: "rentals", label: "Self-Drive Rentals", icon: Car },
     { id: "drivers", label: "Driver Bookings", icon: Users },
+    { id: "agreements", label: "Agreements", icon: FileText },
+    { id: "kyc", label: "KYC Verification", icon: ShieldCheck },
     { id: "partners", label: "API Partners", icon: Globe },
   ];
 
@@ -20,6 +24,8 @@ export function RentalVerticalWorkspace() {
     switch (activeTab) {
       case "rentals": return <SelfDriveWorkspace />;
       case "drivers": return <DriverBookingsManagement />;
+      case "agreements": return <AgreementManagement />;
+      case "kyc": return <KYCVerificationPanel />;
       case "partners": return <APIPartnersManagement />;
       default: return <SelfDriveWorkspace />;
     }
@@ -36,7 +42,7 @@ export function RentalVerticalWorkspace() {
               </div>
               <div>
                 <h2 className="font-bold text-lg">Self-Drive Rental & Fleet</h2>
-                <p className="text-xs text-muted-foreground">Pipeline, bookings, driver operations, and partner integrations</p>
+                <p className="text-xs text-muted-foreground">Pipeline, bookings, agreements, KYC, and partner integrations</p>
               </div>
             </div>
             <Badge className="bg-cyan-100 text-cyan-700 dark:bg-cyan-950 dark:text-cyan-300 border-0">
@@ -46,12 +52,12 @@ export function RentalVerticalWorkspace() {
         </CardContent>
       </Card>
 
-      <div className="flex gap-1 p-1 bg-muted/50 rounded-lg">
+      <div className="flex gap-1 p-1 bg-muted/50 rounded-lg overflow-x-auto">
         {tabs.map(tab => {
           const Icon = tab.icon;
           return (
             <Button key={tab.id} variant={activeTab === tab.id ? "default" : "ghost"} size="sm"
-              onClick={() => setActiveTab(tab.id)} className="gap-1.5 text-xs h-8">
+              onClick={() => setActiveTab(tab.id)} className="gap-1.5 text-xs h-8 whitespace-nowrap">
               <Icon className="h-3.5 w-3.5" /> {tab.label}
             </Button>
           );
