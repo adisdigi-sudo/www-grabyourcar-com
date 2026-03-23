@@ -450,13 +450,13 @@ export const HRDeepWorkspace = ({ initialTab = "overview" }: { initialTab?: stri
                       <TableCell><Badge variant="outline" className="text-[9px]">{p.department}</Badge></TableCell>
                       <TableCell className="text-xs text-right">{fmt(p.basic_salary)}</TableCell>
                       <TableCell className="text-xs text-right font-medium">{fmt(p.gross_salary)}</TableCell>
-                      <TableCell className="text-xs text-right text-red-600">{fmt(p.deductions + p.tds + p.pf)}</TableCell>
+                      <TableCell className="text-xs text-right text-red-600">{fmt(Number(p.pf_deduction || 0) + Number(p.esi_deduction || 0) + Number(p.tds || 0) + Number(p.professional_tax || 0) + Number(p.other_deductions || 0))}</TableCell>
                       <TableCell className="text-xs text-right font-bold text-emerald-600">{fmt(p.net_salary)}</TableCell>
                       <TableCell>
-                        <Badge className={`text-[9px] ${p.status === "paid" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>{p.status}</Badge>
+                        <Badge className={`text-[9px] ${p.payment_status === "paid" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>{p.payment_status}</Badge>
                       </TableCell>
                       <TableCell className="flex gap-1">
-                        {p.status !== "paid" && (
+                        {p.payment_status !== "paid" && (
                           <Button size="sm" variant="ghost" className="h-6 text-[10px] text-emerald-600" onClick={() => updatePayrollStatus.mutate({ id: p.id, status: "paid" })}>Paid</Button>
                         )}
                         <Button size="sm" variant="ghost" className="h-6 text-[10px]"
