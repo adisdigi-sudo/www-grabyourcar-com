@@ -11,7 +11,7 @@ export function SalesDealTracker() {
     queryKey: ["sales-deals"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("sales_pipeline")
+        .from("sales_pipeline" as any)
         .select("*")
         .eq("status_outcome", "won")
         .order("updated_at", { ascending: false })
