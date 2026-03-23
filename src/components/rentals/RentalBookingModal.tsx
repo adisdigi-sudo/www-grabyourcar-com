@@ -65,6 +65,21 @@ export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalP
   const { initiatePayment, isLoading: isPaymentLoading } = useRazorpay();
   const [draftBookingId, setDraftBookingId] = useState<string | null>(null);
   const bookingCompletedRef = useRef(false);
+  const carData = car ?? {
+    id: 0,
+    name: "",
+    image: "",
+    fuelType: "",
+    transmission: "",
+    rent: 0,
+    brand: "",
+    vehicleType: "",
+    seats: 0,
+    year: 0,
+    color: "",
+    available: false,
+    location: "",
+  };
   
   const [pickupDate, setPickupDate] = useState<Date>();
   const [dropoffDate, setDropoffDate] = useState<Date>();
@@ -78,10 +93,8 @@ export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalP
   const [customerEmail, setCustomerEmail] = useState("");
   const [isCreatingBooking, setIsCreatingBooking] = useState(false);
 
-  if (!car) return null;
-
   const rentalDays = pickupDate && dropoffDate ? Math.max(1, differenceInDays(dropoffDate, pickupDate)) : 1;
-  const baseRent = car.rent * rentalDays;
+  const baseRent = carData.rent * rentalDays;
   const gst = Math.round(baseRent * 0.18);
   const securityDeposit = 2000;
   const totalAmount = baseRent + gst;
@@ -155,16 +168,16 @@ export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalP
     const meta = buildRentalLeadMetadata();
     const abandonedPayload = {
       user_id: currentUser.id,
-      vehicle_name: car.name,
-      vehicle_type: car.vehicleType,
-      vehicle_image: car.image,
+      vehicle_name: carData.name,
+      vehicle_type: carData.vehicleType,
+      vehicle_image: carData.image,
       pickup_date: format(pickupDate, "yyyy-MM-dd"),
       pickup_time: pickupTime,
       dropoff_date: format(dropoffDate, "yyyy-MM-dd"),
       dropoff_time: dropoffTime,
       pickup_location: pickupLocation,
       dropoff_location: sameDropoff ? pickupLocation : dropoffLocation || pickupLocation,
-      daily_rate: car.rent,
+      daily_rate: carData.rent,
       total_days: rentalDays,
       subtotal: baseRent,
       security_deposit: securityDeposit,
@@ -277,16 +290,16 @@ export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalP
       // Create booking in database first
       const bookingData = {
         user_id: currentUser.id,
-        vehicle_name: car.name,
-        vehicle_type: car.vehicleType,
-        vehicle_image: car.image,
+        vehicle_name: carData.name,
+        vehicle_type: carData.vehicleType,
+        vehicle_image: carData.image,
         pickup_date: format(pickupDate!, "yyyy-MM-dd"),
         pickup_time: pickupTime,
         dropoff_date: format(dropoffDate!, "yyyy-MM-dd"),
         dropoff_time: dropoffTime,
         pickup_location: pickupLocation,
         dropoff_location: sameDropoff ? pickupLocation : dropoffLocation,
-        daily_rate: car.rent,
+        daily_rate: carData.rent,
         total_days: rentalDays,
         subtotal: baseRent,
         security_deposit: securityDeposit,
@@ -332,9 +345,9 @@ export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalP
         customerName,
         customerEmail: customerEmail || `${customerPhone}@grabyourcar.in`,
         customerPhone,
-        description: `Self-Drive Rental: ${car.name} for ${rentalDays} days`,
+        description: `Self-Drive Rental: ${carData.name} for ${rentalDays} days`,
         notes: {
-          vehicleName: car.name,
+          vehicleName: carData.name,
           rentalDays: rentalDays.toString(),
           pickupLocation,
         },
@@ -342,14 +355,14 @@ export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalP
           bookingCompletedRef.current = true;
           captureRentalJourneyStep("payment_completed", {
             bookingId: booking.id,
-            paymentId: paymentData.paymentId,
+            paymentId: paymentData.razorpay_payment_id,
           });
 
           triggerWhatsApp({
             event: "booking_confirmed",
             phone: customerPhone,
             name: customerName,
-            data: { car_model: car.name, rental_days: String(rentalDays) },
+            data: { car_model: carData.name, rental_days: String(rentalDays) },
           });
 
           // Auto-create rental agreement for the booking
@@ -377,7 +390,7 @@ export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalP
                 customer_name: customerName,
                 customer_phone: customerPhone,
                 customer_email: customerEmail || null,
-                vehicle_name: car.name,
+                vehicle_name: carData.name,
                 vehicle_number: null,
                 pickup_date: format(pickupDate!, "yyyy-MM-dd"),
                 dropoff_date: format(dropoffDate!, "yyyy-MM-dd"),
@@ -414,7 +427,7 @@ export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalP
                 phone: customerPhone,
                 name: customerName,
                 data: {
-                  car_model: car.name,
+                  car_model: carData.name,
                   agreement_url: agreementUrl,
                   agreement_number: agrData.agreement_number || "",
                 },
@@ -426,10 +439,10 @@ export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalP
                 pipeline_stage: "booking_payment",
                 status: "confirmed",
                 payment_status: "paid",
-                payment_id: paymentData.paymentId,
+                payment_id: paymentData.razorpay_payment_id,
                 payment_history: [{
                   at: new Date().toISOString(),
-                  payment_id: paymentData.paymentId,
+                  payment_id: paymentData.razorpay_payment_id,
                   amount: totalAmount,
                   status: "paid",
                 }],
@@ -453,7 +466,7 @@ export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalP
           console.error("Payment failed:", error);
           captureRentalJourneyStep("payment_failed", {
             bookingId: booking.id,
-            message: error?.message || "Payment failed",
+            message: error || "Payment failed",
           });
           supabase.from("rental_bookings").update({
             is_abandoned: true,
@@ -478,7 +491,7 @@ export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalP
 
     // Generate booking message for WhatsApp
     const message = `Hi! I want to book a self-drive car:\n\n` +
-      `🚗 Car: ${car.name}\n` +
+      `🚗 Car: ${carData.name}\n` +
       `📅 Pickup: ${format(pickupDate!, "dd MMM yyyy")} at ${pickupTime}\n` +
       `📅 Dropoff: ${format(dropoffDate!, "dd MMM yyyy")} at ${dropoffTime}\n` +
       `📍 Pickup Location: ${pickupLocation}\n` +
@@ -495,6 +508,8 @@ export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalP
   };
 
   const isProcessing = isCreatingBooking || isPaymentLoading;
+
+  if (!car) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={handleDialogChange}>
