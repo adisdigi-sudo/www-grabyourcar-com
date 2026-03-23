@@ -69,7 +69,7 @@ export function AccessoriesEcommerceWorkspace() {
   };
 
   return (
-    <div className="flex h-full min-h-[calc(100vh-4rem)] bg-background">
+    <div className="flex h-[calc(100vh-4rem)] bg-background overflow-hidden">
       {/* Sidebar */}
       <aside
         className={cn(
