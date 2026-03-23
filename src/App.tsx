@@ -228,6 +228,7 @@ const App = () => (
                         <Route path="/no-waiting-cars" element={<NoWaitingCars />} />
                         <Route path="/best-car-deals" element={<BestCarDeals />} />
                         <Route path="/agreement/:token" element={<AgreementSignPage />} />
+                        <Route path="/track-order" element={<TrackOrder />} />
                         <Route path="*" element={<LegacyRouteHandler />} />
                       </Routes>
                       <RouteAwareChrome />
