@@ -35,24 +35,19 @@ export function KYCVerificationPanel() {
   const [rejectionReason, setRejectionReason] = useState("");
   const updateKYC = useUpdateKYC();
 
-  // Load all KYC documents across all agreements
-  const { data: allDocs = [], isLoading, refetch } = useKYCDocuments(undefined, undefined);
+  const { data: docs = [], refetch } = useQuery({
+    queryKey: ["rental-kyc-all"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("rental_kyc_documents")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data as RentalKYCDocument[];
+    },
+  });
 
-  // Since we pass undefined for both, the query is disabled. Let's use a different approach.
-  // We'll load all via a direct query.
-  const [docs, setDocs] = useState<RentalKYCDocument[]>([]);
-  const [loaded, setLoaded] = useState(false);
-
-  const loadAll = async () => {
-    const { data, error } = await supabase
-      .from("rental_kyc_documents")
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (!error && data) setDocs(data as RentalKYCDocument[]);
-    setLoaded(true);
-  };
-
-  if (!loaded) loadAll();
+  const loadAll = () => refetch();
 
   const filtered = docs.filter(d =>
     (d.customer_name || "").toLowerCase().includes(search.toLowerCase()) ||
