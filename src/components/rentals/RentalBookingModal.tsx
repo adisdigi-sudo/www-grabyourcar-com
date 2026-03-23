@@ -199,14 +199,96 @@ export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalP
           rentalDays: rentalDays.toString(),
           pickupLocation,
         },
-        onSuccess: (paymentData) => {
+        onSuccess: async (paymentData) => {
           triggerWhatsApp({
             event: "booking_confirmed",
             phone: customerPhone,
             name: customerName,
             data: { car_model: car.name, rental_days: String(rentalDays) },
           });
-          toast.success("Booking confirmed! Check My Bookings for details.");
+
+          // Auto-create rental agreement for the booking
+          try {
+            const DEFAULT_TERMS = `<h2>Self-Drive Car Rental Agreement</h2>
+<p>This Rental Agreement is between <strong>GrabYourCar</strong> and the Customer.</p>
+<h3>Terms & Conditions</h3>
+<ol>
+<li>Vehicle used exclusively by the authorized renter with verified KYC.</li>
+<li>Return vehicle on agreed date with same fuel level.</li>
+<li>Traffic violations during rental are the renter's responsibility.</li>
+<li>Security deposit refunded within 3-5 business days after inspection.</li>
+<li>Extra KM charges: ₹12/km beyond agreed limit.</li>
+<li>Late return: ₹500/hour penalty beyond 2 hours grace.</li>
+<li>No illegal activities, racing, or sub-renting.</li>
+<li>Insurance excess up to ₹15,000 payable by renter in accident.</li>
+<li>Vehicle condition documented via photos before and after trip.</li>
+<li>GrabYourCar reserves right to remotely disable vehicle if misused.</li>
+</ol>`;
+
+            const { data: agrData } = await supabase
+              .from("rental_agreements")
+              .insert([{
+                booking_id: booking.id,
+                customer_name: customerName,
+                customer_phone: customerPhone,
+                customer_email: customerEmail || null,
+                vehicle_name: car.name,
+                vehicle_number: null,
+                pickup_date: format(pickupDate!, "yyyy-MM-dd"),
+                dropoff_date: format(dropoffDate!, "yyyy-MM-dd"),
+                pickup_location: pickupLocation,
+                dropoff_location: sameDropoff ? pickupLocation : dropoffLocation,
+                rental_amount: totalAmount,
+                security_deposit: securityDeposit,
+                terms_html: DEFAULT_TERMS,
+                status: "sent",
+                shared_at: new Date().toISOString(),
+              }] as any)
+              .select()
+              .single();
+
+            if (agrData) {
+              // Log history
+              await supabase.from("rental_agreement_history").insert([{
+                agreement_id: agrData.id,
+                action: "created",
+                action_by: "system",
+                details: { source: "auto_after_payment", booking_id: booking.id },
+              }] as any);
+              await supabase.from("rental_agreement_history").insert([{
+                agreement_id: agrData.id,
+                action: "sent_to_client",
+                action_by: "system",
+                details: { auto_sent: true },
+              }] as any);
+
+              // Send agreement link via WhatsApp
+              const agreementUrl = `${window.location.origin}/agreement/${agrData.share_token}`;
+              triggerWhatsApp({
+                event: "agreement_sent",
+                phone: customerPhone,
+                name: customerName,
+                data: {
+                  car_model: car.name,
+                  agreement_url: agreementUrl,
+                  agreement_number: agrData.agreement_number || "",
+                },
+              });
+
+              // Update booking with agreement reference
+              await supabase.from("rental_bookings").update({
+                agreement_url: agreementUrl,
+                pipeline_stage: "booking_payment",
+                status: "confirmed",
+                payment_status: "paid",
+              }).eq("id", booking.id);
+            }
+          } catch (agrErr) {
+            console.error("Auto-agreement creation failed:", agrErr);
+            // Non-blocking - booking is still confirmed
+          }
+
+          toast.success("Booking confirmed! Agreement sent to your WhatsApp.");
           onClose();
           navigate("/my-bookings");
         },
