@@ -435,7 +435,7 @@ const AdminLayout = () => {
         return <ManualQuoteGenerator />;
       case "ecommerce-accessories":
       case "ecommerce-orders":
-        return <AccessoriesManagement />;
+        return <AccessoriesEcommerceWorkspace />;
       case "ecommerce-crosssell":
         return <CrossSellManagement />;
       case "content-blog":
