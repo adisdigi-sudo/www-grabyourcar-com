@@ -2,6 +2,8 @@ import { useState, useMemo, useCallback, forwardRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { AdminLivePreview, PreviewToggleButton } from "../shared/AdminLivePreview";
+import { cn } from "@/lib/utils";
 import { useRealtimeTable } from "@/hooks/useRealtimeSync";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -78,6 +80,7 @@ export function SelfDriveWorkspace() {
   const [prevBookingCount, setPrevBookingCount] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStage, setFilterStage] = useState<string>("all");
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   useRealtimeTable('rental_bookings', ['rental-pipeline']);
 
@@ -256,7 +259,9 @@ export function SelfDriveWorkspace() {
   const getAgreementForBooking = (bookingId: string) => agreements.find((a: any) => a.booking_id === bookingId);
 
   return (
-    <div className="space-y-4">
+    <div className="flex h-full min-h-[calc(100vh-4rem)]">
+      <div className={cn("flex-1 overflow-auto p-1", previewOpen ? "max-w-[55%]" : "w-full")}>
+      <div className="space-y-4">
       {/* KPI Row */}
       <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
         {[
@@ -313,6 +318,7 @@ export function SelfDriveWorkspace() {
           <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">{completed} Completed</Badge>
         </div>
         <div className="flex gap-2 items-center">
+          <PreviewToggleButton isOpen={previewOpen} onToggle={() => setPreviewOpen(!previewOpen)} />
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input placeholder="Search name, phone, vehicle..." className="pl-8 h-8 w-48 text-xs"
@@ -376,6 +382,14 @@ export function SelfDriveWorkspace() {
           agreement={getAgreementForBooking(selected.id)}
           onUpdate={(updates: any) => updateMutation.mutate({ id: selected.id, updates })} />
       )}
+    </div>
+      </div>
+      <AdminLivePreview
+        previewPath="/self-drive"
+        label="Self-Drive Rentals Preview"
+        isOpen={previewOpen}
+        onToggle={() => setPreviewOpen(false)}
+      />
     </div>
   );
 }

@@ -15,12 +15,14 @@ import { cn } from "@/lib/utils";
 import { CarDatabaseScraper } from "./CarDatabaseScraper";
 import { CarUploadWizard } from "./CarUploadWizard";
 import { BulkCSVUpload } from "./BulkCSVUpload";
+import { AdminLivePreview, PreviewToggleButton } from "../shared/AdminLivePreview";
 
 export const CarDatabaseWorkspace = () => {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'upload' | 'bulk' | 'manage' | 'scraper'>('upload');
   const [searchFilter, setSearchFilter] = useState("");
   const [brandFilter, setBrandFilter] = useState("All");
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const { data: dbBrands } = useQuery({
     queryKey: ['car-brands-names'],
@@ -60,7 +62,8 @@ export const CarDatabaseWorkspace = () => {
   ) || [];
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex h-full min-h-[calc(100vh-4rem)]">
+      <div className={cn("flex-1 flex flex-col bg-background", previewOpen ? "max-w-[55%]" : "w-full")}>
       {/* Top Nav */}
       <div className="border-b bg-muted/30 px-4 py-2 flex items-center gap-2">
         {[
@@ -79,6 +82,9 @@ export const CarDatabaseWorkspace = () => {
         {activeTab === 'manage' && (
           <Badge variant="outline" className="ml-auto text-[10px] h-5">{filteredExisting.length} cars in database</Badge>
         )}
+        <div className="ml-auto">
+          <PreviewToggleButton isOpen={previewOpen} onToggle={() => setPreviewOpen(!previewOpen)} />
+        </div>
       </div>
 
       {/* Content */}
@@ -154,6 +160,13 @@ export const CarDatabaseWorkspace = () => {
           </ScrollArea>
         </div>
       )}
+      </div>
+      <AdminLivePreview
+        previewPath="/cars"
+        label="Car Database Preview"
+        isOpen={previewOpen}
+        onToggle={() => setPreviewOpen(false)}
+      />
     </div>
   );
 };
