@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useRazorpay } from "@/hooks/useRazorpay";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { buildRentalLeadMetadata, captureRentalJourneyStep, clearRentalJourneySession, syncRentalJourneySnapshot } from "@/lib/rentalJourney";
 
 interface RentalCar {
   id: number;
@@ -59,9 +60,26 @@ const pickupLocations = [
 ];
 
 export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalProps) => {
-  const { user } = useAuth();
+  const { user, signInWithPhone } = useAuth();
   const navigate = useNavigate();
   const { initiatePayment, isLoading: isPaymentLoading } = useRazorpay();
+  const [draftBookingId, setDraftBookingId] = useState<string | null>(null);
+  const bookingCompletedRef = useRef(false);
+  const carData = car ?? {
+    id: 0,
+    name: "",
+    image: "",
+    fuelType: "",
+    transmission: "",
+    rent: 0,
+    brand: "",
+    vehicleType: "",
+    seats: 0,
+    year: 0,
+    color: "",
+    available: false,
+    location: "",
+  };
   
   const [pickupDate, setPickupDate] = useState<Date>();
   const [dropoffDate, setDropoffDate] = useState<Date>();
@@ -75,13 +93,135 @@ export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalP
   const [customerEmail, setCustomerEmail] = useState("");
   const [isCreatingBooking, setIsCreatingBooking] = useState(false);
 
-  if (!car) return null;
-
   const rentalDays = pickupDate && dropoffDate ? Math.max(1, differenceInDays(dropoffDate, pickupDate)) : 1;
-  const baseRent = car.rent * rentalDays;
+  const baseRent = carData.rent * rentalDays;
   const gst = Math.round(baseRent * 0.18);
   const securityDeposit = 2000;
   const totalAmount = baseRent + gst;
+
+  useEffect(() => {
+    if (!isOpen || !car) return;
+
+    syncRentalJourneySnapshot({
+      selectedVehicle: {
+        id: car.id,
+        name: car.name,
+        brand: car.brand,
+        vehicleType: car.vehicleType,
+        location: car.location,
+        rent: car.rent,
+      },
+    });
+    captureRentalJourneyStep("booking_modal_opened", {
+      vehicleId: car.id,
+      vehicleName: car.name,
+      serviceType: "self-drive",
+    });
+  }, [car, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    syncRentalJourneySnapshot({
+      selectedVehicle: car ? {
+        id: car.id,
+        name: car.name,
+        brand: car.brand,
+        vehicleType: car.vehicleType,
+        location: car.location,
+        rent: car.rent,
+      } : null,
+      bookingId: draftBookingId,
+    });
+  }, [car, draftBookingId, isOpen]);
+
+  const maybeCaptureAbandonment = async () => {
+    if (!car || bookingCompletedRef.current) return;
+
+    const hasMeaningfulProgress = Boolean(
+      customerName || customerPhone || pickupDate || dropoffDate || pickupLocation || pickupTime,
+    );
+
+    if (!hasMeaningfulProgress) return;
+
+    captureRentalJourneyStep("booking_abandoned", {
+      vehicleId: car.id,
+      vehicleName: car.name,
+      hasContact: Boolean(customerPhone),
+    });
+
+    const cleanPhone = customerPhone.replace(/\D/g, "").slice(-10);
+    if (!/^[6-9]\d{9}$/.test(cleanPhone) || !customerName || !pickupDate || !dropoffDate || !pickupTime || !dropoffTime || !pickupLocation) {
+      return;
+    }
+
+    let currentUser = user;
+
+    if (!currentUser) {
+      const { error } = await signInWithPhone(cleanPhone);
+      if (error) return;
+      const { data } = await supabase.auth.getUser();
+      currentUser = data.user;
+      if (!currentUser) return;
+    }
+
+    const meta = buildRentalLeadMetadata();
+    const abandonedPayload = {
+      user_id: currentUser.id,
+      vehicle_name: carData.name,
+      vehicle_type: carData.vehicleType,
+      vehicle_image: carData.image,
+      pickup_date: format(pickupDate, "yyyy-MM-dd"),
+      pickup_time: pickupTime,
+      dropoff_date: format(dropoffDate, "yyyy-MM-dd"),
+      dropoff_time: dropoffTime,
+      pickup_location: pickupLocation,
+      dropoff_location: sameDropoff ? pickupLocation : dropoffLocation || pickupLocation,
+      daily_rate: carData.rent,
+      total_days: rentalDays,
+      subtotal: baseRent,
+      security_deposit: securityDeposit,
+      total_amount: totalAmount,
+      status: "pending",
+      payment_status: "pending",
+      customer_name: customerName,
+      phone: cleanPhone,
+      email: customerEmail || null,
+      pipeline_stage: "website_lead",
+      is_abandoned: true,
+      abandoned_at: new Date().toISOString(),
+      abandoned_step: "checkout_started",
+      source: "website_self_drive",
+      website_journey: meta.websiteJourney,
+      utm_source: meta.utmSource,
+      utm_medium: meta.utmMedium,
+      utm_campaign: meta.utmCampaign,
+      page_referrer: meta.pageReferrer,
+      session_duration_seconds: meta.sessionDurationSeconds,
+      documents_status: { dl: "pending", aadhaar: "pending", address_proof: "pending", selfie: "pending" },
+      kyc_verified: false,
+      last_activity_at: new Date().toISOString(),
+      notes: "Website checkout abandoned before payment",
+    };
+
+    if (draftBookingId) {
+      await supabase.from("rental_bookings").update(abandonedPayload as any).eq("id", draftBookingId);
+      return;
+    }
+
+    const { data } = await supabase.from("rental_bookings").insert(abandonedPayload as any).select("id").single();
+    if (data?.id) {
+      setDraftBookingId(data.id);
+      syncRentalJourneySnapshot({ bookingId: data.id });
+    }
+  };
+
+  const handleDialogChange = async (nextOpen: boolean) => {
+    if (!nextOpen) {
+      await maybeCaptureAbandonment();
+    }
+    onClose();
+  };
 
   const validateForm = () => {
     if (!pickupDate || !dropoffDate || !pickupTime || !dropoffTime || !pickupLocation) {
@@ -99,6 +239,13 @@ export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalP
       return false;
     }
 
+    captureRentalJourneyStep("checkout_details_completed", {
+      customerName,
+      phone: customerPhone,
+      pickupLocation,
+      sameDropoff,
+    });
+
     return true;
   };
 
@@ -106,39 +253,25 @@ export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalP
     if (!validateForm()) return;
 
     // Silent auto-login using customer phone (no redirect needed)
+    captureRentalJourneyStep("payment_attempted", {
+      vehicleName: car.name,
+      totalAmount,
+      rentalDays,
+    });
+
     let currentUser = user;
     if (!currentUser) {
       try {
-        const { signInWithPhone } = await import("@/hooks/useAuth").then(m => {
-          // Can't call hook here, use supabase directly
-          return { signInWithPhone: null };
-        });
-        // Create shadow account using phone
         const cleanPhone = customerPhone.replace(/\D/g, "").slice(-10);
-        const email = `91${cleanPhone}@grabyourcar.app`;
-        const password = `wa_${cleanPhone}_gyc2024`;
-        
-        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-        if (signInError) {
-          // Try signup + signin
-          await supabase.auth.signUp({
-            email, password,
-            options: { data: { phone: `91${cleanPhone}`, auth_method: "rental_booking" } },
-          });
-          const { error: retryError } = await supabase.auth.signInWithPassword({ email, password });
-          if (retryError) {
-            toast.error("Could not create booking session. Please try again.");
-            return;
-          }
+        const { error } = await signInWithPhone(cleanPhone);
+        if (error) {
+          toast.error(error.message || "Could not create booking session. Please try again.");
+          return;
         }
-        
-        // Wait for session
-        for (let i = 0; i < 10; i++) {
-          const { data } = await supabase.auth.getSession();
-          if (data.session?.user) { currentUser = data.session.user; break; }
-          await new Promise(r => setTimeout(r, 300));
-        }
-        
+
+        const { data } = await supabase.auth.getUser();
+        currentUser = data.user;
+
         if (!currentUser) {
           toast.error("Session not ready. Please try again.");
           return;
@@ -152,19 +285,21 @@ export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalP
     setIsCreatingBooking(true);
 
     try {
+      const meta = buildRentalLeadMetadata();
+
       // Create booking in database first
       const bookingData = {
         user_id: currentUser.id,
-        vehicle_name: car.name,
-        vehicle_type: car.vehicleType,
-        vehicle_image: car.image,
+        vehicle_name: carData.name,
+        vehicle_type: carData.vehicleType,
+        vehicle_image: carData.image,
         pickup_date: format(pickupDate!, "yyyy-MM-dd"),
         pickup_time: pickupTime,
         dropoff_date: format(dropoffDate!, "yyyy-MM-dd"),
         dropoff_time: dropoffTime,
         pickup_location: pickupLocation,
         dropoff_location: sameDropoff ? pickupLocation : dropoffLocation,
-        daily_rate: car.rent,
+        daily_rate: carData.rent,
         total_days: rentalDays,
         subtotal: baseRent,
         security_deposit: securityDeposit,
@@ -174,15 +309,32 @@ export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalP
         customer_name: customerName,
         phone: customerPhone,
         email: customerEmail || null,
+        pipeline_stage: "booking_payment",
+        source: "website_self_drive",
+        website_journey: meta.websiteJourney,
+        utm_source: meta.utmSource,
+        utm_medium: meta.utmMedium,
+        utm_campaign: meta.utmCampaign,
+        page_referrer: meta.pageReferrer,
+        session_duration_seconds: meta.sessionDurationSeconds,
+        documents_status: { dl: "pending", aadhaar: "pending", address_proof: "pending", selfie: "pending" },
+        kyc_verified: false,
+        is_abandoned: false,
+        abandoned_step: null,
+        last_activity_at: new Date().toISOString(),
       };
 
-      const { data: booking, error } = await supabase
-        .from("rental_bookings")
-        .insert(bookingData)
-        .select()
-        .single();
+      const bookingQuery = draftBookingId
+        ? supabase.from("rental_bookings").update(bookingData as any).eq("id", draftBookingId).select().single()
+        : supabase.from("rental_bookings").insert(bookingData as any).select().single();
+
+      const { data: booking, error } = await bookingQuery;
 
       if (error) throw error;
+
+      setDraftBookingId(booking.id);
+      syncRentalJourneySnapshot({ bookingId: booking.id });
+      captureRentalJourneyStep("booking_created", { bookingId: booking.id, totalAmount });
 
       // Initiate Razorpay payment
       initiatePayment({
@@ -193,18 +345,24 @@ export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalP
         customerName,
         customerEmail: customerEmail || `${customerPhone}@grabyourcar.in`,
         customerPhone,
-        description: `Self-Drive Rental: ${car.name} for ${rentalDays} days`,
+        description: `Self-Drive Rental: ${carData.name} for ${rentalDays} days`,
         notes: {
-          vehicleName: car.name,
+          vehicleName: carData.name,
           rentalDays: rentalDays.toString(),
           pickupLocation,
         },
         onSuccess: async (paymentData) => {
+          bookingCompletedRef.current = true;
+          captureRentalJourneyStep("payment_completed", {
+            bookingId: booking.id,
+            paymentId: paymentData.razorpay_payment_id,
+          });
+
           triggerWhatsApp({
             event: "booking_confirmed",
             phone: customerPhone,
             name: customerName,
-            data: { car_model: car.name, rental_days: String(rentalDays) },
+            data: { car_model: carData.name, rental_days: String(rentalDays) },
           });
 
           // Auto-create rental agreement for the booking
@@ -232,7 +390,7 @@ export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalP
                 customer_name: customerName,
                 customer_phone: customerPhone,
                 customer_email: customerEmail || null,
-                vehicle_name: car.name,
+                vehicle_name: carData.name,
                 vehicle_number: null,
                 pickup_date: format(pickupDate!, "yyyy-MM-dd"),
                 dropoff_date: format(dropoffDate!, "yyyy-MM-dd"),
@@ -269,7 +427,7 @@ export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalP
                 phone: customerPhone,
                 name: customerName,
                 data: {
-                  car_model: car.name,
+                  car_model: carData.name,
                   agreement_url: agreementUrl,
                   agreement_number: agrData.agreement_number || "",
                 },
@@ -281,6 +439,17 @@ export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalP
                 pipeline_stage: "booking_payment",
                 status: "confirmed",
                 payment_status: "paid",
+                payment_id: paymentData.razorpay_payment_id,
+                payment_history: [{
+                  at: new Date().toISOString(),
+                  payment_id: paymentData.razorpay_payment_id,
+                  amount: totalAmount,
+                  status: "paid",
+                }],
+                is_abandoned: false,
+                abandoned_at: null,
+                abandoned_step: null,
+                last_activity_at: new Date().toISOString(),
               }).eq("id", booking.id);
             }
           } catch (agrErr) {
@@ -289,12 +458,24 @@ export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalP
           }
 
           toast.success("Booking confirmed! Agreement sent to your WhatsApp.");
+          clearRentalJourneySession();
           onClose();
           navigate("/my-bookings");
         },
         onError: (error) => {
           console.error("Payment failed:", error);
-          // Booking is created but payment failed - user can retry from My Bookings
+          captureRentalJourneyStep("payment_failed", {
+            bookingId: booking.id,
+            message: error || "Payment failed",
+          });
+          supabase.from("rental_bookings").update({
+            is_abandoned: true,
+            abandoned_at: new Date().toISOString(),
+            abandoned_step: "payment_failed",
+            source: "website_self_drive",
+            pipeline_stage: "website_lead",
+            last_activity_at: new Date().toISOString(),
+          }).eq("id", booking.id).then(() => undefined);
         },
       });
     } catch (error: any) {
@@ -310,7 +491,7 @@ export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalP
 
     // Generate booking message for WhatsApp
     const message = `Hi! I want to book a self-drive car:\n\n` +
-      `🚗 Car: ${car.name}\n` +
+      `🚗 Car: ${carData.name}\n` +
       `📅 Pickup: ${format(pickupDate!, "dd MMM yyyy")} at ${pickupTime}\n` +
       `📅 Dropoff: ${format(dropoffDate!, "dd MMM yyyy")} at ${dropoffTime}\n` +
       `📍 Pickup Location: ${pickupLocation}\n` +
@@ -328,8 +509,10 @@ export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalP
 
   const isProcessing = isCreatingBooking || isPaymentLoading;
 
+  if (!car) return null;
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleDialogChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">Book Your Ride</DialogTitle>
