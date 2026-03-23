@@ -3730,6 +3730,99 @@ export type Database = {
           },
         ]
       }
+      ecommerce_orders: {
+        Row: {
+          c2p_attempted: boolean | null
+          c2p_converted: boolean | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          courier_partner: string | null
+          created_at: string | null
+          discount: number | null
+          id: string
+          is_flagged: boolean | null
+          items: Json | null
+          ndr_attempts: number | null
+          ndr_status: string | null
+          notes: string | null
+          order_number: string
+          payment_method: string | null
+          payment_status: string | null
+          risk_factors: string[] | null
+          risk_level: string | null
+          risk_score: number | null
+          shipping_address: Json | null
+          shipping_fee: number | null
+          source: string | null
+          status: string | null
+          subtotal: number | null
+          total: number | null
+          tracking_number: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          c2p_attempted?: boolean | null
+          c2p_converted?: boolean | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          courier_partner?: string | null
+          created_at?: string | null
+          discount?: number | null
+          id?: string
+          is_flagged?: boolean | null
+          items?: Json | null
+          ndr_attempts?: number | null
+          ndr_status?: string | null
+          notes?: string | null
+          order_number?: string
+          payment_method?: string | null
+          payment_status?: string | null
+          risk_factors?: string[] | null
+          risk_level?: string | null
+          risk_score?: number | null
+          shipping_address?: Json | null
+          shipping_fee?: number | null
+          source?: string | null
+          status?: string | null
+          subtotal?: number | null
+          total?: number | null
+          tracking_number?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          c2p_attempted?: boolean | null
+          c2p_converted?: boolean | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          courier_partner?: string | null
+          created_at?: string | null
+          discount?: number | null
+          id?: string
+          is_flagged?: boolean | null
+          items?: Json | null
+          ndr_attempts?: number | null
+          ndr_status?: string | null
+          notes?: string | null
+          order_number?: string
+          payment_method?: string | null
+          payment_status?: string | null
+          risk_factors?: string[] | null
+          risk_level?: string | null
+          risk_score?: number | null
+          shipping_address?: Json | null
+          shipping_fee?: number | null
+          source?: string | null
+          status?: string | null
+          subtotal?: number | null
+          total?: number | null
+          tracking_number?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       email_campaigns: {
         Row: {
           click_count: number | null
@@ -8831,6 +8924,98 @@ export type Database = {
           },
         ]
       }
+      omni_conversations: {
+        Row: {
+          assigned_to: string | null
+          channel: string | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string | null
+          id: string
+          last_message_at: string | null
+          last_message_preview: string | null
+          status: string | null
+          subject: string | null
+          tags: string[] | null
+          unread_count: number | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          channel?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          id?: string
+          last_message_at?: string | null
+          last_message_preview?: string | null
+          status?: string | null
+          subject?: string | null
+          tags?: string[] | null
+          unread_count?: number | null
+        }
+        Update: {
+          assigned_to?: string | null
+          channel?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          id?: string
+          last_message_at?: string | null
+          last_message_preview?: string | null
+          status?: string | null
+          subject?: string | null
+          tags?: string[] | null
+          unread_count?: number | null
+        }
+        Relationships: []
+      }
+      omni_messages: {
+        Row: {
+          attachments: Json | null
+          content: string
+          content_type: string | null
+          conversation_id: string
+          created_at: string | null
+          direction: string | null
+          id: string
+          read_at: string | null
+          sender_id: string | null
+        }
+        Insert: {
+          attachments?: Json | null
+          content: string
+          content_type?: string | null
+          conversation_id: string
+          created_at?: string | null
+          direction?: string | null
+          id?: string
+          read_at?: string | null
+          sender_id?: string | null
+        }
+        Update: {
+          attachments?: Json | null
+          content?: string
+          content_type?: string | null
+          conversation_id?: string
+          created_at?: string | null
+          direction?: string | null
+          id?: string
+          read_at?: string | null
+          sender_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "omni_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "omni_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_tracking_history: {
         Row: {
           created_at: string | null
@@ -9765,6 +9950,113 @@ export type Database = {
           updated_at?: string | null
           vehicle_type?: string
           year?: number | null
+        }
+        Relationships: []
+      }
+      return_requests: {
+        Row: {
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string | null
+          id: string
+          media_urls: string[] | null
+          order_id: string | null
+          qc_status: string | null
+          reason: string | null
+          refund_amount: number | null
+          rejected_reason: string | null
+          resolution: string | null
+          status: string | null
+          type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          id?: string
+          media_urls?: string[] | null
+          order_id?: string | null
+          qc_status?: string | null
+          reason?: string | null
+          refund_amount?: number | null
+          rejected_reason?: string | null
+          resolution?: string | null
+          status?: string | null
+          type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          id?: string
+          media_urls?: string[] | null
+          order_id?: string | null
+          qc_status?: string | null
+          reason?: string | null
+          refund_amount?: number | null
+          rejected_reason?: string | null
+          resolution?: string | null
+          status?: string | null
+          type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "return_requests_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "ecommerce_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      return_rules: {
+        Row: {
+          applicable_to: string | null
+          auto_approve: boolean | null
+          created_at: string | null
+          exchange_allowed: boolean | null
+          id: string
+          is_active: boolean | null
+          name: string
+          priority: number | null
+          refund_allowed: boolean | null
+          require_media: boolean | null
+          return_window_days: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          applicable_to?: string | null
+          auto_approve?: boolean | null
+          created_at?: string | null
+          exchange_allowed?: boolean | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          priority?: number | null
+          refund_allowed?: boolean | null
+          require_media?: boolean | null
+          return_window_days?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          applicable_to?: string | null
+          auto_approve?: boolean | null
+          created_at?: string | null
+          exchange_allowed?: boolean | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          priority?: number | null
+          refund_allowed?: boolean | null
+          require_media?: boolean | null
+          return_window_days?: number | null
+          updated_at?: string | null
         }
         Relationships: []
       }
