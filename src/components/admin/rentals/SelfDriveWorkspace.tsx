@@ -97,6 +97,16 @@ export function SelfDriveWorkspace() {
     },
   });
 
+  // ── New booking toast ──
+  useEffect(() => {
+    if (prevBookingCount === null) { setPrevBookingCount(bookings.length); return; }
+    if (bookings.length > prevBookingCount) {
+      const newest = bookings[0];
+      if (newest) toast(`🆕 New Rental Inquiry! ${newest.customer_name || newest.vehicle_name || ""}`);
+    }
+    setPrevBookingCount(bookings.length);
+  }, [bookings.length]);
+
   // KPI
   const stageCounts = STAGES.reduce((acc, s) => {
     acc[s.value] = bookings.filter((b: any) => b.pipeline_stage === s.value).length;
