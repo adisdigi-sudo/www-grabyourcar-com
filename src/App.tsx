@@ -226,6 +226,7 @@ const App = () => (
                         <Route path="/thank-you" element={<ThankYou />} />
                         <Route path="/no-waiting-cars" element={<NoWaitingCars />} />
                         <Route path="/best-car-deals" element={<BestCarDeals />} />
+                        <Route path="/agreement/:token" element={<AgreementSignPage />} />
                         <Route path="*" element={<LegacyRouteHandler />} />
                       </Routes>
                       <RouteAwareChrome />
