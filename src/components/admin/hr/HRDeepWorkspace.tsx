@@ -78,7 +78,7 @@ export const HRDeepWorkspace = ({ initialTab = "overview" }: { initialTab?: stri
   const { data: payrolls = [] } = useQuery({
     queryKey: ["hr-payrolls", currentMonth],
     queryFn: async () => {
-      const { data, error } = await (supabase.from("payroll_records") as any).select("*").eq("pay_period", currentMonth).order("created_at", { ascending: false });
+      const { data, error } = await (supabase.from("payroll_records") as any).select("*").eq("payroll_month", currentMonth).order("created_at", { ascending: false });
       if (error) throw error;
       return data || [];
     },
@@ -131,23 +131,28 @@ export const HRDeepWorkspace = ({ initialTab = "overview" }: { initialTab?: stri
       const hra = Number(entry.hra || 0);
       const da = Number(entry.da || 0);
       const special = Number(entry.special_allowance || 0);
-      const bonus = Number(entry.bonus || 0);
-      const deductions = Number(entry.deductions || 0);
+      const otherAllow = Number(entry.other_allowances || 0);
+      const gross = basic + hra + da + special + otherAllow;
+      const pf = Number(entry.pf_deduction || 0);
+      const esi = Number(entry.esi_deduction || 0);
       const tds = Number(entry.tds || 0);
-      const pf = Number(entry.pf || 0);
-      const gross = basic + hra + da + special + bonus;
-      const totalDeductions = deductions + tds + pf;
-      const net = gross - totalDeductions;
+      const profTax = Number(entry.professional_tax || 0);
+      const otherDed = Number(entry.other_deductions || 0);
+      const totalDed = pf + esi + tds + profTax + otherDed;
+      const net = gross - totalDed;
 
       const { error } = await supabase.from("payroll_records").insert({
         employee_name: entry.employee_name,
         employee_id: entry.employee_id || null,
         department: entry.department,
-        pay_period: currentMonth,
-        basic_salary: basic, hra, da, special_allowance: special, bonus,
-        deductions, tds, pf, gross_salary: gross, net_salary: net,
+        designation: entry.designation || null,
+        payroll_month: currentMonth,
+        basic_salary: basic, hra, da, special_allowance: special,
+        other_allowances: otherAllow, gross_salary: gross,
+        pf_deduction: pf, esi_deduction: esi, tds, professional_tax: profTax,
+        other_deductions: otherDed, total_deductions: totalDed, net_salary: net,
         payment_mode: entry.payment_mode || "bank_transfer",
-        status: "pending",
+        payment_status: "pending",
       } as any);
       if (error) throw error;
     },
@@ -194,8 +199,8 @@ export const HRDeepWorkspace = ({ initialTab = "overview" }: { initialTab?: stri
 
   const updatePayrollStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const updates: any = { status };
-      if (status === "paid") updates.paid_at = new Date().toISOString();
+      const updates: any = { payment_status: status };
+      if (status === "paid") updates.payment_date = new Date().toISOString().split("T")[0];
       const { error } = await supabase.from("payroll_records").update(updates).eq("id", id);
       if (error) throw error;
     },
@@ -445,13 +450,13 @@ export const HRDeepWorkspace = ({ initialTab = "overview" }: { initialTab?: stri
                       <TableCell><Badge variant="outline" className="text-[9px]">{p.department}</Badge></TableCell>
                       <TableCell className="text-xs text-right">{fmt(p.basic_salary)}</TableCell>
                       <TableCell className="text-xs text-right font-medium">{fmt(p.gross_salary)}</TableCell>
-                      <TableCell className="text-xs text-right text-red-600">{fmt(p.deductions + p.tds + p.pf)}</TableCell>
+                      <TableCell className="text-xs text-right text-red-600">{fmt(Number(p.pf_deduction || 0) + Number(p.esi_deduction || 0) + Number(p.tds || 0) + Number(p.professional_tax || 0) + Number(p.other_deductions || 0))}</TableCell>
                       <TableCell className="text-xs text-right font-bold text-emerald-600">{fmt(p.net_salary)}</TableCell>
                       <TableCell>
-                        <Badge className={`text-[9px] ${p.status === "paid" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>{p.status}</Badge>
+                        <Badge className={`text-[9px] ${p.payment_status === "paid" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>{p.payment_status}</Badge>
                       </TableCell>
                       <TableCell className="flex gap-1">
-                        {p.status !== "paid" && (
+                        {p.payment_status !== "paid" && (
                           <Button size="sm" variant="ghost" className="h-6 text-[10px] text-emerald-600" onClick={() => updatePayrollStatus.mutate({ id: p.id, status: "paid" })}>Paid</Button>
                         )}
                         <Button size="sm" variant="ghost" className="h-6 text-[10px]"
@@ -586,12 +591,13 @@ export const HRDeepWorkspace = ({ initialTab = "overview" }: { initialTab?: stri
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div><Label className="text-xs">Special Allow.</Label><Input type="number" value={form.special_allowance || ""} onChange={e => setForm(f => ({ ...f, special_allowance: e.target.value }))} /></div>
-              <div><Label className="text-xs">Bonus</Label><Input type="number" value={form.bonus || ""} onChange={e => setForm(f => ({ ...f, bonus: e.target.value }))} /></div>
-              <div><Label className="text-xs">Other Deductions</Label><Input type="number" value={form.deductions || ""} onChange={e => setForm(f => ({ ...f, deductions: e.target.value }))} /></div>
+              <div><Label className="text-xs">PF Deduction</Label><Input type="number" value={form.pf_deduction || ""} onChange={e => setForm(f => ({ ...f, pf_deduction: e.target.value }))} /></div>
+              <div><Label className="text-xs">ESI Deduction</Label><Input type="number" value={form.esi_deduction || ""} onChange={e => setForm(f => ({ ...f, esi_deduction: e.target.value }))} /></div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div><Label className="text-xs">TDS</Label><Input type="number" value={form.tds || ""} onChange={e => setForm(f => ({ ...f, tds: e.target.value }))} /></div>
-              <div><Label className="text-xs">PF</Label><Input type="number" value={form.pf || ""} onChange={e => setForm(f => ({ ...f, pf: e.target.value }))} /></div>
+              <div><Label className="text-xs">Prof. Tax</Label><Input type="number" value={form.professional_tax || ""} onChange={e => setForm(f => ({ ...f, professional_tax: e.target.value }))} /></div>
+              <div><Label className="text-xs">Other Deductions</Label><Input type="number" value={form.other_deductions || ""} onChange={e => setForm(f => ({ ...f, other_deductions: e.target.value }))} /></div>
             </div>
             <Button onClick={() => addPayroll.mutate(form)} disabled={!form.employee_name || !form.basic_salary || addPayroll.isPending} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white">
               {addPayroll.isPending ? "Saving..." : "Add Payroll Entry"}

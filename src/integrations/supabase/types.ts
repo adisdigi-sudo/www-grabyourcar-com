@@ -2057,9 +2057,11 @@ export type Database = {
           account_name: string
           account_type: string
           created_at: string | null
+          current_balance: number | null
           description: string | null
           id: string
           is_active: boolean | null
+          normal_side: string | null
           opening_balance: number | null
           parent_id: string | null
           updated_at: string | null
@@ -2069,9 +2071,11 @@ export type Database = {
           account_name: string
           account_type?: string
           created_at?: string | null
+          current_balance?: number | null
           description?: string | null
           id?: string
           is_active?: boolean | null
+          normal_side?: string | null
           opening_balance?: number | null
           parent_id?: string | null
           updated_at?: string | null
@@ -2081,9 +2085,11 @@ export type Database = {
           account_name?: string
           account_type?: string
           created_at?: string | null
+          current_balance?: number | null
           description?: string | null
           id?: string
           is_active?: boolean | null
+          normal_side?: string | null
           opening_balance?: number | null
           parent_id?: string | null
           updated_at?: string | null
@@ -7163,8 +7169,10 @@ export type Database = {
           id: string
           invoice_date: string
           invoice_number: string
+          invoice_type: string | null
           items: Json | null
           notes: string | null
+          paid_at: string | null
           payment_mode: string | null
           status: string | null
           subtotal: number | null
@@ -7188,8 +7196,10 @@ export type Database = {
           id?: string
           invoice_date?: string
           invoice_number: string
+          invoice_type?: string | null
           items?: Json | null
           notes?: string | null
+          paid_at?: string | null
           payment_mode?: string | null
           status?: string | null
           subtotal?: number | null
@@ -7213,8 +7223,10 @@ export type Database = {
           id?: string
           invoice_date?: string
           invoice_number?: string
+          invoice_type?: string | null
           items?: Json | null
           notes?: string | null
+          paid_at?: string | null
           payment_mode?: string | null
           status?: string | null
           subtotal?: number | null
@@ -9157,6 +9169,7 @@ export type Database = {
         Row: {
           bank_account: string | null
           basic_salary: number | null
+          bonus: number | null
           created_at: string | null
           da: number | null
           department: string | null
@@ -9185,6 +9198,7 @@ export type Database = {
         Insert: {
           bank_account?: string | null
           basic_salary?: number | null
+          bonus?: number | null
           created_at?: string | null
           da?: number | null
           department?: string | null
@@ -9213,6 +9227,7 @@ export type Database = {
         Update: {
           bank_account?: string | null
           basic_salary?: number | null
+          bonus?: number | null
           created_at?: string | null
           da?: number | null
           department?: string | null
