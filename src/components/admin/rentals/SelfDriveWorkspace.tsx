@@ -1018,7 +1018,7 @@ function RentalDetailModal({ open, onOpenChange, booking, vehicles, agreement, o
                       <Button key={s.value} variant="outline" size="sm" className={`text-[10px] h-7 ${s.color}`}
                         onClick={() => {
                           if (["trip_complete", "vehicle_handover"].includes(s.value)) {
-                            setSelected({ ...booking, _targetStage: s.value });
+                            // Stay in modal, just update target stage
                             return;
                           }
                           onUpdate({ pipeline_stage: s.value });
