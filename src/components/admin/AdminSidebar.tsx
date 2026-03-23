@@ -312,6 +312,8 @@ const navItems: NavItem[] = [
     allowedRoles: ["super_admin", "admin", "finance"],
     children: [
       { id: "accounts-finance", label: "📊 Finance Overview", icon: BarChart3 },
+      { id: "accounts-intelligence", label: "🧠 Financial Intelligence", icon: BarChart3 },
+      { id: "accounts-accounting", label: "📒 Tally Accounting", icon: CreditCard },
       { id: "accounts-revenue", label: "💵 Revenue Entries", icon: CreditCard },
       { id: "accounts-expenses", label: "📤 Expenses", icon: CreditCard },
       { id: "accounts-commissions", label: "🏆 Commissions", icon: CreditCard },
