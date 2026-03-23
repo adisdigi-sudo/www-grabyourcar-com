@@ -30,8 +30,8 @@ const SalesVerticalWorkspace = lazy(() =>
 const SelfDriveWorkspace = lazy(() =>
   import("@/components/admin/rentals/SelfDriveWorkspace").then((module) => ({ default: module.SelfDriveWorkspace })),
 );
-const AccessoriesManagement = lazy(() =>
-  import("@/components/admin/AccessoriesManagement").then((module) => ({ default: module.AccessoriesManagement })),
+const AccessoriesEcommerceWorkspace = lazy(() =>
+  import("@/components/admin/accessories/AccessoriesEcommerceWorkspace").then((module) => ({ default: module.AccessoriesEcommerceWorkspace })),
 );
 const WebsiteSettings = lazy(() =>
   import("@/components/admin/WebsiteSettings").then((module) => ({ default: module.WebsiteSettings })),
