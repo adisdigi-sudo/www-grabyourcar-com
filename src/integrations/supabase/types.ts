@@ -4841,6 +4841,8 @@ export type Database = {
           recovery_attempts: number | null
           recovery_status: string
           registration_number: string | null
+          retarget_date: string | null
+          retarget_remarks: string | null
           service_type: string | null
           session_id: string | null
           state: string | null
@@ -4864,6 +4866,8 @@ export type Database = {
           recovery_attempts?: number | null
           recovery_status?: string
           registration_number?: string | null
+          retarget_date?: string | null
+          retarget_remarks?: string | null
           service_type?: string | null
           session_id?: string | null
           state?: string | null
@@ -4887,6 +4891,8 @@ export type Database = {
           recovery_attempts?: number | null
           recovery_status?: string
           registration_number?: string | null
+          retarget_date?: string | null
+          retarget_remarks?: string | null
           service_type?: string | null
           session_id?: string | null
           state?: string | null

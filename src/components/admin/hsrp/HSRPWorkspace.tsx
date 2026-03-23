@@ -1,7 +1,8 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useRealtimeTable } from "@/hooks/useRealtimeSync";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -57,6 +58,10 @@ export function HSRPWorkspace() {
   const [showModal, setShowModal] = useState(false);
   const [dragOver, setDragOver] = useState<string | null>(null);
   const [dragging, setDragging] = useState<any>(null);
+  const [prevCount, setPrevCount] = useState<number | null>(null);
+
+  // ── Real-time updates ──
+  useRealtimeTable('hsrp_bookings', ['hsrp-pipeline']);
 
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ["hsrp-pipeline"],
@@ -67,6 +72,16 @@ export function HSRPWorkspace() {
       return (data || []).map((b: any) => ({ ...b, pipeline_stage: b.pipeline_stage || normalizeStage(b.order_status) }));
     },
   });
+
+  // ── New booking toast ──
+  useEffect(() => {
+    if (prevCount === null) { setPrevCount(bookings.length); return; }
+    if (bookings.length > prevCount) {
+      const newest = bookings[0];
+      if (newest) toast(`🆕 New HSRP Booking! ${newest.owner_name || ""} - ${newest.registration_number || ""}`);
+    }
+    setPrevCount(bookings.length);
+  }, [bookings.length]);
 
   // KPI
   const stageCounts = STAGES.reduce((acc, s) => {

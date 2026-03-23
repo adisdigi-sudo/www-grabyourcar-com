@@ -1,7 +1,8 @@
-import { useState, useMemo, useCallback, forwardRef } from "react";
+import { useState, useMemo, useCallback, forwardRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useRealtimeTable } from "@/hooks/useRealtimeSync";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -59,6 +60,10 @@ export function SelfDriveWorkspace() {
   const [showModal, setShowModal] = useState(false);
   const [dragOver, setDragOver] = useState<string | null>(null);
   const [dragging, setDragging] = useState<any>(null);
+  const [prevBookingCount, setPrevBookingCount] = useState<number | null>(null);
+
+  // ── Real-time updates ──
+  useRealtimeTable('rental_bookings', ['rental-pipeline']);
 
   // Fetch bookings
   const { data: bookings = [], isLoading } = useQuery({
@@ -91,6 +96,16 @@ export function SelfDriveWorkspace() {
       return data || [];
     },
   });
+
+  // ── New booking toast ──
+  useEffect(() => {
+    if (prevBookingCount === null) { setPrevBookingCount(bookings.length); return; }
+    if (bookings.length > prevBookingCount) {
+      const newest = bookings[0];
+      if (newest) toast(`🆕 New Rental Inquiry! ${newest.customer_name || newest.vehicle_name || ""}`);
+    }
+    setPrevBookingCount(bookings.length);
+  }, [bookings.length]);
 
   // KPI
   const stageCounts = STAGES.reduce((acc, s) => {

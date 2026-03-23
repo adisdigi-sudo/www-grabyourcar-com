@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect, useMemo } from "react";
 import EMICalculator from "@/components/EMICalculator";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useRealtimeTable } from "@/hooks/useRealtimeSync";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -66,6 +67,10 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
     priority: 'medium', source: 'Manual', loan_type: 'new_car_loan', remarks: '',
   });
   const [showImport, setShowImport] = useState(false);
+  const [prevLeadCount, setPrevLeadCount] = useState<number | null>(null);
+
+  // ── Real-time subscription for live updates ──
+  useRealtimeTable('loan_applications', ['loan-applications']);
 
   // Fetch data
   const { data: rawApplications = [] } = useQuery({
@@ -79,6 +84,24 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
       return data;
     },
   });
+
+  // ── New lead toast notification ──
+  useEffect(() => {
+    if (prevLeadCount === null) {
+      setPrevLeadCount(rawApplications.length);
+      return;
+    }
+    if (rawApplications.length > prevLeadCount) {
+      const newest = rawApplications[0];
+      if (newest) {
+        toast("🆕 New Loan Lead!", {
+          description: `${newest.customer_name || "Unknown"} — ${newest.phone || ""}`,
+          duration: 6000,
+        });
+      }
+    }
+    setPrevLeadCount(rawApplications.length);
+  }, [rawApplications.length]);
 
   const { data: dbBankPartners = [] } = useQuery({
     queryKey: ['loan-bank-partners'],
