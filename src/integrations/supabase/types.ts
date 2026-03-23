@@ -894,6 +894,57 @@ export type Database = {
         }
         Relationships: []
       }
+      bank_accounts: {
+        Row: {
+          account_name: string
+          account_number: string | null
+          account_type: string | null
+          bank_name: string | null
+          created_at: string | null
+          currency: string | null
+          current_balance: number | null
+          id: string
+          ifsc_code: string | null
+          is_active: boolean | null
+          is_primary: boolean | null
+          notes: string | null
+          opening_balance: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_name: string
+          account_number?: string | null
+          account_type?: string | null
+          bank_name?: string | null
+          created_at?: string | null
+          currency?: string | null
+          current_balance?: number | null
+          id?: string
+          ifsc_code?: string | null
+          is_active?: boolean | null
+          is_primary?: boolean | null
+          notes?: string | null
+          opening_balance?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_name?: string
+          account_number?: string | null
+          account_type?: string | null
+          bank_name?: string | null
+          created_at?: string | null
+          currency?: string | null
+          current_balance?: number | null
+          id?: string
+          ifsc_code?: string | null
+          is_active?: boolean | null
+          is_primary?: boolean | null
+          notes?: string | null
+          opening_balance?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       bank_reconciliation: {
         Row: {
           account_number: string | null
@@ -993,6 +1044,75 @@ export type Database = {
           subtitle?: string | null
           title?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      bills: {
+        Row: {
+          amount_paid: number | null
+          balance_due: number | null
+          bill_date: string | null
+          bill_number: string | null
+          created_at: string | null
+          due_date: string | null
+          id: string
+          items: Json | null
+          notes: string | null
+          payment_mode: string | null
+          status: string | null
+          subtotal: number | null
+          tax_amount: number | null
+          total_amount: number | null
+          updated_at: string | null
+          vendor_email: string | null
+          vendor_gstin: string | null
+          vendor_name: string
+          vendor_phone: string | null
+          vertical_name: string | null
+        }
+        Insert: {
+          amount_paid?: number | null
+          balance_due?: number | null
+          bill_date?: string | null
+          bill_number?: string | null
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          items?: Json | null
+          notes?: string | null
+          payment_mode?: string | null
+          status?: string | null
+          subtotal?: number | null
+          tax_amount?: number | null
+          total_amount?: number | null
+          updated_at?: string | null
+          vendor_email?: string | null
+          vendor_gstin?: string | null
+          vendor_name: string
+          vendor_phone?: string | null
+          vertical_name?: string | null
+        }
+        Update: {
+          amount_paid?: number | null
+          balance_due?: number | null
+          bill_date?: string | null
+          bill_number?: string | null
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          items?: Json | null
+          notes?: string | null
+          payment_mode?: string | null
+          status?: string | null
+          subtotal?: number | null
+          tax_amount?: number | null
+          total_amount?: number | null
+          updated_at?: string | null
+          vendor_email?: string | null
+          vendor_gstin?: string | null
+          vendor_name?: string
+          vendor_phone?: string | null
+          vertical_name?: string | null
         }
         Relationships: []
       }
@@ -4772,6 +4892,213 @@ export type Database = {
         }
         Relationships: []
       }
+      hr_assets: {
+        Row: {
+          asset_name: string
+          asset_tag: string | null
+          asset_type: string
+          assigned_date: string | null
+          assigned_to: string | null
+          condition: string | null
+          created_at: string | null
+          id: string
+          notes: string | null
+          purchase_cost: number | null
+          purchase_date: string | null
+          return_date: string | null
+          serial_number: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          asset_name: string
+          asset_tag?: string | null
+          asset_type: string
+          assigned_date?: string | null
+          assigned_to?: string | null
+          condition?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          purchase_cost?: number | null
+          purchase_date?: string | null
+          return_date?: string | null
+          serial_number?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          asset_name?: string
+          asset_tag?: string | null
+          asset_type?: string
+          assigned_date?: string | null
+          assigned_to?: string | null
+          condition?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          purchase_cost?: number | null
+          purchase_date?: string | null
+          return_date?: string | null
+          serial_number?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      hr_engagement: {
+        Row: {
+          category: string | null
+          content: string | null
+          created_at: string | null
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          reactions: Json | null
+          target_department: string | null
+          title: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          content?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          reactions?: Json | null
+          target_department?: string | null
+          title: string
+          type?: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          content?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          reactions?: Json | null
+          target_department?: string | null
+          title?: string
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      hr_expense_claims: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          category: string
+          claim_date: string | null
+          created_at: string | null
+          description: string | null
+          employee_id: string | null
+          employee_name: string
+          id: string
+          notes: string | null
+          payment_date: string | null
+          payment_mode: string | null
+          receipt_url: string | null
+          rejection_reason: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          category: string
+          claim_date?: string | null
+          created_at?: string | null
+          description?: string | null
+          employee_id?: string | null
+          employee_name: string
+          id?: string
+          notes?: string | null
+          payment_date?: string | null
+          payment_mode?: string | null
+          receipt_url?: string | null
+          rejection_reason?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          category?: string
+          claim_date?: string | null
+          created_at?: string | null
+          description?: string | null
+          employee_id?: string | null
+          employee_name?: string
+          id?: string
+          notes?: string | null
+          payment_date?: string | null
+          payment_mode?: string | null
+          receipt_url?: string | null
+          rejection_reason?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      hr_helpdesk: {
+        Row: {
+          assigned_to: string | null
+          category: string
+          created_at: string | null
+          description: string | null
+          employee_name: string
+          id: string
+          priority: string | null
+          resolution: string | null
+          resolved_at: string | null
+          status: string | null
+          subject: string
+          ticket_number: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          category: string
+          created_at?: string | null
+          description?: string | null
+          employee_name: string
+          id?: string
+          priority?: string | null
+          resolution?: string | null
+          resolved_at?: string | null
+          status?: string | null
+          subject: string
+          ticket_number?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          employee_name?: string
+          id?: string
+          priority?: string | null
+          resolution?: string | null
+          resolved_at?: string | null
+          status?: string | null
+          subject?: string
+          ticket_number?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       hr_onboarding: {
         Row: {
           completed_at: string | null
@@ -4808,6 +5135,78 @@ export type Database = {
           notes?: string | null
           step_name?: string
           step_order?: number | null
+        }
+        Relationships: []
+      }
+      hr_recruitment: {
+        Row: {
+          applicant_email: string | null
+          applicant_name: string | null
+          applicant_phone: string | null
+          created_at: string | null
+          department: string | null
+          description: string | null
+          experience_required: string | null
+          id: string
+          interview_date: string | null
+          interview_notes: string | null
+          interview_rating: number | null
+          job_type: string | null
+          location: string | null
+          offered_salary: number | null
+          position_title: string
+          requirements: string | null
+          resume_url: string | null
+          salary_range: string | null
+          source: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          applicant_email?: string | null
+          applicant_name?: string | null
+          applicant_phone?: string | null
+          created_at?: string | null
+          department?: string | null
+          description?: string | null
+          experience_required?: string | null
+          id?: string
+          interview_date?: string | null
+          interview_notes?: string | null
+          interview_rating?: number | null
+          job_type?: string | null
+          location?: string | null
+          offered_salary?: number | null
+          position_title: string
+          requirements?: string | null
+          resume_url?: string | null
+          salary_range?: string | null
+          source?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          applicant_email?: string | null
+          applicant_name?: string | null
+          applicant_phone?: string | null
+          created_at?: string | null
+          department?: string | null
+          description?: string | null
+          experience_required?: string | null
+          id?: string
+          interview_date?: string | null
+          interview_notes?: string | null
+          interview_rating?: number | null
+          job_type?: string | null
+          location?: string | null
+          offered_salary?: number | null
+          position_title?: string
+          requirements?: string | null
+          resume_url?: string | null
+          salary_range?: string | null
+          source?: string | null
+          status?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -9101,6 +9500,63 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      payment_received: {
+        Row: {
+          amount: number
+          bank_account_id: string | null
+          created_at: string | null
+          customer_name: string | null
+          id: string
+          invoice_id: string | null
+          notes: string | null
+          payment_date: string | null
+          payment_mode: string | null
+          payment_number: string | null
+          reference_number: string | null
+        }
+        Insert: {
+          amount?: number
+          bank_account_id?: string | null
+          created_at?: string | null
+          customer_name?: string | null
+          id?: string
+          invoice_id?: string | null
+          notes?: string | null
+          payment_date?: string | null
+          payment_mode?: string | null
+          payment_number?: string | null
+          reference_number?: string | null
+        }
+        Update: {
+          amount?: number
+          bank_account_id?: string | null
+          created_at?: string | null
+          customer_name?: string | null
+          id?: string
+          invoice_id?: string | null
+          notes?: string | null
+          payment_date?: string | null
+          payment_mode?: string | null
+          payment_number?: string | null
+          reference_number?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_received_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_received_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payout_records: {
         Row: {
