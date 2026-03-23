@@ -108,6 +108,12 @@ const ServicePricingManager = lazy(() => import("@/components/admin/ServicePrici
 const HeroSlidesManagement = lazy(() =>
   import("@/components/admin/HeroSlidesManagement").then((module) => ({ default: module.HeroSlidesManagement })),
 );
+const RentalVerticalWorkspace = lazy(() =>
+  import("@/components/admin/verticals/RentalVerticalWorkspace").then((module) => ({ default: module.RentalVerticalWorkspace })),
+);
+const FleetVerticalWorkspace = lazy(() =>
+  import("@/components/admin/verticals/FleetVerticalWorkspace").then((module) => ({ default: module.FleetVerticalWorkspace })),
+);
 const PartnersManager = lazy(() => import("@/components/admin/PartnersManager"));
 const InsuranceManagement = lazy(() =>
   import("@/components/admin/InsuranceManagement").then((module) => ({ default: module.InsuranceManagement })),
