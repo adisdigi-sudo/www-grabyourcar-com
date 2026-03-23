@@ -199,8 +199,8 @@ export const HRDeepWorkspace = ({ initialTab = "overview" }: { initialTab?: stri
 
   const updatePayrollStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const updates: any = { status };
-      if (status === "paid") updates.paid_at = new Date().toISOString();
+      const updates: any = { payment_status: status };
+      if (status === "paid") updates.payment_date = new Date().toISOString().split("T")[0];
       const { error } = await supabase.from("payroll_records").update(updates).eq("id", id);
       if (error) throw error;
     },
