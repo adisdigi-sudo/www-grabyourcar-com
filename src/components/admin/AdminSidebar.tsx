@@ -360,12 +360,12 @@ const navItems: NavItem[] = [
     allowedRoles: ["super_admin", "admin", "sales", "finance"],
   },
 
-  // ── Incentive Management — visible to all roles ──
+  // ── Incentive Management — operational + accounts verticals ──
   { 
     id: "incentive-hub", 
     label: "🏆 Incentives", 
     icon: Trophy,
-    verticals: ["all"],
+    verticals: ["sales", "insurance", "loans", "accounts", "rental", "hsrp", "accessories", "dealer-network", "marketing"],
     children: [
       { id: "incentive-management", label: "🏆 Admin Dashboard", icon: Trophy, allowedRoles: ["super_admin"] },
       { id: "incentive-my-dashboard", label: "💰 My Incentives", icon: CreditCard },
