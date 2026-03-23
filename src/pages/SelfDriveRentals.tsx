@@ -160,7 +160,7 @@ const SelfDriveRentals = () => {
   }, [activeService, filteredVehicles.length]);
 
   useEffect(() => {
-    syncRentalJourneySnapshot({ filters });
+    syncRentalJourneySnapshot({ filters: { ...filters } });
   }, [filters]);
 
   return (
