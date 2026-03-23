@@ -67,8 +67,28 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
     priority: 'medium', source: 'Manual', loan_type: 'new_car_loan', remarks: '',
   });
   const [showImport, setShowImport] = useState(false);
+  const [prevLeadCount, setPrevLeadCount] = useState<number | null>(null);
 
-  // Fetch data
+  // ── Real-time subscription for live updates ──
+  useRealtimeTable('loan_applications', ['loan-applications']);
+
+  // ── New lead toast notification ──
+  useEffect(() => {
+    if (prevLeadCount === null) {
+      setPrevLeadCount(rawApplications.length);
+      return;
+    }
+    if (rawApplications.length > prevLeadCount) {
+      const newest = rawApplications[0];
+      if (newest) {
+        toast("🆕 New Loan Lead!", {
+          description: `${newest.customer_name || "Unknown"} — ${newest.phone || ""}`,
+          duration: 6000,
+        });
+      }
+    }
+    setPrevLeadCount(rawApplications.length);
+  }, [rawApplications.length]);
   const { data: rawApplications = [] } = useQuery({
     queryKey: ['loan-applications'],
     queryFn: async () => {
