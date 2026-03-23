@@ -258,7 +258,9 @@ export function SelfDriveWorkspace() {
   const getAgreementForBooking = (bookingId: string) => agreements.find((a: any) => a.booking_id === bookingId);
 
   return (
-    <div className="space-y-4">
+    <div className="flex h-full min-h-[calc(100vh-4rem)]">
+      <div className={cn("flex-1 overflow-auto", previewOpen ? "max-w-[55%]" : "w-full")}>
+        <div className="space-y-4 p-1">
       {/* KPI Row */}
       <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
         {[
