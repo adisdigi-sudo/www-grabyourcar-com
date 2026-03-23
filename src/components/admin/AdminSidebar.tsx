@@ -115,8 +115,9 @@ const navItems: NavItem[] = [
     ]
   },
 
-  // ── Omnichannel Inbox — all verticals ──
+  // ── Omnichannel Inbox — operational verticals only ──
   { id: "d2c-inbox", label: "📨 Omni Inbox", icon: MessageSquare, badge: "New",
+    verticals: ["sales", "insurance", "rental", "hsrp", "accessories", "dealer-network", "marketing", "loans"],
     allowedRoles: ["super_admin", "admin", "sales", "operations"] },
 
   // ── Dealer Network — dedicated vertical ──
