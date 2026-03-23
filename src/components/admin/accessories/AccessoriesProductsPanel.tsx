@@ -1,11 +1,8 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -13,17 +10,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Search, Edit, Trash2, Package, Image, Star } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Image, Star } from "lucide-react";
+import { AccessoryProductForm, ProductFormData } from "./AccessoryProductForm";
 
-const CATEGORIES = [
+const DEFAULT_CATEGORIES = [
   "HSRP Frames", "Car Covers", "Seat Covers", "Floor Mats",
   "Phone Holders", "Dash Cameras", "Air Fresheners", "Cleaning Kits",
   "LED Lights", "Steering Covers", "Sun Shades", "Boot Organizers",
@@ -45,7 +36,6 @@ interface Product {
   badge?: string;
 }
 
-// Static product catalog (can later connect to DB)
 const INITIAL_PRODUCTS: Product[] = [
   { id: 1, name: "Premium Car Cover - UV Protection", description: "Heavy-duty waterproof car cover with UV protection", category: "Car Covers", price: 1499, originalPrice: 2499, image: "/placeholder.svg", inStock: true, rating: 4.5, reviews: 128, features: ["Waterproof", "UV Protection", "Dust Resistant"], badge: "Bestseller" },
   { id: 2, name: "3D Floor Mats - Universal Fit", description: "Premium 3D floor mats with anti-slip base", category: "Floor Mats", price: 899, originalPrice: 1299, image: "/placeholder.svg", inStock: true, rating: 4.3, reviews: 95, features: ["Anti-slip", "Waterproof", "Easy Clean"] },
@@ -55,11 +45,12 @@ const INITIAL_PRODUCTS: Product[] = [
 
 export function AccessoriesProductsPanel() {
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
+  const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [editProduct, setEditProduct] = useState<Product | null>(null);
-  const [showAddDialog, setShowAddDialog] = useState(false);
-  const [form, setForm] = useState({
+  const [showDialog, setShowDialog] = useState(false);
+  const [form, setForm] = useState<ProductFormData>({
     name: "", description: "", category: "Other", price: 0, originalPrice: 0,
     image: "", inStock: true, features: "", badge: "",
   });
@@ -93,7 +84,7 @@ export function AccessoriesProductsPanel() {
       setProducts((prev) => [...prev, newProduct]);
       toast.success("Product added");
     }
-    setShowAddDialog(false);
+    setShowDialog(false);
     setEditProduct(null);
   };
 
@@ -104,13 +95,25 @@ export function AccessoriesProductsPanel() {
       inStock: p.inStock, features: p.features.join(", "), badge: p.badge || "",
     });
     setEditProduct(p);
-    setShowAddDialog(true);
+    setShowDialog(true);
   };
 
   const openAdd = () => {
     setForm({ name: "", description: "", category: "Other", price: 0, originalPrice: 0, image: "", inStock: true, features: "", badge: "" });
     setEditProduct(null);
-    setShowAddDialog(true);
+    setShowDialog(true);
+  };
+
+  const handleAddCategory = (cat: string) => {
+    setCategories((prev) => [...prev, cat]);
+  };
+
+  const handleDeleteCategory = (cat: string) => {
+    setCategories((prev) => prev.filter((c) => c !== cat));
+    if (form.category === cat) {
+      setForm({ ...form, category: "Other" });
+    }
+    toast.success(`Category "${cat}" removed`);
   };
 
   return (
@@ -133,7 +136,7 @@ export function AccessoriesProductsPanel() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Categories</SelectItem>
-            {CATEGORIES.map((c) => (
+            {categories.map((c) => (
               <SelectItem key={c} value={c}>{c}</SelectItem>
             ))}
           </SelectContent>
@@ -185,65 +188,17 @@ export function AccessoriesProductsPanel() {
         ))}
       </div>
 
-      {/* Add/Edit Dialog */}
-      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{editProduct ? "Edit Product" : "Add Product"}</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-3">
-            <div>
-              <Label>Name</Label>
-              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-            </div>
-            <div>
-              <Label>Description</Label>
-              <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Category</Label>
-                <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Badge (optional)</Label>
-                <Input value={form.badge} onChange={(e) => setForm({ ...form, badge: e.target.value })} placeholder="e.g. Bestseller" />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Price (₹)</Label>
-                <Input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: +e.target.value })} />
-              </div>
-              <div>
-                <Label>Original Price (₹)</Label>
-                <Input type="number" value={form.originalPrice} onChange={(e) => setForm({ ...form, originalPrice: +e.target.value })} />
-              </div>
-            </div>
-            <div>
-              <Label>Image URL</Label>
-              <Input value={form.image} onChange={(e) => setForm({ ...form, image: e.target.value })} />
-            </div>
-            <div>
-              <Label>Features (comma-separated)</Label>
-              <Input value={form.features} onChange={(e) => setForm({ ...form, features: e.target.value })} placeholder="Waterproof, UV, Dust" />
-            </div>
-            <div className="flex items-center gap-2">
-              <Switch checked={form.inStock} onCheckedChange={(v) => setForm({ ...form, inStock: v })} />
-              <Label>In Stock</Label>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddDialog(false)}>Cancel</Button>
-            <Button onClick={handleSave} disabled={!form.name || !form.price}>Save</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AccessoryProductForm
+        open={showDialog}
+        onOpenChange={setShowDialog}
+        form={form}
+        setForm={setForm}
+        onSave={handleSave}
+        isEdit={!!editProduct}
+        categories={categories}
+        onAddCategory={handleAddCategory}
+        onDeleteCategory={handleDeleteCategory}
+      />
     </div>
   );
 }
