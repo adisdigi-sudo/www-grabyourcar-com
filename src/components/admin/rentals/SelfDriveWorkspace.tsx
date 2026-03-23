@@ -324,6 +324,10 @@ const RentalCard = forwardRef<HTMLDivElement, any>(function RentalCard(
     await sendWhatsApp({ phone: customerPhone, message: msg, name: customerName, logEvent: "rental_update" });
   };
 
+  // Derive agreement/KYC status from booking data
+  const hasAgreement = !!booking.agreement_url;
+  const isPaid = booking.payment_status === "paid";
+
   return (
     <Card ref={ref} draggable onDragStart={e => onDragStart(e, booking)} onDragEnd={onDragEnd} onClick={onClick}
       className={`border-border/50 hover:shadow-md transition-all cursor-grab active:cursor-grabbing group ${isDragging ? "opacity-30 scale-95" : ""}`}>
@@ -364,6 +368,23 @@ const RentalCard = forwardRef<HTMLDivElement, any>(function RentalCard(
           <span className="text-[11px] font-semibold">Rs.{(booking.total_amount || 0).toLocaleString("en-IN")}</span>
           <span className="text-[10px] text-muted-foreground">{booking.total_days}d</span>
         </div>
+        {/* Agreement & KYC Status Badges */}
+        {isPaid && (
+          <div className="flex items-center gap-1 pt-0.5 flex-wrap">
+            {hasAgreement ? (
+              <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 font-medium flex items-center gap-0.5">
+                <FileText className="h-2 w-2" /> Agreement
+              </span>
+            ) : (
+              <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300 font-medium flex items-center gap-0.5">
+                <FileText className="h-2 w-2" /> No Agreement
+              </span>
+            )}
+            <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 font-medium flex items-center gap-0.5">
+              <CreditCard className="h-2 w-2" /> Paid
+            </span>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
