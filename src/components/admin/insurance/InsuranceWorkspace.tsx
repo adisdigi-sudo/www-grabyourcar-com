@@ -252,9 +252,9 @@ export function InsuranceWorkspace() {
       />
 
       {activeView === "pipeline" && <InsuranceLeadPipeline clients={clients} isLoading={isLoading} />}
-      {activeView === "policy_book" && <InsurancePolicyBook policies={policies} />}
-      {activeView === "renewals" && <InsuranceComingRenewals policies={policies as PolicyRecord[]} />}
-      {activeView === "overdue" && <InsuranceOverdueRenewals policies={policies as PolicyRecord[]} clients={clients} />}
+      {activeView === "policy_book" && <InsurancePolicyBook policies={runningPolicies} />}
+      {activeView === "renewals" && <InsuranceComingRenewals policies={runningPolicies as PolicyRecord[]} />}
+      {activeView === "overdue" && <InsuranceOverdueRenewals policies={overduePolicies as PolicyRecord[]} clients={clients} />}
       {activeView === "bulk_tools" && <BulkRenewalQuoteGenerator onClose={() => setActiveView("pipeline")} />}
 
       <Dialog open={showAddLead} onOpenChange={setShowAddLead}>
