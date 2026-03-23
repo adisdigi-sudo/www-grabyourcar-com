@@ -74,7 +74,7 @@ export const DocumentVault = () => {
         description: form.description || "",
         category: form.category || "general",
         sub_category: form.sub_category || "",
-        file_url: publicUrl,
+        file_url: signedData?.signedUrl || path,
         file_name: file.name,
         file_size: `${(file.size / 1024).toFixed(1)} KB`,
         file_type: file.type,
