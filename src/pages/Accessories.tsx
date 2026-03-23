@@ -67,7 +67,7 @@ const Accessories = () => {
       }
     });
 
-  const handleAddToCart = (product: Accessory) => {
+  const handleAddToCart = (product: AccessoryCatalogProduct) => {
     addToCart({
       id: product.id,
       name: product.name,
@@ -99,7 +99,7 @@ const Accessories = () => {
     }
   };
 
-  const handleViewDetails = (product: Accessory) => {
+  const handleViewDetails = (product: AccessoryCatalogProduct) => {
     setSelectedProduct(product);
     setDetailModalOpen(true);
   };

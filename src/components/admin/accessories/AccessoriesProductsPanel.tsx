@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -43,15 +43,15 @@ interface Product {
 }
 
 const INITIAL_PRODUCTS: Product[] = [
-  { id: 1, name: "Premium Car Cover - UV Protection", description: "Heavy-duty waterproof car cover with UV protection", category: "Car Covers", price: 1499, originalPrice: 2499, image: "/placeholder.svg", inStock: true, rating: 4.5, reviews: 128, features: ["Waterproof", "UV Protection", "Dust Resistant"], badge: "Bestseller" },
-  { id: 2, name: "3D Floor Mats - Universal Fit", description: "Premium 3D floor mats with anti-slip base", category: "Floor Mats", price: 899, originalPrice: 1299, image: "/placeholder.svg", inStock: true, rating: 4.3, reviews: 95, features: ["Anti-slip", "Waterproof", "Easy Clean"] },
-  { id: 3, name: "Dash Cam Pro 1080p", description: "Full HD dash camera with night vision", category: "Dash Cameras", price: 3499, originalPrice: 4999, image: "/placeholder.svg", inStock: true, rating: 4.7, reviews: 210, features: ["1080p", "Night Vision", "Loop Recording"], badge: "New" },
-  { id: 4, name: "Magnetic Phone Mount", description: "360° rotatable magnetic phone holder", category: "Phone Holders", price: 499, image: "/placeholder.svg", inStock: true, rating: 4.2, reviews: 340, features: ["Magnetic", "360° Rotation"] },
+  { id: 1, name: "Premium Car Cover - UV Protection", slug: createAccessorySlug("Premium Car Cover - UV Protection"), description: "Heavy-duty waterproof car cover with UV protection", fullDescription: "Heavy-duty waterproof car cover with UV protection", category: "Car Covers", price: 1499, originalPrice: 2499, image: "/placeholder.svg", images: ["/placeholder.svg"], inStock: true, rating: 4.5, reviews: 128, features: ["Waterproof", "UV Protection", "Dust Resistant"], badge: "Bestseller" },
+  { id: 2, name: "3D Floor Mats - Universal Fit", slug: createAccessorySlug("3D Floor Mats - Universal Fit"), description: "Premium 3D floor mats with anti-slip base", fullDescription: "Premium 3D floor mats with anti-slip base", category: "Floor Mats", price: 899, originalPrice: 1299, image: "/placeholder.svg", images: ["/placeholder.svg"], inStock: true, rating: 4.3, reviews: 95, features: ["Anti-slip", "Waterproof", "Easy Clean"] },
+  { id: 3, name: "Dash Cam Pro 1080p", slug: createAccessorySlug("Dash Cam Pro 1080p"), description: "Full HD dash camera with night vision", fullDescription: "Full HD dash camera with night vision", category: "Dash Cameras", price: 3499, originalPrice: 4999, image: "/placeholder.svg", images: ["/placeholder.svg"], inStock: true, rating: 4.7, reviews: 210, features: ["1080p", "Night Vision", "Loop Recording"], badge: "New" },
+  { id: 4, name: "Magnetic Phone Mount", slug: createAccessorySlug("Magnetic Phone Mount"), description: "360° rotatable magnetic phone holder", fullDescription: "360° rotatable magnetic phone holder", category: "Phone Holders", price: 499, image: "/placeholder.svg", images: ["/placeholder.svg"], inStock: true, rating: 4.2, reviews: 340, features: ["Magnetic", "360° Rotation"] },
 ];
 
 export function AccessoriesProductsPanel() {
   const { catalog, saveCatalog, isSaving } = useAccessoriesCatalog();
-  const [products, setProducts] = useState<Product[]>(catalog.products.length ? (catalog.products as Product[]) : INITIAL_PRODUCTS.map((p) => ({ ...p, slug: createAccessorySlug(p.name), fullDescription: p.description, images: [p.image], imagePrompt: undefined })));
+  const [products, setProducts] = useState<Product[]>(catalog.products.length ? (catalog.products as Product[]) : INITIAL_PRODUCTS);
   const [categories, setCategories] = useState<string[]>(catalog.categories.length ? catalog.categories : DEFAULT_CATEGORIES);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -61,6 +61,15 @@ export function AccessoriesProductsPanel() {
     name: "", slug: "", description: "", fullDescription: "", category: "Other", price: 0, originalPrice: 0,
     image: "", images: [], imagePrompt: "", inStock: true, features: "", badge: "",
   });
+
+  useEffect(() => {
+    if (catalog.products.length) {
+      setProducts(catalog.products as Product[]);
+    }
+    if (catalog.categories.length) {
+      setCategories(catalog.categories);
+    }
+  }, [catalog]);
 
   const persistCatalog = async (nextProducts: Product[], nextCategories: string[]) => {
     setProducts(nextProducts);
@@ -153,7 +162,7 @@ export function AccessoriesProductsPanel() {
     <div className="space-y-4 max-w-full">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Products</h1>
-        <Button onClick={openAdd} size="sm">
+          <Button onClick={openAdd} size="sm" disabled={isSaving}>
           <Plus className="h-4 w-4 mr-1" /> Add Product
         </Button>
       </div>
