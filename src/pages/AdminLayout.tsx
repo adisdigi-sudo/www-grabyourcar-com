@@ -33,6 +33,18 @@ const SelfDriveWorkspace = lazy(() =>
 const AccessoriesEcommerceWorkspace = lazy(() =>
   import("@/components/admin/accessories/AccessoriesEcommerceWorkspace").then((module) => ({ default: module.AccessoriesEcommerceWorkspace })),
 );
+const RTOSuitePage = lazy(() =>
+  import("@/components/admin/d2c/RTOSuitePage").then((module) => ({ default: module.RTOSuitePage })),
+);
+const ReturnManagementPage = lazy(() =>
+  import("@/components/admin/d2c/ReturnManagementPage").then((module) => ({ default: module.ReturnManagementPage })),
+);
+const CheckoutPageD2C = lazy(() =>
+  import("@/components/admin/d2c/CheckoutPage").then((module) => ({ default: module.CheckoutPage })),
+);
+const OmniInboxPage = lazy(() =>
+  import("@/components/admin/d2c/OmniInboxPage").then((module) => ({ default: module.OmniInboxPage })),
+);
 const WebsiteSettings = lazy(() =>
   import("@/components/admin/WebsiteSettings").then((module) => ({ default: module.WebsiteSettings })),
 );
@@ -438,6 +450,14 @@ const AdminLayout = () => {
         return <AccessoriesEcommerceWorkspace />;
       case "ecommerce-crosssell":
         return <CrossSellManagement />;
+      case "d2c-rto":
+        return <RTOSuitePage />;
+      case "d2c-returns":
+        return <ReturnManagementPage />;
+      case "d2c-checkout":
+        return <CheckoutPageD2C />;
+      case "d2c-inbox":
+        return <OmniInboxPage />;
       case "content-blog":
         return <BlogManagement />;
       case "content-news":
