@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { AdminLivePreview, PreviewToggleButton } from "../shared/AdminLivePreview";
+import { cn } from "@/lib/utils";
 import { useRealtimeTable } from "@/hooks/useRealtimeSync";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
