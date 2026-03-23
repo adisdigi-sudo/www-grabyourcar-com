@@ -358,10 +358,11 @@ const RentalCard = forwardRef<HTMLDivElement, any>(function RentalCard(
 function AddRentalDialog({ open, onOpenChange, vehicles, userId }: any) {
   const queryClient = useQueryClient();
   const [form, setForm] = useState({
+    customer_name: "", phone: "", email: "", source: "walk_in",
     vehicle_id: "", vehicle_name: "", vehicle_type: "SUV",
     pickup_date: "", pickup_time: "10:00", pickup_location: "Delhi NCR",
     dropoff_date: "", dropoff_time: "10:00", dropoff_location: "Delhi NCR",
-    daily_rate: "", notes: "",
+    daily_rate: "", notes: "", driver_license_number: "",
   });
 
   const totalDays = form.pickup_date && form.dropoff_date
@@ -369,16 +370,24 @@ function AddRentalDialog({ open, onOpenChange, vehicles, userId }: any) {
     : 1;
   const subtotal = totalDays * (Number(form.daily_rate) || 0);
 
+  const SOURCES = ["Website", "WhatsApp", "Walk-in", "Google Ads", "Instagram", "Facebook", "Referral", "JustDial", "Other"];
+
   const createMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("rental_bookings").insert({
         user_id: userId || "system",
+        customer_name: form.customer_name || null,
+        phone: form.phone || null,
+        email: form.email || null,
+        source: form.source || "walk_in",
         vehicle_name: form.vehicle_name || "TBD",
         vehicle_type: form.vehicle_type,
         pickup_date: form.pickup_date, pickup_time: form.pickup_time, pickup_location: form.pickup_location,
         dropoff_date: form.dropoff_date, dropoff_time: form.dropoff_time, dropoff_location: form.dropoff_location,
         total_days: totalDays, daily_rate: Number(form.daily_rate) || 0, subtotal, total_amount: subtotal,
-        status: "pending", payment_status: "pending", notes: form.notes || null,
+        status: "pending", payment_status: "pending",
+        driver_license_number: form.driver_license_number || null,
+        notes: form.notes || null,
       });
       if (error) throw error;
     },
@@ -392,43 +401,66 @@ function AddRentalDialog({ open, onOpenChange, vehicles, userId }: any) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle>New Self-Drive Inquiry</DialogTitle></DialogHeader>
         <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Vehicle</Label>
-              <Select value={form.vehicle_id} onValueChange={v => {
-                const veh = vehicles.find((x: any) => x.id === v);
-                setForm(p => ({ ...p, vehicle_id: v, vehicle_name: veh?.name || "", vehicle_type: veh?.vehicle_type || p.vehicle_type, daily_rate: veh?.rent_self_drive?.toString() || p.daily_rate }));
-              }}>
-                <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
-                <SelectContent>{vehicles.map((v: any) => <SelectItem key={v.id} value={v.id}>{v.name} ({v.vehicle_type})</SelectItem>)}</SelectContent>
-              </Select>
+          {/* Customer Info */}
+          <div className="p-3 rounded-lg border bg-muted/30 space-y-3">
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Customer Details</h4>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label className="text-xs">Name *</Label><Input value={form.customer_name} onChange={e => setForm(p => ({ ...p, customer_name: e.target.value }))} placeholder="Full name" /></div>
+              <div><Label className="text-xs">Phone *</Label><Input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} placeholder="10-digit mobile" /></div>
             </div>
-            <div><Label>Type</Label>
-              <Select value={form.vehicle_type} onValueChange={v => setForm(p => ({ ...p, vehicle_type: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{VEHICLE_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label className="text-xs">Email</Label><Input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} placeholder="Email address" /></div>
+              <div><Label className="text-xs">Source</Label>
+                <Select value={form.source} onValueChange={v => setForm(p => ({ ...p, source: v }))}>
+                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>{SOURCES.map(s => <SelectItem key={s} value={s.toLowerCase().replace(/\s+/g, "_")}>{s}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div><Label className="text-xs">DL Number</Label><Input value={form.driver_license_number} onChange={e => setForm(p => ({ ...p, driver_license_number: e.target.value.toUpperCase() }))} placeholder="Driving License No." /></div>
+          </div>
+
+          {/* Vehicle & Trip */}
+          <div className="p-3 rounded-lg border bg-muted/30 space-y-3">
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Vehicle & Trip</h4>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label className="text-xs">Vehicle</Label>
+                <Select value={form.vehicle_id} onValueChange={v => {
+                  const veh = vehicles.find((x: any) => x.id === v);
+                  setForm(p => ({ ...p, vehicle_id: v, vehicle_name: veh?.name || "", vehicle_type: veh?.vehicle_type || p.vehicle_type, daily_rate: veh?.rent_self_drive?.toString() || p.daily_rate }));
+                }}>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Select..." /></SelectTrigger>
+                  <SelectContent>{vehicles.map((v: any) => <SelectItem key={v.id} value={v.id}>{v.name} ({v.vehicle_type})</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div><Label className="text-xs">Type</Label>
+                <Select value={form.vehicle_type} onValueChange={v => setForm(p => ({ ...p, vehicle_type: v }))}>
+                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>{VEHICLE_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label className="text-xs">Pickup Date</Label><Input type="date" value={form.pickup_date} onChange={e => setForm(p => ({ ...p, pickup_date: e.target.value }))} /></div>
+              <div><Label className="text-xs">Drop-off Date</Label><Input type="date" value={form.dropoff_date} onChange={e => setForm(p => ({ ...p, dropoff_date: e.target.value }))} /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label className="text-xs">Pickup Location</Label><Input value={form.pickup_location} onChange={e => setForm(p => ({ ...p, pickup_location: e.target.value }))} /></div>
+              <div><Label className="text-xs">Drop-off Location</Label><Input value={form.dropoff_location} onChange={e => setForm(p => ({ ...p, dropoff_location: e.target.value }))} /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label className="text-xs">Daily Rate (Rs.)</Label><Input type="number" value={form.daily_rate} onChange={e => setForm(p => ({ ...p, daily_rate: e.target.value }))} /></div>
+              <div className="flex flex-col justify-end">
+                <p className="text-xs text-muted-foreground">{totalDays} days = <span className="font-bold text-foreground">Rs.{subtotal.toLocaleString("en-IN")}</span></p>
+              </div>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div><Label>Pickup Date</Label><Input type="date" value={form.pickup_date} onChange={e => setForm(p => ({ ...p, pickup_date: e.target.value }))} /></div>
-            <div><Label>Drop-off Date</Label><Input type="date" value={form.dropoff_date} onChange={e => setForm(p => ({ ...p, dropoff_date: e.target.value }))} /></div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div><Label>Pickup Location</Label><Input value={form.pickup_location} onChange={e => setForm(p => ({ ...p, pickup_location: e.target.value }))} /></div>
-            <div><Label>Drop-off Location</Label><Input value={form.dropoff_location} onChange={e => setForm(p => ({ ...p, dropoff_location: e.target.value }))} /></div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div><Label>Daily Rate (Rs.)</Label><Input type="number" value={form.daily_rate} onChange={e => setForm(p => ({ ...p, daily_rate: e.target.value }))} /></div>
-            <div className="flex flex-col justify-end">
-              <p className="text-xs text-muted-foreground">{totalDays} days = <span className="font-bold text-foreground">Rs.{subtotal.toLocaleString("en-IN")}</span></p>
-            </div>
-          </div>
-          <div><Label>Notes</Label><Textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} rows={2} /></div>
-          <Button onClick={() => createMutation.mutate()} disabled={!form.vehicle_name || !form.pickup_date || createMutation.isPending} className="w-full">
+
+          <div><Label className="text-xs">Notes</Label><Textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} rows={2} /></div>
+          <Button onClick={() => createMutation.mutate()} disabled={!form.customer_name || !form.phone || !form.vehicle_name || !form.pickup_date || createMutation.isPending} className="w-full">
             {createMutation.isPending ? "Creating..." : "Create Inquiry"}
           </Button>
         </div>
@@ -447,6 +479,8 @@ function RentalDetailModal({ open, onOpenChange, booking, vehicles, partners, on
   const [partnerId, setPartnerId] = useState("");
   const [feedbackRating, setFeedbackRating] = useState(0);
   const [feedbackText, setFeedbackText] = useState("");
+  const [agreementGenerated, setAgreementGenerated] = useState(!!booking.agreement_url);
+  const [agreementApproved, setAgreementApproved] = useState(false);
 
   const currentStage = booking._targetStage || booking.pipeline_stage;
   const stageConfig = STAGES.find(s => s.value === currentStage);
@@ -492,7 +526,8 @@ function RentalDetailModal({ open, onOpenChange, booking, vehicles, partners, on
     doc.text(`Generated on ${format(new Date(), "dd MMM yyyy")} | GrabYourCar`, bx, y);
 
     doc.save(`Rental_Agreement_${booking.id.slice(0, 8)}.pdf`);
-    toast.success("Agreement PDF downloaded!");
+    setAgreementGenerated(true);
+    toast.success("Agreement PDF downloaded! Customer must approve before booking.");
   };
 
   const handleShareWhatsApp = async () => {
@@ -576,7 +611,7 @@ function RentalDetailModal({ open, onOpenChange, booking, vehicles, partners, on
         {/* ─── Stage: Offer Shared ──────────────── */}
         {currentStage === "offer_shared" && (
           <div className="space-y-3 p-4 rounded-lg border bg-violet-500/5 border-violet-500/20">
-            <h3 className="font-semibold text-sm flex items-center gap-2"><Tag className="h-4 w-4" /> Share Offer & Quote</h3>
+            <h3 className="font-semibold text-sm flex items-center gap-2"><Tag className="h-4 w-4" /> Share Offer & Agreement</h3>
             {booking.notes && (
               <div className="rounded-lg border bg-background p-3 max-h-32 overflow-y-auto">
                 <p className="text-[10px] text-muted-foreground font-medium uppercase mb-1">Chat / Remarks History</p>
@@ -585,15 +620,33 @@ function RentalDetailModal({ open, onOpenChange, booking, vehicles, partners, on
             )}
             <div className="grid grid-cols-2 gap-2">
               <Button variant="outline" size="sm" className="gap-1.5" onClick={handleGenerateAgreement}>
-                <Download className="h-3.5 w-3.5" /> Download Agreement
+                <Download className="h-3.5 w-3.5" /> {agreementGenerated ? "✅ Agreement Downloaded" : "Download Agreement"}
               </Button>
               <Button variant="outline" size="sm" className="gap-1.5 text-emerald-600" onClick={handleShareWhatsApp}>
                 <Share2 className="h-3.5 w-3.5" /> Share on WhatsApp
               </Button>
             </div>
-            <Button size="sm" className="w-full gap-2" onClick={() => { onUpdate({ pipeline_stage: "partner_escalation" }); toast.success("Moved to Partner Escalation"); }}>
+            {/* Agreement Approval Gate */}
+            <div className="rounded-lg border bg-amber-500/10 border-amber-500/20 p-3 space-y-2">
+              <p className="text-xs font-semibold text-amber-700 flex items-center gap-1.5">
+                <AlertTriangle className="h-3.5 w-3.5" /> Legal Agreement Required
+              </p>
+              <p className="text-[10px] text-muted-foreground">Customer must review and approve the rental agreement before proceeding to booking.</p>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={agreementApproved} onChange={e => setAgreementApproved(e.target.checked)}
+                  className="rounded border-amber-500 text-amber-600 focus:ring-amber-500 h-4 w-4" disabled={!agreementGenerated} />
+                <span className="text-xs font-medium">Customer has approved the rental agreement</span>
+              </label>
+            </div>
+            <Button size="sm" className="w-full gap-2" disabled={!agreementGenerated || !agreementApproved}
+              onClick={() => { onUpdate({ pipeline_stage: "partner_escalation" }); toast.success("Moved to Partner Escalation"); }}>
               <Send className="h-4 w-4" /> Escalate to Partner
             </Button>
+            {(!agreementGenerated || !agreementApproved) && (
+              <p className="text-[10px] text-destructive text-center">
+                {!agreementGenerated ? "⚠ Generate agreement first" : "⚠ Customer approval required before proceeding"}
+              </p>
+            )}
           </div>
         )}
 
