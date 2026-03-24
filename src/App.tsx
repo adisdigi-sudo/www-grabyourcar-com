@@ -5,20 +5,17 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
-import { CartProvider } from "@/hooks/useCart";
-import { CompareProvider } from "@/hooks/useCompare";
 import { FloatingCompareBar } from "@/components/FloatingCompareBar";
 import { WhatsAppFloatingButton } from "@/components/WhatsAppCTA";
 import { AdminSubdomainRouter } from "@/components/AdminSubdomainRouter";
 import { isAdminSubdomain } from "@/hooks/useAdminSubdomain";
-import { useGlobalRealtimeSync } from "@/hooks/useRealtimeSync";
-import { VerticalProvider } from "@/hooks/useVerticalAccess";
 import { usePageViewTracking } from "@/hooks/usePageViewTracking";
 import { initDynamicTracking } from "@/lib/adTracking";
 import { FloatingCallButton } from "@/components/FloatingCallButton";
 import { CookieConsentBanner } from "@/components/CookieConsentBanner";
 import { resetChunkLoadRecovery } from "@/lib/chunkLoadRecovery";
 import { SiteStructuredData } from "@/components/seo/SiteStructuredData";
+import { RouteProviderGate } from "@/components/app/RouteProviderGate";
 
 // Only the homepage is statically imported for fastest first paint
 import Index from "./pages/Index";
@@ -73,11 +70,6 @@ const queryClient = new QueryClient({
   },
 });
 
-const RealtimeSyncProvider = ({ children }: { children: React.ReactNode }) => {
-  useGlobalRealtimeSync();
-  return <>{children}</>;
-};
-
 const ADMIN_ROUTE_PREFIXES = [
   "/crm",
   "/crm-auth",
@@ -111,7 +103,7 @@ const PageViewTracker = () => {
   const location = useLocation();
   const isAdminExperience = isAdminSubdomain() || isAdminRoutePath(location.pathname);
 
-  usePageViewTracking();
+  usePageViewTracking(!isAdminExperience);
 
   useEffect(() => {
     resetChunkLoadRecovery();
@@ -134,6 +126,75 @@ const PageViewTracker = () => {
   }, [isAdminExperience]);
 
   return null;
+};
+
+const AppRouterShell = () => {
+  const location = useLocation();
+  const isAdminExperience = isAdminSubdomain() || isAdminRoutePath(location.pathname);
+
+  return (
+    <RouteProviderGate isAdminExperience={isAdminExperience}>
+      <Suspense
+        fallback={
+          <div className="min-h-screen flex items-center justify-center bg-background">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+          </div>
+        }
+      >
+        <RouteAwareStructuredData />
+        <PageViewTracker />
+        <AdminSubdomainRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/cars" element={<Cars />} />
+            <Route path="/car-images" element={<CarImages />} />
+            <Route path="/features-specs" element={<FeaturesSpecs />} />
+            <Route path="/brochures" element={<Brochures />} />
+            <Route path="/car-loans" element={<CarLoan />} />
+            <Route path="/car/:slug" element={<CarDetail />} />
+            <Route path="/cars/:slug" element={<CarDetail />} />
+            <Route path="/car/:slug/on-road-price" element={<CarOnRoadPrice />} />
+            <Route path="/cars/:slug/on-road-price" element={<CarOnRoadPrice />} />
+            <Route path="/compare" element={<CompareCars />} />
+            <Route path="/car-insurance" element={<CarInsurance />} />
+            <Route path="/corporate" element={<CorporateBuying />} />
+            <Route path="/accessories" element={<Accessories />} />
+            <Route path="/accessory-wishlist" element={<AccessoryWishlist />} />
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/blog/:slug" element={<BlogPost />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/favorites" element={<MyFavorites />} />
+            <Route path="/my-bookings" element={<MyBookings />} />
+            <Route path="/my-orders" element={<MyOrders />} />
+            <Route path="/car-finder" element={<CarFinder />} />
+            <Route path="/crm" element={<AdminLayout />} />
+            <Route path="/crm-auth" element={<AdminAuth />} />
+            <Route path="/crm-reset-password" element={<AdminResetPassword />} />
+            <Route path="/admin" element={<Navigate to="/crm" replace />} />
+            <Route path="/admin-auth" element={<Navigate to="/crm-auth" replace />} />
+            <Route path="/admin-reset-password" element={<Navigate to="/crm-reset-password" replace />} />
+            <Route path="/workspace" element={<WorkspaceSelector />} />
+            <Route path="/self-drive" element={<SelfDriveRentals />} />
+            <Route path="/hsrp" element={<HSRP />} />
+            <Route path="/upcoming-cars" element={<UpcomingCars />} />
+            <Route path="/auto-news" element={<AutoNews />} />
+            <Route path="/dealers" element={<DealerLocator />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/auto-intelligence" element={<AutoIntelligence />} />
+            <Route path="/holi" element={<HoliGreeting />} />
+            <Route path="/vehicle-lookup" element={<VehicleLookup />} />
+            <Route path="/thank-you" element={<ThankYou />} />
+            <Route path="/no-waiting-cars" element={<NoWaitingCars />} />
+            <Route path="/best-car-deals" element={<BestCarDeals />} />
+            <Route path="/agreement/:token" element={<AgreementSignPage />} />
+            <Route path="/track-order" element={<TrackOrder />} />
+            <Route path="*" element={<LegacyRouteHandler />} />
+          </Routes>
+          <RouteAwareChrome />
+        </AdminSubdomainRouter>
+      </Suspense>
+    </RouteProviderGate>
+  );
 };
 
 const RouteAwareStructuredData = () => {
@@ -167,79 +228,13 @@ const RouteAwareChrome = () => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <CartProvider>
-        <CompareProvider>
-          <VerticalProvider>
-            <RealtimeSyncProvider>
-              <TooltipProvider>
-                <Toaster />
-                <Sonner />
-                <BrowserRouter>
-                  <Suspense
-                    fallback={
-                      <div className="min-h-screen flex items-center justify-center bg-background">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-                      </div>
-                    }
-                  >
-                    <RouteAwareStructuredData />
-                    <PageViewTracker />
-                    <AdminSubdomainRouter>
-                      <Routes>
-                        <Route path="/" element={<Index />} />
-                        <Route path="/cars" element={<Cars />} />
-                        <Route path="/car-images" element={<CarImages />} />
-                        <Route path="/features-specs" element={<FeaturesSpecs />} />
-                        <Route path="/brochures" element={<Brochures />} />
-                        <Route path="/car-loans" element={<CarLoan />} />
-                        <Route path="/car/:slug" element={<CarDetail />} />
-                        <Route path="/cars/:slug" element={<CarDetail />} />
-                        <Route path="/car/:slug/on-road-price" element={<CarOnRoadPrice />} />
-                        <Route path="/cars/:slug/on-road-price" element={<CarOnRoadPrice />} />
-                        <Route path="/compare" element={<CompareCars />} />
-                        <Route path="/car-insurance" element={<CarInsurance />} />
-                        <Route path="/corporate" element={<CorporateBuying />} />
-                        <Route path="/accessories" element={<Accessories />} />
-                        <Route path="/accessory-wishlist" element={<AccessoryWishlist />} />
-                        <Route path="/blog" element={<Blog />} />
-                        <Route path="/blog/:slug" element={<BlogPost />} />
-                        <Route path="/auth" element={<Auth />} />
-                        <Route path="/favorites" element={<MyFavorites />} />
-                        <Route path="/my-bookings" element={<MyBookings />} />
-                        <Route path="/my-orders" element={<MyOrders />} />
-                        <Route path="/car-finder" element={<CarFinder />} />
-                        <Route path="/crm" element={<AdminLayout />} />
-                        <Route path="/crm-auth" element={<AdminAuth />} />
-                        <Route path="/crm-reset-password" element={<AdminResetPassword />} />
-                        <Route path="/admin" element={<Navigate to="/crm" replace />} />
-                        <Route path="/admin-auth" element={<Navigate to="/crm-auth" replace />} />
-                        <Route path="/admin-reset-password" element={<Navigate to="/crm-reset-password" replace />} />
-                        <Route path="/workspace" element={<WorkspaceSelector />} />
-                        <Route path="/self-drive" element={<SelfDriveRentals />} />
-                        <Route path="/hsrp" element={<HSRP />} />
-                        <Route path="/upcoming-cars" element={<UpcomingCars />} />
-                        <Route path="/auto-news" element={<AutoNews />} />
-                        <Route path="/dealers" element={<DealerLocator />} />
-                        <Route path="/about" element={<About />} />
-                        <Route path="/auto-intelligence" element={<AutoIntelligence />} />
-                        <Route path="/holi" element={<HoliGreeting />} />
-                        <Route path="/vehicle-lookup" element={<VehicleLookup />} />
-                        <Route path="/thank-you" element={<ThankYou />} />
-                        <Route path="/no-waiting-cars" element={<NoWaitingCars />} />
-                        <Route path="/best-car-deals" element={<BestCarDeals />} />
-                        <Route path="/agreement/:token" element={<AgreementSignPage />} />
-                        <Route path="/track-order" element={<TrackOrder />} />
-                        <Route path="*" element={<LegacyRouteHandler />} />
-                      </Routes>
-                      <RouteAwareChrome />
-                    </AdminSubdomainRouter>
-                  </Suspense>
-                </BrowserRouter>
-              </TooltipProvider>
-            </RealtimeSyncProvider>
-          </VerticalProvider>
-        </CompareProvider>
-      </CartProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AppRouterShell />
+        </BrowserRouter>
+      </TooltipProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

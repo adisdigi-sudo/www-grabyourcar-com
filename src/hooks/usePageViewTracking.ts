@@ -3,14 +3,18 @@ import { useLocation } from "react-router-dom";
 import { trackPageView } from "@/lib/adTracking";
 
 /** Fires gtag + fbq page_view on every SPA route change */
-export const usePageViewTracking = () => {
+export const usePageViewTracking = (enabled: boolean = true) => {
   const location = useLocation();
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
     try {
       trackPageView(location.pathname + location.search);
     } catch (error) {
       console.warn("[AdTracking] Page view effect failed", error);
     }
-  }, [location.pathname, location.search]);
+  }, [enabled, location.pathname, location.search]);
 };
