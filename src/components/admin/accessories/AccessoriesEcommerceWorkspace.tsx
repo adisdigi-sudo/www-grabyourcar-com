@@ -58,6 +58,8 @@ export function AccessoriesEcommerceWorkspace() {
         return <AccessoriesOrdersPanel />;
       case "tracking":
         return <AccessoriesTrackingPanel />;
+      case "logistics":
+        return <LogisticsPartnersPanel />;
       case "customers":
         return <AccessoriesCustomersPanel />;
       case "discounts":
