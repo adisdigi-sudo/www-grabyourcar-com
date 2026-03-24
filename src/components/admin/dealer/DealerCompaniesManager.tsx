@@ -105,13 +105,14 @@ export default function DealerCompaniesManager() {
     (c.city || "").toLowerCase().includes(search.toLowerCase())
   );
 
-  const openEdit = (c: DealerCompany) => {
+  const openEdit = (c: any) => {
     setEditId(c.id);
     setForm({
       company_name: c.company_name, dealer_type: c.dealer_type, city: c.city || "",
-      state: c.state || "", priority_level: c.priority_level,
+      state: c.state || "", priority_level: c.priority_level || 1,
       contact_email: c.contact_email || "", contact_phone: c.contact_phone || "",
       address: c.address || "", notes: c.notes || "",
+      brand_name: c.brand_name || "", designation: c.designation || "", pincode: c.pincode || "",
     });
     setDialogOpen(true);
   };
