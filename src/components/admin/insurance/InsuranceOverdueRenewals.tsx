@@ -58,9 +58,11 @@ export function InsuranceOverdueRenewals({ policies, clients }: Props) {
   // Get overdue policies (expiry_date < today)
   const overdueItems = useMemo(() => {
     const now = new Date();
+    const resolvedStatuses = ["renewed", "lapsed", "cancelled", "lost"];
     let items = policies
       .filter(p => {
-        if (!p.expiry_date || p.status === "renewed") return false;
+        if (!p.expiry_date) return false;
+        if (resolvedStatuses.includes(p.status || "")) return false;
         return differenceInDays(new Date(p.expiry_date), now) < 0;
       })
       .map(p => {
