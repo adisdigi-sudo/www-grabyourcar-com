@@ -139,7 +139,7 @@ export default function AICofounderDashboard() {
       const resp = await fetch(CHAT_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
-        body: JSON.stringify({ action: "quick_insight", question: q, user_name: "Boss", user_role: "founder", chat_history: newMsgs.slice(-20) }),
+        body: JSON.stringify({ action: "quick_insight", question: q, user_name: "Boss", user_role: "super_admin", conversation_history: newMsgs.slice(-20) }),
       });
       if (!resp.ok || !resp.body) throw new Error("Failed");
       const reader = resp.body.getReader();
