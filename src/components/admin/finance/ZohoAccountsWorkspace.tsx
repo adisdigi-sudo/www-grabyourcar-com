@@ -113,6 +113,7 @@ export const ZohoAccountsWorkspace = ({ initialView = "home" }: ZohoAccountsWork
       case "chart-of-accounts": return <AccountsChartOfAccounts />;
       case "budgets": return <AccountsBudgets />;
       case "reports": return <FinancialIntelligenceDashboard />;
+      case "profit-loss": return <VerticalProfitLoss />;
       case "documents": return <AccountsDocuments />;
       default: return <AccountsDashboard />;
     }
