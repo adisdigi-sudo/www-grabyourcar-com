@@ -996,6 +996,74 @@ export type Database = {
         }
         Relationships: []
       }
+      bank_transactions: {
+        Row: {
+          amount: number
+          bank_account_id: string | null
+          category: string | null
+          created_at: string | null
+          description: string
+          id: string
+          is_reconciled: boolean | null
+          linked_bill_id: string | null
+          linked_invoice_id: string | null
+          notes: string | null
+          payment_mode: string | null
+          reference_number: string | null
+          running_balance: number | null
+          source: string | null
+          transaction_date: string
+          transaction_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount?: number
+          bank_account_id?: string | null
+          category?: string | null
+          created_at?: string | null
+          description: string
+          id?: string
+          is_reconciled?: boolean | null
+          linked_bill_id?: string | null
+          linked_invoice_id?: string | null
+          notes?: string | null
+          payment_mode?: string | null
+          reference_number?: string | null
+          running_balance?: number | null
+          source?: string | null
+          transaction_date?: string
+          transaction_type?: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          bank_account_id?: string | null
+          category?: string | null
+          created_at?: string | null
+          description?: string
+          id?: string
+          is_reconciled?: boolean | null
+          linked_bill_id?: string | null
+          linked_invoice_id?: string | null
+          notes?: string | null
+          payment_mode?: string | null
+          reference_number?: string | null
+          running_balance?: number | null
+          source?: string | null
+          transaction_date?: string
+          transaction_type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_transactions_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       banners: {
         Row: {
           created_at: string
@@ -4834,6 +4902,75 @@ export type Database = {
           name?: string
           processing_fee?: string | null
           sort_order?: number | null
+        }
+        Relationships: []
+      }
+      financial_documents: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          document_category: string | null
+          document_type: string
+          entity_name: string | null
+          entity_type: string | null
+          expiry_date: string | null
+          file_name: string | null
+          file_size: string | null
+          file_url: string | null
+          id: string
+          issued_date: string | null
+          metadata: Json | null
+          mime_type: string | null
+          reference_number: string | null
+          status: string | null
+          tags: string[] | null
+          title: string
+          updated_at: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          document_category?: string | null
+          document_type: string
+          entity_name?: string | null
+          entity_type?: string | null
+          expiry_date?: string | null
+          file_name?: string | null
+          file_size?: string | null
+          file_url?: string | null
+          id?: string
+          issued_date?: string | null
+          metadata?: Json | null
+          mime_type?: string | null
+          reference_number?: string | null
+          status?: string | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          document_category?: string | null
+          document_type?: string
+          entity_name?: string | null
+          entity_type?: string | null
+          expiry_date?: string | null
+          file_name?: string | null
+          file_size?: string | null
+          file_url?: string | null
+          id?: string
+          issued_date?: string | null
+          metadata?: Json | null
+          mime_type?: string | null
+          reference_number?: string | null
+          status?: string | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string | null
+          uploaded_by?: string | null
         }
         Relationships: []
       }

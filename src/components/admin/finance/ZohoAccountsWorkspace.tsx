@@ -28,6 +28,7 @@ const AccountsPurchaseOrders = lazy(() => import("./AccountsPurchaseOrders"));
 const AccountsItemsModule = lazy(() => import("./AccountsItemsModule"));
 const AccountsBudgets = lazy(() => import("./AccountsBudgets"));
 const VerticalProfitLoss = lazy(() => import("./VerticalProfitLoss"));
+const AccountsFinancialDocuments = lazy(() => import("./AccountsFinancialDocuments"));
 
 interface SidebarItem {
   id: string;
@@ -114,7 +115,7 @@ export const ZohoAccountsWorkspace = ({ initialView = "home" }: ZohoAccountsWork
       case "budgets": return <AccountsBudgets />;
       case "reports": return <FinancialIntelligenceDashboard />;
       case "profit-loss": return <VerticalProfitLoss />;
-      case "documents": return <AccountsDocuments />;
+      case "documents": return <AccountsFinancialDocuments />;
       default: return <AccountsDashboard />;
     }
   };
@@ -219,20 +220,5 @@ export const ZohoAccountsWorkspace = ({ initialView = "home" }: ZohoAccountsWork
     </div>
   );
 };
-
-// Simple documents placeholder
-const AccountsDocuments = () => (
-  <div className="space-y-4">
-    <div className="flex items-center justify-between">
-      <h2 className="text-xl font-semibold">Documents</h2>
-      <Button size="sm"><Plus className="h-4 w-4 mr-1" /> Upload Document</Button>
-    </div>
-    <div className="border-2 border-dashed rounded-xl p-16 text-center text-muted-foreground">
-      <FolderOpen className="h-12 w-12 mx-auto mb-3 opacity-40" />
-      <p className="font-medium">No documents uploaded yet</p>
-      <p className="text-sm mt-1">Upload invoices, receipts, and other financial documents</p>
-    </div>
-  </div>
-);
 
 export default ZohoAccountsWorkspace;
