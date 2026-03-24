@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export function useWhatsAppTemplates() {
   return useQuery({
-    queryKey: ["wa-templates"],
+    queryKey: ["wa-suite-templates"],
     queryFn: async () => {
       const { data, error } = await supabase.from("whatsapp_templates").select("*").order("created_at", { ascending: false });
       if (error) throw error;
@@ -17,14 +17,17 @@ export function useCreateWhatsAppTemplate() {
   return useMutation({
     mutationFn: async (template: { name: string; category?: string; language?: string; body_text: string; header_type?: string; header_content?: string; footer_text?: string; buttons?: unknown[]; variables?: unknown[] }) => {
       const { data, error } = await supabase.from("whatsapp_templates").insert({
-        name: template.name, category: template.category || 'marketing', language: template.language || 'en',
-        body_text: template.body_text, header_type: template.header_type, header_content: template.header_content,
-        footer_text: template.footer_text, buttons: template.buttons as any, variables: template.variables as any,
+        name: template.name,
+        category: template.category || 'marketing',
+        language: template.language || 'en',
+        content: template.body_text,
+        template_type: 'custom',
+        preview: template.body_text?.substring(0, 100),
       }).select().single();
       if (error) throw error;
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["wa-templates"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["wa-suite-templates"] }),
   });
 }
 
@@ -32,7 +35,7 @@ export function useDeleteWhatsAppTemplate() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => { const { error } = await supabase.from("whatsapp_templates").delete().eq("id", id); if (error) throw error; },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["wa-templates"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["wa-suite-templates"] }),
   });
 }
 
