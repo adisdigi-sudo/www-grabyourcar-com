@@ -321,7 +321,6 @@ const navItems: NavItem[] = [
       { id: "accounts-reports", label: "📊 Reports & P&L", icon: BarChart3 },
       { id: "accounts-documents", label: "📂 Documents", icon: FileText },
     ]
-    ]
   },
 
   // ── HR System (10 Sub-Modules) ──
