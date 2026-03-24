@@ -19,8 +19,8 @@ interface Props {
 
 function normalizeStage(stage?: string | null, status?: string | null): string {
   const s = (stage || status || "new_lead").toLowerCase().replace(/[\s-]+/g, "_");
-  if (["won", "policy_issued", "closed"].includes(s)) return "won";
-  if (s === "lost") return "lost";
+  if (["won", "policy_issued", "closed", "converted"].includes(s)) return "won";
+  if (s === "lost" || s === "not_interested") return "lost";
   return s;
 }
 
