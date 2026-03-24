@@ -489,6 +489,15 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
       }
 
       const update: any = { pipeline_stage: newStage, ...extras };
+      // Sync lead_status for terminal stages
+      if (newStage === "lost") {
+        update.lead_status = "lost";
+      } else if (newStage === "won" || newStage === "policy_issued") {
+        update.lead_status = "won";
+      } else if (newStage !== "smart_calling") {
+        // For non-terminal, non-calling stages, keep lead_status in sync
+        update.lead_status = newStage;
+      }
       if (newStage === "smart_calling") {
         const client = clients.find(c => c.id === clientId);
         update.contact_attempts = (client?.contact_attempts || 0) + 1;
@@ -579,9 +588,11 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
       clientId: pendingMoveClient.id,
       newStage: "lost",
       extras: {
+        lead_status: "lost",
         lost_reason: lostReason,
         notes: lostRemarks || undefined,
-        retarget_status: retargetNextYear ? "scheduled" : null,
+        retarget_status: retargetNextYear ? "scheduled" : "none",
+        retargeting_enabled: retargetNextYear,
       },
     });
   };
