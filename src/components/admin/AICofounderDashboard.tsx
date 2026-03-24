@@ -139,7 +139,7 @@ export default function AICofounderDashboard() {
       const resp = await fetch(CHAT_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
-        body: JSON.stringify({ action: "quick_insight", question: q, user_name: "Boss", user_role: "founder", chat_history: newMsgs.slice(-20) }),
+        body: JSON.stringify({ action: "quick_insight", question: q, user_name: "Boss", user_role: "super_admin", conversation_history: newMsgs.slice(-20) }),
       });
       if (!resp.ok || !resp.body) throw new Error("Failed");
       const reader = resp.body.getReader();
@@ -204,7 +204,7 @@ export default function AICofounderDashboard() {
   const { data: mistakeLogs = [] } = useQuery({ queryKey: ["ai-mistakes"], queryFn: async () => { const { data } = await supabase.from("ai_mistake_logs").select("*").eq("status", "detected").order("created_at", { ascending: false }).limit(20); return data || []; } });
   const { data: teamMembers = [] } = useQuery({ queryKey: ["team-members-active"], queryFn: async () => { const { data } = await supabase.from("team_members").select("*").eq("is_active", true); return data || []; } });
 
-  const genTasks = useMutation({ mutationFn: () => callAction("suggest_tasks", { user_name: "Boss", user_role: "founder" }), onSuccess: (d) => { qc.invalidateQueries({ queryKey: ["cofounder-tasks"] }); toast.success(`${d.tasks?.length || 0} tasks generated!`); } });
+  const genTasks = useMutation({ mutationFn: () => callAction("suggest_tasks", { user_name: "Boss", user_role: "super_admin" }), onSuccess: (d) => { qc.invalidateQueries({ queryKey: ["cofounder-tasks"] }); toast.success(`${d.tasks?.length || 0} tasks generated!`); } });
   const genPushes = useMutation({ mutationFn: () => callAction("generate_pushes"), onSuccess: (d) => { qc.invalidateQueries({ queryKey: ["ai-pushes"] }); toast.success(`${d.pushes_generated || 0} reminders sent!`); } });
   const scanRisks = useMutation({ mutationFn: () => callAction("scan_risks"), onSuccess: (d) => { qc.invalidateQueries({ queryKey: ["ai-risks"] }); toast.success(`${d.risks?.length || 0} risks detected!`); } });
   const findCrossSells = useMutation({ mutationFn: () => callAction("find_cross_sells"), onSuccess: (d) => { qc.invalidateQueries({ queryKey: ["ai-cross-sells"] }); toast.success(`${d.suggestions?.length || 0} opportunities found!`); } });
@@ -236,7 +236,7 @@ export default function AICofounderDashboard() {
     onSuccess: (sol) => { qc.invalidateQueries({ queryKey: ["team-problems"] }); setShowProblemDialog(false); toast.success(sol.can_solve_automatically ? "AI solved it! ✅" : "Escalated to founder 📋"); },
   });
 
-  useEffect(() => { if (activeTab === "briefing" && !briefing.content && !briefing.isStreaming) briefing.startStream("daily_briefing", { user_name: "Boss", user_role: "founder" }); }, [activeTab]);
+  useEffect(() => { if (activeTab === "briefing" && !briefing.content && !briefing.isStreaming) briefing.startStream("daily_briefing", { user_name: "Boss", user_role: "super_admin" }); }, [activeTab]);
 
   const pc: Record<string, { color: string; icon: any }> = {
     urgent: { color: "bg-red-500/10 text-red-600", icon: AlertTriangle },
@@ -262,7 +262,7 @@ export default function AICofounderDashboard() {
           </div>
         </div>
         <div className="flex gap-1.5 flex-wrap">
-          <Button variant="outline" size="sm" className="gap-1 text-xs h-7" onClick={() => briefing.startStream("daily_briefing", { user_name: "Boss", user_role: "founder" })}><RefreshCcw className={`h-3 w-3 ${briefing.isStreaming ? "animate-spin" : ""}`} /> Briefing</Button>
+          <Button variant="outline" size="sm" className="gap-1 text-xs h-7" onClick={() => briefing.startStream("daily_briefing", { user_name: "Boss", user_role: "super_admin" })}><RefreshCcw className={`h-3 w-3 ${briefing.isStreaming ? "animate-spin" : ""}`} /> Briefing</Button>
           <Button variant="outline" size="sm" className="gap-1 text-xs h-7" onClick={() => genPushes.mutate()} disabled={genPushes.isPending}><Bell className="h-3 w-3" /> Push</Button>
           <Button variant="outline" size="sm" className="gap-1 text-xs h-7" onClick={() => scanRisks.mutate()} disabled={scanRisks.isPending}><ShieldAlert className="h-3 w-3" /> Scan Risks</Button>
           <Button variant="outline" size="sm" className="gap-1 text-xs h-7" onClick={() => findCrossSells.mutate()} disabled={findCrossSells.isPending}><Crosshair className="h-3 w-3" /> Cross-Sell</Button>
