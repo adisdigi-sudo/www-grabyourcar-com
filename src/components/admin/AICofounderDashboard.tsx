@@ -236,7 +236,7 @@ export default function AICofounderDashboard() {
     onSuccess: (sol) => { qc.invalidateQueries({ queryKey: ["team-problems"] }); setShowProblemDialog(false); toast.success(sol.can_solve_automatically ? "AI solved it! ✅" : "Escalated to founder 📋"); },
   });
 
-  useEffect(() => { if (activeTab === "briefing" && !briefing.content && !briefing.isStreaming) briefing.startStream("daily_briefing", { user_name: "Boss", user_role: "founder" }); }, [activeTab]);
+  useEffect(() => { if (activeTab === "briefing" && !briefing.content && !briefing.isStreaming) briefing.startStream("daily_briefing", { user_name: "Boss", user_role: "super_admin" }); }, [activeTab]);
 
   const pc: Record<string, { color: string; icon: any }> = {
     urgent: { color: "bg-red-500/10 text-red-600", icon: AlertTriangle },
