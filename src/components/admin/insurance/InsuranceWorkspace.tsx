@@ -21,8 +21,9 @@ import { InsuranceLeadPipeline, normalizeStage, LEAD_SOURCES, type Client } from
 import { InsurancePolicyBook, type PolicyRecord } from "./InsurancePolicyBook";
 import { InsuranceComingRenewals } from "./InsuranceComingRenewals";
 import { InsuranceOverdueRenewals } from "./InsuranceOverdueRenewals";
+import { InsurancePremiumCalculator } from "./InsurancePremiumCalculator";
 
-type ActiveView = "pipeline" | "policy_book" | "renewals" | "overdue" | "bulk_tools";
+type ActiveView = "pipeline" | "policy_book" | "renewals" | "overdue" | "bulk_tools" | "calculator";
 
 type LegacyInsuranceLead = {
   id: string;
