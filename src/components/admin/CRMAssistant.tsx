@@ -259,10 +259,10 @@ export function CRMAssistant({ userRole, userName, userVertical }: CRMAssistantP
                   <p className="text-xs text-muted-foreground mt-1">24/7 revenue engine, sales director, risk radar & team coach</p>
                 </div>
                 <div className="grid grid-cols-2 gap-1.5 pt-2">
-                  {QUICK_ACTIONS.map((qa) => (
+                    {QUICK_ACTIONS.map((qa: any) => (
                     <button
                       key={qa.label}
-                      onClick={() => sendMessage(qa.prompt)}
+                      onClick={() => qa.action ? sendMessage(undefined, qa.action) : sendMessage(qa.prompt)}
                       className="flex items-center gap-1.5 text-left text-[11px] bg-muted/60 hover:bg-muted rounded-lg px-2.5 py-2 transition-colors group"
                     >
                       <qa.icon className="h-3.5 w-3.5 text-violet-600 shrink-0 group-hover:scale-110 transition-transform" />
