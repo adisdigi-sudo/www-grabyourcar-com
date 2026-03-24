@@ -258,6 +258,7 @@ export function InsuranceWorkspace() {
       {activeView === "renewals" && <InsuranceComingRenewals policies={runningPolicies as PolicyRecord[]} />}
       {activeView === "overdue" && <InsuranceOverdueRenewals policies={overduePolicies as PolicyRecord[]} clients={clients} />}
       {activeView === "bulk_tools" && <BulkRenewalQuoteGenerator onClose={() => setActiveView("pipeline")} />}
+      {activeView === "calculator" && <InsurancePremiumCalculator />}
 
       <Dialog open={showAddLead} onOpenChange={setShowAddLead}>
         <DialogContent className="max-w-md">
