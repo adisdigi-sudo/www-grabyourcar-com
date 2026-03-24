@@ -462,7 +462,7 @@ ${myTargets.length > 0 ? myTargets.map((t: any) => `• ${t.team_member_name}: $
             if (params.current_policy_type) insertData.current_policy_type = params.current_policy_type;
             if (params.policy_expiry_date) insertData.policy_expiry_date = params.policy_expiry_date;
             if (params.notes) insertData.notes = params.notes;
-            if (params.vehicle_color) insertData.vehicle_color = params.vehicle_color;
+            if (params.vehicle_color) insertData.notes = (insertData.notes || '') + ' | Color: ' + params.vehicle_color;
             const r = await fetch(`${SB}/rest/v1/insurance_clients`, { method: "POST", headers: { ...h, Prefer: "return=representation" }, body: JSON.stringify(insertData) });
             if (!r.ok) return `❌ Failed to add lead: ${await r.text()}`;
             const created = await r.json();
