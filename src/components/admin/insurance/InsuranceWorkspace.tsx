@@ -109,10 +109,11 @@ export function InsuranceWorkspace() {
       return new Date(p.expiry_date) >= today;
     }), [allPolicies, today.toDateString()]
   );
+  const RESOLVED_STATUSES = ["renewed", "lapsed", "cancelled", "lost"];
   const overduePolicies = useMemo(() =>
     allPolicies.filter(p => {
-      if (p.status === "renewed") return false;
       if (!p.expiry_date) return false;
+      if (RESOLVED_STATUSES.includes(p.status || "")) return false;
       return new Date(p.expiry_date) < today;
     }), [allPolicies, today.toDateString()]
   );
