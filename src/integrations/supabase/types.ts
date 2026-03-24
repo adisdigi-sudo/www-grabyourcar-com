@@ -3549,6 +3549,57 @@ export type Database = {
           },
         ]
       }
+      dealer_automation_schedules: {
+        Row: {
+          channel: string
+          created_at: string | null
+          custom_message: string | null
+          days_of_week: number[] | null
+          frequency: string | null
+          id: string
+          is_active: boolean | null
+          last_run_at: string | null
+          next_run_at: string | null
+          schedule_name: string
+          schedule_time: string | null
+          target_filter: Json | null
+          template_key: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          channel?: string
+          created_at?: string | null
+          custom_message?: string | null
+          days_of_week?: number[] | null
+          frequency?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_run_at?: string | null
+          next_run_at?: string | null
+          schedule_name: string
+          schedule_time?: string | null
+          target_filter?: Json | null
+          template_key?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          channel?: string
+          created_at?: string | null
+          custom_message?: string | null
+          days_of_week?: number[] | null
+          frequency?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_run_at?: string | null
+          next_run_at?: string | null
+          schedule_name?: string
+          schedule_time?: string | null
+          target_filter?: Json | null
+          template_key?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       dealer_broadcast_logs: {
         Row: {
           broadcast_type: string
@@ -3594,6 +3645,8 @@ export type Database = {
           created_at: string | null
           dealer_type: string
           designation: string | null
+          established_year: number | null
+          gst_number: string | null
           id: string
           is_active: boolean | null
           last_contacted_at: string | null
@@ -3601,8 +3654,11 @@ export type Database = {
           notes: string | null
           pincode: string | null
           priority_level: number | null
+          region: string | null
+          showroom_count: number | null
           state: string | null
           updated_at: string | null
+          website_url: string | null
         }
         Insert: {
           address?: string | null
@@ -3615,6 +3671,8 @@ export type Database = {
           created_at?: string | null
           dealer_type?: string
           designation?: string | null
+          established_year?: number | null
+          gst_number?: string | null
           id?: string
           is_active?: boolean | null
           last_contacted_at?: string | null
@@ -3622,8 +3680,11 @@ export type Database = {
           notes?: string | null
           pincode?: string | null
           priority_level?: number | null
+          region?: string | null
+          showroom_count?: number | null
           state?: string | null
           updated_at?: string | null
+          website_url?: string | null
         }
         Update: {
           address?: string | null
@@ -3636,6 +3697,8 @@ export type Database = {
           created_at?: string | null
           dealer_type?: string
           designation?: string | null
+          established_year?: number | null
+          gst_number?: string | null
           id?: string
           is_active?: boolean | null
           last_contacted_at?: string | null
@@ -3643,10 +3706,130 @@ export type Database = {
           notes?: string | null
           pincode?: string | null
           priority_level?: number | null
+          region?: string | null
+          showroom_count?: number | null
           state?: string | null
           updated_at?: string | null
+          website_url?: string | null
         }
         Relationships: []
+      }
+      dealer_discount_history: {
+        Row: {
+          brand: string
+          change_type: string | null
+          changed_by: string | null
+          created_at: string | null
+          dealer_company_id: string | null
+          discount_id: string | null
+          id: string
+          model: string
+          new_amount: number | null
+          notes: string | null
+          old_amount: number | null
+          variant: string | null
+        }
+        Insert: {
+          brand: string
+          change_type?: string | null
+          changed_by?: string | null
+          created_at?: string | null
+          dealer_company_id?: string | null
+          discount_id?: string | null
+          id?: string
+          model: string
+          new_amount?: number | null
+          notes?: string | null
+          old_amount?: number | null
+          variant?: string | null
+        }
+        Update: {
+          brand?: string
+          change_type?: string | null
+          changed_by?: string | null
+          created_at?: string | null
+          dealer_company_id?: string | null
+          discount_id?: string | null
+          id?: string
+          model?: string
+          new_amount?: number | null
+          notes?: string | null
+          old_amount?: number | null
+          variant?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dealer_discount_history_dealer_company_id_fkey"
+            columns: ["dealer_company_id"]
+            isOneToOne: false
+            referencedRelation: "dealer_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dealer_discount_history_discount_id_fkey"
+            columns: ["discount_id"]
+            isOneToOne: false
+            referencedRelation: "dealer_live_discounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dealer_follow_up_alerts: {
+        Row: {
+          alert_type: string | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string | null
+          dealer_company_id: string | null
+          dealer_rep_id: string | null
+          due_at: string | null
+          id: string
+          message: string | null
+          priority: string | null
+          status: string | null
+        }
+        Insert: {
+          alert_type?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string | null
+          dealer_company_id?: string | null
+          dealer_rep_id?: string | null
+          due_at?: string | null
+          id?: string
+          message?: string | null
+          priority?: string | null
+          status?: string | null
+        }
+        Update: {
+          alert_type?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string | null
+          dealer_company_id?: string | null
+          dealer_rep_id?: string | null
+          due_at?: string | null
+          id?: string
+          message?: string | null
+          priority?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dealer_follow_up_alerts_dealer_company_id_fkey"
+            columns: ["dealer_company_id"]
+            isOneToOne: false
+            referencedRelation: "dealer_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dealer_follow_up_alerts_dealer_rep_id_fkey"
+            columns: ["dealer_rep_id"]
+            isOneToOne: false
+            referencedRelation: "dealer_representatives"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       dealer_inventory: {
         Row: {
