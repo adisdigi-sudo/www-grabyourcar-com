@@ -332,7 +332,7 @@ const AdminLayout = () => {
         if (slug === "accessories") return <AccessoriesEcommerceWorkspace />;
         if (slug === "marketing") return <MarketingDashboard onNavigate={setActiveTab} />;
         if (slug === "loans") return <LoanCRMDashboard />;
-        if (slug === "accounts") return <AccountsDashboard />;
+        if (slug === "accounts") return <ZohoAccountsWorkspace />;
         if (slug === "hr") return <HRCoreModule />;
         return <AdminDashboard />;
       }
