@@ -38,7 +38,8 @@ const DEALER_TYPES = [
 const emptyForm = {
   company_name: "", dealer_type: "authorized", city: "", state: "",
   priority_level: 1, contact_email: "", contact_phone: "", address: "", notes: "",
-  brand_name: "", designation: "", pincode: "",
+  brand_name: "", designation: "", pincode: "", region: "North",
+  website_url: "", gst_number: "", established_year: "", showroom_count: 1,
 };
 
 export default function DealerCompaniesManager() {
@@ -59,7 +60,7 @@ export default function DealerCompaniesManager() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const payload = { ...form, priority_level: Number(form.priority_level) || 1 };
+      const payload = { ...form, priority_level: Number(form.priority_level) || 1, showroom_count: Number(form.showroom_count) || 1, established_year: form.established_year ? Number(form.established_year) : null };
       if (editId) {
         const { error } = await supabase.from("dealer_companies").update(payload).eq("id", editId);
         if (error) throw error;
@@ -113,6 +114,9 @@ export default function DealerCompaniesManager() {
       contact_email: c.contact_email || "", contact_phone: c.contact_phone || "",
       address: c.address || "", notes: c.notes || "",
       brand_name: c.brand_name || "", designation: c.designation || "", pincode: c.pincode || "",
+      region: c.region || "North", website_url: c.website_url || "",
+      gst_number: c.gst_number || "", established_year: c.established_year || "",
+      showroom_count: c.showroom_count || 1,
     });
     setDialogOpen(true);
   };
@@ -191,6 +195,23 @@ export default function DealerCompaniesManager() {
                 <div className="grid gap-2"><Label>Phone</Label><Input value={form.contact_phone} onChange={e => setForm(f => ({ ...f, contact_phone: e.target.value }))} /></div>
               </div>
               <div className="grid gap-2"><Label>Full Address</Label><Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="Full showroom address..." /></div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Region</Label>
+                  <Select value={form.region} onValueChange={v => setForm(f => ({ ...f, region: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {["North", "South", "East", "West", "Central", "North-East"].map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2"><Label>Showroom Count</Label><Input type="number" min={1} value={form.showroom_count} onChange={e => setForm(f => ({ ...f, showroom_count: Number(e.target.value) }))} /></div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="grid gap-2"><Label>Website</Label><Input value={form.website_url} onChange={e => setForm(f => ({ ...f, website_url: e.target.value }))} placeholder="https://..." /></div>
+                <div className="grid gap-2"><Label>GST Number</Label><Input value={form.gst_number} onChange={e => setForm(f => ({ ...f, gst_number: e.target.value }))} /></div>
+                <div className="grid gap-2"><Label>Est. Year</Label><Input type="number" value={form.established_year} onChange={e => setForm(f => ({ ...f, established_year: e.target.value }))} placeholder="2010" /></div>
+              </div>
               <div className="grid gap-2"><Label>Notes</Label><Input value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} /></div>
               <Button onClick={() => saveMutation.mutate()} disabled={!form.company_name || saveMutation.isPending}>
                 {saveMutation.isPending ? "Saving..." : editId ? "Update" : "Add Company"}
