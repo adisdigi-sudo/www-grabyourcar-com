@@ -66,12 +66,109 @@ export default function AICofounderDashboard() {
   const [problemForm, setProblemForm] = useState({ reported_by_name: "", vertical_name: "", problem_description: "" });
 
   const briefing = useStream();
-  const insight = useStream();
   const report = useStream();
   const runway = useStream();
   const investor = useStream();
   const ecommerce = useStream();
   const coaching = useStream();
+
+  // Persistent Ask chat
+  const [askMessages, setAskMessages] = useState<{ role: string; content: string }[]>([]);
+  const [askConvId, setAskConvId] = useState<string | null>(null);
+  const [askLoading, setAskLoading] = useState(false);
+  const [askStreamContent, setAskStreamContent] = useState("");
+  const askLoadedRef = useState(false);
+
+  // Load saved conversation on mount
+  useEffect(() => {
+    if (askLoadedRef[0]) return;
+    askLoadedRef[1](true);
+    (async () => {
+      const { data } = await supabase
+        .from("ai_cofounder_conversations")
+        .select("id, messages")
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .single();
+      if (data) {
+        setAskConvId(data.id);
+        const msgs = data.messages as { role: string; content: string }[];
+        if (msgs?.length > 0) setAskMessages(msgs);
+      }
+    })();
+  }, []);
+
+  const saveAskConversation = useCallback(async (msgs: { role: string; content: string }[]) => {
+    const payload = JSON.parse(JSON.stringify(msgs));
+    if (askConvId) {
+      await supabase.from("ai_cofounder_conversations").update({ messages: payload, updated_at: new Date().toISOString() }).eq("id", askConvId);
+    } else {
+      const { data } = await supabase.from("ai_cofounder_conversations").insert({ user_id: "system", messages: payload }).select("id").single();
+      if (data) setAskConvId(data.id);
+    }
+  }, [askConvId]);
+
+  const sendAskMessage = useCallback(async (q: string) => {
+    if (!q.trim() || askLoading) return;
+    const userMsg = { role: "user", content: q };
+    const newMsgs = [...askMessages, userMsg];
+    setAskMessages(newMsgs);
+    setQuestion("");
+    setAskLoading(true);
+    setAskStreamContent("");
+    let acc = "";
+    try {
+      const resp = await fetch(CHAT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+        body: JSON.stringify({ action: "quick_insight", question: q, user_name: "Boss", user_role: "founder", chat_history: newMsgs.slice(-20) }),
+      });
+      if (!resp.ok || !resp.body) throw new Error("Failed");
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let idx: number;
+        while ((idx = buffer.indexOf("\n")) !== -1) {
+          let line = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 1);
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (!line.startsWith("data: ")) continue;
+          const j = line.slice(6).trim();
+          if (j === "[DONE]") break;
+          try {
+            const t = JSON.parse(j).choices?.[0]?.delta?.content;
+            if (t) { acc += t; setAskStreamContent(acc); }
+          } catch {}
+        }
+      }
+      const assistantMsg = { role: "assistant", content: acc || "I'm here to help!" };
+      const finalMsgs = [...newMsgs, assistantMsg];
+      setAskMessages(finalMsgs);
+      setAskStreamContent("");
+      saveAskConversation(finalMsgs);
+    } catch (e: any) {
+      toast.error(e.message || "Failed");
+      const errMsg = { role: "assistant", content: "Sorry, encountered an error. Please try again." };
+      const finalMsgs = [...newMsgs, errMsg];
+      setAskMessages(finalMsgs);
+      saveAskConversation(finalMsgs);
+    } finally {
+      setAskLoading(false);
+    }
+  }, [askMessages, askLoading, saveAskConversation]);
+
+  const clearAskHistory = useCallback(async () => {
+    setAskMessages([]);
+    if (askConvId) {
+      await supabase.from("ai_cofounder_conversations").delete().eq("id", askConvId);
+      setAskConvId(null);
+    }
+    toast.success("Chat history cleared");
+  }, [askConvId]);
 
   const today = format(new Date(), "yyyy-MM-dd");
   const cm = format(new Date(), "yyyy-MM");
