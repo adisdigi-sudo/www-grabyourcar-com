@@ -112,6 +112,9 @@ const APIPartnersManagement = lazy(() => import("@/components/admin/APIPartnersM
 const DealerManagement = lazy(() =>
   import("@/components/admin/DealerManagement").then((module) => ({ default: module.DealerManagement })),
 );
+const AICofounderDashboard = lazy(() =>
+  import("@/components/admin/AICofounderDashboard"),
+);
 const SiteSettingsManager = lazy(() => import("@/components/admin/SiteSettingsManager"));
 const BannersManager = lazy(() => import("@/components/admin/BannersManager"));
 const TestimonialsManager = lazy(() => import("@/components/admin/TestimonialsManager"));
