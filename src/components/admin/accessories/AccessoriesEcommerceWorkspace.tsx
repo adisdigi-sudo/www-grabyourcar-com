@@ -32,6 +32,7 @@ const SIDEBAR_ITEMS = [
   { id: "categories", label: "Categories", icon: Grid3X3 },
   { id: "orders", label: "Orders", icon: ShoppingCart },
   { id: "tracking", label: "Tracking", icon: Truck },
+  { id: "logistics", label: "Logistics Partners", icon: Box },
   { id: "customers", label: "Customers", icon: Users },
   { id: "discounts", label: "Discount Codes", icon: Tags },
   { id: "crosssell", label: "Cross-Sell", icon: Repeat },
