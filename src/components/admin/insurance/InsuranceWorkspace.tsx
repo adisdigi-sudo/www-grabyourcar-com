@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { differenceInDays } from "date-fns";
+import { differenceInDays, format, startOfMonth, endOfMonth } from "date-fns";
 import {
   UserPlus, Clock, CheckCircle2, Shield, TrendingUp,
   Plus, FileSpreadsheet, BookOpen, CalendarClock, Wrench, AlertTriangle, Calculator, ArrowRight
@@ -22,8 +22,10 @@ import { InsurancePolicyBook, type PolicyRecord } from "./InsurancePolicyBook";
 import { InsuranceComingRenewals } from "./InsuranceComingRenewals";
 import { InsuranceOverdueRenewals } from "./InsuranceOverdueRenewals";
 import { InsurancePremiumCalculator } from "./InsurancePremiumCalculator";
+import { InsuranceKpiDetailDialog } from "./InsuranceKpiDetailDialog";
 
 type ActiveView = "pipeline" | "policy_book" | "renewals" | "overdue" | "bulk_tools" | "calculator";
+type KpiType = "total_leads" | "in_pipeline" | "won" | "active_policies" | "conversion" | null;
 
 type LegacyInsuranceLead = {
   id: string;
@@ -35,6 +37,7 @@ type LegacyInsuranceLead = {
 export function InsuranceWorkspace() {
   const queryClient = useQueryClient();
   const [activeView, setActiveView] = useState<ActiveView>("pipeline");
+  const [kpiDetail, setKpiDetail] = useState<KpiType>(null);
   const [showImport, setShowImport] = useState(false);
   const [showAddLead, setShowAddLead] = useState(false);
   const [newLead, setNewLead] = useState({
@@ -125,7 +128,39 @@ export function InsuranceWorkspace() {
   }).length;
   const lostCount = clients.filter(c => normalizeStage(c.pipeline_stage, c.lead_status) === "lost").length;
   const inPipeline = totalLeads - wonCount - lostCount;
-  const convRate = totalLeads > 0 ? ((wonCount / totalLeads) * 100).toFixed(1) : "0";
+
+  // Month-wise conversion calculation
+  const monthWiseConversion = useMemo(() => {
+    const monthMap: Record<string, { total: number; won: number; renewals: number; rollovers: number }> = {};
+    clients.forEach(c => {
+      const d = c.created_at ? new Date(c.created_at) : new Date();
+      const key = format(d, "yyyy-MM");
+      if (!monthMap[key]) monthMap[key] = { total: 0, won: 0, renewals: 0, rollovers: 0 };
+      monthMap[key].total++;
+      const st = normalizeStage(c.pipeline_stage, c.lead_status);
+      if (st === "won" || st === "policy_issued") monthMap[key].won++;
+      const src = (c.lead_source || "").toLowerCase();
+      if (src.includes("renewal") || src.includes("renew")) monthMap[key].renewals++;
+      if (src.includes("rollover") || src.includes("roll")) monthMap[key].rollovers++;
+    });
+    return Object.entries(monthMap)
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .slice(0, 12)
+      .map(([month, d]) => ({
+        month: format(new Date(month + "-01"), "MMM yyyy"),
+        total: d.total,
+        won: d.won,
+        rate: d.total > 0 ? ((d.won / d.total) * 100).toFixed(1) : "0",
+        renewals: d.renewals,
+        rollovers: d.rollovers,
+      }));
+  }, [clients]);
+
+  // Current month conversion rate
+  const currentMonthKey = format(new Date(), "MMM yyyy");
+  const currentMonthData = monthWiseConversion.find(m => m.month === currentMonthKey);
+  const convRate = currentMonthData ? currentMonthData.rate : "0";
+
   const activePolicies = runningPolicies.filter(p => p.status === "active").length;
   const renewalsDue = useMemo(() => {
     const now = new Date();
@@ -195,13 +230,17 @@ export function InsuranceWorkspace() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {[
-              { label: "Total Leads", value: totalLeads, icon: UserPlus, bgc: "bg-blue-500/20" },
-              { label: "In Pipeline", value: inPipeline, icon: Clock, bgc: "bg-orange-400/20" },
-              { label: "Won / Issued", value: wonCount, icon: CheckCircle2, bgc: "bg-emerald-400/20" },
-              { label: "Active Policies", value: activePolicies, icon: BookOpen, bgc: "bg-cyan-400/20" },
-              { label: "Conversion", value: `${convRate}%`, icon: TrendingUp, bgc: "bg-violet-400/20" },
+              { label: "Total Leads", value: totalLeads, icon: UserPlus, bgc: "bg-blue-500/20", kpi: "total_leads" as KpiType },
+              { label: "In Pipeline", value: inPipeline, icon: Clock, bgc: "bg-orange-400/20", kpi: "in_pipeline" as KpiType },
+              { label: "Won / Issued", value: wonCount, icon: CheckCircle2, bgc: "bg-emerald-400/20", kpi: "won" as KpiType },
+              { label: "Active Policies", value: activePolicies, icon: BookOpen, bgc: "bg-cyan-400/20", kpi: "active_policies" as KpiType },
+              { label: "Conv (This Month)", value: `${convRate}%`, icon: TrendingUp, bgc: "bg-violet-400/20", kpi: "conversion" as KpiType },
             ].map(kpi => (
-              <div key={kpi.label} className={`${kpi.bgc} backdrop-blur-sm rounded-xl px-4 py-3 border border-white/10`}>
+              <div
+                key={kpi.label}
+                className={`${kpi.bgc} backdrop-blur-sm rounded-xl px-4 py-3 border border-white/10 cursor-pointer hover:border-white/30 hover:scale-[1.02] transition-all`}
+                onClick={() => setKpiDetail(kpi.kpi)}
+              >
                 <div className="flex items-center gap-2 mb-1">
                   <kpi.icon className="h-4 w-4 text-white/70" />
                   <span className="text-[10px] uppercase tracking-wider text-white/70">{kpi.label}</span>
@@ -338,6 +377,15 @@ export function InsuranceWorkspace() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <InsuranceKpiDetailDialog
+        open={!!kpiDetail}
+        onOpenChange={(v) => { if (!v) setKpiDetail(null); }}
+        kpiType={kpiDetail}
+        clients={clients}
+        policies={runningPolicies.filter(p => p.status === "active")}
+        monthWiseConversion={monthWiseConversion}
+      />
     </div>
   );
 }
