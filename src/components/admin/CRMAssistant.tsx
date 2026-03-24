@@ -315,10 +315,10 @@ export function CRMAssistant({ userRole, userName, userVertical }: CRMAssistantP
         {/* Quick actions when mid-conversation */}
         {messages.length > 0 && messages.length < 6 && !isLoading && (
           <div className="px-3 pb-1 flex flex-wrap gap-1 shrink-0">
-            {QUICK_ACTIONS.slice(0, 4).map((qa) => (
+            {QUICK_ACTIONS.slice(0, 4).map((qa: any) => (
               <button
                 key={qa.label}
-                onClick={() => sendMessage(qa.prompt)}
+                onClick={() => qa.action ? sendMessage(undefined, qa.action) : sendMessage(qa.prompt)}
                 className="text-[10px] bg-violet-50 dark:bg-violet-950/30 hover:bg-violet-100 dark:hover:bg-violet-950/50 text-violet-700 dark:text-violet-300 rounded-full px-2 py-0.5 transition-colors font-medium"
               >
                 {qa.label}
