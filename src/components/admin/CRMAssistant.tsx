@@ -12,9 +12,15 @@ import { motion, AnimatePresence } from "framer-motion";
 
 type Message = { role: "user" | "assistant"; content: string };
 
+interface CRMAssistantProps {
+  userRole?: string;
+  userName?: string;
+  userVertical?: string;
+}
+
 const COFOUNDER_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-cofounder`;
 
-const QUICK_ACTIONS = [
+const ADMIN_QUICK_ACTIONS = [
   { icon: Zap, label: "What should I do now?", prompt: "What should I focus on RIGHT NOW to maximize revenue today?" },
   { icon: Target, label: "Today's targets", prompt: "Show me today's target status for all team members with specific actions to close gaps" },
   { icon: TrendingUp, label: "Revenue boost", prompt: "Give me 5 immediate revenue-boosting actions I can take in the next 2 hours" },
