@@ -8978,6 +8978,66 @@ export type Database = {
           },
         ]
       }
+      logistics_partners: {
+        Row: {
+          api_base_url: string | null
+          api_email: string | null
+          api_key: string | null
+          api_password_encrypted: string | null
+          api_token: string | null
+          auth_type: string
+          config: Json | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          is_default: boolean | null
+          name: string
+          slug: string
+          supported_services: string[] | null
+          token_expires_at: string | null
+          updated_at: string | null
+          webhook_url: string | null
+        }
+        Insert: {
+          api_base_url?: string | null
+          api_email?: string | null
+          api_key?: string | null
+          api_password_encrypted?: string | null
+          api_token?: string | null
+          auth_type?: string
+          config?: Json | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name: string
+          slug: string
+          supported_services?: string[] | null
+          token_expires_at?: string | null
+          updated_at?: string | null
+          webhook_url?: string | null
+        }
+        Update: {
+          api_base_url?: string | null
+          api_email?: string | null
+          api_key?: string | null
+          api_password_encrypted?: string | null
+          api_token?: string | null
+          auth_type?: string
+          config?: Json | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name?: string
+          slug?: string
+          supported_services?: string[] | null
+          token_expires_at?: string | null
+          updated_at?: string | null
+          webhook_url?: string | null
+        }
+        Relationships: []
+      }
       manager_bonus_tracking: {
         Row: {
           approved_at: string | null
