@@ -703,7 +703,50 @@ ${myTargets.length > 0 ? myTargets.map((t: any) => `• ${t.team_member_name}: $
         throw new Error(`AI error: ${firstCall.status}`);
       }
 
-      const firstResult = await firstCall.json();
+      // Parse response - handle both JSON and SSE formats
+      const contentType = firstCall.headers.get("content-type") || "";
+      let firstResult: any;
+      
+      if (contentType.includes("text/event-stream")) {
+        // Gateway returned SSE despite stream:false — parse SSE to reconstruct message
+        const text = await firstCall.text();
+        const lines = text.split("\n").filter(l => l.startsWith("data: ") && !l.includes("[DONE]"));
+        let toolCalls: any[] = [];
+        let finishReason = "";
+        let messageContent = "";
+        
+        for (const line of lines) {
+          try {
+            const chunk = JSON.parse(line.slice(6));
+            const delta = chunk.choices?.[0]?.delta;
+            if (delta?.content) messageContent += delta.content;
+            if (delta?.tool_calls) {
+              for (const tc of delta.tool_calls) {
+                if (tc.id) {
+                  toolCalls.push({ id: tc.id, type: tc.type, function: { name: tc.function?.name || "", arguments: tc.function?.arguments || "" } });
+                } else if (tc.function?.arguments && toolCalls.length > 0) {
+                  toolCalls[toolCalls.length - 1].function.arguments += tc.function.arguments;
+                }
+              }
+            }
+            if (chunk.choices?.[0]?.finish_reason) finishReason = chunk.choices[0].finish_reason;
+          } catch {}
+        }
+        
+        firstResult = {
+          choices: [{
+            finish_reason: finishReason,
+            message: {
+              role: "assistant",
+              content: messageContent || null,
+              tool_calls: toolCalls.length > 0 ? toolCalls : undefined,
+            }
+          }]
+        };
+      } else {
+        firstResult = await firstCall.json();
+      }
+      
       const choice = firstResult.choices?.[0];
 
       // If AI wants to call tool(s)
