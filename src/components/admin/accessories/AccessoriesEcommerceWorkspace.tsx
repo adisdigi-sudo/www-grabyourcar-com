@@ -23,6 +23,7 @@ import { AccessoriesDiscountCodesPanel } from "./AccessoriesDiscountCodesPanel";
 import { AccessoriesCrossSellPanel } from "./AccessoriesCrossSellPanel";
 import { AccessoriesSettingsPanel } from "./AccessoriesSettingsPanel";
 import { AccessoriesTrackingPanel } from "./AccessoriesTrackingPanel";
+import { LogisticsPartnersPanel } from "./LogisticsPartnersPanel";
 import { AdminLivePreview, PreviewToggleButton } from "../shared/AdminLivePreview";
 
 const SIDEBAR_ITEMS = [
