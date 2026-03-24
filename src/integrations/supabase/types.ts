@@ -3633,6 +3633,66 @@ export type Database = {
         }
         Relationships: []
       }
+      dealer_chat_history: {
+        Row: {
+          attachments: Json | null
+          channel: string
+          created_at: string
+          dealer_company_id: string | null
+          dealer_rep_id: string | null
+          direction: string
+          id: string
+          message: string
+          read_at: string | null
+          sender_name: string | null
+          sender_phone: string | null
+          status: string | null
+        }
+        Insert: {
+          attachments?: Json | null
+          channel?: string
+          created_at?: string
+          dealer_company_id?: string | null
+          dealer_rep_id?: string | null
+          direction?: string
+          id?: string
+          message: string
+          read_at?: string | null
+          sender_name?: string | null
+          sender_phone?: string | null
+          status?: string | null
+        }
+        Update: {
+          attachments?: Json | null
+          channel?: string
+          created_at?: string
+          dealer_company_id?: string | null
+          dealer_rep_id?: string | null
+          direction?: string
+          id?: string
+          message?: string
+          read_at?: string | null
+          sender_name?: string | null
+          sender_phone?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dealer_chat_history_dealer_company_id_fkey"
+            columns: ["dealer_company_id"]
+            isOneToOne: false
+            referencedRelation: "dealer_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dealer_chat_history_dealer_rep_id_fkey"
+            columns: ["dealer_rep_id"]
+            isOneToOne: false
+            referencedRelation: "dealer_representatives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dealer_companies: {
         Row: {
           address: string | null
