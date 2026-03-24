@@ -319,7 +319,7 @@ const navItems: NavItem[] = [
       { id: "accounts-chart", label: "📒 Chart of Accounts", icon: CreditCard },
       { id: "accounts-journal", label: "📓 Journal Entries", icon: FileText },
       { id: "accounts-reports", label: "📊 Reports & P&L", icon: BarChart3 },
-      { id: "accounts-incentive-payouts", label: "🎯 Incentive Payouts", icon: Trophy },
+      { id: "accounts-documents", label: "📂 Documents", icon: FileText },
       { id: "accounts-documents", label: "📂 Documents", icon: FileText },
     ]
   },
