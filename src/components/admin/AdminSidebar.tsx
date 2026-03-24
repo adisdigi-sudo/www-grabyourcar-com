@@ -320,7 +320,7 @@ const navItems: NavItem[] = [
       { id: "accounts-journal", label: "📓 Journal Entries", icon: FileText },
       { id: "accounts-reports", label: "📊 Reports & P&L", icon: BarChart3 },
       { id: "accounts-documents", label: "📂 Documents", icon: FileText },
-      { id: "accounts-documents", label: "📂 Documents", icon: FileText },
+    ]
     ]
   },
 
