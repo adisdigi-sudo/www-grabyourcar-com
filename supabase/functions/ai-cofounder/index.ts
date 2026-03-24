@@ -246,7 +246,7 @@ NOTE: You are viewing data for ${userVertical} vertical only.`;
       return new Response(JSON.stringify({ tasks }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     } else if (action === "quick_insight") {
-      return streamAI([{ role: "system", content: sysPrompt }, { role: "user", content: `Data:\n${ctx}\n\nQuestion: ${question || "What should I focus on right now?"}` }]);
+      return streamAI([{ role: "system", content: sysPrompt }, { role: "user", content: `Data:\n${dataCtx}\n\nQuestion: ${question || "What should I focus on right now?"}` }]);
 
     } else if (action === "scan_risks") {
       const data = await callAI(

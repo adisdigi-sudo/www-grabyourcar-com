@@ -60,7 +60,7 @@ export function AICofounderBanner({ activeTab, userRole, userName, userVertical 
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ action: "quick_insight", question: contextPrompt }),
+        body: JSON.stringify({ action: "quick_insight", question: contextPrompt, user_role: userRole || "super_admin", user_name: userName, vertical: userVertical }),
       });
 
       if (!resp.ok || !resp.body) return;

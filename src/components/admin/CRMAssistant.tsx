@@ -110,7 +110,13 @@ export function CRMAssistant({ userRole, userName, userVertical }: CRMAssistantP
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ action: "quick_insight", question: query }),
+        body: JSON.stringify({
+          action: "quick_insight",
+          question: query,
+          user_role: userRole || "super_admin",
+          user_name: userName,
+          vertical: userVertical,
+        }),
       });
 
       if (!resp.ok) {
