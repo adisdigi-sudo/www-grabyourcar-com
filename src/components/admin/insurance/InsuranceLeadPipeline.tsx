@@ -700,10 +700,30 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                           <div className={cn("w-7 h-7 rounded-full bg-gradient-to-br flex items-center justify-center shrink-0", stage.color)}>
                             <User className="h-3 w-3 text-white" />
                           </div>
-                          <div className="min-w-0">
+                          <div className="min-w-0 flex flex-col gap-0.5">
                             <p className="font-semibold text-xs leading-tight truncate">{client.customer_name || "Unknown"}</p>
-                            <p className="text-[10px] text-muted-foreground">{client.city || "—"}</p>
-                            <JourneyBreadcrumb clientId={client.id} />
+                            <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                              <Select
+                                value={normStage}
+                                onValueChange={(val) => handleMove(client, val)}
+                              >
+                                <SelectTrigger className={cn("h-5 text-[9px] px-1.5 py-0 w-auto min-w-[90px] max-w-[120px] border rounded-full gap-0.5", stage.bg, stage.text, stage.border)}>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {PIPELINE_STAGES.map(s => {
+                                    const SIcon = s.icon;
+                                    return (
+                                      <SelectItem key={s.value} value={s.value} className="text-xs">
+                                        <span className="flex items-center gap-1.5">
+                                          <SIcon className="h-3 w-3" /> {s.label}
+                                        </span>
+                                      </SelectItem>
+                                    );
+                                  })}
+                                </SelectContent>
+                              </Select>
+                            </div>
                           </div>
                         </div>
                       </TableCell>
