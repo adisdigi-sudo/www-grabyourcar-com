@@ -228,7 +228,6 @@ const CarDatabaseWorkspace = lazy(() =>
 const OpenAPIPortal = lazy(() =>
   import("@/components/admin/OpenAPIPortal").then((module) => ({ default: module.OpenAPIPortal })),
 );
-const SuperAdminIncentiveWorkspace = lazy(() => import("@/components/admin/incentives/SuperAdminIncentiveWorkspace"));
 const HREmployeeManagement = lazy(() =>
   import("@/components/admin/hr/HREmployeeManagement").then((module) => ({ default: module.HREmployeeManagement })),
 );
@@ -240,18 +239,6 @@ const HRKPIManagement = lazy(() =>
 );
 const HRTemplates = lazy(() =>
   import("@/components/admin/hr/HRTemplates").then((module) => ({ default: module.HRTemplates })),
-);
-const DocumentVault = lazy(() =>
-  import("@/components/admin/documents/DocumentVault").then((module) => ({ default: module.DocumentVault })),
-);
-const SalesIncentiveDashboard = lazy(() =>
-  import("@/components/admin/incentives/SalesIncentiveDashboard").then((module) => ({ default: module.SalesIncentiveDashboard })),
-);
-const IncentivePayoutApproval = lazy(() =>
-  import("@/components/admin/finance/IncentivePayoutApproval").then((module) => ({ default: module.IncentivePayoutApproval })),
-);
-const DealsPipeline = lazy(() =>
-  import("@/components/admin/deals/DealsPipeline").then((module) => ({ default: module.DealsPipeline })),
 );
 const CRMAssistant = lazy(() =>
   import("@/components/admin/CRMAssistant").then((module) => ({ default: module.CRMAssistant })),
@@ -551,10 +538,6 @@ const AdminLayout = () => {
       case "accounts-reports":
       case "accounts-documents":
         return <ZohoAccountsWorkspace />;
-      case "accounts-incentive-payouts":
-        return <IncentivePayoutApproval />;
-      case "document-vault":
-        return <DocumentVault />;
       // ── HR (10 sub-modules) ──
       case "hr-core":
         return <HRCoreModule />;
@@ -576,12 +559,6 @@ const AdminLayout = () => {
         return <HRAssetModule />;
       case "hr-helpdesk":
         return <HRHelpdeskModule />;
-      case "incentive-management":
-        return <SuperAdminIncentiveWorkspace />;
-      case "incentive-my-dashboard":
-        return <SalesIncentiveDashboard />;
-      case "deals-pipeline":
-        return <DealsPipeline />;
       default:
         return <AdminDashboard />;
     }
@@ -627,7 +604,6 @@ const AdminLayout = () => {
                     "loan-crm",
                     "rental-crm",
                     "hsrp-crm",
-                    "deals-pipeline",
                     "calling-system",
                     "manager-dashboard",
                   ].includes(activeTab)
