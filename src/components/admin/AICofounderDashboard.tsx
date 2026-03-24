@@ -262,7 +262,7 @@ export default function AICofounderDashboard() {
           </div>
         </div>
         <div className="flex gap-1.5 flex-wrap">
-          <Button variant="outline" size="sm" className="gap-1 text-xs h-7" onClick={() => briefing.startStream("daily_briefing", { user_name: "Boss", user_role: "founder" })}><RefreshCcw className={`h-3 w-3 ${briefing.isStreaming ? "animate-spin" : ""}`} /> Briefing</Button>
+          <Button variant="outline" size="sm" className="gap-1 text-xs h-7" onClick={() => briefing.startStream("daily_briefing", { user_name: "Boss", user_role: "super_admin" })}><RefreshCcw className={`h-3 w-3 ${briefing.isStreaming ? "animate-spin" : ""}`} /> Briefing</Button>
           <Button variant="outline" size="sm" className="gap-1 text-xs h-7" onClick={() => genPushes.mutate()} disabled={genPushes.isPending}><Bell className="h-3 w-3" /> Push</Button>
           <Button variant="outline" size="sm" className="gap-1 text-xs h-7" onClick={() => scanRisks.mutate()} disabled={scanRisks.isPending}><ShieldAlert className="h-3 w-3" /> Scan Risks</Button>
           <Button variant="outline" size="sm" className="gap-1 text-xs h-7" onClick={() => findCrossSells.mutate()} disabled={findCrossSells.isPending}><Crosshair className="h-3 w-3" /> Cross-Sell</Button>
