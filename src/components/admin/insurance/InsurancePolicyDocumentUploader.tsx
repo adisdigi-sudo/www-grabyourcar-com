@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Eye, FileText, Loader2, Upload, X } from "lucide-react";
 
@@ -156,18 +155,20 @@ export function InsurancePolicyDocumentUploader({
         <>
           <div className="space-y-1">
             <Label className="text-xs">Select Policy</Label>
-            <Select value={selectedPolicyId} onValueChange={setSelectedPolicyId}>
-              <SelectTrigger className="h-9">
-                <SelectValue placeholder="Choose policy" />
-              </SelectTrigger>
-              <SelectContent>
-                {policies.map((policy) => (
-                  <SelectItem key={policy.id} value={policy.id}>
-                    {(policy.policy_number || "No Policy No") + " • " + (policy.insurer || "Unknown Insurer")}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <select
+              value={selectedPolicyId}
+              onChange={(e) => setSelectedPolicyId(e.target.value)}
+              className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm outline-none ring-offset-background transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <option value="" disabled>
+                Choose policy
+              </option>
+              {policies.map((policy) => (
+                <option key={policy.id} value={policy.id}>
+                  {(policy.policy_number || "No Policy No") + " • " + (policy.insurer || "Unknown Insurer")}
+                </option>
+              ))}
+            </select>
           </div>
 
           {selectedPolicy?.policy_document_url && (
