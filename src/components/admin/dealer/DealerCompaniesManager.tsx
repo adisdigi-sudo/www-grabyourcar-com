@@ -60,7 +60,7 @@ export default function DealerCompaniesManager() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const payload = { ...form, priority_level: Number(form.priority_level) || 1 };
+      const payload = { ...form, priority_level: Number(form.priority_level) || 1, showroom_count: Number(form.showroom_count) || 1, established_year: form.established_year ? Number(form.established_year) : null };
       if (editId) {
         const { error } = await supabase.from("dealer_companies").update(payload).eq("id", editId);
         if (error) throw error;
