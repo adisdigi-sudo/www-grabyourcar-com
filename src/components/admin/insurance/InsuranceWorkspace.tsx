@@ -121,27 +121,36 @@ export function InsuranceWorkspace() {
     }), [allPolicies, today.toDateString()]
   );
 
-  const totalLeads = clients.length;
-  const wonCount = clients.filter(c => {
+  const isWon = (c: Client) => {
     const stage = normalizeStage(c.pipeline_stage, c.lead_status);
     return stage === "won" || stage === "policy_issued";
-  }).length;
-  const lostCount = clients.filter(c => normalizeStage(c.pipeline_stage, c.lead_status) === "lost").length;
+  };
+  const isLost = (c: Client) => normalizeStage(c.pipeline_stage, c.lead_status) === "lost";
+
+  const totalLeads = clients.length;
+  const wonCount = clients.filter(isWon).length;
+  const lostCount = clients.filter(isLost).length;
   const inPipeline = totalLeads - wonCount - lostCount;
 
   // Month-wise conversion calculation
   const monthWiseConversion = useMemo(() => {
     const monthMap: Record<string, { total: number; won: number; renewals: number; rollovers: number }> = {};
+    // Group leads by created_at month for total count
     clients.forEach(c => {
       const d = c.created_at ? new Date(c.created_at) : new Date();
       const key = format(d, "yyyy-MM");
       if (!monthMap[key]) monthMap[key] = { total: 0, won: 0, renewals: 0, rollovers: 0 };
       monthMap[key].total++;
-      const st = normalizeStage(c.pipeline_stage, c.lead_status);
-      if (st === "won" || st === "policy_issued") monthMap[key].won++;
       const src = (c.lead_source || "").toLowerCase();
       if (src.includes("renewal") || src.includes("renew")) monthMap[key].renewals++;
       if (src.includes("rollover") || src.includes("roll")) monthMap[key].rollovers++;
+    });
+    // Group won leads by updated_at (when they were actually converted)
+    clients.filter(isWon).forEach(c => {
+      const d = c.updated_at ? new Date(c.updated_at) : (c.created_at ? new Date(c.created_at) : new Date());
+      const key = format(d, "yyyy-MM");
+      if (!monthMap[key]) monthMap[key] = { total: 0, won: 0, renewals: 0, rollovers: 0 };
+      monthMap[key].won++;
     });
     return Object.entries(monthMap)
       .sort((a, b) => b[0].localeCompare(a[0]))
