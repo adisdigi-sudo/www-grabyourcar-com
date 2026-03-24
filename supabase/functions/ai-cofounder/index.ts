@@ -5,7 +5,14 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const fetchJson = async (url: string, h: Record<string, string>) => (await fetch(url, { headers: h })).json();
+async function safeFetch(url: string, h: Record<string, string>): Promise<any[]> {
+  try {
+    const r = await fetch(url, { headers: h });
+    if (!r.ok) return [];
+    const data = await r.json();
+    return Array.isArray(data) ? data : [];
+  } catch { return []; }
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -19,94 +26,107 @@ serve(async (req) => {
     const body = await req.json();
     const { action, user_name, user_role, vertical, question, target_data, problem_data } = body;
 
-    // Role-based access: determine if user is super_admin/admin or team member
     const isSuperAdmin = !user_role || user_role === "super_admin" || user_role === "admin";
-    const userVertical = vertical || null; // e.g. "insurance", "sales", "self-drive"
+    const userVertical = vertical || null;
 
     const h = { apikey: SK, Authorization: `Bearer ${SK}`, "Content-Type": "application/json" };
     const today = new Date().toISOString().split("T")[0];
-    const cm = today.slice(0, 7); // current month
+    const cm = today.slice(0, 7);
 
-    // Parallel fetch all business data
+    // Parallel fetch all business data with safe error handling
     const [leads, insurance, rentals, hsrp, deals, followUps, pendingTasks, targets, problems, teamMembers, expenses, bankAccounts, invoices, risks, crossSells, mistakes] = await Promise.all([
-      fetchJson(`${SB}/rest/v1/leads?created_at=gte.${today}T00:00:00&select=id,name,source,service_category,status,priority&limit=50`, h),
-      fetchJson(`${SB}/rest/v1/insurance_clients?select=id,customer_name,phone,policy_expiry_date,lead_status,pipeline_stage,follow_up_date,assigned_executive&policy_expiry_date=lte.${new Date(Date.now()+90*86400000).toISOString().split("T")[0]}&policy_expiry_date=gte.${today}&limit=50`, h),
-      fetchJson(`${SB}/rest/v1/rental_bookings?select=id,customer_name,phone,pickup_date,return_date,status,payment_status&return_date=gte.${today}&return_date=lte.${new Date(Date.now()+3*86400000).toISOString().split("T")[0]}&limit=30`, h),
-      fetchJson(`${SB}/rest/v1/hsrp_bookings?select=id,owner_name,registration_number,order_status,payment_status&order_status=neq.completed&limit=30`, h),
-      fetchJson(`${SB}/rest/v1/deals?select=id,deal_number,customer_id,deal_value,payment_status,deal_status,vertical_name,payment_received_amount&deal_status=eq.active&limit=50`, h),
-      fetchJson(`${SB}/rest/v1/leads?select=id,name,phone,follow_up_date,status,assigned_to,service_category&follow_up_date=lte.${today}&status=neq.closed&limit=50`, h),
-      fetchJson(`${SB}/rest/v1/ai_cofounder_tasks?select=id,title,status,priority&due_date=eq.${today}&status=eq.pending&limit=20`, h),
-      fetchJson(`${SB}/rest/v1/team_targets?select=*&month_year=eq.${cm}&limit=100`, h),
-      fetchJson(`${SB}/rest/v1/team_problems?select=*&status=eq.open&limit=20`, h),
-      fetchJson(`${SB}/rest/v1/team_members?select=*&is_active=eq.true&limit=50`, h),
-      fetchJson(`${SB}/rest/v1/expenses?select=id,category,amount,expense_date,vertical_name&month_year=eq.${cm}&limit=200`, h),
-      fetchJson(`${SB}/rest/v1/bank_accounts?select=id,account_name,current_balance,bank_name&is_active=eq.true&limit=10`, h),
-      fetchJson(`${SB}/rest/v1/invoices?select=id,total_amount,status,vertical_name,invoice_date&invoice_date=gte.${cm}-01&limit=200`, h),
-      fetchJson(`${SB}/rest/v1/ai_risk_indicators?select=*&auto_resolved=eq.false&limit=20`, h),
-      fetchJson(`${SB}/rest/v1/ai_cross_sell_suggestions?select=*&status=eq.pending&limit=20`, h),
-      fetchJson(`${SB}/rest/v1/ai_mistake_logs?select=*&status=eq.detected&limit=20`, h),
+      safeFetch(`${SB}/rest/v1/leads?created_at=gte.${today}T00:00:00&select=id,name,phone,source,service_category,status,priority,assigned_to,city&limit=50`, h),
+      safeFetch(`${SB}/rest/v1/insurance_clients?select=id,customer_name,phone,vehicle_number,vehicle_make,vehicle_model,policy_expiry_date,lead_status,pipeline_stage,follow_up_date,assigned_executive,current_insurer,current_premium&policy_expiry_date=lte.${new Date(Date.now()+90*86400000).toISOString().split("T")[0]}&policy_expiry_date=gte.${today}&order=policy_expiry_date.asc&limit=50`, h),
+      safeFetch(`${SB}/rest/v1/rental_bookings?select=id,customer_name,phone,pickup_date,return_date,status,payment_status,total_amount,car_name&return_date=gte.${today}&return_date=lte.${new Date(Date.now()+3*86400000).toISOString().split("T")[0]}&limit=30`, h),
+      safeFetch(`${SB}/rest/v1/hsrp_bookings?select=id,owner_name,registration_number,order_status,payment_status,mobile,service_type&order_status=neq.completed&limit=30`, h),
+      safeFetch(`${SB}/rest/v1/deals?select=id,deal_number,customer_id,deal_value,payment_status,deal_status,vertical_name,payment_received_amount&deal_status=eq.active&limit=50`, h),
+      safeFetch(`${SB}/rest/v1/leads?select=id,name,phone,follow_up_date,status,assigned_to,service_category&follow_up_date=lte.${today}&status=neq.closed&limit=50`, h),
+      safeFetch(`${SB}/rest/v1/ai_cofounder_tasks?select=id,title,status,priority&due_date=eq.${today}&status=eq.pending&limit=20`, h),
+      safeFetch(`${SB}/rest/v1/team_targets?select=*&month_year=eq.${cm}&limit=100`, h),
+      safeFetch(`${SB}/rest/v1/team_problems?select=*&status=eq.open&limit=20`, h),
+      safeFetch(`${SB}/rest/v1/team_members?select=*&is_active=eq.true&limit=50`, h),
+      safeFetch(`${SB}/rest/v1/expenses?select=id,category,amount,expense_date,vertical_name&month_year=eq.${cm}&limit=200`, h),
+      safeFetch(`${SB}/rest/v1/bank_accounts?select=id,account_name,current_balance,bank_name&is_active=eq.true&limit=10`, h),
+      safeFetch(`${SB}/rest/v1/invoices?select=id,total_amount,status,vertical_name,invoice_date&invoice_date=gte.${cm}-01&limit=200`, h),
+      safeFetch(`${SB}/rest/v1/ai_risk_indicators?select=*&auto_resolved=eq.false&limit=20`, h),
+      safeFetch(`${SB}/rest/v1/ai_cross_sell_suggestions?select=*&status=eq.pending&limit=20`, h),
+      safeFetch(`${SB}/rest/v1/ai_mistake_logs?select=*&status=eq.detected&limit=20`, h),
     ]);
 
-    const s = (a: any) => Array.isArray(a) ? a : [];
-
     // Financial calculations
-    const totalRevenue = s(invoices).filter((i: any) => i.status === "paid").reduce((sum: number, i: any) => sum + Number(i.total_amount || 0), 0);
-    const totalExpenses = s(expenses).reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
-    const cashInBank = s(bankAccounts).reduce((sum: number, b: any) => sum + Number(b.current_balance || 0), 0);
+    const totalRevenue = invoices.filter((i: any) => i.status === "paid").reduce((sum: number, i: any) => sum + Number(i.total_amount || 0), 0);
+    const totalExpenses = expenses.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
+    const cashInBank = bankAccounts.reduce((sum: number, b: any) => sum + Number(b.current_balance || 0), 0);
     const netProfit = totalRevenue - totalExpenses;
     const monthlyBurn = totalExpenses;
     const runwayMonths = monthlyBurn > 0 ? Math.round((cashInBank / monthlyBurn) * 10) / 10 : 99;
-    const pendingPayments = s(deals).filter((d: any) => d.payment_status !== "received").reduce((sum: number, d: any) => sum + (Number(d.deal_value || 0) - Number(d.payment_received_amount || 0)), 0);
+    const pendingPayments = deals.filter((d: any) => d.payment_status !== "received").reduce((sum: number, d: any) => sum + (Number(d.deal_value || 0) - Number(d.payment_received_amount || 0)), 0);
 
+    // Build DETAILED context with actual record data
     const ctx = `
-BUSINESS SNAPSHOT (${today}):
-New Leads: ${s(leads).length} | Insurance Renewals (90d): ${s(insurance).length} | Self-Drive Returns (3d): ${s(rentals).length}
-HSRP Pending: ${s(hsrp).length} | Active Deals: ${s(deals).length} | Overdue Follow-ups: ${s(followUps).length}
-Pending Tasks: ${s(pendingTasks).length} | Open Problems: ${s(problems).length} | Active Risks: ${s(risks).length}
-Cross-sell Pending: ${s(crossSells).length} | Unresolved Mistakes: ${s(mistakes).length}
+===== LIVE BUSINESS DATA (${today}) =====
+COUNTS: New Leads Today: ${leads.length} | Insurance Renewals (next 90 days): ${insurance.length} | Self-Drive Returns (3d): ${rentals.length}
+HSRP Pending: ${hsrp.length} | Active Deals: ${deals.length} | Overdue Follow-ups: ${followUps.length}
+Pending Tasks: ${pendingTasks.length} | Open Problems: ${problems.length} | Active Risks: ${risks.length}
 
 💰 FINANCIAL HEALTH (${cm}):
-Revenue: ₹${totalRevenue.toLocaleString()} | Expenses: ₹${totalExpenses.toLocaleString()} | Net Profit: ₹${netProfit.toLocaleString()}
-Cash in Bank: ₹${cashInBank.toLocaleString()} | Monthly Burn: ₹${monthlyBurn.toLocaleString()}
-Runway: ${runwayMonths} months | Pending Payments: ₹${pendingPayments.toLocaleString()}
+Revenue: ₹${totalRevenue.toLocaleString("en-IN")} | Expenses: ₹${totalExpenses.toLocaleString("en-IN")} | Net Profit: ₹${netProfit.toLocaleString("en-IN")}
+Cash in Bank: ₹${cashInBank.toLocaleString("en-IN")} | Monthly Burn: ₹${monthlyBurn.toLocaleString("en-IN")}
+Runway: ${runwayMonths} months | Pending Payments: ₹${pendingPayments.toLocaleString("en-IN")}
 
-TEAM TARGETS (${cm}):
-${s(targets).map((t: any) => `  ${t.team_member_name} [${t.vertical_name}]: ${t.achieved_count}/${t.target_count} (${t.achievement_pct}%) | ₹${t.achieved_revenue}/₹${t.target_revenue}`).join('\n') || 'No targets set'}
+===== INSURANCE RENEWALS (NEXT 90 DAYS) — ${insurance.length} RECORDS =====
+${insurance.length > 0 ? insurance.map((i: any) => `• ${i.customer_name || 'N/A'} | Ph: ${i.phone || 'N/A'} | Vehicle: ${i.vehicle_number || 'N/A'} (${i.vehicle_make || ''} ${i.vehicle_model || ''}) | Expiry: ${i.policy_expiry_date || 'N/A'} | Insurer: ${i.current_insurer || 'N/A'} | Premium: ₹${i.current_premium || 'N/A'} | Stage: ${i.pipeline_stage || 'N/A'} | Exec: ${i.assigned_executive || 'Unassigned'}`).join('\n') : '⚠️ NO INSURANCE RENEWALS FOUND IN DATABASE FOR NEXT 90 DAYS'}
 
-INSURANCE RENEWALS:
-${s(insurance).slice(0,10).map((i: any) => `  ${i.customer_name} (${i.phone}) expires ${i.policy_expiry_date}, stage: ${i.pipeline_stage}`).join('\n') || 'None'}
+===== TODAY'S NEW LEADS — ${leads.length} RECORDS =====
+${leads.length > 0 ? leads.map((l: any) => `• ${l.name || 'N/A'} | Ph: ${l.phone || 'N/A'} | Source: ${l.source || 'N/A'} | Category: ${l.service_category || 'N/A'} | Status: ${l.status || 'N/A'} | Priority: ${l.priority || 'N/A'} | City: ${l.city || 'N/A'}`).join('\n') : '⚠️ NO NEW LEADS TODAY'}
 
-OVERDUE FOLLOW-UPS:
-${s(followUps).slice(0,10).map((f: any) => `  ${f.name} (${f.phone}) due ${f.follow_up_date}, category: ${f.service_category}`).join('\n') || 'None'}
+===== OVERDUE FOLLOW-UPS — ${followUps.length} RECORDS =====
+${followUps.length > 0 ? followUps.map((f: any) => `• ${f.name || 'N/A'} | Ph: ${f.phone || 'N/A'} | Due: ${f.follow_up_date || 'N/A'} | Status: ${f.status || 'N/A'} | Category: ${f.service_category || 'N/A'} | Assigned: ${f.assigned_to || 'Unassigned'}`).join('\n') : '⚠️ NO OVERDUE FOLLOW-UPS'}
 
-SELF-DRIVE RETURNS:
-${s(rentals).map((r: any) => `  ${r.customer_name} (${r.phone}) return: ${r.return_date}, payment: ${r.payment_status}`).join('\n') || 'None'}
+===== SELF-DRIVE RETURNS (NEXT 3 DAYS) — ${rentals.length} RECORDS =====
+${rentals.length > 0 ? rentals.map((r: any) => `• ${r.customer_name || 'N/A'} | Ph: ${r.phone || 'N/A'} | Car: ${r.car_name || 'N/A'} | Return: ${r.return_date || 'N/A'} | Amount: ₹${r.total_amount || 'N/A'} | Payment: ${r.payment_status || 'N/A'}`).join('\n') : '⚠️ NO SELF-DRIVE RETURNS DUE'}
 
-ACTIVE DEALS:
-${s(deals).slice(0,15).map((d: any) => `  Deal #${d.deal_number} ₹${d.deal_value} payment: ${d.payment_status} vertical: ${d.vertical_name}`).join('\n') || 'None'}
+===== HSRP PENDING ORDERS — ${hsrp.length} RECORDS =====
+${hsrp.length > 0 ? hsrp.map((h: any) => `• ${h.owner_name || 'N/A'} | Ph: ${h.mobile || 'N/A'} | Reg: ${h.registration_number || 'N/A'} | Type: ${h.service_type || 'N/A'} | Status: ${h.order_status || 'N/A'} | Payment: ${h.payment_status || 'N/A'}`).join('\n') : '⚠️ NO PENDING HSRP ORDERS'}
 
-ACTIVE RISKS:
-${s(risks).map((r: any) => `  [${r.severity}] ${r.title}: ${r.description}`).join('\n') || 'None'}
+===== ACTIVE DEALS — ${deals.length} RECORDS =====
+${deals.length > 0 ? deals.map((d: any) => `• Deal #${d.deal_number || 'N/A'} | Value: ₹${Number(d.deal_value || 0).toLocaleString("en-IN")} | Received: ₹${Number(d.payment_received_amount || 0).toLocaleString("en-IN")} | Payment: ${d.payment_status || 'N/A'} | Vertical: ${d.vertical_name || 'N/A'}`).join('\n') : '⚠️ NO ACTIVE DEALS'}
 
-BANK ACCOUNTS:
-${s(bankAccounts).map((b: any) => `  ${b.account_name} (${b.bank_name}): ₹${Number(b.current_balance || 0).toLocaleString()}`).join('\n') || 'None'}
-`;
+===== TEAM TARGETS (${cm}) — ${targets.length} RECORDS =====
+${targets.length > 0 ? targets.map((t: any) => `• ${t.team_member_name || 'N/A'} [${t.vertical_name || 'N/A'}]: ${t.achieved_count || 0}/${t.target_count || 0} deals (${t.achievement_pct || 0}%) | ₹${Number(t.achieved_revenue || 0).toLocaleString("en-IN")}/₹${Number(t.target_revenue || 0).toLocaleString("en-IN")}`).join('\n') : '⚠️ NO TARGETS SET THIS MONTH'}
+
+===== BANK ACCOUNTS =====
+${bankAccounts.length > 0 ? bankAccounts.map((b: any) => `• ${b.account_name || 'N/A'} (${b.bank_name || 'N/A'}): ₹${Number(b.current_balance || 0).toLocaleString("en-IN")}`).join('\n') : '⚠️ NO BANK ACCOUNTS CONFIGURED'}
+
+===== ACTIVE RISKS — ${risks.length} =====
+${risks.length > 0 ? risks.map((r: any) => `• [${r.severity || 'N/A'}] ${r.title || 'N/A'}: ${r.description || 'N/A'}`).join('\n') : 'No active risks'}
+
+===== CROSS-SELL PENDING — ${crossSells.length} =====
+${crossSells.length > 0 ? crossSells.map((c: any) => `• ${c.customer_name || 'N/A'} | From: ${c.source_vertical || 'N/A'} → To: ${c.target_vertical || 'N/A'} | Suggestion: ${c.suggestion || 'N/A'}`).join('\n') : 'No pending cross-sells'}
+===== END OF DATA =====`;
 
     // ===== ROLE-BASED SYSTEM PROMPT =====
+    const DATA_ACCURACY_RULES = `
+🚨 CRITICAL DATA ACCURACY RULES — VIOLATION = FAILURE:
+1. ONLY use data shown above between "===== LIVE BUSINESS DATA" and "===== END OF DATA =====".
+2. If a section says "⚠️ NO ... FOUND" or shows 0 records, say EXACTLY THAT — "No records found in the database."
+3. NEVER invent names, phone numbers, vehicle numbers, amounts, or dates.
+4. NEVER assume or estimate data that isn't provided.
+5. If asked about data not in the snapshot, say: "I don't have that data in my current snapshot. Please check the relevant CRM section."
+6. Always quote EXACT names, phones, amounts from the data above.
+7. If count is 0, say "0 records" — don't create fictional records.
+8. When presenting tables, ONLY include rows from actual data above.`;
+
     let sysPrompt: string;
 
     if (isSuperAdmin) {
-      // SUPER ADMIN: Full Co-Founder access — all data, all verticals, all financials
-      sysPrompt = `You are the AI Co-Founder & CEO-level Business Partner of GrabYourCar. You work 24/7 as the most involved, data-obsessed, revenue-focused co-founder any startup could have.
+      sysPrompt = `You are GrabYourCar's AI Co-Founder & CEO-level Business Partner. You work 24/7 as the most involved, data-obsessed, revenue-focused co-founder.
 
 YOUR IDENTITY:
-- You're a 24/7 AI Co-Founder who NEVER sleeps — always watching, analyzing, pushing
-- Address people warmly by name: "Hey ${user_name || 'Boss'}! 🚀"
+- Address warmly: "Hey ${user_name || 'Boss'}! 🚀"
 - Mix Hindi-English naturally like a Delhi startup founder
-- ALWAYS specific — names, numbers, amounts, dates, phone numbers
+- ALWAYS cite exact data — names, numbers, amounts from the database
 - Every suggestion has WHY + IMPACT + REVENUE POTENTIAL
-- You think 10X — not incremental improvements
-- You're obsessed with cash flow, runway, and profitability
 
 YOUR 12 ROLES (ALL ACTIVE 24/7):
 1. 💰 REVENUE ENGINE — Find every ₹ hiding in the business
@@ -122,68 +142,74 @@ YOUR 12 ROLES (ALL ACTIVE 24/7):
 11. 🎯 TARGET ENFORCER — Set, track, push, celebrate targets
 12. 🔔 REMINDER ENGINE — Never let anyone forget anything
 
-RULES:
-- Always calculate revenue impact in ₹
-- Flag risks with severity (🔴 Critical, 🟠 High, 🟡 Medium, 🟢 Low)
-- Full access to ALL team data, financials, reports, every vertical
-- You can discuss profits, expenses, runway, investor metrics, team performance
+REPORT GENERATION:
+- When asked for reports, generate detailed markdown reports with tables, charts descriptions, and actionable insights
+- Include period comparison, trend analysis, and specific recommendations
+- Format reports professionally with headers, tables, and summary sections
+
+${DATA_ACCURACY_RULES}
 
 Current role: SUPER ADMIN / FOUNDER (all verticals)`;
     } else {
-      // TEAM MEMBER: Restricted to their vertical only — NO financial data, NO other team reports
       const verticalLabel = userVertical || "general";
       sysPrompt = `You are the AI Manager & Personal Coach for ${user_name || 'team member'} at GrabYourCar, working in the ${verticalLabel} vertical.
 
 YOUR IDENTITY:
-- You're a friendly, motivating AI manager who helps ${user_name || 'team member'} crush their targets
-- Address them warmly: "Hey ${user_name || 'champ'}! 💪"
+- Friendly, motivating AI manager: "Hey ${user_name || 'champ'}! 💪"
 - Mix Hindi-English naturally
-- Be SPECIFIC — give exact tasks, names, phone numbers, amounts
+- Be SPECIFIC with exact data from database only
 - Push them to become Employee of the Day/Week/Month
-- Celebrate wins, coach on gaps
 
-YOUR ROLE FOR ${(user_name || 'TEAM MEMBER').toUpperCase()}:
-1. 🎯 TARGET TRACKER — Show their personal targets & progress
-2. 📋 DAILY TASK MANAGER — What to do next, who to call, what to follow up
-3. 💪 MOTIVATOR — Push with incentive reminders, leaderboard position
-4. 📞 FOLLOW-UP COACH — Remind about pending calls, renewals, orders
-5. 🏆 PERFORMANCE COACH — Tips to close more deals, improve conversion
-6. 🔔 REMINDER ENGINE — Never miss a follow-up, renewal, or deadline
+YOUR ROLE:
+1. 🎯 TARGET TRACKER — Show personal targets & progress
+2. 📋 DAILY TASK MANAGER — What to do next, who to call
+3. 💪 MOTIVATOR — Push with incentive reminders
+4. 📞 FOLLOW-UP COACH — Remind about pending calls, renewals
+5. 🏆 PERFORMANCE COACH — Tips to close more deals
+6. 🔔 REMINDER ENGINE — Never miss a follow-up or deadline
 
-STRICT RESTRICTIONS — YOU MUST FOLLOW:
+STRICT RESTRICTIONS — MUST FOLLOW:
 🚫 NEVER share company profits, revenue, expenses, margins, or financial data
 🚫 NEVER share other team members' performance, salary, targets, or reports
 🚫 NEVER discuss investor data, runway, burn rate, or company finances
 🚫 NEVER answer questions about other verticals or departments
 🚫 NEVER reveal admin-level business intelligence or strategies
-🚫 If asked about restricted topics, politely say: "That information is restricted to management. Focus on your targets — let me help you crush them! 🎯"
+🚫 If asked about restricted topics, say: "That info is restricted to management. Focus on your targets — let me help you crush them! 🎯"
 
 ONLY ANSWER about:
-✅ Their own vertical (${verticalLabel}) tasks, leads, follow-ups
+✅ Their own ${verticalLabel} tasks, leads, follow-ups
 ✅ Their own targets and achievement progress
-✅ How to close more deals in their vertical
-✅ Renewal reminders, pending orders in their vertical
+✅ How to close more deals in ${verticalLabel}
+✅ Renewal reminders, pending orders in ${verticalLabel}
 ✅ Incentive calculations for THEIR performance
 ✅ Tips and coaching for THEIR role
-✅ General product knowledge and sales techniques
+
+REPORT GENERATION:
+- Generate personal performance reports for their vertical only
+- Show their targets, achievements, and improvement areas
+- Never include other team members' data
+
+${DATA_ACCURACY_RULES}
 
 Current role: ${user_role || 'employee'} in ${verticalLabel}`;
     }
 
-    // For non-admin users, filter the context to only their vertical
+    // For non-admin users, filter the context
     let filteredCtx = ctx;
     if (!isSuperAdmin && userVertical) {
-      // Strip financial health, bank accounts, runway data for non-admins
-      filteredCtx = filteredCtx
-        .replace(/💰 FINANCIAL HEALTH[\s\S]*?(?=TEAM TARGETS|$)/m, '')
-        .replace(/BANK ACCOUNTS:[\s\S]*?(?=\n\n|$)/m, '')
-        .replace(/Runway:.*\n/g, '')
-        .replace(/Pending Payments:.*\n/g, '');
-      // Only show data summary relevant to their vertical
       filteredCtx = `
-YOUR VERTICAL SNAPSHOT (${today}) — ${userVertical}:
-${filteredCtx}
-NOTE: You are viewing data for ${userVertical} vertical only.`;
+===== YOUR VERTICAL DATA (${today}) — ${userVertical} =====
+${userVertical.toLowerCase().includes('insurance') ? `INSURANCE RENEWALS:\n${insurance.length > 0 ? insurance.map((i: any) => `• ${i.customer_name || 'N/A'} | Ph: ${i.phone || 'N/A'} | Vehicle: ${i.vehicle_number || 'N/A'} | Expiry: ${i.policy_expiry_date || 'N/A'} | Stage: ${i.pipeline_stage || 'N/A'}`).join('\n') : '⚠️ NO INSURANCE RENEWALS FOUND'}` : ''}
+${userVertical.toLowerCase().includes('sales') || userVertical.toLowerCase().includes('auto') ? `TODAY'S LEADS:\n${leads.filter((l: any) => !l.service_category || l.service_category?.toLowerCase().includes('car') || l.service_category?.toLowerCase().includes('sale')).map((l: any) => `• ${l.name || 'N/A'} | Ph: ${l.phone || 'N/A'} | Source: ${l.source || 'N/A'} | Status: ${l.status || 'N/A'} | Priority: ${l.priority || 'N/A'}`).join('\n') || '⚠️ NO SALES LEADS TODAY'}` : ''}
+${userVertical.toLowerCase().includes('rental') || userVertical.toLowerCase().includes('self') ? `SELF-DRIVE RETURNS:\n${rentals.length > 0 ? rentals.map((r: any) => `• ${r.customer_name || 'N/A'} | Ph: ${r.phone || 'N/A'} | Car: ${r.car_name || 'N/A'} | Return: ${r.return_date || 'N/A'} | Payment: ${r.payment_status || 'N/A'}`).join('\n') : '⚠️ NO RETURNS DUE'}` : ''}
+${userVertical.toLowerCase().includes('hsrp') ? `HSRP PENDING:\n${hsrp.length > 0 ? hsrp.map((h: any) => `• ${h.owner_name || 'N/A'} | Ph: ${h.mobile || 'N/A'} | Reg: ${h.registration_number || 'N/A'} | Status: ${h.order_status || 'N/A'}`).join('\n') : '⚠️ NO PENDING HSRP ORDERS'}` : ''}
+
+YOUR FOLLOW-UPS:
+${followUps.length > 0 ? followUps.map((f: any) => `• ${f.name || 'N/A'} | Ph: ${f.phone || 'N/A'} | Due: ${f.follow_up_date || 'N/A'} | Category: ${f.service_category || 'N/A'}`).join('\n') : '⚠️ NO PENDING FOLLOW-UPS'}
+
+YOUR TARGETS:
+${targets.filter((t: any) => t.vertical_name?.toLowerCase().includes(userVertical.toLowerCase())).map((t: any) => `• ${t.team_member_name}: ${t.achieved_count || 0}/${t.target_count || 0} deals | ₹${Number(t.achieved_revenue || 0).toLocaleString("en-IN")}/₹${Number(t.target_revenue || 0).toLocaleString("en-IN")}`).join('\n') || '⚠️ NO TARGETS SET'}
+===== END OF DATA =====`;
     }
 
     // Streaming AI helper
@@ -191,7 +217,7 @@ NOTE: You are viewing data for ${userVertical} vertical only.`;
       const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "google/gemini-3-flash-preview", messages: msgs, stream: true }),
+        body: JSON.stringify({ model: "google/gemini-3-flash-preview", messages: msgs, stream: true, max_tokens: 4000 }),
       });
       if (!r.ok) {
         if (r.status === 429) return new Response(JSON.stringify({ error: "Rate limited" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -201,9 +227,8 @@ NOTE: You are viewing data for ${userVertical} vertical only.`;
       return new Response(r.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
     }
 
-    // Non-streaming AI with optional tools
     async function callAI(msgs: any[], tools?: any[], tc?: any) {
-      const b: any = { model: "google/gemini-3-flash-preview", messages: msgs };
+      const b: any = { model: "google/gemini-3-flash-preview", messages: msgs, max_tokens: 4000 };
       if (tools) { b.tools = tools; b.tool_choice = tc; }
       const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
@@ -218,15 +243,14 @@ NOTE: You are viewing data for ${userVertical} vertical only.`;
       try { return JSON.parse(data.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments || "{}"); } catch { return {}; }
     }
 
-    // ========== ACTIONS ==========
-
-    // Use filtered context for non-admins
     const dataCtx = isSuperAdmin ? ctx : filteredCtx;
+
+    // ========== ACTIONS ==========
 
     if (action === "daily_briefing") {
       const briefingPrompt = isSuperAdmin
-        ? `Generate COMPREHENSIVE daily briefing. Data:\n${dataCtx}\n\nInclude:\n1. 🌅 GOOD MORNING (motivational + key numbers + financial health)\n2. 🏦 FINANCIAL PULSE (revenue, expenses, runway, cash position)\n3. 🎯 TARGET STATUS (who's on track, who needs push)\n4. 🔥 URGENT NOW (immediate revenue actions)\n5. 📋 TOP 10 TASKS (with names, phones, amounts)\n6. 💰 REVENUE OPPORTUNITIES (cross-sell every customer)\n7. ⚠️ RISK RADAR (all detected risks with severity)\n8. 🔍 MISTAKES FOUND (process failures, missed opportunities)\n9. 👥 TEAM COACHING (specific per-member guidance)\n10. 📈 INVESTOR METRICS (MRR, growth, unit economics)\n11. 🎯 SUCCESS = (what must be achieved today)`
-        : `Generate daily briefing for ${user_name || 'team member'} in ${userVertical} vertical ONLY. Data:\n${dataCtx}\n\nInclude:\n1. 🌅 GOOD MORNING ${user_name || ''}! (motivational)\n2. 🎯 YOUR TARGETS TODAY (personal targets & progress)\n3. 📋 YOUR TOP TASKS (specific calls, follow-ups, orders)\n4. 💪 INCENTIVE UPDATE (what you earn if you close these)\n5. 🏆 TIPS TO WIN (how to close more in ${userVertical})\n6. 🔔 REMINDERS (renewals, follow-ups, deadlines)\n7. 🎯 SUCCESS = (what YOU must achieve today to be Employee of the Day)`;
+        ? `Generate COMPREHENSIVE daily briefing using ONLY the data provided below. Data:\n${dataCtx}\n\nInclude:\n1. 🌅 GOOD MORNING (key numbers from data)\n2. 🏦 FINANCIAL PULSE (exact numbers from data)\n3. 🎯 TARGET STATUS (from team targets data)\n4. 🔥 URGENT NOW (from overdue follow-ups data)\n5. 📋 TOP 10 TASKS (with exact names, phones from data)\n6. 💰 REVENUE OPPORTUNITIES (from active deals data)\n7. ⚠️ RISK RADAR (from risks data)\n8. 🔍 MISTAKES FOUND (from mistakes data)\n9. 👥 TEAM STATUS (from targets data)\n10. 🎯 SUCCESS = (what must be achieved today)\n\nIMPORTANT: If any section has 0 records, say "No data available" — do NOT make up records.`
+        : `Generate daily briefing for ${user_name || 'team member'} in ${userVertical} vertical ONLY. Data:\n${dataCtx}\n\nInclude:\n1. 🌅 GOOD MORNING ${user_name || ''}!\n2. 🎯 YOUR TARGETS TODAY\n3. 📋 YOUR TOP TASKS (exact names, phones from data)\n4. 💪 INCENTIVE UPDATE\n5. 🏆 TIPS TO WIN\n6. 🔔 REMINDERS\n7. 🎯 SUCCESS = what YOU must achieve today\n\nIMPORTANT: Only use data from above. If 0 records, say so.`;
       return streamAI([
         { role: "system", content: sysPrompt },
         { role: "user", content: briefingPrompt }
@@ -234,7 +258,7 @@ NOTE: You are viewing data for ${userVertical} vertical only.`;
 
     } else if (action === "suggest_tasks") {
       const data = await callAI(
-        [{ role: "system", content: sysPrompt }, { role: "user", content: `Data:\n${ctx}\n\nGenerate 15-20 specific tasks covering ALL verticals. Include target-push tasks, cross-sell tasks, risk-mitigation tasks, follow-up tasks, and mistake-fixing tasks.` }],
+        [{ role: "system", content: sysPrompt }, { role: "user", content: `Data:\n${ctx}\n\nGenerate 15-20 specific tasks from ACTUAL data. Each task must reference a real record from the data above. Do NOT create tasks about fictional leads/customers.` }],
         [{ type: "function", function: { name: "generate_tasks", description: "Generate tasks", parameters: { type: "object", properties: { tasks: { type: "array", items: { type: "object", properties: { title: { type: "string" }, description: { type: "string" }, priority: { type: "string", enum: ["urgent","high","medium","low"] }, task_type: { type: "string", enum: ["follow_up","renewal","order_processing","payment_collection","car_return","cross_sell","new_lead","approval","target_push","coaching","problem_solving","risk_mitigation","mistake_fix","investor_prep","ecommerce"] }, vertical: { type: "string" }, team_member_name: { type: "string" }, ai_suggestion: { type: "string" } }, required: ["title","description","priority","task_type","vertical"], additionalProperties: false } } }, required: ["tasks"], additionalProperties: false } } }],
         { type: "function", function: { name: "generate_tasks" } }
       );
@@ -246,12 +270,21 @@ NOTE: You are viewing data for ${userVertical} vertical only.`;
       return new Response(JSON.stringify({ tasks }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     } else if (action === "quick_insight") {
-      return streamAI([{ role: "system", content: sysPrompt }, { role: "user", content: `Data:\n${dataCtx}\n\nQuestion: ${question || "What should I focus on right now?"}` }]);
+      return streamAI([{ role: "system", content: sysPrompt }, { role: "user", content: `Here is the ACTUAL live database data. Use ONLY this data to answer:\n${dataCtx}\n\nQuestion: ${question || "What should I focus on right now?"}` }]);
+
+    } else if (action === "generate_report") {
+      const reportPrompt = isSuperAdmin
+        ? `Generate a detailed ${body.report_type || 'performance'} report using ONLY the data below:\n${dataCtx}\n\nReport requirements:\n1. 📊 EXECUTIVE SUMMARY with exact numbers\n2. 🎯 TARGET vs ACHIEVEMENT table (from team targets data)\n3. 💰 REVENUE BREAKDOWN by vertical (from deals/invoices data)\n4. 📈 LEAD FUNNEL (from leads data)\n5. 🛡️ INSURANCE PIPELINE (from insurance data — exact records)\n6. 🚗 SELF-DRIVE STATUS (from rentals data)\n7. 🏷️ HSRP ORDERS (from hsrp data)\n8. 🏆 TOP PERFORMERS\n9. ⚠️ RISKS & ACTION ITEMS\n10. 📋 RECOMMENDATIONS\n\nFormat as a professional markdown report with tables. ONLY use real data — if a section has 0 records, state that clearly.`
+        : `Generate a personal ${body.report_type || 'performance'} report for ${user_name} in ${userVertical} using ONLY this data:\n${dataCtx}\n\nInclude: targets, achievements, pending tasks, improvement areas. ONLY use real data.`;
+      return streamAI([
+        { role: "system", content: sysPrompt },
+        { role: "user", content: reportPrompt }
+      ]);
 
     } else if (action === "scan_risks") {
       const data = await callAI(
-        [{ role: "system", content: sysPrompt + "\n\nYou are the RISK RADAR. Scan ALL business data for risks, problems, and threats. Be thorough — financial risks, operational risks, customer churn risks, compliance risks, team risks." },
-         { role: "user", content: `Scan for ALL risks:\n${ctx}` }],
+        [{ role: "system", content: sysPrompt + "\n\nScan ALL business data for REAL risks based on actual records. Do NOT invent risks — only flag issues visible in the data." },
+         { role: "user", content: `Scan for risks in this ACTUAL data:\n${ctx}` }],
         [{ type: "function", function: { name: "detect_risks", description: "Detect business risks", parameters: { type: "object", properties: { risks: { type: "array", items: { type: "object", properties: { risk_type: { type: "string", enum: ["financial","operational","customer_churn","compliance","team","revenue_loss","cash_flow","inventory"] }, severity: { type: "string", enum: ["critical","high","medium","low"] }, vertical_name: { type: "string" }, title: { type: "string" }, description: { type: "string" }, impact_amount: { type: "number" }, recommended_action: { type: "string" } }, required: ["risk_type","severity","title","description","recommended_action"], additionalProperties: false } } }, required: ["risks"], additionalProperties: false } } }],
         { type: "function", function: { name: "detect_risks" } }
       );
@@ -264,8 +297,8 @@ NOTE: You are viewing data for ${userVertical} vertical only.`;
 
     } else if (action === "find_cross_sells") {
       const data = await callAI(
-        [{ role: "system", content: sysPrompt + "\n\nYou are the CROSS-SELL MACHINE. Analyze EVERY customer across ALL verticals. Find opportunities where a customer in one vertical can be sold services from another vertical. Be specific with names, phones, amounts." },
-         { role: "user", content: `Find cross-sell opportunities:\n${ctx}` }],
+        [{ role: "system", content: sysPrompt + "\n\nFind cross-sell opportunities from ACTUAL customer data only. Use real names and phones from the data." },
+         { role: "user", content: `Find cross-sell opportunities from REAL data:\n${ctx}` }],
         [{ type: "function", function: { name: "find_cross_sells", description: "Find cross-sell opportunities", parameters: { type: "object", properties: { suggestions: { type: "array", items: { type: "object", properties: { customer_name: { type: "string" }, customer_phone: { type: "string" }, source_vertical: { type: "string" }, target_vertical: { type: "string" }, suggestion: { type: "string" }, potential_revenue: { type: "number" } }, required: ["customer_name","source_vertical","target_vertical","suggestion"], additionalProperties: false } } }, required: ["suggestions"], additionalProperties: false } } }],
         { type: "function", function: { name: "find_cross_sells" } }
       );
@@ -278,8 +311,8 @@ NOTE: You are viewing data for ${userVertical} vertical only.`;
 
     } else if (action === "detect_mistakes") {
       const data = await callAI(
-        [{ role: "system", content: sysPrompt + "\n\nYou are the MISTAKE DETECTIVE. Find ALL operational mistakes, missed opportunities, process failures, and inefficiencies. Be constructive — focus on the fix." },
-         { role: "user", content: `Detect mistakes and inefficiencies:\n${ctx}` }],
+        [{ role: "system", content: sysPrompt + "\n\nFind mistakes and inefficiencies from ACTUAL data only." },
+         { role: "user", content: `Detect mistakes in REAL data:\n${ctx}` }],
         [{ type: "function", function: { name: "detect_mistakes", description: "Detect mistakes", parameters: { type: "object", properties: { mistakes: { type: "array", items: { type: "object", properties: { mistake_type: { type: "string", enum: ["missed_followup","delayed_payment","process_failure","missed_renewal","inventory_issue","pricing_error","team_gap","communication_failure"] }, vertical_name: { type: "string" }, team_member_name: { type: "string" }, description: { type: "string" }, impact: { type: "string" }, ai_fix_suggestion: { type: "string" } }, required: ["mistake_type","description","ai_fix_suggestion"], additionalProperties: false } } }, required: ["mistakes"], additionalProperties: false } } }],
         { type: "function", function: { name: "detect_mistakes" } }
       );
@@ -291,31 +324,29 @@ NOTE: You are viewing data for ${userVertical} vertical only.`;
       return new Response(JSON.stringify({ mistakes: detected }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     } else if (action === "calculate_runway") {
-      // Save snapshot
       await fetch(`${SB}/rest/v1/ai_runway_snapshots`, { method: "POST", headers: { ...h, Prefer: "return=minimal" },
         body: JSON.stringify({ snapshot_date: today, total_revenue: totalRevenue, total_expenses: totalExpenses, net_profit: netProfit, cash_in_bank: cashInBank, monthly_burn_rate: monthlyBurn, runway_months: runwayMonths }) });
-
       return streamAI([
-        { role: "system", content: sysPrompt + "\n\nYou are the CFO BRAIN. Analyze financial health deeply. Calculate runway, profitability, and give specific recommendations." },
-        { role: "user", content: `Analyze financial health:\n${ctx}\n\nCalculated metrics:\n- Monthly Revenue: ₹${totalRevenue.toLocaleString()}\n- Monthly Expenses: ₹${totalExpenses.toLocaleString()}\n- Net Profit: ₹${netProfit.toLocaleString()}\n- Cash in Bank: ₹${cashInBank.toLocaleString()}\n- Burn Rate: ₹${monthlyBurn.toLocaleString()}/month\n- Runway: ${runwayMonths} months\n- Pending Payments: ₹${pendingPayments.toLocaleString()}\n\nGive:\n1. 🏦 FINANCIAL HEALTH SCORE (1-10)\n2. 💰 CASH FLOW ANALYSIS\n3. ⚠️ RUNWAY ALERT (if <6 months, urgent plan)\n4. 📉 EXPENSE OPTIMIZATION (cut what)\n5. 📈 REVENUE ACCELERATION (grow what)\n6. 🤝 INVESTOR READINESS SCORE\n7. 📋 ACTION PLAN (next 30 days)` }
+        { role: "system", content: sysPrompt },
+        { role: "user", content: `Analyze financial health using EXACT data:\n${ctx}\n\nGive:\n1. 🏦 FINANCIAL HEALTH SCORE (1-10)\n2. 💰 CASH FLOW ANALYSIS\n3. ⚠️ RUNWAY ALERT\n4. 📉 EXPENSE OPTIMIZATION\n5. 📈 REVENUE ACCELERATION\n6. 📋 ACTION PLAN (30 days)` }
       ]);
 
     } else if (action === "investor_prep") {
       return streamAI([
-        { role: "system", content: sysPrompt + "\n\nYou are the INVESTOR READINESS advisor. Prepare pitch metrics, identify gaps, and suggest investor outreach strategy." },
-        { role: "user", content: `Prepare investor readiness report:\n${ctx}\n\nFinancials: Revenue ₹${totalRevenue.toLocaleString()}, Expenses ₹${totalExpenses.toLocaleString()}, Runway ${runwayMonths}mo\n\nGive:\n1. 📊 KEY METRICS FOR INVESTORS (MRR, growth, customers, verticals)\n2. 💪 STRENGTHS to highlight\n3. ⚠️ GAPS to fix before pitching\n4. 🎯 IDEAL INVESTOR PROFILE\n5. 📧 EMAIL TEMPLATE for investor outreach\n6. 📋 PITCH DECK OUTLINE\n7. 🗓️ 30-DAY INVESTOR READINESS PLAN` }
+        { role: "system", content: sysPrompt },
+        { role: "user", content: `Prepare investor readiness using EXACT data:\n${ctx}\n\nGive: Key metrics, strengths, gaps, ideal investor profile, email template, pitch deck outline.` }
       ]);
 
     } else if (action === "ecommerce_autopilot") {
       return streamAI([
-        { role: "system", content: sysPrompt + "\n\nYou are the E-COMMERCE AUTOPILOT. Manage inventory, suggest new products, optimize pricing, and push shipping/fulfillment." },
-        { role: "user", content: `E-commerce autopilot analysis:\n${ctx}\n\nGive:\n1. 📦 INVENTORY STATUS (what to restock, what's slow-moving)\n2. 🏷️ PRICING OPTIMIZATION (margin analysis)\n3. 🆕 NEW PRODUCT SUGGESTIONS (based on customer data)\n4. 📊 SALES ANALYTICS (best sellers, trends)\n5. 🚚 SHIPPING & FULFILLMENT (pending, delays)\n6. 💡 REVENUE BOOSTERS (bundles, offers, seasonal)\n7. 🤖 AUTO-ACTIONS RECOMMENDED` }
+        { role: "system", content: sysPrompt },
+        { role: "user", content: `E-commerce autopilot analysis using EXACT data:\n${ctx}\n\nGive: Inventory status, pricing, new products, sales analytics, shipping, revenue boosters.` }
       ]);
 
     } else if (action === "solve_problem") {
       const pd = problem_data || {};
       const data = await callAI(
-        [{ role: "system", content: sysPrompt + "\n\nSolve the team's problem with data-driven solutions. Only escalate if it needs budget/policy/hiring decisions." },
+        [{ role: "system", content: sysPrompt + "\n\nSolve with data-driven solutions. Escalate only if it needs budget/policy/hiring decisions." },
          { role: "user", content: `Problem from ${pd.reported_by || 'team'} [${pd.vertical || 'general'}]: ${pd.description || ''}\n\nData:\n${ctx}` }],
         [{ type: "function", function: { name: "solve_problem", description: "Solve problem", parameters: { type: "object", properties: { solution: { type: "string" }, can_solve_automatically: { type: "boolean" }, escalation_reason: { type: "string" }, action_items: { type: "array", items: { type: "string" } } }, required: ["solution","can_solve_automatically"], additionalProperties: false } } }],
         { type: "function", function: { name: "solve_problem" } }
@@ -327,16 +358,10 @@ NOTE: You are viewing data for ${userVertical} vertical only.`;
       }
       return new Response(JSON.stringify(sol), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    } else if (action === "generate_report") {
-      return streamAI([
-        { role: "system", content: sysPrompt + "\n\nGenerate detailed performance report with target achievement, revenue analysis, team performance, and recommendations." },
-        { role: "user", content: `Generate ${body.report_type || 'weekly'} report for ${body.period || cm}:\n${ctx}\n\nInclude:\n1. 📊 EXECUTIVE SUMMARY\n2. 🎯 TARGET vs ACHIEVEMENT\n3. 💰 REVENUE & P&L BREAKDOWN\n4. 🏆 TOP PERFORMERS & INCENTIVE\n5. ⚠️ UNDERPERFORMERS & COACHING\n6. 📈 TRENDS & PREDICTIONS\n7. 🎯 NEXT PERIOD TARGETS` }
-      ]);
-
     } else if (action === "team_coaching") {
       return streamAI([
-        { role: "system", content: sysPrompt + `\n\nPersonal coach for ${body.member_name || 'team member'}. Warm, specific, action-oriented.` },
-        { role: "user", content: `Coach ${body.member_name || ''} (${body.member_vertical || ''}):\n${ctx}\n\nGive personal daily plan with exact tasks, calls, targets.` }
+        { role: "system", content: sysPrompt },
+        { role: "user", content: `Coach ${body.member_name || ''} (${body.member_vertical || ''}) using EXACT data:\n${ctx}\n\nGive personal daily plan with exact tasks from actual data.` }
       ]);
 
     } else if (action === "set_targets") {
@@ -353,8 +378,8 @@ NOTE: You are viewing data for ${userVertical} vertical only.`;
 
     } else if (action === "generate_pushes") {
       const data = await callAI(
-        [{ role: "system", content: sysPrompt + "\n\nGenerate personalized daily pushes for EVERY team member." },
-         { role: "user", content: `Generate pushes:\n${ctx}` }],
+        [{ role: "system", content: sysPrompt + "\n\nGenerate personalized daily pushes using ACTUAL team and data records." },
+         { role: "user", content: `Generate pushes from REAL data:\n${ctx}` }],
         [{ type: "function", function: { name: "gen_pushes", description: "Generate pushes", parameters: { type: "object", properties: { pushes: { type: "array", items: { type: "object", properties: { team_member_name: { type: "string" }, push_type: { type: "string", enum: ["daily_reminder","target_push","follow_up","renewal_alert","car_return","payment_due","coaching_tip","incentive_update","risk_alert","mistake_alert"] }, message: { type: "string" }, vertical_name: { type: "string" } }, required: ["team_member_name","push_type","message"], additionalProperties: false } } }, required: ["pushes"], additionalProperties: false } } }],
         { type: "function", function: { name: "gen_pushes" } }
       );
