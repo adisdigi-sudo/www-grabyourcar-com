@@ -415,6 +415,259 @@ ${myTargets.length > 0 ? myTargets.map((t: any) => `• ${t.team_member_name}: $
 ===== END OF DATA =====`;
     }
 
+    // ===== WRITE ACTIONS — Let AI actually do things =====
+    async function executeWriteAction(actionName: string, params: any): Promise<string> {
+      try {
+        if (actionName === "add_insurance_lead") {
+          const phone = (params.phone || "").replace(/\D/g, "").replace(/^91/, "");
+          if (!phone || phone.length < 10) return "❌ Invalid phone number provided.";
+          // Check if client exists
+          const existing = await safeFetch(`${SB}/rest/v1/insurance_clients?phone=eq.${phone}&select=id,customer_name&limit=1`, h);
+          if (existing.length > 0) {
+            // Update existing
+            const updates: any = {};
+            if (params.customer_name) updates.customer_name = params.customer_name;
+            if (params.vehicle_number) updates.vehicle_number = params.vehicle_number;
+            if (params.vehicle_make) updates.vehicle_make = params.vehicle_make;
+            if (params.vehicle_model) updates.vehicle_model = params.vehicle_model;
+            if (params.vehicle_year) updates.vehicle_year = params.vehicle_year;
+            if (params.current_insurer) updates.current_insurer = params.current_insurer;
+            if (params.current_policy_type) updates.current_policy_type = params.current_policy_type;
+            if (params.policy_expiry_date) updates.policy_expiry_date = params.policy_expiry_date;
+            if (params.email) updates.email = params.email;
+            if (params.notes) updates.notes = params.notes;
+            if (params.vehicle_color) updates.vehicle_color = params.vehicle_color;
+            updates.updated_at = new Date().toISOString();
+            const r = await fetch(`${SB}/rest/v1/insurance_clients?id=eq.${existing[0].id}`, { method: "PATCH", headers: { ...h, Prefer: "return=minimal" }, body: JSON.stringify(updates) });
+            if (!r.ok) return `❌ Failed to update client: ${await r.text()}`;
+            // Log activity
+            await fetch(`${SB}/rest/v1/insurance_activity_log`, { method: "POST", headers: { ...h, Prefer: "return=minimal" }, body: JSON.stringify({ client_id: existing[0].id, activity_type: "lead_updated", title: "Lead updated by AI Co-Founder", description: `Updated info for ${params.customer_name || existing[0].customer_name}` }) });
+            return `✅ Updated existing client "${existing[0].customer_name || params.customer_name}" (ID: ${existing[0].id}). Phone: ${phone}`;
+          } else {
+            // Create new
+            const insertData: any = {
+              phone,
+              customer_name: params.customer_name || "New Lead",
+              lead_source: params.lead_source || "ai_cofounder",
+              pipeline_stage: "new_lead",
+              lead_status: "new",
+              priority: params.priority || "medium",
+            };
+            if (params.email) insertData.email = params.email;
+            if (params.vehicle_number) insertData.vehicle_number = params.vehicle_number;
+            if (params.vehicle_make) insertData.vehicle_make = params.vehicle_make;
+            if (params.vehicle_model) insertData.vehicle_model = params.vehicle_model;
+            if (params.vehicle_year) insertData.vehicle_year = params.vehicle_year;
+            if (params.current_insurer) insertData.current_insurer = params.current_insurer;
+            if (params.current_policy_type) insertData.current_policy_type = params.current_policy_type;
+            if (params.policy_expiry_date) insertData.policy_expiry_date = params.policy_expiry_date;
+            if (params.notes) insertData.notes = params.notes;
+            if (params.vehicle_color) insertData.vehicle_color = params.vehicle_color;
+            const r = await fetch(`${SB}/rest/v1/insurance_clients`, { method: "POST", headers: { ...h, Prefer: "return=representation" }, body: JSON.stringify(insertData) });
+            if (!r.ok) return `❌ Failed to add lead: ${await r.text()}`;
+            const created = await r.json();
+            const clientId = Array.isArray(created) ? created[0]?.id : created?.id;
+            if (clientId) {
+              await fetch(`${SB}/rest/v1/insurance_activity_log`, { method: "POST", headers: { ...h, Prefer: "return=minimal" }, body: JSON.stringify({ client_id: clientId, activity_type: "lead_created", title: "New lead added by AI Co-Founder", description: `${params.customer_name} - ${params.vehicle_make || ''} ${params.vehicle_model || ''}` }) });
+            }
+            return `✅ New insurance lead added! Name: ${params.customer_name}, Phone: ${phone}, Vehicle: ${params.vehicle_make || ''} ${params.vehicle_model || ''}${params.policy_expiry_date ? ', Expiry: ' + params.policy_expiry_date : ''}`;
+          }
+        }
+
+        if (actionName === "update_insurance_client") {
+          if (!params.client_id && !params.phone) return "❌ Need client_id or phone to update.";
+          let clientId = params.client_id;
+          if (!clientId && params.phone) {
+            const phone = params.phone.replace(/\D/g, "").replace(/^91/, "");
+            const found = await safeFetch(`${SB}/rest/v1/insurance_clients?phone=eq.${phone}&select=id&limit=1`, h);
+            if (found.length === 0) return `❌ No client found with phone ${phone}`;
+            clientId = found[0].id;
+          }
+          const updates: any = { updated_at: new Date().toISOString() };
+          for (const key of ["customer_name","vehicle_number","vehicle_make","vehicle_model","vehicle_year","current_insurer","current_policy_type","policy_expiry_date","current_premium","lead_status","pipeline_stage","follow_up_date","assigned_executive","notes","email","ncb_percentage","vehicle_color"]) {
+            if (params[key] !== undefined) updates[key] = params[key];
+          }
+          const r = await fetch(`${SB}/rest/v1/insurance_clients?id=eq.${clientId}`, { method: "PATCH", headers: { ...h, Prefer: "return=minimal" }, body: JSON.stringify(updates) });
+          if (!r.ok) return `❌ Update failed: ${await r.text()}`;
+          return `✅ Client ${clientId} updated successfully.`;
+        }
+
+        if (actionName === "add_general_lead") {
+          const phone = (params.phone || "").replace(/\D/g, "").replace(/^91/, "");
+          if (!phone || phone.length < 10) return "❌ Invalid phone number.";
+          const insertData: any = {
+            customer_name: params.name || params.customer_name || "New Lead",
+            phone,
+            source: params.source || "ai_cofounder",
+            status: "new",
+            priority: params.priority || "medium",
+            service_category: params.service_category || null,
+            email: params.email || null,
+            city: params.city || null,
+            car_model: params.car_model || null,
+            notes: params.notes || null,
+          };
+          const r = await fetch(`${SB}/rest/v1/leads`, { method: "POST", headers: { ...h, Prefer: "return=representation" }, body: JSON.stringify(insertData) });
+          if (!r.ok) return `❌ Failed: ${await r.text()}`;
+          return `✅ Lead added: ${insertData.customer_name} (${phone})`;
+        }
+
+        if (actionName === "update_lead_status") {
+          if (!params.lead_id) return "❌ Need lead_id.";
+          const updates: any = { updated_at: new Date().toISOString() };
+          if (params.status) updates.status = params.status;
+          if (params.priority) updates.priority = params.priority;
+          if (params.assigned_to) updates.assigned_to = params.assigned_to;
+          if (params.notes) updates.notes = params.notes;
+          const r = await fetch(`${SB}/rest/v1/leads?id=eq.${params.lead_id}`, { method: "PATCH", headers: { ...h, Prefer: "return=minimal" }, body: JSON.stringify(updates) });
+          if (!r.ok) return `❌ Update failed.`;
+          return `✅ Lead ${params.lead_id} updated.`;
+        }
+
+        if (actionName === "set_follow_up") {
+          if (!params.client_id && !params.phone) return "❌ Need client_id or phone.";
+          let clientId = params.client_id;
+          if (!clientId && params.phone) {
+            const phone = params.phone.replace(/\D/g, "").replace(/^91/, "");
+            const found = await safeFetch(`${SB}/rest/v1/insurance_clients?phone=eq.${phone}&select=id&limit=1`, h);
+            if (found.length === 0) return `❌ No client found with phone ${phone}`;
+            clientId = found[0].id;
+          }
+          const r = await fetch(`${SB}/rest/v1/insurance_clients?id=eq.${clientId}`, { method: "PATCH", headers: { ...h, Prefer: "return=minimal" }, body: JSON.stringify({ follow_up_date: params.follow_up_date, updated_at: new Date().toISOString() }) });
+          if (!r.ok) return `❌ Failed to set follow-up.`;
+          return `✅ Follow-up set for ${params.follow_up_date} on client ${clientId}.`;
+        }
+
+        return `❌ Unknown action: ${actionName}`;
+      } catch (err) {
+        console.error("Write action error:", err);
+        return `❌ Error: ${err instanceof Error ? err.message : "Unknown error"}`;
+      }
+    }
+
+    const WRITE_TOOLS = [
+      {
+        type: "function",
+        function: {
+          name: "add_insurance_lead",
+          description: "Add a new insurance lead/client to the CRM. Use when user says 'add lead', 'add client', 'create entry', etc.",
+          parameters: {
+            type: "object",
+            properties: {
+              customer_name: { type: "string", description: "Customer/company name" },
+              phone: { type: "string", description: "10-digit mobile number" },
+              email: { type: "string", description: "Email address" },
+              vehicle_number: { type: "string", description: "Vehicle registration number" },
+              vehicle_make: { type: "string", description: "Vehicle brand like Hyundai, Maruti, etc." },
+              vehicle_model: { type: "string", description: "Vehicle model like Creta, Swift, etc." },
+              vehicle_year: { type: "number", description: "Manufacturing year" },
+              vehicle_color: { type: "string", description: "Vehicle color" },
+              current_insurer: { type: "string", description: "Current insurance company" },
+              current_policy_type: { type: "string", description: "Policy type: comprehensive, third_party, own_damage" },
+              policy_expiry_date: { type: "string", description: "Policy expiry date in YYYY-MM-DD format" },
+              notes: { type: "string", description: "Additional notes" },
+              priority: { type: "string", enum: ["low","medium","high","urgent"], description: "Lead priority" },
+              lead_source: { type: "string", description: "Source of lead" },
+            },
+            required: ["customer_name", "phone"],
+            additionalProperties: false,
+          }
+        }
+      },
+      {
+        type: "function",
+        function: {
+          name: "update_insurance_client",
+          description: "Update an existing insurance client's information. Use when user says 'update', 'change', 'modify' client data.",
+          parameters: {
+            type: "object",
+            properties: {
+              client_id: { type: "string", description: "Client UUID" },
+              phone: { type: "string", description: "Phone to find client if no client_id" },
+              customer_name: { type: "string" },
+              vehicle_number: { type: "string" },
+              vehicle_make: { type: "string" },
+              vehicle_model: { type: "string" },
+              vehicle_year: { type: "number" },
+              vehicle_color: { type: "string" },
+              current_insurer: { type: "string" },
+              current_policy_type: { type: "string" },
+              policy_expiry_date: { type: "string" },
+              current_premium: { type: "number" },
+              lead_status: { type: "string" },
+              pipeline_stage: { type: "string" },
+              follow_up_date: { type: "string" },
+              assigned_executive: { type: "string" },
+              notes: { type: "string" },
+              email: { type: "string" },
+              ncb_percentage: { type: "number" },
+            },
+            required: [],
+            additionalProperties: false,
+          }
+        }
+      },
+      {
+        type: "function",
+        function: {
+          name: "add_general_lead",
+          description: "Add a general lead to the main leads table for any vertical.",
+          parameters: {
+            type: "object",
+            properties: {
+              name: { type: "string", description: "Customer name" },
+              phone: { type: "string", description: "Phone number" },
+              email: { type: "string" },
+              city: { type: "string" },
+              source: { type: "string" },
+              service_category: { type: "string", description: "car-sales, insurance, loan, hsrp, self-drive, accessories" },
+              car_model: { type: "string" },
+              notes: { type: "string" },
+              priority: { type: "string", enum: ["low","medium","high"] },
+            },
+            required: ["name", "phone"],
+            additionalProperties: false,
+          }
+        }
+      },
+      {
+        type: "function",
+        function: {
+          name: "set_follow_up",
+          description: "Set a follow-up date for a client.",
+          parameters: {
+            type: "object",
+            properties: {
+              client_id: { type: "string" },
+              phone: { type: "string", description: "Phone to find client" },
+              follow_up_date: { type: "string", description: "Follow-up date YYYY-MM-DD" },
+            },
+            required: ["follow_up_date"],
+            additionalProperties: false,
+          }
+        }
+      },
+      {
+        type: "function",
+        function: {
+          name: "update_lead_status",
+          description: "Update a lead's status, priority, or assignment.",
+          parameters: {
+            type: "object",
+            properties: {
+              lead_id: { type: "string" },
+              status: { type: "string" },
+              priority: { type: "string" },
+              assigned_to: { type: "string" },
+              notes: { type: "string" },
+            },
+            required: ["lead_id"],
+            additionalProperties: false,
+          }
+        }
+      }
+    ];
+
     // ===== STREAMING AI HELPER =====
     async function streamAI(msgs: any[]) {
       const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -430,67 +683,85 @@ ${myTargets.length > 0 ? myTargets.map((t: any) => `• ${t.team_member_name}: $
       return new Response(r.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
     }
 
-    async function callAI(msgs: any[], tools?: any[], tc?: any) {
-      const b: any = { model: "google/gemini-3-flash-preview", messages: msgs, max_tokens: 4000 };
-      if (tools) { b.tools = tools; b.tool_choice = tc; }
-      const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    // ===== AI WITH TOOL CALLING (for write actions) =====
+    async function streamAIWithTools(msgs: any[]) {
+      // First call: let AI decide if it needs to call a tool
+      const firstCall = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify(b),
+        body: JSON.stringify({
+          model: "google/gemini-3-flash-preview",
+          messages: msgs,
+          tools: isSuperAdmin ? WRITE_TOOLS : [],
+          max_tokens: 4000,
+        }),
       });
-      if (!r.ok) throw new Error(`AI error: ${r.status}`);
-      return r.json();
-    }
-
-    function parseTool(data: any) {
-      try { return JSON.parse(data.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments || "{}"); } catch { return {}; }
-    }
-
-    // ========== ACTIONS ==========
-
-    if (action === "daily_briefing") {
-      const briefingPrompt = isSuperAdmin
-        ? `Generate COMPREHENSIVE daily briefing using ONLY the data provided below. Data:\n${dataCtx}\n\nInclude:\n1. 🌅 GOOD MORNING\n2. 🏦 FINANCIAL PULSE\n3. 🎯 TARGET STATUS\n4. 🔥 URGENT NOW\n5. 📋 TOP 10 TASKS\n6. 💰 REVENUE OPPORTUNITIES\n7. ⚠️ RISK RADAR\n8. 🔍 MISTAKES FOUND\n9. 👥 TEAM STATUS\n10. 🎯 SUCCESS =\n\nIMPORTANT: If any section has 0 records, say "No data available".`
-        : `Generate daily work briefing for ${user_name || 'team member'} in ${userVertical} ONLY. Data:\n${dataCtx}\n\nInclude:\n1. 🌅 GOOD MORNING!\n2. 🎯 YOUR TARGETS\n3. 📋 YOUR TASKS\n4. 📞 WHO TO CALL\n5. 💪 TIPS\n6. 🔔 REMINDERS\n\nONLY use data from above. NO financial data. NO other teams.`;
-      return streamAI([{ role: "system", content: sysPrompt }, { role: "user", content: briefingPrompt }]);
-
-    } else if (action === "suggest_tasks") {
-      if (!isSuperAdmin) {
-        return new Response(JSON.stringify({ error: "Access restricted" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (!firstCall.ok) {
+        if (firstCall.status === 429) return new Response(JSON.stringify({ error: "Rate limited" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        if (firstCall.status === 402) return new Response(JSON.stringify({ error: "Credits exhausted" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        throw new Error(`AI error: ${firstCall.status}`);
       }
-      const data = await callAI(
-        [{ role: "system", content: sysPrompt }, { role: "user", content: `Data:\n${ctx}\n\nGenerate 15-20 specific tasks from ACTUAL data.` }],
-        [{ type: "function", function: { name: "generate_tasks", description: "Generate tasks", parameters: { type: "object", properties: { tasks: { type: "array", items: { type: "object", properties: { title: { type: "string" }, description: { type: "string" }, priority: { type: "string", enum: ["urgent","high","medium","low"] }, task_type: { type: "string", enum: ["follow_up","renewal","order_processing","payment_collection","car_return","cross_sell","new_lead","approval","target_push","coaching","problem_solving","risk_mitigation","mistake_fix","investor_prep","ecommerce"] }, vertical: { type: "string" }, team_member_name: { type: "string" }, ai_suggestion: { type: "string" } }, required: ["title","description","priority","task_type","vertical"], additionalProperties: false } } }, required: ["tasks"], additionalProperties: false } } }],
-        { type: "function", function: { name: "generate_tasks" } }
-      );
-      const tasks = parseTool(data).tasks || [];
-      if (tasks.length > 0) {
-        await fetch(`${SB}/rest/v1/ai_cofounder_tasks`, { method: "POST", headers: { ...h, Prefer: "return=minimal" },
-          body: JSON.stringify(tasks.map((t: any) => ({ title: t.title, description: t.description, priority: t.priority, task_type: t.task_type, vertical: t.vertical, team_member_name: t.team_member_name || null, ai_suggestion: t.ai_suggestion || null, due_date: today, status: "pending" }))) });
-      }
-      return new Response(JSON.stringify({ tasks }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    } else if (action === "quick_insight") {
-      // Build messages with conversation history for context
-      const msgs: any[] = [{ role: "system", content: sysPrompt }];
-      
-      // Add conversation history if provided
-      if (conversation_history && Array.isArray(conversation_history)) {
-        for (const msg of conversation_history.slice(-8)) {
-          msgs.push({ role: msg.role, content: msg.content });
+      const firstResult = await firstCall.json();
+      const choice = firstResult.choices?.[0];
+
+      // If AI wants to call tool(s)
+      if (choice?.finish_reason === "tool_calls" || choice?.message?.tool_calls?.length > 0) {
+        const toolCalls = choice.message.tool_calls || [];
+        const toolResults: string[] = [];
+
+        for (const tc of toolCalls) {
+          const fnName = tc.function?.name;
+          let fnArgs: any = {};
+          try { fnArgs = JSON.parse(tc.function?.arguments || "{}"); } catch {}
+          console.log(`Executing tool: ${fnName}`, fnArgs);
+          const result = await executeWriteAction(fnName, fnArgs);
+          toolResults.push(result);
         }
+
+        // Now stream final response with tool results
+        const followUpMsgs = [
+          ...msgs,
+          choice.message,
+          ...toolCalls.map((tc: any, i: number) => ({
+            role: "tool",
+            tool_call_id: tc.id,
+            content: toolResults[i],
+          })),
+        ];
+
+        const r2 = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ model: "google/gemini-3-flash-preview", messages: followUpMsgs, stream: true, max_tokens: 4000 }),
+        });
+        if (!r2.ok) throw new Error(`AI follow-up error: ${r2.status}`);
+        return new Response(r2.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
       }
 
-      const searchResults = await targetedSearch(question || "", SB, h, isSuperAdmin ? null : userVertical);
-      const fullContext = dataCtx + searchResults;
-      
-      const workStyle = isRenewalQuestion(question)
-        ? `Respond like a serious renewal operations manager. Format EXACTLY in 4 sections: 1) Summary, 2) Priority table with Priority | Customer | Phone | Vehicle | Expiry | Days Left | Premium | Next Action, 3) Call-first list in order, 4) Immediate next steps for today. If there are 0 records, say \"No upcoming renewals found in the database.\"`
-        : `Respond like a serious work assistant: give exact answer first, then ordered priorities, then next actions.`;
-
-      msgs.push({ role: "user", content: `Here is the ACTUAL live database data AND targeted search results. Use ONLY this data to answer. ${workStyle}\n\n${fullContext}\n\nQuestion: ${question || "What should I focus on right now?"}` });
-      
-      return streamAI(msgs);
+      // No tool call — AI just wants to respond. Stream it.
+      // Since we already consumed the response, re-stream it as SSE
+      const content = choice?.message?.content || "I'm here to help!";
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream({
+        start(controller) {
+          const words = content.split(' ');
+          let i = 0;
+          const interval = setInterval(() => {
+            if (i >= words.length) {
+              controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+              controller.close();
+              clearInterval(interval);
+              return;
+            }
+            const chunk = (i === 0 ? '' : ' ') + words[i];
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: chunk } }] })}\n\n`));
+            i++;
+          }, 15);
+        }
+      });
+      return new Response(stream, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+    }
 
     } else if (action === "generate_report") {
       if (!isSuperAdmin) {
