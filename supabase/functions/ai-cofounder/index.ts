@@ -308,7 +308,9 @@ ${crossSells.length > 0 ? crossSells.map((c: any) => `• ${c.customer_name || '
 7. Always quote EXACT names, phones, amounts from the data above.
 8. If count is 0, say "0 records" — don't create fictional records.
 9. PRIORITIZE TARGETED SEARCH RESULTS over general snapshot.
-10. Format data in clean markdown tables when showing multiple records.`;
+10. Format data in clean markdown tables when showing multiple records.
+11. For renewal questions, ALWAYS use the insurance renewals list sorted by lowest days left first.
+12. For renewal answers, include priority, days left, and next action for each customer.`;
 
     // ===== SYSTEM PROMPTS =====
     let sysPrompt: string;
@@ -400,7 +402,7 @@ Current role: ${user_role || 'employee'} in ${verticalLabel} (RESTRICTED ACCESS)
       });
 
       dataCtx = `===== YOUR ${(userVertical || "").toUpperCase()} WORK DATA (${today}) =====
-${vl.includes('insurance') ? `📋 PENDING RENEWALS:\n${insurance.length > 0 ? insurance.map((i: any) => `• ${i.customer_name || 'N/A'} | Ph: ${i.phone || 'N/A'} | Vehicle: ${i.vehicle_number || 'N/A'} | Expiry: ${i.policy_expiry_date || 'N/A'} | Insurer: ${i.current_insurer || 'N/A'} | Premium: ₹${i.current_premium || 'N/A'} | Stage: ${i.pipeline_stage || 'N/A'}`).join('\n') : '⚠️ No pending renewals found'}` : ''}
+${vl.includes('insurance') ? `📋 PENDING RENEWALS:\n${insurance.length > 0 ? insurance.map((i: any) => `• [${(i.priority || 'low').toUpperCase()}] ${i.customer_name || 'N/A'} | Ph: ${i.phone || 'N/A'} | Vehicle: ${i.vehicle_number || 'N/A'} | Expiry: ${i.expiry_date || 'N/A'} | Days Left: ${i.days_until_expiry ?? 'N/A'} | Insurer: ${i.current_insurer || 'N/A'} | Premium: ₹${i.current_premium || 'N/A'} | Next: ${i.next_action}`).join('\n') : '⚠️ No pending renewals found'}` : ''}
 ${vl.includes('sales') || vl.includes('auto') ? `📋 YOUR LEADS:\n${leads.filter((l: any) => !l.service_category || l.service_category?.toLowerCase().includes('car') || l.service_category?.toLowerCase().includes('sale')).map((l: any) => `• ${l.name || 'N/A'} | Ph: ${l.phone || 'N/A'} | Source: ${l.source || 'N/A'} | Status: ${l.status || 'N/A'} | Priority: ${l.priority || 'N/A'}`).join('\n') || '⚠️ No sales leads today'}` : ''}
 ${vl.includes('rental') || vl.includes('self') || vl.includes('drive') ? `📋 SELF-DRIVE RETURNS:\n${rentals.length > 0 ? rentals.map((r: any) => `• ${r.customer_name || 'N/A'} | Ph: ${r.phone || 'N/A'} | Car: ${r.car_name || 'N/A'} | Return: ${r.return_date || 'N/A'} | Payment: ${r.payment_status || 'N/A'}`).join('\n') : '⚠️ No returns due'}` : ''}
 ${vl.includes('hsrp') ? `📋 HSRP PENDING:\n${hsrp.length > 0 ? hsrp.map((h: any) => `• ${h.owner_name || 'N/A'} | Ph: ${h.mobile || 'N/A'} | Reg: ${h.registration_number || 'N/A'} | Status: ${h.order_status || 'N/A'}`).join('\n') : '⚠️ No pending HSRP orders'}` : ''}
@@ -482,7 +484,11 @@ ${myTargets.length > 0 ? myTargets.map((t: any) => `• ${t.team_member_name}: $
       const searchResults = await targetedSearch(question || "", SB, h, isSuperAdmin ? null : userVertical);
       const fullContext = dataCtx + searchResults;
       
-      msgs.push({ role: "user", content: `Here is the ACTUAL live database data AND targeted search results. Use ONLY this data to answer:\n${fullContext}\n\nQuestion: ${question || "What should I focus on right now?"}` });
+      const workStyle = isRenewalQuestion(question)
+        ? `Respond like a serious renewal operations manager. Format EXACTLY in 4 sections: 1) Summary, 2) Priority table with Priority | Customer | Phone | Vehicle | Expiry | Days Left | Premium | Next Action, 3) Call-first list in order, 4) Immediate next steps for today. If there are 0 records, say \"No upcoming renewals found in the database.\"`
+        : `Respond like a serious work assistant: give exact answer first, then ordered priorities, then next actions.`;
+
+      msgs.push({ role: "user", content: `Here is the ACTUAL live database data AND targeted search results. Use ONLY this data to answer. ${workStyle}\n\n${fullContext}\n\nQuestion: ${question || "What should I focus on right now?"}` });
       
       return streamAI(msgs);
 
