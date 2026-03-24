@@ -66,12 +66,109 @@ export default function AICofounderDashboard() {
   const [problemForm, setProblemForm] = useState({ reported_by_name: "", vertical_name: "", problem_description: "" });
 
   const briefing = useStream();
-  const insight = useStream();
   const report = useStream();
   const runway = useStream();
   const investor = useStream();
   const ecommerce = useStream();
   const coaching = useStream();
+
+  // Persistent Ask chat
+  const [askMessages, setAskMessages] = useState<{ role: string; content: string }[]>([]);
+  const [askConvId, setAskConvId] = useState<string | null>(null);
+  const [askLoading, setAskLoading] = useState(false);
+  const [askStreamContent, setAskStreamContent] = useState("");
+  const askLoadedRef = useState(false);
+
+  // Load saved conversation on mount
+  useEffect(() => {
+    if (askLoadedRef[0]) return;
+    askLoadedRef[1](true);
+    (async () => {
+      const { data } = await supabase
+        .from("ai_cofounder_conversations")
+        .select("id, messages")
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .single();
+      if (data) {
+        setAskConvId(data.id);
+        const msgs = data.messages as { role: string; content: string }[];
+        if (msgs?.length > 0) setAskMessages(msgs);
+      }
+    })();
+  }, []);
+
+  const saveAskConversation = useCallback(async (msgs: { role: string; content: string }[]) => {
+    const payload = JSON.parse(JSON.stringify(msgs));
+    if (askConvId) {
+      await supabase.from("ai_cofounder_conversations").update({ messages: payload, updated_at: new Date().toISOString() }).eq("id", askConvId);
+    } else {
+      const { data } = await supabase.from("ai_cofounder_conversations").insert({ user_id: "system", messages: payload }).select("id").single();
+      if (data) setAskConvId(data.id);
+    }
+  }, [askConvId]);
+
+  const sendAskMessage = useCallback(async (q: string) => {
+    if (!q.trim() || askLoading) return;
+    const userMsg = { role: "user", content: q };
+    const newMsgs = [...askMessages, userMsg];
+    setAskMessages(newMsgs);
+    setQuestion("");
+    setAskLoading(true);
+    setAskStreamContent("");
+    let acc = "";
+    try {
+      const resp = await fetch(CHAT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+        body: JSON.stringify({ action: "quick_insight", question: q, user_name: "Boss", user_role: "founder", chat_history: newMsgs.slice(-20) }),
+      });
+      if (!resp.ok || !resp.body) throw new Error("Failed");
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let idx: number;
+        while ((idx = buffer.indexOf("\n")) !== -1) {
+          let line = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 1);
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (!line.startsWith("data: ")) continue;
+          const j = line.slice(6).trim();
+          if (j === "[DONE]") break;
+          try {
+            const t = JSON.parse(j).choices?.[0]?.delta?.content;
+            if (t) { acc += t; setAskStreamContent(acc); }
+          } catch {}
+        }
+      }
+      const assistantMsg = { role: "assistant", content: acc || "I'm here to help!" };
+      const finalMsgs = [...newMsgs, assistantMsg];
+      setAskMessages(finalMsgs);
+      setAskStreamContent("");
+      saveAskConversation(finalMsgs);
+    } catch (e: any) {
+      toast.error(e.message || "Failed");
+      const errMsg = { role: "assistant", content: "Sorry, encountered an error. Please try again." };
+      const finalMsgs = [...newMsgs, errMsg];
+      setAskMessages(finalMsgs);
+      saveAskConversation(finalMsgs);
+    } finally {
+      setAskLoading(false);
+    }
+  }, [askMessages, askLoading, saveAskConversation]);
+
+  const clearAskHistory = useCallback(async () => {
+    setAskMessages([]);
+    if (askConvId) {
+      await supabase.from("ai_cofounder_conversations").delete().eq("id", askConvId);
+      setAskConvId(null);
+    }
+    toast.success("Chat history cleared");
+  }, [askConvId]);
 
   const today = format(new Date(), "yyyy-MM-dd");
   const cm = format(new Date(), "yyyy-MM");
@@ -429,23 +526,59 @@ export default function AICofounderDashboard() {
           </CardContent></Card>
         </TabsContent>
 
-        {/* ASK */}
+        {/* ASK - Persistent Chat */}
         <TabsContent value="ask" className="mt-3">
           <Card className="border-violet-200 dark:border-violet-800">
-            <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Brain className="h-4 w-4 text-violet-500" /> Ask AI Co-Founder</CardTitle></CardHeader>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm flex items-center gap-2"><Brain className="h-4 w-4 text-violet-500" /> Ask AI Co-Founder</CardTitle>
+                {askMessages.length > 0 && <Button variant="ghost" size="sm" className="h-6 text-[9px] gap-1 text-muted-foreground" onClick={clearAskHistory}><X className="h-3 w-3" /> Clear History</Button>}
+              </div>
+            </CardHeader>
             <CardContent className="space-y-2">
-              <div className="flex gap-2">
-                <Input placeholder="Ask anything..." value={question} onChange={e => setQuestion(e.target.value)}
-                  onKeyDown={e => { if (e.key === "Enter" && question.trim()) insight.startStream("quick_insight", { question, user_name: "Boss", user_role: "founder" }); }} className="flex-1" />
-                <Button className="gap-1 bg-gradient-to-r from-violet-600 to-purple-600" onClick={() => insight.startStream("quick_insight", { question, user_name: "Boss", user_role: "founder" })} disabled={!question.trim() || insight.isStreaming}><Send className="h-4 w-4" /></Button>
+              {/* Quick actions */}
+              {askMessages.length === 0 && (
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {["Revenue acceleration plan", "Who needs coaching?", "Cross-sell opportunities", "Investor pitch metrics", "Cost cutting suggestions", "Team performance", "Runway extension plan"].map(q => (
+                    <Button key={q} variant="outline" size="sm" className="text-[9px] h-5 px-1.5" onClick={() => sendAskMessage(q)}>{q}</Button>
+                  ))}
+                </div>
+              )}
+              {/* Chat messages */}
+              <ScrollArea className="max-h-[400px]">
+                <div className="space-y-3">
+                  {askMessages.map((msg, i) => (
+                    <div key={i} className={`flex gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                      {msg.role === "assistant" && <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-100 dark:bg-violet-900/30 mt-0.5"><Brain className="h-3.5 w-3.5 text-violet-600" /></div>}
+                      <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-xs leading-relaxed ${msg.role === "user" ? "bg-primary text-primary-foreground rounded-br-md" : "bg-muted rounded-bl-md"}`}>
+                        {msg.role === "assistant" ? <div className="prose prose-sm dark:prose-invert max-w-none [&>p]:mb-1.5"><ReactMarkdown>{msg.content}</ReactMarkdown></div> : msg.content}
+                      </div>
+                    </div>
+                  ))}
+                  {askLoading && askStreamContent && (
+                    <div className="flex gap-2 justify-start">
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-100 dark:bg-violet-900/30 mt-0.5"><Brain className="h-3.5 w-3.5 text-violet-600" /></div>
+                      <div className="max-w-[85%] rounded-2xl rounded-bl-md px-3 py-2 text-xs bg-muted">
+                        <div className="prose prose-sm dark:prose-invert max-w-none [&>p]:mb-1.5"><ReactMarkdown>{askStreamContent}</ReactMarkdown></div>
+                      </div>
+                    </div>
+                  )}
+                  {askLoading && !askStreamContent && (
+                    <div className="flex gap-2"><div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-100 dark:bg-violet-900/30"><Brain className="h-3.5 w-3.5 text-violet-600" /></div>
+                      <div className="bg-muted rounded-2xl rounded-bl-md px-3 py-2"><div className="flex gap-1.5 items-center"><span className="h-1.5 w-1.5 rounded-full bg-violet-500/60 animate-bounce" style={{ animationDelay: "0ms" }} /><span className="h-1.5 w-1.5 rounded-full bg-violet-500/60 animate-bounce" style={{ animationDelay: "150ms" }} /><span className="h-1.5 w-1.5 rounded-full bg-violet-500/60 animate-bounce" style={{ animationDelay: "300ms" }} /></div></div>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+              {/* Coaching content */}
+              {coaching.content && <ScrollArea className="max-h-[300px]"><div className="prose prose-sm dark:prose-invert max-w-none p-3 bg-violet-50 dark:bg-violet-950/30 rounded-xl border border-violet-200 dark:border-violet-800"><p className="text-[10px] font-semibold text-violet-600 mb-1">🎯 Team Coaching</p><ReactMarkdown>{coaching.content}</ReactMarkdown></div></ScrollArea>}
+              {coaching.isStreaming && !coaching.content && <div className="flex items-center gap-3 py-2"><div className="animate-spin rounded-full h-4 w-4 border-2 border-violet-500 border-t-transparent" /><p className="text-xs text-muted-foreground">Coaching...</p></div>}
+              {/* Input */}
+              <div className="flex gap-2 pt-1">
+                <Input placeholder="Ask anything about your business..." value={question} onChange={e => setQuestion(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter" && question.trim() && !askLoading) sendAskMessage(question); }} className="flex-1 text-xs" />
+                <Button className="gap-1 bg-gradient-to-r from-violet-600 to-purple-600" onClick={() => sendAskMessage(question)} disabled={!question.trim() || askLoading} size="sm"><Send className="h-3.5 w-3.5" /></Button>
               </div>
-              <div className="flex flex-wrap gap-1">
-                {["Revenue acceleration plan", "Who needs coaching?", "Cross-sell opportunities", "Investor pitch metrics", "Cost cutting suggestions", "Team performance", "Runway extension plan"].map(q => (
-                  <Button key={q} variant="outline" size="sm" className="text-[9px] h-5 px-1.5" onClick={() => { setQuestion(q); insight.startStream("quick_insight", { question: q, user_name: "Boss", user_role: "founder" }); }}>{q}</Button>
-                ))}
-              </div>
-              {(insight.content || coaching.content) ? <ScrollArea className="max-h-[400px]"><div className="prose prose-sm dark:prose-invert max-w-none p-3 bg-muted/30 rounded-xl"><ReactMarkdown>{insight.content || coaching.content}</ReactMarkdown></div></ScrollArea>
-              : (insight.isStreaming || coaching.isStreaming) ? <div className="flex items-center gap-3 py-4"><div className="animate-spin rounded-full h-5 w-5 border-2 border-violet-500 border-t-transparent" /><p className="text-sm text-muted-foreground">Thinking...</p></div> : null}
             </CardContent>
           </Card>
         </TabsContent>
