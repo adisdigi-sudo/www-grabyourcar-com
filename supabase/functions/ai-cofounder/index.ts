@@ -15,100 +15,110 @@ async function safeFetch(url: string, h: Record<string, string>): Promise<any[]>
 }
 
 // Targeted search: query specific tables based on user question keywords
-async function targetedSearch(question: string, SB: string, h: Record<string, string>): Promise<string> {
+async function targetedSearch(question: string, SB: string, h: Record<string, string>, verticalFilter?: string | null): Promise<string> {
   if (!question) return "";
   const q = question.toLowerCase();
   const results: string[] = [];
 
-  // Extract potential vehicle/registration numbers (like 4191, HR26EY7114, etc.)
   const numPatterns = question.match(/\b\d{4}\b/g) || [];
   const regPatterns = question.match(/[A-Za-z]{2}\d{1,2}[A-Za-z]{0,3}\d{1,4}/gi) || [];
   const searchTerms = [...numPatterns, ...regPatterns];
-
-  // Extract phone numbers
   const phonePatterns = question.match(/\b\d{10}\b/g) || [];
+  const nameWords = question.match(/\b[A-Z][a-z]{2,}\b/g) || [];
+  const skipNames = new Set(["Insurance","Policy","Booked","Vehicle","Number","Car","What","Show","Give","Find","Search","Check","Report","Campaign","Target","Today","Month","Week","Call","Send","Help","Status","Payment","Pending","Details","Customer","Client"]);
 
-  // Search insurance_clients by vehicle number or phone
-  if (q.includes("policy") || q.includes("insurance") || q.includes("renewal") || q.includes("insur") || searchTerms.length > 0) {
-    for (const term of searchTerms) {
-      const clients = await safeFetch(`${SB}/rest/v1/insurance_clients?or=(vehicle_number.ilike.*${term}*,phone.ilike.*${term}*)&select=id,customer_name,phone,vehicle_number,vehicle_make,vehicle_model,vehicle_year,current_insurer,current_premium,current_policy_number,current_policy_type,policy_expiry_date,lead_status,pipeline_stage,assigned_executive,ncb_percentage,follow_up_date&limit=10`, h);
-      if (clients.length > 0) {
-        results.push(`🔍 SEARCH: Insurance clients matching "${term}":\n${clients.map((c: any) => `• ${c.customer_name || 'N/A'} | Ph: ${c.phone || 'N/A'} | Vehicle: ${c.vehicle_number || 'N/A'} (${c.vehicle_make || ''} ${c.vehicle_model || ''} ${c.vehicle_year || ''}) | Policy#: ${c.current_policy_number || 'N/A'} | Type: ${c.current_policy_type || 'N/A'} | Insurer: ${c.current_insurer || 'N/A'} | Premium: ₹${c.current_premium || 'N/A'} | NCB: ${c.ncb_percentage || 'N/A'}% | Expiry: ${c.policy_expiry_date || 'N/A'} | Status: ${c.lead_status || 'N/A'} | Stage: ${c.pipeline_stage || 'N/A'} | Exec: ${c.assigned_executive || 'N/A'} | Follow-up: ${c.follow_up_date || 'N/A'}`).join('\n')}`);
+  // ===== INSURANCE =====
+  if (!verticalFilter || verticalFilter.toLowerCase().includes("insurance")) {
+    if (q.includes("policy") || q.includes("insurance") || q.includes("renewal") || q.includes("insur") || q.includes("client") || searchTerms.length > 0 || phonePatterns.length > 0) {
+      for (const term of searchTerms) {
+        const clients = await safeFetch(`${SB}/rest/v1/insurance_clients?or=(vehicle_number.ilike.*${term}*,phone.ilike.*${term}*)&select=id,customer_name,phone,vehicle_number,vehicle_make,vehicle_model,vehicle_year,current_insurer,current_premium,current_policy_number,current_policy_type,policy_expiry_date,lead_status,pipeline_stage,assigned_executive,ncb_percentage,follow_up_date&limit=10`, h);
+        if (clients.length > 0) {
+          results.push(`🔍 Insurance clients "${term}":\n${clients.map((c: any) => `• ${c.customer_name || 'N/A'} | Ph: ${c.phone || 'N/A'} | Vehicle: ${c.vehicle_number || 'N/A'} (${c.vehicle_make || ''} ${c.vehicle_model || ''} ${c.vehicle_year || ''}) | Policy#: ${c.current_policy_number || 'N/A'} | Type: ${c.current_policy_type || 'N/A'} | Insurer: ${c.current_insurer || 'N/A'} | Premium: ₹${c.current_premium || 'N/A'} | NCB: ${c.ncb_percentage || 'N/A'}% | Expiry: ${c.policy_expiry_date || 'N/A'} | Status: ${c.lead_status || 'N/A'} | Stage: ${c.pipeline_stage || 'N/A'} | Exec: ${c.assigned_executive || 'N/A'} | Follow-up: ${c.follow_up_date || 'N/A'}`).join('\n')}`);
+        }
+        const policies = await safeFetch(`${SB}/rest/v1/insurance_policies?or=(vehicle_number.ilike.*${term}*,policy_number.ilike.*${term}*)&select=id,client_id,policy_number,policy_type,insurer,premium_amount,vehicle_number,start_date,expiry_date,status,ncb_percentage,od_premium,tp_premium,net_premium&limit=10`, h);
+        if (policies.length > 0) {
+          results.push(`🔍 Insurance policies "${term}":\n${policies.map((p: any) => `• Policy#: ${p.policy_number || 'N/A'} | Type: ${p.policy_type || 'N/A'} | Insurer: ${p.insurer || 'N/A'} | Vehicle: ${p.vehicle_number || 'N/A'} | Premium: ₹${p.premium_amount || 'N/A'} | OD: ₹${p.od_premium || 'N/A'} | TP: ₹${p.tp_premium || 'N/A'} | NCB: ${p.ncb_percentage || 'N/A'}% | Expiry: ${p.expiry_date || 'N/A'} | Status: ${p.status || 'N/A'}`).join('\n')}`);
+        }
       }
-    }
-    for (const phone of phonePatterns) {
-      const clients = await safeFetch(`${SB}/rest/v1/insurance_clients?phone=ilike.*${phone}*&select=id,customer_name,phone,vehicle_number,vehicle_make,vehicle_model,current_insurer,current_premium,current_policy_number,policy_expiry_date,lead_status,pipeline_stage&limit=10`, h);
-      if (clients.length > 0) {
-        results.push(`🔍 SEARCH: Insurance clients with phone "${phone}":\n${clients.map((c: any) => `• ${c.customer_name || 'N/A'} | Ph: ${c.phone || 'N/A'} | Vehicle: ${c.vehicle_number || 'N/A'} | Policy#: ${c.current_policy_number || 'N/A'} | Insurer: ${c.current_insurer || 'N/A'} | Premium: ₹${c.current_premium || 'N/A'} | Expiry: ${c.policy_expiry_date || 'N/A'} | Status: ${c.lead_status || 'N/A'}`).join('\n')}`);
-      }
-    }
-    // Also search insurance_policies table
-    for (const term of searchTerms) {
-      const policies = await safeFetch(`${SB}/rest/v1/insurance_policies?or=(vehicle_number.ilike.*${term}*,policy_number.ilike.*${term}*)&select=id,client_id,policy_number,policy_type,insurer,premium_amount,vehicle_number,start_date,expiry_date,status,ncb_percentage,od_premium,tp_premium,net_premium&limit=10`, h);
-      if (policies.length > 0) {
-        results.push(`🔍 SEARCH: Insurance policies matching "${term}":\n${policies.map((p: any) => `• Policy#: ${p.policy_number || 'N/A'} | Type: ${p.policy_type || 'N/A'} | Insurer: ${p.insurer || 'N/A'} | Vehicle: ${p.vehicle_number || 'N/A'} | Premium: ₹${p.premium_amount || 'N/A'} | OD: ₹${p.od_premium || 'N/A'} | TP: ₹${p.tp_premium || 'N/A'} | Net: ₹${p.net_premium || 'N/A'} | NCB: ${p.ncb_percentage || 'N/A'}% | Start: ${p.start_date || 'N/A'} | Expiry: ${p.expiry_date || 'N/A'} | Status: ${p.status || 'N/A'}`).join('\n')}`);
+      for (const phone of phonePatterns) {
+        const clients = await safeFetch(`${SB}/rest/v1/insurance_clients?phone=ilike.*${phone}*&select=id,customer_name,phone,vehicle_number,vehicle_make,vehicle_model,current_insurer,current_premium,current_policy_number,policy_expiry_date,lead_status,pipeline_stage&limit=10`, h);
+        if (clients.length > 0) {
+          results.push(`🔍 Insurance clients ph "${phone}":\n${clients.map((c: any) => `• ${c.customer_name || 'N/A'} | Ph: ${c.phone} | Vehicle: ${c.vehicle_number || 'N/A'} | Policy#: ${c.current_policy_number || 'N/A'} | Insurer: ${c.current_insurer || 'N/A'} | Premium: ₹${c.current_premium || 'N/A'} | Expiry: ${c.policy_expiry_date || 'N/A'}`).join('\n')}`);
+        }
       }
     }
   }
 
-  // Search HSRP bookings
-  if (q.includes("hsrp") || q.includes("plate") || q.includes("registration") || searchTerms.length > 0) {
-    for (const term of searchTerms) {
-      const hsrps = await safeFetch(`${SB}/rest/v1/hsrp_bookings?registration_number=ilike.*${term}*&select=id,owner_name,registration_number,order_status,payment_status,mobile,service_type,payment_amount&limit=10`, h);
-      if (hsrps.length > 0) {
-        results.push(`🔍 SEARCH: HSRP bookings matching "${term}":\n${hsrps.map((h: any) => `• ${h.owner_name || 'N/A'} | Ph: ${h.mobile || 'N/A'} | Reg: ${h.registration_number || 'N/A'} | Type: ${h.service_type || 'N/A'} | Status: ${h.order_status || 'N/A'} | Payment: ${h.payment_status || 'N/A'} | Amount: ₹${h.payment_amount || 'N/A'}`).join('\n')}`);
+  // ===== HSRP =====
+  if (!verticalFilter || verticalFilter.toLowerCase().includes("hsrp")) {
+    if (q.includes("hsrp") || q.includes("plate") || q.includes("registration") || searchTerms.length > 0) {
+      for (const term of searchTerms) {
+        const hsrps = await safeFetch(`${SB}/rest/v1/hsrp_bookings?registration_number=ilike.*${term}*&select=id,owner_name,registration_number,order_status,payment_status,mobile,service_type,payment_amount&limit=10`, h);
+        if (hsrps.length > 0) {
+          results.push(`🔍 HSRP "${term}":\n${hsrps.map((h: any) => `• ${h.owner_name || 'N/A'} | Ph: ${h.mobile || 'N/A'} | Reg: ${h.registration_number || 'N/A'} | Type: ${h.service_type || 'N/A'} | Status: ${h.order_status || 'N/A'} | Payment: ${h.payment_status || 'N/A'} | ₹${h.payment_amount || 'N/A'}`).join('\n')}`);
+        }
       }
     }
   }
 
-  // Search leads by name or phone
+  // ===== LEADS =====
   if (q.includes("lead") || q.includes("customer") || q.includes("client") || phonePatterns.length > 0) {
     for (const phone of phonePatterns) {
       const foundLeads = await safeFetch(`${SB}/rest/v1/leads?phone=ilike.*${phone}*&select=id,name,phone,source,service_category,status,priority,assigned_to,city,follow_up_date&limit=10`, h);
       if (foundLeads.length > 0) {
-        results.push(`🔍 SEARCH: Leads with phone "${phone}":\n${foundLeads.map((l: any) => `• ${l.name || 'N/A'} | Ph: ${l.phone || 'N/A'} | Source: ${l.source || 'N/A'} | Category: ${l.service_category || 'N/A'} | Status: ${l.status || 'N/A'} | Priority: ${l.priority || 'N/A'} | City: ${l.city || 'N/A'}`).join('\n')}`);
+        results.push(`🔍 Leads ph "${phone}":\n${foundLeads.map((l: any) => `• ${l.name || 'N/A'} | Ph: ${l.phone} | Source: ${l.source || 'N/A'} | Category: ${l.service_category || 'N/A'} | Status: ${l.status || 'N/A'} | Priority: ${l.priority || 'N/A'} | City: ${l.city || 'N/A'}`).join('\n')}`);
       }
     }
   }
 
-  // Search deals
-  if (q.includes("deal") || q.includes("payment") || q.includes("booking")) {
-    for (const phone of phonePatterns) {
-      const customers = await safeFetch(`${SB}/rest/v1/customers?phone=ilike.*${phone}*&select=id,name,phone,email,status&limit=5`, h);
-      if (customers.length > 0) {
-        results.push(`🔍 SEARCH: Customers with phone "${phone}":\n${customers.map((c: any) => `• ${c.name || 'N/A'} | Ph: ${c.phone || 'N/A'} | Email: ${c.email || 'N/A'} | Status: ${c.status || 'N/A'}`).join('\n')}`);
+  // ===== RENTAL =====
+  if (!verticalFilter || verticalFilter.toLowerCase().includes("rental") || verticalFilter.toLowerCase().includes("self") || verticalFilter.toLowerCase().includes("drive")) {
+    if (q.includes("rental") || q.includes("self drive") || q.includes("booking") || q.includes("return")) {
+      for (const phone of phonePatterns) {
+        const rentals = await safeFetch(`${SB}/rest/v1/rental_bookings?phone=ilike.*${phone}*&select=id,customer_name,phone,car_name,pickup_date,return_date,status,payment_status,total_amount&limit=10`, h);
+        if (rentals.length > 0) {
+          results.push(`🔍 Rentals ph "${phone}":\n${rentals.map((r: any) => `• ${r.customer_name || 'N/A'} | Ph: ${r.phone} | Car: ${r.car_name || 'N/A'} | Pickup: ${r.pickup_date || 'N/A'} | Return: ${r.return_date || 'N/A'} | ₹${r.total_amount || 'N/A'} | Status: ${r.status || 'N/A'}`).join('\n')}`);
+        }
       }
     }
   }
 
-  // Search rental bookings
-  if (q.includes("rental") || q.includes("self drive") || q.includes("booking")) {
-    for (const phone of phonePatterns) {
-      const rentals = await safeFetch(`${SB}/rest/v1/rental_bookings?phone=ilike.*${phone}*&select=id,customer_name,phone,car_name,pickup_date,return_date,status,payment_status,total_amount&limit=10`, h);
-      if (rentals.length > 0) {
-        results.push(`🔍 SEARCH: Rental bookings for phone "${phone}":\n${rentals.map((r: any) => `• ${r.customer_name || 'N/A'} | Ph: ${r.phone || 'N/A'} | Car: ${r.car_name || 'N/A'} | Pickup: ${r.pickup_date || 'N/A'} | Return: ${r.return_date || 'N/A'} | Amount: ₹${r.total_amount || 'N/A'} | Status: ${r.status || 'N/A'}`).join('\n')}`);
-      }
+  // ===== NAME SEARCH =====
+  for (const name of (nameWords || []).slice(0, 3)) {
+    if (skipNames.has(name)) continue;
+    const clients = await safeFetch(`${SB}/rest/v1/insurance_clients?customer_name=ilike.*${name}*&select=id,customer_name,phone,vehicle_number,vehicle_make,vehicle_model,current_insurer,current_premium,policy_expiry_date,lead_status&limit=5`, h);
+    if (clients.length > 0) {
+      results.push(`🔍 Insurance clients "${name}":\n${clients.map((c: any) => `• ${c.customer_name || 'N/A'} | Ph: ${c.phone || 'N/A'} | Vehicle: ${c.vehicle_number || 'N/A'} (${c.vehicle_make || ''} ${c.vehicle_model || ''}) | Insurer: ${c.current_insurer || 'N/A'} | Premium: ₹${c.current_premium || 'N/A'} | Expiry: ${c.policy_expiry_date || 'N/A'}`).join('\n')}`);
     }
-  }
-
-  // Extract name-like patterns and search
-  const nameWords = question.match(/\b[A-Z][a-z]{2,}\b/g) || [];
-  if (nameWords.length > 0) {
-    for (const name of nameWords.slice(0, 3)) {
-      if (["Insurance", "Policy", "Booked", "Vehicle", "Number", "Car", "What", "Show", "Give", "Find", "Search", "Check"].includes(name)) continue;
-      const clients = await safeFetch(`${SB}/rest/v1/insurance_clients?customer_name=ilike.*${name}*&select=id,customer_name,phone,vehicle_number,vehicle_make,vehicle_model,current_insurer,current_premium,policy_expiry_date,lead_status&limit=5`, h);
-      if (clients.length > 0) {
-        results.push(`🔍 SEARCH: Insurance clients named "${name}":\n${clients.map((c: any) => `• ${c.customer_name || 'N/A'} | Ph: ${c.phone || 'N/A'} | Vehicle: ${c.vehicle_number || 'N/A'} (${c.vehicle_make || ''} ${c.vehicle_model || ''}) | Insurer: ${c.current_insurer || 'N/A'} | Premium: ₹${c.current_premium || 'N/A'} | Expiry: ${c.policy_expiry_date || 'N/A'}`).join('\n')}`);
-      }
-      const custSearch = await safeFetch(`${SB}/rest/v1/customers?name=ilike.*${name}*&select=id,name,phone,email,status,city&limit=5`, h);
-      if (custSearch.length > 0) {
-        results.push(`🔍 SEARCH: Customers named "${name}":\n${custSearch.map((c: any) => `• ${c.name || 'N/A'} | Ph: ${c.phone || 'N/A'} | Email: ${c.email || 'N/A'} | City: ${c.city || 'N/A'} | Status: ${c.status || 'N/A'}`).join('\n')}`);
-      }
+    const custSearch = await safeFetch(`${SB}/rest/v1/customers?name=ilike.*${name}*&select=id,name,phone,email,status,city&limit=5`, h);
+    if (custSearch.length > 0) {
+      results.push(`🔍 Customers "${name}":\n${custSearch.map((c: any) => `• ${c.name || 'N/A'} | Ph: ${c.phone || 'N/A'} | Email: ${c.email || 'N/A'} | City: ${c.city || 'N/A'} | Status: ${c.status || 'N/A'}`).join('\n')}`);
+    }
+    const leadSearch = await safeFetch(`${SB}/rest/v1/leads?name=ilike.*${name}*&select=id,name,phone,source,service_category,status,priority,city&limit=5`, h);
+    if (leadSearch.length > 0) {
+      results.push(`🔍 Leads "${name}":\n${leadSearch.map((l: any) => `• ${l.name || 'N/A'} | Ph: ${l.phone || 'N/A'} | Source: ${l.source || 'N/A'} | Category: ${l.service_category || 'N/A'} | Status: ${l.status || 'N/A'} | City: ${l.city || 'N/A'}`).join('\n')}`);
     }
   }
 
   if (results.length === 0) return "\n⚠️ TARGETED SEARCH: No specific records found matching your query keywords.\n";
   return "\n===== TARGETED SEARCH RESULTS =====\n" + results.join("\n\n") + "\n===== END SEARCH RESULTS =====\n";
+}
+
+// ===== BLOCKED TOPICS FOR TEAM MEMBERS =====
+const BLOCKED_KEYWORDS_FOR_TEAM = [
+  "profit", "revenue", "expenses", "burn rate", "runway", "investor", "funding",
+  "bank balance", "cash in bank", "salary", "payroll", "other team", "other vertical",
+  "company finance", "total revenue", "net profit", "p&l", "balance sheet",
+  "how much company", "company earning", "our profit", "business profit",
+  "employee salary", "team salary", "other member", "other executive",
+  "admin data", "super admin", "founder data", "company data",
+  "all teams", "all verticals", "all employees", "full report",
+  "bank account", "financial health", "investment", "share", "equity"
+];
+
+function isBlockedForTeam(question: string): boolean {
+  const q = question.toLowerCase();
+  return BLOCKED_KEYWORDS_FOR_TEAM.some(k => q.includes(k));
 }
 
 serve(async (req) => {
@@ -121,16 +131,41 @@ serve(async (req) => {
     const SB = Deno.env.get("SUPABASE_URL")!;
     const SK = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const body = await req.json();
-    const { action, user_name, user_role, vertical, question, target_data, problem_data } = body;
+    const { action, user_name, user_role, vertical, question, target_data, problem_data, conversation_history } = body;
 
     const isSuperAdmin = !user_role || user_role === "super_admin" || user_role === "admin";
     const userVertical = vertical || null;
+
+    // ===== HARD BLOCK: Team members asking restricted questions =====
+    if (!isSuperAdmin && question && isBlockedForTeam(question)) {
+      const blockMsg = `🔒 Sorry ${user_name || 'team member'}, that information is restricted to management only.\n\nI can help you with:\n- 🔍 Finding your clients/leads\n- 📋 Your pending tasks & follow-ups\n- 🎯 Your personal targets & incentives\n- 📞 Who to call next\n- 📊 Your performance report\n\nAsk me about your ${userVertical || ''} work! 💪`;
+      // Return as SSE stream for consistency
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream({
+        start(controller) {
+          const words = blockMsg.split(' ');
+          let i = 0;
+          const interval = setInterval(() => {
+            if (i >= words.length) {
+              controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+              controller.close();
+              clearInterval(interval);
+              return;
+            }
+            const chunk = (i === 0 ? '' : ' ') + words[i];
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: chunk } }] })}\n\n`));
+            i++;
+          }, 20);
+        }
+      });
+      return new Response(stream, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+    }
 
     const h = { apikey: SK, Authorization: `Bearer ${SK}`, "Content-Type": "application/json" };
     const today = new Date().toISOString().split("T")[0];
     const cm = today.slice(0, 7);
 
-    // Parallel fetch all business data with safe error handling
+    // Parallel fetch all business data
     const [leads, insurance, rentals, hsrp, deals, followUps, pendingTasks, targets, problems, teamMembers, expenses, bankAccounts, invoices, risks, crossSells, mistakes] = await Promise.all([
       safeFetch(`${SB}/rest/v1/leads?created_at=gte.${today}T00:00:00&select=id,name,phone,source,service_category,status,priority,assigned_to,city&limit=50`, h),
       safeFetch(`${SB}/rest/v1/insurance_clients?select=id,customer_name,phone,vehicle_number,vehicle_make,vehicle_model,policy_expiry_date,lead_status,pipeline_stage,follow_up_date,assigned_executive,current_insurer,current_premium&policy_expiry_date=lte.${new Date(Date.now()+90*86400000).toISOString().split("T")[0]}&policy_expiry_date=gte.${today}&order=policy_expiry_date.asc&limit=50`, h),
@@ -159,7 +194,7 @@ serve(async (req) => {
     const runwayMonths = monthlyBurn > 0 ? Math.round((cashInBank / monthlyBurn) * 10) / 10 : 99;
     const pendingPayments = deals.filter((d: any) => d.payment_status !== "received").reduce((sum: number, d: any) => sum + (Number(d.deal_value || 0) - Number(d.payment_received_amount || 0)), 0);
 
-    // Build DETAILED context with actual record data
+    // ===== FULL CONTEXT (ADMIN ONLY) =====
     const ctx = `
 ===== LIVE BUSINESS DATA (${today}) =====
 COUNTS: New Leads Today: ${leads.length} | Insurance Renewals (next 90 days): ${insurance.length} | Self-Drive Returns (3d): ${rentals.length}
@@ -172,7 +207,7 @@ Cash in Bank: ₹${cashInBank.toLocaleString("en-IN")} | Monthly Burn: ₹${mont
 Runway: ${runwayMonths} months | Pending Payments: ₹${pendingPayments.toLocaleString("en-IN")}
 
 ===== INSURANCE RENEWALS (NEXT 90 DAYS) — ${insurance.length} RECORDS =====
-${insurance.length > 0 ? insurance.map((i: any) => `• ${i.customer_name || 'N/A'} | Ph: ${i.phone || 'N/A'} | Vehicle: ${i.vehicle_number || 'N/A'} (${i.vehicle_make || ''} ${i.vehicle_model || ''}) | Expiry: ${i.policy_expiry_date || 'N/A'} | Insurer: ${i.current_insurer || 'N/A'} | Premium: ₹${i.current_premium || 'N/A'} | Stage: ${i.pipeline_stage || 'N/A'} | Exec: ${i.assigned_executive || 'Unassigned'}`).join('\n') : '⚠️ NO INSURANCE RENEWALS FOUND IN DATABASE FOR NEXT 90 DAYS'}
+${insurance.length > 0 ? insurance.map((i: any) => `• ${i.customer_name || 'N/A'} | Ph: ${i.phone || 'N/A'} | Vehicle: ${i.vehicle_number || 'N/A'} (${i.vehicle_make || ''} ${i.vehicle_model || ''}) | Expiry: ${i.policy_expiry_date || 'N/A'} | Insurer: ${i.current_insurer || 'N/A'} | Premium: ₹${i.current_premium || 'N/A'} | Stage: ${i.pipeline_stage || 'N/A'} | Exec: ${i.assigned_executive || 'Unassigned'}`).join('\n') : '⚠️ NO INSURANCE RENEWALS FOUND'}
 
 ===== TODAY'S NEW LEADS — ${leads.length} RECORDS =====
 ${leads.length > 0 ? leads.map((l: any) => `• ${l.name || 'N/A'} | Ph: ${l.phone || 'N/A'} | Source: ${l.source || 'N/A'} | Category: ${l.service_category || 'N/A'} | Status: ${l.status || 'N/A'} | Priority: ${l.priority || 'N/A'} | City: ${l.city || 'N/A'}`).join('\n') : '⚠️ NO NEW LEADS TODAY'}
@@ -202,7 +237,7 @@ ${risks.length > 0 ? risks.map((r: any) => `• [${r.severity || 'N/A'}] ${r.tit
 ${crossSells.length > 0 ? crossSells.map((c: any) => `• ${c.customer_name || 'N/A'} | From: ${c.source_vertical || 'N/A'} → To: ${c.target_vertical || 'N/A'} | Suggestion: ${c.suggestion || 'N/A'}`).join('\n') : 'No pending cross-sells'}
 ===== END OF DATA =====`;
 
-    // ===== ROLE-BASED SYSTEM PROMPT =====
+    // ===== DATA ACCURACY RULES =====
     const DATA_ACCURACY_RULES = `
 🚨 CRITICAL DATA ACCURACY RULES — VIOLATION = FAILURE:
 1. ONLY use data shown between "===== LIVE BUSINESS DATA" and "===== END OF DATA =====" AND from "===== TARGETED SEARCH RESULTS =====".
@@ -210,12 +245,13 @@ ${crossSells.length > 0 ? crossSells.map((c: any) => `• ${c.customer_name || '
 3. NEVER invent names, phone numbers, vehicle numbers, amounts, or dates.
 4. NEVER assume or estimate data that isn't provided.
 5. If TARGETED SEARCH found specific records, use THOSE exact records in your answer.
-6. If TARGETED SEARCH says "No specific records found", say clearly: "I searched the database but couldn't find a matching record. Please verify the details or add the entry."
+6. If TARGETED SEARCH says "No specific records found", say clearly: "I searched the database but couldn't find a matching record."
 7. Always quote EXACT names, phones, amounts from the data above.
 8. If count is 0, say "0 records" — don't create fictional records.
-9. When presenting tables, ONLY include rows from actual data above.
-10. PRIORITIZE TARGETED SEARCH RESULTS over general snapshot when answering specific queries.`;
+9. PRIORITIZE TARGETED SEARCH RESULTS over general snapshot.
+10. Format data in clean markdown tables when showing multiple records.`;
 
+    // ===== SYSTEM PROMPTS =====
     let sysPrompt: string;
 
     if (isSuperAdmin) {
@@ -242,76 +278,83 @@ YOUR 12 ROLES (ALL ACTIVE 24/7):
 12. 🔔 REMINDER ENGINE — Never let anyone forget anything
 
 REPORT GENERATION:
-- When asked for reports, generate detailed markdown reports with tables, charts descriptions, and actionable insights
-- Include period comparison, trend analysis, and specific recommendations
-- Format reports professionally with headers, tables, and summary sections
+- Generate detailed markdown reports with tables
+- Include period comparison, trend analysis, specific recommendations
+- When user asks for Excel report, format as structured table data with clear headers
 
 ${DATA_ACCURACY_RULES}
 
-Current role: SUPER ADMIN / FOUNDER (all verticals)`;
+Current role: SUPER ADMIN / FOUNDER (full access to all verticals & financials)`;
     } else {
+      // ===== STRICT TEAM MEMBER PROMPT =====
       const verticalLabel = userVertical || "general";
-      sysPrompt = `You are the AI Manager & Personal Coach for ${user_name || 'team member'} at GrabYourCar, working in the ${verticalLabel} vertical.
+      sysPrompt = `You are a Work Assistant for ${user_name || 'team member'} at GrabYourCar, working in the ${verticalLabel} vertical.
 
 YOUR IDENTITY:
-- Friendly, motivating AI manager: "Hey ${user_name || 'champ'}! 💪"
-- Mix Hindi-English naturally
+- Professional, friendly work helper: "Hi ${user_name || 'there'}! 👋"
 - Be SPECIFIC with exact data from database only
-- Push them to become Employee of the Day/Week/Month
+- Focus ONLY on operational work tasks
 
-YOUR ROLE:
-1. 🎯 TARGET TRACKER — Show personal targets & progress
-2. 📋 DAILY TASK MANAGER — What to do next, who to call
-3. 💪 MOTIVATOR — Push with incentive reminders
-4. 📞 FOLLOW-UP COACH — Remind about pending calls, renewals
-5. 🏆 PERFORMANCE COACH — Tips to close more deals
-6. 🔔 REMINDER ENGINE — Never miss a follow-up or deadline
+⚠️ CRITICAL ACCESS RESTRICTIONS — MUST FOLLOW — NO EXCEPTIONS:
+🚫 You are NOT an AI Co-Founder for this user — you are a WORK ASSISTANT only
+🚫 NEVER share company profits, revenue, expenses, margins, P&L, or ANY financial data
+🚫 NEVER share other team members' performance, salary, targets, or personal info
+🚫 NEVER discuss investor data, runway, burn rate, company finances, or bank balances
+🚫 NEVER answer questions about other verticals, departments, or teams
+🚫 NEVER reveal admin-level business intelligence, strategies, or company plans
+🚫 NEVER discuss total company data, overall business metrics, or cross-vertical analytics
+🚫 NEVER generate company-wide reports or dashboards
+🚫 If asked about ANY restricted topic, respond EXACTLY with:
+   "🔒 That information is restricted to management. I can help you with your ${verticalLabel} work — clients, targets, follow-ups, and performance!"
 
-STRICT RESTRICTIONS — MUST FOLLOW:
-🚫 NEVER share company profits, revenue, expenses, margins, or financial data
-🚫 NEVER share other team members' performance, salary, targets, or reports
-🚫 NEVER discuss investor data, runway, burn rate, or company finances
-🚫 NEVER answer questions about other verticals or departments
-🚫 NEVER reveal admin-level business intelligence or strategies
-🚫 If asked about restricted topics, say: "That info is restricted to management. Focus on your targets — let me help you crush them! 🎯"
-
-ONLY ANSWER about:
-✅ Their own ${verticalLabel} tasks, leads, follow-ups
-✅ Their own targets and achievement progress
-✅ How to close more deals in ${verticalLabel}
-✅ Renewal reminders, pending orders in ${verticalLabel}
-✅ Incentive calculations for THEIR performance
-✅ Tips and coaching for THEIR role
-
-REPORT GENERATION:
-- Generate personal performance reports for their vertical only
-- Show their targets, achievements, and improvement areas
-- Never include other team members' data
+✅ ONLY HELP WITH:
+- Finding/searching clients and leads in ${verticalLabel}
+- Showing their pending follow-ups and tasks
+- Their PERSONAL targets and achievement
+- Who to call next and what to say
+- Their personal incentive calculation
+- Tips to improve THEIR performance
+- Drafting messages (WhatsApp/Email) for THEIR clients
+- Their personal performance report (ONLY their data)
+${verticalLabel.toLowerCase().includes('insurance') ? '- Insurance renewals assigned to them\n- Policy lookups for their clients\n- Renewal reminder message templates' : ''}
+${verticalLabel.toLowerCase().includes('rental') || verticalLabel.toLowerCase().includes('self') ? '- Self-drive bookings and returns\n- KYC verification status\n- Customer pickup/return coordination' : ''}
+${verticalLabel.toLowerCase().includes('hsrp') ? '- HSRP order processing and status\n- Customer registration updates\n- Payment follow-ups' : ''}
+${verticalLabel.toLowerCase().includes('sales') || verticalLabel.toLowerCase().includes('auto') ? '- Sales leads and pipeline\n- Test drive scheduling\n- Quotation follow-ups' : ''}
 
 ${DATA_ACCURACY_RULES}
 
-Current role: ${user_role || 'employee'} in ${verticalLabel}`;
+Current role: ${user_role || 'employee'} in ${verticalLabel} (RESTRICTED ACCESS)`;
     }
 
-    // For non-admin users, filter the context
-    let filteredCtx = ctx;
-    if (!isSuperAdmin && userVertical) {
-      filteredCtx = `
-===== YOUR VERTICAL DATA (${today}) — ${userVertical} =====
-${userVertical.toLowerCase().includes('insurance') ? `INSURANCE RENEWALS:\n${insurance.length > 0 ? insurance.map((i: any) => `• ${i.customer_name || 'N/A'} | Ph: ${i.phone || 'N/A'} | Vehicle: ${i.vehicle_number || 'N/A'} | Expiry: ${i.policy_expiry_date || 'N/A'} | Stage: ${i.pipeline_stage || 'N/A'}`).join('\n') : '⚠️ NO INSURANCE RENEWALS FOUND'}` : ''}
-${userVertical.toLowerCase().includes('sales') || userVertical.toLowerCase().includes('auto') ? `TODAY'S LEADS:\n${leads.filter((l: any) => !l.service_category || l.service_category?.toLowerCase().includes('car') || l.service_category?.toLowerCase().includes('sale')).map((l: any) => `• ${l.name || 'N/A'} | Ph: ${l.phone || 'N/A'} | Source: ${l.source || 'N/A'} | Status: ${l.status || 'N/A'} | Priority: ${l.priority || 'N/A'}`).join('\n') || '⚠️ NO SALES LEADS TODAY'}` : ''}
-${userVertical.toLowerCase().includes('rental') || userVertical.toLowerCase().includes('self') ? `SELF-DRIVE RETURNS:\n${rentals.length > 0 ? rentals.map((r: any) => `• ${r.customer_name || 'N/A'} | Ph: ${r.phone || 'N/A'} | Car: ${r.car_name || 'N/A'} | Return: ${r.return_date || 'N/A'} | Payment: ${r.payment_status || 'N/A'}`).join('\n') : '⚠️ NO RETURNS DUE'}` : ''}
-${userVertical.toLowerCase().includes('hsrp') ? `HSRP PENDING:\n${hsrp.length > 0 ? hsrp.map((h: any) => `• ${h.owner_name || 'N/A'} | Ph: ${h.mobile || 'N/A'} | Reg: ${h.registration_number || 'N/A'} | Status: ${h.order_status || 'N/A'}`).join('\n') : '⚠️ NO PENDING HSRP ORDERS'}` : ''}
+    // ===== BUILD CONTEXT BASED ON ROLE =====
+    let dataCtx: string;
+    if (isSuperAdmin) {
+      dataCtx = ctx;
+    } else {
+      // Team members get ONLY their vertical data — NO financials, NO other teams
+      const vl = (userVertical || "").toLowerCase();
+      const myTargets = targets.filter((t: any) => {
+        const tv = (t.vertical_name || "").toLowerCase();
+        const tn = (t.team_member_name || "").toLowerCase();
+        const un = (user_name || "").toLowerCase();
+        return tv.includes(vl) || vl.includes(tv) || tn.includes(un);
+      });
 
-YOUR FOLLOW-UPS:
-${followUps.length > 0 ? followUps.map((f: any) => `• ${f.name || 'N/A'} | Ph: ${f.phone || 'N/A'} | Due: ${f.follow_up_date || 'N/A'} | Category: ${f.service_category || 'N/A'}`).join('\n') : '⚠️ NO PENDING FOLLOW-UPS'}
+      dataCtx = `===== YOUR ${(userVertical || "").toUpperCase()} WORK DATA (${today}) =====
+${vl.includes('insurance') ? `📋 PENDING RENEWALS:\n${insurance.length > 0 ? insurance.map((i: any) => `• ${i.customer_name || 'N/A'} | Ph: ${i.phone || 'N/A'} | Vehicle: ${i.vehicle_number || 'N/A'} | Expiry: ${i.policy_expiry_date || 'N/A'} | Insurer: ${i.current_insurer || 'N/A'} | Premium: ₹${i.current_premium || 'N/A'} | Stage: ${i.pipeline_stage || 'N/A'}`).join('\n') : '⚠️ No pending renewals found'}` : ''}
+${vl.includes('sales') || vl.includes('auto') ? `📋 YOUR LEADS:\n${leads.filter((l: any) => !l.service_category || l.service_category?.toLowerCase().includes('car') || l.service_category?.toLowerCase().includes('sale')).map((l: any) => `• ${l.name || 'N/A'} | Ph: ${l.phone || 'N/A'} | Source: ${l.source || 'N/A'} | Status: ${l.status || 'N/A'} | Priority: ${l.priority || 'N/A'}`).join('\n') || '⚠️ No sales leads today'}` : ''}
+${vl.includes('rental') || vl.includes('self') || vl.includes('drive') ? `📋 SELF-DRIVE RETURNS:\n${rentals.length > 0 ? rentals.map((r: any) => `• ${r.customer_name || 'N/A'} | Ph: ${r.phone || 'N/A'} | Car: ${r.car_name || 'N/A'} | Return: ${r.return_date || 'N/A'} | Payment: ${r.payment_status || 'N/A'}`).join('\n') : '⚠️ No returns due'}` : ''}
+${vl.includes('hsrp') ? `📋 HSRP PENDING:\n${hsrp.length > 0 ? hsrp.map((h: any) => `• ${h.owner_name || 'N/A'} | Ph: ${h.mobile || 'N/A'} | Reg: ${h.registration_number || 'N/A'} | Status: ${h.order_status || 'N/A'}`).join('\n') : '⚠️ No pending HSRP orders'}` : ''}
 
-YOUR TARGETS:
-${targets.filter((t: any) => t.vertical_name?.toLowerCase().includes(userVertical.toLowerCase())).map((t: any) => `• ${t.team_member_name}: ${t.achieved_count || 0}/${t.target_count || 0} deals | ₹${Number(t.achieved_revenue || 0).toLocaleString("en-IN")}/₹${Number(t.target_revenue || 0).toLocaleString("en-IN")}`).join('\n') || '⚠️ NO TARGETS SET'}
+📞 YOUR FOLLOW-UPS:
+${followUps.length > 0 ? followUps.map((f: any) => `• ${f.name || 'N/A'} | Ph: ${f.phone || 'N/A'} | Due: ${f.follow_up_date || 'N/A'} | Category: ${f.service_category || 'N/A'}`).join('\n') : '⚠️ No pending follow-ups'}
+
+🎯 YOUR TARGETS:
+${myTargets.length > 0 ? myTargets.map((t: any) => `• ${t.team_member_name}: ${t.achieved_count || 0}/${t.target_count || 0} deals | ₹${Number(t.achieved_revenue || 0).toLocaleString("en-IN")}/₹${Number(t.target_revenue || 0).toLocaleString("en-IN")}`).join('\n') : '⚠️ No targets set for this month'}
 ===== END OF DATA =====`;
     }
 
-    // Streaming AI helper
+    // ===== STREAMING AI HELPER =====
     async function streamAI(msgs: any[]) {
       const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
@@ -342,22 +385,20 @@ ${targets.filter((t: any) => t.vertical_name?.toLowerCase().includes(userVertica
       try { return JSON.parse(data.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments || "{}"); } catch { return {}; }
     }
 
-    const dataCtx = isSuperAdmin ? ctx : filteredCtx;
-
     // ========== ACTIONS ==========
 
     if (action === "daily_briefing") {
       const briefingPrompt = isSuperAdmin
-        ? `Generate COMPREHENSIVE daily briefing using ONLY the data provided below. Data:\n${dataCtx}\n\nInclude:\n1. 🌅 GOOD MORNING (key numbers from data)\n2. 🏦 FINANCIAL PULSE (exact numbers from data)\n3. 🎯 TARGET STATUS (from team targets data)\n4. 🔥 URGENT NOW (from overdue follow-ups data)\n5. 📋 TOP 10 TASKS (with exact names, phones from data)\n6. 💰 REVENUE OPPORTUNITIES (from active deals data)\n7. ⚠️ RISK RADAR (from risks data)\n8. 🔍 MISTAKES FOUND (from mistakes data)\n9. 👥 TEAM STATUS (from targets data)\n10. 🎯 SUCCESS = (what must be achieved today)\n\nIMPORTANT: If any section has 0 records, say "No data available" — do NOT make up records.`
-        : `Generate daily briefing for ${user_name || 'team member'} in ${userVertical} vertical ONLY. Data:\n${dataCtx}\n\nInclude:\n1. 🌅 GOOD MORNING ${user_name || ''}!\n2. 🎯 YOUR TARGETS TODAY\n3. 📋 YOUR TOP TASKS (exact names, phones from data)\n4. 💪 INCENTIVE UPDATE\n5. 🏆 TIPS TO WIN\n6. 🔔 REMINDERS\n7. 🎯 SUCCESS = what YOU must achieve today\n\nIMPORTANT: Only use data from above. If 0 records, say so.`;
-      return streamAI([
-        { role: "system", content: sysPrompt },
-        { role: "user", content: briefingPrompt }
-      ]);
+        ? `Generate COMPREHENSIVE daily briefing using ONLY the data provided below. Data:\n${dataCtx}\n\nInclude:\n1. 🌅 GOOD MORNING\n2. 🏦 FINANCIAL PULSE\n3. 🎯 TARGET STATUS\n4. 🔥 URGENT NOW\n5. 📋 TOP 10 TASKS\n6. 💰 REVENUE OPPORTUNITIES\n7. ⚠️ RISK RADAR\n8. 🔍 MISTAKES FOUND\n9. 👥 TEAM STATUS\n10. 🎯 SUCCESS =\n\nIMPORTANT: If any section has 0 records, say "No data available".`
+        : `Generate daily work briefing for ${user_name || 'team member'} in ${userVertical} ONLY. Data:\n${dataCtx}\n\nInclude:\n1. 🌅 GOOD MORNING!\n2. 🎯 YOUR TARGETS\n3. 📋 YOUR TASKS\n4. 📞 WHO TO CALL\n5. 💪 TIPS\n6. 🔔 REMINDERS\n\nONLY use data from above. NO financial data. NO other teams.`;
+      return streamAI([{ role: "system", content: sysPrompt }, { role: "user", content: briefingPrompt }]);
 
     } else if (action === "suggest_tasks") {
+      if (!isSuperAdmin) {
+        return new Response(JSON.stringify({ error: "Access restricted" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
       const data = await callAI(
-        [{ role: "system", content: sysPrompt }, { role: "user", content: `Data:\n${ctx}\n\nGenerate 15-20 specific tasks from ACTUAL data. Each task must reference a real record from the data above. Do NOT create tasks about fictional leads/customers.` }],
+        [{ role: "system", content: sysPrompt }, { role: "user", content: `Data:\n${ctx}\n\nGenerate 15-20 specific tasks from ACTUAL data.` }],
         [{ type: "function", function: { name: "generate_tasks", description: "Generate tasks", parameters: { type: "object", properties: { tasks: { type: "array", items: { type: "object", properties: { title: { type: "string" }, description: { type: "string" }, priority: { type: "string", enum: ["urgent","high","medium","low"] }, task_type: { type: "string", enum: ["follow_up","renewal","order_processing","payment_collection","car_return","cross_sell","new_lead","approval","target_push","coaching","problem_solving","risk_mitigation","mistake_fix","investor_prep","ecommerce"] }, vertical: { type: "string" }, team_member_name: { type: "string" }, ai_suggestion: { type: "string" } }, required: ["title","description","priority","task_type","vertical"], additionalProperties: false } } }, required: ["tasks"], additionalProperties: false } } }],
         { type: "function", function: { name: "generate_tasks" } }
       );
@@ -369,24 +410,37 @@ ${targets.filter((t: any) => t.vertical_name?.toLowerCase().includes(userVertica
       return new Response(JSON.stringify({ tasks }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     } else if (action === "quick_insight") {
-      // Run targeted search based on the user's question
-      const searchResults = await targetedSearch(question || "", SB, h);
+      // Build messages with conversation history for context
+      const msgs: any[] = [{ role: "system", content: sysPrompt }];
+      
+      // Add conversation history if provided
+      if (conversation_history && Array.isArray(conversation_history)) {
+        for (const msg of conversation_history.slice(-8)) {
+          msgs.push({ role: msg.role, content: msg.content });
+        }
+      }
+
+      const searchResults = await targetedSearch(question || "", SB, h, isSuperAdmin ? null : userVertical);
       const fullContext = dataCtx + searchResults;
       
-      return streamAI([{ role: "system", content: sysPrompt }, { role: "user", content: `Here is the ACTUAL live database data AND targeted search results. Use ONLY this data to answer:\n${fullContext}\n\nQuestion: ${question || "What should I focus on right now?"}` }]);
+      msgs.push({ role: "user", content: `Here is the ACTUAL live database data AND targeted search results. Use ONLY this data to answer:\n${fullContext}\n\nQuestion: ${question || "What should I focus on right now?"}` });
+      
+      return streamAI(msgs);
 
     } else if (action === "generate_report") {
-      const reportPrompt = isSuperAdmin
-        ? `Generate a detailed ${body.report_type || 'performance'} report using ONLY the data below:\n${dataCtx}\n\nReport requirements:\n1. 📊 EXECUTIVE SUMMARY with exact numbers\n2. 🎯 TARGET vs ACHIEVEMENT table (from team targets data)\n3. 💰 REVENUE BREAKDOWN by vertical (from deals/invoices data)\n4. 📈 LEAD FUNNEL (from leads data)\n5. 🛡️ INSURANCE PIPELINE (from insurance data — exact records)\n6. 🚗 SELF-DRIVE STATUS (from rentals data)\n7. 🏷️ HSRP ORDERS (from hsrp data)\n8. 🏆 TOP PERFORMERS\n9. ⚠️ RISKS & ACTION ITEMS\n10. 📋 RECOMMENDATIONS\n\nFormat as a professional markdown report with tables. ONLY use real data — if a section has 0 records, state that clearly.`
-        : `Generate a personal ${body.report_type || 'performance'} report for ${user_name} in ${userVertical} using ONLY this data:\n${dataCtx}\n\nInclude: targets, achievements, pending tasks, improvement areas. ONLY use real data.`;
-      return streamAI([
-        { role: "system", content: sysPrompt },
-        { role: "user", content: reportPrompt }
-      ]);
+      if (!isSuperAdmin) {
+        // Team members get personal report only
+        const personalPrompt = `Generate PERSONAL performance report for ${user_name} in ${userVertical} using ONLY this data:\n${dataCtx}\n\nFormat as a clean markdown report with:\n1. 📊 YOUR PERFORMANCE SUMMARY\n2. 🎯 TARGETS vs ACHIEVEMENT (table)\n3. 📋 PENDING TASKS\n4. 💡 IMPROVEMENT AREAS\n5. 💰 YOUR INCENTIVE ESTIMATE\n\nNO company financials. NO other team data. ONLY their personal data.`;
+        return streamAI([{ role: "system", content: sysPrompt }, { role: "user", content: personalPrompt }]);
+      }
+
+      const reportPrompt = `Generate a detailed ${body.report_type || 'performance'} report using ONLY the data below:\n${dataCtx}\n\nReport requirements:\n1. 📊 EXECUTIVE SUMMARY with exact numbers\n2. 🎯 TARGET vs ACHIEVEMENT table\n3. 💰 REVENUE BREAKDOWN by vertical\n4. 📈 LEAD FUNNEL\n5. 🛡️ INSURANCE PIPELINE (exact records)\n6. 🚗 SELF-DRIVE STATUS\n7. 🏷️ HSRP ORDERS\n8. 🏆 TOP PERFORMERS\n9. ⚠️ RISKS & ACTION ITEMS\n10. 📋 RECOMMENDATIONS\n\nFormat as a professional markdown report with tables. ONLY use real data.`;
+      return streamAI([{ role: "system", content: sysPrompt }, { role: "user", content: reportPrompt }]);
 
     } else if (action === "scan_risks") {
+      if (!isSuperAdmin) return new Response(JSON.stringify({ error: "Access restricted" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       const data = await callAI(
-        [{ role: "system", content: sysPrompt + "\n\nScan ALL business data for REAL risks based on actual records. Do NOT invent risks — only flag issues visible in the data." },
+        [{ role: "system", content: sysPrompt + "\n\nScan ALL business data for REAL risks." },
          { role: "user", content: `Scan for risks in this ACTUAL data:\n${ctx}` }],
         [{ type: "function", function: { name: "detect_risks", description: "Detect business risks", parameters: { type: "object", properties: { risks: { type: "array", items: { type: "object", properties: { risk_type: { type: "string", enum: ["financial","operational","customer_churn","compliance","team","revenue_loss","cash_flow","inventory"] }, severity: { type: "string", enum: ["critical","high","medium","low"] }, vertical_name: { type: "string" }, title: { type: "string" }, description: { type: "string" }, impact_amount: { type: "number" }, recommended_action: { type: "string" } }, required: ["risk_type","severity","title","description","recommended_action"], additionalProperties: false } } }, required: ["risks"], additionalProperties: false } } }],
         { type: "function", function: { name: "detect_risks" } }
@@ -399,8 +453,9 @@ ${targets.filter((t: any) => t.vertical_name?.toLowerCase().includes(userVertica
       return new Response(JSON.stringify({ risks: detectedRisks }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     } else if (action === "find_cross_sells") {
+      if (!isSuperAdmin) return new Response(JSON.stringify({ error: "Access restricted" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       const data = await callAI(
-        [{ role: "system", content: sysPrompt + "\n\nFind cross-sell opportunities from ACTUAL customer data only. Use real names and phones from the data." },
+        [{ role: "system", content: sysPrompt + "\n\nFind cross-sell opportunities from ACTUAL customer data only." },
          { role: "user", content: `Find cross-sell opportunities from REAL data:\n${ctx}` }],
         [{ type: "function", function: { name: "find_cross_sells", description: "Find cross-sell opportunities", parameters: { type: "object", properties: { suggestions: { type: "array", items: { type: "object", properties: { customer_name: { type: "string" }, customer_phone: { type: "string" }, source_vertical: { type: "string" }, target_vertical: { type: "string" }, suggestion: { type: "string" }, potential_revenue: { type: "number" } }, required: ["customer_name","source_vertical","target_vertical","suggestion"], additionalProperties: false } } }, required: ["suggestions"], additionalProperties: false } } }],
         { type: "function", function: { name: "find_cross_sells" } }
@@ -413,6 +468,7 @@ ${targets.filter((t: any) => t.vertical_name?.toLowerCase().includes(userVertica
       return new Response(JSON.stringify({ suggestions }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     } else if (action === "detect_mistakes") {
+      if (!isSuperAdmin) return new Response(JSON.stringify({ error: "Access restricted" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       const data = await callAI(
         [{ role: "system", content: sysPrompt + "\n\nFind mistakes and inefficiencies from ACTUAL data only." },
          { role: "user", content: `Detect mistakes in REAL data:\n${ctx}` }],
@@ -427,29 +483,33 @@ ${targets.filter((t: any) => t.vertical_name?.toLowerCase().includes(userVertica
       return new Response(JSON.stringify({ mistakes: detected }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     } else if (action === "calculate_runway") {
+      if (!isSuperAdmin) return new Response(JSON.stringify({ error: "Access restricted" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       await fetch(`${SB}/rest/v1/ai_runway_snapshots`, { method: "POST", headers: { ...h, Prefer: "return=minimal" },
         body: JSON.stringify({ snapshot_date: today, total_revenue: totalRevenue, total_expenses: totalExpenses, net_profit: netProfit, cash_in_bank: cashInBank, monthly_burn_rate: monthlyBurn, runway_months: runwayMonths }) });
       return streamAI([
         { role: "system", content: sysPrompt },
-        { role: "user", content: `Analyze financial health using EXACT data:\n${ctx}\n\nGive:\n1. 🏦 FINANCIAL HEALTH SCORE (1-10)\n2. 💰 CASH FLOW ANALYSIS\n3. ⚠️ RUNWAY ALERT\n4. 📉 EXPENSE OPTIMIZATION\n5. 📈 REVENUE ACCELERATION\n6. 📋 ACTION PLAN (30 days)` }
+        { role: "user", content: `Analyze financial health using EXACT data:\n${ctx}\n\nGive:\n1. 🏦 FINANCIAL HEALTH SCORE\n2. 💰 CASH FLOW ANALYSIS\n3. ⚠️ RUNWAY ALERT\n4. 📉 EXPENSE OPTIMIZATION\n5. 📈 REVENUE ACCELERATION\n6. 📋 ACTION PLAN` }
       ]);
 
     } else if (action === "investor_prep") {
+      if (!isSuperAdmin) return new Response(JSON.stringify({ error: "Access restricted" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       return streamAI([
         { role: "system", content: sysPrompt },
         { role: "user", content: `Prepare investor readiness using EXACT data:\n${ctx}\n\nGive: Key metrics, strengths, gaps, ideal investor profile, email template, pitch deck outline.` }
       ]);
 
     } else if (action === "ecommerce_autopilot") {
+      if (!isSuperAdmin) return new Response(JSON.stringify({ error: "Access restricted" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       return streamAI([
         { role: "system", content: sysPrompt },
         { role: "user", content: `E-commerce autopilot analysis using EXACT data:\n${ctx}\n\nGive: Inventory status, pricing, new products, sales analytics, shipping, revenue boosters.` }
       ]);
 
     } else if (action === "solve_problem") {
+      if (!isSuperAdmin) return new Response(JSON.stringify({ error: "Access restricted" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       const pd = problem_data || {};
       const data = await callAI(
-        [{ role: "system", content: sysPrompt + "\n\nSolve with data-driven solutions. Escalate only if it needs budget/policy/hiring decisions." },
+        [{ role: "system", content: sysPrompt + "\n\nSolve with data-driven solutions." },
          { role: "user", content: `Problem from ${pd.reported_by || 'team'} [${pd.vertical || 'general'}]: ${pd.description || ''}\n\nData:\n${ctx}` }],
         [{ type: "function", function: { name: "solve_problem", description: "Solve problem", parameters: { type: "object", properties: { solution: { type: "string" }, can_solve_automatically: { type: "boolean" }, escalation_reason: { type: "string" }, action_items: { type: "array", items: { type: "string" } } }, required: ["solution","can_solve_automatically"], additionalProperties: false } } }],
         { type: "function", function: { name: "solve_problem" } }
@@ -464,10 +524,11 @@ ${targets.filter((t: any) => t.vertical_name?.toLowerCase().includes(userVertica
     } else if (action === "team_coaching") {
       return streamAI([
         { role: "system", content: sysPrompt },
-        { role: "user", content: `Coach ${body.member_name || ''} (${body.member_vertical || ''}) using EXACT data:\n${ctx}\n\nGive personal daily plan with exact tasks from actual data.` }
+        { role: "user", content: `Coach ${body.member_name || ''} (${body.member_vertical || ''}) using EXACT data:\n${dataCtx}\n\nGive personal daily plan with exact tasks from actual data.` }
       ]);
 
     } else if (action === "set_targets") {
+      if (!isSuperAdmin) return new Response(JSON.stringify({ error: "Access restricted" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       if (target_data && Array.isArray(target_data)) {
         for (const t of target_data) {
           await fetch(`${SB}/rest/v1/team_targets`, { method: "POST", headers: { ...h, Prefer: "return=representation,resolution=merge-duplicates" },
@@ -480,6 +541,7 @@ ${targets.filter((t: any) => t.vertical_name?.toLowerCase().includes(userVertica
       return new Response(JSON.stringify({ error: "No target_data" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     } else if (action === "generate_pushes") {
+      if (!isSuperAdmin) return new Response(JSON.stringify({ error: "Access restricted" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       const data = await callAI(
         [{ role: "system", content: sysPrompt + "\n\nGenerate personalized daily pushes using ACTUAL team and data records." },
          { role: "user", content: `Generate pushes from REAL data:\n${ctx}` }],
