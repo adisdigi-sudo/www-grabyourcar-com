@@ -80,13 +80,16 @@ export function CRMAssistant({ userRole, userName, userVertical }: CRMAssistantP
 
   const saveConversation = useCallback(async (msgs: Message[]) => {
     const payload = JSON.parse(JSON.stringify(msgs));
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
+    if (!userId) return; // Can't save without a valid user
     if (convId) {
       await supabase.from("ai_cofounder_conversations")
         .update({ messages: payload, updated_at: new Date().toISOString() })
         .eq("id", convId);
     } else {
       const { data } = await supabase.from("ai_cofounder_conversations")
-        .insert({ user_id: "system", messages: payload })
+        .insert({ user_id: userId, messages: payload })
         .select("id").single();
       if (data) setConvId(data.id);
     }
