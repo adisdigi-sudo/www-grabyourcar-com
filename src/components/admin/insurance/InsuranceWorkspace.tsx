@@ -377,6 +377,15 @@ export function InsuranceWorkspace() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <InsuranceKpiDetailDialog
+        open={!!kpiDetail}
+        onOpenChange={(v) => { if (!v) setKpiDetail(null); }}
+        kpiType={kpiDetail}
+        clients={clients}
+        policies={runningPolicies.filter(p => p.status === "active")}
+        monthWiseConversion={monthWiseConversion}
+      />
     </div>
   );
 }
