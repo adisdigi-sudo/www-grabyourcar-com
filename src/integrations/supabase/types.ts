@@ -1452,6 +1452,51 @@ export type Database = {
           },
         ]
       }
+      campaigns: {
+        Row: {
+          channel: string | null
+          created_at: string
+          delivered_count: number | null
+          id: string
+          message_template: string | null
+          name: string
+          read_count: number | null
+          scheduled_at: string | null
+          sent_at: string | null
+          status: string | null
+          total_recipients: number | null
+          type: string | null
+        }
+        Insert: {
+          channel?: string | null
+          created_at?: string
+          delivered_count?: number | null
+          id?: string
+          message_template?: string | null
+          name: string
+          read_count?: number | null
+          scheduled_at?: string | null
+          sent_at?: string | null
+          status?: string | null
+          total_recipients?: number | null
+          type?: string | null
+        }
+        Update: {
+          channel?: string | null
+          created_at?: string
+          delivered_count?: number | null
+          id?: string
+          message_template?: string | null
+          name?: string
+          read_count?: number | null
+          scheduled_at?: string | null
+          sent_at?: string | null
+          status?: string | null
+          total_recipients?: number | null
+          type?: string | null
+        }
+        Relationships: []
+      }
       car_brands: {
         Row: {
           country: string
@@ -2248,6 +2293,66 @@ export type Database = {
         }
         Relationships: []
       }
+      chatbot_flows: {
+        Row: {
+          created_at: string
+          description: string | null
+          flow_data: Json | null
+          id: string
+          is_active: boolean | null
+          name: string
+          trigger_type: string | null
+          trigger_value: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          flow_data?: Json | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          trigger_type?: string | null
+          trigger_value?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          flow_data?: Json | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          trigger_type?: string | null
+          trigger_value?: string | null
+        }
+        Relationships: []
+      }
+      checkout_settings: {
+        Row: {
+          auto_disable_cod_threshold: number | null
+          cod_order_limit: number | null
+          id: string
+          partial_payment_default_percent: number | null
+          partial_payment_enabled: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          auto_disable_cod_threshold?: number | null
+          cod_order_limit?: number | null
+          id?: string
+          partial_payment_default_percent?: number | null
+          partial_payment_enabled?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          auto_disable_cod_threshold?: number | null
+          cod_order_limit?: number | null
+          id?: string
+          partial_payment_default_percent?: number | null
+          partial_payment_enabled?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       client_interactions: {
         Row: {
           client_id: string
@@ -2506,6 +2611,89 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contacts: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string | null
+          id: string
+          metadata: Json | null
+          name: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          metadata?: Json | null
+          name: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          metadata?: Json | null
+          name?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      conversations: {
+        Row: {
+          assigned_to: string | null
+          channel: string
+          contact_id: string
+          created_at: string
+          id: string
+          last_message_at: string
+          last_message_preview: string | null
+          status: string
+          subject: string | null
+          tags: string[] | null
+          unread_count: number | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          channel?: string
+          contact_id: string
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          last_message_preview?: string | null
+          status?: string
+          subject?: string | null
+          tags?: string[] | null
+          unread_count?: number | null
+        }
+        Update: {
+          assigned_to?: string | null
+          channel?: string
+          contact_id?: string
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          last_message_preview?: string | null
+          status?: string
+          subject?: string | null
+          tags?: string[] | null
+          unread_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
             referencedColumns: ["id"]
           },
         ]
@@ -3018,6 +3206,92 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "unified_customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_risk_profiles: {
+        Row: {
+          avg_order_value: number | null
+          cancel_rate: number | null
+          cancelled_orders: number | null
+          cod_enabled: boolean | null
+          cod_orders: number | null
+          computed_at: string | null
+          contact_id: string
+          delivered_orders: number | null
+          id: string
+          last_order_at: string | null
+          ndr_count: number | null
+          partial_payment_percent: number | null
+          partial_payment_required: boolean | null
+          prepaid_orders: number | null
+          return_rate: number | null
+          returned_orders: number | null
+          risk_factors: string[] | null
+          risk_level: string | null
+          risk_score: number | null
+          rto_orders: number | null
+          rto_rate: number | null
+          total_orders: number | null
+          total_spent: number | null
+        }
+        Insert: {
+          avg_order_value?: number | null
+          cancel_rate?: number | null
+          cancelled_orders?: number | null
+          cod_enabled?: boolean | null
+          cod_orders?: number | null
+          computed_at?: string | null
+          contact_id: string
+          delivered_orders?: number | null
+          id?: string
+          last_order_at?: string | null
+          ndr_count?: number | null
+          partial_payment_percent?: number | null
+          partial_payment_required?: boolean | null
+          prepaid_orders?: number | null
+          return_rate?: number | null
+          returned_orders?: number | null
+          risk_factors?: string[] | null
+          risk_level?: string | null
+          risk_score?: number | null
+          rto_orders?: number | null
+          rto_rate?: number | null
+          total_orders?: number | null
+          total_spent?: number | null
+        }
+        Update: {
+          avg_order_value?: number | null
+          cancel_rate?: number | null
+          cancelled_orders?: number | null
+          cod_enabled?: boolean | null
+          cod_orders?: number | null
+          computed_at?: string | null
+          contact_id?: string
+          delivered_orders?: number | null
+          id?: string
+          last_order_at?: string | null
+          ndr_count?: number | null
+          partial_payment_percent?: number | null
+          partial_payment_required?: boolean | null
+          prepaid_orders?: number | null
+          return_rate?: number | null
+          returned_orders?: number | null
+          risk_factors?: string[] | null
+          risk_level?: string | null
+          risk_score?: number | null
+          rto_orders?: number | null
+          rto_rate?: number | null
+          total_orders?: number | null
+          total_spent?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_risk_profiles_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
             referencedColumns: ["id"]
           },
         ]
@@ -4019,6 +4293,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      email_lists: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          subscriber_count: number | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          subscriber_count?: number | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          subscriber_count?: number | null
+        }
+        Relationships: []
       }
       email_logs: {
         Row: {
@@ -9259,6 +9557,53 @@ export type Database = {
           },
         ]
       }
+      messages: {
+        Row: {
+          attachments: Json | null
+          contact_id: string | null
+          content: string
+          content_type: string | null
+          conversation_id: string
+          created_at: string
+          direction: string
+          id: string
+          read_at: string | null
+          sender_id: string | null
+        }
+        Insert: {
+          attachments?: Json | null
+          contact_id?: string | null
+          content: string
+          content_type?: string | null
+          conversation_id: string
+          created_at?: string
+          direction?: string
+          id?: string
+          read_at?: string | null
+          sender_id?: string | null
+        }
+        Update: {
+          attachments?: Json | null
+          contact_id?: string | null
+          content?: string
+          content_type?: string | null
+          conversation_id?: string
+          created_at?: string
+          direction?: string
+          id?: string
+          read_at?: string | null
+          sender_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messaging_providers: {
         Row: {
           config: Json | null
@@ -9521,6 +9866,95 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "accessory_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          c2p_attempted: boolean | null
+          c2p_converted: boolean | null
+          contact_id: string | null
+          courier_partner: string | null
+          created_at: string
+          currency: string | null
+          discount: number | null
+          id: string
+          is_flagged: boolean | null
+          items: Json | null
+          ndr_attempts: number | null
+          ndr_status: string | null
+          order_number: string
+          payment_method: string | null
+          risk_factors: string[] | null
+          risk_level: string | null
+          risk_score: number | null
+          shipping_address: Json | null
+          shipping_fee: number | null
+          status: string
+          subtotal: number | null
+          total: number
+          tracking_number: string | null
+          updated_at: string
+        }
+        Insert: {
+          c2p_attempted?: boolean | null
+          c2p_converted?: boolean | null
+          contact_id?: string | null
+          courier_partner?: string | null
+          created_at?: string
+          currency?: string | null
+          discount?: number | null
+          id?: string
+          is_flagged?: boolean | null
+          items?: Json | null
+          ndr_attempts?: number | null
+          ndr_status?: string | null
+          order_number: string
+          payment_method?: string | null
+          risk_factors?: string[] | null
+          risk_level?: string | null
+          risk_score?: number | null
+          shipping_address?: Json | null
+          shipping_fee?: number | null
+          status?: string
+          subtotal?: number | null
+          total?: number
+          tracking_number?: string | null
+          updated_at?: string
+        }
+        Update: {
+          c2p_attempted?: boolean | null
+          c2p_converted?: boolean | null
+          contact_id?: string | null
+          courier_partner?: string | null
+          created_at?: string
+          currency?: string | null
+          discount?: number | null
+          id?: string
+          is_flagged?: boolean | null
+          items?: Json | null
+          ndr_attempts?: number | null
+          ndr_status?: string | null
+          order_number?: string
+          payment_method?: string | null
+          risk_factors?: string[] | null
+          risk_level?: string | null
+          risk_score?: number | null
+          shipping_address?: Json | null
+          shipping_fee?: number | null
+          status?: string
+          subtotal?: number | null
+          total?: number
+          tracking_number?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
             referencedColumns: ["id"]
           },
         ]
@@ -9871,6 +10305,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      quick_replies: {
+        Row: {
+          category: string | null
+          created_at: string
+          id: string
+          message: string
+          shortcut: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          id?: string
+          message: string
+          shortcut: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          id?: string
+          message?: string
+          shortcut?: string
+        }
+        Relationships: []
       }
       rental_agreement_history: {
         Row: {
