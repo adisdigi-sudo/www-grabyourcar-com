@@ -385,6 +385,16 @@ const Accessories = () => {
             </div>
           </div>
         </section>
+        {/* ShopRocket Store Embed */}
+        <section className="py-12 bg-muted/30">
+          <div className="container mx-auto px-4">
+            <h2 className="text-2xl font-bold text-center mb-2">Shop Online</h2>
+            <p className="text-muted-foreground text-center mb-8">
+              Browse and order accessories directly — powered by ShopRocket
+            </p>
+            <ShopRocketEmbed />
+          </div>
+        </section>
       </main>
 
       <Footer />
