@@ -544,6 +544,8 @@ const AdminLayout = () => {
       case "hr-assets":
       case "hr-helpdesk":
         return <ZohoHRWorkspace />;
+      case "ai-cofounder":
+        return <AICofounderDashboard />;
       default:
         return <AdminDashboard />;
     }
