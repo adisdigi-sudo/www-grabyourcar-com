@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { FileText, Plus, Search, Edit2, Trash2, Download, Eye } from "lucide-react";
+import { FileText, Plus, Search, Edit2, Trash2, Download, Send, Zap } from "lucide-react";
 import { generateInvoicePDF } from "@/lib/generateInvoicePDF";
 
 const STATUSES = ["draft", "sent", "viewed", "partial", "paid", "overdue", "cancelled"];
@@ -119,11 +119,27 @@ export const AccountsInvoicesModule = () => {
                 <TableCell className="font-medium">{fmt(inv.total_amount)}</TableCell>
                 <TableCell className="text-green-600">{fmt(inv.amount_paid)}</TableCell>
                 <TableCell className="font-medium text-orange-600">{fmt(inv.balance_due)}</TableCell>
-                <TableCell><Badge className={statusColor[inv.status] || ""}>{inv.status}</Badge></TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-1">
+                    <Badge className={statusColor[inv.status] || ""}>{inv.status}</Badge>
+                    {inv.invoice_type === 'auto' && <Badge variant="outline" className="text-xs gap-1"><Zap className="h-3 w-3" />Auto</Badge>}
+                  </div>
+                </TableCell>
                 <TableCell className="text-right"><div className="flex gap-1 justify-end">
                   <Button size="icon" variant="ghost" title="Download PDF" onClick={() => {
                     generateInvoicePDF({ ...inv, items: Array.isArray(inv.items) ? inv.items : [] });
                   }}><Download className="h-4 w-4" /></Button>
+                  {inv.client_email && (
+                    <Button size="icon" variant="ghost" title="Send via Email" onClick={async () => {
+                      try {
+                        toast.loading("Sending invoice...");
+                        const { data, error } = await supabase.functions.invoke("send-invoice-email", { body: { invoice_id: inv.id } });
+                        toast.dismiss();
+                        if (error) throw error;
+                        toast.success("Invoice sent to " + inv.client_email);
+                      } catch (e: any) { toast.dismiss(); toast.error(e.message || "Failed to send"); }
+                    }}><Send className="h-4 w-4" /></Button>
+                  )}
                   <Button size="icon" variant="ghost" onClick={() => openEdit(inv)}><Edit2 className="h-4 w-4" /></Button>
                   <Button size="icon" variant="ghost" className="text-destructive" onClick={() => { if (confirm("Delete?")) deleteMutation.mutate(inv.id); }}><Trash2 className="h-4 w-4" /></Button>
                 </div></TableCell>
