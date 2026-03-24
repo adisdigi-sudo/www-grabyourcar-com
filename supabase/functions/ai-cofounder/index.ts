@@ -484,7 +484,7 @@ ${myTargets.length > 0 ? myTargets.map((t: any) => `• ${t.team_member_name}: $
             clientId = found[0].id;
           }
           const updates: any = { updated_at: new Date().toISOString() };
-          for (const key of ["customer_name","vehicle_number","vehicle_make","vehicle_model","vehicle_year","current_insurer","current_policy_type","policy_expiry_date","current_premium","lead_status","pipeline_stage","follow_up_date","assigned_executive","notes","email","ncb_percentage","vehicle_color"]) {
+          for (const key of ["customer_name","vehicle_number","vehicle_make","vehicle_model","vehicle_year","current_insurer","current_policy_type","policy_expiry_date","current_premium","lead_status","pipeline_stage","follow_up_date","assigned_executive","notes","email","ncb_percentage"]) {
             if (params[key] !== undefined) updates[key] = params[key];
           }
           const r = await fetch(`${SB}/rest/v1/insurance_clients?id=eq.${clientId}`, { method: "PATCH", headers: { ...h, Prefer: "return=minimal" }, body: JSON.stringify(updates) });
