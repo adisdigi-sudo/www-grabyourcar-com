@@ -97,17 +97,26 @@ export function CRMAssistant({ userRole, userName, userVertical }: CRMAssistantP
   const [isLoading, setIsLoading] = useState(false);
   const [streamContent, setStreamContent] = useState("");
   const [convId, setConvId] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const loadedRef = useRef(false);
 
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUserId(user?.id ?? null);
+    })();
+  }, []);
+
   // Load persistent conversation
   useEffect(() => {
-    if (!isOpen || loadedRef.current) return;
+    if (!isOpen || loadedRef.current || !currentUserId) return;
     loadedRef.current = true;
     (async () => {
       const { data } = await supabase
         .from("ai_cofounder_conversations")
         .select("id, messages")
+        .eq("user_id", currentUserId)
         .order("updated_at", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -116,7 +125,7 @@ export function CRMAssistant({ userRole, userName, userVertical }: CRMAssistantP
         setConvId(data.id);
       }
     })();
-  }, [isOpen]);
+  }, [isOpen, currentUserId]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -127,20 +136,19 @@ export function CRMAssistant({ userRole, userName, userVertical }: CRMAssistantP
 
   const saveConversation = useCallback(async (msgs: Message[]) => {
     const payload = JSON.parse(JSON.stringify(msgs));
-    const { data: { user } } = await supabase.auth.getUser();
-    const userId = user?.id;
-    if (!userId) return;
+    if (!currentUserId) return;
     if (convId) {
       await supabase.from("ai_cofounder_conversations")
         .update({ messages: payload, updated_at: new Date().toISOString() })
-        .eq("id", convId);
+        .eq("id", convId)
+        .eq("user_id", currentUserId);
     } else {
       const { data } = await supabase.from("ai_cofounder_conversations")
-        .insert({ user_id: userId, messages: payload })
+        .insert({ user_id: currentUserId, messages: payload })
         .select("id").single();
       if (data) setConvId(data.id);
     }
-  }, [convId]);
+  }, [convId, currentUserId]);
 
   const sendMessage = async (text?: string, actionOverride?: string) => {
     const query = text || input.trim();
