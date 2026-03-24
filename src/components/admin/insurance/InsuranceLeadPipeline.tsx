@@ -668,7 +668,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                   <TableHead className="text-[10px] font-bold uppercase">Phone</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase">Vehicle</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase">Insurer</TableHead>
-                  <TableHead className="text-[10px] font-bold uppercase">Stage</TableHead>
+                  {/* Stage column removed - inline select in Name cell */}
                   <TableHead className="text-[10px] font-bold uppercase">Picked Up</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase">Source</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase">Lead Time</TableHead>
