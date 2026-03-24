@@ -67,6 +67,7 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
     ],
   },
   { id: "reports", label: "Reports", icon: BarChart3 },
+  { id: "profit-loss", label: "Profit & Loss", icon: Calculator },
   { id: "documents", label: "Documents", icon: FolderOpen },
 ];
 
