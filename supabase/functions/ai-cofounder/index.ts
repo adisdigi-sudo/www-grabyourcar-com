@@ -220,10 +220,16 @@ NOTE: You are viewing data for ${userVertical} vertical only.`;
 
     // ========== ACTIONS ==========
 
+    // Use filtered context for non-admins
+    const dataCtx = isSuperAdmin ? ctx : filteredCtx;
+
     if (action === "daily_briefing") {
+      const briefingPrompt = isSuperAdmin
+        ? `Generate COMPREHENSIVE daily briefing. Data:\n${dataCtx}\n\nInclude:\n1. 🌅 GOOD MORNING (motivational + key numbers + financial health)\n2. 🏦 FINANCIAL PULSE (revenue, expenses, runway, cash position)\n3. 🎯 TARGET STATUS (who's on track, who needs push)\n4. 🔥 URGENT NOW (immediate revenue actions)\n5. 📋 TOP 10 TASKS (with names, phones, amounts)\n6. 💰 REVENUE OPPORTUNITIES (cross-sell every customer)\n7. ⚠️ RISK RADAR (all detected risks with severity)\n8. 🔍 MISTAKES FOUND (process failures, missed opportunities)\n9. 👥 TEAM COACHING (specific per-member guidance)\n10. 📈 INVESTOR METRICS (MRR, growth, unit economics)\n11. 🎯 SUCCESS = (what must be achieved today)`
+        : `Generate daily briefing for ${user_name || 'team member'} in ${userVertical} vertical ONLY. Data:\n${dataCtx}\n\nInclude:\n1. 🌅 GOOD MORNING ${user_name || ''}! (motivational)\n2. 🎯 YOUR TARGETS TODAY (personal targets & progress)\n3. 📋 YOUR TOP TASKS (specific calls, follow-ups, orders)\n4. 💪 INCENTIVE UPDATE (what you earn if you close these)\n5. 🏆 TIPS TO WIN (how to close more in ${userVertical})\n6. 🔔 REMINDERS (renewals, follow-ups, deadlines)\n7. 🎯 SUCCESS = (what YOU must achieve today to be Employee of the Day)`;
       return streamAI([
         { role: "system", content: sysPrompt },
-        { role: "user", content: `Generate COMPREHENSIVE daily briefing. Data:\n${ctx}\n\nInclude:\n1. 🌅 GOOD MORNING (motivational + key numbers + financial health)\n2. 🏦 FINANCIAL PULSE (revenue, expenses, runway, cash position)\n3. 🎯 TARGET STATUS (who's on track, who needs push)\n4. 🔥 URGENT NOW (immediate revenue actions)\n5. 📋 TOP 10 TASKS (with names, phones, amounts)\n6. 💰 REVENUE OPPORTUNITIES (cross-sell every customer)\n7. ⚠️ RISK RADAR (all detected risks with severity)\n8. 🔍 MISTAKES FOUND (process failures, missed opportunities)\n9. 👥 TEAM COACHING (specific per-member guidance)\n10. 📈 INVESTOR METRICS (MRR, growth, unit economics)\n11. 🎯 SUCCESS = (what must be achieved today)` }
+        { role: "user", content: briefingPrompt }
       ]);
 
     } else if (action === "suggest_tasks") {
