@@ -735,16 +735,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                         </div>
                       </TableCell>
                       <TableCell className="text-xs">{client.current_insurer || "—"}</TableCell>
-                      <TableCell>
-                        <div className="flex flex-col gap-0.5">
-                          <Badge variant="outline" className={cn("text-[9px] px-1.5", stage.bg, stage.text, "border", stage.border)}>
-                            {stage.label}
-                          </Badge>
-                          {client.retarget_status === "scheduled" && (
-                            <Badge variant="outline" className="text-[8px] px-1 bg-violet-50 text-violet-600 border-violet-200">🔄 Retarget</Badge>
-                          )}
-                        </div>
-                      </TableCell>
+                      {/* Stage column removed - inline in Name */}
                       <TableCell onClick={e => e.stopPropagation()}>
                         {client.picked_up_by ? (
                           <div className="flex flex-col gap-0.5">
