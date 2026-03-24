@@ -28,7 +28,17 @@ const TAB_CONTEXT: Record<string, string> = {
   "marketing-hub": "Give ONE marketing idea to boost leads today. Max 2 sentences.",
 };
 
-export function AICofounderBanner({ activeTab }: Props) {
+const TEAM_TAB_CONTEXT: Record<string, string> = {
+  "sales-crm": "Give ONE sales task for ME right now. Which lead should I call first? Max 2 sentences.",
+  "services-insurance": "Give ONE renewal task for ME. Which customer should I call for renewal right now? Max 2 sentences.",
+  "rental-crm": "Give ONE self-drive task for ME. Any returns due or bookings to confirm? Max 2 sentences.",
+  "hsrp-crm": "Give ONE HSRP task for ME. Any orders I need to process? Max 2 sentences.",
+  "dealer-network": "Give ONE dealer task for ME. Any updates to collect or calls to make? Max 2 sentences.",
+  "calling-system": "Give ONE calling task for ME. Which lead should I call first and what to say? Max 2 sentences.",
+};
+
+export function AICofounderBanner({ activeTab, userRole, userName, userVertical }: Props) {
+  const isSuperAdmin = !userRole || userRole === "super_admin" || userRole === "admin";
   const [suggestion, setSuggestion] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
