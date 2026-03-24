@@ -211,17 +211,8 @@ const LeadRoutingManager = lazy(() =>
 // Accounts — Zoho Books-style unified workspace
 const ZohoAccountsWorkspace = lazy(() => import("@/components/admin/finance/ZohoAccountsWorkspace").then(m => ({ default: m.ZohoAccountsWorkspace })));
 
-// HR modules (10 sub-modules)
-const HRCoreModule = lazy(() => import("@/components/admin/hr/HRCoreModule").then(m => ({ default: m.HRCoreModule })));
-const HRRecruitmentModule = lazy(() => import("@/components/admin/hr/HRRecruitmentModule").then(m => ({ default: m.HRRecruitmentModule })));
-const HRWorkforceModule = lazy(() => import("@/components/admin/hr/HRWorkforceModule").then(m => ({ default: m.HRWorkforceModule })));
-const HRAttendanceModule = lazy(() => import("@/components/admin/hr/HRAttendanceModule").then(m => ({ default: m.HRAttendanceModule })));
-const HRPayrollModule = lazy(() => import("@/components/admin/hr/HRPayrollModule").then(m => ({ default: m.HRPayrollModule })));
-const HRExpenseModule = lazy(() => import("@/components/admin/hr/HRExpenseModule").then(m => ({ default: m.HRExpenseModule })));
-const HRPerformanceModule = lazy(() => import("@/components/admin/hr/HRPerformanceModule").then(m => ({ default: m.HRPerformanceModule })));
-const HREngagementModule = lazy(() => import("@/components/admin/hr/HREngagementModule").then(m => ({ default: m.HREngagementModule })));
-const HRAssetModule = lazy(() => import("@/components/admin/hr/HRAssetModule").then(m => ({ default: m.HRAssetModule })));
-const HRHelpdeskModule = lazy(() => import("@/components/admin/hr/HRHelpdeskModule").then(m => ({ default: m.HRHelpdeskModule })));
+// HR — Zoho People-style unified workspace
+const ZohoHRWorkspace = lazy(() => import("@/components/admin/hr/ZohoHRWorkspace").then(m => ({ default: m.ZohoHRWorkspace })));
 const CarDatabaseWorkspace = lazy(() =>
   import("@/components/admin/car-database/CarDatabaseWorkspace").then((module) => ({ default: module.CarDatabaseWorkspace })),
 );
@@ -320,7 +311,7 @@ const AdminLayout = () => {
         if (slug === "marketing") return <MarketingDashboard onNavigate={setActiveTab} />;
         if (slug === "loans") return <LoanCRMDashboard />;
         if (slug === "accounts") return <ZohoAccountsWorkspace />;
-        if (slug === "hr") return <HRCoreModule />;
+        if (slug === "hr") return <ZohoHRWorkspace />;
         return <AdminDashboard />;
       }
       case "sales-crm":
@@ -538,27 +529,18 @@ const AdminLayout = () => {
       case "accounts-reports":
       case "accounts-documents":
         return <ZohoAccountsWorkspace />;
-      // ── HR (10 sub-modules) ──
+      // ── HR (Zoho People-style unified workspace) ──
       case "hr-core":
-        return <HRCoreModule />;
       case "hr-recruitment":
-        return <HRRecruitmentModule />;
       case "hr-workforce":
-        return <HRWorkforceModule />;
       case "hr-attendance":
-        return <HRAttendanceModule />;
       case "hr-payroll":
-        return <HRPayrollModule />;
       case "hr-expense":
-        return <HRExpenseModule />;
       case "hr-performance":
-        return <HRPerformanceModule />;
       case "hr-engagement":
-        return <HREngagementModule />;
       case "hr-assets":
-        return <HRAssetModule />;
       case "hr-helpdesk":
-        return <HRHelpdeskModule />;
+        return <ZohoHRWorkspace />;
       default:
         return <AdminDashboard />;
     }
