@@ -820,21 +820,6 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                           <Button size="sm" variant="outline" className="h-6 text-[10px] gap-0.5 px-1.5 text-emerald-600 border-emerald-200" onClick={() => { setSelectedClient(client); setShowQuoteModal(true); }}>
                             <FileText className="h-2.5 w-2.5" /> Quote
                           </Button>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button size="sm" variant="outline" className="h-6 text-[10px] gap-0.5 px-1.5">Move <ChevronRight className="h-2.5 w-2.5" /></Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-44">
-                              {PIPELINE_STAGES.filter(s => s.value !== normStage).map(s => {
-                                const SIcon = s.icon;
-                                return (
-                                  <DropdownMenuItem key={s.value} onClick={() => handleMove(client, s.value)} className="gap-2 text-xs">
-                                    <SIcon className="h-3 w-3" /> {s.label}
-                                  </DropdownMenuItem>
-                                );
-                              })}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
                         </div>
                       </TableCell>
                     </TableRow>
