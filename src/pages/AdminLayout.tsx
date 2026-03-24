@@ -210,7 +210,7 @@ const LeadRoutingManager = lazy(() =>
 );
 // Accounts — Zoho Books-style unified workspace
 const ZohoAccountsWorkspace = lazy(() => import("@/components/admin/finance/ZohoAccountsWorkspace").then(m => ({ default: m.ZohoAccountsWorkspace })));
-const IncentivePayoutApprovalLazy = lazy(() => import("@/components/admin/finance/IncentivePayoutApproval"));
+
 // HR modules (10 sub-modules)
 const HRCoreModule = lazy(() => import("@/components/admin/hr/HRCoreModule").then(m => ({ default: m.HRCoreModule })));
 const HRRecruitmentModule = lazy(() => import("@/components/admin/hr/HRRecruitmentModule").then(m => ({ default: m.HRRecruitmentModule })));
