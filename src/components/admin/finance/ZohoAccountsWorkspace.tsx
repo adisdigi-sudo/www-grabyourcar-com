@@ -27,6 +27,7 @@ const AccountsVendorCredits = lazy(() => import("./AccountsVendorCredits"));
 const AccountsPurchaseOrders = lazy(() => import("./AccountsPurchaseOrders"));
 const AccountsItemsModule = lazy(() => import("./AccountsItemsModule"));
 const AccountsBudgets = lazy(() => import("./AccountsBudgets"));
+const VerticalProfitLoss = lazy(() => import("./VerticalProfitLoss"));
 
 interface SidebarItem {
   id: string;
@@ -66,6 +67,7 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
     ],
   },
   { id: "reports", label: "Reports", icon: BarChart3 },
+  { id: "profit-loss", label: "Profit & Loss", icon: Calculator },
   { id: "documents", label: "Documents", icon: FolderOpen },
 ];
 
@@ -111,6 +113,7 @@ export const ZohoAccountsWorkspace = ({ initialView = "home" }: ZohoAccountsWork
       case "chart-of-accounts": return <AccountsChartOfAccounts />;
       case "budgets": return <AccountsBudgets />;
       case "reports": return <FinancialIntelligenceDashboard />;
+      case "profit-loss": return <VerticalProfitLoss />;
       case "documents": return <AccountsDocuments />;
       default: return <AccountsDashboard />;
     }

@@ -12158,6 +12158,105 @@ export type Database = {
         }
         Relationships: []
       }
+      vertical_pl_entries: {
+        Row: {
+          breakdown: Json | null
+          cost_of_service: number
+          created_at: string | null
+          customer_name: string | null
+          description: string | null
+          entry_date: string
+          gross_revenue: number
+          gst_amount: number
+          id: string
+          margin_percentage: number | null
+          month_year: string | null
+          net_revenue: number
+          profit: number
+          reference_id: string | null
+          reference_type: string | null
+          vertical_slug: string
+        }
+        Insert: {
+          breakdown?: Json | null
+          cost_of_service?: number
+          created_at?: string | null
+          customer_name?: string | null
+          description?: string | null
+          entry_date?: string
+          gross_revenue?: number
+          gst_amount?: number
+          id?: string
+          margin_percentage?: number | null
+          month_year?: string | null
+          net_revenue?: number
+          profit?: number
+          reference_id?: string | null
+          reference_type?: string | null
+          vertical_slug: string
+        }
+        Update: {
+          breakdown?: Json | null
+          cost_of_service?: number
+          created_at?: string | null
+          customer_name?: string | null
+          description?: string | null
+          entry_date?: string
+          gross_revenue?: number
+          gst_amount?: number
+          id?: string
+          margin_percentage?: number | null
+          month_year?: string | null
+          net_revenue?: number
+          profit?: number
+          reference_id?: string | null
+          reference_type?: string | null
+          vertical_slug?: string
+        }
+        Relationships: []
+      }
+      vertical_profit_config: {
+        Row: {
+          config_json: Json | null
+          created_at: string | null
+          gst_percentage: number | null
+          id: string
+          is_active: boolean | null
+          margin_description: string | null
+          margin_type: string
+          margin_value: number | null
+          updated_at: string | null
+          vertical_name: string
+          vertical_slug: string
+        }
+        Insert: {
+          config_json?: Json | null
+          created_at?: string | null
+          gst_percentage?: number | null
+          id?: string
+          is_active?: boolean | null
+          margin_description?: string | null
+          margin_type?: string
+          margin_value?: number | null
+          updated_at?: string | null
+          vertical_name: string
+          vertical_slug: string
+        }
+        Update: {
+          config_json?: Json | null
+          created_at?: string | null
+          gst_percentage?: number | null
+          id?: string
+          is_active?: boolean | null
+          margin_description?: string | null
+          margin_type?: string
+          margin_value?: number | null
+          updated_at?: string | null
+          vertical_name?: string
+          vertical_slug?: string
+        }
+        Relationships: []
+      }
       verticals: {
         Row: {
           created_at: string | null
