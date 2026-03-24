@@ -572,12 +572,6 @@ const AdminLayout = () => {
         return <HRAssetModule />;
       case "hr-helpdesk":
         return <HRHelpdeskModule />;
-      case "incentive-management":
-        return <SuperAdminIncentiveWorkspace />;
-      case "incentive-my-dashboard":
-        return <SalesIncentiveDashboard />;
-      case "deals-pipeline":
-        return <DealsPipeline />;
       default:
         return <AdminDashboard />;
     }
