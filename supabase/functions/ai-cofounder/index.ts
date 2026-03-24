@@ -19,6 +19,10 @@ serve(async (req) => {
     const body = await req.json();
     const { action, user_name, user_role, vertical, question, target_data, problem_data } = body;
 
+    // Role-based access: determine if user is super_admin/admin or team member
+    const isSuperAdmin = !user_role || user_role === "super_admin" || user_role === "admin";
+    const userVertical = vertical || null; // e.g. "insurance", "sales", "self-drive"
+
     const h = { apikey: SK, Authorization: `Bearer ${SK}`, "Content-Type": "application/json" };
     const today = new Date().toISOString().split("T")[0];
     const cm = today.slice(0, 7); // current month
