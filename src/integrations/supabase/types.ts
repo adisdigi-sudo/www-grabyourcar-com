@@ -314,6 +314,69 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_cofounder_tasks: {
+        Row: {
+          ai_suggestion: string | null
+          approved_at: string | null
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          dismissed_at: string | null
+          due_date: string | null
+          id: string
+          priority: string | null
+          role: string | null
+          source_id: string | null
+          source_table: string | null
+          status: string | null
+          task_type: string
+          team_member_name: string | null
+          title: string
+          user_id: string | null
+          vertical: string | null
+        }
+        Insert: {
+          ai_suggestion?: string | null
+          approved_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          dismissed_at?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string | null
+          role?: string | null
+          source_id?: string | null
+          source_table?: string | null
+          status?: string | null
+          task_type: string
+          team_member_name?: string | null
+          title: string
+          user_id?: string | null
+          vertical?: string | null
+        }
+        Update: {
+          ai_suggestion?: string | null
+          approved_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          dismissed_at?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string | null
+          role?: string | null
+          source_id?: string | null
+          source_table?: string | null
+          status?: string | null
+          task_type?: string
+          team_member_name?: string | null
+          title?: string
+          user_id?: string | null
+          vertical?: string | null
+        }
+        Relationships: []
+      }
       ai_conversation_analytics: {
         Row: {
           channel: string

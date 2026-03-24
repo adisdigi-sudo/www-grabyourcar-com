@@ -69,6 +69,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   // ── Universal ──
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "ai-cofounder", label: "🤖 AI Co-Founder", icon: Brain, badge: "AI" },
 
   // ── Sales CRM — sales vertical ──
   { id: "sales-crm", label: "🚗 Sales CRM", icon: Car, verticals: ["sales"], allowedRoles: ["super_admin", "admin", "sales"] },
