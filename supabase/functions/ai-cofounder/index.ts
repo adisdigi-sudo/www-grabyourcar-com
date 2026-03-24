@@ -685,14 +685,15 @@ ${myTargets.length > 0 ? myTargets.map((t: any) => `• ${t.team_member_name}: $
 
     // ===== AI WITH TOOL CALLING (for write actions) =====
     async function streamAIWithTools(msgs: any[]) {
-      // First call: let AI decide if it needs to call a tool
+      // First call: NON-streaming to detect tool calls
       const firstCall = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "google/gemini-3-flash-preview",
           messages: msgs,
-          tools: isSuperAdmin ? WRITE_TOOLS : [],
+          tools: isSuperAdmin ? WRITE_TOOLS : undefined,
+          stream: false,
           max_tokens: 4000,
         }),
       });
