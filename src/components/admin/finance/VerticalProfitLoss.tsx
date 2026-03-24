@@ -72,7 +72,7 @@ export const VerticalProfitLoss = () => {
   // Add entry mutation
   const addEntry = useMutation({
     mutationFn: async (entry: any) => {
-      const { error } = await (supabase.from("vertical_pl_entries") as any).insert(entry);
+      const { error } = await (supabase as any).from("vertical_pl_entries").insert(entry);
       if (error) throw error;
     },
     onSuccess: () => {
