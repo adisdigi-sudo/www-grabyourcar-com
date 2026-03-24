@@ -237,6 +237,9 @@ const HRTemplates = lazy(() =>
 const CRMAssistant = lazy(() =>
   import("@/components/admin/CRMAssistant").then((module) => ({ default: module.CRMAssistant })),
 );
+const AICofounderBanner = lazy(() =>
+  import("@/components/admin/AICofounderBanner").then((module) => ({ default: module.AICofounderBanner })),
+);
 
 const AdminPanelLoader = ({ className }: { className?: string }) => (
   <div className={cn("flex min-h-[240px] items-center justify-center", className)}>
