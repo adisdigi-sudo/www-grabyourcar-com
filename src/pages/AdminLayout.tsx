@@ -311,7 +311,7 @@ const AdminLayout = () => {
         if (slug === "marketing") return <MarketingDashboard onNavigate={setActiveTab} />;
         if (slug === "loans") return <LoanCRMDashboard />;
         if (slug === "accounts") return <ZohoAccountsWorkspace />;
-        if (slug === "hr") return <HRCoreModule />;
+        if (slug === "hr") return <ZohoHRWorkspace />;
         return <AdminDashboard />;
       }
       case "sales-crm":
