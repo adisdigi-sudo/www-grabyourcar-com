@@ -3495,6 +3495,60 @@ export type Database = {
           },
         ]
       }
+      dealer_automation_logs: {
+        Row: {
+          action_type: string
+          channel: string
+          created_at: string | null
+          dealer_company_id: string | null
+          dealer_rep_id: string | null
+          id: string
+          message_template: string | null
+          response: string | null
+          sent_at: string | null
+          status: string | null
+        }
+        Insert: {
+          action_type?: string
+          channel?: string
+          created_at?: string | null
+          dealer_company_id?: string | null
+          dealer_rep_id?: string | null
+          id?: string
+          message_template?: string | null
+          response?: string | null
+          sent_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          action_type?: string
+          channel?: string
+          created_at?: string | null
+          dealer_company_id?: string | null
+          dealer_rep_id?: string | null
+          id?: string
+          message_template?: string | null
+          response?: string | null
+          sent_at?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dealer_automation_logs_dealer_company_id_fkey"
+            columns: ["dealer_company_id"]
+            isOneToOne: false
+            referencedRelation: "dealer_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dealer_automation_logs_dealer_rep_id_fkey"
+            columns: ["dealer_rep_id"]
+            isOneToOne: false
+            referencedRelation: "dealer_representatives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dealer_broadcast_logs: {
         Row: {
           broadcast_type: string
@@ -3531,45 +3585,63 @@ export type Database = {
       dealer_companies: {
         Row: {
           address: string | null
+          automation_enabled: boolean | null
+          brand_name: string | null
           city: string | null
           company_name: string
           contact_email: string | null
           contact_phone: string | null
           created_at: string | null
           dealer_type: string
+          designation: string | null
           id: string
           is_active: boolean | null
+          last_contacted_at: string | null
+          last_discount_update: string | null
           notes: string | null
+          pincode: string | null
           priority_level: number | null
           state: string | null
           updated_at: string | null
         }
         Insert: {
           address?: string | null
+          automation_enabled?: boolean | null
+          brand_name?: string | null
           city?: string | null
           company_name: string
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string | null
           dealer_type?: string
+          designation?: string | null
           id?: string
           is_active?: boolean | null
+          last_contacted_at?: string | null
+          last_discount_update?: string | null
           notes?: string | null
+          pincode?: string | null
           priority_level?: number | null
           state?: string | null
           updated_at?: string | null
         }
         Update: {
           address?: string | null
+          automation_enabled?: boolean | null
+          brand_name?: string | null
           city?: string | null
           company_name?: string
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string | null
           dealer_type?: string
+          designation?: string | null
           id?: string
           is_active?: boolean | null
+          last_contacted_at?: string | null
+          last_discount_update?: string | null
           notes?: string | null
+          pincode?: string | null
           priority_level?: number | null
           state?: string | null
           updated_at?: string | null
@@ -3659,6 +3731,75 @@ export type Database = {
           {
             foreignKeyName: "dealer_inventory_dealer_rep_id_fkey"
             columns: ["dealer_rep_id"]
+            isOneToOne: false
+            referencedRelation: "dealer_representatives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dealer_live_discounts: {
+        Row: {
+          brand: string
+          created_at: string | null
+          dealer_company_id: string | null
+          discount_amount: number | null
+          discount_type: string | null
+          id: string
+          is_active: boolean | null
+          model: string
+          offer_details: string | null
+          reported_by: string | null
+          source: string | null
+          updated_at: string | null
+          valid_from: string | null
+          valid_till: string | null
+          variant: string | null
+        }
+        Insert: {
+          brand: string
+          created_at?: string | null
+          dealer_company_id?: string | null
+          discount_amount?: number | null
+          discount_type?: string | null
+          id?: string
+          is_active?: boolean | null
+          model: string
+          offer_details?: string | null
+          reported_by?: string | null
+          source?: string | null
+          updated_at?: string | null
+          valid_from?: string | null
+          valid_till?: string | null
+          variant?: string | null
+        }
+        Update: {
+          brand?: string
+          created_at?: string | null
+          dealer_company_id?: string | null
+          discount_amount?: number | null
+          discount_type?: string | null
+          id?: string
+          is_active?: boolean | null
+          model?: string
+          offer_details?: string | null
+          reported_by?: string | null
+          source?: string | null
+          updated_at?: string | null
+          valid_from?: string | null
+          valid_till?: string | null
+          variant?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dealer_live_discounts_dealer_company_id_fkey"
+            columns: ["dealer_company_id"]
+            isOneToOne: false
+            referencedRelation: "dealer_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dealer_live_discounts_reported_by_fkey"
+            columns: ["reported_by"]
             isOneToOne: false
             referencedRelation: "dealer_representatives"
             referencedColumns: ["id"]
