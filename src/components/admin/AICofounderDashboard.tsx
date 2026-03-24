@@ -530,10 +530,10 @@ export default function AICofounderDashboard() {
           <div className="space-y-3">
             <Select onValueChange={(v) => {
               const m = teamMembers.find((m: any) => m.user_id === v || m.id === v);
-              if (m) setTargetForm(f => ({ ...f, user_id: m.user_id || m.id, team_member_name: m.full_name }));
+              if (m) setTargetForm(f => ({ ...f, user_id: m.user_id || m.id, team_member_name: m.display_name || m.username }));
             }}>
               <SelectTrigger><SelectValue placeholder="Select team member" /></SelectTrigger>
-              <SelectContent>{teamMembers.map((m: any) => <SelectItem key={m.id} value={m.user_id || m.id}>{m.full_name}</SelectItem>)}</SelectContent>
+              <SelectContent>{teamMembers.map((m: any) => <SelectItem key={m.id} value={m.user_id || m.id}>{m.display_name || m.username}</SelectItem>)}</SelectContent>
             </Select>
             <Select onValueChange={(v) => setTargetForm(f => ({ ...f, vertical_name: v }))}>
               <SelectTrigger><SelectValue placeholder="Select vertical" /></SelectTrigger>
