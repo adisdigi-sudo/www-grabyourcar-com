@@ -617,7 +617,6 @@ const AdminLayout = () => {
                     "loan-crm",
                     "rental-crm",
                     "hsrp-crm",
-                    "deals-pipeline",
                     "calling-system",
                     "manager-dashboard",
                   ].includes(activeTab)
