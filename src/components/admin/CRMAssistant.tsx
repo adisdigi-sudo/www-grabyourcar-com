@@ -31,7 +31,18 @@ const ADMIN_QUICK_ACTIONS = [
   { icon: Lightbulb, label: "New ideas", prompt: "Suggest 3 creative ideas to grow revenue this week that we haven't tried" },
 ];
 
-export function CRMAssistant() {
+const TEAM_QUICK_ACTIONS = [
+  { icon: Target, label: "My targets", prompt: "Show me my personal targets and how much I've achieved. What do I need to close today?" },
+  { icon: Zap, label: "What to do now?", prompt: "What's my most important task RIGHT NOW? Who should I call first?" },
+  { icon: TrendingUp, label: "My incentive", prompt: "How much incentive have I earned so far? What can I earn if I close pending deals?" },
+  { icon: AlertTriangle, label: "My follow-ups", prompt: "Show all my pending follow-ups, renewals, and deadlines. What's urgent?" },
+  { icon: Users, label: "Tips to close", prompt: "Give me 3 specific tips to close my pending deals faster today" },
+  { icon: Lightbulb, label: "Coach me", prompt: "Be my personal coach - analyze my performance and tell me how to improve" },
+];
+
+export function CRMAssistant({ userRole, userName, userVertical }: CRMAssistantProps) {
+  const isSuperAdmin = !userRole || userRole === "super_admin" || userRole === "admin";
+  const QUICK_ACTIONS = isSuperAdmin ? ADMIN_QUICK_ACTIONS : TEAM_QUICK_ACTIONS;
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
