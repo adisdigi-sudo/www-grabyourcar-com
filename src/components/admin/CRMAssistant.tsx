@@ -12,9 +12,15 @@ import { motion, AnimatePresence } from "framer-motion";
 
 type Message = { role: "user" | "assistant"; content: string };
 
+interface CRMAssistantProps {
+  userRole?: string;
+  userName?: string;
+  userVertical?: string;
+}
+
 const COFOUNDER_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-cofounder`;
 
-const QUICK_ACTIONS = [
+const ADMIN_QUICK_ACTIONS = [
   { icon: Zap, label: "What should I do now?", prompt: "What should I focus on RIGHT NOW to maximize revenue today?" },
   { icon: Target, label: "Today's targets", prompt: "Show me today's target status for all team members with specific actions to close gaps" },
   { icon: TrendingUp, label: "Revenue boost", prompt: "Give me 5 immediate revenue-boosting actions I can take in the next 2 hours" },
@@ -25,7 +31,18 @@ const QUICK_ACTIONS = [
   { icon: Lightbulb, label: "New ideas", prompt: "Suggest 3 creative ideas to grow revenue this week that we haven't tried" },
 ];
 
-export function CRMAssistant() {
+const TEAM_QUICK_ACTIONS = [
+  { icon: Target, label: "My targets", prompt: "Show me my personal targets and how much I've achieved. What do I need to close today?" },
+  { icon: Zap, label: "What to do now?", prompt: "What's my most important task RIGHT NOW? Who should I call first?" },
+  { icon: TrendingUp, label: "My incentive", prompt: "How much incentive have I earned so far? What can I earn if I close pending deals?" },
+  { icon: AlertTriangle, label: "My follow-ups", prompt: "Show all my pending follow-ups, renewals, and deadlines. What's urgent?" },
+  { icon: Users, label: "Tips to close", prompt: "Give me 3 specific tips to close my pending deals faster today" },
+  { icon: Lightbulb, label: "Coach me", prompt: "Be my personal coach - analyze my performance and tell me how to improve" },
+];
+
+export function CRMAssistant({ userRole, userName, userVertical }: CRMAssistantProps) {
+  const isSuperAdmin = !userRole || userRole === "super_admin" || userRole === "admin";
+  const QUICK_ACTIONS = isSuperAdmin ? ADMIN_QUICK_ACTIONS : TEAM_QUICK_ACTIONS;
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -93,7 +110,13 @@ export function CRMAssistant() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ action: "quick_insight", question: query }),
+        body: JSON.stringify({
+          action: "quick_insight",
+          question: query,
+          user_role: userRole || "super_admin",
+          user_name: userName,
+          vertical: userVertical,
+        }),
       });
 
       if (!resp.ok) {

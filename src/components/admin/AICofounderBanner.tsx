@@ -11,6 +11,9 @@ const COFOUNDER_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-cofo
 
 interface Props {
   activeTab: string;
+  userRole?: string;
+  userName?: string;
+  userVertical?: string;
 }
 
 const TAB_CONTEXT: Record<string, string> = {
@@ -25,14 +28,28 @@ const TAB_CONTEXT: Record<string, string> = {
   "marketing-hub": "Give ONE marketing idea to boost leads today. Max 2 sentences.",
 };
 
-export function AICofounderBanner({ activeTab }: Props) {
+const TEAM_TAB_CONTEXT: Record<string, string> = {
+  "sales-crm": "Give ONE sales task for ME right now. Which lead should I call first? Max 2 sentences.",
+  "services-insurance": "Give ONE renewal task for ME. Which customer should I call for renewal right now? Max 2 sentences.",
+  "rental-crm": "Give ONE self-drive task for ME. Any returns due or bookings to confirm? Max 2 sentences.",
+  "hsrp-crm": "Give ONE HSRP task for ME. Any orders I need to process? Max 2 sentences.",
+  "dealer-network": "Give ONE dealer task for ME. Any updates to collect or calls to make? Max 2 sentences.",
+  "calling-system": "Give ONE calling task for ME. Which lead should I call first and what to say? Max 2 sentences.",
+};
+
+export function AICofounderBanner({ activeTab, userRole, userName, userVertical }: Props) {
+  const isSuperAdmin = !userRole || userRole === "super_admin" || userRole === "admin";
   const [suggestion, setSuggestion] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
   const [lastTab, setLastTab] = useState("");
 
   const fetchSuggestion = useCallback(async () => {
-    const contextPrompt = TAB_CONTEXT[activeTab] || "Give ONE actionable insight for the business right now. Max 2 sentences.";
+    const contextMap = isSuperAdmin ? TAB_CONTEXT : TEAM_TAB_CONTEXT;
+    const defaultPrompt = isSuperAdmin
+      ? "Give ONE actionable insight for the business right now. Max 2 sentences."
+      : `Give ONE task for ${userName || 'me'} in ${userVertical || 'my'} vertical right now. Max 2 sentences.`;
+    const contextPrompt = contextMap[activeTab] || defaultPrompt;
     setIsLoading(true);
     setSuggestion("");
 
@@ -43,7 +60,7 @@ export function AICofounderBanner({ activeTab }: Props) {
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ action: "quick_insight", question: contextPrompt }),
+        body: JSON.stringify({ action: "quick_insight", question: contextPrompt, user_role: userRole || "super_admin", user_name: userName, vertical: userVertical }),
       });
 
       if (!resp.ok || !resp.body) return;

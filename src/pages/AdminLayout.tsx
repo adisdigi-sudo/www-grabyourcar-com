@@ -603,7 +603,7 @@ const AdminLayout = () => {
         >
           <Suspense fallback={null}>
             <AdminRenderBoundary fallback={null} contextLabel="AI Co-Founder banner">
-              <AICofounderBanner activeTab={activeTab} />
+              <AICofounderBanner activeTab={activeTab} userRole={roles?.[0]?.role} userName={user?.email?.split('@')[0]} userVertical={activeVertical?.name} />
             </AdminRenderBoundary>
           </Suspense>
           <AdminRenderBoundary
@@ -619,7 +619,7 @@ const AdminLayout = () => {
 
       <Suspense fallback={null}>
         <AdminRenderBoundary fallback={null} contextLabel="CRM assistant">
-          <CRMAssistant />
+          <CRMAssistant userRole={roles?.[0]?.role} userName={user?.email?.split('@')[0]} userVertical={activeVertical?.name} />
         </AdminRenderBoundary>
       </Suspense>
     </div>
