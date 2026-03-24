@@ -121,6 +121,35 @@ function isBlockedForTeam(question: string): boolean {
   return BLOCKED_KEYWORDS_FOR_TEAM.some(k => q.includes(k));
 }
 
+function getDaysUntilExpiry(expiryDate: string | null | undefined, daysUntilExpiry?: number | null): number | null {
+  if (typeof daysUntilExpiry === "number" && Number.isFinite(daysUntilExpiry)) return daysUntilExpiry;
+  if (!expiryDate) return null;
+  const diff = Math.ceil((new Date(expiryDate).getTime() - Date.now()) / 86400000);
+  return Number.isFinite(diff) ? diff : null;
+}
+
+function getRenewalPriority(daysLeft: number | null): "critical" | "high" | "medium" | "low" {
+  if (daysLeft === null) return "low";
+  if (daysLeft <= 3) return "critical";
+  if (daysLeft <= 7) return "high";
+  if (daysLeft <= 15) return "medium";
+  return "low";
+}
+
+function getRenewalAction(daysLeft: number | null): string {
+  if (daysLeft === null) return "Verify expiry date and contact customer";
+  if (daysLeft <= 1) return "Call immediately and send renewal quote now";
+  if (daysLeft <= 3) return "Call today and close follow-up";
+  if (daysLeft <= 7) return "Call within 2 hours and send reminder";
+  if (daysLeft <= 15) return "Schedule follow-up today";
+  return "Add to nurture queue and remind before due date";
+}
+
+function isRenewalQuestion(question: string | null | undefined): boolean {
+  const q = (question || "").toLowerCase();
+  return ["renewal", "renew", "expir", "policy due", "upcoming policy", "upcoming renewal"].some((term) => q.includes(term));
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -166,9 +195,10 @@ serve(async (req) => {
     const cm = today.slice(0, 7);
 
     // Parallel fetch all business data
-    const [leads, insurance, rentals, hsrp, deals, followUps, pendingTasks, targets, problems, teamMembers, expenses, bankAccounts, invoices, risks, crossSells, mistakes] = await Promise.all([
+    const [leads, renewalTracking, insuranceClients, rentals, hsrp, deals, followUps, pendingTasks, targets, problems, teamMembers, expenses, bankAccounts, invoices, risks, crossSells, mistakes] = await Promise.all([
       safeFetch(`${SB}/rest/v1/leads?created_at=gte.${today}T00:00:00&select=id,name,phone,source,service_category,status,priority,assigned_to,city&limit=50`, h),
-      safeFetch(`${SB}/rest/v1/insurance_clients?select=id,customer_name,phone,vehicle_number,vehicle_make,vehicle_model,policy_expiry_date,lead_status,pipeline_stage,follow_up_date,assigned_executive,current_insurer,current_premium&policy_expiry_date=lte.${new Date(Date.now()+90*86400000).toISOString().split("T")[0]}&policy_expiry_date=gte.${today}&order=policy_expiry_date.asc&limit=50`, h),
+      safeFetch(`${SB}/rest/v1/insurance_renewal_tracking?select=id,client_id,policy_id,expiry_date,days_until_expiry,updated_at&expiry_date=gte.${today}&expiry_date=lte.${new Date(Date.now()+90*86400000).toISOString().split("T")[0]}&order=expiry_date.asc&limit=100`, h),
+      safeFetch(`${SB}/rest/v1/insurance_clients?select=id,customer_name,phone,vehicle_number,vehicle_make,vehicle_model,lead_status,pipeline_stage,follow_up_date,assigned_executive,current_insurer,current_premium,current_policy_number,current_policy_type,ncb_percentage&limit=500`, h),
       safeFetch(`${SB}/rest/v1/rental_bookings?select=id,customer_name,phone,pickup_date,return_date,status,payment_status,total_amount,car_name&return_date=gte.${today}&return_date=lte.${new Date(Date.now()+3*86400000).toISOString().split("T")[0]}&limit=30`, h),
       safeFetch(`${SB}/rest/v1/hsrp_bookings?select=id,owner_name,registration_number,order_status,payment_status,mobile,service_type&order_status=neq.completed&limit=30`, h),
       safeFetch(`${SB}/rest/v1/deals?select=id,deal_number,customer_id,deal_value,payment_status,deal_status,vertical_name,payment_received_amount&deal_status=eq.active&limit=50`, h),
@@ -184,6 +214,35 @@ serve(async (req) => {
       safeFetch(`${SB}/rest/v1/ai_cross_sell_suggestions?select=*&status=eq.pending&limit=20`, h),
       safeFetch(`${SB}/rest/v1/ai_mistake_logs?select=*&status=eq.detected&limit=20`, h),
     ]);
+
+    const insuranceClientMap = new Map((insuranceClients || []).map((client: any) => [client.id, client]));
+    const insurance = (renewalTracking || []).map((renewal: any) => {
+      const client = insuranceClientMap.get(renewal.client_id) || {};
+      const daysLeft = getDaysUntilExpiry(renewal.expiry_date, renewal.days_until_expiry);
+      return {
+        id: renewal.id,
+        client_id: renewal.client_id,
+        policy_id: renewal.policy_id,
+        customer_name: client.customer_name || "N/A",
+        phone: client.phone || "N/A",
+        vehicle_number: client.vehicle_number || "N/A",
+        vehicle_make: client.vehicle_make || "",
+        vehicle_model: client.vehicle_model || "",
+        current_insurer: client.current_insurer || "N/A",
+        current_premium: client.current_premium || 0,
+        current_policy_number: client.current_policy_number || "N/A",
+        current_policy_type: client.current_policy_type || "N/A",
+        pipeline_stage: client.pipeline_stage || "N/A",
+        follow_up_date: client.follow_up_date || null,
+        assigned_executive: client.assigned_executive || null,
+        lead_status: client.lead_status || "N/A",
+        ncb_percentage: client.ncb_percentage || null,
+        expiry_date: renewal.expiry_date,
+        days_until_expiry: daysLeft,
+        priority: getRenewalPriority(daysLeft),
+        next_action: getRenewalAction(daysLeft),
+      };
+    }).sort((a: any, b: any) => (a.days_until_expiry ?? 9999) - (b.days_until_expiry ?? 9999));
 
     // Financial calculations
     const totalRevenue = invoices.filter((i: any) => i.status === "paid").reduce((sum: number, i: any) => sum + Number(i.total_amount || 0), 0);
@@ -207,7 +266,7 @@ Cash in Bank: ₹${cashInBank.toLocaleString("en-IN")} | Monthly Burn: ₹${mont
 Runway: ${runwayMonths} months | Pending Payments: ₹${pendingPayments.toLocaleString("en-IN")}
 
 ===== INSURANCE RENEWALS (NEXT 90 DAYS) — ${insurance.length} RECORDS =====
-${insurance.length > 0 ? insurance.map((i: any) => `• ${i.customer_name || 'N/A'} | Ph: ${i.phone || 'N/A'} | Vehicle: ${i.vehicle_number || 'N/A'} (${i.vehicle_make || ''} ${i.vehicle_model || ''}) | Expiry: ${i.policy_expiry_date || 'N/A'} | Insurer: ${i.current_insurer || 'N/A'} | Premium: ₹${i.current_premium || 'N/A'} | Stage: ${i.pipeline_stage || 'N/A'} | Exec: ${i.assigned_executive || 'Unassigned'}`).join('\n') : '⚠️ NO INSURANCE RENEWALS FOUND'}
+${insurance.length > 0 ? insurance.map((i: any) => `• [${(i.priority || 'low').toUpperCase()}] ${i.customer_name || 'N/A'} | Ph: ${i.phone || 'N/A'} | Vehicle: ${i.vehicle_number || 'N/A'} (${i.vehicle_make || ''} ${i.vehicle_model || ''}) | Expiry: ${i.expiry_date || 'N/A'} | Days Left: ${i.days_until_expiry ?? 'N/A'} | Insurer: ${i.current_insurer || 'N/A'} | Premium: ₹${i.current_premium || 'N/A'} | Policy#: ${i.current_policy_number || 'N/A'} | Stage: ${i.pipeline_stage || 'N/A'} | Exec: ${i.assigned_executive || 'Unassigned'} | Next: ${i.next_action}`).join('\n') : '⚠️ NO INSURANCE RENEWALS FOUND'}
 
 ===== TODAY'S NEW LEADS — ${leads.length} RECORDS =====
 ${leads.length > 0 ? leads.map((l: any) => `• ${l.name || 'N/A'} | Ph: ${l.phone || 'N/A'} | Source: ${l.source || 'N/A'} | Category: ${l.service_category || 'N/A'} | Status: ${l.status || 'N/A'} | Priority: ${l.priority || 'N/A'} | City: ${l.city || 'N/A'}`).join('\n') : '⚠️ NO NEW LEADS TODAY'}
