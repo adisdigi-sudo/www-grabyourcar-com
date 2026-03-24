@@ -114,6 +114,9 @@ export default function DealerCompaniesManager() {
       contact_email: c.contact_email || "", contact_phone: c.contact_phone || "",
       address: c.address || "", notes: c.notes || "",
       brand_name: c.brand_name || "", designation: c.designation || "", pincode: c.pincode || "",
+      region: c.region || "North", website_url: c.website_url || "",
+      gst_number: c.gst_number || "", established_year: c.established_year || "",
+      showroom_count: c.showroom_count || 1,
     });
     setDialogOpen(true);
   };
