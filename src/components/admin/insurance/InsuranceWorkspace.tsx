@@ -37,6 +37,7 @@ type LegacyInsuranceLead = {
 export function InsuranceWorkspace() {
   const queryClient = useQueryClient();
   const [activeView, setActiveView] = useState<ActiveView>("pipeline");
+  const [kpiDetail, setKpiDetail] = useState<KpiType>(null);
   const [showImport, setShowImport] = useState(false);
   const [showAddLead, setShowAddLead] = useState(false);
   const [newLead, setNewLead] = useState({
