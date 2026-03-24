@@ -38,7 +38,8 @@ const DEALER_TYPES = [
 const emptyForm = {
   company_name: "", dealer_type: "authorized", city: "", state: "",
   priority_level: 1, contact_email: "", contact_phone: "", address: "", notes: "",
-  brand_name: "", designation: "", pincode: "",
+  brand_name: "", designation: "", pincode: "", region: "North",
+  website_url: "", gst_number: "", established_year: "", showroom_count: 1,
 };
 
 export default function DealerCompaniesManager() {
