@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, Users, Car, Send, MessageCircle } from "lucide-react";
+import { Building2, Users, Car, Send, MessageCircle, BarChart3 } from "lucide-react";
 import DealerCompaniesManager from "./dealer/DealerCompaniesManager";
 import DealerRepresentativesManager from "./dealer/DealerRepresentativesManager";
 import DealerInventoryManager from "./dealer/DealerInventoryManager";
 import DealerBroadcastManager from "./dealer/DealerBroadcastManager";
 import DealerInquiryHub from "./dealer/DealerInquiryHub";
+import DealerAnalytics from "./dealer/DealerAnalytics";
 
 interface Props {
   initialTab?: string;
