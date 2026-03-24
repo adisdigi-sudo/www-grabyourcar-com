@@ -551,10 +551,6 @@ const AdminLayout = () => {
       case "accounts-reports":
       case "accounts-documents":
         return <ZohoAccountsWorkspace />;
-      case "accounts-incentive-payouts":
-        return <IncentivePayoutApproval />;
-      case "document-vault":
-        return <DocumentVault />;
       // ── HR (10 sub-modules) ──
       case "hr-core":
         return <HRCoreModule />;
