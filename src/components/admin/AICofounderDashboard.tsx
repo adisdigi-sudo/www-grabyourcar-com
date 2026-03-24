@@ -77,36 +77,54 @@ export default function AICofounderDashboard() {
   const [askConvId, setAskConvId] = useState<string | null>(null);
   const [askLoading, setAskLoading] = useState(false);
   const [askStreamContent, setAskStreamContent] = useState("");
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const askLoadedRef = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUserId(user?.id ?? null);
+    })();
+  }, []);
 
   // Load saved conversation on mount
   useEffect(() => {
-    if (askLoadedRef[0]) return;
+    if (askLoadedRef[0] || !currentUserId) return;
     askLoadedRef[1](true);
     (async () => {
       const { data } = await supabase
         .from("ai_cofounder_conversations")
         .select("id, messages")
+        .eq("user_id", currentUserId)
         .order("updated_at", { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
       if (data) {
         setAskConvId(data.id);
         const msgs = data.messages as { role: string; content: string }[];
         if (msgs?.length > 0) setAskMessages(msgs);
       }
     })();
-  }, []);
+  }, [currentUserId]);
 
   const saveAskConversation = useCallback(async (msgs: { role: string; content: string }[]) => {
     const payload = JSON.parse(JSON.stringify(msgs));
+    if (!currentUserId) return;
     if (askConvId) {
-      await supabase.from("ai_cofounder_conversations").update({ messages: payload, updated_at: new Date().toISOString() }).eq("id", askConvId);
+      await supabase
+        .from("ai_cofounder_conversations")
+        .update({ messages: payload, updated_at: new Date().toISOString() })
+        .eq("id", askConvId)
+        .eq("user_id", currentUserId);
     } else {
-      const { data } = await supabase.from("ai_cofounder_conversations").insert({ user_id: "system", messages: payload }).select("id").single();
+      const { data } = await supabase
+        .from("ai_cofounder_conversations")
+        .insert({ user_id: currentUserId, messages: payload })
+        .select("id")
+        .single();
       if (data) setAskConvId(data.id);
     }
-  }, [askConvId]);
+  }, [askConvId, currentUserId]);
 
   const sendAskMessage = useCallback(async (q: string) => {
     if (!q.trim() || askLoading) return;
@@ -163,12 +181,16 @@ export default function AICofounderDashboard() {
 
   const clearAskHistory = useCallback(async () => {
     setAskMessages([]);
-    if (askConvId) {
-      await supabase.from("ai_cofounder_conversations").delete().eq("id", askConvId);
+    if (askConvId && currentUserId) {
+      await supabase
+        .from("ai_cofounder_conversations")
+        .delete()
+        .eq("id", askConvId)
+        .eq("user_id", currentUserId);
       setAskConvId(null);
     }
     toast.success("Chat history cleared");
-  }, [askConvId]);
+  }, [askConvId, currentUserId]);
 
   const today = format(new Date(), "yyyy-MM-dd");
   const cm = format(new Date(), "yyyy-MM");
