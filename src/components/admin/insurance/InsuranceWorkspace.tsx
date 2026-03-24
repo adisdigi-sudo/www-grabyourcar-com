@@ -230,13 +230,17 @@ export function InsuranceWorkspace() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {[
-              { label: "Total Leads", value: totalLeads, icon: UserPlus, bgc: "bg-blue-500/20" },
-              { label: "In Pipeline", value: inPipeline, icon: Clock, bgc: "bg-orange-400/20" },
-              { label: "Won / Issued", value: wonCount, icon: CheckCircle2, bgc: "bg-emerald-400/20" },
-              { label: "Active Policies", value: activePolicies, icon: BookOpen, bgc: "bg-cyan-400/20" },
-              { label: "Conversion", value: `${convRate}%`, icon: TrendingUp, bgc: "bg-violet-400/20" },
+              { label: "Total Leads", value: totalLeads, icon: UserPlus, bgc: "bg-blue-500/20", kpi: "total_leads" as KpiType },
+              { label: "In Pipeline", value: inPipeline, icon: Clock, bgc: "bg-orange-400/20", kpi: "in_pipeline" as KpiType },
+              { label: "Won / Issued", value: wonCount, icon: CheckCircle2, bgc: "bg-emerald-400/20", kpi: "won" as KpiType },
+              { label: "Active Policies", value: activePolicies, icon: BookOpen, bgc: "bg-cyan-400/20", kpi: "active_policies" as KpiType },
+              { label: "Conv (This Month)", value: `${convRate}%`, icon: TrendingUp, bgc: "bg-violet-400/20", kpi: "conversion" as KpiType },
             ].map(kpi => (
-              <div key={kpi.label} className={`${kpi.bgc} backdrop-blur-sm rounded-xl px-4 py-3 border border-white/10`}>
+              <div
+                key={kpi.label}
+                className={`${kpi.bgc} backdrop-blur-sm rounded-xl px-4 py-3 border border-white/10 cursor-pointer hover:border-white/30 hover:scale-[1.02] transition-all`}
+                onClick={() => setKpiDetail(kpi.kpi)}
+              >
                 <div className="flex items-center gap-2 mb-1">
                   <kpi.icon className="h-4 w-4 text-white/70" />
                   <span className="text-[10px] uppercase tracking-wider text-white/70">{kpi.label}</span>
