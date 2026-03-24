@@ -21,14 +21,14 @@ interface CRMAssistantProps {
 const COFOUNDER_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-cofounder`;
 
 const ADMIN_QUICK_ACTIONS = [
-  { icon: Zap, label: "What should I do now?", prompt: "What should I focus on RIGHT NOW to maximize revenue today?" },
-  { icon: Target, label: "Today's targets", prompt: "Show me today's target status for all team members with specific actions to close gaps" },
-  { icon: TrendingUp, label: "Revenue boost", prompt: "Give me 5 immediate revenue-boosting actions I can take in the next 2 hours" },
-  { icon: AlertTriangle, label: "Risk alerts", prompt: "What are the top risks right now? Flag anything critical with urgency" },
-  { icon: ShoppingCart, label: "Cross-sell now", prompt: "Which customers can I cross-sell to RIGHT NOW? Give names, phones, and what to pitch" },
-  { icon: DollarSign, label: "Cash position", prompt: "What's our cash position, runway, and what payments are pending collection?" },
-  { icon: Users, label: "Team status", prompt: "How is each team member performing? Who needs coaching or push?" },
-  { icon: Lightbulb, label: "New ideas", prompt: "Suggest 3 creative ideas to grow revenue this week that we haven't tried" },
+  { icon: Zap, label: "What to do now?", prompt: "What should I focus on RIGHT NOW? Show exact data from database with names and phones." },
+  { icon: Target, label: "Today's targets", prompt: "Show me EXACT target status for all team members from database. Real numbers only." },
+  { icon: TrendingUp, label: "Revenue boost", prompt: "Show 5 revenue actions from ACTUAL data — real leads, real deals, real renewals with names and phones." },
+  { icon: AlertTriangle, label: "Risk alerts", prompt: "What risks exist in ACTUAL data? Show real overdue follow-ups, unpaid deals, expiring policies." },
+  { icon: DollarSign, label: "Cash position", prompt: "Show EXACT cash position from bank accounts, pending payments, and revenue from actual database." },
+  { icon: Users, label: "Team status", prompt: "Show EXACT team performance from targets table. Real achievement numbers, not estimates." },
+  { icon: Lightbulb, label: "📊 Full report", action: "generate_report" },
+  { icon: ShoppingCart, label: "Cross-sell", prompt: "Find cross-sell from ACTUAL customer data. Real names, real phones, real opportunities." },
 ];
 
 const TEAM_QUICK_ACTIONS = [
@@ -92,11 +92,13 @@ export function CRMAssistant({ userRole, userName, userVertical }: CRMAssistantP
     }
   }, [convId]);
 
-  const sendMessage = async (text?: string) => {
+  const sendMessage = async (text?: string, actionOverride?: string) => {
     const query = text || input.trim();
-    if (!query || isLoading) return;
+    if (!query && !actionOverride) return;
+    if (isLoading) return;
 
-    const userMsg: Message = { role: "user", content: query };
+    const displayText = query || (actionOverride === "generate_report" ? "📊 Generate full business report" : "Running action...");
+    const userMsg: Message = { role: "user", content: displayText };
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
     setInput("");
@@ -111,8 +113,9 @@ export function CRMAssistant({ userRole, userName, userVertical }: CRMAssistantP
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
         body: JSON.stringify({
-          action: "quick_insight",
-          question: query,
+          action: actionOverride || "quick_insight",
+          question: query || undefined,
+          report_type: actionOverride === "generate_report" ? "comprehensive" : undefined,
           user_role: userRole || "super_admin",
           user_name: userName,
           vertical: userVertical,
@@ -256,10 +259,10 @@ export function CRMAssistant({ userRole, userName, userVertical }: CRMAssistantP
                   <p className="text-xs text-muted-foreground mt-1">24/7 revenue engine, sales director, risk radar & team coach</p>
                 </div>
                 <div className="grid grid-cols-2 gap-1.5 pt-2">
-                  {QUICK_ACTIONS.map((qa) => (
+                    {QUICK_ACTIONS.map((qa: any) => (
                     <button
                       key={qa.label}
-                      onClick={() => sendMessage(qa.prompt)}
+                      onClick={() => qa.action ? sendMessage(undefined, qa.action) : sendMessage(qa.prompt)}
                       className="flex items-center gap-1.5 text-left text-[11px] bg-muted/60 hover:bg-muted rounded-lg px-2.5 py-2 transition-colors group"
                     >
                       <qa.icon className="h-3.5 w-3.5 text-violet-600 shrink-0 group-hover:scale-110 transition-transform" />
@@ -312,10 +315,10 @@ export function CRMAssistant({ userRole, userName, userVertical }: CRMAssistantP
         {/* Quick actions when mid-conversation */}
         {messages.length > 0 && messages.length < 6 && !isLoading && (
           <div className="px-3 pb-1 flex flex-wrap gap-1 shrink-0">
-            {QUICK_ACTIONS.slice(0, 4).map((qa) => (
+            {QUICK_ACTIONS.slice(0, 4).map((qa: any) => (
               <button
                 key={qa.label}
-                onClick={() => sendMessage(qa.prompt)}
+                onClick={() => qa.action ? sendMessage(undefined, qa.action) : sendMessage(qa.prompt)}
                 className="text-[10px] bg-violet-50 dark:bg-violet-950/30 hover:bg-violet-100 dark:hover:bg-violet-950/50 text-violet-700 dark:text-violet-300 rounded-full px-2 py-0.5 transition-colors font-medium"
               >
                 {qa.label}
