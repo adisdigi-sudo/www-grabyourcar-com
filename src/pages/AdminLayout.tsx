@@ -237,6 +237,9 @@ const HRTemplates = lazy(() =>
 const CRMAssistant = lazy(() =>
   import("@/components/admin/CRMAssistant").then((module) => ({ default: module.CRMAssistant })),
 );
+const AICofounderBanner = lazy(() =>
+  import("@/components/admin/AICofounderBanner").then((module) => ({ default: module.AICofounderBanner })),
+);
 
 const AdminPanelLoader = ({ className }: { className?: string }) => (
   <div className={cn("flex min-h-[240px] items-center justify-center", className)}>
@@ -598,6 +601,11 @@ const AdminLayout = () => {
                 : "max-w-7xl",
           )}
         >
+          <Suspense fallback={null}>
+            <AdminRenderBoundary fallback={null} contextLabel="AI Co-Founder banner">
+              <AICofounderBanner activeTab={activeTab} />
+            </AdminRenderBoundary>
+          </Suspense>
           <AdminRenderBoundary
             key={`${activeVertical?.id ?? "no-vertical"}:${activeTab}`}
             contextLabel="CRM workspace"
