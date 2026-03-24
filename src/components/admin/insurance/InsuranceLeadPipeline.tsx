@@ -588,9 +588,11 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
       clientId: pendingMoveClient.id,
       newStage: "lost",
       extras: {
+        lead_status: "lost",
         lost_reason: lostReason,
         notes: lostRemarks || undefined,
-        retarget_status: retargetNextYear ? "scheduled" : null,
+        retarget_status: retargetNextYear ? "scheduled" : "none",
+        retargeting_enabled: retargetNextYear,
       },
     });
   };
