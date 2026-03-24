@@ -28,6 +28,7 @@ const AccountsPurchaseOrders = lazy(() => import("./AccountsPurchaseOrders"));
 const AccountsItemsModule = lazy(() => import("./AccountsItemsModule"));
 const AccountsBudgets = lazy(() => import("./AccountsBudgets"));
 const VerticalProfitLoss = lazy(() => import("./VerticalProfitLoss"));
+const AccountsFinancialDocuments = lazy(() => import("./AccountsFinancialDocuments"));
 
 interface SidebarItem {
   id: string;
