@@ -128,7 +128,39 @@ export function InsuranceWorkspace() {
   }).length;
   const lostCount = clients.filter(c => normalizeStage(c.pipeline_stage, c.lead_status) === "lost").length;
   const inPipeline = totalLeads - wonCount - lostCount;
-  const convRate = totalLeads > 0 ? ((wonCount / totalLeads) * 100).toFixed(1) : "0";
+
+  // Month-wise conversion calculation
+  const monthWiseConversion = useMemo(() => {
+    const monthMap: Record<string, { total: number; won: number; renewals: number; rollovers: number }> = {};
+    clients.forEach(c => {
+      const d = c.created_at ? new Date(c.created_at) : new Date();
+      const key = format(d, "yyyy-MM");
+      if (!monthMap[key]) monthMap[key] = { total: 0, won: 0, renewals: 0, rollovers: 0 };
+      monthMap[key].total++;
+      const st = normalizeStage(c.pipeline_stage, c.lead_status);
+      if (st === "won" || st === "policy_issued") monthMap[key].won++;
+      const src = (c.lead_source || "").toLowerCase();
+      if (src.includes("renewal") || src.includes("renew")) monthMap[key].renewals++;
+      if (src.includes("rollover") || src.includes("roll")) monthMap[key].rollovers++;
+    });
+    return Object.entries(monthMap)
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .slice(0, 12)
+      .map(([month, d]) => ({
+        month: format(new Date(month + "-01"), "MMM yyyy"),
+        total: d.total,
+        won: d.won,
+        rate: d.total > 0 ? ((d.won / d.total) * 100).toFixed(1) : "0",
+        renewals: d.renewals,
+        rollovers: d.rollovers,
+      }));
+  }, [clients]);
+
+  // Current month conversion rate
+  const currentMonthKey = format(new Date(), "MMM yyyy");
+  const currentMonthData = monthWiseConversion.find(m => m.month === currentMonthKey);
+  const convRate = currentMonthData ? currentMonthData.rate : "0";
+
   const activePolicies = runningPolicies.filter(p => p.status === "active").length;
   const renewalsDue = useMemo(() => {
     const now = new Date();
