@@ -165,8 +165,11 @@ export default function DealerCompaniesManager() {
           <DialogContent className="max-w-lg">
             <DialogHeader><DialogTitle>{editId ? "Edit" : "Add"} Dealer Company</DialogTitle></DialogHeader>
             <div className="grid gap-4">
-              <div className="grid gap-2"><Label>Company Name *</Label><Input value={form.company_name} onChange={e => setForm(f => ({ ...f, company_name: e.target.value }))} /></div>
               <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2"><Label>Company / Showroom Name *</Label><Input value={form.company_name} onChange={e => setForm(f => ({ ...f, company_name: e.target.value }))} placeholder="e.g. Kiran Hyundai" /></div>
+                <div className="grid gap-2"><Label>Dealership Brand</Label><Input value={form.brand_name} onChange={e => setForm(f => ({ ...f, brand_name: e.target.value }))} placeholder="e.g. Hyundai, Maruti" /></div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
                 <div className="grid gap-2">
                   <Label>Type</Label>
                   <Select value={form.dealer_type} onValueChange={v => setForm(f => ({ ...f, dealer_type: v }))}>
@@ -174,17 +177,19 @@ export default function DealerCompaniesManager() {
                     <SelectContent>{DEALER_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
+                <div className="grid gap-2"><Label>Designation</Label><Input value={form.designation} onChange={e => setForm(f => ({ ...f, designation: e.target.value }))} placeholder="e.g. Sales Manager" /></div>
                 <div className="grid gap-2"><Label>Priority (1-5)</Label><Input type="number" min={1} max={5} value={form.priority_level} onChange={e => setForm(f => ({ ...f, priority_level: Number(e.target.value) }))} /></div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="grid gap-2"><Label>City</Label><Input value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} /></div>
                 <div className="grid gap-2"><Label>State</Label><Input value={form.state} onChange={e => setForm(f => ({ ...f, state: e.target.value }))} /></div>
+                <div className="grid gap-2"><Label>Pincode</Label><Input value={form.pincode} onChange={e => setForm(f => ({ ...f, pincode: e.target.value }))} /></div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2"><Label>Email</Label><Input value={form.contact_email} onChange={e => setForm(f => ({ ...f, contact_email: e.target.value }))} /></div>
                 <div className="grid gap-2"><Label>Phone</Label><Input value={form.contact_phone} onChange={e => setForm(f => ({ ...f, contact_phone: e.target.value }))} /></div>
               </div>
-              <div className="grid gap-2"><Label>Address</Label><Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} /></div>
+              <div className="grid gap-2"><Label>Full Address</Label><Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="Full showroom address..." /></div>
               <div className="grid gap-2"><Label>Notes</Label><Input value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} /></div>
               <Button onClick={() => saveMutation.mutate()} disabled={!form.company_name || saveMutation.isPending}>
                 {saveMutation.isPending ? "Saving..." : editId ? "Update" : "Add Company"}
