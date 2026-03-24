@@ -413,6 +413,48 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_cross_sell_suggestions: {
+        Row: {
+          actioned_at: string | null
+          approved_by: string | null
+          created_at: string | null
+          customer_name: string
+          customer_phone: string | null
+          id: string
+          potential_revenue: number | null
+          source_vertical: string
+          status: string | null
+          suggestion: string
+          target_vertical: string
+        }
+        Insert: {
+          actioned_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          customer_name: string
+          customer_phone?: string | null
+          id?: string
+          potential_revenue?: number | null
+          source_vertical: string
+          status?: string | null
+          suggestion: string
+          target_vertical: string
+        }
+        Update: {
+          actioned_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          customer_name?: string
+          customer_phone?: string | null
+          id?: string
+          potential_revenue?: number | null
+          source_vertical?: string
+          status?: string | null
+          suggestion?: string
+          target_vertical?: string
+        }
+        Relationships: []
+      }
       ai_daily_pushes: {
         Row: {
           action_url: string | null
@@ -482,6 +524,48 @@ export type Database = {
           sort_order?: number | null
           title?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      ai_mistake_logs: {
+        Row: {
+          ai_fix_suggestion: string | null
+          created_at: string | null
+          description: string
+          fixed_at: string | null
+          founder_acknowledged: boolean | null
+          id: string
+          impact: string | null
+          mistake_type: string
+          status: string | null
+          team_member_name: string | null
+          vertical_name: string | null
+        }
+        Insert: {
+          ai_fix_suggestion?: string | null
+          created_at?: string | null
+          description: string
+          fixed_at?: string | null
+          founder_acknowledged?: boolean | null
+          id?: string
+          impact?: string | null
+          mistake_type: string
+          status?: string | null
+          team_member_name?: string | null
+          vertical_name?: string | null
+        }
+        Update: {
+          ai_fix_suggestion?: string | null
+          created_at?: string | null
+          description?: string
+          fixed_at?: string | null
+          founder_acknowledged?: boolean | null
+          id?: string
+          impact?: string | null
+          mistake_type?: string
+          status?: string | null
+          team_member_name?: string | null
+          vertical_name?: string | null
         }
         Relationships: []
       }
@@ -584,6 +668,99 @@ export type Database = {
           team_member_name?: string | null
           user_id?: string | null
           vertical_name?: string | null
+        }
+        Relationships: []
+      }
+      ai_risk_indicators: {
+        Row: {
+          auto_resolved: boolean | null
+          created_at: string | null
+          description: string
+          founder_notified: boolean | null
+          id: string
+          impact_amount: number | null
+          recommended_action: string | null
+          resolved_at: string | null
+          risk_type: string
+          severity: string
+          title: string
+          vertical_name: string | null
+        }
+        Insert: {
+          auto_resolved?: boolean | null
+          created_at?: string | null
+          description: string
+          founder_notified?: boolean | null
+          id?: string
+          impact_amount?: number | null
+          recommended_action?: string | null
+          resolved_at?: string | null
+          risk_type: string
+          severity?: string
+          title: string
+          vertical_name?: string | null
+        }
+        Update: {
+          auto_resolved?: boolean | null
+          created_at?: string | null
+          description?: string
+          founder_notified?: boolean | null
+          id?: string
+          impact_amount?: number | null
+          recommended_action?: string | null
+          resolved_at?: string | null
+          risk_type?: string
+          severity?: string
+          title?: string
+          vertical_name?: string | null
+        }
+        Relationships: []
+      }
+      ai_runway_snapshots: {
+        Row: {
+          ai_assessment: string | null
+          ai_recommendations: Json | null
+          cash_in_bank: number | null
+          created_at: string | null
+          expense_growth_pct: number | null
+          id: string
+          monthly_burn_rate: number | null
+          net_profit: number | null
+          revenue_growth_pct: number | null
+          runway_months: number | null
+          snapshot_date: string
+          total_expenses: number | null
+          total_revenue: number | null
+        }
+        Insert: {
+          ai_assessment?: string | null
+          ai_recommendations?: Json | null
+          cash_in_bank?: number | null
+          created_at?: string | null
+          expense_growth_pct?: number | null
+          id?: string
+          monthly_burn_rate?: number | null
+          net_profit?: number | null
+          revenue_growth_pct?: number | null
+          runway_months?: number | null
+          snapshot_date?: string
+          total_expenses?: number | null
+          total_revenue?: number | null
+        }
+        Update: {
+          ai_assessment?: string | null
+          ai_recommendations?: Json | null
+          cash_in_bank?: number | null
+          created_at?: string | null
+          expense_growth_pct?: number | null
+          id?: string
+          monthly_burn_rate?: number | null
+          net_profit?: number | null
+          revenue_growth_pct?: number | null
+          runway_months?: number | null
+          snapshot_date?: string
+          total_expenses?: number | null
+          total_revenue?: number | null
         }
         Relationships: []
       }
@@ -8512,6 +8689,63 @@ export type Database = {
           sent_at?: string
           sent_by?: string | null
           sent_to_count?: number
+        }
+        Relationships: []
+      }
+      investor_contacts: {
+        Row: {
+          ai_suggested: boolean | null
+          created_at: string | null
+          email: string | null
+          firm_name: string | null
+          id: string
+          investment_stage: string | null
+          investor_name: string
+          last_contacted_at: string | null
+          linkedin_url: string | null
+          notes: string | null
+          phone: string | null
+          response: string | null
+          sector_focus: string | null
+          status: string | null
+          typical_ticket_size: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          ai_suggested?: boolean | null
+          created_at?: string | null
+          email?: string | null
+          firm_name?: string | null
+          id?: string
+          investment_stage?: string | null
+          investor_name: string
+          last_contacted_at?: string | null
+          linkedin_url?: string | null
+          notes?: string | null
+          phone?: string | null
+          response?: string | null
+          sector_focus?: string | null
+          status?: string | null
+          typical_ticket_size?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          ai_suggested?: boolean | null
+          created_at?: string | null
+          email?: string | null
+          firm_name?: string | null
+          id?: string
+          investment_stage?: string | null
+          investor_name?: string
+          last_contacted_at?: string | null
+          linkedin_url?: string | null
+          notes?: string | null
+          phone?: string | null
+          response?: string | null
+          sector_focus?: string | null
+          status?: string | null
+          typical_ticket_size?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
