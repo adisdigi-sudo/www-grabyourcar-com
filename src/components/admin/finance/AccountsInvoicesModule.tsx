@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { FileText, Plus, Search, Edit2, Trash2, Download, Eye } from "lucide-react";
+import { FileText, Plus, Search, Edit2, Trash2, Download, Send, Zap } from "lucide-react";
 import { generateInvoicePDF } from "@/lib/generateInvoicePDF";
 
 const STATUSES = ["draft", "sent", "viewed", "partial", "paid", "overdue", "cancelled"];
