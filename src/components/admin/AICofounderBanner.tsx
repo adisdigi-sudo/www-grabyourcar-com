@@ -11,6 +11,9 @@ const COFOUNDER_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-cofo
 
 interface Props {
   activeTab: string;
+  userRole?: string;
+  userName?: string;
+  userVertical?: string;
 }
 
 const TAB_CONTEXT: Record<string, string> = {
