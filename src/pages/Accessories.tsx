@@ -26,6 +26,7 @@ import { useAccessoryWishlist } from "@/hooks/useAccessoryWishlist";
 import { useAuth } from "@/hooks/useAuth";
 import { CartSheet } from "@/components/CartSheet";
 import { AccessoryDetailModal } from "@/components/AccessoryDetailModal";
+import { ShopRocketEmbed } from "@/components/ShopRocketEmbed";
 import { toast } from "sonner";
 import {
   Select,
