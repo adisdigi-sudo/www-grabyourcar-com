@@ -668,7 +668,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                   <TableHead className="text-[10px] font-bold uppercase">Phone</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase">Vehicle</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase">Insurer</TableHead>
-                  <TableHead className="text-[10px] font-bold uppercase">Stage</TableHead>
+                  {/* Stage column removed - inline select in Name cell */}
                   <TableHead className="text-[10px] font-bold uppercase">Picked Up</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase">Source</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase">Lead Time</TableHead>
@@ -679,9 +679,9 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableRow><TableCell colSpan={12} className="text-center py-12 text-muted-foreground">Loading...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={11} className="text-center py-12 text-muted-foreground">Loading...</TableCell></TableRow>
                 ) : filtered.length === 0 ? (
-                  <TableRow><TableCell colSpan={12} className="text-center py-12 text-muted-foreground">
+                  <TableRow><TableCell colSpan={11} className="text-center py-12 text-muted-foreground">
                     <Shield className="h-8 w-8 mx-auto mb-2 opacity-30" />
                     <p className="text-sm">No leads found</p>
                   </TableCell></TableRow>
@@ -700,10 +700,30 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                           <div className={cn("w-7 h-7 rounded-full bg-gradient-to-br flex items-center justify-center shrink-0", stage.color)}>
                             <User className="h-3 w-3 text-white" />
                           </div>
-                          <div className="min-w-0">
+                          <div className="min-w-0 flex flex-col gap-0.5">
                             <p className="font-semibold text-xs leading-tight truncate">{client.customer_name || "Unknown"}</p>
-                            <p className="text-[10px] text-muted-foreground">{client.city || "—"}</p>
-                            <JourneyBreadcrumb clientId={client.id} />
+                            <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                              <Select
+                                value={normStage}
+                                onValueChange={(val) => handleMove(client, val)}
+                              >
+                                <SelectTrigger className={cn("h-5 text-[9px] px-1.5 py-0 w-auto min-w-[90px] max-w-[120px] border rounded-full gap-0.5", stage.bg, stage.text, stage.border)}>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {PIPELINE_STAGES.map(s => {
+                                    const SIcon = s.icon;
+                                    return (
+                                      <SelectItem key={s.value} value={s.value} className="text-xs">
+                                        <span className="flex items-center gap-1.5">
+                                          <SIcon className="h-3 w-3" /> {s.label}
+                                        </span>
+                                      </SelectItem>
+                                    );
+                                  })}
+                                </SelectContent>
+                              </Select>
+                            </div>
                           </div>
                         </div>
                       </TableCell>
@@ -715,16 +735,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                         </div>
                       </TableCell>
                       <TableCell className="text-xs">{client.current_insurer || "—"}</TableCell>
-                      <TableCell>
-                        <div className="flex flex-col gap-0.5">
-                          <Badge variant="outline" className={cn("text-[9px] px-1.5", stage.bg, stage.text, "border", stage.border)}>
-                            {stage.label}
-                          </Badge>
-                          {client.retarget_status === "scheduled" && (
-                            <Badge variant="outline" className="text-[8px] px-1 bg-violet-50 text-violet-600 border-violet-200">🔄 Retarget</Badge>
-                          )}
-                        </div>
-                      </TableCell>
+                      {/* Stage column removed - inline in Name */}
                       <TableCell onClick={e => e.stopPropagation()}>
                         {client.picked_up_by ? (
                           <div className="flex flex-col gap-0.5">
@@ -809,21 +820,6 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                           <Button size="sm" variant="outline" className="h-6 text-[10px] gap-0.5 px-1.5 text-emerald-600 border-emerald-200" onClick={() => { setSelectedClient(client); setShowQuoteModal(true); }}>
                             <FileText className="h-2.5 w-2.5" /> Quote
                           </Button>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button size="sm" variant="outline" className="h-6 text-[10px] gap-0.5 px-1.5">Move <ChevronRight className="h-2.5 w-2.5" /></Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-44">
-                              {PIPELINE_STAGES.filter(s => s.value !== normStage).map(s => {
-                                const SIcon = s.icon;
-                                return (
-                                  <DropdownMenuItem key={s.value} onClick={() => handleMove(client, s.value)} className="gap-2 text-xs">
-                                    <SIcon className="h-3 w-3" /> {s.label}
-                                  </DropdownMenuItem>
-                                );
-                              })}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
                         </div>
                       </TableCell>
                     </TableRow>
