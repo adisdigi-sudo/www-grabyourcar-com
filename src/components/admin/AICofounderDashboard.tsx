@@ -204,7 +204,7 @@ export default function AICofounderDashboard() {
   const { data: mistakeLogs = [] } = useQuery({ queryKey: ["ai-mistakes"], queryFn: async () => { const { data } = await supabase.from("ai_mistake_logs").select("*").eq("status", "detected").order("created_at", { ascending: false }).limit(20); return data || []; } });
   const { data: teamMembers = [] } = useQuery({ queryKey: ["team-members-active"], queryFn: async () => { const { data } = await supabase.from("team_members").select("*").eq("is_active", true); return data || []; } });
 
-  const genTasks = useMutation({ mutationFn: () => callAction("suggest_tasks", { user_name: "Boss", user_role: "founder" }), onSuccess: (d) => { qc.invalidateQueries({ queryKey: ["cofounder-tasks"] }); toast.success(`${d.tasks?.length || 0} tasks generated!`); } });
+  const genTasks = useMutation({ mutationFn: () => callAction("suggest_tasks", { user_name: "Boss", user_role: "super_admin" }), onSuccess: (d) => { qc.invalidateQueries({ queryKey: ["cofounder-tasks"] }); toast.success(`${d.tasks?.length || 0} tasks generated!`); } });
   const genPushes = useMutation({ mutationFn: () => callAction("generate_pushes"), onSuccess: (d) => { qc.invalidateQueries({ queryKey: ["ai-pushes"] }); toast.success(`${d.pushes_generated || 0} reminders sent!`); } });
   const scanRisks = useMutation({ mutationFn: () => callAction("scan_risks"), onSuccess: (d) => { qc.invalidateQueries({ queryKey: ["ai-risks"] }); toast.success(`${d.risks?.length || 0} risks detected!`); } });
   const findCrossSells = useMutation({ mutationFn: () => callAction("find_cross_sells"), onSuccess: (d) => { qc.invalidateQueries({ queryKey: ["ai-cross-sells"] }); toast.success(`${d.suggestions?.length || 0} opportunities found!`); } });
