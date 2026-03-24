@@ -46,7 +46,7 @@ export const VerticalProfitLoss = () => {
   const { data: configs = [] } = useQuery({
     queryKey: ["vertical-profit-configs"],
     queryFn: async () => {
-      const { data } = await (supabase.from("vertical_profit_config") as any).select("*").order("vertical_name");
+      const { data } = await (supabase as any).from("vertical_profit_config").select("*").order("vertical_name");
       return data || [];
     },
   });
@@ -55,7 +55,7 @@ export const VerticalProfitLoss = () => {
   const { data: entries = [] } = useQuery({
     queryKey: ["vertical-pl-entries", selectedVertical, dateRange],
     queryFn: async () => {
-      let query = (supabase.from("vertical_pl_entries") as any).select("*").order("entry_date", { ascending: false });
+      let query = (supabase as any).from("vertical_pl_entries").select("*").order("entry_date", { ascending: false });
       if (selectedVertical !== "all") query = query.eq("vertical_slug", selectedVertical);
       if (dateRange === "this-month") {
         const start = format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), "yyyy-MM-dd");
