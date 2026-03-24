@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { differenceInDays } from "date-fns";
+import { differenceInDays, format, startOfMonth, endOfMonth } from "date-fns";
 import {
   UserPlus, Clock, CheckCircle2, Shield, TrendingUp,
   Plus, FileSpreadsheet, BookOpen, CalendarClock, Wrench, AlertTriangle, Calculator, ArrowRight
@@ -22,8 +22,10 @@ import { InsurancePolicyBook, type PolicyRecord } from "./InsurancePolicyBook";
 import { InsuranceComingRenewals } from "./InsuranceComingRenewals";
 import { InsuranceOverdueRenewals } from "./InsuranceOverdueRenewals";
 import { InsurancePremiumCalculator } from "./InsurancePremiumCalculator";
+import { InsuranceKpiDetailDialog } from "./InsuranceKpiDetailDialog";
 
 type ActiveView = "pipeline" | "policy_book" | "renewals" | "overdue" | "bulk_tools" | "calculator";
+type KpiType = "total_leads" | "in_pipeline" | "won" | "active_policies" | "conversion" | null;
 
 type LegacyInsuranceLead = {
   id: string;
