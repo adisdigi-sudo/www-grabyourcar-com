@@ -436,7 +436,7 @@ ${myTargets.length > 0 ? myTargets.map((t: any) => `• ${t.team_member_name}: $
             if (params.policy_expiry_date) updates.policy_expiry_date = params.policy_expiry_date;
             if (params.email) updates.email = params.email;
             if (params.notes) updates.notes = params.notes;
-            if (params.vehicle_color) updates.vehicle_color = params.vehicle_color;
+            if (params.vehicle_color) updates.notes = (updates.notes || params.notes || '') + ' | Color: ' + params.vehicle_color;
             updates.updated_at = new Date().toISOString();
             const r = await fetch(`${SB}/rest/v1/insurance_clients?id=eq.${existing[0].id}`, { method: "PATCH", headers: { ...h, Prefer: "return=minimal" }, body: JSON.stringify(updates) });
             if (!r.ok) return `❌ Failed to update client: ${await r.text()}`;
