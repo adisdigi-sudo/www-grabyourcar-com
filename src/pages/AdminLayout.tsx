@@ -208,15 +208,9 @@ const AutomationCommandCenter = lazy(() => import("@/components/admin/Automation
 const LeadRoutingManager = lazy(() =>
   import("@/components/admin/LeadRoutingManager").then((module) => ({ default: module.LeadRoutingManager })),
 );
-// Accounts modules (Zoho Books style)
-const AccountsDashboard = lazy(() => import("@/components/admin/finance/AccountsDashboard").then(m => ({ default: m.AccountsDashboard })));
-const AccountsInvoicesModule = lazy(() => import("@/components/admin/finance/AccountsInvoicesModule").then(m => ({ default: m.AccountsInvoicesModule })));
-const AccountsExpensesModule = lazy(() => import("@/components/admin/finance/AccountsExpensesModule").then(m => ({ default: m.AccountsExpensesModule })));
-const AccountsBillsModule = lazy(() => import("@/components/admin/finance/AccountsBillsModule").then(m => ({ default: m.AccountsBillsModule })));
-const AccountsBankingModule = lazy(() => import("@/components/admin/finance/AccountsBankingModule").then(m => ({ default: m.AccountsBankingModule })));
-const AccountsChartOfAccounts = lazy(() => import("@/components/admin/finance/AccountsChartOfAccounts").then(m => ({ default: m.AccountsChartOfAccounts })));
-const AccountsDeepWorkspace = lazy(() => import("@/components/admin/finance/AccountsDeepWorkspace").then(m => ({ default: m.AccountsDeepWorkspace })));
-const FinancialIntelligenceDashboard = lazy(() => import("@/components/admin/finance/FinancialIntelligenceDashboard").then(m => ({ default: m.FinancialIntelligenceDashboard })));
+// Accounts — Zoho Books-style unified workspace
+const ZohoAccountsWorkspace = lazy(() => import("@/components/admin/finance/ZohoAccountsWorkspace").then(m => ({ default: m.ZohoAccountsWorkspace })));
+
 // HR modules (10 sub-modules)
 const HRCoreModule = lazy(() => import("@/components/admin/hr/HRCoreModule").then(m => ({ default: m.HRCoreModule })));
 const HRRecruitmentModule = lazy(() => import("@/components/admin/hr/HRRecruitmentModule").then(m => ({ default: m.HRRecruitmentModule })));
@@ -338,7 +332,7 @@ const AdminLayout = () => {
         if (slug === "accessories") return <AccessoriesEcommerceWorkspace />;
         if (slug === "marketing") return <MarketingDashboard onNavigate={setActiveTab} />;
         if (slug === "loans") return <LoanCRMDashboard />;
-        if (slug === "accounts") return <AccountsDashboard />;
+        if (slug === "accounts") return <ZohoAccountsWorkspace />;
         if (slug === "hr") return <HRCoreModule />;
         return <AdminDashboard />;
       }
@@ -548,24 +542,17 @@ const AdminLayout = () => {
         return <DealerManagement initialTab="broadcast" />;
       // ── Accounts (Zoho Books style) ──
       case "accounts-dashboard":
-        return <AccountsDashboard />;
       case "accounts-invoices":
-        return <AccountsInvoicesModule />;
       case "accounts-expenses":
-        return <AccountsExpensesModule />;
       case "accounts-bills":
-        return <AccountsBillsModule />;
       case "accounts-banking":
-        return <AccountsBankingModule />;
       case "accounts-chart":
-        return <AccountsChartOfAccounts />;
       case "accounts-journal":
-        return <AccountsDeepWorkspace initialTab="journal" />;
       case "accounts-reports":
-        return <FinancialIntelligenceDashboard />;
+      case "accounts-documents":
+        return <ZohoAccountsWorkspace />;
       case "accounts-incentive-payouts":
         return <IncentivePayoutApproval />;
-      case "accounts-documents":
       case "document-vault":
         return <DocumentVault />;
       // ── HR (10 sub-modules) ──
