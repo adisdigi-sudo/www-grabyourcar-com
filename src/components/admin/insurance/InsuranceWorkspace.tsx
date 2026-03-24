@@ -121,12 +121,15 @@ export function InsuranceWorkspace() {
     }), [allPolicies, today.toDateString()]
   );
 
-  const totalLeads = clients.length;
-  const wonCount = clients.filter(c => {
+  const isWon = (c: Client) => {
     const stage = normalizeStage(c.pipeline_stage, c.lead_status);
     return stage === "won" || stage === "policy_issued";
-  }).length;
-  const lostCount = clients.filter(c => normalizeStage(c.pipeline_stage, c.lead_status) === "lost").length;
+  };
+  const isLost = (c: Client) => normalizeStage(c.pipeline_stage, c.lead_status) === "lost";
+
+  const totalLeads = clients.length;
+  const wonCount = clients.filter(isWon).length;
+  const lostCount = clients.filter(isLost).length;
   const inPipeline = totalLeads - wonCount - lostCount;
 
   // Month-wise conversion calculation
