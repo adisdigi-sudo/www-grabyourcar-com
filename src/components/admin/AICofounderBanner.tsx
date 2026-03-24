@@ -45,7 +45,11 @@ export function AICofounderBanner({ activeTab, userRole, userName, userVertical 
   const [lastTab, setLastTab] = useState("");
 
   const fetchSuggestion = useCallback(async () => {
-    const contextPrompt = TAB_CONTEXT[activeTab] || "Give ONE actionable insight for the business right now. Max 2 sentences.";
+    const contextMap = isSuperAdmin ? TAB_CONTEXT : TEAM_TAB_CONTEXT;
+    const defaultPrompt = isSuperAdmin
+      ? "Give ONE actionable insight for the business right now. Max 2 sentences."
+      : `Give ONE task for ${userName || 'me'} in ${userVertical || 'my'} vertical right now. Max 2 sentences.`;
+    const contextPrompt = contextMap[activeTab] || defaultPrompt;
     setIsLoading(true);
     setSuggestion("");
 
