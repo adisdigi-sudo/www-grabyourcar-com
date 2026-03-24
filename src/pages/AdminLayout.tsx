@@ -529,27 +529,18 @@ const AdminLayout = () => {
       case "accounts-reports":
       case "accounts-documents":
         return <ZohoAccountsWorkspace />;
-      // ── HR (10 sub-modules) ──
+      // ── HR (Zoho People-style unified workspace) ──
       case "hr-core":
-        return <HRCoreModule />;
       case "hr-recruitment":
-        return <HRRecruitmentModule />;
       case "hr-workforce":
-        return <HRWorkforceModule />;
       case "hr-attendance":
-        return <HRAttendanceModule />;
       case "hr-payroll":
-        return <HRPayrollModule />;
       case "hr-expense":
-        return <HRExpenseModule />;
       case "hr-performance":
-        return <HRPerformanceModule />;
       case "hr-engagement":
-        return <HREngagementModule />;
       case "hr-assets":
-        return <HRAssetModule />;
       case "hr-helpdesk":
-        return <HRHelpdeskModule />;
+        return <ZohoHRWorkspace />;
       default:
         return <AdminDashboard />;
     }
