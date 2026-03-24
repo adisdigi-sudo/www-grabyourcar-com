@@ -345,35 +345,6 @@ const navItems: NavItem[] = [
     ]
   },
 
-  // ── Document Vault — Super Admin only ──
-  { 
-    id: "document-vault", 
-    label: "📂 Document Vault", 
-    icon: FileText,
-    verticals: ["accounts", "hr"],
-    allowedRoles: ["super_admin", "admin"],
-  },
-
-  // ── Deals Pipeline — sales/loans/accounts verticals ──
-  { 
-    id: "deals-pipeline", 
-    label: "📋 Deals Pipeline", 
-    icon: FileText,
-    verticals: ["sales", "insurance", "loans", "accounts", "dealer-network"],
-    allowedRoles: ["super_admin", "admin", "sales", "finance"],
-  },
-
-  // ── Incentive Management — operational + accounts verticals ──
-  { 
-    id: "incentive-hub", 
-    label: "🏆 Incentives", 
-    icon: Trophy,
-    verticals: ["sales", "insurance", "loans", "accounts", "rental", "hsrp", "accessories", "dealer-network", "marketing"],
-    children: [
-      { id: "incentive-management", label: "🏆 Admin Dashboard", icon: Trophy, allowedRoles: ["super_admin"] },
-      { id: "incentive-my-dashboard", label: "💰 My Incentives", icon: CreditCard },
-    ]
-  },
 ];
 
 export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => {
