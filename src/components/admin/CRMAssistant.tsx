@@ -21,14 +21,14 @@ interface CRMAssistantProps {
 const COFOUNDER_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-cofounder`;
 
 const ADMIN_QUICK_ACTIONS = [
-  { icon: Zap, label: "What should I do now?", prompt: "What should I focus on RIGHT NOW to maximize revenue today?" },
-  { icon: Target, label: "Today's targets", prompt: "Show me today's target status for all team members with specific actions to close gaps" },
-  { icon: TrendingUp, label: "Revenue boost", prompt: "Give me 5 immediate revenue-boosting actions I can take in the next 2 hours" },
-  { icon: AlertTriangle, label: "Risk alerts", prompt: "What are the top risks right now? Flag anything critical with urgency" },
-  { icon: ShoppingCart, label: "Cross-sell now", prompt: "Which customers can I cross-sell to RIGHT NOW? Give names, phones, and what to pitch" },
-  { icon: DollarSign, label: "Cash position", prompt: "What's our cash position, runway, and what payments are pending collection?" },
-  { icon: Users, label: "Team status", prompt: "How is each team member performing? Who needs coaching or push?" },
-  { icon: Lightbulb, label: "New ideas", prompt: "Suggest 3 creative ideas to grow revenue this week that we haven't tried" },
+  { icon: Zap, label: "What to do now?", prompt: "What should I focus on RIGHT NOW? Show exact data from database with names and phones." },
+  { icon: Target, label: "Today's targets", prompt: "Show me EXACT target status for all team members from database. Real numbers only." },
+  { icon: TrendingUp, label: "Revenue boost", prompt: "Show 5 revenue actions from ACTUAL data — real leads, real deals, real renewals with names and phones." },
+  { icon: AlertTriangle, label: "Risk alerts", prompt: "What risks exist in ACTUAL data? Show real overdue follow-ups, unpaid deals, expiring policies." },
+  { icon: DollarSign, label: "Cash position", prompt: "Show EXACT cash position from bank accounts, pending payments, and revenue from actual database." },
+  { icon: Users, label: "Team status", prompt: "Show EXACT team performance from targets table. Real achievement numbers, not estimates." },
+  { icon: Lightbulb, label: "📊 Full report", action: "generate_report" },
+  { icon: ShoppingCart, label: "Cross-sell", prompt: "Find cross-sell from ACTUAL customer data. Real names, real phones, real opportunities." },
 ];
 
 const TEAM_QUICK_ACTIONS = [
