@@ -221,19 +221,4 @@ export const ZohoAccountsWorkspace = ({ initialView = "home" }: ZohoAccountsWork
   );
 };
 
-// Simple documents placeholder
-const AccountsDocuments = () => (
-  <div className="space-y-4">
-    <div className="flex items-center justify-between">
-      <h2 className="text-xl font-semibold">Documents</h2>
-      <Button size="sm"><Plus className="h-4 w-4 mr-1" /> Upload Document</Button>
-    </div>
-    <div className="border-2 border-dashed rounded-xl p-16 text-center text-muted-foreground">
-      <FolderOpen className="h-12 w-12 mx-auto mb-3 opacity-40" />
-      <p className="font-medium">No documents uploaded yet</p>
-      <p className="text-sm mt-1">Upload invoices, receipts, and other financial documents</p>
-    </div>
-  </div>
-);
-
 export default ZohoAccountsWorkspace;
