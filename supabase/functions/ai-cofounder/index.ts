@@ -763,6 +763,67 @@ ${myTargets.length > 0 ? myTargets.map((t: any) => `• ${t.team_member_name}: $
       return new Response(stream, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
     }
 
+    async function callAI(msgs: any[], tools?: any[], tc?: any) {
+      const b: any = { model: "google/gemini-3-flash-preview", messages: msgs, max_tokens: 4000 };
+      if (tools) { b.tools = tools; b.tool_choice = tc; }
+      const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify(b),
+      });
+      if (!r.ok) throw new Error(`AI error: ${r.status}`);
+      return r.json();
+    }
+
+    function parseTool(data: any) {
+      try { return JSON.parse(data.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments || "{}"); } catch { return {}; }
+    }
+
+    // ========== ACTIONS ==========
+
+    if (action === "daily_briefing") {
+      const briefingPrompt = isSuperAdmin
+        ? `Generate COMPREHENSIVE daily briefing using ONLY the data provided below. Data:\n${dataCtx}\n\nInclude:\n1. 🌅 GOOD MORNING\n2. 🏦 FINANCIAL PULSE\n3. 🎯 TARGET STATUS\n4. 🔥 URGENT NOW\n5. 📋 TOP 10 TASKS\n6. 💰 REVENUE OPPORTUNITIES\n7. ⚠️ RISK RADAR\n8. 🔍 MISTAKES FOUND\n9. 👥 TEAM STATUS\n10. 🎯 SUCCESS =\n\nIMPORTANT: If any section has 0 records, say "No data available".`
+        : `Generate daily work briefing for ${user_name || 'team member'} in ${userVertical} ONLY. Data:\n${dataCtx}\n\nInclude:\n1. 🌅 GOOD MORNING!\n2. 🎯 YOUR TARGETS\n3. 📋 YOUR TASKS\n4. 📞 WHO TO CALL\n5. 💪 TIPS\n6. 🔔 REMINDERS\n\nONLY use data from above. NO financial data. NO other teams.`;
+      return streamAI([{ role: "system", content: sysPrompt }, { role: "user", content: briefingPrompt }]);
+
+    } else if (action === "suggest_tasks") {
+      if (!isSuperAdmin) {
+        return new Response(JSON.stringify({ error: "Access restricted" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const data = await callAI(
+        [{ role: "system", content: sysPrompt }, { role: "user", content: `Data:\n${ctx}\n\nGenerate 15-20 specific tasks from ACTUAL data.` }],
+        [{ type: "function", function: { name: "generate_tasks", description: "Generate tasks", parameters: { type: "object", properties: { tasks: { type: "array", items: { type: "object", properties: { title: { type: "string" }, description: { type: "string" }, priority: { type: "string", enum: ["urgent","high","medium","low"] }, task_type: { type: "string", enum: ["follow_up","renewal","order_processing","payment_collection","car_return","cross_sell","new_lead","approval","target_push","coaching","problem_solving","risk_mitigation","mistake_fix","investor_prep","ecommerce"] }, vertical: { type: "string" }, team_member_name: { type: "string" }, ai_suggestion: { type: "string" } }, required: ["title","description","priority","task_type","vertical"], additionalProperties: false } } }, required: ["tasks"], additionalProperties: false } } }],
+        { type: "function", function: { name: "generate_tasks" } }
+      );
+      const tasks = parseTool(data).tasks || [];
+      if (tasks.length > 0) {
+        await fetch(`${SB}/rest/v1/ai_cofounder_tasks`, { method: "POST", headers: { ...h, Prefer: "return=minimal" },
+          body: JSON.stringify(tasks.map((t: any) => ({ title: t.title, description: t.description, priority: t.priority, task_type: t.task_type, vertical: t.vertical, team_member_name: t.team_member_name || null, ai_suggestion: t.ai_suggestion || null, due_date: today, status: "pending" }))) });
+      }
+      return new Response(JSON.stringify({ tasks }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+    } else if (action === "quick_insight") {
+      // Build messages with conversation history for context
+      const msgs: any[] = [{ role: "system", content: sysPrompt + `\n\nYou have WRITE capabilities. When the user asks you to add a lead, update a client, set follow-up, etc., use the available tools to ACTUALLY perform the action in the database. After performing the action, confirm what you did with exact details.\n\nYou can:\n- add_insurance_lead: Add new insurance client/lead\n- update_insurance_client: Update existing client info\n- add_general_lead: Add lead to main leads table\n- set_follow_up: Set follow-up date\n- update_lead_status: Update lead status/priority` }];
+      
+      if (conversation_history && Array.isArray(conversation_history)) {
+        for (const msg of conversation_history.slice(-8)) {
+          msgs.push({ role: msg.role, content: msg.content });
+        }
+      }
+
+      const searchResults = await targetedSearch(question || "", SB, h, isSuperAdmin ? null : userVertical);
+      const fullContext = dataCtx + searchResults;
+      
+      const workStyle = isRenewalQuestion(question)
+        ? `Respond like a serious renewal operations manager. Format EXACTLY in 4 sections: 1) Summary, 2) Priority table, 3) Call-first list, 4) Immediate next steps.`
+        : `Respond like a serious work assistant: give exact answer first, then ordered priorities, then next actions. If user asks to ADD/CREATE/INSERT a lead or client, USE THE TOOLS to actually do it.`;
+
+      msgs.push({ role: "user", content: `Here is the ACTUAL live database data AND targeted search results. Use ONLY this data to answer. ${workStyle}\n\n${fullContext}\n\nQuestion: ${question || "What should I focus on right now?"}` });
+      
+      return streamAIWithTools(msgs);
+
     } else if (action === "generate_report") {
       if (!isSuperAdmin) {
         // Team members get personal report only
