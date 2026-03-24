@@ -92,11 +92,13 @@ export function CRMAssistant({ userRole, userName, userVertical }: CRMAssistantP
     }
   }, [convId]);
 
-  const sendMessage = async (text?: string) => {
+  const sendMessage = async (text?: string, actionOverride?: string) => {
     const query = text || input.trim();
-    if (!query || isLoading) return;
+    if (!query && !actionOverride) return;
+    if (isLoading) return;
 
-    const userMsg: Message = { role: "user", content: query };
+    const displayText = query || (actionOverride === "generate_report" ? "📊 Generate full business report" : "Running action...");
+    const userMsg: Message = { role: "user", content: displayText };
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
     setInput("");
@@ -111,8 +113,9 @@ export function CRMAssistant({ userRole, userName, userVertical }: CRMAssistantP
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
         body: JSON.stringify({
-          action: "quick_insight",
-          question: query,
+          action: actionOverride || "quick_insight",
+          question: query || undefined,
+          report_type: actionOverride === "generate_report" ? "comprehensive" : undefined,
           user_role: userRole || "super_admin",
           user_name: userName,
           vertical: userVertical,
