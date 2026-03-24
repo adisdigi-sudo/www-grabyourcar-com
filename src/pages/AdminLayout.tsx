@@ -542,24 +542,17 @@ const AdminLayout = () => {
         return <DealerManagement initialTab="broadcast" />;
       // ── Accounts (Zoho Books style) ──
       case "accounts-dashboard":
-        return <AccountsDashboard />;
       case "accounts-invoices":
-        return <AccountsInvoicesModule />;
       case "accounts-expenses":
-        return <AccountsExpensesModule />;
       case "accounts-bills":
-        return <AccountsBillsModule />;
       case "accounts-banking":
-        return <AccountsBankingModule />;
       case "accounts-chart":
-        return <AccountsChartOfAccounts />;
       case "accounts-journal":
-        return <AccountsDeepWorkspace initialTab="journal" />;
       case "accounts-reports":
-        return <FinancialIntelligenceDashboard />;
-      case "accounts-incentive-payouts":
-        return <IncentivePayoutApproval />;
       case "accounts-documents":
+        return <ZohoAccountsWorkspace />;
+      case "accounts-incentive-payouts":
+        return <IncentivePayoutApprovalLazy />;
       case "document-vault":
         return <DocumentVault />;
       // ── HR (10 sub-modules) ──
