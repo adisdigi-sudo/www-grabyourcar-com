@@ -16,7 +16,11 @@ export function useCreateEmailList() {
 export function useEmailSubscribers(listId?: string) {
   return useQuery({
     queryKey: ["email-subscribers", listId],
-    queryFn: async () => { const { data, error } = await supabase.from("email_subscribers").select("*").eq("list_id", listId!).order("created_at", { ascending: false }); if (error) throw error; return data; },
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).from("email_subscribers").select("*").eq("list_id", listId!).order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
     enabled: !!listId,
   });
 }
