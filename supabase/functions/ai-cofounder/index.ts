@@ -14,6 +14,103 @@ async function safeFetch(url: string, h: Record<string, string>): Promise<any[]>
   } catch { return []; }
 }
 
+// Targeted search: query specific tables based on user question keywords
+async function targetedSearch(question: string, SB: string, h: Record<string, string>): Promise<string> {
+  if (!question) return "";
+  const q = question.toLowerCase();
+  const results: string[] = [];
+
+  // Extract potential vehicle/registration numbers (like 4191, HR26EY7114, etc.)
+  const numPatterns = question.match(/\b\d{4}\b/g) || [];
+  const regPatterns = question.match(/[A-Za-z]{2}\d{1,2}[A-Za-z]{0,3}\d{1,4}/gi) || [];
+  const searchTerms = [...numPatterns, ...regPatterns];
+
+  // Extract phone numbers
+  const phonePatterns = question.match(/\b\d{10}\b/g) || [];
+
+  // Search insurance_clients by vehicle number or phone
+  if (q.includes("policy") || q.includes("insurance") || q.includes("renewal") || q.includes("insur") || searchTerms.length > 0) {
+    for (const term of searchTerms) {
+      const clients = await safeFetch(`${SB}/rest/v1/insurance_clients?or=(vehicle_number.ilike.*${term}*,phone.ilike.*${term}*)&select=id,customer_name,phone,vehicle_number,vehicle_make,vehicle_model,vehicle_year,current_insurer,current_premium,current_policy_number,current_policy_type,policy_expiry_date,lead_status,pipeline_stage,assigned_executive,ncb_percentage,follow_up_date&limit=10`, h);
+      if (clients.length > 0) {
+        results.push(`🔍 SEARCH: Insurance clients matching "${term}":\n${clients.map((c: any) => `• ${c.customer_name || 'N/A'} | Ph: ${c.phone || 'N/A'} | Vehicle: ${c.vehicle_number || 'N/A'} (${c.vehicle_make || ''} ${c.vehicle_model || ''} ${c.vehicle_year || ''}) | Policy#: ${c.current_policy_number || 'N/A'} | Type: ${c.current_policy_type || 'N/A'} | Insurer: ${c.current_insurer || 'N/A'} | Premium: ₹${c.current_premium || 'N/A'} | NCB: ${c.ncb_percentage || 'N/A'}% | Expiry: ${c.policy_expiry_date || 'N/A'} | Status: ${c.lead_status || 'N/A'} | Stage: ${c.pipeline_stage || 'N/A'} | Exec: ${c.assigned_executive || 'N/A'} | Follow-up: ${c.follow_up_date || 'N/A'}`).join('\n')}`);
+      }
+    }
+    for (const phone of phonePatterns) {
+      const clients = await safeFetch(`${SB}/rest/v1/insurance_clients?phone=ilike.*${phone}*&select=id,customer_name,phone,vehicle_number,vehicle_make,vehicle_model,current_insurer,current_premium,current_policy_number,policy_expiry_date,lead_status,pipeline_stage&limit=10`, h);
+      if (clients.length > 0) {
+        results.push(`🔍 SEARCH: Insurance clients with phone "${phone}":\n${clients.map((c: any) => `• ${c.customer_name || 'N/A'} | Ph: ${c.phone || 'N/A'} | Vehicle: ${c.vehicle_number || 'N/A'} | Policy#: ${c.current_policy_number || 'N/A'} | Insurer: ${c.current_insurer || 'N/A'} | Premium: ₹${c.current_premium || 'N/A'} | Expiry: ${c.policy_expiry_date || 'N/A'} | Status: ${c.lead_status || 'N/A'}`).join('\n')}`);
+      }
+    }
+    // Also search insurance_policies table
+    for (const term of searchTerms) {
+      const policies = await safeFetch(`${SB}/rest/v1/insurance_policies?or=(vehicle_number.ilike.*${term}*,policy_number.ilike.*${term}*)&select=id,client_id,policy_number,policy_type,insurer,premium_amount,vehicle_number,start_date,expiry_date,status,ncb_percentage,od_premium,tp_premium,net_premium&limit=10`, h);
+      if (policies.length > 0) {
+        results.push(`🔍 SEARCH: Insurance policies matching "${term}":\n${policies.map((p: any) => `• Policy#: ${p.policy_number || 'N/A'} | Type: ${p.policy_type || 'N/A'} | Insurer: ${p.insurer || 'N/A'} | Vehicle: ${p.vehicle_number || 'N/A'} | Premium: ₹${p.premium_amount || 'N/A'} | OD: ₹${p.od_premium || 'N/A'} | TP: ₹${p.tp_premium || 'N/A'} | Net: ₹${p.net_premium || 'N/A'} | NCB: ${p.ncb_percentage || 'N/A'}% | Start: ${p.start_date || 'N/A'} | Expiry: ${p.expiry_date || 'N/A'} | Status: ${p.status || 'N/A'}`).join('\n')}`);
+      }
+    }
+  }
+
+  // Search HSRP bookings
+  if (q.includes("hsrp") || q.includes("plate") || q.includes("registration") || searchTerms.length > 0) {
+    for (const term of searchTerms) {
+      const hsrps = await safeFetch(`${SB}/rest/v1/hsrp_bookings?registration_number=ilike.*${term}*&select=id,owner_name,registration_number,order_status,payment_status,mobile,service_type,payment_amount&limit=10`, h);
+      if (hsrps.length > 0) {
+        results.push(`🔍 SEARCH: HSRP bookings matching "${term}":\n${hsrps.map((h: any) => `• ${h.owner_name || 'N/A'} | Ph: ${h.mobile || 'N/A'} | Reg: ${h.registration_number || 'N/A'} | Type: ${h.service_type || 'N/A'} | Status: ${h.order_status || 'N/A'} | Payment: ${h.payment_status || 'N/A'} | Amount: ₹${h.payment_amount || 'N/A'}`).join('\n')}`);
+      }
+    }
+  }
+
+  // Search leads by name or phone
+  if (q.includes("lead") || q.includes("customer") || q.includes("client") || phonePatterns.length > 0) {
+    for (const phone of phonePatterns) {
+      const foundLeads = await safeFetch(`${SB}/rest/v1/leads?phone=ilike.*${phone}*&select=id,name,phone,source,service_category,status,priority,assigned_to,city,follow_up_date&limit=10`, h);
+      if (foundLeads.length > 0) {
+        results.push(`🔍 SEARCH: Leads with phone "${phone}":\n${foundLeads.map((l: any) => `• ${l.name || 'N/A'} | Ph: ${l.phone || 'N/A'} | Source: ${l.source || 'N/A'} | Category: ${l.service_category || 'N/A'} | Status: ${l.status || 'N/A'} | Priority: ${l.priority || 'N/A'} | City: ${l.city || 'N/A'}`).join('\n')}`);
+      }
+    }
+  }
+
+  // Search deals
+  if (q.includes("deal") || q.includes("payment") || q.includes("booking")) {
+    for (const phone of phonePatterns) {
+      const customers = await safeFetch(`${SB}/rest/v1/customers?phone=ilike.*${phone}*&select=id,name,phone,email,status&limit=5`, h);
+      if (customers.length > 0) {
+        results.push(`🔍 SEARCH: Customers with phone "${phone}":\n${customers.map((c: any) => `• ${c.name || 'N/A'} | Ph: ${c.phone || 'N/A'} | Email: ${c.email || 'N/A'} | Status: ${c.status || 'N/A'}`).join('\n')}`);
+      }
+    }
+  }
+
+  // Search rental bookings
+  if (q.includes("rental") || q.includes("self drive") || q.includes("booking")) {
+    for (const phone of phonePatterns) {
+      const rentals = await safeFetch(`${SB}/rest/v1/rental_bookings?phone=ilike.*${phone}*&select=id,customer_name,phone,car_name,pickup_date,return_date,status,payment_status,total_amount&limit=10`, h);
+      if (rentals.length > 0) {
+        results.push(`🔍 SEARCH: Rental bookings for phone "${phone}":\n${rentals.map((r: any) => `• ${r.customer_name || 'N/A'} | Ph: ${r.phone || 'N/A'} | Car: ${r.car_name || 'N/A'} | Pickup: ${r.pickup_date || 'N/A'} | Return: ${r.return_date || 'N/A'} | Amount: ₹${r.total_amount || 'N/A'} | Status: ${r.status || 'N/A'}`).join('\n')}`);
+      }
+    }
+  }
+
+  // Extract name-like patterns and search
+  const nameWords = question.match(/\b[A-Z][a-z]{2,}\b/g) || [];
+  if (nameWords.length > 0) {
+    for (const name of nameWords.slice(0, 3)) {
+      if (["Insurance", "Policy", "Booked", "Vehicle", "Number", "Car", "What", "Show", "Give", "Find", "Search", "Check"].includes(name)) continue;
+      const clients = await safeFetch(`${SB}/rest/v1/insurance_clients?customer_name=ilike.*${name}*&select=id,customer_name,phone,vehicle_number,vehicle_make,vehicle_model,current_insurer,current_premium,policy_expiry_date,lead_status&limit=5`, h);
+      if (clients.length > 0) {
+        results.push(`🔍 SEARCH: Insurance clients named "${name}":\n${clients.map((c: any) => `• ${c.customer_name || 'N/A'} | Ph: ${c.phone || 'N/A'} | Vehicle: ${c.vehicle_number || 'N/A'} (${c.vehicle_make || ''} ${c.vehicle_model || ''}) | Insurer: ${c.current_insurer || 'N/A'} | Premium: ₹${c.current_premium || 'N/A'} | Expiry: ${c.policy_expiry_date || 'N/A'}`).join('\n')}`);
+      }
+      const custSearch = await safeFetch(`${SB}/rest/v1/customers?name=ilike.*${name}*&select=id,name,phone,email,status,city&limit=5`, h);
+      if (custSearch.length > 0) {
+        results.push(`🔍 SEARCH: Customers named "${name}":\n${custSearch.map((c: any) => `• ${c.name || 'N/A'} | Ph: ${c.phone || 'N/A'} | Email: ${c.email || 'N/A'} | City: ${c.city || 'N/A'} | Status: ${c.status || 'N/A'}`).join('\n')}`);
+      }
+    }
+  }
+
+  if (results.length === 0) return "\n⚠️ TARGETED SEARCH: No specific records found matching your query keywords.\n";
+  return "\n===== TARGETED SEARCH RESULTS =====\n" + results.join("\n\n") + "\n===== END SEARCH RESULTS =====\n";
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -108,14 +205,16 @@ ${crossSells.length > 0 ? crossSells.map((c: any) => `• ${c.customer_name || '
     // ===== ROLE-BASED SYSTEM PROMPT =====
     const DATA_ACCURACY_RULES = `
 🚨 CRITICAL DATA ACCURACY RULES — VIOLATION = FAILURE:
-1. ONLY use data shown above between "===== LIVE BUSINESS DATA" and "===== END OF DATA =====".
+1. ONLY use data shown between "===== LIVE BUSINESS DATA" and "===== END OF DATA =====" AND from "===== TARGETED SEARCH RESULTS =====".
 2. If a section says "⚠️ NO ... FOUND" or shows 0 records, say EXACTLY THAT — "No records found in the database."
 3. NEVER invent names, phone numbers, vehicle numbers, amounts, or dates.
 4. NEVER assume or estimate data that isn't provided.
-5. If asked about data not in the snapshot, say: "I don't have that data in my current snapshot. Please check the relevant CRM section."
-6. Always quote EXACT names, phones, amounts from the data above.
-7. If count is 0, say "0 records" — don't create fictional records.
-8. When presenting tables, ONLY include rows from actual data above.`;
+5. If TARGETED SEARCH found specific records, use THOSE exact records in your answer.
+6. If TARGETED SEARCH says "No specific records found", say clearly: "I searched the database but couldn't find a matching record. Please verify the details or add the entry."
+7. Always quote EXACT names, phones, amounts from the data above.
+8. If count is 0, say "0 records" — don't create fictional records.
+9. When presenting tables, ONLY include rows from actual data above.
+10. PRIORITIZE TARGETED SEARCH RESULTS over general snapshot when answering specific queries.`;
 
     let sysPrompt: string;
 
@@ -270,7 +369,11 @@ ${targets.filter((t: any) => t.vertical_name?.toLowerCase().includes(userVertica
       return new Response(JSON.stringify({ tasks }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     } else if (action === "quick_insight") {
-      return streamAI([{ role: "system", content: sysPrompt }, { role: "user", content: `Here is the ACTUAL live database data. Use ONLY this data to answer:\n${dataCtx}\n\nQuestion: ${question || "What should I focus on right now?"}` }]);
+      // Run targeted search based on the user's question
+      const searchResults = await targetedSearch(question || "", SB, h);
+      const fullContext = dataCtx + searchResults;
+      
+      return streamAI([{ role: "system", content: sysPrompt }, { role: "user", content: `Here is the ACTUAL live database data AND targeted search results. Use ONLY this data to answer:\n${fullContext}\n\nQuestion: ${question || "What should I focus on right now?"}` }]);
 
     } else if (action === "generate_report") {
       const reportPrompt = isSuperAdmin
