@@ -23,7 +23,7 @@ const iconMap: Record<string, React.ElementType> = {
 
 const WorkspaceSelector = () => {
   const navigate = useNavigate();
-  const { user, loading: authLoading, signOut } = useAuth();
+  const { user, loading: authLoading, initialized: authInitialized, signOut } = useAuth();
   const { availableVerticals, setActiveVertical, isLoading: verticalLoading, teamMember } = useVerticalAccess();
   const { isSuperAdmin } = useAdminAuth();
 
@@ -33,10 +33,10 @@ const WorkspaceSelector = () => {
   );
 
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (authInitialized && !authLoading && !user) {
       navigate("/crm-auth");
     }
-  }, [user, authLoading, navigate]);
+  }, [user, authLoading, authInitialized, navigate]);
 
   // If only 1 vertical available, auto-select it
   useEffect(() => {
@@ -56,7 +56,7 @@ const WorkspaceSelector = () => {
     navigate("/crm-auth");
   };
 
-  if (authLoading || verticalLoading) {
+  if (!authInitialized || authLoading || verticalLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
