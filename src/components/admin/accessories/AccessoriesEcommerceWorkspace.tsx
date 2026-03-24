@@ -12,6 +12,7 @@ import {
   Truck,
   ChevronLeft,
   ChevronRight,
+  Box,
 } from "lucide-react";
 import { AccessoriesEcomDashboard } from "./AccessoriesEcomDashboard";
 import { AccessoriesProductsPanel } from "./AccessoriesProductsPanel";
