@@ -413,6 +413,45 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_daily_pushes: {
+        Row: {
+          action_url: string | null
+          created_at: string | null
+          id: string
+          is_actioned: boolean | null
+          is_read: boolean | null
+          message: string
+          push_type: string
+          team_member_name: string
+          user_id: string | null
+          vertical_name: string | null
+        }
+        Insert: {
+          action_url?: string | null
+          created_at?: string | null
+          id?: string
+          is_actioned?: boolean | null
+          is_read?: boolean | null
+          message: string
+          push_type: string
+          team_member_name: string
+          user_id?: string | null
+          vertical_name?: string | null
+        }
+        Update: {
+          action_url?: string | null
+          created_at?: string | null
+          id?: string
+          is_actioned?: boolean | null
+          is_read?: boolean | null
+          message?: string
+          push_type?: string
+          team_member_name?: string
+          user_id?: string | null
+          vertical_name?: string | null
+        }
+        Relationships: []
+      }
       ai_knowledge_base: {
         Row: {
           category: string
@@ -503,6 +542,48 @@ export type Database = {
           status?: string
           tags?: string[] | null
           title?: string
+        }
+        Relationships: []
+      }
+      ai_performance_reports: {
+        Row: {
+          created_at: string | null
+          id: string
+          incentive_suggestion: Json | null
+          key_metrics: Json | null
+          period: string
+          recommendations: Json | null
+          report_content: string
+          report_type: string
+          team_member_name: string | null
+          user_id: string | null
+          vertical_name: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          incentive_suggestion?: Json | null
+          key_metrics?: Json | null
+          period: string
+          recommendations?: Json | null
+          report_content: string
+          report_type?: string
+          team_member_name?: string | null
+          user_id?: string | null
+          vertical_name?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          incentive_suggestion?: Json | null
+          key_metrics?: Json | null
+          period?: string
+          recommendations?: Json | null
+          report_content?: string
+          report_type?: string
+          team_member_name?: string | null
+          user_id?: string | null
+          vertical_name?: string | null
         }
         Relationships: []
       }
@@ -12246,6 +12327,111 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
           username?: string
+        }
+        Relationships: []
+      }
+      team_problems: {
+        Row: {
+          ai_solution: string | null
+          ai_solved: boolean | null
+          created_at: string | null
+          escalated_to_founder: boolean | null
+          founder_response: string | null
+          id: string
+          priority: string | null
+          problem_description: string
+          reported_by_name: string
+          reported_by_user_id: string | null
+          resolved_at: string | null
+          status: string | null
+          vertical_name: string | null
+        }
+        Insert: {
+          ai_solution?: string | null
+          ai_solved?: boolean | null
+          created_at?: string | null
+          escalated_to_founder?: boolean | null
+          founder_response?: string | null
+          id?: string
+          priority?: string | null
+          problem_description: string
+          reported_by_name: string
+          reported_by_user_id?: string | null
+          resolved_at?: string | null
+          status?: string | null
+          vertical_name?: string | null
+        }
+        Update: {
+          ai_solution?: string | null
+          ai_solved?: boolean | null
+          created_at?: string | null
+          escalated_to_founder?: boolean | null
+          founder_response?: string | null
+          id?: string
+          priority?: string | null
+          problem_description?: string
+          reported_by_name?: string
+          reported_by_user_id?: string | null
+          resolved_at?: string | null
+          status?: string | null
+          vertical_name?: string | null
+        }
+        Relationships: []
+      }
+      team_targets: {
+        Row: {
+          achieved_count: number | null
+          achieved_revenue: number | null
+          achievement_pct: number | null
+          created_at: string | null
+          id: string
+          month_year: string
+          notes: string | null
+          set_by: string | null
+          status: string | null
+          target_count: number | null
+          target_revenue: number | null
+          target_type: string
+          team_member_name: string
+          updated_at: string | null
+          user_id: string
+          vertical_name: string
+        }
+        Insert: {
+          achieved_count?: number | null
+          achieved_revenue?: number | null
+          achievement_pct?: number | null
+          created_at?: string | null
+          id?: string
+          month_year: string
+          notes?: string | null
+          set_by?: string | null
+          status?: string | null
+          target_count?: number | null
+          target_revenue?: number | null
+          target_type?: string
+          team_member_name: string
+          updated_at?: string | null
+          user_id: string
+          vertical_name: string
+        }
+        Update: {
+          achieved_count?: number | null
+          achieved_revenue?: number | null
+          achievement_pct?: number | null
+          created_at?: string | null
+          id?: string
+          month_year?: string
+          notes?: string | null
+          set_by?: string | null
+          status?: string | null
+          target_count?: number | null
+          target_revenue?: number | null
+          target_type?: string
+          team_member_name?: string
+          updated_at?: string | null
+          user_id?: string
+          vertical_name?: string
         }
         Relationships: []
       }
