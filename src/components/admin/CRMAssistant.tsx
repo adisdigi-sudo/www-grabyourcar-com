@@ -310,7 +310,10 @@ export function CRMAssistant({ userRole, userName, userVertical }: CRMAssistantP
               {isSuperAdmin ? <Brain className="h-4 w-4 text-white" /> : <Bot className="h-4 w-4 text-white" />}
             </div>
             <div>
-              <span className="font-bold text-sm">{isSuperAdmin ? "AI Co-Founder" : "Work Assistant"}</span>
+              <span className="font-bold text-sm">{isSuperAdmin ? "AI Co-Founder" : (() => {
+                const clean = (userName || "Team").replace(/@.*$/, "").split(/[_.\-]/)[0];
+                return clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase() + "'s Assistant";
+              })()}</span>
               {isSuperAdmin ? (
                 <Badge variant="secondary" className="ml-2 text-[9px] px-1.5 py-0 bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300">
                   FOUNDER ROOM
