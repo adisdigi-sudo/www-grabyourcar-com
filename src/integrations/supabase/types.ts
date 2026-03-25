@@ -5371,6 +5371,57 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_absence_logs: {
+        Row: {
+          absence_date: string
+          absence_type: string
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          auto_detected: boolean | null
+          created_at: string | null
+          id: string
+          notified_admin: boolean | null
+          notified_hr: boolean | null
+          reason: string | null
+          user_email: string | null
+          user_id: string
+          user_name: string | null
+          vertical_name: string | null
+        }
+        Insert: {
+          absence_date?: string
+          absence_type?: string
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          auto_detected?: boolean | null
+          created_at?: string | null
+          id?: string
+          notified_admin?: boolean | null
+          notified_hr?: boolean | null
+          reason?: string | null
+          user_email?: string | null
+          user_id: string
+          user_name?: string | null
+          vertical_name?: string | null
+        }
+        Update: {
+          absence_date?: string
+          absence_type?: string
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          auto_detected?: boolean | null
+          created_at?: string | null
+          id?: string
+          notified_admin?: boolean | null
+          notified_hr?: boolean | null
+          reason?: string | null
+          user_email?: string | null
+          user_id?: string
+          user_name?: string | null
+          vertical_name?: string | null
+        }
+        Relationships: []
+      }
       employee_documents: {
         Row: {
           created_at: string | null
@@ -5419,6 +5470,63 @@ export type Database = {
           updated_at?: string | null
           verified_at?: string | null
           verified_by?: string | null
+        }
+        Relationships: []
+      }
+      employee_sessions: {
+        Row: {
+          break_count: number | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          last_heartbeat_at: string | null
+          login_at: string
+          logout_at: string | null
+          session_date: string
+          total_active_seconds: number | null
+          total_break_seconds: number | null
+          total_idle_seconds: number | null
+          updated_at: string | null
+          user_email: string | null
+          user_id: string
+          user_name: string | null
+          vertical_name: string | null
+        }
+        Insert: {
+          break_count?: number | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_heartbeat_at?: string | null
+          login_at?: string
+          logout_at?: string | null
+          session_date?: string
+          total_active_seconds?: number | null
+          total_break_seconds?: number | null
+          total_idle_seconds?: number | null
+          updated_at?: string | null
+          user_email?: string | null
+          user_id: string
+          user_name?: string | null
+          vertical_name?: string | null
+        }
+        Update: {
+          break_count?: number | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_heartbeat_at?: string | null
+          login_at?: string
+          logout_at?: string | null
+          session_date?: string
+          total_active_seconds?: number | null
+          total_break_seconds?: number | null
+          total_idle_seconds?: number | null
+          updated_at?: string | null
+          user_email?: string | null
+          user_id?: string
+          user_name?: string | null
+          vertical_name?: string | null
         }
         Relationships: []
       }

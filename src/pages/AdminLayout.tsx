@@ -3,6 +3,7 @@ import { useNavigate, Navigate } from "react-router-dom";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { useVerticalAccess } from "@/hooks/useVerticalAccess";
 import { useSessionTimeout } from "@/hooks/useSessionTimeout";
+import { useEmployeeTracker } from "@/hooks/useEmployeeTracker";
 import { cn } from "@/lib/utils";
 import { logAdminActivity } from "@/lib/adminActivityLogger";
 import { Button } from "@/components/ui/button";
@@ -259,6 +260,16 @@ const AdminLayout = () => {
   const [isTablet, setIsTablet] = useState(false);
 
   useSessionTimeout(!isLoading && !verticalAccessLoading && !!user);
+
+  const isSuperAdmin = roles.some((r: any) => r.role === "super_admin" || r.role === "admin");
+  useEmployeeTracker({
+    enabled: !isLoading && !verticalAccessLoading && !!user,
+    userId: user?.id,
+    userEmail: user?.email,
+    userName: user?.email?.split("@")[0],
+    verticalName: activeVertical?.name,
+    isSuperAdmin,
+  });
 
   useEffect(() => {
     const handleResize = () => {
