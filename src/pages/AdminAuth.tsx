@@ -14,6 +14,7 @@ import logoImage from "@/assets/logo-grabyourcar-main.png";
 import AdminForgotPassword from "@/components/admin/AdminForgotPassword";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { VerticalPasswordDialog, getVerifiedVerticals, markVerticalVerified } from "@/components/admin/VerticalPasswordDialog";
 
 type LoginStep =
   | "choose-type"
