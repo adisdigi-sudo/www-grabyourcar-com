@@ -240,6 +240,9 @@ const CRMAssistant = lazy(() =>
 const AICofounderBanner = lazy(() =>
   import("@/components/admin/AICofounderBanner").then((module) => ({ default: module.AICofounderBanner })),
 );
+const PersonalizedWelcomeBanner = lazy(() =>
+  import("@/components/admin/PersonalizedWelcomeBanner").then((module) => ({ default: module.PersonalizedWelcomeBanner })),
+);
 
 const AdminPanelLoader = ({ className }: { className?: string }) => (
   <div className={cn("flex min-h-[240px] items-center justify-center", className)}>
@@ -613,6 +616,13 @@ const AdminLayout = () => {
                 : "max-w-7xl",
           )}
         >
+          {activeTab === "dashboard" && (
+            <Suspense fallback={null}>
+              <AdminRenderBoundary fallback={null} contextLabel="Welcome banner">
+                <PersonalizedWelcomeBanner userRole={roles?.[0]?.role} userName={user?.email?.split('@')[0]} userVertical={activeVertical?.name} />
+              </AdminRenderBoundary>
+            </Suspense>
+          )}
           <Suspense fallback={null}>
             <AdminRenderBoundary fallback={null} contextLabel="AI Co-Founder banner">
               <AICofounderBanner activeTab={activeTab} userRole={roles?.[0]?.role} userName={user?.email?.split('@')[0]} userVertical={activeVertical?.name} />
