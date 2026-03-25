@@ -241,6 +241,9 @@ const HRTemplates = lazy(() =>
 const CRMAssistant = lazy(() =>
   import("@/components/admin/CRMAssistant").then((module) => ({ default: module.CRMAssistant })),
 );
+const EncouragementPopup = lazy(() =>
+  import("@/components/admin/EncouragementPopup").then((module) => ({ default: module.EncouragementPopup })),
+);
 const AICofounderBanner = lazy(() =>
   import("@/components/admin/AICofounderBanner").then((module) => ({ default: module.AICofounderBanner })),
 );
