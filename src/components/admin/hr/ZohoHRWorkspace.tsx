@@ -43,6 +43,8 @@ const initials = (name: string) => name?.split(" ").map(w => w[0]).join("").toUp
 const SIDEBAR_ITEMS = [
   { id: "home", label: "Home", icon: Home },
   { id: "onboarding", label: "Onboarding", icon: UserPlus },
+  { id: "tickets", label: "Tickets & Approvals", icon: ListTodo },
+  { id: "salary-engine", label: "Salary Engine", icon: IndianRupee },
   { id: "leave", label: "Leave Tracker", icon: Palmtree },
   { id: "attendance", label: "Attendance", icon: CalendarDays },
   { id: "time", label: "Time Tracker", icon: Clock },
