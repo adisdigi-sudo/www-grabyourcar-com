@@ -3,6 +3,7 @@ import { useNavigate, Navigate } from "react-router-dom";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { useVerticalAccess } from "@/hooks/useVerticalAccess";
 import { useSessionTimeout } from "@/hooks/useSessionTimeout";
+import { useEmployeeTracker } from "@/hooks/useEmployeeTracker";
 import { cn } from "@/lib/utils";
 import { logAdminActivity } from "@/lib/adminActivityLogger";
 import { Button } from "@/components/ui/button";
