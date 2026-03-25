@@ -13,12 +13,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { generateEmployeeDocumentPDF } from "@/lib/generateEmployeeDocumentPDF";
 import {
   FileText, IndianRupee, Ticket, Palmtree, Calendar, Clock,
   Download, Plus, AlertCircle, CheckCircle2, HelpCircle, Send
 } from "lucide-react";
 
-const fmt = (v: number) => `₹${Math.round(v || 0).toLocaleString("en-IN")}`;
+const fmt = (v: number) => `Rs. ${Math.round(v || 0).toLocaleString("en-IN")}`;
 
 const TICKET_TYPES = [
   { value: "leave", label: "Leave Request", icon: Palmtree },
@@ -177,7 +178,9 @@ export const MyHRDashboard = () => {
                         <p className="text-xs text-muted-foreground">{doc.document_type.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}</p>
                         <p className="text-xs text-muted-foreground">{format(new Date(doc.created_at), "dd MMM yyyy")}</p>
                       </div>
-                      {doc.file_url && <Button variant="ghost" size="icon"><Download className="h-4 w-4" /></Button>}
+                      <Button variant="ghost" size="icon" onClick={() => generateEmployeeDocumentPDF(doc)}>
+                        <Download className="h-4 w-4" />
+                      </Button>
                     </CardContent>
                   </Card>
                 );
@@ -196,9 +199,14 @@ export const MyHRDashboard = () => {
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between mb-2">
                       <h4 className="font-semibold">{rec.month_year}</h4>
-                      <Badge className={rec.payment_status === "paid" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}>
-                        {rec.payment_status}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge className={rec.payment_status === "paid" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}>
+                          {rec.payment_status}
+                        </Badge>
+                        <Button variant="ghost" size="icon" onClick={() => generateEmployeeDocumentPDF({ document_type: "salary_slip", document_name: `Salary Slip - ${rec.month_year}`, generated_data: rec })}>
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                     <div className="grid grid-cols-3 md:grid-cols-6 gap-2 text-sm">
                       <div><span className="text-muted-foreground block">Gross</span>{fmt(rec.gross_salary)}</div>
