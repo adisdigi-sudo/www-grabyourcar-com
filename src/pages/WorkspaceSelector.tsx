@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useVerticalAccess, BusinessVertical } from "@/hooks/useVerticalAccess";
@@ -6,10 +6,13 @@ import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Shield, Banknote, Car, Key, CreditCard, ShoppingBag, Megaphone, LogOut, Crown } from "lucide-react";
+import { Loader2, Shield, Banknote, Car, Key, CreditCard, ShoppingBag, Megaphone, LogOut, Crown, Lock } from "lucide-react";
 import { motion } from "framer-motion";
 import logoImage from "@/assets/logo-grabyourcar-main.png";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { VerticalPasswordDialog, getVerifiedVerticals } from "@/components/admin/VerticalPasswordDialog";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 const iconMap: Record<string, React.ElementType> = {
   Shield,
