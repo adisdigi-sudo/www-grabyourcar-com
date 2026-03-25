@@ -151,23 +151,62 @@ export const HROnboarding = () => {
       const { error: stepsError } = await (supabase.from("hr_onboarding") as any).insert(steps);
       if (stepsError) throw stepsError;
 
-      // 3. Generate welcome letter document
-      const { error: docError } = await (supabase.from("employee_documents") as any).insert({
-        employee_user_id: emp?.user_id || user?.id,
-        employee_name: emp?.full_name || form.employee_name,
-        employee_id: form.employee_id,
-        document_type: "welcome_letter",
-        document_name: `Welcome Letter - ${emp?.full_name || form.employee_name}`,
-        generated_data: {
-          name: emp?.full_name || form.employee_name,
-          designation: form.designation,
-          department: form.department,
-          vertical: vertical?.name,
-          manager: manager?.display_name || form.manager_name,
-          joining_date: form.joining_date,
-          ctc: monthlyCTC,
+      // 3. Generate starter HR documents
+      const baseGeneratedData = {
+        name: emp?.full_name || form.employee_name,
+        designation: form.designation,
+        department: form.department,
+        vertical: vertical?.name,
+        manager: manager?.display_name || form.manager_name,
+        joining_date: form.joining_date,
+        ctc: monthlyCTC,
+        basic_salary: basic,
+        hra,
+        da,
+        special_allowance: special,
+        pf_deduction: pf,
+        esi_deduction: esi,
+        professional_tax: Number(form.professional_tax || 200),
+        tds: Number(form.tds || 0),
+        employment_type: form.employment_type || "full_time",
+        shift_start: form.shift_start || "09:00",
+        shift_end: form.shift_end || "18:00",
+        working_days: Number(form.working_days || 26),
+      };
+      const { error: docError } = await (supabase.from("employee_documents") as any).insert([
+        {
+          employee_user_id: emp?.user_id || user?.id,
+          employee_name: emp?.full_name || form.employee_name,
+          employee_id: form.employee_id,
+          document_type: "welcome_letter",
+          document_name: `Welcome Letter - ${emp?.full_name || form.employee_name}`,
+          generated_data: baseGeneratedData,
         },
-      });
+        {
+          employee_user_id: emp?.user_id || user?.id,
+          employee_name: emp?.full_name || form.employee_name,
+          employee_id: form.employee_id,
+          document_type: "offer_letter",
+          document_name: `Offer Letter - ${emp?.full_name || form.employee_name}`,
+          generated_data: baseGeneratedData,
+        },
+        {
+          employee_user_id: emp?.user_id || user?.id,
+          employee_name: emp?.full_name || form.employee_name,
+          employee_id: form.employee_id,
+          document_type: "joining_letter",
+          document_name: `Joining Letter - ${emp?.full_name || form.employee_name}`,
+          generated_data: baseGeneratedData,
+        },
+        {
+          employee_user_id: emp?.user_id || user?.id,
+          employee_name: emp?.full_name || form.employee_name,
+          employee_id: form.employee_id,
+          document_type: "salary_structure",
+          document_name: `Salary Structure - ${emp?.full_name || form.employee_name}`,
+          generated_data: { ...baseGeneratedData, net_salary: calcNet },
+        },
+      ]);
       if (docError) console.error("Doc error:", docError);
     },
     onSuccess: () => {

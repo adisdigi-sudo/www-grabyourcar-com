@@ -927,7 +927,12 @@ ${myTargets.length > 0 ? myTargets.map((t: any) => `• ${t.team_member_name}: $
         }
       }
 
-      const searchResults = await targetedSearch(question || "", SB, h, isSuperAdmin ? null : userVertical);
+      const searchResults = await targetedSearch(question || "", SB, h, isSuperAdmin ? null : userVertical, {
+        authUserId,
+        userName: user_name,
+        teamDisplayName: myTeamMember?.display_name || myTeamMember?.full_name || null,
+        isSuperAdmin,
+      });
       const fullContext = dataCtx + searchResults;
       
       const workStyle = isRenewalQuestion(question)

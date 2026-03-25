@@ -199,9 +199,14 @@ export const MyHRDashboard = () => {
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between mb-2">
                       <h4 className="font-semibold">{rec.month_year}</h4>
-                      <Badge className={rec.payment_status === "paid" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}>
-                        {rec.payment_status}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge className={rec.payment_status === "paid" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}>
+                          {rec.payment_status}
+                        </Badge>
+                        <Button variant="ghost" size="icon" onClick={() => generateEmployeeDocumentPDF({ document_type: "salary_slip", document_name: `Salary Slip - ${rec.month_year}`, generated_data: rec })}>
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                     <div className="grid grid-cols-3 md:grid-cols-6 gap-2 text-sm">
                       <div><span className="text-muted-foreground block">Gross</span>{fmt(rec.gross_salary)}</div>
