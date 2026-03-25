@@ -134,6 +134,9 @@ const PartnersManager = lazy(() => import("@/components/admin/PartnersManager"))
 const LegacyLeadsManager = lazy(() =>
   import("@/components/admin/shared/LegacyLeadsManager").then((module) => ({ default: module.LegacyLeadsManager })),
 );
+const MyHRDashboard = lazy(() =>
+  import("@/components/admin/shared/MyHRDashboard").then((module) => ({ default: module.MyHRDashboard })),
+);
 const InsuranceManagement = lazy(() =>
   import("@/components/admin/InsuranceManagement").then((module) => ({ default: module.InsuranceManagement })),
 );
