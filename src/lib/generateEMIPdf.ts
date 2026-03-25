@@ -76,7 +76,7 @@ const DEFAULT_COMPANY: EMIPDFConfig = {
   founder: "Anshdeep Singh",
   founderTitle: "Founder & CEO",
   partnerBanks: ["SBI", "HDFC Bank", "ICICI Bank", "Axis Bank", "Kotak", "IDFC First", "Yes Bank"],
-  disclaimer: "This is an indicative estimate. Actual EMI may vary based on bank policies, credit score, and prevailing interest rates.",
+  disclaimer: "This offer is valid for 7 days from the date of quotation. Ex-Showroom price is subject to change before billing as per manufacturer revision. Insurance and financing are arranged in-house by Grabyourcar.",
   footerCTA: "Get the Best Car Loan - Lowest Interest Rates Guaranteed!",
   primaryColor: "#22c55e",
   accentColor: "#f59e0b",
@@ -88,9 +88,9 @@ const DEFAULT_COMPANY: EMIPDFConfig = {
     linkedin: "grabyourcar",
   },
   termsAndConditions: [
-    "Quote is valid for 7 days from generation date.",
-    "Prices are subject to change based on manufacturer price revisions or government regulations.",
-    "Actual EMI may vary based on bank policies, credit score, and prevailing interest rates.",
+    "This offer is valid for 7 days from the date of quotation.",
+    "Ex-Showroom price is subject to change before billing as per manufacturer revision.",
+    "Insurance and financing are arranged in-house by Grabyourcar.",
     "Processing fees and other bank charges may apply as per financing institution.",
   ],
   validityDays: 7,
@@ -699,9 +699,9 @@ function generateCarQuotePdf(
     doc.setFont("helvetica", "normal");
     doc.setTextColor(113, 63, 18);
     const terms = [
-      `1. Quote valid until ${validUntil} (${COMPANY.validityDays || 7} days).`,
-      "2. Prices subject to manufacturer/government revisions.",
-      "3. Actual EMI may vary based on bank policies & credit score.",
+      `1. This offer is valid for 7 days (until ${validUntil}).`,
+      "2. Ex-Showroom price is subject to change before billing as per manufacturer revision.",
+      "3. Insurance and financing are arranged in-house by Grabyourcar.",
       "4. Processing fees may apply per financing institution.",
     ];
     terms.forEach((t, i) => {
