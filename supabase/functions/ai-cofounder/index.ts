@@ -231,6 +231,17 @@ serve(async (req) => {
       safeFetch(`${SB}/rest/v1/ai_mistake_logs?select=*&status=eq.detected&limit=20`, h),
     ]);
 
+    const myTeamMember = teamMembers.find((member: any) => member.user_id === authUserId);
+    const ownNames = [user_name, myTeamMember?.display_name, myTeamMember?.full_name]
+      .filter(Boolean)
+      .map((value: any) => String(value).toLowerCase().trim());
+    const ownsRecord = (value: any) => {
+      if (isSuperAdmin) return true;
+      if (!value) return false;
+      const lower = String(value).toLowerCase();
+      return (authUserId && value === authUserId) || ownNames.some((name) => lower.includes(name));
+    };
+
     const insuranceClientMap = new Map((insuranceClients || []).map((client: any) => [client.id, client]));
     const insurance = (renewalTracking || []).map((renewal: any) => {
       const client = insuranceClientMap.get(renewal.client_id) || {};
@@ -251,6 +262,7 @@ serve(async (req) => {
         pipeline_stage: client.pipeline_stage || "N/A",
         follow_up_date: client.follow_up_date || null,
         assigned_executive: client.assigned_executive || null,
+        assigned_advisor_id: client.assigned_advisor_id || null,
         lead_status: client.lead_status || "N/A",
         ncb_percentage: client.ncb_percentage || null,
         expiry_date: renewal.expiry_date,
@@ -258,7 +270,8 @@ serve(async (req) => {
         priority: getRenewalPriority(daysLeft),
         next_action: getRenewalAction(daysLeft),
       };
-    }).sort((a: any, b: any) => (a.days_until_expiry ?? 9999) - (b.days_until_expiry ?? 9999));
+    }).filter((item: any) => isSuperAdmin || ownsRecord(item.assigned_advisor_id) || ownsRecord(item.assigned_executive))
+      .sort((a: any, b: any) => (a.days_until_expiry ?? 9999) - (b.days_until_expiry ?? 9999));
 
     // Financial calculations
     const totalRevenue = invoices.filter((i: any) => i.status === "paid").reduce((sum: number, i: any) => sum + Number(i.total_amount || 0), 0);
