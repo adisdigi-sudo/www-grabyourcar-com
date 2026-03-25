@@ -1,0 +1,1 @@
+ALTER TABLE public.business_verticals ADD COLUMN IF NOT EXISTS vertical_password text DEFAULT null;
