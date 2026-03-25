@@ -281,7 +281,10 @@ export function CRMAssistant({ userRole, userName, userVertical }: CRMAssistantP
         )}
       >
         {isSuperAdmin ? <Brain className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
-        <span className="text-sm font-semibold">{isSuperAdmin ? "AI Co-Founder" : "Work Assistant"}</span>
+        <span className="text-sm font-semibold">{isSuperAdmin ? "AI Co-Founder" : (() => {
+          const clean = (userName || "Team").replace(/@.*$/, "").split(/[_.\-]/)[0];
+          return clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase() + "'s AI";
+        })()}</span>
         <span className="flex h-2 w-2 rounded-full bg-green-400 animate-pulse" />
       </motion.div>
     );
