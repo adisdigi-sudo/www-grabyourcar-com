@@ -14,6 +14,7 @@ import logoImage from "@/assets/logo-grabyourcar-main.png";
 import AdminForgotPassword from "@/components/admin/AdminForgotPassword";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { VerticalPasswordDialog, getVerifiedVerticals, markVerticalVerified } from "@/components/admin/VerticalPasswordDialog";
 
 type LoginStep =
   | "choose-type"
@@ -170,8 +171,37 @@ const AdminAuth = () => {
     setIsSubmitting(false);
   };
 
+  // Password gate state for vertical selection
+  const [passwordTarget, setPasswordTarget] = useState<BusinessVertical | null>(null);
+
   // ── STEP 2: Select vertical (after successful auth) ──
-  const handleSelectVertical = (vertical: BusinessVertical) => {
+  const handleSelectVertical = async (vertical: BusinessVertical) => {
+    // Check if vertical has a password and user isn't admin
+    const isAdminUser = (await supabase.from("user_roles").select("role").eq("user_id", user?.id || "")).data?.some(
+      (r: any) => r.role === "admin" || r.role === "super_admin"
+    );
+    
+    if (!isAdminUser) {
+      // Check if password exists for this vertical
+      const { data: vData } = await supabase
+        .from("business_verticals")
+        .select("vertical_password")
+        .eq("id", vertical.id)
+        .single();
+      
+      if (vData?.vertical_password && !getVerifiedVerticals().includes(vertical.id)) {
+        setPasswordTarget(vertical);
+        return;
+      }
+    }
+
+    setActiveVertical(vertical);
+    toast.success(`Welcome to ${vertical.name}!`);
+    navigate("/crm");
+  };
+
+  const handlePasswordSuccess = (vertical: BusinessVertical) => {
+    setPasswordTarget(null);
     setActiveVertical(vertical);
     toast.success(`Welcome to ${vertical.name}!`);
     navigate("/crm");
@@ -648,6 +678,13 @@ const AdminAuth = () => {
           </motion.div>
         </motion.div>
       </div>
+
+      <VerticalPasswordDialog
+        vertical={passwordTarget}
+        open={!!passwordTarget}
+        onClose={() => setPasswordTarget(null)}
+        onSuccess={handlePasswordSuccess}
+      />
     </div>
   );
 };

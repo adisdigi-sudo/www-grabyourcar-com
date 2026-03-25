@@ -1690,6 +1690,7 @@ export type Database = {
           slug: string
           sort_order: number | null
           updated_at: string | null
+          vertical_password: string | null
         }
         Insert: {
           color?: string | null
@@ -1702,6 +1703,7 @@ export type Database = {
           slug: string
           sort_order?: number | null
           updated_at?: string | null
+          vertical_password?: string | null
         }
         Update: {
           color?: string | null
@@ -1714,6 +1716,7 @@ export type Database = {
           slug?: string
           sort_order?: number | null
           updated_at?: string | null
+          vertical_password?: string | null
         }
         Relationships: []
       }

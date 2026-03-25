@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useVerticalAccess, BusinessVertical } from "@/hooks/useVerticalAccess";
@@ -6,10 +6,13 @@ import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Shield, Banknote, Car, Key, CreditCard, ShoppingBag, Megaphone, LogOut, Crown } from "lucide-react";
+import { Loader2, Shield, Banknote, Car, Key, CreditCard, ShoppingBag, Megaphone, LogOut, Crown, Lock } from "lucide-react";
 import { motion } from "framer-motion";
 import logoImage from "@/assets/logo-grabyourcar-main.png";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { VerticalPasswordDialog, getVerifiedVerticals } from "@/components/admin/VerticalPasswordDialog";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 const iconMap: Record<string, React.ElementType> = {
   Shield,
@@ -25,7 +28,28 @@ const WorkspaceSelector = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading, initialized: authInitialized, signOut } = useAuth();
   const { availableVerticals, setActiveVertical, isLoading: verticalLoading, teamMember } = useVerticalAccess();
-  const { isSuperAdmin } = useAdminAuth();
+  const { isSuperAdmin, isAdmin } = useAdminAuth();
+
+  const [passwordTarget, setPasswordTarget] = useState<BusinessVertical | null>(null);
+
+  // Fetch which verticals have passwords set (for lock icon display)
+  const { data: verticalPasswords = {} } = useQuery({
+    queryKey: ["vertical-passwords-check"],
+    queryFn: async () => {
+      // Super admins/admins bypass password
+      if (isAdmin()) return {};
+      const { data } = await supabase
+        .from("business_verticals")
+        .select("id, vertical_password")
+        .eq("is_active", true);
+      const map: Record<string, boolean> = {};
+      (data || []).forEach((v: any) => {
+        if (v.vertical_password) map[v.id] = true;
+      });
+      return map;
+    },
+    enabled: !!user?.id,
+  });
 
   const sortedVerticals = useMemo(
     () => [...availableVerticals].sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999)),
@@ -38,15 +62,34 @@ const WorkspaceSelector = () => {
     }
   }, [user, authLoading, authInitialized, navigate]);
 
-  // If only 1 vertical available, auto-select it
+  // If only 1 vertical available, auto-select it (skip password for single vertical)
   useEffect(() => {
     if (!authLoading && !verticalLoading && user && sortedVerticals.length === 1) {
-      setActiveVertical(sortedVerticals[0]);
-      navigate("/crm");
+      const v = sortedVerticals[0];
+      const hasPassword = verticalPasswords[v.id];
+      const alreadyVerified = getVerifiedVerticals().includes(v.id);
+      if (!hasPassword || alreadyVerified || isAdmin()) {
+        setActiveVertical(v);
+        navigate("/crm");
+      }
     }
-  }, [authLoading, verticalLoading, user, sortedVerticals, setActiveVertical, navigate]);
+  }, [authLoading, verticalLoading, user, sortedVerticals, setActiveVertical, navigate, verticalPasswords]);
 
   const handleSelectVertical = (vertical: BusinessVertical) => {
+    const hasPassword = verticalPasswords[vertical.id];
+    const alreadyVerified = getVerifiedVerticals().includes(vertical.id);
+    
+    if (hasPassword && !alreadyVerified && !isAdmin()) {
+      setPasswordTarget(vertical);
+      return;
+    }
+    
+    setActiveVertical(vertical);
+    navigate("/crm");
+  };
+
+  const handlePasswordSuccess = (vertical: BusinessVertical) => {
+    setPasswordTarget(null);
     setActiveVertical(vertical);
     navigate("/crm");
   };
@@ -109,6 +152,8 @@ const WorkspaceSelector = () => {
           >
             {sortedVerticals.map((vertical, i) => {
               const Icon = iconMap[vertical.icon || "Shield"] || Shield;
+              const hasPassword = verticalPasswords[vertical.id] && !isAdmin();
+              const isVerified = getVerifiedVerticals().includes(vertical.id);
               return (
                 <motion.div
                   key={vertical.id}
@@ -117,9 +162,12 @@ const WorkspaceSelector = () => {
                   transition={{ delay: 0.1 * i }}
                 >
                   <Card
-                    className="p-6 cursor-pointer hover:shadow-lg hover:border-primary/30 transition-all duration-200 group border-border/50"
+                    className="p-6 cursor-pointer hover:shadow-lg hover:border-primary/30 transition-all duration-200 group border-border/50 relative"
                     onClick={() => handleSelectVertical(vertical)}
                   >
+                    {hasPassword && !isVerified && (
+                      <Lock className="absolute top-3 right-3 h-4 w-4 text-muted-foreground" />
+                    )}
                     <div
                       className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110"
                       style={{ backgroundColor: `${vertical.color}15` }}
@@ -160,6 +208,13 @@ const WorkspaceSelector = () => {
           </motion.div>
         </div>
       </div>
+
+      <VerticalPasswordDialog
+        vertical={passwordTarget}
+        open={!!passwordTarget}
+        onClose={() => setPasswordTarget(null)}
+        onSuccess={handlePasswordSuccess}
+      />
     </div>
   );
 };
