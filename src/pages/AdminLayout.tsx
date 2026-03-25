@@ -261,6 +261,16 @@ const AdminLayout = () => {
 
   useSessionTimeout(!isLoading && !verticalAccessLoading && !!user);
 
+  const isSuperAdmin = roles.some((r: any) => r.role === "super_admin" || r.role === "admin");
+  useEmployeeTracker({
+    enabled: !isLoading && !verticalAccessLoading && !!user,
+    userId: user?.id,
+    userEmail: user?.email,
+    userName: user?.email?.split("@")[0],
+    verticalName: activeVertical?.name,
+    isSuperAdmin,
+  });
+
   useEffect(() => {
     const handleResize = () => {
       const width = window.innerWidth;
