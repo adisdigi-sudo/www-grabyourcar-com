@@ -396,6 +396,8 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
   const [showQuoteModal, setShowQuoteModal] = useState(false);
   const [showUploadPolicy, setShowUploadPolicy] = useState(false);
   const [showWonDialog, setShowWonDialog] = useState(false);
+  const [showForwardDialog, setShowForwardDialog] = useState(false);
+  const [forwardClient, setForwardClient] = useState<Client | null>(null);
 
   useEffect(() => {
     if (!selectedClient) {
