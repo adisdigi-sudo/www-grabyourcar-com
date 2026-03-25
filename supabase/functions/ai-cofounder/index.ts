@@ -153,14 +153,39 @@ serve(async (req) => {
     const SK = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const body = await req.json();
     const { action, user_name, user_role, vertical, question, target_data, problem_data, conversation_history } = body;
+    const authHeader = req.headers.get("authorization") || "";
+    let authUserId: string | null = null;
+
+    if (authHeader.startsWith("Bearer ")) {
+      try {
+        const authResp = await fetch(`${SB}/auth/v1/user`, {
+          headers: {
+            Authorization: authHeader,
+            apikey: SK,
+          },
+        });
+        if (authResp.ok) {
+          const authUser = await authResp.json();
+          authUserId = authUser?.id || null;
+        }
+      } catch {
+        authUserId = null;
+      }
+    }
 
     const isSuperAdmin = !user_role || user_role === "super_admin" || user_role === "admin";
     const userVertical = vertical || null;
 
+    if (!isSuperAdmin && !authUserId) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // ===== HARD BLOCK: Team members asking restricted questions =====
     if (!isSuperAdmin && question && isBlockedForTeam(question)) {
       const blockMsg = `🔒 Sorry ${user_name || 'team member'}, that information is restricted to management only.\n\nI can help you with:\n- 🔍 Finding your clients/leads\n- 📋 Your pending tasks & follow-ups\n- 🎯 Your personal targets & incentives\n- 📞 Who to call next\n- 📊 Your performance report\n\nAsk me about your ${userVertical || ''} work! 💪`;
-      // Return as SSE stream for consistency
       const encoder = new TextEncoder();
       const stream = new ReadableStream({
         start(controller) {
@@ -186,11 +211,10 @@ serve(async (req) => {
     const today = new Date().toISOString().split("T")[0];
     const cm = today.slice(0, 7);
 
-    // Parallel fetch all business data
     const [leads, renewalTracking, insuranceClients, rentals, hsrp, deals, followUps, pendingTasks, targets, problems, teamMembers, expenses, bankAccounts, invoices, risks, crossSells, mistakes] = await Promise.all([
       safeFetch(`${SB}/rest/v1/leads?created_at=gte.${today}T00:00:00&select=id,name,phone,source,service_category,status,priority,assigned_to,city&limit=50`, h),
       safeFetch(`${SB}/rest/v1/insurance_renewal_tracking?select=id,client_id,policy_id,expiry_date,days_until_expiry,updated_at&expiry_date=gte.${today}&expiry_date=lte.${new Date(Date.now()+90*86400000).toISOString().split("T")[0]}&order=expiry_date.asc&limit=100`, h),
-      safeFetch(`${SB}/rest/v1/insurance_clients?select=id,customer_name,phone,vehicle_number,vehicle_make,vehicle_model,lead_status,pipeline_stage,follow_up_date,assigned_executive,current_insurer,current_premium,current_policy_number,current_policy_type,ncb_percentage&limit=500`, h),
+      safeFetch(`${SB}/rest/v1/insurance_clients?select=id,customer_name,phone,vehicle_number,vehicle_make,vehicle_model,lead_status,pipeline_stage,follow_up_date,assigned_executive,assigned_advisor_id,current_insurer,current_premium,current_policy_number,current_policy_type,ncb_percentage&limit=500`, h),
       safeFetch(`${SB}/rest/v1/rental_bookings?select=id,customer_name,phone,pickup_date,return_date,status,payment_status,total_amount,car_name&return_date=gte.${today}&return_date=lte.${new Date(Date.now()+3*86400000).toISOString().split("T")[0]}&limit=30`, h),
       safeFetch(`${SB}/rest/v1/hsrp_bookings?select=id,owner_name,registration_number,order_status,payment_status,mobile,service_type&order_status=neq.completed&limit=30`, h),
       safeFetch(`${SB}/rest/v1/deals?select=id,deal_number,customer_id,deal_value,payment_status,deal_status,vertical_name,payment_received_amount&deal_status=eq.active&limit=50`, h),
