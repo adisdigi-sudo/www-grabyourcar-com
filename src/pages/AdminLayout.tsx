@@ -589,6 +589,8 @@ const AdminLayout = () => {
         return <AICofounderDashboard />;
       case "legacy-leads":
         return <LegacyLeadsManager />;
+      case "my-hr":
+        return <MyHRDashboard />;
       default:
         return <AdminDashboard />;
     }
