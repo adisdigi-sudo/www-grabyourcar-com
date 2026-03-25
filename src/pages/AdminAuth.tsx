@@ -171,8 +171,37 @@ const AdminAuth = () => {
     setIsSubmitting(false);
   };
 
+  // Password gate state for vertical selection
+  const [passwordTarget, setPasswordTarget] = useState<BusinessVertical | null>(null);
+
   // ── STEP 2: Select vertical (after successful auth) ──
-  const handleSelectVertical = (vertical: BusinessVertical) => {
+  const handleSelectVertical = async (vertical: BusinessVertical) => {
+    // Check if vertical has a password and user isn't admin
+    const isAdminUser = (await supabase.from("user_roles").select("role").eq("user_id", user?.id || "")).data?.some(
+      (r: any) => r.role === "admin" || r.role === "super_admin"
+    );
+    
+    if (!isAdminUser) {
+      // Check if password exists for this vertical
+      const { data: vData } = await supabase
+        .from("business_verticals")
+        .select("vertical_password")
+        .eq("id", vertical.id)
+        .single();
+      
+      if (vData?.vertical_password && !getVerifiedVerticals().includes(vertical.id)) {
+        setPasswordTarget(vertical);
+        return;
+      }
+    }
+
+    setActiveVertical(vertical);
+    toast.success(`Welcome to ${vertical.name}!`);
+    navigate("/crm");
+  };
+
+  const handlePasswordSuccess = (vertical: BusinessVertical) => {
+    setPasswordTarget(null);
     setActiveVertical(vertical);
     toast.success(`Welcome to ${vertical.name}!`);
     navigate("/crm");
