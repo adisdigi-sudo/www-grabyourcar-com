@@ -9,6 +9,10 @@ export interface OnRoadPriceBreakup {
   fastag: number;
   registration: number;
   handling: number;
+  accessories?: number;
+  extendedWarranty?: number;
+  otherCharges?: number;
+  otherChargesLabel?: string;
   onRoadPrice: number;
 }
 
