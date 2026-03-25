@@ -88,9 +88,9 @@ const DEFAULT_COMPANY: EMIPDFConfig = {
     linkedin: "grabyourcar",
   },
   termsAndConditions: [
-    "Quote is valid for 7 days from generation date.",
-    "Prices are subject to change based on manufacturer price revisions or government regulations.",
-    "Actual EMI may vary based on bank policies, credit score, and prevailing interest rates.",
+    "This offer is valid for 7 days from the date of quotation.",
+    "Ex-Showroom price is subject to change before billing as per manufacturer revision.",
+    "Insurance and financing are arranged in-house by Grabyourcar.",
     "Processing fees and other bank charges may apply as per financing institution.",
   ],
   validityDays: 7,
