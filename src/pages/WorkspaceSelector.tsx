@@ -208,6 +208,13 @@ const WorkspaceSelector = () => {
           </motion.div>
         </div>
       </div>
+
+      <VerticalPasswordDialog
+        vertical={passwordTarget}
+        open={!!passwordTarget}
+        onClose={() => setPasswordTarget(null)}
+        onSuccess={handlePasswordSuccess}
+      />
     </div>
   );
 };
