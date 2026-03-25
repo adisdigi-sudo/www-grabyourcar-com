@@ -411,9 +411,31 @@ function generateCarQuotePdf(
     { label: data.onRoadPrice!.otherChargesLabel || "Other Charges", value: data.onRoadPrice!.otherCharges || 0 },
   ].filter(item => item.value > 0) : [];
 
+  // Calculate the actual final car price after discount
+  const carFinalPrice = hasOnRoad
+    ? (hasDiscount ? data.onRoadPrice!.onRoadPrice - data.discount!.amount : data.onRoadPrice!.onRoadPrice)
+    : (hasDiscount ? data.loanAmount - data.discount!.amount : data.loanAmount);
+
   const footerH = 28;
   const footerStartY = pageHeight - footerH;
-  const maxY = footerStartY - 8;
+  const maxContentY = footerStartY - 8;
+
+  // Helper: check if we need a new page, and if so add one with header
+  const checkPageBreak = (neededSpace: number) => {
+    if (y + neededSpace > maxContentY) {
+      // Draw footer on current page
+      drawQuoteFooter(doc, COMPANY, CA, pageWidth, footerStartY, footerH);
+      doc.addPage();
+      // Mini header on continuation page
+      doc.setFillColor(...CA.primary);
+      doc.rect(0, 0, pageWidth, 16, "F");
+      doc.setFontSize(10);
+      doc.setTextColor(...CA.white);
+      doc.setFont("helvetica", "bold");
+      doc.text(`${COMPANY.companyName} — Price Estimate (cont.)`, margin, 11);
+      y = 24;
+    }
+  };
 
   // WATERMARK
   doc.setFontSize(48);
@@ -456,6 +478,7 @@ function generateCarQuotePdf(
   if (data.carName) {
     const cleanName = data.carName.replace(/(\w+)\s+\1/gi, '$1');
     const cardH = 30;
+    checkPageBreak(cardH + 6);
     doc.setFillColor(250, 250, 250);
     doc.roundedRect(margin + 1, y + 1, contentWidth, cardH, 3, 3, "F");
     doc.setFillColor(...CA.white);
@@ -490,17 +513,20 @@ function generateCarQuotePdf(
     if (data.selectedCity) { doc.text(`City: ${data.selectedCity}`, infoX, infoY, { align: "right" }); infoY += 6; }
     if (hasOnRoad) {
       doc.setFontSize(6);
-      doc.text("On-Road Price", infoX, infoY, { align: "right" });
+      doc.text("Final Price", infoX, infoY, { align: "right" });
       doc.setFontSize(10);
       doc.setTextColor(...CA.primary);
       doc.setFont("helvetica", "bold");
-      doc.text(formatCurrency(data.onRoadPrice!.onRoadPrice), infoX, infoY + 6, { align: "right" });
+      doc.text(formatCurrency(carFinalPrice), infoX, infoY + 6, { align: "right" });
     }
     y += cardH + 6;
   }
 
   // ON-ROAD PRICE BREAKUP
   if (hasOnRoad) {
+    const breakupH = 10 + priceItems.length * 7 + 14;
+    checkPageBreak(breakupH);
+
     doc.setFillColor(...CA.primary);
     doc.roundedRect(margin, y, contentWidth, 7, 2, 2, "F");
     doc.setFontSize(8);
@@ -538,6 +564,10 @@ function generateCarQuotePdf(
 
     // DISCOUNT
     if (hasDiscount) {
+      // Calculate needed height for discount section
+      const discountBoxH = data.discount!.remarks ? 28 : 22;
+      checkPageBreak(discountBoxH + 18);
+
       const discountLabels: Record<string, string> = {
         cash: "Cash Discount", exchange: "Exchange Bonus", accessory: "Accessory Discount",
         corporate: "Corporate Discount", festival: "Festival Offer",
@@ -545,10 +575,10 @@ function generateCarQuotePdf(
       };
 
       doc.setFillColor(255, 251, 235);
-      doc.roundedRect(margin, y, contentWidth, 22, 3, 3, "F");
+      doc.roundedRect(margin, y, contentWidth, discountBoxH, 3, 3, "F");
       doc.setFillColor(...CA.accent);
-      doc.roundedRect(margin, y, 4, 22, 3, 0, "F");
-      doc.rect(margin + 2, y, 2, 22, "F");
+      doc.roundedRect(margin, y, 4, discountBoxH, 3, 0, "F");
+      doc.rect(margin + 2, y, 2, discountBoxH, "F");
 
       doc.setFillColor(...CA.accent);
       doc.roundedRect(margin + 10, y + 2, 42, 5, 1, 1, "F");
@@ -567,12 +597,16 @@ function generateCarQuotePdf(
       doc.text(`- ${formatCurrency(data.discount!.amount)}`, pageWidth - margin - 6, y + 14, { align: "right" });
 
       if (data.discount!.remarks) {
-        doc.setFontSize(6);
+        doc.setFontSize(6.5);
         doc.setTextColor(...CA.grayText);
         doc.setFont("helvetica", "italic");
-        doc.text(data.discount!.remarks, margin + 10, y + 19);
+        // Wrap remarks text to prevent overflow
+        const remarkLines = doc.splitTextToSize(data.discount!.remarks, contentWidth - 20);
+        remarkLines.slice(0, 2).forEach((line: string, idx: number) => {
+          doc.text(line, margin + 10, y + 20 + idx * 4);
+        });
       }
-      y += 26;
+      y += discountBoxH + 4;
 
       const finalPrice = data.onRoadPrice!.onRoadPrice - data.discount!.amount;
       doc.setFillColor(...CA.primaryDark);
@@ -589,6 +623,8 @@ function generateCarQuotePdf(
 
   // EMI SECTION
   if (hasEMI) {
+    checkPageBreak(80);
+
     const emiBoxH = 30;
     doc.setFillColor(...CA.primaryLight);
     doc.roundedRect(margin, y, contentWidth, emiBoxH, 4, 4, "F");
@@ -616,7 +652,7 @@ function generateCarQuotePdf(
 
     const colW = contentWidth / 4;
     const loanItems = [
-      { label: "Car Price", value: formatCurrency(data.loanAmount) },
+      { label: "Car Price (Final)", value: formatCurrency(carFinalPrice) },
       { label: "Down Payment", value: formatCurrency(data.downPayment) },
       { label: "Loan Amount", value: formatCurrency(data.loanPrincipal) },
       { label: "Total Payable", value: formatCurrency(data.totalPayment) },
@@ -682,45 +718,43 @@ function generateCarQuotePdf(
   }
 
   // TERMS & CONDITIONS
+  checkPageBreak(30);
   const validUntil = format(addDays(new Date(), COMPANY.validityDays || 7), "dd MMM yyyy");
   const termsH = 22;
-  if (y + termsH < maxY) {
-    doc.setFillColor(254, 249, 195);
-    doc.roundedRect(margin, y, contentWidth, termsH, 2, 2, "F");
-    doc.setFillColor(...CA.accent);
-    doc.roundedRect(margin, y, 3, termsH, 2, 0, "F");
+  doc.setFillColor(254, 249, 195);
+  doc.roundedRect(margin, y, contentWidth, termsH, 2, 2, "F");
+  doc.setFillColor(...CA.accent);
+  doc.roundedRect(margin, y, 3, termsH, 2, 0, "F");
 
-    doc.setFontSize(7);
-    doc.setTextColor(161, 98, 7);
-    doc.setFont("helvetica", "bold");
-    doc.text("Terms & Conditions:", margin + 6, y + 5);
+  doc.setFontSize(7);
+  doc.setTextColor(161, 98, 7);
+  doc.setFont("helvetica", "bold");
+  doc.text("Terms & Conditions:", margin + 6, y + 5);
 
-    doc.setFontSize(6);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(113, 63, 18);
-    const terms = [
-      `1. This offer is valid for 7 days (until ${validUntil}).`,
-      "2. Ex-Showroom price is subject to change before billing as per manufacturer revision.",
-      "3. Insurance and financing are arranged in-house by Grabyourcar.",
-      "4. Processing fees may apply per financing institution.",
-    ];
-    terms.forEach((t, i) => {
-      doc.text(t, margin + 6, y + 10 + i * 3);
-    });
-    y += termsH + 3;
-  }
+  doc.setFontSize(6);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(113, 63, 18);
+  const terms = [
+    `1. This offer is valid for 7 days (until ${validUntil}).`,
+    "2. Ex-Showroom price is subject to change before billing as per manufacturer revision.",
+    "3. Insurance and financing are arranged in-house by Grabyourcar.",
+    "4. Processing fees may apply per financing institution.",
+  ];
+  terms.forEach((t, i) => {
+    doc.text(t, margin + 6, y + 10 + i * 3);
+  });
+  y += termsH + 3;
 
   // DISCLAIMER
-  if (y + 6 < maxY) {
-    doc.setFontSize(5.5);
-    doc.setTextColor(...CA.grayText);
-    doc.setFont("helvetica", "italic");
-    doc.text(
-      COMPANY.disclaimer || "This is an indicative estimate for reference purposes only.",
-      pageWidth / 2, y, { align: "center", maxWidth: contentWidth }
-    );
-    y += 6;
-  }
+  checkPageBreak(10);
+  doc.setFontSize(5.5);
+  doc.setTextColor(...CA.grayText);
+  doc.setFont("helvetica", "italic");
+  doc.text(
+    COMPANY.disclaimer || "This is an indicative estimate for reference purposes only.",
+    pageWidth / 2, y, { align: "center", maxWidth: contentWidth }
+  );
+  y += 6;
 
   // Timestamp
   doc.setFontSize(5.5);
@@ -728,10 +762,19 @@ function generateCarQuotePdf(
   doc.setFont("helvetica", "normal");
   doc.text(
     `Generated on ${format(new Date(), "dd MMM yyyy 'at' hh:mm a")} | Quote ID: GYC-${Date.now().toString().slice(-8)}`,
-    pageWidth / 2, maxY, { align: "center" }
+    pageWidth / 2, Math.min(y + 4, maxContentY), { align: "center" }
   );
 
   // FOOTER
+  drawQuoteFooter(doc, COMPANY, CA, pageWidth, footerStartY, footerH);
+}
+
+// Helper: Draw footer on any page
+function drawQuoteFooter(
+  doc: jsPDF, COMPANY: EMIPDFConfig, CA: ColorPalette & { accent: RGB },
+  pageWidth: number, footerStartY: number, footerH: number
+) {
+  const margin = 16;
   doc.setFillColor(...CA.primary);
   doc.rect(0, footerStartY, pageWidth, footerH, "F");
   doc.setFillColor(...CA.accent);
