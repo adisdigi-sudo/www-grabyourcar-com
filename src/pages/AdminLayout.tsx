@@ -240,6 +240,9 @@ const CRMAssistant = lazy(() =>
 const AICofounderBanner = lazy(() =>
   import("@/components/admin/AICofounderBanner").then((module) => ({ default: module.AICofounderBanner })),
 );
+const PersonalizedWelcomeBanner = lazy(() =>
+  import("@/components/admin/PersonalizedWelcomeBanner").then((module) => ({ default: module.PersonalizedWelcomeBanner })),
+);
 
 const AdminPanelLoader = ({ className }: { className?: string }) => (
   <div className={cn("flex min-h-[240px] items-center justify-center", className)}>
