@@ -7635,6 +7635,7 @@ export type Database = {
           id: string
           incentive_eligible: boolean | null
           is_active: boolean | null
+          is_legacy: boolean | null
           is_otp_verified: boolean | null
           journey_drop_off_page: string | null
           journey_last_event: string | null
@@ -7713,6 +7714,7 @@ export type Database = {
           id?: string
           incentive_eligible?: boolean | null
           is_active?: boolean | null
+          is_legacy?: boolean | null
           is_otp_verified?: boolean | null
           journey_drop_off_page?: string | null
           journey_last_event?: string | null
@@ -7791,6 +7793,7 @@ export type Database = {
           id?: string
           incentive_eligible?: boolean | null
           is_active?: boolean | null
+          is_legacy?: boolean | null
           is_otp_verified?: boolean | null
           journey_drop_off_page?: string | null
           journey_last_event?: string | null
@@ -9437,6 +9440,122 @@ export type Database = {
           },
         ]
       }
+      lead_forward_history: {
+        Row: {
+          action: string
+          action_by: string | null
+          action_by_name: string | null
+          created_at: string
+          details: string | null
+          forward_id: string
+          id: string
+        }
+        Insert: {
+          action: string
+          action_by?: string | null
+          action_by_name?: string | null
+          created_at?: string
+          details?: string | null
+          forward_id: string
+          id?: string
+        }
+        Update: {
+          action?: string
+          action_by?: string | null
+          action_by_name?: string | null
+          created_at?: string
+          details?: string | null
+          forward_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_forward_history_forward_id_fkey"
+            columns: ["forward_id"]
+            isOneToOne: false
+            referencedRelation: "lead_forwards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_forwards: {
+        Row: {
+          accepted_at: string | null
+          completed_at: string | null
+          created_at: string
+          from_user_id: string
+          from_user_name: string | null
+          from_vertical_id: string | null
+          id: string
+          lead_id: string
+          lead_name: string | null
+          lead_phone: string | null
+          lead_table: string
+          result_note: string | null
+          status: string
+          task_note: string | null
+          to_user_id: string | null
+          to_user_name: string | null
+          to_vertical_id: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          from_user_id: string
+          from_user_name?: string | null
+          from_vertical_id?: string | null
+          id?: string
+          lead_id: string
+          lead_name?: string | null
+          lead_phone?: string | null
+          lead_table?: string
+          result_note?: string | null
+          status?: string
+          task_note?: string | null
+          to_user_id?: string | null
+          to_user_name?: string | null
+          to_vertical_id: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          from_user_id?: string
+          from_user_name?: string | null
+          from_vertical_id?: string | null
+          id?: string
+          lead_id?: string
+          lead_name?: string | null
+          lead_phone?: string | null
+          lead_table?: string
+          result_note?: string | null
+          status?: string
+          task_note?: string | null
+          to_user_id?: string | null
+          to_user_name?: string | null
+          to_vertical_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_forwards_from_vertical_id_fkey"
+            columns: ["from_vertical_id"]
+            isOneToOne: false
+            referencedRelation: "business_verticals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_forwards_to_vertical_id_fkey"
+            columns: ["to_vertical_id"]
+            isOneToOne: false
+            referencedRelation: "business_verticals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_imports: {
         Row: {
           completed_at: string | null
@@ -9604,6 +9723,7 @@ export type Database = {
           email: string | null
           follow_up_count: number | null
           id: string
+          is_legacy: boolean | null
           last_contacted_at: string | null
           lead_type: string | null
           name: string
@@ -9633,6 +9753,7 @@ export type Database = {
           email?: string | null
           follow_up_count?: number | null
           id?: string
+          is_legacy?: boolean | null
           last_contacted_at?: string | null
           lead_type?: string | null
           name: string
@@ -9662,6 +9783,7 @@ export type Database = {
           email?: string | null
           follow_up_count?: number | null
           id?: string
+          is_legacy?: boolean | null
           last_contacted_at?: string | null
           lead_type?: string | null
           name?: string
@@ -9876,6 +9998,7 @@ export type Database = {
           id: string
           incentive_eligible: boolean | null
           interest_rate: number | null
+          is_legacy: boolean | null
           last_activity_at: string | null
           lead_id: string | null
           lead_source_tag: string | null
@@ -9927,6 +10050,7 @@ export type Database = {
           id?: string
           incentive_eligible?: boolean | null
           interest_rate?: number | null
+          is_legacy?: boolean | null
           last_activity_at?: string | null
           lead_id?: string | null
           lead_source_tag?: string | null
@@ -9978,6 +10102,7 @@ export type Database = {
           id?: string
           incentive_eligible?: boolean | null
           interest_rate?: number | null
+          is_legacy?: boolean | null
           last_activity_at?: string | null
           lead_id?: string | null
           lead_source_tag?: string | null
@@ -12353,6 +12478,7 @@ export type Database = {
           id: string
           incentive_eligible: boolean | null
           inquiry_remarks: string | null
+          is_legacy: boolean | null
           last_activity_at: string | null
           loan_status: string | null
           lost_reason: string | null
@@ -12392,6 +12518,7 @@ export type Database = {
           id?: string
           incentive_eligible?: boolean | null
           inquiry_remarks?: string | null
+          is_legacy?: boolean | null
           last_activity_at?: string | null
           loan_status?: string | null
           lost_reason?: string | null
@@ -12431,6 +12558,7 @@ export type Database = {
           id?: string
           incentive_eligible?: boolean | null
           inquiry_remarks?: string | null
+          is_legacy?: boolean | null
           last_activity_at?: string | null
           loan_status?: string | null
           lost_reason?: string | null
