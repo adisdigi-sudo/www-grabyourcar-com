@@ -215,6 +215,7 @@ const TeamEngagement = lazy(() => import("@/components/admin/TeamEngagement"));
 const ErrorPrevention = lazy(() => import("@/components/admin/ErrorPrevention"));
 const WorkflowEngine = lazy(() => import("@/components/admin/WorkflowEngine"));
 const AutomationCommandCenter = lazy(() => import("@/components/admin/AutomationCommandCenter"));
+const AutoPilotDashboard = lazy(() => import("@/components/admin/AutoPilotDashboard"));
 const LeadRoutingManager = lazy(() =>
   import("@/components/admin/LeadRoutingManager").then((module) => ({ default: module.LeadRoutingManager })),
 );
@@ -550,6 +551,8 @@ const AdminLayout = () => {
         return <WorkflowEngine />;
       case "automation-center":
         return <AutomationCommandCenter />;
+      case "auto-pilot":
+        return <AutoPilotDashboard />;
       case "lead-routing":
         return <LeadRoutingManager />;
       case "dealer-inquiry":

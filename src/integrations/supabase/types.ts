@@ -1161,6 +1161,99 @@ export type Database = {
         }
         Relationships: []
       }
+      auto_pilot_config: {
+        Row: {
+          agent_name: string
+          agent_type: string
+          config: Json | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_enabled: boolean | null
+          last_run_at: string | null
+          last_run_status: string | null
+          recipient_phones: string[] | null
+          recipient_type: string | null
+          schedule_description: string | null
+          total_runs: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          agent_name: string
+          agent_type: string
+          config?: Json | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          last_run_at?: string | null
+          last_run_status?: string | null
+          recipient_phones?: string[] | null
+          recipient_type?: string | null
+          schedule_description?: string | null
+          total_runs?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          agent_name?: string
+          agent_type?: string
+          config?: Json | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          last_run_at?: string | null
+          last_run_status?: string | null
+          recipient_phones?: string[] | null
+          recipient_type?: string | null
+          schedule_description?: string | null
+          total_runs?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      auto_pilot_logs: {
+        Row: {
+          agent_type: string
+          completed_at: string | null
+          created_at: string | null
+          details: Json | null
+          error_message: string | null
+          execution_time_ms: number | null
+          id: string
+          messages_sent: number | null
+          started_at: string | null
+          status: string | null
+          summary: string | null
+        }
+        Insert: {
+          agent_type: string
+          completed_at?: string | null
+          created_at?: string | null
+          details?: Json | null
+          error_message?: string | null
+          execution_time_ms?: number | null
+          id?: string
+          messages_sent?: number | null
+          started_at?: string | null
+          status?: string | null
+          summary?: string | null
+        }
+        Update: {
+          agent_type?: string
+          completed_at?: string | null
+          created_at?: string | null
+          details?: Json | null
+          error_message?: string | null
+          execution_time_ms?: number | null
+          id?: string
+          messages_sent?: number | null
+          started_at?: string | null
+          status?: string | null
+          summary?: string | null
+        }
+        Relationships: []
+      }
       automation_lead_tracking: {
         Row: {
           assigned_at: string | null
@@ -10061,6 +10154,7 @@ export type Database = {
           notes: string | null
           phone: string
           priority: string | null
+          quote_sent_at: string | null
           service_category: string | null
           source: string | null
           status: string
@@ -10091,6 +10185,7 @@ export type Database = {
           notes?: string | null
           phone: string
           priority?: string | null
+          quote_sent_at?: string | null
           service_category?: string | null
           source?: string | null
           status?: string
@@ -10121,6 +10216,7 @@ export type Database = {
           notes?: string | null
           phone?: string
           priority?: string | null
+          quote_sent_at?: string | null
           service_category?: string | null
           source?: string | null
           status?: string
