@@ -823,6 +823,10 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                           <Button size="sm" variant="outline" className="h-6 text-[10px] gap-0.5 px-1.5 text-emerald-600 border-emerald-200" onClick={() => { setSelectedClient(client); setShowQuoteModal(true); }}>
                             <FileText className="h-2.5 w-2.5" /> Quote
                           </Button>
+                          <Button size="sm" variant="outline" className="h-6 text-[10px] gap-0.5 px-1.5 border-primary/30 text-primary" onClick={() => { setForwardClient(client); setShowForwardDialog(true); }}>
+                            <Send className="h-2.5 w-2.5" /> Forward
+                          </Button>
+                          <ForwardedBadge leadId={client.id} />
                         </div>
                       </TableCell>
                     </TableRow>
