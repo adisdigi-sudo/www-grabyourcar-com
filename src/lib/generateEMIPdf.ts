@@ -406,6 +406,9 @@ function generateCarQuotePdf(
     { label: "FASTag", value: data.onRoadPrice!.fastag },
     { label: "Registration", value: data.onRoadPrice!.registration },
     { label: "Handling Charges", value: data.onRoadPrice!.handling },
+    { label: "Accessories", value: data.onRoadPrice!.accessories || 0 },
+    { label: "Extended Warranty", value: data.onRoadPrice!.extendedWarranty || 0 },
+    { label: data.onRoadPrice!.otherChargesLabel || "Other Charges", value: data.onRoadPrice!.otherCharges || 0 },
   ].filter(item => item.value > 0) : [];
 
   const footerH = 28;
