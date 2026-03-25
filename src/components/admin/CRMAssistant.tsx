@@ -347,12 +347,26 @@ export function CRMAssistant({ userRole, userName, userVertical }: CRMAssistantP
                   {isSuperAdmin ? <Brain className="h-8 w-8 text-violet-600" /> : <Bot className="h-8 w-8 text-blue-600" />}
                 </div>
                 <div>
-                  <p className="font-bold text-sm">{isSuperAdmin ? "Your AI Co-Founder" : `${userName || "Team"} Assistant`}</p>
+                  <p className="font-bold text-sm">
+                    {(() => {
+                      const hour = new Date().getHours();
+                      const greet = hour >= 5 && hour < 12 ? "Good Morning" : hour < 17 ? "Good Afternoon" : hour < 21 ? "Good Evening" : "Good Night";
+                      const cleanName = (userName || "Team").replace(/@.*$/, "").split(/[_.\-]/)[0];
+                      const displayName = cleanName.charAt(0).toUpperCase() + cleanName.slice(1).toLowerCase();
+                      return `${greet}, ${displayName}! 👋`;
+                    })()}
+                  </p>
                   <p className="text-xs text-muted-foreground mt-1">
                     {isSuperAdmin
-                      ? "24/7 revenue engine, sales director, risk radar & team coach"
-                      : `Your personal ${userVertical || ''} work assistant — clients, targets, follow-ups`}
+                      ? "I'm your AI Co-Founder — 24/7 revenue engine, sales director & team coach"
+                      : `I'm your personal ${userVertical || ''} assistant — ask me anything about your work`}
                   </p>
+                </div>
+
+                {/* Privacy notice */}
+                <div className="flex items-center gap-1.5 justify-center text-[10px] text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/30 rounded-lg px-3 py-1.5">
+                  <Lock className="h-3 w-3" />
+                  <span>Your chats are private — only you can see them</span>
                 </div>
 
                 {/* Team restriction notice */}
