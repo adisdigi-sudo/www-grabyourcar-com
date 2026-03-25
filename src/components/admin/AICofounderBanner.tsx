@@ -54,13 +54,23 @@ export function AICofounderBanner({ activeTab, userRole, userName, userVertical 
     setSuggestion("");
 
     try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
       const resp = await fetch(COFOUNDER_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
         },
-        body: JSON.stringify({ action: "quick_insight", question: contextPrompt, user_role: userRole || "super_admin", user_name: userName, vertical: userVertical }),
+        body: JSON.stringify({
+          action: "quick_insight",
+          question: contextPrompt,
+          user_role: userRole || "super_admin",
+          user_name: userName,
+          vertical: userVertical,
+        }),
       });
 
       if (!resp.ok || !resp.body) return;
@@ -83,7 +93,10 @@ export function AICofounderBanner({ activeTab, userRole, userName, userVertical 
           if (j === "[DONE]") break;
           try {
             const t = JSON.parse(j).choices?.[0]?.delta?.content;
-            if (t) { acc += t; setSuggestion(acc); }
+            if (t) {
+              acc += t;
+              setSuggestion(acc);
+            }
           } catch {}
         }
       }
@@ -92,7 +105,7 @@ export function AICofounderBanner({ activeTab, userRole, userName, userVertical 
     } finally {
       setIsLoading(false);
     }
-  }, [activeTab]);
+  }, [activeTab, isSuperAdmin, userName, userRole, userVertical]);
 
   useEffect(() => {
     if (activeTab !== lastTab) {
