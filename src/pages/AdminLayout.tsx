@@ -551,6 +551,8 @@ const AdminLayout = () => {
         return <WorkflowEngine />;
       case "automation-center":
         return <AutomationCommandCenter />;
+      case "auto-pilot":
+        return <AutoPilotDashboard />;
       case "lead-routing":
         return <LeadRoutingManager />;
       case "dealer-inquiry":
