@@ -850,8 +850,11 @@ export const generateEMIWhatsAppMessage = (data: EMIData, config?: Partial<EMIPD
   }
 
   if (data.emi > 0) {
+    const whatsappCarPrice = data.onRoadPrice
+      ? (data.discount && data.discount.amount > 0 ? data.onRoadPrice.onRoadPrice - data.discount.amount : data.onRoadPrice.onRoadPrice)
+      : data.loanAmount;
     message += `💰 *Loan Details*\n`;
-    message += `• Car Price: ${formatCurrency(data.loanAmount)}\n`;
+    message += `• Car Price (Final): ${formatCurrency(whatsappCarPrice)}\n`;
     message += `• Down Payment: ${formatCurrency(data.downPayment)}\n`;
     message += `• Loan Amount: ${formatCurrency(data.loanPrincipal)}\n`;
     message += `• Interest Rate: ${data.interestRate}% p.a.\n`;
