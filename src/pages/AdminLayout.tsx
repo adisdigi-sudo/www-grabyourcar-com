@@ -616,6 +616,13 @@ const AdminLayout = () => {
                 : "max-w-7xl",
           )}
         >
+          {activeTab === "dashboard" && (
+            <Suspense fallback={null}>
+              <AdminRenderBoundary fallback={null} contextLabel="Welcome banner">
+                <PersonalizedWelcomeBanner userRole={roles?.[0]?.role} userName={user?.email?.split('@')[0]} userVertical={activeVertical?.name} />
+              </AdminRenderBoundary>
+            </Suspense>
+          )}
           <Suspense fallback={null}>
             <AdminRenderBoundary fallback={null} contextLabel="AI Co-Founder banner">
               <AICofounderBanner activeTab={activeTab} userRole={roles?.[0]?.role} userName={user?.email?.split('@')[0]} userVertical={activeVertical?.name} />
