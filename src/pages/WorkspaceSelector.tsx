@@ -152,6 +152,8 @@ const WorkspaceSelector = () => {
           >
             {sortedVerticals.map((vertical, i) => {
               const Icon = iconMap[vertical.icon || "Shield"] || Shield;
+              const hasPassword = verticalPasswords[vertical.id] && !isAdmin();
+              const isVerified = getVerifiedVerticals().includes(vertical.id);
               return (
                 <motion.div
                   key={vertical.id}
@@ -160,9 +162,12 @@ const WorkspaceSelector = () => {
                   transition={{ delay: 0.1 * i }}
                 >
                   <Card
-                    className="p-6 cursor-pointer hover:shadow-lg hover:border-primary/30 transition-all duration-200 group border-border/50"
+                    className="p-6 cursor-pointer hover:shadow-lg hover:border-primary/30 transition-all duration-200 group border-border/50 relative"
                     onClick={() => handleSelectVertical(vertical)}
                   >
+                    {hasPassword && !isVerified && (
+                      <Lock className="absolute top-3 right-3 h-4 w-4 text-muted-foreground" />
+                    )}
                     <div
                       className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110"
                       style={{ backgroundColor: `${vertical.color}15` }}
