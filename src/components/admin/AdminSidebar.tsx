@@ -70,6 +70,7 @@ const navItems: NavItem[] = [
   // ── Universal ──
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "ai-cofounder", label: "🤖 AI Co-Founder", icon: Brain, badge: "AI" },
+  { id: "legacy-leads", label: "📦 Legacy Leads", icon: LayoutDashboard, allowedRoles: ["super_admin", "admin"] },
 
   // ── Sales CRM — sales vertical ──
   { id: "sales-crm", label: "🚗 Sales CRM", icon: Car, verticals: ["sales"], allowedRoles: ["super_admin", "admin", "sales"] },

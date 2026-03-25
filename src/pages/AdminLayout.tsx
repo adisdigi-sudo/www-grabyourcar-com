@@ -131,6 +131,9 @@ const FleetVerticalWorkspace = lazy(() =>
   import("@/components/admin/verticals/FleetVerticalWorkspace").then((module) => ({ default: module.FleetVerticalWorkspace })),
 );
 const PartnersManager = lazy(() => import("@/components/admin/PartnersManager"));
+const LegacyLeadsManager = lazy(() =>
+  import("@/components/admin/shared/LegacyLeadsManager").then((module) => ({ default: module.LegacyLeadsManager })),
+);
 const InsuranceManagement = lazy(() =>
   import("@/components/admin/InsuranceManagement").then((module) => ({ default: module.InsuranceManagement })),
 );
@@ -578,6 +581,8 @@ const AdminLayout = () => {
         return <ZohoHRWorkspace />;
       case "ai-cofounder":
         return <AICofounderDashboard />;
+      case "legacy-leads":
+        return <LegacyLeadsManager />;
       default:
         return <AdminDashboard />;
     }

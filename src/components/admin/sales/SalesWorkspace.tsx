@@ -67,6 +67,7 @@ export function SalesWorkspace() {
       const { data, error } = await supabase
         .from("sales_pipeline" as any)
         .select("*")
+        .eq("is_legacy", false)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data || []).map((l: any) => ({

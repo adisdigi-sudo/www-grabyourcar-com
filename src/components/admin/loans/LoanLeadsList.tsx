@@ -25,6 +25,7 @@ export const LoanLeadsList = () => {
       const { data, error } = await supabase
         .from('loan_applications')
         .select('*')
+        .eq('is_legacy', false)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
