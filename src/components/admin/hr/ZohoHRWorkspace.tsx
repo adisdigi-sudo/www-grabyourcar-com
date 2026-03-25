@@ -156,7 +156,9 @@ export const ZohoHRWorkspace = () => {
   // Render module content based on sidebar or "more services" selection
   const renderModuleContent = () => {
     switch (sidebarActive) {
-      case "onboarding": return <HRRecruitmentModule />;
+      case "onboarding": return <HROnboarding />;
+      case "tickets": return <TicketApprovalCenter />;
+      case "salary-engine": return <SalaryEngine />;
       case "leave": return renderLeaveTracker();
       case "attendance": return <HRAttendanceModule />;
       case "time": return <HRAttendanceModule />;
