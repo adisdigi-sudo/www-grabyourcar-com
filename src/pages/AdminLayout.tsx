@@ -581,6 +581,8 @@ const AdminLayout = () => {
         return <ZohoHRWorkspace />;
       case "ai-cofounder":
         return <AICofounderDashboard />;
+      case "legacy-leads":
+        return <LegacyLeadsManager />;
       default:
         return <AdminDashboard />;
     }
