@@ -178,7 +178,9 @@ export const MyHRDashboard = () => {
                         <p className="text-xs text-muted-foreground">{doc.document_type.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}</p>
                         <p className="text-xs text-muted-foreground">{format(new Date(doc.created_at), "dd MMM yyyy")}</p>
                       </div>
-                      {doc.file_url && <Button variant="ghost" size="icon"><Download className="h-4 w-4" /></Button>}
+                      <Button variant="ghost" size="icon" onClick={() => generateEmployeeDocumentPDF(doc)}>
+                        <Download className="h-4 w-4" />
+                      </Button>
                     </CardContent>
                   </Card>
                 );
