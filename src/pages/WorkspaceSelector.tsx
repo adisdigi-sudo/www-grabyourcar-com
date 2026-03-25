@@ -28,7 +28,28 @@ const WorkspaceSelector = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading, initialized: authInitialized, signOut } = useAuth();
   const { availableVerticals, setActiveVertical, isLoading: verticalLoading, teamMember } = useVerticalAccess();
-  const { isSuperAdmin } = useAdminAuth();
+  const { isSuperAdmin, isAdmin } = useAdminAuth();
+
+  const [passwordTarget, setPasswordTarget] = useState<BusinessVertical | null>(null);
+
+  // Fetch which verticals have passwords set (for lock icon display)
+  const { data: verticalPasswords = {} } = useQuery({
+    queryKey: ["vertical-passwords-check"],
+    queryFn: async () => {
+      // Super admins/admins bypass password
+      if (isAdmin()) return {};
+      const { data } = await supabase
+        .from("business_verticals")
+        .select("id, vertical_password")
+        .eq("is_active", true);
+      const map: Record<string, boolean> = {};
+      (data || []).forEach((v: any) => {
+        if (v.vertical_password) map[v.id] = true;
+      });
+      return map;
+    },
+    enabled: !!user?.id,
+  });
 
   const sortedVerticals = useMemo(
     () => [...availableVerticals].sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999)),
@@ -41,15 +62,34 @@ const WorkspaceSelector = () => {
     }
   }, [user, authLoading, authInitialized, navigate]);
 
-  // If only 1 vertical available, auto-select it
+  // If only 1 vertical available, auto-select it (skip password for single vertical)
   useEffect(() => {
     if (!authLoading && !verticalLoading && user && sortedVerticals.length === 1) {
-      setActiveVertical(sortedVerticals[0]);
-      navigate("/crm");
+      const v = sortedVerticals[0];
+      const hasPassword = verticalPasswords[v.id];
+      const alreadyVerified = getVerifiedVerticals().includes(v.id);
+      if (!hasPassword || alreadyVerified || isAdmin()) {
+        setActiveVertical(v);
+        navigate("/crm");
+      }
     }
-  }, [authLoading, verticalLoading, user, sortedVerticals, setActiveVertical, navigate]);
+  }, [authLoading, verticalLoading, user, sortedVerticals, setActiveVertical, navigate, verticalPasswords]);
 
   const handleSelectVertical = (vertical: BusinessVertical) => {
+    const hasPassword = verticalPasswords[vertical.id];
+    const alreadyVerified = getVerifiedVerticals().includes(vertical.id);
+    
+    if (hasPassword && !alreadyVerified && !isAdmin()) {
+      setPasswordTarget(vertical);
+      return;
+    }
+    
+    setActiveVertical(vertical);
+    navigate("/crm");
+  };
+
+  const handlePasswordSuccess = (vertical: BusinessVertical) => {
+    setPasswordTarget(null);
     setActiveVertical(vertical);
     navigate("/crm");
   };
