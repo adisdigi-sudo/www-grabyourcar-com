@@ -665,6 +665,9 @@ const AdminLayout = () => {
         <AdminRenderBoundary fallback={null} contextLabel="CRM assistant">
           <CRMAssistant userRole={roles?.[0]?.role} userName={user?.email?.split('@')[0]} userVertical={activeVertical?.name} />
         </AdminRenderBoundary>
+        <AdminRenderBoundary fallback={null} contextLabel="Encouragement popup">
+          <EncouragementPopup userRole={roles?.[0]?.role} userName={user?.email?.split('@')[0]} userVertical={activeVertical?.name} />
+        </AdminRenderBoundary>
       </Suspense>
     </div>
   );
