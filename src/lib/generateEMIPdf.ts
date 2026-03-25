@@ -76,7 +76,7 @@ const DEFAULT_COMPANY: EMIPDFConfig = {
   founder: "Anshdeep Singh",
   founderTitle: "Founder & CEO",
   partnerBanks: ["SBI", "HDFC Bank", "ICICI Bank", "Axis Bank", "Kotak", "IDFC First", "Yes Bank"],
-  disclaimer: "This is an indicative estimate. Actual EMI may vary based on bank policies, credit score, and prevailing interest rates.",
+  disclaimer: "This offer is valid for 7 days from the date of quotation. Ex-Showroom price is subject to change before billing as per manufacturer revision. Insurance and financing are arranged in-house by Grabyourcar.",
   footerCTA: "Get the Best Car Loan - Lowest Interest Rates Guaranteed!",
   primaryColor: "#22c55e",
   accentColor: "#f59e0b",
