@@ -5431,11 +5431,18 @@ export type Database = {
           document_url: string | null
           employee_id: string | null
           employee_name: string
+          employee_user_id: string | null
           expiry_date: string | null
+          file_url: string | null
+          generated_data: Json | null
           id: string
+          is_signed: boolean | null
           is_verified: boolean | null
+          month_year: string | null
           notes: string | null
+          signed_at: string | null
           updated_at: string | null
+          uploaded_by: string | null
           verified_at: string | null
           verified_by: string | null
         }
@@ -5447,11 +5454,18 @@ export type Database = {
           document_url?: string | null
           employee_id?: string | null
           employee_name: string
+          employee_user_id?: string | null
           expiry_date?: string | null
+          file_url?: string | null
+          generated_data?: Json | null
           id?: string
+          is_signed?: boolean | null
           is_verified?: boolean | null
+          month_year?: string | null
           notes?: string | null
+          signed_at?: string | null
           updated_at?: string | null
+          uploaded_by?: string | null
           verified_at?: string | null
           verified_by?: string | null
         }
@@ -5463,13 +5477,239 @@ export type Database = {
           document_url?: string | null
           employee_id?: string | null
           employee_name?: string
+          employee_user_id?: string | null
           expiry_date?: string | null
+          file_url?: string | null
+          generated_data?: Json | null
           id?: string
+          is_signed?: boolean | null
           is_verified?: boolean | null
+          month_year?: string | null
           notes?: string | null
+          signed_at?: string | null
           updated_at?: string | null
+          uploaded_by?: string | null
           verified_at?: string | null
           verified_by?: string | null
+        }
+        Relationships: []
+      }
+      employee_profiles: {
+        Row: {
+          basic_salary: number | null
+          created_at: string | null
+          da: number | null
+          department: string | null
+          designation: string | null
+          email: string | null
+          employment_type: string | null
+          esi_deduction: number | null
+          full_name: string
+          grace_minutes: number | null
+          hra: number | null
+          id: string
+          is_active: boolean | null
+          joining_date: string | null
+          manager_name: string | null
+          manager_user_id: string | null
+          monthly_ctc: number | null
+          onboarded_at: string | null
+          onboarded_by: string | null
+          pf_deduction: number | null
+          phone: string | null
+          probation_end_date: string | null
+          professional_tax: number | null
+          role: string | null
+          shift_end: string | null
+          shift_start: string | null
+          special_allowance: number | null
+          tds: number | null
+          team_member_id: string | null
+          updated_at: string | null
+          user_id: string | null
+          vertical_id: string | null
+          vertical_name: string | null
+          working_days_per_month: number | null
+        }
+        Insert: {
+          basic_salary?: number | null
+          created_at?: string | null
+          da?: number | null
+          department?: string | null
+          designation?: string | null
+          email?: string | null
+          employment_type?: string | null
+          esi_deduction?: number | null
+          full_name: string
+          grace_minutes?: number | null
+          hra?: number | null
+          id?: string
+          is_active?: boolean | null
+          joining_date?: string | null
+          manager_name?: string | null
+          manager_user_id?: string | null
+          monthly_ctc?: number | null
+          onboarded_at?: string | null
+          onboarded_by?: string | null
+          pf_deduction?: number | null
+          phone?: string | null
+          probation_end_date?: string | null
+          professional_tax?: number | null
+          role?: string | null
+          shift_end?: string | null
+          shift_start?: string | null
+          special_allowance?: number | null
+          tds?: number | null
+          team_member_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          vertical_id?: string | null
+          vertical_name?: string | null
+          working_days_per_month?: number | null
+        }
+        Update: {
+          basic_salary?: number | null
+          created_at?: string | null
+          da?: number | null
+          department?: string | null
+          designation?: string | null
+          email?: string | null
+          employment_type?: string | null
+          esi_deduction?: number | null
+          full_name?: string
+          grace_minutes?: number | null
+          hra?: number | null
+          id?: string
+          is_active?: boolean | null
+          joining_date?: string | null
+          manager_name?: string | null
+          manager_user_id?: string | null
+          monthly_ctc?: number | null
+          onboarded_at?: string | null
+          onboarded_by?: string | null
+          pf_deduction?: number | null
+          phone?: string | null
+          probation_end_date?: string | null
+          professional_tax?: number | null
+          role?: string | null
+          shift_end?: string | null
+          shift_start?: string | null
+          special_allowance?: number | null
+          tds?: number | null
+          team_member_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          vertical_id?: string | null
+          vertical_name?: string | null
+          working_days_per_month?: number | null
+        }
+        Relationships: []
+      }
+      employee_salary_records: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          basic_salary: number | null
+          bonus_amount: number | null
+          calculation_notes: string | null
+          created_at: string | null
+          da: number | null
+          days_absent: number | null
+          days_present: number | null
+          employee_name: string
+          employee_user_id: string
+          esi_deduction: number | null
+          gross_salary: number | null
+          half_days: number | null
+          hra: number | null
+          id: string
+          incentive_amount: number | null
+          late_count: number | null
+          late_deduction: number | null
+          leave_deduction: number | null
+          month_year: string
+          monthly_ctc: number | null
+          net_salary: number | null
+          other_deductions: number | null
+          paid_at: string | null
+          payment_status: string | null
+          pf_deduction: number | null
+          professional_tax: number | null
+          special_allowance: number | null
+          tds: number | null
+          total_deductions: number | null
+          total_working_days: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          basic_salary?: number | null
+          bonus_amount?: number | null
+          calculation_notes?: string | null
+          created_at?: string | null
+          da?: number | null
+          days_absent?: number | null
+          days_present?: number | null
+          employee_name: string
+          employee_user_id: string
+          esi_deduction?: number | null
+          gross_salary?: number | null
+          half_days?: number | null
+          hra?: number | null
+          id?: string
+          incentive_amount?: number | null
+          late_count?: number | null
+          late_deduction?: number | null
+          leave_deduction?: number | null
+          month_year: string
+          monthly_ctc?: number | null
+          net_salary?: number | null
+          other_deductions?: number | null
+          paid_at?: string | null
+          payment_status?: string | null
+          pf_deduction?: number | null
+          professional_tax?: number | null
+          special_allowance?: number | null
+          tds?: number | null
+          total_deductions?: number | null
+          total_working_days?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          basic_salary?: number | null
+          bonus_amount?: number | null
+          calculation_notes?: string | null
+          created_at?: string | null
+          da?: number | null
+          days_absent?: number | null
+          days_present?: number | null
+          employee_name?: string
+          employee_user_id?: string
+          esi_deduction?: number | null
+          gross_salary?: number | null
+          half_days?: number | null
+          hra?: number | null
+          id?: string
+          incentive_amount?: number | null
+          late_count?: number | null
+          late_deduction?: number | null
+          leave_deduction?: number | null
+          month_year?: string
+          monthly_ctc?: number | null
+          net_salary?: number | null
+          other_deductions?: number | null
+          paid_at?: string | null
+          payment_status?: string | null
+          pf_deduction?: number | null
+          professional_tax?: number | null
+          special_allowance?: number | null
+          tds?: number | null
+          total_deductions?: number | null
+          total_working_days?: number | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -5527,6 +5767,96 @@ export type Database = {
           user_id?: string
           user_name?: string | null
           vertical_name?: string | null
+        }
+        Relationships: []
+      }
+      employee_tickets: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          employee_name: string
+          employee_user_id: string
+          hr_action: string | null
+          hr_action_at: string | null
+          hr_remarks: string | null
+          hr_user_id: string | null
+          id: string
+          leave_days: number | null
+          leave_end_date: string | null
+          leave_start_date: string | null
+          leave_type: string | null
+          manager_action: string | null
+          manager_action_at: string | null
+          manager_name: string | null
+          manager_remarks: string | null
+          manager_user_id: string | null
+          priority: string | null
+          resolution_notes: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string | null
+          subject: string
+          ticket_number: string
+          ticket_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          employee_name: string
+          employee_user_id: string
+          hr_action?: string | null
+          hr_action_at?: string | null
+          hr_remarks?: string | null
+          hr_user_id?: string | null
+          id?: string
+          leave_days?: number | null
+          leave_end_date?: string | null
+          leave_start_date?: string | null
+          leave_type?: string | null
+          manager_action?: string | null
+          manager_action_at?: string | null
+          manager_name?: string | null
+          manager_remarks?: string | null
+          manager_user_id?: string | null
+          priority?: string | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string | null
+          subject: string
+          ticket_number?: string
+          ticket_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          employee_name?: string
+          employee_user_id?: string
+          hr_action?: string | null
+          hr_action_at?: string | null
+          hr_remarks?: string | null
+          hr_user_id?: string | null
+          id?: string
+          leave_days?: number | null
+          leave_end_date?: string | null
+          leave_start_date?: string | null
+          leave_type?: string | null
+          manager_action?: string | null
+          manager_action_at?: string | null
+          manager_name?: string | null
+          manager_remarks?: string | null
+          manager_user_id?: string | null
+          priority?: string | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string | null
+          subject?: string
+          ticket_number?: string
+          ticket_type?: string
+          updated_at?: string | null
         }
         Relationships: []
       }

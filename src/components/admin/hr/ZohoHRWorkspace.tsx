@@ -33,6 +33,9 @@ import { HRPerformanceModule } from "./HRPerformanceModule";
 import { HREngagementModule } from "./HREngagementModule";
 import { HRAssetModule } from "./HRAssetModule";
 import { HRHelpdeskModule } from "./HRHelpdeskModule";
+import { HROnboarding } from "./HROnboarding";
+import { TicketApprovalCenter } from "./TicketApprovalCenter";
+import { SalaryEngine } from "./SalaryEngine";
 
 const initials = (name: string) => name?.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2) || "??";
 
@@ -40,6 +43,8 @@ const initials = (name: string) => name?.split(" ").map(w => w[0]).join("").toUp
 const SIDEBAR_ITEMS = [
   { id: "home", label: "Home", icon: Home },
   { id: "onboarding", label: "Onboarding", icon: UserPlus },
+  { id: "tickets", label: "Tickets & Approvals", icon: ListTodo },
+  { id: "salary-engine", label: "Salary Engine", icon: IndianRupee },
   { id: "leave", label: "Leave Tracker", icon: Palmtree },
   { id: "attendance", label: "Attendance", icon: CalendarDays },
   { id: "time", label: "Time Tracker", icon: Clock },
@@ -151,7 +156,9 @@ export const ZohoHRWorkspace = () => {
   // Render module content based on sidebar or "more services" selection
   const renderModuleContent = () => {
     switch (sidebarActive) {
-      case "onboarding": return <HRRecruitmentModule />;
+      case "onboarding": return <HROnboarding />;
+      case "tickets": return <TicketApprovalCenter />;
+      case "salary-engine": return <SalaryEngine />;
       case "leave": return renderLeaveTracker();
       case "attendance": return <HRAttendanceModule />;
       case "time": return <HRAttendanceModule />;
