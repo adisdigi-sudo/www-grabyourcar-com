@@ -19,9 +19,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import {
   UserPlus, Phone, FileText, Clock, CheckCircle2, XCircle, Search,
   PhoneCall, User, Shield, Send, MessageSquare, CalendarIcon, Bell, Plus,
-  ChevronRight, Upload, RefreshCw
+  ChevronRight, Upload, RefreshCw, Send
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { LeadForwardDialog, ForwardedBadge } from "../shared/LeadForwardDialog";
 import InsuranceQuoteModal from "./InsuranceQuoteModal";
 import { InsurancePolicyDocumentUploader } from "./InsurancePolicyDocumentUploader";
 import { useQuery } from "@tanstack/react-query";
