@@ -1140,6 +1140,17 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
           </DialogContent>
         </Dialog>
       )}
+
+      {forwardClient && (
+        <LeadForwardDialog
+          open={showForwardDialog}
+          onOpenChange={(o) => { setShowForwardDialog(o); if (!o) setForwardClient(null); }}
+          leadId={forwardClient.id}
+          leadTable="insurance_clients"
+          leadName={forwardClient.customer_name || "Unknown"}
+          leadPhone={forwardClient.phone}
+        />
+      )}
     </>
   );
 }
