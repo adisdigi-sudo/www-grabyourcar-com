@@ -13,12 +13,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { generateEmployeeDocumentPDF } from "@/lib/generateEmployeeDocumentPDF";
 import {
   FileText, IndianRupee, Ticket, Palmtree, Calendar, Clock,
   Download, Plus, AlertCircle, CheckCircle2, HelpCircle, Send
 } from "lucide-react";
 
-const fmt = (v: number) => `₹${Math.round(v || 0).toLocaleString("en-IN")}`;
+const fmt = (v: number) => `Rs. ${Math.round(v || 0).toLocaleString("en-IN")}`;
 
 const TICKET_TYPES = [
   { value: "leave", label: "Leave Request", icon: Palmtree },

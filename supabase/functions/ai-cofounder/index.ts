@@ -15,10 +15,32 @@ async function safeFetch(url: string, h: Record<string, string>): Promise<any[]>
 }
 
 // Targeted search: query specific tables based on user question keywords
-async function targetedSearch(question: string, SB: string, h: Record<string, string>, verticalFilter?: string | null): Promise<string> {
+async function targetedSearch(
+  question: string,
+  SB: string,
+  h: Record<string, string>,
+  verticalFilter?: string | null,
+  ownFilters?: { authUserId?: string | null; userName?: string | null; teamDisplayName?: string | null; isSuperAdmin?: boolean }
+): Promise<string> {
   if (!question) return "";
   const q = question.toLowerCase();
   const results: string[] = [];
+  const normalizedNames = [ownFilters?.userName, ownFilters?.teamDisplayName]
+    .filter(Boolean)
+    .map((v) => String(v).toLowerCase().trim());
+  const matchesOwner = (value: any) => {
+    if (ownFilters?.isSuperAdmin) return true;
+    if (!value) return false;
+    const lower = String(value).toLowerCase();
+    return normalizedNames.some((name) => lower.includes(name));
+  };
+  const filterOwnRows = <T extends Record<string, any>>(rows: T[], ownerKeys: string[]) => {
+    if (ownFilters?.isSuperAdmin) return rows;
+    return rows.filter((row) => ownerKeys.some((key) => {
+      const rowValue = row[key];
+      return ownFilters?.authUserId ? rowValue === ownFilters.authUserId || matchesOwner(rowValue) : matchesOwner(rowValue);
+    }));
+  };
 
   const numPatterns = question.match(/\b\d{4}\b/g) || [];
   const regPatterns = question.match(/[A-Za-z]{2}\d{1,2}[A-Za-z]{0,3}\d{1,4}/gi) || [];
@@ -27,21 +49,18 @@ async function targetedSearch(question: string, SB: string, h: Record<string, st
   const nameWords = question.match(/\b[A-Z][a-z]{2,}\b/g) || [];
   const skipNames = new Set(["Insurance","Policy","Booked","Vehicle","Number","Car","What","Show","Give","Find","Search","Check","Report","Campaign","Target","Today","Month","Week","Call","Send","Help","Status","Payment","Pending","Details","Customer","Client"]);
 
-  // ===== INSURANCE =====
   if (!verticalFilter || verticalFilter.toLowerCase().includes("insurance")) {
     if (q.includes("policy") || q.includes("insurance") || q.includes("renewal") || q.includes("insur") || q.includes("client") || searchTerms.length > 0 || phonePatterns.length > 0) {
       for (const term of searchTerms) {
-        const clients = await safeFetch(`${SB}/rest/v1/insurance_clients?or=(vehicle_number.ilike.*${term}*,phone.ilike.*${term}*)&select=id,customer_name,phone,vehicle_number,vehicle_make,vehicle_model,vehicle_year,current_insurer,current_premium,current_policy_number,current_policy_type,policy_expiry_date,lead_status,pipeline_stage,assigned_executive,ncb_percentage,follow_up_date&limit=10`, h);
+        const clientsRaw = await safeFetch(`${SB}/rest/v1/insurance_clients?or=(vehicle_number.ilike.*${term}*,phone.ilike.*${term}*)&select=id,customer_name,phone,vehicle_number,vehicle_make,vehicle_model,vehicle_year,current_insurer,current_premium,current_policy_number,current_policy_type,policy_expiry_date,lead_status,pipeline_stage,assigned_executive,assigned_advisor_id,ncb_percentage,follow_up_date&limit=10`, h);
+        const clients = filterOwnRows(clientsRaw, ["assigned_advisor_id", "assigned_executive"]);
         if (clients.length > 0) {
           results.push(`🔍 Insurance clients "${term}":\n${clients.map((c: any) => `• ${c.customer_name || 'N/A'} | Ph: ${c.phone || 'N/A'} | Vehicle: ${c.vehicle_number || 'N/A'} (${c.vehicle_make || ''} ${c.vehicle_model || ''} ${c.vehicle_year || ''}) | Policy#: ${c.current_policy_number || 'N/A'} | Type: ${c.current_policy_type || 'N/A'} | Insurer: ${c.current_insurer || 'N/A'} | Premium: ₹${c.current_premium || 'N/A'} | NCB: ${c.ncb_percentage || 'N/A'}% | Expiry: ${c.policy_expiry_date || 'N/A'} | Status: ${c.lead_status || 'N/A'} | Stage: ${c.pipeline_stage || 'N/A'} | Exec: ${c.assigned_executive || 'N/A'} | Follow-up: ${c.follow_up_date || 'N/A'}`).join('\n')}`);
         }
-        const policies = await safeFetch(`${SB}/rest/v1/insurance_policies?or=(vehicle_number.ilike.*${term}*,policy_number.ilike.*${term}*)&select=id,client_id,policy_number,policy_type,insurer,premium_amount,vehicle_number,start_date,expiry_date,status,ncb_percentage,od_premium,tp_premium,net_premium&limit=10`, h);
-        if (policies.length > 0) {
-          results.push(`🔍 Insurance policies "${term}":\n${policies.map((p: any) => `• Policy#: ${p.policy_number || 'N/A'} | Type: ${p.policy_type || 'N/A'} | Insurer: ${p.insurer || 'N/A'} | Vehicle: ${p.vehicle_number || 'N/A'} | Premium: ₹${p.premium_amount || 'N/A'} | OD: ₹${p.od_premium || 'N/A'} | TP: ₹${p.tp_premium || 'N/A'} | NCB: ${p.ncb_percentage || 'N/A'}% | Expiry: ${p.expiry_date || 'N/A'} | Status: ${p.status || 'N/A'}`).join('\n')}`);
-        }
       }
       for (const phone of phonePatterns) {
-        const clients = await safeFetch(`${SB}/rest/v1/insurance_clients?phone=ilike.*${phone}*&select=id,customer_name,phone,vehicle_number,vehicle_make,vehicle_model,current_insurer,current_premium,current_policy_number,policy_expiry_date,lead_status,pipeline_stage&limit=10`, h);
+        const clientsRaw = await safeFetch(`${SB}/rest/v1/insurance_clients?phone=ilike.*${phone}*&select=id,customer_name,phone,vehicle_number,vehicle_make,vehicle_model,current_insurer,current_premium,current_policy_number,policy_expiry_date,lead_status,pipeline_stage,assigned_executive,assigned_advisor_id&limit=10`, h);
+        const clients = filterOwnRows(clientsRaw, ["assigned_advisor_id", "assigned_executive"]);
         if (clients.length > 0) {
           results.push(`🔍 Insurance clients ph "${phone}":\n${clients.map((c: any) => `• ${c.customer_name || 'N/A'} | Ph: ${c.phone} | Vehicle: ${c.vehicle_number || 'N/A'} | Policy#: ${c.current_policy_number || 'N/A'} | Insurer: ${c.current_insurer || 'N/A'} | Premium: ₹${c.current_premium || 'N/A'} | Expiry: ${c.policy_expiry_date || 'N/A'}`).join('\n')}`);
         }
@@ -49,58 +68,31 @@ async function targetedSearch(question: string, SB: string, h: Record<string, st
     }
   }
 
-  // ===== HSRP =====
-  if (!verticalFilter || verticalFilter.toLowerCase().includes("hsrp")) {
-    if (q.includes("hsrp") || q.includes("plate") || q.includes("registration") || searchTerms.length > 0) {
-      for (const term of searchTerms) {
-        const hsrps = await safeFetch(`${SB}/rest/v1/hsrp_bookings?registration_number=ilike.*${term}*&select=id,owner_name,registration_number,order_status,payment_status,mobile,service_type,payment_amount&limit=10`, h);
-        if (hsrps.length > 0) {
-          results.push(`🔍 HSRP "${term}":\n${hsrps.map((h: any) => `• ${h.owner_name || 'N/A'} | Ph: ${h.mobile || 'N/A'} | Reg: ${h.registration_number || 'N/A'} | Type: ${h.service_type || 'N/A'} | Status: ${h.order_status || 'N/A'} | Payment: ${h.payment_status || 'N/A'} | ₹${h.payment_amount || 'N/A'}`).join('\n')}`);
-        }
-      }
-    }
-  }
-
-  // ===== LEADS =====
   if (q.includes("lead") || q.includes("customer") || q.includes("client") || phonePatterns.length > 0) {
     for (const phone of phonePatterns) {
-      const foundLeads = await safeFetch(`${SB}/rest/v1/leads?phone=ilike.*${phone}*&select=id,name,phone,source,service_category,status,priority,assigned_to,city,follow_up_date&limit=10`, h);
+      const foundLeadsRaw = await safeFetch(`${SB}/rest/v1/leads?phone=ilike.*${phone}*&select=id,name,phone,source,service_category,status,priority,assigned_to,city,follow_up_date&limit=10`, h);
+      const foundLeads = filterOwnRows(foundLeadsRaw, ["assigned_to"]);
       if (foundLeads.length > 0) {
         results.push(`🔍 Leads ph "${phone}":\n${foundLeads.map((l: any) => `• ${l.name || 'N/A'} | Ph: ${l.phone} | Source: ${l.source || 'N/A'} | Category: ${l.service_category || 'N/A'} | Status: ${l.status || 'N/A'} | Priority: ${l.priority || 'N/A'} | City: ${l.city || 'N/A'}`).join('\n')}`);
       }
     }
   }
 
-  // ===== RENTAL =====
-  if (!verticalFilter || verticalFilter.toLowerCase().includes("rental") || verticalFilter.toLowerCase().includes("self") || verticalFilter.toLowerCase().includes("drive")) {
-    if (q.includes("rental") || q.includes("self drive") || q.includes("booking") || q.includes("return")) {
-      for (const phone of phonePatterns) {
-        const rentals = await safeFetch(`${SB}/rest/v1/rental_bookings?phone=ilike.*${phone}*&select=id,customer_name,phone,car_name,pickup_date,return_date,status,payment_status,total_amount&limit=10`, h);
-        if (rentals.length > 0) {
-          results.push(`🔍 Rentals ph "${phone}":\n${rentals.map((r: any) => `• ${r.customer_name || 'N/A'} | Ph: ${r.phone} | Car: ${r.car_name || 'N/A'} | Pickup: ${r.pickup_date || 'N/A'} | Return: ${r.return_date || 'N/A'} | ₹${r.total_amount || 'N/A'} | Status: ${r.status || 'N/A'}`).join('\n')}`);
-        }
-      }
-    }
-  }
-
-  // ===== NAME SEARCH =====
   for (const name of (nameWords || []).slice(0, 3)) {
     if (skipNames.has(name)) continue;
-    const clients = await safeFetch(`${SB}/rest/v1/insurance_clients?customer_name=ilike.*${name}*&select=id,customer_name,phone,vehicle_number,vehicle_make,vehicle_model,current_insurer,current_premium,policy_expiry_date,lead_status&limit=5`, h);
+    const clientsRaw = await safeFetch(`${SB}/rest/v1/insurance_clients?customer_name=ilike.*${name}*&select=id,customer_name,phone,vehicle_number,vehicle_make,vehicle_model,current_insurer,current_premium,policy_expiry_date,lead_status,assigned_executive,assigned_advisor_id&limit=5`, h);
+    const clients = filterOwnRows(clientsRaw, ["assigned_advisor_id", "assigned_executive"]);
     if (clients.length > 0) {
       results.push(`🔍 Insurance clients "${name}":\n${clients.map((c: any) => `• ${c.customer_name || 'N/A'} | Ph: ${c.phone || 'N/A'} | Vehicle: ${c.vehicle_number || 'N/A'} (${c.vehicle_make || ''} ${c.vehicle_model || ''}) | Insurer: ${c.current_insurer || 'N/A'} | Premium: ₹${c.current_premium || 'N/A'} | Expiry: ${c.policy_expiry_date || 'N/A'}`).join('\n')}`);
     }
-    const custSearch = await safeFetch(`${SB}/rest/v1/customers?name=ilike.*${name}*&select=id,name,phone,email,status,city&limit=5`, h);
-    if (custSearch.length > 0) {
-      results.push(`🔍 Customers "${name}":\n${custSearch.map((c: any) => `• ${c.name || 'N/A'} | Ph: ${c.phone || 'N/A'} | Email: ${c.email || 'N/A'} | City: ${c.city || 'N/A'} | Status: ${c.status || 'N/A'}`).join('\n')}`);
-    }
-    const leadSearch = await safeFetch(`${SB}/rest/v1/leads?name=ilike.*${name}*&select=id,name,phone,source,service_category,status,priority,city&limit=5`, h);
+    const leadSearchRaw = await safeFetch(`${SB}/rest/v1/leads?name=ilike.*${name}*&select=id,name,phone,source,service_category,status,priority,city,assigned_to&limit=5`, h);
+    const leadSearch = filterOwnRows(leadSearchRaw, ["assigned_to"]);
     if (leadSearch.length > 0) {
       results.push(`🔍 Leads "${name}":\n${leadSearch.map((l: any) => `• ${l.name || 'N/A'} | Ph: ${l.phone || 'N/A'} | Source: ${l.source || 'N/A'} | Category: ${l.service_category || 'N/A'} | Status: ${l.status || 'N/A'} | City: ${l.city || 'N/A'}`).join('\n')}`);
     }
   }
 
-  if (results.length === 0) return "\n⚠️ TARGETED SEARCH: No specific records found matching your query keywords.\n";
+  if (results.length === 0) return "\n⚠️ TARGETED SEARCH: No specific records found matching your assigned records.\n";
   return "\n===== TARGETED SEARCH RESULTS =====\n" + results.join("\n\n") + "\n===== END SEARCH RESULTS =====\n";
 }
 
