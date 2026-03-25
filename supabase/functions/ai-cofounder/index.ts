@@ -462,23 +462,23 @@ Current role: ${user_role || 'employee'} in ${verticalLabel} (RESTRICTED — OWN
     if (isSuperAdmin) {
       dataCtx = ctx;
     } else {
-      // Team members get ONLY their vertical data — NO financials, NO other teams
       const vl = (userVertical || "").toLowerCase();
+      const myLeads = (leads || []).filter((lead: any) => ownsRecord(lead.assigned_to));
+      const myFollowUps = (followUps || []).filter((lead: any) => ownsRecord(lead.assigned_to));
       const myTargets = targets.filter((t: any) => {
         const tv = (t.vertical_name || "").toLowerCase();
         const tn = (t.team_member_name || "").toLowerCase();
-        const un = (user_name || "").toLowerCase();
-        return tv.includes(vl) || vl.includes(tv) || tn.includes(un);
+        return tv.includes(vl) || vl.includes(tv) || ownNames.some((name) => tn.includes(name));
       });
 
       dataCtx = `===== YOUR ${(userVertical || "").toUpperCase()} WORK DATA (${today}) =====
 ${vl.includes('insurance') ? `📋 PENDING RENEWALS:\n${insurance.length > 0 ? insurance.map((i: any) => `• [${(i.priority || 'low').toUpperCase()}] ${i.customer_name || 'N/A'} | Ph: ${i.phone || 'N/A'} | Vehicle: ${i.vehicle_number || 'N/A'} | Expiry: ${i.expiry_date || 'N/A'} | Days Left: ${i.days_until_expiry ?? 'N/A'} | Insurer: ${i.current_insurer || 'N/A'} | Premium: ₹${i.current_premium || 'N/A'} | Next: ${i.next_action}`).join('\n') : '⚠️ No pending renewals found'}` : ''}
-${vl.includes('sales') || vl.includes('auto') ? `📋 YOUR LEADS:\n${leads.filter((l: any) => !l.service_category || l.service_category?.toLowerCase().includes('car') || l.service_category?.toLowerCase().includes('sale')).map((l: any) => `• ${l.name || 'N/A'} | Ph: ${l.phone || 'N/A'} | Source: ${l.source || 'N/A'} | Status: ${l.status || 'N/A'} | Priority: ${l.priority || 'N/A'}`).join('\n') || '⚠️ No sales leads today'}` : ''}
-${vl.includes('rental') || vl.includes('self') || vl.includes('drive') ? `📋 SELF-DRIVE RETURNS:\n${rentals.length > 0 ? rentals.map((r: any) => `• ${r.customer_name || 'N/A'} | Ph: ${r.phone || 'N/A'} | Car: ${r.car_name || 'N/A'} | Return: ${r.return_date || 'N/A'} | Payment: ${r.payment_status || 'N/A'}`).join('\n') : '⚠️ No returns due'}` : ''}
-${vl.includes('hsrp') ? `📋 HSRP PENDING:\n${hsrp.length > 0 ? hsrp.map((h: any) => `• ${h.owner_name || 'N/A'} | Ph: ${h.mobile || 'N/A'} | Reg: ${h.registration_number || 'N/A'} | Status: ${h.order_status || 'N/A'}`).join('\n') : '⚠️ No pending HSRP orders'}` : ''}
+${vl.includes('sales') || vl.includes('auto') ? `📋 YOUR LEADS:\n${myLeads.filter((l: any) => !l.service_category || l.service_category?.toLowerCase().includes('car') || l.service_category?.toLowerCase().includes('sale')).map((l: any) => `• ${l.name || 'N/A'} | Ph: ${l.phone || 'N/A'} | Source: ${l.source || 'N/A'} | Status: ${l.status || 'N/A'} | Priority: ${l.priority || 'N/A'}`).join('\n') || '⚠️ No sales leads today'}` : ''}
+${vl.includes('rental') || vl.includes('self') || vl.includes('drive') ? `📋 SELF-DRIVE RETURNS:\n⚠️ Only assigned booking insights are shown in your workspace.` : ''}
+${vl.includes('hsrp') ? `📋 HSRP PENDING:\n⚠️ Only assigned order insights are shown in your workspace.` : ''}
 
 📞 YOUR FOLLOW-UPS:
-${followUps.length > 0 ? followUps.map((f: any) => `• ${f.name || 'N/A'} | Ph: ${f.phone || 'N/A'} | Due: ${f.follow_up_date || 'N/A'} | Category: ${f.service_category || 'N/A'}`).join('\n') : '⚠️ No pending follow-ups'}
+${myFollowUps.length > 0 ? myFollowUps.map((f: any) => `• ${f.name || 'N/A'} | Ph: ${f.phone || 'N/A'} | Due: ${f.follow_up_date || 'N/A'} | Category: ${f.service_category || 'N/A'}`).join('\n') : '⚠️ No pending follow-ups'}
 
 🎯 YOUR TARGETS:
 ${myTargets.length > 0 ? myTargets.map((t: any) => `• ${t.team_member_name}: ${t.achieved_count || 0}/${t.target_count || 0} deals | ₹${Number(t.achieved_revenue || 0).toLocaleString("en-IN")}/₹${Number(t.target_revenue || 0).toLocaleString("en-IN")}`).join('\n') : '⚠️ No targets set for this month'}
