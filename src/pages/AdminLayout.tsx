@@ -254,7 +254,7 @@ const AdminPanelLoader = ({ className }: { className?: string }) => (
 const AdminLayout = () => {
   const navigate = useNavigate();
   const { user, isLoading, roles } = useAdminAuth();
-  const { activeVertical, isLoading: verticalAccessLoading, availableVerticals } = useVerticalAccess();
+  const { activeVertical, setActiveVertical, isLoading: verticalAccessLoading, availableVerticals } = useVerticalAccess();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
@@ -289,11 +289,22 @@ const AdminLayout = () => {
     }
   }, [user, isLoading]);
 
+  useEffect(() => {
+    if (!user || isLoading || verticalAccessLoading || activeVertical) return;
+
+    if (availableVerticals.length === 1) {
+      setActiveVertical(availableVerticals[0]);
+    }
+  }, [user, isLoading, verticalAccessLoading, activeVertical, availableVerticals, setActiveVertical]);
+
+  const isResolvingWorkspace =
+    !!user && !isLoading && !verticalAccessLoading && !activeVertical && availableVerticals.length === 1;
+
   if (!isLoading && !user) {
     return <Navigate to="/crm-auth" replace />;
   }
 
-  if (isLoading || verticalAccessLoading) {
+  if (isLoading || verticalAccessLoading || isResolvingWorkspace) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
@@ -307,14 +318,6 @@ const AdminLayout = () => {
 
   if (user && !activeVertical && availableVerticals.length === 0) {
     return <Navigate to="/workspace" replace />;
-  }
-
-  if (isLoading || verticalAccessLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    );
   }
 
   const hasAdminAccess = roles.length > 0;
