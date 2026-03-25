@@ -699,9 +699,9 @@ function generateCarQuotePdf(
     doc.setFont("helvetica", "normal");
     doc.setTextColor(113, 63, 18);
     const terms = [
-      `1. Quote valid until ${validUntil} (${COMPANY.validityDays || 7} days).`,
-      "2. Prices subject to manufacturer/government revisions.",
-      "3. Actual EMI may vary based on bank policies & credit score.",
+      `1. This offer is valid for 7 days (until ${validUntil}).`,
+      "2. Ex-Showroom price is subject to change before billing as per manufacturer revision.",
+      "3. Insurance and financing are arranged in-house by Grabyourcar.",
       "4. Processing fees may apply per financing institution.",
     ];
     terms.forEach((t, i) => {

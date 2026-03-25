@@ -240,7 +240,7 @@ const handler = async (req: Request): Promise<Response> => {
     <tr>
       <td style="padding: 15px 30px;">
         <p style="font-size: 11px; color: #94a3b8; text-align: center; margin: 0; line-height: 1.5;">
-          This is an indicative estimate. Actual EMI may vary based on bank policies, credit score, and prevailing interest rates. Quote valid for 7 days.
+          This offer is valid for 7 days from the date of quotation. Ex-Showroom price is subject to change before billing as per manufacturer revision. Insurance and financing are arranged in-house by Grabyourcar.
         </p>
       </td>
     </tr>
