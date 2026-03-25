@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { 
   Users, UserPlus, Trash2, Loader2, Search, Shield, KeyRound,
-  Ban, CheckCircle2, Copy, Eye, EyeOff, RefreshCw
+  Ban, CheckCircle2, Copy, Eye, EyeOff, RefreshCw, Lock
 } from "lucide-react";
 
 interface ManagedUser {
