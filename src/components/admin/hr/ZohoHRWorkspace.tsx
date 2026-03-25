@@ -33,6 +33,9 @@ import { HRPerformanceModule } from "./HRPerformanceModule";
 import { HREngagementModule } from "./HREngagementModule";
 import { HRAssetModule } from "./HRAssetModule";
 import { HRHelpdeskModule } from "./HRHelpdeskModule";
+import { HROnboarding } from "./HROnboarding";
+import { TicketApprovalCenter } from "./TicketApprovalCenter";
+import { SalaryEngine } from "./SalaryEngine";
 
 const initials = (name: string) => name?.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2) || "??";
 
