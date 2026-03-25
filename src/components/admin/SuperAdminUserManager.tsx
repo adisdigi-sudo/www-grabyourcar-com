@@ -650,3 +650,98 @@ function EditUserDialog({ user, verticals, onClose, onSave, isPending }: {
     </Dialog>
   );
 }
+
+// ── Vertical Password Manager ──
+function VerticalPasswordManager({ verticals }: { verticals: BusinessVertical[] }) {
+  const [passwords, setPasswords] = useState<Record<string, string>>({});
+  const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
+  const [saving, setSaving] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+
+  // Fetch current passwords
+  const { data: verticalData = [], isLoading } = useQuery({
+    queryKey: ["vertical-passwords-admin"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("business_verticals")
+        .select("id, name, slug, vertical_password")
+        .eq("is_active", true)
+        .order("sort_order");
+      return data || [];
+    },
+  });
+
+  useEffect(() => {
+    const map: Record<string, string> = {};
+    verticalData.forEach((v: any) => {
+      map[v.id] = v.vertical_password || "";
+    });
+    setPasswords(map);
+  }, [verticalData]);
+
+  const handleSave = async (verticalId: string) => {
+    setSaving(verticalId);
+    const pw = passwords[verticalId]?.trim() || null;
+    const { error } = await supabase
+      .from("business_verticals")
+      .update({ vertical_password: pw })
+      .eq("id", verticalId);
+
+    if (error) {
+      toast.error("Failed to update password");
+    } else {
+      toast.success(pw ? "Password set" : "Password removed");
+      queryClient.invalidateQueries({ queryKey: ["vertical-passwords-admin"] });
+    }
+    setSaving(null);
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Lock className="h-5 w-5" /> Vertical Passwords
+        </CardTitle>
+        <CardDescription>Set a password for each workspace. Leave empty for no password.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="flex justify-center py-4"><Loader2 className="h-6 w-6 animate-spin" /></div>
+        ) : (
+          <div className="grid gap-3">
+            {verticalData.map((v: any) => (
+              <div key={v.id} className="flex items-center gap-3">
+                <span className="text-sm font-medium w-32 truncate">{v.name}</span>
+                <div className="relative flex-1 max-w-xs">
+                  <Input
+                    type={showPasswords[v.id] ? "text" : "password"}
+                    placeholder="No password"
+                    value={passwords[v.id] || ""}
+                    onChange={(e) => setPasswords(p => ({ ...p, [v.id]: e.target.value }))}
+                    className="pr-8 h-8 text-sm"
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    onClick={() => setShowPasswords(p => ({ ...p, [v.id]: !p[v.id] }))}
+                  >
+                    {showPasswords[v.id] ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  </button>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs"
+                  disabled={saving === v.id}
+                  onClick={() => handleSave(v.id)}
+                >
+                  {saving === v.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
