@@ -256,9 +256,6 @@ export const AICarRecommendations = ({
             </Link>
           )}
 
-          <p className="text-center text-[10px] text-muted-foreground/50">
-            🔄 AI suggestions refresh based on your browsing
-          </p>
         </>
       ) : (
         <div className="text-center py-4 text-muted-foreground text-sm">

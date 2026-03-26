@@ -654,23 +654,24 @@ const CarDetail = () => {
 
               <TabsContent value="overview" className="space-y-6">
                 <Card>
-                  <CardHeader>
-                    <CardTitle>About {car.name}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground leading-relaxed">{car.overview}</p>
-                  </CardContent>
-                </Card>
-
-                {/* Key Features - FAQ/Accordion Style */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Key Features</CardTitle>
-                  </CardHeader>
                   <CardContent className="p-0">
                     <Accordion type="multiple" className="w-full">
+                      <AccordionItem value="about-car" className="border-b border-border/50 last:border-0 px-4 lg:px-6">
+                        <AccordionTrigger className="py-4 hover:no-underline gap-3">
+                          <div className="flex items-center gap-3 text-left">
+                            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                              <Sparkles className="h-4 w-4 text-primary" />
+                            </div>
+                            <span className="font-semibold text-sm lg:text-base">About {car.name}</span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="pb-4 pl-11 lg:pl-14 text-sm text-muted-foreground leading-relaxed">
+                          {car.overview}
+                        </AccordionContent>
+                      </AccordionItem>
+
                       {car.specifications.features.map((feature, index) => (
-                        <AccordionItem key={index} value={`feature-${index}`} className="border-b border-border/50 last:border-0 px-6">
+                        <AccordionItem key={index} value={`feature-${index}`} className="border-b border-border/50 last:border-0 px-4 lg:px-6">
                           <AccordionTrigger className="py-3.5 hover:no-underline gap-3">
                             <div className="flex items-center gap-3 text-left">
                               <div className="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
@@ -679,7 +680,7 @@ const CarDetail = () => {
                               <span className="font-medium text-sm">{feature.label}</span>
                             </div>
                           </AccordionTrigger>
-                          <AccordionContent className="pb-4 pl-11 text-sm text-muted-foreground">
+                          <AccordionContent className="pb-4 pl-11 lg:pl-14 text-sm text-muted-foreground">
                             {feature.value}
                           </AccordionContent>
                         </AccordionItem>
