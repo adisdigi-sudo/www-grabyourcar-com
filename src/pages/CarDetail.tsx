@@ -18,6 +18,13 @@ import { CarPricingConfigurator } from "@/components/CarPricingConfigurator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+} from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -98,6 +105,7 @@ const CarDetail = () => {
   
   const [selectedColor, setSelectedColor] = useState(0);
   const [selectedVariant, setSelectedVariant] = useState(0);
+  const [pricingDrawerOpen, setPricingDrawerOpen] = useState(false);
   const { trackCarView, trackBrochureDownload, trackVariantClick, trackColorChange } = useEventTracking();
 
   // Track car view
@@ -342,7 +350,7 @@ const CarDetail = () => {
 
                 {/* CTA Buttons - Sales-Driven */}
                 <div className="flex flex-wrap gap-3">
-                  <Button variant="cta" size="lg" className="flex-1 font-semibold hover:scale-105 transition-transform">
+                  <Button variant="cta" size="lg" className="flex-1 font-semibold hover:scale-105 transition-transform hidden md:flex" onClick={() => setPricingDrawerOpen(true)}>
                     Get Best Price
                   </Button>
                   <CompareButton carId={car.id} />
@@ -402,11 +410,13 @@ const CarDetail = () => {
                   </div>
                 </div>
 
-                {/* Full Pricing Configurator */}
-                <CarPricingConfigurator
-                  car={car}
-                  colors={displayColors}
-                />
+                {/* Full Pricing Configurator - Hidden on mobile, shown on md+ */}
+                <div className="hidden md:block">
+                  <CarPricingConfigurator
+                    car={car}
+                    colors={displayColors}
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -789,9 +799,48 @@ const CarDetail = () => {
         </section>
 
       </main>
+      {/* Spacer for mobile sticky bottom bar */}
+      <div className="h-20 md:hidden" />
 
       <Footer />
       <FloatingCTA />
+
+      {/* Mobile Sticky Bottom Bar */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-card border-t border-border shadow-[0_-4px_20px_-4px_hsl(var(--foreground)/0.1)]">
+        <div className="flex items-center justify-between px-4 py-3">
+          <div>
+            <p className="text-[10px] text-muted-foreground font-medium">On-Road Price</p>
+            <p className="text-lg font-bold text-foreground">
+              ₹{((car.variants?.[selectedVariant]?.priceNumeric || car.priceNumeric) / 100000).toFixed(2)} L
+            </p>
+          </div>
+          <Button
+            variant="cta"
+            size="lg"
+            className="font-bold px-6 rounded-xl"
+            onClick={() => setPricingDrawerOpen(true)}
+          >
+            <IndianRupee className="h-4 w-4 mr-1" />
+            Get Best Price
+          </Button>
+        </div>
+      </div>
+
+      {/* Mobile Pricing Drawer */}
+      <Drawer open={pricingDrawerOpen} onOpenChange={setPricingDrawerOpen}>
+        <DrawerContent className="max-h-[90vh]">
+          <DrawerHeader className="pb-2">
+            <DrawerTitle>Configure & Get Best Price</DrawerTitle>
+            <DrawerDescription>Select variant, city & accessories</DrawerDescription>
+          </DrawerHeader>
+          <div className="overflow-y-auto px-4 pb-6">
+            <CarPricingConfigurator
+              car={car}
+              colors={displayColors}
+            />
+          </div>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 };
