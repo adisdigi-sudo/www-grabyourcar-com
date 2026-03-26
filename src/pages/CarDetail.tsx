@@ -6,7 +6,7 @@ import { GlobalSEO } from "@/components/seo/GlobalSEO";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { FloatingCTA } from "@/components/FloatingCTA";
-import { PriceBreakup } from "@/components/PriceBreakup";
+
 import { DealerLocator } from "@/components/DealerLocator";
 import { ShareButtons } from "@/components/ShareButtons";
 import { CarStructuredData } from "@/components/seo/CarStructuredData";
