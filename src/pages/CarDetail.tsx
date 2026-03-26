@@ -271,7 +271,7 @@ const CarDetail = () => {
                 />
 
                 {/* Mobile: 4 Action Buttons Grid right below car image */}
-                <div className="grid grid-cols-4 gap-2 lg:hidden">
+                <div className="grid grid-cols-4 gap-2">
                   <button
                     onClick={() => setPricingDrawerOpen(true)}
                     className="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-primary text-primary-foreground shadow-md hover:shadow-lg transition-all active:scale-95"
