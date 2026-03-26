@@ -19,6 +19,8 @@ export interface CrossSellOffer {
   href: string;
   ctaText: string;
   gradient: string;
+  iconBg?: string;
+  iconColor?: string;
   highlight?: boolean;
 }
 
