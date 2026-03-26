@@ -253,6 +253,17 @@ const CarDetail = () => {
                   onColorChange={setSelectedColor}
                 />
 
+                {/* Mobile: WhatsApp Quick Actions below color patches */}
+                <div className="lg:hidden">
+                  <WhatsAppQuickActions
+                    carName={`${car.brand} ${car.name}`}
+                    variant={car.variants?.[selectedVariant]?.name}
+                    triggers={['checkWaitingPeriod', 'bookTestDrive', 'getOffers', 'compareVariants']}
+                    layout="horizontal"
+                    size="sm"
+                  />
+                </div>
+
                 {/* Mobile: 4 Action Buttons Grid right below car image */}
                 <div className="grid grid-cols-4 gap-2 lg:hidden">
                   <button
