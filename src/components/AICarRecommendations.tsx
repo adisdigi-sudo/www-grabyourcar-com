@@ -145,23 +145,11 @@ export const AICarRecommendations = ({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 bg-success/10 rounded-lg">
-            <Sparkles className="h-4 w-4 text-success" />
-          </div>
-          <h3 className="font-bold text-base">AI Picks For You</h3>
+      <div className="flex items-center gap-2">
+        <div className="p-1.5 bg-success/10 rounded-lg">
+          <Sparkles className="h-4 w-4 text-success" />
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={fetchRecommendations}
-          disabled={isLoading}
-          className="text-success hover:text-success/80 hover:bg-success/10 h-8 px-2 text-xs"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 mr-1 ${isLoading ? "animate-spin" : ""}`} />
-          Refresh
-        </Button>
+        <h3 className="font-bold text-base">AI Picks For You</h3>
       </div>
 
       {isLoading ? (
