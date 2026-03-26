@@ -618,16 +618,6 @@ const CarDetail = () => {
                   </a>
                 </div>
 
-                {/* WhatsApp Quick Actions - Desktop only (mobile version is below color patches) */}
-                <div className="hidden lg:block">
-                  <WhatsAppQuickActions
-                    carName={`${car.brand} ${car.name}`}
-                    variant={car.variants?.[selectedVariant]?.name}
-                    triggers={['checkWaitingPeriod', 'bookTestDrive', 'getOffers', 'compareVariants']}
-                    layout="horizontal"
-                    size="sm"
-                  />
-                </div>
 
                 {/* Trust Badges - compact highlighted strip */}
                 <div className="flex items-center gap-3 bg-success/10 border border-success/20 rounded-xl px-3 py-2">
