@@ -673,68 +673,108 @@ const CarDetail = () => {
                 <TabsTrigger value="offers" className="rounded-lg text-xs px-3 py-1.5 data-[state=active]:bg-success data-[state=active]:text-success-foreground">Offers</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="specifications" className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Engine */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg">Engine & Transmission</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      {car.specifications.engine.map((spec, index) => (
-                        <div key={index} className="flex justify-between py-2 border-b border-border last:border-0">
-                          <span className="text-muted-foreground">{spec.label}</span>
-                          <span className="font-medium text-right">{spec.value}</span>
+              <TabsContent value="specifications" className="space-y-2">
+                <Accordion type="multiple" defaultValue={["engine"]} className="w-full space-y-2">
+                  {/* Engine & Transmission */}
+                  <AccordionItem value="engine" className="rounded-2xl border border-border/50 overflow-hidden bg-card">
+                    <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/30">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <Cog className="h-3.5 w-3.5 text-primary" />
                         </div>
-                      ))}
-                    </CardContent>
-                  </Card>
+                        <span className="text-sm font-bold">Engine & Transmission</span>
+                        <Badge variant="outline" className="text-[9px] px-1.5 py-0 ml-auto mr-2 border-border">
+                          {car.specifications.engine.length}
+                        </Badge>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="divide-y divide-border/30">
+                        {car.specifications.engine.map((spec, index) => (
+                          <div key={index} className="flex justify-between px-4 py-2.5">
+                            <span className="text-xs text-muted-foreground">{spec.label}</span>
+                            <span className="text-xs font-medium text-right">{spec.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
 
-                  {/* Dimensions */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg">Dimensions & Capacity</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      {car.specifications.dimensions.map((spec, index) => (
-                        <div key={index} className="flex justify-between py-2 border-b border-border last:border-0">
-                          <span className="text-muted-foreground">{spec.label}</span>
-                          <span className="font-medium text-right">{spec.value}</span>
+                  {/* Dimensions & Capacity */}
+                  <AccordionItem value="dimensions" className="rounded-2xl border border-border/50 overflow-hidden bg-card">
+                    <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/30">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <Repeat className="h-3.5 w-3.5 text-primary" />
                         </div>
-                      ))}
-                    </CardContent>
-                  </Card>
+                        <span className="text-sm font-bold">Dimensions & Capacity</span>
+                        <Badge variant="outline" className="text-[9px] px-1.5 py-0 ml-auto mr-2 border-border">
+                          {car.specifications.dimensions.length}
+                        </Badge>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="divide-y divide-border/30">
+                        {car.specifications.dimensions.map((spec, index) => (
+                          <div key={index} className="flex justify-between px-4 py-2.5">
+                            <span className="text-xs text-muted-foreground">{spec.label}</span>
+                            <span className="text-xs font-medium text-right">{spec.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
 
                   {/* Performance */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg">Performance</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      {car.specifications.performance.map((spec, index) => (
-                        <div key={index} className="flex justify-between py-2 border-b border-border last:border-0">
-                          <span className="text-muted-foreground">{spec.label}</span>
-                          <span className="font-medium text-right">{spec.value}</span>
+                  <AccordionItem value="performance" className="rounded-2xl border border-border/50 overflow-hidden bg-card">
+                    <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/30">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <Fuel className="h-3.5 w-3.5 text-primary" />
                         </div>
-                      ))}
-                    </CardContent>
-                  </Card>
+                        <span className="text-sm font-bold">Performance</span>
+                        <Badge variant="outline" className="text-[9px] px-1.5 py-0 ml-auto mr-2 border-border">
+                          {car.specifications.performance.length}
+                        </Badge>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="divide-y divide-border/30">
+                        {car.specifications.performance.map((spec, index) => (
+                          <div key={index} className="flex justify-between px-4 py-2.5">
+                            <span className="text-xs text-muted-foreground">{spec.label}</span>
+                            <span className="text-xs font-medium text-right">{spec.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
 
-                  {/* Features */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg">Features & Safety</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      {car.specifications.features.map((spec, index) => (
-                        <div key={index} className="flex justify-between py-2 border-b border-border last:border-0">
-                          <span className="text-muted-foreground">{spec.label}</span>
-                          <span className="font-medium text-right">{spec.value}</span>
+                  {/* Features & Safety */}
+                  <AccordionItem value="features" className="rounded-2xl border border-border/50 overflow-hidden bg-card">
+                    <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/30">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <Shield className="h-3.5 w-3.5 text-primary" />
                         </div>
-                      ))}
-                    </CardContent>
-                  </Card>
-                </div>
+                        <span className="text-sm font-bold">Features & Safety</span>
+                        <Badge variant="outline" className="text-[9px] px-1.5 py-0 ml-auto mr-2 border-border">
+                          {car.specifications.features.length}
+                        </Badge>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="divide-y divide-border/30">
+                        {car.specifications.features.map((spec, index) => (
+                          <div key={index} className="flex justify-between px-4 py-2.5">
+                            <span className="text-xs text-muted-foreground">{spec.label}</span>
+                            <span className="text-xs font-medium text-right">{spec.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
               </TabsContent>
 
               <TabsContent value="variants" className="space-y-8">
