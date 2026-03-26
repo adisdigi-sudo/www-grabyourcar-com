@@ -885,6 +885,7 @@ const CarDetail = () => {
             </Tabs>
           </div>
         </section>
+        </SectionErrorBoundary>
 
         {/* AI Recommendations Section */}
         <section className="py-6 md:py-10 bg-secondary/30">
