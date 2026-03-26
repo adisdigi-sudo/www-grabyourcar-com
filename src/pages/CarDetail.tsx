@@ -216,18 +216,36 @@ const CarDetail = () => {
       <Header />
       
       <main className="pt-20">
+        {/* Bold Hero Card */}
+        <div className="lg:hidden bg-primary text-primary-foreground">
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex items-center gap-4">
+              <img
+                src={car.image}
+                alt={car.name}
+                className="w-24 h-16 object-contain rounded-lg bg-white/10 p-1 flex-shrink-0"
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-medium uppercase tracking-wider opacity-80">{car.brand}</p>
+                <h1 className="text-lg font-bold leading-tight truncate">{car.name}</h1>
+                <p className="text-sm font-semibold mt-0.5">{car.price} onwards</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Breadcrumb */}
-        <div className="bg-secondary/50 py-4">
+        <div className="bg-secondary/50 py-3">
           <div className="container mx-auto px-4">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Link to="/" className="hover:text-primary transition-colors">Home</Link>
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-3 w-3" />
               <Link to="/#cars" className="hover:text-primary transition-colors">Cars</Link>
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-3 w-3" />
               <span className="text-foreground font-medium">{car.name}</span>
             </div>
           </div>
-                </div>
+        </div>
 
         {/* Car Details Section */}
         <section className="py-6 lg:py-12">
