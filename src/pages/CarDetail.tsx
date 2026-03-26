@@ -489,7 +489,7 @@ const CarDetail = () => {
                   <div className="bg-card border border-border rounded-xl p-3 md:p-4 text-center">
                     <Cog className="h-5 w-5 md:h-6 md:w-6 mx-auto mb-1.5 md:mb-2 text-primary" />
                     <p className="text-[10px] md:text-sm text-muted-foreground">Gearbox</p>
-                    <p className="font-semibold text-[10px] md:text-sm">{car.transmission.join(" / ")}</p>
+                    <p className="font-semibold text-[10px] md:text-sm">{car.transmission?.join(" / ") || "—"}</p>
                   </div>
                   <div className="bg-card border border-border rounded-xl p-3 md:p-4 text-center">
                     <Clock className="h-5 w-5 md:h-6 md:w-6 mx-auto mb-1.5 md:mb-2 text-primary" />
