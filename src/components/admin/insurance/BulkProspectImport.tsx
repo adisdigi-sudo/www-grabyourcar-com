@@ -324,19 +324,17 @@ function ProspectExcel({ onParsed }: { onParsed: (c: ParsedProspect[]) => void }
         onParsed(prospects);
         toast.success(`Parsed ${prospects.length.toLocaleString()} prospects from Excel`);
       } catch (err) {
-        toast.error("Failed to parse Excel file");
+        toast.error("Failed to parse file");
         console.error(err);
       } finally {
         setParsing(false);
       }
-    };
-    reader.readAsArrayBuffer(file);
   };
 
   return (
     <div className="space-y-3">
       <div className="p-3 rounded-lg bg-muted/30 border text-xs text-muted-foreground">
-        <p className="font-medium text-foreground text-sm mb-1">Upload Excel File (.xlsx, .xls)</p>
+        <p className="font-medium text-foreground text-sm mb-1">Upload CSV File</p>
         <p>Auto-detects columns: Name, Mobile/Phone, City, State, Model, Submodel, Vehicle No, Email, Insurer</p>
         <p className="mt-1 text-emerald-600 font-medium">✓ Supports large files (10K-100K+ records)</p>
       </div>
@@ -346,9 +344,9 @@ function ProspectExcel({ onParsed }: { onParsed: (c: ParsedProspect[]) => void }
         ) : (
           <FileSpreadsheet className="h-8 w-8 text-muted-foreground mb-2" />
         )}
-        <span className="text-sm font-medium">{parsing ? "Parsing..." : fileName || "Click to select Excel file"}</span>
-        <span className="text-xs text-muted-foreground mt-1">.xlsx, .xls supported</span>
-        <Input id="prospect-excel-upload" type="file" accept=".xlsx,.xls" className="hidden" onChange={handleFile} />
+        <span className="text-sm font-medium">{parsing ? "Parsing..." : fileName || "Click to select CSV file"}</span>
+        <span className="text-xs text-muted-foreground mt-1">.csv supported</span>
+        <Input id="prospect-excel-upload" type="file" accept=".csv" className="hidden" onChange={handleFile} />
       </Label>
     </div>
   );
