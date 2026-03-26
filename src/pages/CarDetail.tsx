@@ -410,11 +410,13 @@ const CarDetail = () => {
                   </div>
                 </div>
 
-                {/* Full Pricing Configurator */}
-                <CarPricingConfigurator
-                  car={car}
-                  colors={displayColors}
-                />
+                {/* Full Pricing Configurator - Hidden on mobile, shown on md+ */}
+                <div className="hidden md:block">
+                  <CarPricingConfigurator
+                    car={car}
+                    colors={displayColors}
+                  />
+                </div>
               </div>
             </div>
           </div>
