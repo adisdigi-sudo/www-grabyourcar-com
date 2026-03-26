@@ -315,7 +315,7 @@ const CarFinder = () => {
                   <CardContent className="p-6 md:p-8">
                     <div className="flex items-center gap-3 mb-6">
                       <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                        <currentQuestion.icon className="h-6 w-6 text-primary" />
+                        <currentQuestion.icon className="h-6 w-6 text-foreground" />
                       </div>
                       <div>
                         <h2 className="text-xl md:text-2xl font-bold text-foreground">
@@ -344,7 +344,7 @@ const CarFinder = () => {
                               <p className="text-sm text-muted-foreground">{option.description}</p>
                             </div>
                             {isSelected(option.value) && (
-                              <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0" />
+                              <CheckCircle2 className="h-5 w-5 text-foreground flex-shrink-0" />
                             )}
                           </div>
                         </button>
@@ -403,7 +403,7 @@ const CarFinder = () => {
                   <CardContent className="p-6 md:p-8">
                     <div className="flex items-start gap-4">
                       <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <Sparkles className="h-6 w-6 text-primary" />
+                        <Sparkles className="h-6 w-6 text-foreground" />
                       </div>
                       <div className="flex-1">
                         <h2 className="text-xl font-bold text-foreground mb-2">
@@ -444,7 +444,7 @@ const CarFinder = () => {
                             </div>
                             <div className="md:hidden">
                               <h3 className="font-bold text-lg text-foreground">{car.name}</h3>
-                              <p className="text-primary font-semibold">{car.price}</p>
+                              <p className="text-foreground font-semibold">{car.price}</p>
                             </div>
                           </div>
 
@@ -455,7 +455,7 @@ const CarFinder = () => {
                                 <h3 className="font-bold text-xl text-foreground">{car.name}</h3>
                                 <Badge variant="secondary">{car.brand}</Badge>
                               </div>
-                              <p className="text-primary font-semibold text-lg mb-2">{car.price}</p>
+                              <p className="text-foreground font-semibold text-lg mb-2">{car.price}</p>
                             </div>
 
                             {/* Match Reasons */}

@@ -186,11 +186,11 @@ export function InsuranceHeroForm({ policyType = "comprehensive", vehicleLabel =
           <div className="px-2">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                <Car className="h-5 w-5 text-primary" />
+                <Car className="h-5 w-5 text-foreground" />
               </div>
               <span className="text-sm font-semibold text-muted-foreground">Enter {vehicleLabel} number</span>
               {step === 2 && (
-                <button onClick={handleResetVehicle} className="ml-auto text-xs text-primary font-bold hover:underline active:scale-95 transition-transform">
+                <button onClick={handleResetVehicle} className="ml-auto text-xs text-foreground font-bold hover:underline active:scale-95 transition-transform">
                   Edit
                 </button>
               )}
@@ -262,7 +262,7 @@ export function InsuranceHeroForm({ policyType = "comprehensive", vehicleLabel =
                 </div>
 
                 {isVehicleComplete() && (
-                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="self-center text-primary text-sm font-bold shrink-0 -mt-3">✓</motion.div>
+                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="self-center text-foreground text-sm font-bold shrink-0 -mt-3">✓</motion.div>
                 )}
               </div>
             ) : (
@@ -294,7 +294,7 @@ export function InsuranceHeroForm({ policyType = "comprehensive", vehicleLabel =
                     className="border-0 shadow-none focus-visible:ring-0 text-sm md:text-lg h-12 md:h-14 bg-transparent placeholder:text-muted-foreground/50 font-bold"
                     maxLength={10}
                   />
-                  {isLoading && <Loader2 className="h-5 w-5 animate-spin text-primary shrink-0" />}
+                  {isLoading && <Loader2 className="h-5 w-5 animate-spin text-foreground shrink-0" />}
                 </div>
               </motion.div>
             )}
@@ -308,7 +308,7 @@ export function InsuranceHeroForm({ policyType = "comprehensive", vehicleLabel =
             { icon: Star, text: "20+ Insurers" },
           ].map((badge) => (
             <div key={badge.text} className="flex items-center gap-1.5">
-              <badge.icon className="h-3.5 w-3.5 text-primary" />
+              <badge.icon className="h-3.5 w-3.5 text-foreground" />
               <span className="font-medium">{badge.text}</span>
             </div>
           ))}
@@ -322,7 +322,7 @@ export function InsuranceHeroForm({ policyType = "comprehensive", vehicleLabel =
               {[...scrollingOffers, ...scrollingOffers, ...scrollingOffers].map((offer, i) => (
                 <div key={i} className="flex items-center gap-2 shrink-0">
                   <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <offer.icon className="h-3.5 w-3.5 text-primary" />
+                    <offer.icon className="h-3.5 w-3.5 text-foreground" />
                   </div>
                   <span className="text-xs font-semibold text-foreground/80">{offer.text}</span>
                 </div>

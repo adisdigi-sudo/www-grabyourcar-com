@@ -78,7 +78,7 @@ export const DealerCard = ({ dealer, distance, onGetDirections, compact = false 
           {/* Address & Distance */}
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <MapPin className="h-5 w-5 text-primary" />
+              <MapPin className="h-5 w-5 text-foreground" />
             </div>
             <div className="flex-1">
               <p className="text-sm text-foreground line-clamp-2">{dealer.address}</p>
@@ -86,7 +86,7 @@ export const DealerCard = ({ dealer, distance, onGetDirections, compact = false 
                 {dealer.city}, {dealer.state} - {dealer.pincode}
               </p>
               {distance !== undefined && (
-                <div className="inline-flex items-center gap-1.5 mt-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary">
+                <div className="inline-flex items-center gap-1.5 mt-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-foreground">
                   <MapPin className="h-3.5 w-3.5" />
                   <span className="text-xs font-semibold">
                     {distance < 1 ? `${(distance * 1000).toFixed(0)}m` : `${distance.toFixed(1)} km`} away
@@ -113,7 +113,7 @@ export const DealerCard = ({ dealer, distance, onGetDirections, compact = false 
               </div>
             ))}
             {dealer.services.length > 4 && (
-              <span className="text-xs text-primary font-medium px-2 py-1">+{dealer.services.length - 4} more</span>
+              <span className="text-xs text-foreground font-medium px-2 py-1">+{dealer.services.length - 4} more</span>
             )}
           </div>
 

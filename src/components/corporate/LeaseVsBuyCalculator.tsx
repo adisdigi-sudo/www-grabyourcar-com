@@ -41,7 +41,7 @@ export const LeaseVsBuyCalculator = () => {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Calculator className="h-5 w-5 text-primary" />
+          <Calculator className="h-5 w-5 text-foreground" />
           Lease vs Buy vs Subscribe — TCO Calculator
         </CardTitle>
       </CardHeader>
@@ -128,7 +128,7 @@ export const LeaseVsBuyCalculator = () => {
                 <div className="border-t border-border pt-1.5 flex justify-between font-bold text-foreground">
                   <span>Total ({quantity} vehicles)</span><span>{formatCurrency(totalLeaseCost)}</span>
                 </div>
-                <div className="flex justify-between text-primary font-medium">
+                <div className="flex justify-between text-foreground font-medium">
                   <span>Cost/Vehicle</span><span>{formatCurrency(leaseCostPerVehicle)}</span>
                 </div>
                 {leaseCostPerVehicle < netBuyCost && (

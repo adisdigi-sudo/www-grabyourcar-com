@@ -97,7 +97,7 @@ export default function VehicleLookup() {
         <div className="container mx-auto px-4 max-w-3xl text-center">
           <div className="flex justify-center mb-4">
             <div className="p-3 rounded-2xl bg-primary/10">
-              <Car className="h-8 w-8 text-primary" />
+              <Car className="h-8 w-8 text-foreground" />
             </div>
           </div>
           <h1 className="text-3xl font-bold mb-2">Vehicle RC Lookup</h1>

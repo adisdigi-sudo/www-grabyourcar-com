@@ -61,7 +61,7 @@ export const TrustBadges = () => {
               style={{ animationDelay: `${index * 0.1}s` }}
             >
               <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-success/10 flex items-center justify-center">
-                <item.icon className="h-8 w-8 text-success" />
+                <item.icon className="h-8 w-8 text-foreground" />
               </div>
               <h3 className="font-heading font-semibold text-foreground text-sm mb-1">
                 {item.hasCounter ? (

@@ -119,7 +119,7 @@ export const LeadForm = ({ prefillCarInterest }: LeadFormProps) => {
             <Card className="p-8">
               {isSubmitted ? (
                 <div className="text-center py-8">
-                  <CheckCircle className="h-16 w-16 text-success mx-auto mb-4" />
+                  <CheckCircle className="h-16 w-16 text-foreground mx-auto mb-4" />
                   <h3 className="text-xl font-bold mb-2">We've Got Your Request! 🎉</h3>
                   <p className="text-muted-foreground">Our expert will call you within 30 minutes.</p>
                 </div>

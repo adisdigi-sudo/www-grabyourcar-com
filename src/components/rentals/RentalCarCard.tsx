@@ -34,7 +34,7 @@ export const RentalCarCard = ({ car, onBook, isFavorite, onToggleFavorite }: Ren
         <div className="p-4 pb-2 flex items-start justify-between">
           <div>
             <h3 className="font-bold text-foreground text-lg">{car.name}</h3>
-            <p className="text-xs text-primary font-medium">{car.vehicleType} • {car.brand}</p>
+            <p className="text-xs text-foreground font-medium">{car.vehicleType} • {car.brand}</p>
           </div>
           <div className="flex items-center gap-2">
             {onToggleFavorite && (

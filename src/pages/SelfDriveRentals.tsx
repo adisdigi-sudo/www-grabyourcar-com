@@ -221,7 +221,7 @@ const SelfDriveRentals = () => {
 
             <div className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
-                <Car className="h-4 w-4 text-primary" />
+                <Car className="h-4 w-4 text-foreground" />
                 <span>{vehicles.length} Vehicles</span>
               </div>
               <Badge variant="secondary">{availableCount} Available Now</Badge>

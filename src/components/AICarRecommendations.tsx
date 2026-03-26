@@ -146,7 +146,7 @@ export const AICarRecommendations = ({
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <div className="p-1.5 bg-success/10 rounded-lg">
-          <Sparkles className="h-4 w-4 text-success" />
+          <Sparkles className="h-4 w-4 text-foreground" />
         </div>
         <h3 className="font-bold text-base">AI Picks For You</h3>
       </div>
@@ -209,10 +209,10 @@ export const AICarRecommendations = ({
                         ))}
                       </div>
 
-                      <p className="text-xs font-bold text-success">{rec.priceRange}</p>
+                      <p className="text-xs font-bold text-foreground">{rec.priceRange}</p>
 
                       {rec.slug && (
-                        <div className="flex items-center justify-center gap-1 text-[10px] font-medium text-success pt-1">
+                        <div className="flex items-center justify-center gap-1 text-[10px] font-medium text-foreground pt-1">
                           <Eye className="h-3 w-3" />
                           View Details
                           <ArrowRight className="h-3 w-3" />
@@ -241,16 +241,16 @@ export const AICarRecommendations = ({
                     className="h-12 w-16 object-cover rounded-lg shrink-0"
                   />
                 ) : (
-                  <div className="h-12 w-16 rounded-lg bg-success/10 flex items-center justify-center shrink-0 text-success font-bold">
+                  <div className="h-12 w-16 rounded-lg bg-success/10 flex items-center justify-center shrink-0 text-foreground font-bold">
                     {recommendations[2].brand?.charAt(0)}
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
                   <h4 className="font-bold text-xs truncate">{recommendations[2].brand} {recommendations[2].name}</h4>
                   <p className="text-[10px] text-muted-foreground truncate">{recommendations[2].reason}</p>
-                  <p className="text-xs font-bold text-success">{recommendations[2].priceRange}</p>
+                  <p className="text-xs font-bold text-foreground">{recommendations[2].priceRange}</p>
                 </div>
-                <ArrowRight className="h-4 w-4 text-success shrink-0 group-hover:translate-x-0.5 transition-transform" />
+                <ArrowRight className="h-4 w-4 text-foreground shrink-0 group-hover:translate-x-0.5 transition-transform" />
               </motion.div>
             </Link>
           )}

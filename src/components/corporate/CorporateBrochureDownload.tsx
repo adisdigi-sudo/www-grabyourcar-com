@@ -20,7 +20,7 @@ export const CorporateBrochureDownload = () => {
       <div className="container mx-auto px-4">
         <div className="max-w-3xl mx-auto text-center">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-6">
-            <FileText className="h-8 w-8 text-primary" />
+            <FileText className="h-8 w-8 text-foreground" />
           </div>
 
           <h2 className="font-heading text-2xl md:text-3xl font-bold text-foreground mb-3">

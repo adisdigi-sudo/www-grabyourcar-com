@@ -226,7 +226,7 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
                 {/* Left: Calculator Inputs */}
                 <div className="p-6 lg:p-8 space-y-6 bg-card">
                   <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                    <Calculator className="w-5 h-5 text-primary" />
+                    <Calculator className="w-5 h-5 text-foreground" />
                     Loan Parameters
                   </h3>
 
@@ -234,7 +234,7 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <Label className="flex items-center gap-1.5 text-sm font-medium">
-                        <IndianRupee className="w-4 h-4 text-primary" />
+                        <IndianRupee className="w-4 h-4 text-foreground" />
                         Car Price
                       </Label>
                       <div className="flex items-center gap-1">
@@ -245,7 +245,7 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
                           onChange={(e) => setLoanAmountText(formatInputCurrency(e.target.value))}
                           onFocus={(e) => e.target.select()}
                           placeholder="Enter amount"
-                          className="w-36 h-9 text-sm text-right font-bold text-primary px-2 border-primary/30 focus:border-primary"
+                          className="w-36 h-9 text-sm text-right font-bold text-foreground px-2 border-primary/30 focus:border-primary"
                         />
                       </div>
                     </div>
@@ -280,7 +280,7 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <Label className="flex items-center gap-1.5 text-sm font-medium">
-                        <Percent className="w-4 h-4 text-accent" />
+                        <Percent className="w-4 h-4 text-foreground" />
                         Interest Rate (p.a.)
                       </Label>
                       <div className="flex items-center gap-1">
@@ -290,7 +290,7 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
                           onChange={(e) => setInterestRateText(e.target.value)}
                           onFocus={(e) => e.target.select()}
                           placeholder="8.5"
-                          className="w-20 h-9 text-sm text-right font-bold text-accent px-2 border-accent/30 focus:border-accent"
+                          className="w-20 h-9 text-sm text-right font-bold text-foreground px-2 border-accent/30 focus:border-accent"
                         />
                         <span className="text-sm text-muted-foreground">%</span>
                       </div>
@@ -420,7 +420,7 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
-                      <Building2 className="w-5 h-5 text-primary" />
+                      <Building2 className="w-5 h-5 text-foreground" />
                       Bank-wise EMI Comparison
                     </h3>
                     <p className="text-sm text-muted-foreground mt-1">

@@ -55,7 +55,7 @@ const CarImages = () => {
       <section className="bg-gradient-to-br from-primary/10 via-background to-accent/10 py-12 md:py-16">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto">
-            <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-4">
+            <div className="inline-flex items-center gap-2 bg-primary/10 text-foreground px-4 py-2 rounded-full text-sm font-medium mb-4">
               <Camera className="h-4 w-4" />
               Car Image Gallery
             </div>
@@ -162,7 +162,7 @@ const CarImages = () => {
                     <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1 text-sm">
                       {car.name}
                     </h3>
-                    <span className="text-sm text-primary font-medium">{car.price}</span>
+                    <span className="text-sm text-foreground font-medium">{car.price}</span>
                   </CardContent>
                   {/* Action Buttons - 3 CTAs */}
                   <CardFooter className="p-3 pt-0 flex flex-col gap-2">

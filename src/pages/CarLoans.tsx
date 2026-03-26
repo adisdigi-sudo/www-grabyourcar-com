@@ -225,15 +225,15 @@ const CarLoans = () => {
             </p>
             <div className="flex flex-wrap justify-center gap-6 text-sm">
               <div className="flex items-center gap-2">
-                <Percent className="w-5 h-5 text-accent" />
+                <Percent className="w-5 h-5 text-foreground" />
                 <span>Starting 8.45% p.a.</span>
               </div>
               <div className="flex items-center gap-2">
-                <Clock className="w-5 h-5 text-accent" />
+                <Clock className="w-5 h-5 text-foreground" />
                 <span>Approval in 30 mins</span>
               </div>
               <div className="flex items-center gap-2">
-                <IndianRupee className="w-5 h-5 text-accent" />
+                <IndianRupee className="w-5 h-5 text-foreground" />
                 <span>Up to ₹1 Crore</span>
               </div>
             </div>
@@ -288,14 +288,14 @@ const CarLoans = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <span className="font-semibold text-primary">{bank.interestRate}</span>
+                        <span className="font-semibold text-foreground">{bank.interestRate}</span>
                       </TableCell>
                       <TableCell>{bank.processingFee}</TableCell>
                       <TableCell>{bank.maxTenure}</TableCell>
                       <TableCell>{bank.maxAmount}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          <Star className="w-4 h-4 fill-accent text-accent" />
+                          <Star className="w-4 h-4 fill-accent text-foreground" />
                           <span className="font-medium">{bank.rating}</span>
                         </div>
                       </TableCell>
@@ -320,7 +320,7 @@ const CarLoans = () => {
                     <span className="text-3xl">{bank.logo}</span>
                     <div>
                       <CardTitle className="text-lg">{bank.name}</CardTitle>
-                      <p className="text-sm text-primary font-semibold">{bank.interestRate}</p>
+                      <p className="text-sm text-foreground font-semibold">{bank.interestRate}</p>
                     </div>
                   </div>
                 </CardHeader>
@@ -328,7 +328,7 @@ const CarLoans = () => {
                   <ul className="space-y-2">
                     {bank.features.map((feature, i) => (
                       <li key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <CheckCircle2 className="w-4 h-4 text-success" />
+                        <CheckCircle2 className="w-4 h-4 text-foreground" />
                         {feature}
                       </li>
                     ))}
@@ -436,14 +436,14 @@ const CarLoans = () => {
                       <div className="text-center p-6 rounded-2xl bg-muted/50 w-full">
                         {eligibilityResult.eligible ? (
                           <>
-                            <CheckCircle2 className="w-16 h-16 text-success mx-auto mb-4" />
+                            <CheckCircle2 className="w-16 h-16 text-foreground mx-auto mb-4" />
                             <h3 className="text-2xl font-bold text-foreground mb-2">
                               You're Eligible! 🎉
                             </h3>
                             <div className="space-y-3 mt-6">
                               <div className="bg-background rounded-lg p-4">
                                 <p className="text-sm text-muted-foreground">Maximum Loan Amount</p>
-                                <p className="text-2xl font-bold text-primary">
+                                <p className="text-2xl font-bold text-foreground">
                                   ₹{eligibilityResult.maxLoan.toLocaleString()}
                                 </p>
                               </div>
@@ -527,7 +527,7 @@ const CarLoans = () => {
                   <ul className="space-y-2">
                     {doc.documents.map((item, i) => (
                       <li key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0" />
+                        <CheckCircle2 className="w-4 h-4 text-foreground flex-shrink-0" />
                         {item}
                       </li>
                     ))}

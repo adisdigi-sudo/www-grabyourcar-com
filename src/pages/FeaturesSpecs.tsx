@@ -62,7 +62,7 @@ const FeaturesSpecs = () => {
       <section className="bg-gradient-to-br from-primary/10 via-background to-accent/10 py-12 md:py-16">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto">
-            <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-4">
+            <div className="inline-flex items-center gap-2 bg-primary/10 text-foreground px-4 py-2 rounded-full text-sm font-medium mb-4">
               <Settings2 className="h-4 w-4" />
               Features & Specifications
             </div>
@@ -95,7 +95,7 @@ const FeaturesSpecs = () => {
           <Card key={category.id} className="hover:border-primary/50 transition-colors cursor-pointer">
             <CardContent className="flex items-center gap-3 p-4">
               <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <category.icon className="h-5 w-5 text-primary" />
+                <category.icon className="h-5 w-5 text-foreground" />
               </div>
               <div>
                 <p className="font-medium text-foreground">{category.label}</p>
@@ -193,7 +193,7 @@ const FeaturesSpecs = () => {
                                 {car.name}
                               </h3>
                             </Link>
-                            <p className="text-primary font-medium">{car.price}</p>
+                            <p className="text-foreground font-medium">{car.price}</p>
                           </div>
                           {/* Action Buttons - 3 CTAs */}
                           <div className="flex flex-wrap gap-2">
@@ -216,7 +216,7 @@ const FeaturesSpecs = () => {
                         {/* Quick Specs */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
                           <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
-                            <Fuel className="h-4 w-4 text-primary" />
+                            <Fuel className="h-4 w-4 text-foreground" />
                             <div>
                               <p className="text-xs text-muted-foreground">Fuel Type</p>
                               <p className="text-sm font-medium text-foreground">
@@ -225,7 +225,7 @@ const FeaturesSpecs = () => {
                             </div>
                           </div>
                           <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
-                            <Cog className="h-4 w-4 text-primary" />
+                            <Cog className="h-4 w-4 text-foreground" />
                             <div>
                               <p className="text-xs text-muted-foreground">Transmission</p>
                               <p className="text-sm font-medium text-foreground">
@@ -234,7 +234,7 @@ const FeaturesSpecs = () => {
                             </div>
                           </div>
                           <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
-                            <Gauge className="h-4 w-4 text-primary" />
+                            <Gauge className="h-4 w-4 text-foreground" />
                             <div>
                               <p className="text-xs text-muted-foreground">Body Type</p>
                               <p className="text-sm font-medium text-foreground">
@@ -243,7 +243,7 @@ const FeaturesSpecs = () => {
                             </div>
                           </div>
                           <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
-                            <Users className="h-4 w-4 text-primary" />
+                            <Users className="h-4 w-4 text-foreground" />
                             <div>
                               <p className="text-xs text-muted-foreground">Availability</p>
                               <p className="text-sm font-medium text-foreground">

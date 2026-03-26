@@ -297,7 +297,7 @@ export const CarAdvisorChat = () => {
                   <div key={index} className={cn("flex gap-2", message.role === "user" ? "justify-end" : "justify-start")}>
                     {message.role === "assistant" && (
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 mt-1">
-                        <Bot className="h-4 w-4 text-primary" />
+                        <Bot className="h-4 w-4 text-foreground" />
                       </div>
                     )}
                     <div className={cn(
@@ -322,7 +322,7 @@ export const CarAdvisorChat = () => {
                 {isLoading && messages[messages.length - 1]?.role === "user" && (
                   <div className="flex gap-2">
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                      <Bot className="h-4 w-4 text-primary" />
+                      <Bot className="h-4 w-4 text-foreground" />
                     </div>
                     <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-2.5">
                       <div className="flex gap-1.5 items-center">
@@ -344,7 +344,7 @@ export const CarAdvisorChat = () => {
                 <button
                   key={action.label}
                   onClick={() => sendMessage(action.prompt)}
-                  className="text-xs bg-primary/10 hover:bg-primary/20 text-primary rounded-full px-3 py-1.5 transition-colors font-medium"
+                  className="text-xs bg-primary/10 hover:bg-primary/20 text-foreground rounded-full px-3 py-1.5 transition-colors font-medium"
                 >
                   {action.label}
                 </button>

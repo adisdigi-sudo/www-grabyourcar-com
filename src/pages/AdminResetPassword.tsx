@@ -102,7 +102,7 @@ const AdminResetPassword = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <Loader2 className="h-8 w-8 animate-spin text-foreground" />
       </div>
     );
   }
@@ -148,8 +148,8 @@ const AdminResetPassword = () => {
               transition={{ delay: 0.2, duration: 0.4 }}
             >
               <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 mb-4">
-                <Shield className="h-4 w-4 text-primary" />
-                <span className="text-sm font-medium text-primary">Admin Portal</span>
+                <Shield className="h-4 w-4 text-foreground" />
+                <span className="text-sm font-medium text-foreground">Admin Portal</span>
               </div>
               <h1 className="text-2xl md:text-3xl font-heading font-bold text-foreground">
                 Reset Your Password
@@ -221,7 +221,7 @@ const AdminResetPassword = () => {
               <Card className="border-border/50 shadow-xl shadow-primary/5 backdrop-blur-sm">
                 <CardHeader className="pb-4">
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <KeyRound className="h-5 w-5 text-primary" />
+                    <KeyRound className="h-5 w-5 text-foreground" />
                     New Password
                   </CardTitle>
                   <CardDescription>
@@ -307,7 +307,7 @@ const AdminResetPassword = () => {
                   {/* Security Notice */}
                   <div className="mt-6 pt-4 border-t border-border/50">
                     <div className="flex items-start gap-3 text-xs text-muted-foreground">
-                      <Shield className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                      <Shield className="h-4 w-4 text-foreground shrink-0 mt-0.5" />
                       <p>
                         After resetting, you'll be redirected to login with your new password.
                       </p>

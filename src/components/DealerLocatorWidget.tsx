@@ -153,12 +153,12 @@
            viewport={{ once: true }}
            className="text-center mb-12"
          >
-           <Badge className="mb-4 bg-primary/10 text-primary border-primary/20 px-4 py-1.5">
+           <Badge className="mb-4 bg-primary/10 text-foreground border-primary/20 px-4 py-1.5">
              <MapPin className="h-3.5 w-3.5 mr-1.5" />
              Dealer Network
            </Badge>
            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
-             Find <span className="text-primary">Authorized Dealers</span> Near You
+             Find <span className="text-foreground">Authorized Dealers</span> Near You
            </h2>
            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
              Connect with verified dealerships for exclusive offers, transparent pricing, and exceptional service.
@@ -168,7 +168,7 @@
            <div className="flex flex-wrap justify-center gap-6 md:gap-10 mt-8">
              <div className="flex items-center gap-2">
                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                 <Building2 className="h-5 w-5 text-primary" />
+                 <Building2 className="h-5 w-5 text-foreground" />
                </div>
                <div className="text-left">
                  <p className="text-xl font-bold">{dealerLocatorData.length}+</p>
@@ -300,7 +300,7 @@
                    {/* Address & Distance */}
                    <div className="flex items-start gap-3">
                      <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                       <MapPin className="h-4 w-4 text-primary" />
+                       <MapPin className="h-4 w-4 text-foreground" />
                      </div>
                      <div className="flex-1 min-w-0">
                        <p className="text-sm line-clamp-2">{dealer.address}</p>
@@ -308,7 +308,7 @@
                          {dealer.city}, {dealer.state}
                        </p>
                        {dealer.distance !== undefined && (
-                         <p className="text-sm font-medium text-primary mt-1">
+                         <p className="text-sm font-medium text-foreground mt-1">
                            📍 {dealer.distance < 1
                              ? `${(dealer.distance * 1000).toFixed(0)}m`
                              : `${dealer.distance.toFixed(1)} km`}{" "}

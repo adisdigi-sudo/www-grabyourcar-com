@@ -112,7 +112,7 @@ const Brochures = () => {
       <section className="bg-gradient-to-br from-primary/10 via-background to-accent/10 py-12 md:py-16">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto">
-            <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-4">
+            <div className="inline-flex items-center gap-2 bg-primary/10 text-foreground px-4 py-2 rounded-full text-sm font-medium mb-4">
               <FileText className="h-4 w-4" />
               Car Brochures
             </div>
@@ -219,7 +219,7 @@ const Brochures = () => {
                               {car.name}
                             </h3>
                           </Link>
-                          <p className="text-sm text-primary font-medium mb-3">{car.price}</p>
+                          <p className="text-sm text-foreground font-medium mb-3">{car.price}</p>
 
                           {/* Action Buttons - 3 CTAs + Download */}
                           <div className="flex flex-wrap items-center gap-2">
@@ -272,7 +272,7 @@ const Brochures = () => {
                           <div className="flex items-center gap-2">
                             {hasBrochure(car) ? (
                               <>
-                                <FileText className="h-4 w-4 text-primary" />
+                                <FileText className="h-4 w-4 text-foreground" />
                                 <span className="text-foreground">Official Brochure</span>
                               </>
                             ) : (
@@ -352,7 +352,7 @@ const Brochures = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="p-6 bg-background rounded-xl border border-border/50">
                 <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                  <FileText className="h-6 w-6 text-primary" />
+                  <FileText className="h-6 w-6 text-foreground" />
                 </div>
                 <h3 className="font-semibold text-foreground mb-2">Complete Specs</h3>
                 <p className="text-sm text-muted-foreground">
@@ -361,7 +361,7 @@ const Brochures = () => {
               </div>
               <div className="p-6 bg-background rounded-xl border border-border/50">
                 <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                  <Download className="h-6 w-6 text-primary" />
+                  <Download className="h-6 w-6 text-foreground" />
                 </div>
                 <h3 className="font-semibold text-foreground mb-2">Offline Access</h3>
                 <p className="text-sm text-muted-foreground">
@@ -370,7 +370,7 @@ const Brochures = () => {
               </div>
               <div className="p-6 bg-background rounded-xl border border-border/50">
                 <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                  <ExternalLink className="h-6 w-6 text-primary" />
+                  <ExternalLink className="h-6 w-6 text-foreground" />
                 </div>
                 <h3 className="font-semibold text-foreground mb-2">Easy Sharing</h3>
                 <p className="text-sm text-muted-foreground">

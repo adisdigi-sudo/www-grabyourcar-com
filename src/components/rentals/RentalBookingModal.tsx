@@ -542,7 +542,7 @@ export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalP
                 </div>
               </div>
               <div className="text-right">
-                <span className="text-lg font-bold text-primary">₹{car.rent}</span>
+                <span className="text-lg font-bold text-foreground">₹{car.rent}</span>
                 <span className="text-sm text-muted-foreground">/day</span>
               </div>
             </div>
@@ -733,7 +733,7 @@ export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalP
           <Card className="bg-primary/5 border-primary/20">
             <CardContent className="p-4 space-y-3">
               <h4 className="font-semibold flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5 text-primary" />
+                <CheckCircle2 className="h-5 w-5 text-foreground" />
                 Price Summary
               </h4>
               <div className="space-y-2 text-sm">
@@ -752,7 +752,7 @@ export const RentalBookingModal = ({ car, isOpen, onClose }: RentalBookingModalP
                 <Separator />
                 <div className="flex justify-between font-bold text-lg">
                   <span>Total Amount</span>
-                  <span className="text-primary">₹{totalAmount.toLocaleString()}</span>
+                  <span className="text-foreground">₹{totalAmount.toLocaleString()}</span>
                 </div>
               </div>
             </CardContent>

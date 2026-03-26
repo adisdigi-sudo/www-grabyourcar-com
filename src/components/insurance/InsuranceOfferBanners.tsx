@@ -92,7 +92,7 @@ export function InsuranceOfferBanners() {
             className="text-center mb-16"
           >
             <h2 className="text-3xl md:text-5xl font-heading font-bold text-foreground mb-4">
-              Exclusive <span className="text-primary">rewards</span> when you buy via GrabYourCar
+              Exclusive <span className="text-foreground">rewards</span> when you buy via GrabYourCar
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Purchase your car insurance through us and grab any of these premium freebies
@@ -117,10 +117,10 @@ export function InsuranceOfferBanners() {
                     <div className="bg-card rounded-3xl border border-border/60 p-6 h-full hover:border-primary/40 hover:shadow-[0_20px_60px_-15px_hsl(var(--primary)/0.12)] transition-all duration-500">
                       <div className="flex items-start gap-4">
                         <div className="w-14 h-14 rounded-2xl bg-primary/8 flex items-center justify-center shrink-0">
-                          <offer.icon className="h-7 w-7 text-primary" />
+                          <offer.icon className="h-7 w-7 text-foreground" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">{offer.badge}</span>
+                          <span className="text-[10px] font-bold text-foreground bg-primary/10 px-2 py-0.5 rounded-full">{offer.badge}</span>
                           <h4 className="text-sm font-bold text-foreground mt-1.5 leading-tight">{offer.title}</h4>
                           <p className="text-xs text-muted-foreground mt-1">{offer.subtitle}</p>
                         </div>
@@ -152,15 +152,15 @@ export function InsuranceOfferBanners() {
               >
                 <div className="bg-card rounded-3xl border-2 border-border/60 p-8 hover:border-primary/50 hover:shadow-[0_20px_60px_-15px_hsl(var(--primary)/0.15)] transition-all duration-500 h-full">
                   {/* Badge */}
-                  <span className="text-[10px] font-bold text-primary bg-primary/10 px-3 py-1 rounded-full border border-primary/20">{offer.badge}</span>
+                  <span className="text-[10px] font-bold text-foreground bg-primary/10 px-3 py-1 rounded-full border border-primary/20">{offer.badge}</span>
 
                   {/* Icon */}
                   <div className="w-16 h-16 rounded-2xl bg-primary/8 flex items-center justify-center mt-5 mb-5">
-                    <offer.icon className="h-8 w-8 text-primary" />
+                    <offer.icon className="h-8 w-8 text-foreground" />
                   </div>
 
                   {/* Content */}
-                  <span className="text-2xl font-heading font-bold text-primary">{offer.highlight}</span>
+                  <span className="text-2xl font-heading font-bold text-foreground">{offer.highlight}</span>
                   <h4 className="text-lg font-bold text-foreground mt-1 leading-tight">{offer.title}</h4>
                   <p className="text-sm text-muted-foreground mt-3 leading-relaxed">{offer.description}</p>
 
@@ -186,7 +186,7 @@ export function InsuranceOfferBanners() {
               <motion.div key="form" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2 text-xl font-heading">
-                    <Gift className="h-5 w-5 text-primary" />
+                    <Gift className="h-5 w-5 text-foreground" />
                     Grab Your Free Offer!
                   </DialogTitle>
                 </DialogHeader>
@@ -196,17 +196,17 @@ export function InsuranceOfferBanners() {
                     <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
                       <div className="flex items-center gap-3">
                         <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                          <selectedOffer.icon className="h-6 w-6 text-primary" />
+                          <selectedOffer.icon className="h-6 w-6 text-foreground" />
                         </div>
                         <div>
-                          <span className="text-xs font-black text-primary">{selectedOffer.highlight}</span>
+                          <span className="text-xs font-black text-foreground">{selectedOffer.highlight}</span>
                           <h4 className="text-sm font-bold text-foreground leading-tight">{selectedOffer.title}</h4>
                         </div>
                       </div>
                     </div>
 
                     <div className="flex items-start gap-2 text-xs text-muted-foreground bg-muted/50 rounded-xl p-3">
-                      <Shield className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                      <Shield className="h-4 w-4 text-foreground shrink-0 mt-0.5" />
                       <span>This offer is valid when you <strong className="text-foreground">buy car insurance through GrabYourCar</strong>.</span>
                     </div>
 
@@ -237,7 +237,7 @@ export function InsuranceOfferBanners() {
             ) : (
               <motion.div key="success" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-6">
                 <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 200 }} className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                  <CheckCircle2 className="h-10 w-10 text-primary" />
+                  <CheckCircle2 className="h-10 w-10 text-foreground" />
                 </motion.div>
                 <h3 className="text-xl font-heading font-bold text-foreground mb-2">Offer Grabbed! 🎉</h3>
                 <p className="text-sm text-muted-foreground mb-1">
@@ -245,7 +245,7 @@ export function InsuranceOfferBanners() {
                 </p>
                 <p className="text-xs text-muted-foreground mb-6">Our insurance expert will call you within 30 minutes.</p>
                 <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-xl p-3 mx-auto max-w-xs">
-                  <Phone className="h-3.5 w-3.5 text-primary" />
+                  <Phone className="h-3.5 w-3.5 text-foreground" />
                   <span>Expect a call from <strong className="text-foreground">+91 98559 24442</strong></span>
                 </div>
                 <Button variant="outline" className="mt-5 rounded-xl" onClick={resetModal}>Close</Button>

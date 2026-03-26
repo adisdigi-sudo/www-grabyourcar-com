@@ -184,7 +184,7 @@ const HSRP = () => {
               {/* Main Booking Form */}
               <div className="min-w-0">
                 <div className="mb-6 text-center lg:mb-8 lg:text-left">
-                  <Badge className="mb-3 border-primary/20 bg-primary/10 text-primary">
+                  <Badge className="mb-3 border-primary/20 bg-primary/10 text-foreground">
                     <Sparkles className="mr-1 h-3 w-3" />
                     Quick & Easy Booking
                   </Badge>
@@ -218,7 +218,7 @@ const HSRP = () => {
                       return (
                         <div key={idx} className="flex items-start gap-3">
                           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                            <Icon className="h-4 w-4 text-primary" />
+                            <Icon className="h-4 w-4 text-foreground" />
                           </div>
                           <div>
                             <p className="text-sm font-medium">{benefit.title}</p>
@@ -233,7 +233,7 @@ const HSRP = () => {
                 {/* Help Card */}
                 <Card className="border-primary/20 bg-gradient-to-br from-primary/10 to-primary/5">
                   <CardContent className="pt-6 text-center">
-                    <Phone className="mx-auto mb-3 h-10 w-10 text-primary" />
+                    <Phone className="mx-auto mb-3 h-10 w-10 text-foreground" />
                     <p className="font-semibold">Need Help?</p>
                     <p className="mb-4 text-sm text-muted-foreground">Our team is available 24/7</p>
                     <Button variant="outline" className="w-full gap-2" asChild>
@@ -265,7 +265,7 @@ const HSRP = () => {
                 <Card key={index} className="text-center border-border/50 hover:shadow-md transition-shadow">
                   <CardContent className="p-4">
                     <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                      <benefit.icon className="h-6 w-6 text-primary" />
+                      <benefit.icon className="h-6 w-6 text-foreground" />
                     </div>
                     <h3 className="font-semibold text-foreground text-sm mb-1">{benefit.title}</h3>
                     <p className="text-xs text-muted-foreground">{benefit.description}</p>
@@ -283,7 +283,7 @@ const HSRP = () => {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-primary" />
+                    <FileText className="h-5 w-5 text-foreground" />
                     Required Documents
                   </CardTitle>
                 </CardHeader>
@@ -291,7 +291,7 @@ const HSRP = () => {
                   <ul className="space-y-3">
                     {requiredDocuments.map((doc, index) => (
                       <li key={index} className="flex items-start gap-3">
-                        <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                        <CheckCircle2 className="h-5 w-5 text-foreground flex-shrink-0 mt-0.5" />
                         <span className="text-foreground">{doc}</span>
                       </li>
                     ))}
@@ -302,7 +302,7 @@ const HSRP = () => {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <IndianRupee className="h-5 w-5 text-primary" />
+                    <IndianRupee className="h-5 w-5 text-foreground" />
                     HSRP Pricing
                   </CardTitle>
                 </CardHeader>
@@ -313,35 +313,35 @@ const HSRP = () => {
                         <Car className="h-4 w-4 text-muted-foreground" />
                         <span>4-Wheeler (Car/SUV)</span>
                       </div>
-                      <span className="font-bold text-primary">{formatPrice(pricing?.fourWheeler || 1500)}</span>
+                      <span className="font-bold text-foreground">{formatPrice(pricing?.fourWheeler || 1500)}</span>
                     </div>
                     <div className="flex justify-between items-center py-2 border-b border-border">
                       <div className="flex items-center gap-2">
                         <Bike className="h-4 w-4 text-muted-foreground" />
                         <span>2-Wheeler (Bike/Scooter)</span>
                       </div>
-                      <span className="font-bold text-primary">{formatPrice(pricing?.twoWheeler || 850)}</span>
+                      <span className="font-bold text-foreground">{formatPrice(pricing?.twoWheeler || 850)}</span>
                     </div>
                     <div className="flex justify-between items-center py-2 border-b border-border">
                       <div className="flex items-center gap-2">
                         <Truck className="h-4 w-4 text-muted-foreground" />
                         <span>Tractor & Trailer</span>
                       </div>
-                      <span className="font-bold text-primary">{formatPrice(pricing?.tractor || 600)}</span>
+                      <span className="font-bold text-foreground">{formatPrice(pricing?.tractor || 600)}</span>
                     </div>
                     <div className="flex justify-between items-center py-2 border-b border-border">
                       <div className="flex items-center gap-2">
                         <Package className="h-4 w-4 text-muted-foreground" />
                         <span>Colour Sticker Only</span>
                       </div>
-                      <span className="font-bold text-primary">{formatPrice(pricing?.colourSticker || 100)}</span>
+                      <span className="font-bold text-foreground">{formatPrice(pricing?.colourSticker || 100)}</span>
                     </div>
                     <div className="flex justify-between items-center py-2">
                       <div className="flex items-center gap-2">
                         <Home className="h-4 w-4 text-muted-foreground" />
                         <span>Home Installation (Additional)</span>
                       </div>
-                      <span className="font-bold text-primary">+{formatPrice(pricing?.homeInstallationFee || 200)}</span>
+                      <span className="font-bold text-foreground">+{formatPrice(pricing?.homeInstallationFee || 200)}</span>
                     </div>
                   </div>
                 </CardContent>

@@ -78,7 +78,7 @@ export const QuickNavigation = () => {
           <div className="border-b border-border bg-muted/40 px-5 py-5 md:px-8 md:py-7">
             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
               <div className="max-w-2xl">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-primary">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-foreground">
                   All Navigation
                 </p>
                 <h2 className="text-balance font-heading text-2xl font-bold text-foreground md:text-3xl">
@@ -126,7 +126,7 @@ export const QuickNavigation = () => {
                       to={item.href}
                       className="group flex items-center gap-3 rounded-2xl border border-transparent bg-muted/40 px-3 py-3 transition-[transform,background-color,border-color,box-shadow] duration-300 ease-out hover:-translate-y-0.5 hover:border-border hover:bg-background hover:shadow-md active:scale-[0.98]"
                     >
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-foreground transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
                         <item.icon className="h-5 w-5" />
                       </div>
 

@@ -182,7 +182,7 @@ export function HSRPServiceCarousel({ onSelectService, selectedServiceId, servic
                         </Badge>
                       )}
                       {selectedServiceId === currentBanner.id && (
-                        <Badge className="bg-white text-primary">
+                        <Badge className="bg-white text-foreground">
                           <Check className="w-3 h-3 mr-1" />
                           Selected
                         </Badge>
@@ -219,7 +219,7 @@ export function HSRPServiceCarousel({ onSelectService, selectedServiceId, servic
                     <p className="text-white/70 text-sm mb-4">All inclusive</p>
                     <Button
                       size="lg"
-                      className="bg-white text-primary hover:bg-white/90 gap-2"
+                      className="bg-white text-foreground hover:bg-white/90 gap-2"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleSelectBanner(currentBanner);
@@ -298,7 +298,7 @@ export function HSRPServiceCarousel({ onSelectService, selectedServiceId, servic
                   <p className="text-xs text-muted-foreground">{formatPrice(price)}</p>
                 </div>
                 {selectedServiceId === banner.id && (
-                  <Check className="w-4 h-4 text-primary ml-2" />
+                  <Check className="w-4 h-4 text-foreground ml-2" />
                 )}
               </motion.button>
             );

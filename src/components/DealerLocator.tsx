@@ -59,7 +59,7 @@ export const DealerLocator = ({ carName }: DealerLocatorProps) => {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
-                <Building2 className="h-5 w-5 text-primary" />
+                <Building2 className="h-5 w-5 text-foreground" />
                 Find Your Nearest Showroom
               </h3>
               <p className="text-muted-foreground mt-1">
@@ -68,11 +68,11 @@ export const DealerLocator = ({ carName }: DealerLocatorProps) => {
             </div>
             <div className="flex gap-6">
               <div className="text-center">
-                <p className="text-2xl font-bold text-primary">{totalDealers}+</p>
+                <p className="text-2xl font-bold text-foreground">{totalDealers}+</p>
                 <p className="text-sm text-muted-foreground">Showrooms</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold text-primary">{states.length}</p>
+                <p className="text-2xl font-bold text-foreground">{states.length}</p>
                 <p className="text-sm text-muted-foreground">States</p>
               </div>
             </div>
@@ -84,7 +84,7 @@ export const DealerLocator = ({ carName }: DealerLocatorProps) => {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <MapPin className="h-5 w-5 text-primary" />
+            <MapPin className="h-5 w-5 text-foreground" />
             Select Location
           </CardTitle>
         </CardHeader>
@@ -151,7 +151,7 @@ export const DealerLocator = ({ carName }: DealerLocatorProps) => {
       ) : (
         <Card className="bg-secondary/50">
           <CardContent className="py-8 text-center">
-            <Navigation className="h-12 w-12 mx-auto text-primary mb-4" />
+            <Navigation className="h-12 w-12 mx-auto text-foreground mb-4" />
             <p className="text-muted-foreground">Select a state and city to find showrooms near you.</p>
           </CardContent>
         </Card>
@@ -189,7 +189,7 @@ const DealerCard = ({ dealer }: { dealer: Dealer }) => {
               </p>
             </div>
             {dealer.isAuthorized && (
-              <Badge variant="outline" className="flex-shrink-0 bg-success/10 text-success border-success/30">
+              <Badge variant="outline" className="flex-shrink-0 bg-success/10 text-foreground border-success/30">
                 <Shield className="h-3 w-3 mr-1" />
                 Authorized
               </Badge>
@@ -199,7 +199,7 @@ const DealerCard = ({ dealer }: { dealer: Dealer }) => {
           {/* Rating */}
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1 bg-accent/10 px-2 py-1 rounded">
-              <Star className="h-4 w-4 text-accent fill-accent" />
+              <Star className="h-4 w-4 text-foreground fill-accent" />
               <span className="font-semibold text-sm">{dealer.rating}</span>
             </div>
             <span className="text-sm text-muted-foreground">({dealer.reviews} reviews)</span>
@@ -208,7 +208,7 @@ const DealerCard = ({ dealer }: { dealer: Dealer }) => {
           {/* Working Hours */}
           <div className="bg-secondary/50 rounded-lg p-3 space-y-1.5">
             <p className="text-sm font-medium flex items-center gap-2">
-              <Clock className="h-4 w-4 text-primary" />
+              <Clock className="h-4 w-4 text-foreground" />
               Working Hours
             </p>
             <div className="grid grid-cols-1 gap-1 text-sm">

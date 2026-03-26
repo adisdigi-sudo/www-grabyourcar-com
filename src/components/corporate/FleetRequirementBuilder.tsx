@@ -63,12 +63,12 @@ export const FleetRequirementBuilder = ({ onRequirementsChange }: FleetRequireme
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <ShoppingCart className="h-5 w-5 text-primary" />
+          <ShoppingCart className="h-5 w-5 text-foreground" />
           Build Your Fleet Requirement
         </CardTitle>
         <div className="flex items-center gap-2 mt-2">
           <Badge variant="secondary">{totalVehicles} Vehicles</Badge>
-          <Badge variant="outline" className="border-primary/30 text-primary">{tierLabel} Tier</Badge>
+          <Badge variant="outline" className="border-primary/30 text-foreground">{tierLabel} Tier</Badge>
           {discountPct > 0 && (
             <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
               {discountPct}% Volume Discount

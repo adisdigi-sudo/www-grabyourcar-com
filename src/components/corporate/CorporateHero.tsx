@@ -22,7 +22,7 @@ export const CorporateHero = () => {
         <div className="max-w-4xl mx-auto text-center">
           <Badge 
             variant="outline" 
-            className="mb-6 border-primary/30 text-primary bg-primary/10 px-4 py-1.5"
+            className="mb-6 border-primary/30 text-foreground bg-primary/10 px-4 py-1.5"
           >
             <Building2 className="h-3.5 w-3.5 mr-2" />
             Enterprise Solutions
@@ -30,7 +30,7 @@ export const CorporateHero = () => {
 
           <h1 className="font-heading text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
             Trusted by Leading Organizations{" "}
-            <span className="text-primary">Across Industries</span>
+            <span className="text-foreground">Across Industries</span>
           </h1>
 
           <p className="text-lg md:text-xl text-slate-300 mb-12 max-w-3xl mx-auto leading-relaxed">
@@ -42,7 +42,7 @@ export const CorporateHero = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 max-w-2xl mx-auto">
             <div className="flex flex-col items-center p-4">
               <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mb-3">
-                <Building2 className="h-6 w-6 text-primary" />
+                <Building2 className="h-6 w-6 text-foreground" />
               </div>
               <span className="text-slate-300 text-sm font-medium text-center">
                 Serving Multiple<br />Corporate Clients
@@ -51,7 +51,7 @@ export const CorporateHero = () => {
 
             <div className="flex flex-col items-center p-4">
               <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mb-3">
-                <Globe className="h-6 w-6 text-primary" />
+                <Globe className="h-6 w-6 text-foreground" />
               </div>
               <span className="text-slate-300 text-sm font-medium text-center">
                 Cross-Industry<br />Partnerships
@@ -60,7 +60,7 @@ export const CorporateHero = () => {
 
             <div className="flex flex-col items-center p-4">
               <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mb-3">
-                <Users className="h-6 w-6 text-primary" />
+                <Users className="h-6 w-6 text-foreground" />
               </div>
               <span className="text-slate-300 text-sm font-medium text-center">
                 Growing Enterprise<br />Network

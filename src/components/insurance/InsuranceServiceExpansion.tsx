@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { Shield, Wrench, Car, Cog, CircleDot, Package, ArrowRight } from "lucide-react";
 
 const services = [
-  { icon: Shield, title: "Extended Warranty", description: "Protect beyond manufacturer warranty", tag: "Popular", tagColor: "bg-primary/10 text-primary" },
+  { icon: Shield, title: "Extended Warranty", description: "Protect beyond manufacturer warranty", tag: "Popular", tagColor: "bg-primary/10 text-foreground" },
   { icon: Car, title: "Roadside Assistance", description: "24/7 breakdown & towing support", tag: null, tagColor: "" },
   { icon: Cog, title: "Engine Protection", description: "Cover engine & gearbox damage", tag: "Recommended", tagColor: "bg-chart-2/10 text-chart-2" },
   { icon: CircleDot, title: "Tyre Cover", description: "Tyre damage & replacement cover", tag: null, tagColor: "" },
@@ -23,7 +23,7 @@ export function InsuranceServiceExpansion() {
           className="text-center max-w-2xl mx-auto mb-16"
         >
           <h2 className="text-3xl md:text-5xl font-heading font-bold mb-4">
-            Complete <span className="text-primary">protection</span> suite
+            Complete <span className="text-foreground">protection</span> suite
           </h2>
           <p className="text-lg text-muted-foreground">
             Go beyond basic insurance — comprehensive protection for every scenario
@@ -43,7 +43,7 @@ export function InsuranceServiceExpansion() {
               <div className="bg-card rounded-3xl border border-border/60 p-7 h-full hover:border-primary/30 hover:shadow-[0_20px_60px_-15px_hsl(var(--primary)/0.1)] transition-all duration-500">
                 <div className="flex items-start gap-4">
                   <div className="w-14 h-14 rounded-2xl bg-primary/8 group-hover:bg-primary/15 flex items-center justify-center shrink-0 transition-colors duration-300">
-                    <service.icon className="h-7 w-7 text-primary" />
+                    <service.icon className="h-7 w-7 text-foreground" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1.5">

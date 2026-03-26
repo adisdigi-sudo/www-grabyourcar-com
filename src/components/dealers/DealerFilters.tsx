@@ -61,7 +61,7 @@ export const DealerFilters = ({
           {isDetecting ? "Detecting..." : "Use My Location"}
         </Button>
         {detectedLocation && (
-          <div className="flex items-center gap-2 text-sm bg-primary/10 text-primary px-4 py-2.5 rounded-full font-medium">
+          <div className="flex items-center gap-2 text-sm bg-primary/10 text-foreground px-4 py-2.5 rounded-full font-medium">
             <MapPin className="h-4 w-4" />
             <span>{detectedLocation}</span>
           </div>
@@ -132,22 +132,22 @@ export const DealerFilters = ({
           <div className="flex items-center gap-2 flex-wrap">
             <Filter className="h-4 w-4 text-muted-foreground" />
             {searchQuery && (
-              <span className="text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-full font-medium">
+              <span className="text-xs bg-primary/10 text-foreground px-3 py-1.5 rounded-full font-medium">
                 "{searchQuery}"
               </span>
             )}
             {selectedBrand !== "All Brands" && (
-              <span className="text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-full font-medium">
+              <span className="text-xs bg-primary/10 text-foreground px-3 py-1.5 rounded-full font-medium">
                 {selectedBrand}
               </span>
             )}
              {selectedState && selectedState !== "all" && (
-              <span className="text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-full font-medium">
+              <span className="text-xs bg-primary/10 text-foreground px-3 py-1.5 rounded-full font-medium">
                 {selectedState}
               </span>
             )}
              {selectedCity && selectedCity !== "all" && (
-              <span className="text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-full font-medium">
+              <span className="text-xs bg-primary/10 text-foreground px-3 py-1.5 rounded-full font-medium">
                 {selectedCity}
               </span>
             )}

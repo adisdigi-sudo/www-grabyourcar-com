@@ -84,7 +84,7 @@ const StatusIcon = ({ status }: { status: "yes" | "no" | "partial" }) => {
   if (status === "yes") {
     return (
       <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
-        <Check className="h-4 w-4 text-primary" />
+        <Check className="h-4 w-4 text-foreground" />
       </div>
     );
   }
@@ -107,7 +107,7 @@ export const CorporateComparison = () => {
     <section className="py-16 md:py-24 bg-background">
       <div className="container mx-auto px-4">
         <div className="text-center mb-10 md:mb-14">
-          <span className="text-primary text-sm font-semibold uppercase tracking-wider mb-2 block">
+          <span className="text-foreground text-sm font-semibold uppercase tracking-wider mb-2 block">
             The Grabyourcar Advantage
           </span>
           <h2 className="font-heading text-3xl md:text-4xl font-bold text-foreground mb-4">
@@ -127,7 +127,7 @@ export const CorporateComparison = () => {
                 Feature
               </div>
               <div className="p-5 text-center border-l border-border/50">
-                <div className="font-bold text-primary text-lg">Grabyourcar</div>
+                <div className="font-bold text-foreground text-lg">Grabyourcar</div>
                 <div className="text-xs text-muted-foreground">Corporate Solutions</div>
               </div>
               <div className="p-5 text-center border-l border-border/50">
@@ -152,7 +152,7 @@ export const CorporateComparison = () => {
                 <div className="p-4 border-l border-border/30 flex flex-col items-center justify-center gap-1">
                   <StatusIcon status={row.grabyourcar} />
                   {row.grabyourcarNote && (
-                    <span className="text-xs text-primary font-medium">{row.grabyourcarNote}</span>
+                    <span className="text-xs text-foreground font-medium">{row.grabyourcarNote}</span>
                   )}
                 </div>
                 <div className="p-4 border-l border-border/30 flex flex-col items-center justify-center gap-1">
@@ -180,7 +180,7 @@ export const CorporateComparison = () => {
                 <div className="flex items-center gap-2 p-2 rounded-lg bg-primary/5">
                   <StatusIcon status={row.grabyourcar} />
                   <div>
-                    <div className="text-xs font-semibold text-primary">Grabyourcar</div>
+                    <div className="text-xs font-semibold text-foreground">Grabyourcar</div>
                     {row.grabyourcarNote && (
                       <div className="text-xs text-muted-foreground">{row.grabyourcarNote}</div>
                     )}

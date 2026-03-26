@@ -93,8 +93,8 @@ const BestCarDeals = () => {
                 {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Gift className="h-4 w-4 mr-2" /> Unlock Best Deals</>}
               </Button>
               <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1"><Shield className="h-3 w-3 text-success" /> No Spam</span>
-                <span className="flex items-center gap-1"><Clock className="h-3 w-3 text-success" /> Expert Call in 30 min</span>
+                <span className="flex items-center gap-1"><Shield className="h-3 w-3 text-foreground" /> No Spam</span>
+                <span className="flex items-center gap-1"><Clock className="h-3 w-3 text-foreground" /> Expert Call in 30 min</span>
               </div>
             </form>
 
@@ -118,7 +118,7 @@ const BestCarDeals = () => {
           <div className="container mx-auto px-4">
             <h2 className="text-2xl font-heading font-bold text-center mb-8">Featured Deals</h2>
             {isLoading ? (
-              <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+              <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-foreground" /></div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-5xl mx-auto">
                 {deals?.map((car) => (
@@ -136,7 +136,7 @@ const BestCarDeals = () => {
                         )}
                       </div>
                       <div className="flex items-baseline gap-2">
-                        <p className="text-sm text-primary font-semibold">{car.price_range || "Price on request"}</p>
+                        <p className="text-sm text-foreground font-semibold">{car.price_range || "Price on request"}</p>
                         {car.original_price && <p className="text-xs text-muted-foreground line-through">{car.original_price}</p>}
                       </div>
                     </div>
@@ -153,7 +153,7 @@ const BestCarDeals = () => {
             <div className="flex flex-wrap justify-center gap-8 text-sm text-muted-foreground">
               {["Verified Dealers", "Best Price Guarantee", "Free RC Transfer", "Pan-India Delivery"].map((t) => (
                 <div key={t} className="flex items-center gap-2">
-                  <Star className="h-4 w-4 text-primary" />
+                  <Star className="h-4 w-4 text-foreground" />
                   <span className="font-medium">{t}</span>
                 </div>
               ))}

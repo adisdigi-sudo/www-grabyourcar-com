@@ -138,7 +138,7 @@ export const EntryLeadCaptureModal = () => {
                 transition={{ type: "spring", bounce: 0.5 }}
                 className="w-20 h-20 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-4"
               >
-                <CheckCircle className="h-10 w-10 text-success" />
+                <CheckCircle className="h-10 w-10 text-foreground" />
               </motion.div>
               <h3 className="text-2xl font-heading font-bold mb-2">You're In! 🎉</h3>
               <p className="text-muted-foreground">
@@ -265,8 +265,8 @@ export const EntryLeadCaptureModal = () => {
                 </Button>
 
                 <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1"><Shield className="h-3 w-3 text-success" /> 100% Free</span>
-                  <span className="flex items-center gap-1"><Clock className="h-3 w-3 text-success" /> Callback in 30 min</span>
+                  <span className="flex items-center gap-1"><Shield className="h-3 w-3 text-foreground" /> 100% Free</span>
+                  <span className="flex items-center gap-1"><Clock className="h-3 w-3 text-foreground" /> Callback in 30 min</span>
                 </div>
               </form>
             </>

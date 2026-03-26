@@ -225,7 +225,7 @@ const MyOrders = () => {
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <div className="flex items-center gap-4">
                       <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <Package className="h-6 w-6 text-primary" />
+                        <Package className="h-6 w-6 text-foreground" />
                       </div>
                       <div>
                         <CardTitle className="text-base font-semibold">
@@ -250,7 +250,7 @@ const MyOrders = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="gap-1.5 text-primary border-primary/30 hover:bg-primary/10"
+                          className="gap-1.5 text-foreground border-primary/30 hover:bg-primary/10"
                           onClick={() => {
                             try {
                               generateInvoice(order);
@@ -304,7 +304,7 @@ const MyOrders = () => {
                       {(order.items as OrderItem[]).length > 2 && expandedOrder !== order.id && (
                         <button
                           onClick={() => setExpandedOrder(order.id)}
-                          className="text-sm text-primary hover:underline"
+                          className="text-sm text-foreground hover:underline"
                         >
                           +{(order.items as OrderItem[]).length - 2} more items
                         </button>
@@ -353,7 +353,7 @@ const MyOrders = () => {
                         <Separator className="my-2" />
                         <div className="flex justify-between md:justify-end md:gap-4">
                           <span className="font-semibold text-foreground">Total:</span>
-                          <span className="font-bold text-primary text-lg">
+                          <span className="font-bold text-foreground text-lg">
                             ₹{order.total_amount.toLocaleString()}
                           </span>
                         </div>

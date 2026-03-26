@@ -141,15 +141,15 @@ const Accessories = () => {
               </p>
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
-                  <Package className="h-4 w-4 text-primary" />
+                  <Package className="h-4 w-4 text-foreground" />
                   <span>Free Delivery</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-primary" />
+                  <Check className="h-4 w-4 text-foreground" />
                   <span>Genuine Products</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Star className="h-4 w-4 text-primary" />
+                  <Star className="h-4 w-4 text-foreground" />
                   <span>Top Rated</span>
                 </div>
               </div>
@@ -301,7 +301,7 @@ const Accessories = () => {
                       </div>
                       
                       <div className="flex items-center gap-2 mb-3">
-                        <span className="text-lg font-bold text-primary">
+                        <span className="text-lg font-bold text-foreground">
                           ₹{product.price.toLocaleString()}
                         </span>
                         {product.originalPrice && (
@@ -346,28 +346,28 @@ const Accessories = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
               <div>
                 <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Package className="h-6 w-6 text-primary" />
+                  <Package className="h-6 w-6 text-foreground" />
                 </div>
                 <h4 className="font-semibold mb-1">Free Delivery</h4>
                 <p className="text-sm text-muted-foreground">On all orders</p>
               </div>
               <div>
                 <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Check className="h-6 w-6 text-primary" />
+                  <Check className="h-6 w-6 text-foreground" />
                 </div>
                 <h4 className="font-semibold mb-1">Genuine Products</h4>
                 <p className="text-sm text-muted-foreground">100% authentic</p>
               </div>
               <div>
                 <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Star className="h-6 w-6 text-primary" />
+                  <Star className="h-6 w-6 text-foreground" />
                 </div>
                 <h4 className="font-semibold mb-1">Top Quality</h4>
                 <p className="text-sm text-muted-foreground">Premium materials</p>
               </div>
               <div>
                 <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Heart className="h-6 w-6 text-primary" />
+                  <Heart className="h-6 w-6 text-foreground" />
                 </div>
                 <h4 className="font-semibold mb-1">Easy Returns</h4>
                 <p className="text-sm text-muted-foreground">7-day return policy</p>

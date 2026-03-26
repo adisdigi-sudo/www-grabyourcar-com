@@ -66,7 +66,7 @@ export const PriceBreakup = ({ variantName, carName, exShowroomPrice, onStateCha
             <p className="text-sm text-muted-foreground mt-1">On-Road Price Breakup</p>
           </div>
           <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-primary" />
+            <MapPin className="h-4 w-4 text-foreground" />
             <Select value={selectedState} onValueChange={handleStateChange}>
               <SelectTrigger className="w-[160px] h-9">
                 <SelectValue placeholder="Select State" />
@@ -111,7 +111,7 @@ export const PriceBreakup = ({ variantName, carName, exShowroomPrice, onStateCha
             </div>
           </div>
           <div className="text-right">
-            <span className="font-bold text-2xl text-primary">{formatPrice(breakup.onRoadPrice)}</span>
+            <span className="font-bold text-2xl text-foreground">{formatPrice(breakup.onRoadPrice)}</span>
             <p className="text-xs text-muted-foreground">{formatPriceExact(breakup.onRoadPrice)}</p>
           </div>
         </div>

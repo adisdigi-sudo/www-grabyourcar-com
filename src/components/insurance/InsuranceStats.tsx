@@ -52,7 +52,7 @@ export function InsuranceStats() {
           className="text-center mb-16"
         >
           <h2 className="text-3xl md:text-5xl font-heading font-bold text-foreground mb-4">
-            Numbers that <span className="text-primary">speak trust</span>
+            Numbers that <span className="text-foreground">speak trust</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-xl mx-auto">
             Join lakhs of happy customers who chose smart insurance
@@ -69,7 +69,7 @@ export function InsuranceStats() {
             >
               <div className="bg-card rounded-3xl border border-border/60 p-8 text-center hover:shadow-[0_20px_60px_-15px_hsl(var(--primary)/0.12)] hover:border-primary/30 transition-all duration-500 h-full group">
                 <div className="w-16 h-16 rounded-2xl bg-primary/8 group-hover:bg-primary/15 flex items-center justify-center mx-auto mb-5 transition-colors duration-300">
-                  <stat.icon className="h-8 w-8 text-primary" />
+                  <stat.icon className="h-8 w-8 text-foreground" />
                 </div>
                 <AnimatedCounter value={stat.value} suffix={stat.suffix} isVisible={isInView} />
                 <p className="text-base font-semibold text-foreground mt-3">{stat.label}</p>

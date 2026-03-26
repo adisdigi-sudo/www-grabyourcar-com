@@ -313,7 +313,7 @@ const AdminAuth = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <Loader2 className="h-8 w-8 animate-spin text-foreground" />
       </div>
     );
   }
@@ -363,8 +363,8 @@ const AdminAuth = () => {
               </div>
             </div>
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 mb-4">
-              <Shield className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium text-primary">Enterprise CRM</span>
+              <Shield className="h-4 w-4 text-foreground" />
+              <span className="text-sm font-medium text-foreground">Enterprise CRM</span>
             </div>
             <h1 className="text-2xl md:text-3xl font-heading font-bold text-foreground">
               {stepTitle[step]}
@@ -383,7 +383,7 @@ const AdminAuth = () => {
                   >
                     <CardContent className="p-6 flex items-center gap-4">
                       <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <Building2 className="h-7 w-7 text-primary" />
+                        <Building2 className="h-7 w-7 text-foreground" />
                       </div>
                       <div className="flex-1">
                         <h3 className="font-semibold text-lg text-foreground">Team Login</h3>
@@ -495,7 +495,7 @@ const AdminAuth = () => {
                         <button
                           type="button"
                           onClick={() => setStep("forgot-password")}
-                          className="text-sm text-primary hover:underline"
+                          className="text-sm text-foreground hover:underline"
                         >
                           Forgot password?
                         </button>
@@ -522,7 +522,7 @@ const AdminAuth = () => {
                   <CardContent className="p-4 pt-0">
                     {verticalsLoading ? (
                       <div className="flex justify-center py-8">
-                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                        <Loader2 className="h-6 w-6 animate-spin text-foreground" />
                       </div>
                     ) : (
                       <div className="grid grid-cols-1 gap-2">
@@ -672,7 +672,7 @@ const AdminAuth = () => {
               <span>Grabyourcar Enterprise CRM</span>
             </div>
             <div className="flex items-start gap-3 text-xs text-muted-foreground mt-3 justify-center">
-              <Shield className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
+              <Shield className="h-3.5 w-3.5 text-foreground shrink-0 mt-0.5" />
               <p>Protected area. All login attempts are monitored &amp; logged.</p>
             </div>
           </motion.div>

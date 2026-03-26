@@ -55,7 +55,7 @@ export const CorporatePricingTiers = () => (
   <section className="py-16 md:py-20">
     <div className="container mx-auto px-4">
       <div className="text-center mb-12">
-        <Badge variant="outline" className="mb-4 border-primary/30 text-primary">Corporate Pricing</Badge>
+        <Badge variant="outline" className="mb-4 border-primary/30 text-foreground">Corporate Pricing</Badge>
         <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-3">
           Volume-Based Pricing Tiers
         </h2>
@@ -79,7 +79,7 @@ export const CorporatePricingTiers = () => (
               <CardContent className="p-6 space-y-5">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <Icon className="h-6 w-6 text-primary" />
+                    <Icon className="h-6 w-6 text-foreground" />
                   </div>
                   <div>
                     <h3 className="font-bold text-lg text-foreground">{tier.name}</h3>
@@ -88,14 +88,14 @@ export const CorporatePricingTiers = () => (
                 </div>
 
                 <div className="text-center py-3 rounded-lg bg-muted/50">
-                  <span className="text-2xl font-bold text-primary">{tier.discount}</span>
+                  <span className="text-2xl font-bold text-foreground">{tier.discount}</span>
                   <p className="text-xs text-muted-foreground">Volume Discount</p>
                 </div>
 
                 <ul className="space-y-2.5">
                   {tier.features.map((f, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm">
-                      <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                      <CheckCircle2 className="h-4 w-4 text-foreground shrink-0 mt-0.5" />
                       <span className="text-muted-foreground">{f}</span>
                     </li>
                   ))}

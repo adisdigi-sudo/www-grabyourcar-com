@@ -24,7 +24,7 @@ export function InsuranceClaimsAssistance() {
           className="text-center max-w-2xl mx-auto mb-16"
         >
           <h2 className="text-3xl md:text-5xl font-heading font-bold mb-4">
-            Claims? <span className="text-primary">We handle it</span> for you
+            Claims? <span className="text-foreground">We handle it</span> for you
           </h2>
           <p className="text-lg text-muted-foreground">
             Our dedicated team ensures your claim is processed quickly and hassle-free
@@ -45,7 +45,7 @@ export function InsuranceClaimsAssistance() {
               >
                 <div className="bg-card rounded-3xl border border-border/60 p-7 text-center h-full hover:border-primary/30 hover:shadow-[0_20px_60px_-15px_hsl(var(--primary)/0.12)] transition-all duration-500">
                   <div className="w-16 h-16 rounded-2xl bg-primary/8 group-hover:bg-primary/15 flex items-center justify-center mx-auto mb-5 transition-colors duration-300">
-                    <IconComponent className="h-8 w-8 text-primary" />
+                    <IconComponent className="h-8 w-8 text-foreground" />
                   </div>
                   <h3 className="font-heading font-bold text-lg mb-3">{feature.title}</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">{feature.description}</p>
