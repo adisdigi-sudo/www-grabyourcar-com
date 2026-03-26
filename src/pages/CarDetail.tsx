@@ -649,7 +649,6 @@ const CarDetail = () => {
           <div className="container mx-auto px-4">
             <Tabs defaultValue="overview" className="space-y-8">
               <TabsList className="flex flex-wrap h-auto gap-2 bg-background p-2 rounded-xl">
-                <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-success data-[state=active]:text-success-foreground">Overview</TabsTrigger>
                 <TabsTrigger value="specifications" className="rounded-lg data-[state=active]:bg-success data-[state=active]:text-success-foreground">Specifications</TabsTrigger>
                 <TabsTrigger value="variants" className="rounded-lg data-[state=active]:bg-success data-[state=active]:text-success-foreground">Variants & Price</TabsTrigger>
                 <TabsTrigger value="emi" className="rounded-lg data-[state=active]:bg-success data-[state=active]:text-success-foreground">
@@ -662,44 +661,6 @@ const CarDetail = () => {
                 </TabsTrigger>
                 <TabsTrigger value="offers" className="rounded-lg data-[state=active]:bg-success data-[state=active]:text-success-foreground">Dealer Offers</TabsTrigger>
               </TabsList>
-
-              <TabsContent value="overview" className="space-y-6">
-                <Card>
-                  <CardContent className="p-0">
-                    <Accordion type="multiple" className="w-full">
-                      <AccordionItem value="about-car" className="border-b border-border/50 last:border-0 px-4 lg:px-6">
-                        <AccordionTrigger className="py-4 hover:no-underline gap-3">
-                          <div className="flex items-center gap-3 text-left">
-                            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                              <Sparkles className="h-4 w-4 text-primary" />
-                            </div>
-                            <span className="font-semibold text-sm lg:text-base">About {car.name}</span>
-                          </div>
-                        </AccordionTrigger>
-                        <AccordionContent className="pb-4 pl-11 lg:pl-14 text-sm text-muted-foreground leading-relaxed">
-                          {car.overview}
-                        </AccordionContent>
-                      </AccordionItem>
-
-                      {car.specifications.features.map((feature, index) => (
-                        <AccordionItem key={index} value={`feature-${index}`} className="border-b border-border/50 last:border-0 px-4 lg:px-6">
-                          <AccordionTrigger className="py-3.5 hover:no-underline gap-3">
-                            <div className="flex items-center gap-3 text-left">
-                              <div className="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
-                                <Check className="h-4 w-4 text-success" />
-                              </div>
-                              <span className="font-medium text-sm">{feature.label}</span>
-                            </div>
-                          </AccordionTrigger>
-                          <AccordionContent className="pb-4 pl-11 lg:pl-14 text-sm text-muted-foreground">
-                            {feature.value}
-                          </AccordionContent>
-                        </AccordionItem>
-                      ))}
-                    </Accordion>
-                  </CardContent>
-                </Card>
-              </TabsContent>
 
               <TabsContent value="specifications" className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
