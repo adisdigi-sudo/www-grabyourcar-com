@@ -253,16 +253,14 @@ const CarDetail = () => {
                   onColorChange={setSelectedColor}
                 />
 
-                {/* Mobile: WhatsApp Quick Actions below color patches */}
-                <div className="lg:hidden">
-                  <WhatsAppQuickActions
-                    carName={`${car.brand} ${car.name}`}
-                    variant={car.variants?.[selectedVariant]?.name}
-                    triggers={['checkWaitingPeriod', 'bookTestDrive', 'getOffers', 'compareVariants']}
-                    layout="horizontal"
-                    size="sm"
-                  />
-                </div>
+                {/* WhatsApp Quick Actions below color patches */}
+                <WhatsAppQuickActions
+                  carName={`${car.brand} ${car.name}`}
+                  variant={car.variants?.[selectedVariant]?.name}
+                  triggers={['checkWaitingPeriod', 'bookTestDrive', 'getOffers', 'compareVariants']}
+                  layout="horizontal"
+                  size="sm"
+                />
 
                 {/* Mobile: 4 Action Buttons Grid right below car image */}
                 <div className="grid grid-cols-4 gap-2 lg:hidden">
@@ -300,8 +298,8 @@ const CarDetail = () => {
                   </button>
                 </div>
 
-                {/* Mobile: Why Buy - Auto-scrolling marquee */}
-                <div className="lg:hidden overflow-hidden rounded-xl border border-border/50 bg-gradient-to-r from-card to-secondary/20 p-3">
+                {/* Why Buy - Auto-scrolling marquee */}
+                <div className="overflow-hidden rounded-xl border border-border/50 bg-gradient-to-r from-card to-secondary/20 p-3">
                   <div className="flex items-center gap-2 mb-2">
                     <Star className="h-4 w-4 text-foreground" />
                     <span className="text-xs font-semibold">Why Buy From Grabyourcar?</span>
@@ -330,8 +328,8 @@ const CarDetail = () => {
                   </div>
                 </div>
 
-                {/* Mobile: Need Help bar */}
-                <div className="lg:hidden p-3 rounded-xl bg-gradient-to-r from-primary/10 to-success/10 border border-primary/20">
+                {/* Need Help bar */}
+                <div className="p-3 rounded-xl bg-gradient-to-r from-primary/10 to-success/10 border border-primary/20">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Phone className="h-4 w-4 text-foreground" />
@@ -409,9 +407,9 @@ const CarDetail = () => {
                   </div>
                 </div>
 
-                {/* Mobile/Tablet: About Car + Key Features — unified accordion */}
+                {/* About Car + Key Features — FAQ accordion */}
                 {car.specifications?.features && car.specifications.features.length > 0 && (
-                  <div className="lg:hidden">
+                  <div>
                     <Accordion type="single" collapsible className="w-full space-y-2">
                       {/* About Car */}
                       {car.overview && (
@@ -419,12 +417,12 @@ const CarDetail = () => {
                           <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/30">
                             <div className="flex items-center gap-2 flex-1">
                               <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
-                                <Sparkles className="h-3.5 w-3.5 text-foreground" />
+                                <Sparkles className="h-3.5 w-3.5 text-primary" />
                               </div>
-                              <span className="text-xs font-bold uppercase tracking-wide">About {car.name}</span>
+                              <span className="text-xs lg:text-sm font-bold uppercase tracking-wide">About {car.name}</span>
                             </div>
                           </AccordionTrigger>
-                          <AccordionContent className="px-4 pb-3 text-xs text-muted-foreground leading-relaxed">
+                          <AccordionContent className="px-4 pb-3 text-xs lg:text-sm text-muted-foreground leading-relaxed">
                             {car.overview}
                           </AccordionContent>
                         </AccordionItem>
@@ -434,11 +432,11 @@ const CarDetail = () => {
                       <AccordionItem value="key-features" className="rounded-2xl border border-border/50 overflow-hidden bg-card">
                         <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/30">
                           <div className="flex items-center gap-2 flex-1">
-                            <div className="w-7 h-7 rounded-lg bg-success/10 flex items-center justify-center">
-                              <Check className="h-3.5 w-3.5 text-foreground" />
+                            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                              <Check className="h-3.5 w-3.5 text-primary" />
                             </div>
-                            <span className="text-xs font-bold uppercase tracking-wide">Key Features</span>
-                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 ml-auto mr-2 border-success/30 text-foreground">
+                            <span className="text-xs lg:text-sm font-bold uppercase tracking-wide">Key Features</span>
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 ml-auto mr-2 border-border text-foreground">
                               {car.specifications.features.length}
                             </Badge>
                           </div>
@@ -447,12 +445,12 @@ const CarDetail = () => {
                           <div className="divide-y divide-border/30">
                             {car.specifications.features.slice(0, 8).map((feature, index) => (
                               <div key={index} className="flex items-center gap-3 px-4 py-2.5">
-                                <div className="w-6 h-6 rounded-full bg-success/10 flex items-center justify-center shrink-0">
-                                  <Check className="h-3 w-3 text-foreground" />
+                                <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                                  <Check className="h-3 w-3 text-primary" />
                                 </div>
                                 <div className="min-w-0">
-                                  <span className="font-medium text-xs block">{feature.label}</span>
-                                  <span className="text-[10px] text-muted-foreground">{feature.value}</span>
+                                  <span className="font-medium text-xs lg:text-sm block">{feature.label}</span>
+                                  <span className="text-[10px] lg:text-xs text-muted-foreground">{feature.value}</span>
                                 </div>
                               </div>
                             ))}
@@ -467,68 +465,6 @@ const CarDetail = () => {
                   <BookingForm carName={car.name} carBrand={car.brand} />
                 </div>
 
-                {/* Desktop: Why Buy From Us */}
-                <Card className="mt-6 hidden lg:block border-border/50 bg-gradient-to-br from-card to-secondary/20">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Star className="h-5 w-5 text-foreground" />
-                      Why Buy From Grabyourcar?
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="flex items-start gap-2 p-2.5 rounded-lg bg-background/60 border border-border/30">
-                        <div className="w-8 h-8 rounded-full bg-success/10 flex items-center justify-center flex-shrink-0">
-                          <TrendingDown className="h-4 w-4 text-foreground" />
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold text-foreground">Best Price</p>
-                          <p className="text-[10px] text-muted-foreground">Guaranteed lowest price</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-2 p-2.5 rounded-lg bg-background/60 border border-border/30">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                          <Clock className="h-4 w-4 text-foreground" />
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold text-foreground">Fast Delivery</p>
-                          <p className="text-[10px] text-muted-foreground">Priority delivery slots</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-2 p-2.5 rounded-lg bg-background/60 border border-border/30">
-                        <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0">
-                          <Gift className="h-4 w-4 text-foreground" />
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold text-foreground">Free Accessories</p>
-                          <p className="text-[10px] text-muted-foreground">Worth ₹25,000+</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-2 p-2.5 rounded-lg bg-background/60 border border-border/30">
-                        <div className="w-8 h-8 rounded-full bg-success/10 flex items-center justify-center flex-shrink-0">
-                          <Shield className="h-4 w-4 text-foreground" />
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold text-foreground">100% Genuine</p>
-                          <p className="text-[10px] text-muted-foreground">Authorized dealer</p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Quick Contact */}
-                    <div className="mt-4 p-3 rounded-lg bg-gradient-to-r from-primary/10 to-success/10 border border-primary/20">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4 text-foreground" />
-                          <span className="text-xs font-medium">Need Help?</span>
-                        </div>
-                        <a href="tel:+1155578093" className="text-xs font-bold text-foreground hover:underline">
-                          +1 155578093
-                        </a>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
               </div>
 
               {/* Car Info - Right Column */}
@@ -620,16 +556,6 @@ const CarDetail = () => {
                   </a>
                 </div>
 
-                {/* WhatsApp Quick Actions - Desktop only (mobile version is below color patches) */}
-                <div className="hidden lg:block">
-                  <WhatsAppQuickActions
-                    carName={`${car.brand} ${car.name}`}
-                    variant={car.variants?.[selectedVariant]?.name}
-                    triggers={['checkWaitingPeriod', 'bookTestDrive', 'getOffers', 'compareVariants']}
-                    layout="horizontal"
-                    size="sm"
-                  />
-                </div>
 
                 {/* Trust Badges - compact highlighted strip */}
                 <div className="flex items-center gap-3 bg-success/10 border border-success/20 rounded-xl px-3 py-2">
