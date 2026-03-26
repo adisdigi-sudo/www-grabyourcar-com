@@ -499,7 +499,7 @@ const CarDetail = () => {
                   <div className="bg-card border border-border rounded-xl p-3 md:p-4 text-center">
                     <Shield className="h-5 w-5 md:h-6 md:w-6 mx-auto mb-1.5 md:mb-2 text-primary" />
                     <p className="text-[10px] md:text-sm text-muted-foreground">Safety</p>
-                    <p className="font-semibold text-[10px] md:text-sm">{car.specifications?.performance?.find(s => s.label.toLowerCase().includes('safety'))?.value || '5 Star'}</p>
+                    <p className="font-semibold text-[10px] md:text-sm">{(Array.isArray(car.specifications?.performance) ? car.specifications.performance.find(s => s.label?.toLowerCase().includes('safety'))?.value : null) || '5 Star'}</p>
                   </div>
                 </div>
 
