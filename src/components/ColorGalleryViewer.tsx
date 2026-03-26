@@ -202,40 +202,38 @@ export const ColorGalleryViewer = ({
         <TooltipProvider delayDuration={200}>
           <div className="flex items-center gap-1.5 shrink-0">
             {colors.map((color, index) => (
-              <TooltipTrigger key={index} asChild>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <motion.button
-                      onClick={() => onColorChange(index)}
-                      className={cn(
-                        "relative w-7 h-7 rounded-full transition-all",
-                        selectedColor === index
-                          ? "ring-2 ring-primary ring-offset-2 ring-offset-background scale-110"
-                          : "ring-1 ring-black/10 hover:ring-2 hover:ring-muted-foreground/40 hover:scale-105"
-                      )}
-                      style={{ backgroundColor: color.hex }}
-                      whileTap={{ scale: 0.9 }}
-                      aria-label={color.name}
-                    >
-                      {selectedColor === index && (
-                        <motion.div
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          className="absolute inset-0 flex items-center justify-center"
-                        >
-                          <Check className={cn(
-                            "h-3.5 w-3.5 drop-shadow-sm",
-                            isLightColor(color.hex) ? "text-foreground" : "text-white"
-                          )} strokeWidth={3} />
-                        </motion.div>
-                      )}
-                    </motion.button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="text-xs font-medium">
-                    {color.name}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipTrigger>
+              <Tooltip key={index}>
+                <TooltipTrigger asChild>
+                  <motion.button
+                    onClick={() => onColorChange(index)}
+                    className={cn(
+                      "relative w-7 h-7 rounded-full transition-all",
+                      selectedColor === index
+                        ? "ring-2 ring-primary ring-offset-2 ring-offset-background scale-110"
+                        : "ring-1 ring-black/10 hover:ring-2 hover:ring-muted-foreground/40 hover:scale-105"
+                    )}
+                    style={{ backgroundColor: color.hex }}
+                    whileTap={{ scale: 0.9 }}
+                    aria-label={color.name}
+                  >
+                    {selectedColor === index && (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className="absolute inset-0 flex items-center justify-center"
+                      >
+                        <Check className={cn(
+                          "h-3.5 w-3.5 drop-shadow-sm",
+                          isLightColor(color.hex) ? "text-foreground" : "text-white"
+                        )} strokeWidth={3} />
+                      </motion.div>
+                    )}
+                  </motion.button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs font-medium">
+                  {color.name}
+                </TooltipContent>
+              </Tooltip>
             ))}
           </div>
         </TooltipProvider>
