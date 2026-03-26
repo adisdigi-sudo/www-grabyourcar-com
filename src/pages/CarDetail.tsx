@@ -6,7 +6,7 @@ import { GlobalSEO } from "@/components/seo/GlobalSEO";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { FloatingCTA } from "@/components/FloatingCTA";
-import { PriceBreakup } from "@/components/PriceBreakup";
+
 import { DealerLocator } from "@/components/DealerLocator";
 import { ShareButtons } from "@/components/ShareButtons";
 import { CarStructuredData } from "@/components/seo/CarStructuredData";
@@ -410,7 +410,7 @@ const CarDetail = () => {
                       </button>
                       <Link to={`/car/${car.slug}/on-road-price`} className="flex items-center justify-center gap-2 py-3.5 text-xs font-bold text-primary-foreground bg-primary hover:bg-primary/90 transition-all active:scale-[0.98]">
                         <FileText className="h-3.5 w-3.5" />
-                        Full Breakup
+                        On-Road Breakup
                       </Link>
                     </div>
                   </div>
@@ -670,24 +670,6 @@ const CarDetail = () => {
                 {/* Selected Variant Details - Only show if variants exist */}
                 {car.variants && car.variants.length > 0 && car.variants[selectedVariant] ? (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Price Breakup */}
-                    <div className="space-y-4">
-                      {(() => {
-                        const selectedVar = car.variants[selectedVariant];
-                        const priceMatch = selectedVar?.price?.match(/[\d.]+/);
-                        const priceInLakh = priceMatch ? parseFloat(priceMatch[0]) : 0;
-                        const exShowroomPrice = selectedVar?.priceNumeric || priceInLakh * 100000 || car.priceNumeric || 0;
-                        
-                        return (
-                          <PriceBreakup
-                            variantName={selectedVar?.name || 'Base'}
-                            carName={car.name}
-                            exShowroomPrice={exShowroomPrice}
-                          />
-                        );
-                      })()}
-                    </div>
-                    
                     {/* Features for selected variant */}
                     <Card>
                       <CardHeader className="pb-3">
