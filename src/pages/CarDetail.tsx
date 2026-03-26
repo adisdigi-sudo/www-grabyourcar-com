@@ -126,6 +126,7 @@ const CarDetail = () => {
   const [pricingDrawerOpen, setPricingDrawerOpen] = useState(false);
   const [bookingDrawerOpen, setBookingDrawerOpen] = useState(false);
   const { trackCarView, trackBrochureDownload, trackVariantClick, trackColorChange } = useEventTracking();
+  const compareCtx = useCompare();
 
   // Track car view
   useEffect(() => {
