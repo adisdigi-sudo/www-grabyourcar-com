@@ -37,6 +37,8 @@ const allOffers: CrossSellOffer[] = [
     href: "/hsrp?addon=frame",
     ctaText: "Add to Booking",
     gradient: "from-emerald-500/20 to-emerald-600/10",
+    iconBg: "bg-emerald-500/15",
+    iconColor: "text-emerald-600",
     highlight: true,
   },
   {
@@ -48,6 +50,8 @@ const allOffers: CrossSellOffer[] = [
     href: "/car-loans",
     ctaText: "Check Eligibility",
     gradient: "from-blue-500/20 to-blue-600/10",
+    iconBg: "bg-blue-500/15",
+    iconColor: "text-blue-600",
   },
   {
     id: "car-insurance",
@@ -58,6 +62,8 @@ const allOffers: CrossSellOffer[] = [
     href: "/car-insurance",
     ctaText: "Get Quote",
     gradient: "from-purple-500/20 to-purple-600/10",
+    iconBg: "bg-purple-500/15",
+    iconColor: "text-purple-600",
   },
   {
     id: "accessories",
@@ -68,6 +74,8 @@ const allOffers: CrossSellOffer[] = [
     href: "/accessories",
     ctaText: "Shop Now",
     gradient: "from-amber-500/20 to-amber-600/10",
+    iconBg: "bg-amber-500/15",
+    iconColor: "text-amber-600",
   },
   {
     id: "extended-warranty",
@@ -80,6 +88,8 @@ const allOffers: CrossSellOffer[] = [
     href: "/cars?warranty=extended",
     ctaText: "Learn More",
     gradient: "from-rose-500/20 to-rose-600/10",
+    iconBg: "bg-rose-500/15",
+    iconColor: "text-rose-600",
   },
   {
     id: "self-drive",
@@ -90,6 +100,8 @@ const allOffers: CrossSellOffer[] = [
     href: "/self-drive-rentals",
     ctaText: "Book Test Drive",
     gradient: "from-teal-500/20 to-teal-600/10",
+    iconBg: "bg-teal-500/15",
+    iconColor: "text-teal-600",
   },
   {
     id: "hsrp-booking",
@@ -100,6 +112,8 @@ const allOffers: CrossSellOffer[] = [
     href: "/hsrp",
     ctaText: "Book Now",
     gradient: "from-green-500/20 to-green-600/10",
+    iconBg: "bg-green-500/15",
+    iconColor: "text-green-600",
   },
   {
     id: "finance-promo",
@@ -110,6 +124,8 @@ const allOffers: CrossSellOffer[] = [
     href: "/car-loans",
     ctaText: "Apply Now",
     gradient: "from-indigo-500/20 to-indigo-600/10",
+    iconBg: "bg-indigo-500/15",
+    iconColor: "text-indigo-600",
     highlight: true,
   },
 ];
