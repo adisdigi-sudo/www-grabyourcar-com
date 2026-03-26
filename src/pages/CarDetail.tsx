@@ -616,19 +616,21 @@ const CarDetail = () => {
                   size="sm"
                 />
 
-                {/* Trust Badges */}
-                <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-1.5">
-                    <Shield className="h-4 w-4 text-success" />
-                    <span>Verified Dealer</span>
+                {/* Trust Badges - compact highlighted strip */}
+                <div className="flex items-center gap-3 bg-success/10 border border-success/20 rounded-xl px-3 py-2">
+                  <div className="flex items-center gap-1">
+                    <Shield className="h-3.5 w-3.5 text-success" />
+                    <span className="text-[11px] font-semibold text-success">Verified Dealer</span>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <Star className="h-4 w-4 text-accent" />
-                    <span>4.8/5 Rating</span>
+                  <div className="w-px h-4 bg-success/30" />
+                  <div className="flex items-center gap-1">
+                    <Star className="h-3.5 w-3.5 text-success fill-success" />
+                    <span className="text-[11px] font-semibold text-success">4.8/5</span>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <MapPin className="h-4 w-4 text-primary" />
-                    <span>15+ Showrooms</span>
+                  <div className="w-px h-4 bg-success/30" />
+                  <div className="flex items-center gap-1">
+                    <MapPin className="h-3.5 w-3.5 text-success" />
+                    <span className="text-[11px] font-semibold text-success">15+ Showrooms</span>
                   </div>
                 </div>
 
@@ -645,21 +647,15 @@ const CarDetail = () => {
         </section>
 
         {/* Specifications & Details */}
-        <section className="py-12 bg-secondary/30">
+        <section className="py-8 bg-secondary/30">
           <div className="container mx-auto px-4">
-            <Tabs defaultValue="specifications" className="space-y-8">
-              <TabsList className="flex flex-wrap h-auto gap-2 bg-background p-2 rounded-xl">
-                <TabsTrigger value="specifications" className="rounded-lg data-[state=active]:bg-success data-[state=active]:text-success-foreground">Specifications</TabsTrigger>
-                <TabsTrigger value="variants" className="rounded-lg data-[state=active]:bg-success data-[state=active]:text-success-foreground">Variants & Price</TabsTrigger>
-                <TabsTrigger value="emi" className="rounded-lg data-[state=active]:bg-success data-[state=active]:text-success-foreground">
-                  <Calculator className="h-4 w-4 mr-1.5" />
-                  EMI Calculator
-                </TabsTrigger>
-                <TabsTrigger value="dealers" className="rounded-lg data-[state=active]:bg-success data-[state=active]:text-success-foreground">
-                  <Building2 className="h-4 w-4 mr-1.5" />
-                  Find Dealers
-                </TabsTrigger>
-                <TabsTrigger value="offers" className="rounded-lg data-[state=active]:bg-success data-[state=active]:text-success-foreground">Dealer Offers</TabsTrigger>
+            <Tabs defaultValue="specifications" className="space-y-4">
+              <TabsList className="flex flex-wrap h-auto gap-1.5 bg-background p-1.5 rounded-xl">
+                <TabsTrigger value="specifications" className="rounded-lg text-xs px-3 py-1.5 data-[state=active]:bg-success data-[state=active]:text-success-foreground">Specs</TabsTrigger>
+                <TabsTrigger value="variants" className="rounded-lg text-xs px-3 py-1.5 data-[state=active]:bg-success data-[state=active]:text-success-foreground">Variants</TabsTrigger>
+                <TabsTrigger value="emi" className="rounded-lg text-xs px-3 py-1.5 data-[state=active]:bg-success data-[state=active]:text-success-foreground">EMI</TabsTrigger>
+                <TabsTrigger value="dealers" className="rounded-lg text-xs px-3 py-1.5 data-[state=active]:bg-success data-[state=active]:text-success-foreground">Dealers</TabsTrigger>
+                <TabsTrigger value="offers" className="rounded-lg text-xs px-3 py-1.5 data-[state=active]:bg-success data-[state=active]:text-success-foreground">Offers</TabsTrigger>
               </TabsList>
 
               <TabsContent value="specifications" className="space-y-6">
