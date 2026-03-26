@@ -105,6 +105,7 @@ const CarDetail = () => {
   
   const [selectedColor, setSelectedColor] = useState(0);
   const [selectedVariant, setSelectedVariant] = useState(0);
+  const [pricingDrawerOpen, setPricingDrawerOpen] = useState(false);
   const { trackCarView, trackBrochureDownload, trackVariantClick, trackColorChange } = useEventTracking();
 
   // Track car view
