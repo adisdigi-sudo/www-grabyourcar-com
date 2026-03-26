@@ -134,7 +134,7 @@ export const RivianHero = () => {
   };
 
   return (
-    <section className="relative h-[75vh] md:h-[85vh] lg:h-screen w-full overflow-hidden bg-black">
+    <section className="relative h-[60vh] md:h-[85vh] lg:h-screen w-full overflow-hidden bg-black">
       {/* Full-bleed background image */}
       <AnimatePresence initial={false} custom={direction} mode="wait">
         <motion.div
