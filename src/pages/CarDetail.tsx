@@ -552,22 +552,22 @@ const CarDetail = () => {
                 {/* Quick Specs - 4 columns on mobile, 4 on desktop */}
                 <div className="grid grid-cols-4 gap-2 md:gap-4">
                   <div className="bg-card border border-border rounded-xl p-3 md:p-4 text-center">
-                    <Fuel className="h-5 w-5 md:h-6 md:w-6 mx-auto mb-1.5 md:mb-2 text-foreground" />
+                    <Fuel className="h-5 w-5 md:h-6 md:w-6 mx-auto mb-1.5 md:mb-2 text-primary" />
                     <p className="text-[10px] md:text-sm text-muted-foreground">Fuel</p>
                     <p className="font-semibold text-[10px] md:text-sm">{car.fuelTypes.join(" / ")}</p>
                   </div>
                   <div className="bg-card border border-border rounded-xl p-3 md:p-4 text-center">
-                    <Cog className="h-5 w-5 md:h-6 md:w-6 mx-auto mb-1.5 md:mb-2 text-foreground" />
+                    <Cog className="h-5 w-5 md:h-6 md:w-6 mx-auto mb-1.5 md:mb-2 text-primary" />
                     <p className="text-[10px] md:text-sm text-muted-foreground">Gearbox</p>
                     <p className="font-semibold text-[10px] md:text-sm">{car.transmission.join(" / ")}</p>
                   </div>
                   <div className="bg-card border border-border rounded-xl p-3 md:p-4 text-center">
-                    <Clock className="h-5 w-5 md:h-6 md:w-6 mx-auto mb-1.5 md:mb-2 text-foreground" />
+                    <Clock className="h-5 w-5 md:h-6 md:w-6 mx-auto mb-1.5 md:mb-2 text-primary" />
                     <p className="text-[10px] md:text-sm text-muted-foreground">Delivery</p>
                     <p className="font-semibold text-[10px] md:text-sm text-foreground">{car.availability}</p>
                   </div>
                   <div className="bg-card border border-border rounded-xl p-3 md:p-4 text-center">
-                    <Shield className="h-5 w-5 md:h-6 md:w-6 mx-auto mb-1.5 md:mb-2 text-foreground" />
+                    <Shield className="h-5 w-5 md:h-6 md:w-6 mx-auto mb-1.5 md:mb-2 text-primary" />
                     <p className="text-[10px] md:text-sm text-muted-foreground">Safety</p>
                     <p className="font-semibold text-[10px] md:text-sm">{car.specifications?.performance?.find(s => s.label.toLowerCase().includes('safety'))?.value || '5 Star'}</p>
                   </div>
