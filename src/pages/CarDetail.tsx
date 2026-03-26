@@ -381,7 +381,7 @@ const CarDetail = () => {
                     </div>
 
                     {/* Action Row */}
-                    <div className="border-t border-border/40 grid grid-cols-2">
+                    <div className="border-t border-border/40 grid grid-cols-2 gap-px bg-border/40">
                       <button
                         onClick={() => setPricingDrawerOpen(true)}
                         className="flex items-center justify-center gap-2 py-3.5 text-xs font-bold text-primary-foreground bg-primary hover:bg-primary/90 transition-all active:scale-[0.98]"
@@ -389,8 +389,9 @@ const CarDetail = () => {
                         <IndianRupee className="h-3.5 w-3.5" />
                         Get Best Price
                       </button>
-                      <Link to={`/car/${car.slug}/on-road-price`} className="flex items-center justify-center gap-1.5 py-3.5 text-xs font-semibold text-foreground bg-muted/50 hover:bg-muted transition-colors border-l border-border/40">
-                        Full Breakup <ChevronRight className="h-3 w-3" />
+                      <Link to={`/car/${car.slug}/on-road-price`} className="flex items-center justify-center gap-2 py-3.5 text-xs font-bold text-primary-foreground bg-primary hover:bg-primary/90 transition-all active:scale-[0.98]">
+                        <FileText className="h-3.5 w-3.5" />
+                        Full Breakup
                       </Link>
                     </div>
                   </div>
