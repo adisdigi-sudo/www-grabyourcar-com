@@ -11,7 +11,7 @@ import {
   Loader2, Trash2, Save, Download, Eye, X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import * as XLSX from "xlsx";
+import { parseCSV, downloadCSVFile } from "@/lib/spreadsheetUtils";
 
 interface ParsedCar {
   id: string;

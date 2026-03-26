@@ -14,7 +14,7 @@ import {
   Upload, FileText, ClipboardPaste, Table2,
   CheckCircle2, Loader2, X, Download, Database, FileSpreadsheet,
 } from "lucide-react";
-import * as XLSX from "xlsx";
+import { parseSpreadsheetToObjects } from "@/lib/spreadsheetUtils";
 
 type ParsedProspect = {
   phone: string;
