@@ -524,7 +524,7 @@ const CarDetail = () => {
                 </div>
 
                 {/* Full Pricing Configurator - Hidden on mobile, shown on md+ */}
-                <div className="hidden lg:block">
+                <div>
                   <CarPricingConfigurator
                     car={car}
                     colors={displayColors}
