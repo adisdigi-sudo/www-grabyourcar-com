@@ -81,10 +81,8 @@ export const BulkCSVUpload = ({ onClose }: { onClose?: () => void }) => {
     setParsing(true);
     setFileName(file.name);
     try {
-      const buffer = await file.arrayBuffer();
-      const wb = XLSX.read(buffer, { type: 'array' });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      const text = await file.text();
+      const rows: string[][] = parseCSV(text);
 
       if (rows.length < 2) throw new Error('File has no data rows');
 
