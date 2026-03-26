@@ -266,14 +266,11 @@ function ProspectExcel({ onParsed }: { onParsed: (c: ParsedProspect[]) => void }
     setParsing(true);
 
     const reader = new FileReader();
-    reader.onload = (ev) => {
+    reader.onload = async (ev) => {
       try {
-        const data = new Uint8Array(ev.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: "array" });
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: "" });
+        const rows = await parseSpreadsheetToObjects(file);
 
-        if (!rows.length) { toast.error("No data found in Excel file"); setParsing(false); return; }
+        if (!rows.length) { toast.error("No data found in file"); setParsing(false); return; }
 
         // Build column map from headers
         const headers = Object.keys(rows[0]);
