@@ -128,7 +128,7 @@ interface CrossSellWidgetProps {
   context?: keyof typeof contextOffers;
   excludeIds?: string[];
   maxItems?: number;
-  layout?: "horizontal" | "vertical" | "compact";
+  layout?: "horizontal" | "vertical" | "compact" | "compact-grid";
   title?: string;
   showTitle?: boolean;
 }
@@ -147,6 +147,61 @@ export function CrossSellWidget({
     .slice(0, maxItems);
 
   if (offers.length === 0) return null;
+
+  // 2x2 branded icon grid for mobile
+  if (layout === "compact-grid") {
+    return (
+      <div className="space-y-3">
+        {showTitle && (
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-success/10 rounded-lg">
+              <Zap className="h-4 w-4 text-success" />
+            </div>
+            <h3 className="font-bold text-base">{title}</h3>
+          </div>
+        )}
+        <div className="grid grid-cols-2 gap-3">
+          {offers.map((offer, index) => (
+            <Link key={offer.id} to={offer.href}>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.05 }}
+                className="relative group rounded-xl border border-border/60 bg-card p-4 hover:border-success/50 hover:shadow-md transition-all active:scale-[0.97] h-full"
+              >
+                {offer.badge && (
+                  <Badge className="absolute -top-2 -right-1 text-[9px] px-1.5 py-0 bg-success text-success-foreground shadow-sm z-10">
+                    {offer.badge}
+                  </Badge>
+                )}
+                <div className="flex flex-col items-center text-center gap-2.5">
+                  <div className="w-11 h-11 rounded-xl bg-success/10 flex items-center justify-center text-success group-hover:scale-110 transition-transform">
+                    {offer.icon}
+                  </div>
+                  <div className="space-y-0.5">
+                    <h4 className="font-semibold text-xs leading-tight line-clamp-2">{offer.title}</h4>
+                    <p className="text-[10px] text-muted-foreground leading-tight line-clamp-1">{offer.subtitle}</p>
+                  </div>
+                  {offer.price && (
+                    <div className="flex items-center gap-1">
+                      <span className="text-sm font-bold text-success">{offer.price}</span>
+                      {offer.originalPrice && (
+                        <span className="text-[10px] text-muted-foreground line-through">{offer.originalPrice}</span>
+                      )}
+                    </div>
+                  )}
+                  <span className="text-[10px] font-medium text-success flex items-center gap-0.5">
+                    {offer.ctaText} <ArrowRight className="h-3 w-3" />
+                  </span>
+                </div>
+              </motion.div>
+            </Link>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   if (layout === "compact") {
     return (
