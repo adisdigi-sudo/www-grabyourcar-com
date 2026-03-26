@@ -185,11 +185,11 @@ export const AICarRecommendations = ({
                   <div className="rounded-xl border border-border/60 bg-card overflow-hidden hover:border-success/50 hover:shadow-md transition-all active:scale-[0.97] group h-full">
                     {/* Car Image */}
                     {rec.image ? (
-                      <div className="relative h-28 bg-gradient-to-b from-muted/20 to-muted/50 overflow-hidden">
+                      <div className="relative h-28 bg-card overflow-hidden">
                         <img
                           src={rec.image}
                           alt={rec.name}
-                          className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500 p-1"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                           loading="lazy"
                         />
                         <Badge className="absolute top-1.5 left-1.5 bg-success text-success-foreground text-[8px] px-1 py-0 shadow-sm">
