@@ -333,55 +333,73 @@ const CarDetail = () => {
                   </div>
                 </div>
 
-                {/* Mobile: On-Road Price with Variant Selector */}
-                <div className="md:hidden space-y-3">
-                  <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-success/5">
-                    <CardContent className="p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-bold flex items-center gap-1.5">
-                          <IndianRupee className="h-4 w-4 text-primary" />
-                          On-Road Price
-                        </h3>
-                        <Link to={`/car/${car.slug}/on-road-price`}>
-                          <Button variant="ghost" size="sm" className="text-xs text-primary h-7 px-2">
-                            View Details <ChevronRight className="h-3 w-3 ml-0.5" />
-                          </Button>
-                        </Link>
+                {/* Mobile: Unified Price Card with Variant Selector */}
+                <div className="md:hidden">
+                  <div className="rounded-2xl overflow-hidden border border-success/20 shadow-lg">
+                    {/* Header strip */}
+                    <div className="bg-gradient-to-r from-success via-success/90 to-success px-4 py-2.5 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <IndianRupee className="h-4 w-4 text-success-foreground" />
+                        <span className="text-xs font-bold text-success-foreground tracking-wide uppercase">Price & Variants</span>
                       </div>
-                      {/* Variant Selector */}
-                      {car.variants && car.variants.length > 0 && (
-                        <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
-                          {car.variants.map((v, i) => (
-                            <button
-                              key={i}
-                              onClick={() => { setSelectedVariant(i); trackVariantClick(car.slug, v.name); }}
-                              className={`flex-shrink-0 text-[10px] px-3 py-1.5 rounded-full font-medium transition-all ${
-                                selectedVariant === i
-                                  ? 'bg-primary text-primary-foreground shadow-sm'
-                                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                              }`}
-                            >
-                              {v.name}
-                            </button>
-                          ))}
+                      <Link to={`/car/${car.slug}/on-road-price`}>
+                        <span className="text-[10px] font-semibold text-success-foreground/80 flex items-center gap-0.5 hover:text-success-foreground transition-colors">
+                          Full Breakup <ChevronRight className="h-3 w-3" />
+                        </span>
+                      </Link>
+                    </div>
+                    
+                    {/* Price body */}
+                    <div className="bg-gradient-to-br from-card via-card to-success/5 p-4 space-y-3">
+                      {/* Two-column price display */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-background/60 rounded-xl p-3 border border-border/40">
+                          <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Ex-Showroom</p>
+                          <p className="text-lg font-bold text-foreground mt-0.5">{car.price}</p>
                         </div>
-                      )}
-                      <div className="flex items-end justify-between">
-                        <div>
-                          <p className="text-[10px] text-muted-foreground">
-                            {car.variants?.[selectedVariant]?.name || 'Base'} • {car.variants?.[selectedVariant]?.fuelType || car.fuelTypes?.[0]}
-                          </p>
-                          <p className="text-2xl font-bold text-primary">
+                        <div className="bg-success/10 rounded-xl p-3 border border-success/20">
+                          <p className="text-[10px] text-success font-medium uppercase tracking-wider">On-Road Price*</p>
+                          <p className="text-lg font-bold text-success mt-0.5">
                             ₹{((car.variants?.[selectedVariant]?.priceNumeric || car.priceNumeric) / 100000).toFixed(2)} L
                           </p>
-                          <p className="text-[10px] text-muted-foreground">Estimated on-road price</p>
                         </div>
-                        <Button variant="cta" size="sm" className="font-semibold" onClick={() => setPricingDrawerOpen(true)}>
-                          Get Best Price
-                        </Button>
                       </div>
-                    </CardContent>
-                  </Card>
+
+                      {/* Variant Selector */}
+                      {car.variants && car.variants.length > 0 && (
+                        <div>
+                          <p className="text-[10px] text-muted-foreground font-medium mb-1.5">Select Variant</p>
+                          <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
+                            {car.variants.map((v, i) => (
+                              <button
+                                key={i}
+                                onClick={() => { setSelectedVariant(i); trackVariantClick(car.slug, v.name); }}
+                                className={`flex-shrink-0 text-[10px] px-3 py-1.5 rounded-full font-semibold transition-all ${
+                                  selectedVariant === i
+                                    ? 'bg-success text-success-foreground shadow-sm'
+                                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                                }`}
+                              >
+                                {v.name}
+                              </button>
+                            ))}
+                          </div>
+                          <p className="text-[9px] text-muted-foreground mt-1.5">
+                            {car.variants?.[selectedVariant]?.name || 'Base'} • {car.variants?.[selectedVariant]?.fuelType || car.fuelTypes?.[0]} • {car.variants?.[selectedVariant]?.transmission || car.transmission?.[0]}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* CTA */}
+                      <button
+                        onClick={() => setPricingDrawerOpen(true)}
+                        className="w-full py-3 rounded-xl bg-success text-success-foreground font-bold text-sm shadow-md hover:shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                      >
+                        <IndianRupee className="h-4 w-4" />
+                        Get Best Price
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Desktop: Book Your Car Form */}
@@ -463,8 +481,8 @@ const CarDetail = () => {
                   <p className="text-muted-foreground text-lg">{car.tagline}</p>
                 </div>
 
-                {/* Quick Price Display */}
-                <div className="bg-gradient-to-r from-primary/10 via-success/10 to-primary/10 rounded-xl p-4 border border-primary/20">
+                {/* Quick Price Display - Desktop only (mobile has merged card above) */}
+                <div className="hidden md:block bg-gradient-to-r from-primary/10 via-success/10 to-primary/10 rounded-xl p-4 border border-primary/20">
                   <div className="flex items-center justify-between flex-wrap gap-4">
                     <div>
                       <p className="text-xs text-muted-foreground">Starting Price</p>
