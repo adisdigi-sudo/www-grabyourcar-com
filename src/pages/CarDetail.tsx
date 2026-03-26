@@ -616,19 +616,21 @@ const CarDetail = () => {
                   size="sm"
                 />
 
-                {/* Trust Badges */}
-                <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-1.5">
-                    <Shield className="h-4 w-4 text-success" />
-                    <span>Verified Dealer</span>
+                {/* Trust Badges - compact highlighted strip */}
+                <div className="flex items-center gap-3 bg-success/10 border border-success/20 rounded-xl px-3 py-2">
+                  <div className="flex items-center gap-1">
+                    <Shield className="h-3.5 w-3.5 text-success" />
+                    <span className="text-[11px] font-semibold text-success">Verified Dealer</span>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <Star className="h-4 w-4 text-accent" />
-                    <span>4.8/5 Rating</span>
+                  <div className="w-px h-4 bg-success/30" />
+                  <div className="flex items-center gap-1">
+                    <Star className="h-3.5 w-3.5 text-success fill-success" />
+                    <span className="text-[11px] font-semibold text-success">4.8/5</span>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <MapPin className="h-4 w-4 text-primary" />
-                    <span>15+ Showrooms</span>
+                  <div className="w-px h-4 bg-success/30" />
+                  <div className="flex items-center gap-1">
+                    <MapPin className="h-3.5 w-3.5 text-success" />
+                    <span className="text-[11px] font-semibold text-success">15+ Showrooms</span>
                   </div>
                 </div>
 
