@@ -602,18 +602,18 @@ const CarDetail = () => {
           <div className="container mx-auto px-4">
             <Tabs defaultValue="overview" className="space-y-8">
               <TabsList className="flex flex-wrap h-auto gap-2 bg-background p-2 rounded-xl">
-                <TabsTrigger value="overview" className="rounded-lg">Overview</TabsTrigger>
-                <TabsTrigger value="specifications" className="rounded-lg">Specifications</TabsTrigger>
-                <TabsTrigger value="variants" className="rounded-lg">Variants & Price</TabsTrigger>
-                <TabsTrigger value="emi" className="rounded-lg">
+                <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-success data-[state=active]:text-success-foreground">Overview</TabsTrigger>
+                <TabsTrigger value="specifications" className="rounded-lg data-[state=active]:bg-success data-[state=active]:text-success-foreground">Specifications</TabsTrigger>
+                <TabsTrigger value="variants" className="rounded-lg data-[state=active]:bg-success data-[state=active]:text-success-foreground">Variants & Price</TabsTrigger>
+                <TabsTrigger value="emi" className="rounded-lg data-[state=active]:bg-success data-[state=active]:text-success-foreground">
                   <Calculator className="h-4 w-4 mr-1.5" />
                   EMI Calculator
                 </TabsTrigger>
-                <TabsTrigger value="dealers" className="rounded-lg">
+                <TabsTrigger value="dealers" className="rounded-lg data-[state=active]:bg-success data-[state=active]:text-success-foreground">
                   <Building2 className="h-4 w-4 mr-1.5" />
                   Find Dealers
                 </TabsTrigger>
-                <TabsTrigger value="offers" className="rounded-lg">Dealer Offers</TabsTrigger>
+                <TabsTrigger value="offers" className="rounded-lg data-[state=active]:bg-success data-[state=active]:text-success-foreground">Dealer Offers</TabsTrigger>
               </TabsList>
 
               <TabsContent value="overview" className="space-y-6">
