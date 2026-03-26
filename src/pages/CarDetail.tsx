@@ -298,8 +298,8 @@ const CarDetail = () => {
                   </button>
                 </div>
 
-                {/* Mobile: Why Buy - Auto-scrolling marquee */}
-                <div className="lg:hidden overflow-hidden rounded-xl border border-border/50 bg-gradient-to-r from-card to-secondary/20 p-3">
+                {/* Why Buy - Auto-scrolling marquee */}
+                <div className="overflow-hidden rounded-xl border border-border/50 bg-gradient-to-r from-card to-secondary/20 p-3">
                   <div className="flex items-center gap-2 mb-2">
                     <Star className="h-4 w-4 text-foreground" />
                     <span className="text-xs font-semibold">Why Buy From Grabyourcar?</span>
