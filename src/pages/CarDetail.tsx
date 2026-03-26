@@ -481,8 +481,8 @@ const CarDetail = () => {
                   <p className="text-muted-foreground text-lg">{car.tagline}</p>
                 </div>
 
-                {/* Quick Price Display */}
-                <div className="bg-gradient-to-r from-primary/10 via-success/10 to-primary/10 rounded-xl p-4 border border-primary/20">
+                {/* Quick Price Display - Desktop only (mobile has merged card above) */}
+                <div className="hidden md:block bg-gradient-to-r from-primary/10 via-success/10 to-primary/10 rounded-xl p-4 border border-primary/20">
                   <div className="flex items-center justify-between flex-wrap gap-4">
                     <div>
                       <p className="text-xs text-muted-foreground">Starting Price</p>
