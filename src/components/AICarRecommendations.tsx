@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Sparkles, ArrowRight, RefreshCw, Fuel, Eye } from "lucide-react";
+import { Sparkles, ArrowRight, Fuel, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { allCars, Car } from "@/data/cars";
+import { motion } from "framer-motion";
 import { motion } from "framer-motion";
 
 interface Recommendation {
