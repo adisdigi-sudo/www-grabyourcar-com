@@ -470,7 +470,7 @@ const CarDetail = () => {
                 )}
 
 
-                <div className="mt-6 hidden lg:block">
+                <div className="mt-6">
                   <BookingForm carName={car.name} carBrand={car.brand} />
                 </div>
 
