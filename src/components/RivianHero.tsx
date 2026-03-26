@@ -134,7 +134,7 @@ export const RivianHero = () => {
   };
 
   return (
-    <section className="relative h-[75vh] md:h-[85vh] lg:h-screen w-full overflow-hidden bg-black">
+    <section className="relative h-[60vh] md:h-[85vh] lg:h-screen w-full overflow-hidden bg-black">
       {/* Full-bleed background image */}
       <AnimatePresence initial={false} custom={direction} mode="wait">
         <motion.div
@@ -157,7 +157,7 @@ export const RivianHero = () => {
       </AnimatePresence>
 
       {/* Content */}
-      <div className="relative z-10 h-full flex items-end pb-20 md:items-center md:pb-0">
+      <div className="relative z-10 h-full flex items-end pb-14 md:items-center md:pb-0">
         <div className="container mx-auto px-4 md:px-12 lg:px-20">
           <AnimatePresence mode="wait">
             <motion.div
@@ -191,7 +191,7 @@ export const RivianHero = () => {
               </div>
 
               {/* Title */}
-              <h1 className="text-3xl md:text-5xl lg:text-7xl font-bold text-white leading-[1.05] tracking-tight mb-1 md:mb-2">
+              <h1 className="text-2xl md:text-5xl lg:text-7xl font-bold text-white leading-[1.05] tracking-tight mb-1 md:mb-2">
                 {slide.title}
               </h1>
               {slide.subtitle && (

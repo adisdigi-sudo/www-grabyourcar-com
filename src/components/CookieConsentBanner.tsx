@@ -55,42 +55,20 @@ export const CookieConsentBanner = () => {
   if (!visible) return null;
 
   return (
-    <div className="fixed bottom-0 inset-x-0 z-[60] p-3 sm:p-4 animate-in slide-in-from-bottom-4 duration-500">
-      <div className="mx-auto max-w-3xl rounded-2xl border border-border bg-card/95 backdrop-blur-lg shadow-2xl p-4 sm:p-5">
-        <div className="flex items-start gap-3">
-          <div className="hidden sm:flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
-            <Cookie className="h-5 w-5 text-primary" />
-          </div>
-
-          <div className="flex-1 space-y-3">
-            <div className="flex items-start justify-between gap-2">
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                We use cookies and similar technologies to improve your experience, serve personalized ads, and analyze traffic.
-                By clicking <strong className="text-foreground">"Accept All"</strong>, you consent to our use of cookies.{" "}
-                <a
-                  href="/privacy-policy"
-                  className="underline underline-offset-2 hover:text-primary transition-colors"
-                >
-                  Privacy Policy
-                </a>
-              </p>
-              <button
-                onClick={handleDecline}
-                className="shrink-0 text-muted-foreground hover:text-foreground transition-colors sm:hidden"
-                aria-label="Close cookie banner"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <Button size="sm" onClick={handleAccept} className="text-xs sm:text-sm">
-                Accept All
-              </Button>
-              <Button size="sm" variant="outline" onClick={handleDecline} className="text-xs sm:text-sm">
-                Decline
-              </Button>
-            </div>
+    <div className="fixed bottom-14 md:bottom-0 inset-x-0 z-[60] p-2 sm:p-4 animate-in slide-in-from-bottom-4 duration-500">
+      <div className="mx-auto max-w-xl rounded-xl border border-border bg-card/95 backdrop-blur-lg shadow-2xl p-3 sm:p-4">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <p className="flex-1 text-xs sm:text-sm text-muted-foreground leading-snug">
+            We use cookies to improve your experience.{" "}
+            <a href="/privacy-policy" className="underline hover:text-primary">Privacy Policy</a>
+          </p>
+          <div className="flex gap-1.5 shrink-0">
+            <Button size="sm" onClick={handleAccept} className="text-xs h-8 px-3">
+              Accept
+            </Button>
+            <Button size="sm" variant="ghost" onClick={handleDecline} className="text-xs h-8 px-2">
+              <X className="h-3.5 w-3.5" />
+            </Button>
           </div>
         </div>
       </div>
