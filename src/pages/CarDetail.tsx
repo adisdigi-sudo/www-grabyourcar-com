@@ -350,7 +350,7 @@ const CarDetail = () => {
 
                 {/* CTA Buttons - Sales-Driven */}
                 <div className="flex flex-wrap gap-3">
-                  <Button variant="cta" size="lg" className="flex-1 font-semibold hover:scale-105 transition-transform">
+                  <Button variant="cta" size="lg" className="flex-1 font-semibold hover:scale-105 transition-transform hidden md:flex" onClick={() => setPricingDrawerOpen(true)}>
                     Get Best Price
                   </Button>
                   <CompareButton carId={car.id} />
