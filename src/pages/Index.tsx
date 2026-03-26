@@ -75,6 +75,13 @@ const Index = () => {
         <SectionErrorBoundary sectionName="category-grid">
           <CategoryGrid />
         </SectionErrorBoundary>
+
+        {/* Browse by Budget/Body Type - CarDekho style */}
+        <Suspense fallback={null}>
+          <SectionErrorBoundary sectionName="browse-by-budget" fallback={null}>
+            <BrowseByBudget />
+          </SectionErrorBoundary>
+        </Suspense>
         
         <Suspense fallback={null}>
           {/* Dynamic Hero Banners from Admin */}
