@@ -471,10 +471,6 @@ const CarDetail = () => {
                 )}
 
 
-                <div className="mt-6">
-                  <BookingForm carName={car.name} carBrand={car.brand} />
-                </div>
-
               </div>
 
               {/* Car Info - Right Column */}
