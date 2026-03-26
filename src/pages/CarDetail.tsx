@@ -53,7 +53,8 @@ import {
   Calculator,
   Building2,
   GitCompareArrows,
-  FileText
+  FileText,
+  Sparkles
 } from "lucide-react";
 import { useCompare } from "@/hooks/useCompare";
 import { useCarColors, useCarGalleryImages } from "@/hooks/useCarColors";
