@@ -66,7 +66,8 @@ export const EntryLeadCaptureModal = () => {
       if (Date.now() - dismissedAt < SEVEN_DAYS_MS) return;
     }
 
-    const timer = setTimeout(() => setIsOpen(true), 5000);
+    const isMobile = window.innerWidth < 768;
+    const timer = setTimeout(() => setIsOpen(true), isMobile ? 20000 : 8000);
     return () => clearTimeout(timer);
   }, []);
 

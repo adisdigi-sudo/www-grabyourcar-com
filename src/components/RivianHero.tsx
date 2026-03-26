@@ -191,7 +191,7 @@ export const RivianHero = () => {
               </div>
 
               {/* Title */}
-              <h1 className="text-3xl md:text-5xl lg:text-7xl font-bold text-white leading-[1.05] tracking-tight mb-1 md:mb-2">
+              <h1 className="text-2xl md:text-5xl lg:text-7xl font-bold text-white leading-[1.05] tracking-tight mb-1 md:mb-2">
                 {slide.title}
               </h1>
               {slide.subtitle && (
