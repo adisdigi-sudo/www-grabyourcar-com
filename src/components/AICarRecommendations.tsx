@@ -145,177 +145,139 @@ export const AICarRecommendations = ({
   const featured = recommendations[activeIndex];
 
   return (
-    <Card className="border-success/30 bg-gradient-to-br from-success/5 via-background to-success/5 overflow-hidden">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <div className="p-1.5 bg-success/10 rounded-lg">
-              <Sparkles className="h-5 w-5 text-success" />
-            </div>
-            AI Picks For You
-          </CardTitle>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={fetchRecommendations}
-            disabled={isLoading}
-            className="text-success hover:text-success/80 hover:bg-success/10"
-          >
-            <RefreshCw className={`h-4 w-4 mr-1.5 ${isLoading ? "animate-spin" : ""}`} />
-            New Ideas
-          </Button>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          🧠 AI is analyzing customer preferences for {carName} alternatives
-        </p>
-      </CardHeader>
-
-      <CardContent className="space-y-4">
-        {isLoading ? (
-          <div className="space-y-3">
-            <Skeleton className="h-40 w-full rounded-xl" />
-            <div className="flex gap-2">
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-16 flex-1 rounded-lg" />
-              ))}
-            </div>
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 bg-success/10 rounded-lg">
+            <Sparkles className="h-4 w-4 text-success" />
           </div>
-        ) : recommendations.length > 0 ? (
-          <>
-            {/* Featured Card - Auto-rotating */}
-            <AnimatePresence mode="wait">
-              {featured && (
-                <motion.div
-                  key={`${activeIndex}-${cycleCount}`}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <Link to={featured.slug ? `/car/${featured.slug}` : "#"}>
-                    <div className="relative rounded-xl overflow-hidden border border-success/20 bg-card hover:shadow-lg transition-all group">
-                      {/* Car Image */}
-                      {featured.image ? (
-                        <div className="relative h-44 sm:h-52 bg-gradient-to-b from-muted/30 to-muted/60 overflow-hidden">
-                          <img
-                            src={featured.image}
-                            alt={featured.name}
-                            className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
-                            loading="lazy"
-                          />
-                          <div className="absolute top-3 left-3">
-                            <Badge className="bg-success text-success-foreground text-[10px] shadow-sm">
-                              <Sparkles className="h-3 w-3 mr-1" />
-                              AI Pick #{activeIndex + 1}
-                            </Badge>
-                          </div>
-                          <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent p-4">
-                            <h3 className="text-white font-bold text-lg leading-tight">
-                              {featured.brand} {featured.name}
-                            </h3>
-                            <p className="text-white/80 text-sm font-medium">
-                              {featured.priceRange}
-                            </p>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="p-4 bg-success/5">
-                          <h3 className="font-bold text-lg">
-                            {featured.brand} {featured.name}
-                          </h3>
-                          <p className="text-sm font-medium text-success">
-                            {featured.priceRange}
-                          </p>
+          <h3 className="font-bold text-base">AI Picks For You</h3>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={fetchRecommendations}
+          disabled={isLoading}
+          className="text-success hover:text-success/80 hover:bg-success/10 h-8 px-2 text-xs"
+        >
+          <RefreshCw className={`h-3.5 w-3.5 mr-1 ${isLoading ? "animate-spin" : ""}`} />
+          Refresh
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <div className="grid grid-cols-2 gap-3">
+          {[1, 2].map((i) => (
+            <Skeleton key={i} className="h-52 rounded-xl" />
+          ))}
+        </div>
+      ) : recommendations.length > 0 ? (
+        <>
+          {/* 2-column car cards */}
+          <div className="grid grid-cols-2 gap-3">
+            {recommendations.slice(0, 2).map((rec, index) => (
+              <motion.div
+                key={`${rec.name}-${cycleCount}`}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: index * 0.1 }}
+              >
+                <Link to={rec.slug ? `/car/${rec.slug}` : "#"}>
+                  <div className="rounded-xl border border-border/60 bg-card overflow-hidden hover:border-success/50 hover:shadow-md transition-all active:scale-[0.97] group h-full">
+                    {/* Car Image */}
+                    {rec.image ? (
+                      <div className="relative h-28 bg-gradient-to-b from-muted/20 to-muted/50 overflow-hidden">
+                        <img
+                          src={rec.image}
+                          alt={rec.name}
+                          className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500 p-1"
+                          loading="lazy"
+                        />
+                        <Badge className="absolute top-1.5 left-1.5 bg-success text-success-foreground text-[8px] px-1 py-0 shadow-sm">
+                          <Sparkles className="h-2.5 w-2.5 mr-0.5" />
+                          AI Pick
+                        </Badge>
+                      </div>
+                    ) : (
+                      <div className="h-28 bg-success/5 flex items-center justify-center">
+                        <span className="text-3xl font-bold text-success/30">{rec.brand?.charAt(0)}</span>
+                      </div>
+                    )}
+
+                    {/* Info */}
+                    <div className="p-3 space-y-1.5">
+                      <h4 className="font-bold text-xs leading-tight line-clamp-1">
+                        {rec.brand} {rec.name}
+                      </h4>
+                      <p className="text-[10px] text-muted-foreground italic line-clamp-2 leading-tight">
+                        💡 {rec.reason}
+                      </p>
+
+                      {/* Fuel badges */}
+                      <div className="flex flex-wrap gap-1">
+                        {rec.fuelTypes?.slice(0, 2).map((fuel) => (
+                          <Badge key={fuel} variant="outline" className="text-[8px] px-1 py-0 gap-0.5">
+                            <Fuel className="h-2.5 w-2.5" />
+                            {fuel}
+                          </Badge>
+                        ))}
+                      </div>
+
+                      <p className="text-xs font-bold text-success">{rec.priceRange}</p>
+
+                      {rec.slug && (
+                        <div className="flex items-center justify-center gap-1 text-[10px] font-medium text-success pt-1">
+                          <Eye className="h-3 w-3" />
+                          View Details
+                          <ArrowRight className="h-3 w-3" />
                         </div>
                       )}
-
-                      {/* AI Reason + Features */}
-                      <div className="p-4 space-y-3">
-                        <p className="text-sm text-muted-foreground italic">
-                          💡 "{featured.reason}"
-                        </p>
-
-                        {/* Quick specs from catalog */}
-                        <div className="flex flex-wrap gap-2">
-                          {featured.fuelTypes?.map((fuel) => (
-                            <Badge key={fuel} variant="outline" className="text-[10px] gap-1">
-                              <Fuel className="h-3 w-3" />
-                              {fuel}
-                            </Badge>
-                          ))}
-                          {featured.bodyType && (
-                            <Badge variant="outline" className="text-[10px] gap-1">
-                              <Gauge className="h-3 w-3" />
-                              {featured.bodyType}
-                            </Badge>
-                          )}
-                        </div>
-
-                        {/* Key highlights from catalog */}
-                        {featured.highlights && featured.highlights.length > 0 && (
-                          <div className="space-y-1">
-                            {featured.highlights.map((h, i) => (
-                              <p key={i} className="text-xs text-muted-foreground flex items-start gap-1.5">
-                                <span className="text-success mt-0.5">✓</span>
-                                {h}
-                              </p>
-                            ))}
-                          </div>
-                        )}
-
-                        {featured.slug && (
-                          <Button size="sm" className="w-full bg-success hover:bg-success/90 text-success-foreground gap-2 mt-1">
-                            <Eye className="h-4 w-4" />
-                            View {featured.name}
-                            <ArrowRight className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
                     </div>
-                  </Link>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Thumbnail selector dots */}
-            <div className="flex items-center justify-center gap-3">
-              {recommendations.map((rec, index) => (
-                <button
-                  key={index}
-                  onClick={() => setActiveIndex(index)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all text-xs font-medium ${
-                    index === activeIndex
-                      ? "border-success bg-success/10 text-success"
-                      : "border-border bg-card text-muted-foreground hover:border-success/40"
-                  }`}
-                >
-                  {rec.image ? (
-                    <img
-                      src={rec.image}
-                      alt={rec.name}
-                      className="h-8 w-12 object-contain rounded"
-                    />
-                  ) : (
-                    <div className="h-8 w-12 bg-muted rounded flex items-center justify-center text-[9px]">
-                      {rec.brand?.charAt(0)}
-                    </div>
-                  )}
-                  <span className="hidden sm:inline truncate max-w-[80px]">{rec.name}</span>
-                </button>
-              ))}
-            </div>
-
-            {/* Behavior hint */}
-            <p className="text-center text-[10px] text-muted-foreground/60">
-              🔄 Suggestions refresh automatically based on browsing patterns
-            </p>
-          </>
-        ) : (
-          <div className="text-center py-6 text-muted-foreground">
-            <p>No recommendations available</p>
+                  </div>
+                </Link>
+              </motion.div>
+            ))}
           </div>
-        )}
-      </CardContent>
-    </Card>
+
+          {/* Third recommendation as a compact strip */}
+          {recommendations[2] && (
+            <Link to={recommendations[2].slug ? `/car/${recommendations[2].slug}` : "#"}>
+              <motion.div
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="flex items-center gap-3 p-3 rounded-xl border border-border/60 bg-card hover:border-success/50 transition-all group"
+              >
+                {recommendations[2].image ? (
+                  <img
+                    src={recommendations[2].image}
+                    alt={recommendations[2].name}
+                    className="h-12 w-16 object-contain rounded-lg bg-muted/30 shrink-0"
+                  />
+                ) : (
+                  <div className="h-12 w-16 rounded-lg bg-success/10 flex items-center justify-center shrink-0 text-success font-bold">
+                    {recommendations[2].brand?.charAt(0)}
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-bold text-xs truncate">{recommendations[2].brand} {recommendations[2].name}</h4>
+                  <p className="text-[10px] text-muted-foreground truncate">{recommendations[2].reason}</p>
+                  <p className="text-xs font-bold text-success">{recommendations[2].priceRange}</p>
+                </div>
+                <ArrowRight className="h-4 w-4 text-success shrink-0 group-hover:translate-x-0.5 transition-transform" />
+              </motion.div>
+            </Link>
+          )}
+
+          <p className="text-center text-[10px] text-muted-foreground/50">
+            🔄 AI suggestions refresh based on your browsing
+          </p>
+        </>
+      ) : (
+        <div className="text-center py-4 text-muted-foreground text-sm">
+          No recommendations available
+        </div>
+      )}
+    </div>
   );
 };
