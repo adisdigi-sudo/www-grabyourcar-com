@@ -478,24 +478,6 @@ const CarDetail = () => {
 
               {/* Car Info - Right Column */}
               <div className="space-y-6">
-                {/* Quick Price Display - Desktop only (mobile has merged card above) */}
-                <div className="hidden lg:block bg-gradient-to-r from-primary/10 via-success/10 to-primary/10 rounded-xl p-4 border border-primary/20">
-                  <div className="flex items-center justify-between flex-wrap gap-4">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Starting Price</p>
-                      <p className="text-2xl md:text-3xl font-bold text-foreground">{car.price}</p>
-                      <p className="text-xs text-muted-foreground">Ex-showroom price</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Link to={`/car/${car.slug}/on-road-price`}>
-                        <Button variant="cta" size="sm">
-                          <IndianRupee className="h-4 w-4 mr-1" />
-                          On Road Price
-                        </Button>
-                      </Link>
-                    </div>
-                  </div>
-                </div>
 
                 {/* Quick Specs - 4 columns on mobile, 4 on desktop */}
                 <div className="grid grid-cols-4 gap-2 md:gap-4">
