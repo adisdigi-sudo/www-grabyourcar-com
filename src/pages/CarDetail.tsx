@@ -253,13 +253,6 @@ const CarDetail = () => {
                   onColorChange={setSelectedColor}
                 />
 
-                {/* Complete Your Purchase - Cross-sell */}
-                <CrossSellWidget 
-                  context="carDetail" 
-                  title="Complete Your Purchase" 
-                  maxItems={4}
-                  layout="compact-grid"
-                />
 
                 {/* WhatsApp Quick Actions below color patches */}
                 <WhatsAppQuickActions
