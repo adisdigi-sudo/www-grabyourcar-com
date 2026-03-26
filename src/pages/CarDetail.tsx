@@ -802,6 +802,43 @@ const CarDetail = () => {
 
       <Footer />
       <FloatingCTA />
+
+      {/* Mobile Sticky Bottom Bar */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-card border-t border-border shadow-[0_-4px_20px_-4px_hsl(var(--foreground)/0.1)]">
+        <div className="flex items-center justify-between px-4 py-3">
+          <div>
+            <p className="text-[10px] text-muted-foreground font-medium">On-Road Price</p>
+            <p className="text-lg font-bold text-foreground">
+              ₹{((car.variants?.[selectedVariant]?.priceNumeric || car.priceNumeric) / 100000).toFixed(2)} L
+            </p>
+          </div>
+          <Button
+            variant="cta"
+            size="lg"
+            className="font-bold px-6 rounded-xl"
+            onClick={() => setPricingDrawerOpen(true)}
+          >
+            <IndianRupee className="h-4 w-4 mr-1" />
+            Get Best Price
+          </Button>
+        </div>
+      </div>
+
+      {/* Mobile Pricing Drawer */}
+      <Drawer open={pricingDrawerOpen} onOpenChange={setPricingDrawerOpen}>
+        <DrawerContent className="max-h-[90vh]">
+          <DrawerHeader className="pb-2">
+            <DrawerTitle>Configure & Get Best Price</DrawerTitle>
+            <DrawerDescription>Select variant, city & accessories</DrawerDescription>
+          </DrawerHeader>
+          <div className="overflow-y-auto px-4 pb-6">
+            <CarPricingConfigurator
+              car={car}
+              colors={displayColors}
+            />
+          </div>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 };
