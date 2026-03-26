@@ -78,8 +78,8 @@
     --muted: 210 20% 96%;
     --muted-foreground: 210 15% 45%;
 
-    /* Success - Green */
-    --success: 142 70% 45%;
+    /* Success - Same Brand Green */
+    --success: 142 66% 40%;
     --success-foreground: 0 0% 100%;
 
     /* Destructive */
@@ -89,7 +89,7 @@
     /* Border & Input */
     --border: 210 20% 90%;
     --input: 210 20% 90%;
-    --ring: 142 70% 45%;
+    --ring: 142 66% 40%;
 
     --radius: 0.75rem;
 
