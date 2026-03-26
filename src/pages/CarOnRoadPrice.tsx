@@ -489,11 +489,11 @@ const CarOnRoadPrice = () => {
 
                       <Button 
                         variant="default" 
-                        className="w-full"
+                        className="w-full text-xs sm:text-sm"
                         onClick={() => setShowEMIModal(true)}
                       >
-                        <Calculator className="h-4 w-4 mr-2" />
-                        Customize EMI & Download Quote
+                        <Calculator className="h-4 w-4 mr-1.5 shrink-0" />
+                        <span>Customize EMI & Download Quote</span>
                       </Button>
                     </div>
                   </div>

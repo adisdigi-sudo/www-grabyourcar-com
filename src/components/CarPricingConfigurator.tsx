@@ -410,11 +410,11 @@ export const CarPricingConfigurator = ({ car, colors: dbColors }: CarPricingConf
               <Button 
                 variant="default" 
                 size="sm" 
-                className="w-full gap-2"
+                className="w-full gap-1.5 text-xs sm:text-sm"
                 onClick={() => setShowEMIModal(true)}
               >
-                <Settings2 className="h-4 w-4" />
-                Customize EMI & Download Quote
+                <Settings2 className="h-4 w-4 shrink-0" />
+                <span>Customize EMI & Download Quote</span>
               </Button>
             </div>
           </div>
