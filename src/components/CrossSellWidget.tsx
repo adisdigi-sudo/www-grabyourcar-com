@@ -128,7 +128,7 @@ interface CrossSellWidgetProps {
   context?: keyof typeof contextOffers;
   excludeIds?: string[];
   maxItems?: number;
-  layout?: "horizontal" | "vertical" | "compact";
+  layout?: "horizontal" | "vertical" | "compact" | "compact-grid";
   title?: string;
   showTitle?: boolean;
 }
