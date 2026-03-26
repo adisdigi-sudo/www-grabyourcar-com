@@ -96,25 +96,25 @@
     /* Sidebar - Light theme */
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 210 20% 15%;
-    --sidebar-primary: 142 70% 45%;
+    --sidebar-primary: 142 66% 40%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 210 20% 96%;
     --sidebar-accent-foreground: 210 20% 15%;
     --sidebar-border: 210 20% 90%;
-    --sidebar-ring: 142 70% 45%;
+    --sidebar-ring: 142 66% 40%;
 
-    /* Custom Gradients - Green theme */
-    --gradient-hero: linear-gradient(135deg, hsl(142 70% 45%) 0%, hsl(142 60% 35%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(142 70% 45%) 0%, hsl(142 60% 40%) 100%);
+    /* Custom Gradients - Brand Green */
+    --gradient-hero: linear-gradient(135deg, hsl(142 66% 40%) 0%, hsl(142 66% 35%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(142 66% 40%) 0%, hsl(142 66% 35%) 100%);
     --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(210 20% 98%) 100%);
     --gradient-overlay: linear-gradient(180deg, hsla(0 0% 100% / 0) 0%, hsla(0 0% 100% / 0.9) 100%);
 
-    /* Shadows - Light */
+    /* Shadows */
     --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
     --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.1), 0 2px 4px -2px hsl(0 0% 0% / 0.1);
     --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.1), 0 4px 6px -4px hsl(0 0% 0% / 0.1);
-    --shadow-glow: 0 0 40px hsla(142 70% 45% / 0.2);
-    --shadow-accent-glow: 0 8px 32px hsla(142 70% 45% / 0.3);
+    --shadow-glow: 0 0 40px hsla(142 66% 40% / 0.2);
+    --shadow-accent-glow: 0 8px 32px hsla(142 66% 40% / 0.3);
     --chart-1: 142 70% 45%;
     --chart-2: 142 60% 55%;
     --chart-3: 142 50% 40%;
