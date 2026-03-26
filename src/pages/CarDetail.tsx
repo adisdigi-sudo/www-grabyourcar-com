@@ -799,6 +799,8 @@ const CarDetail = () => {
         </section>
 
       </main>
+      {/* Spacer for mobile sticky bottom bar */}
+      <div className="h-20 md:hidden" />
 
       <Footer />
       <FloatingCTA />
