@@ -334,84 +334,95 @@ const CarDetail = () => {
                   </div>
                 </div>
 
-                {/* Mobile: Unified Price Card with Variant Selector */}
+                {/* Mobile/Tablet: Structured Price & Variants Card */}
                 <div className="lg:hidden">
-                  <div className="rounded-2xl overflow-hidden border border-success/20 shadow-lg">
-                    {/* Header strip */}
-                    <div className="bg-gradient-to-r from-success via-success/90 to-success px-4 py-2.5 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <IndianRupee className="h-4 w-4 text-success-foreground" />
-                        <span className="text-xs font-bold text-success-foreground tracking-wide uppercase">Price & Variants</span>
-                      </div>
-                      <Link to={`/car/${car.slug}/on-road-price`}>
-                        <span className="text-[10px] font-semibold text-success-foreground/80 flex items-center gap-0.5 hover:text-success-foreground transition-colors">
-                          Full Breakup <ChevronRight className="h-3 w-3" />
-                        </span>
-                      </Link>
-                    </div>
-                    
-                    {/* Price body */}
-                    <div className="bg-gradient-to-br from-card via-card to-success/5 p-4 space-y-3">
-                      {/* Two-column price display */}
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-background/60 rounded-xl p-3 border border-border/40">
+                  <div className="rounded-2xl overflow-hidden border border-border/60 shadow-sm bg-card">
+                    {/* Price Row */}
+                    <div className="p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
                           <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Ex-Showroom</p>
-                          <p className="text-lg font-bold text-foreground mt-0.5">{car.price}</p>
+                          <p className="text-xl font-bold text-foreground">{car.price}</p>
                         </div>
-                        <div className="bg-success/10 rounded-xl p-3 border border-success/20">
+                        <div className="text-right">
                           <p className="text-[10px] text-success font-medium uppercase tracking-wider">On-Road Price*</p>
-                          <p className="text-lg font-bold text-success mt-0.5">
+                          <p className="text-xl font-bold text-success">
                             ₹{((car.variants?.[selectedVariant]?.priceNumeric || car.priceNumeric) / 100000).toFixed(2)} L
                           </p>
                         </div>
                       </div>
 
-                      {/* Variant Selector */}
+                      {/* Variant Pills */}
                       {car.variants && car.variants.length > 0 && (
-                        <div>
-                          <p className="text-[10px] text-muted-foreground font-medium mb-1.5">Select Variant</p>
-                          <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Select Variant</p>
+                            <p className="text-[9px] text-muted-foreground">
+                              {car.variants?.[selectedVariant]?.fuelType || car.fuelTypes?.[0]} • {car.variants?.[selectedVariant]?.transmission || car.transmission?.[0]}
+                            </p>
+                          </div>
+                          <div className="flex gap-1.5 overflow-x-auto pb-0.5 -mx-1 px-1 scrollbar-hide">
                             {car.variants.map((v, i) => (
                               <button
                                 key={i}
                                 onClick={() => { setSelectedVariant(i); trackVariantClick(car.slug, v.name); }}
-                                className={`flex-shrink-0 text-[10px] px-3 py-1.5 rounded-full font-semibold transition-all ${
+                                className={`flex-shrink-0 text-[10px] px-3 py-1.5 rounded-full font-semibold transition-all border ${
                                   selectedVariant === i
-                                    ? 'bg-success text-success-foreground shadow-sm'
-                                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                                    ? 'bg-success text-success-foreground border-success shadow-sm'
+                                    : 'bg-card text-muted-foreground border-border hover:border-success/50'
                                 }`}
                               >
                                 {v.name}
                               </button>
                             ))}
                           </div>
-                          <p className="text-[9px] text-muted-foreground mt-1.5">
-                            {car.variants?.[selectedVariant]?.name || 'Base'} • {car.variants?.[selectedVariant]?.fuelType || car.fuelTypes?.[0]} • {car.variants?.[selectedVariant]?.transmission || car.transmission?.[0]}
-                          </p>
                         </div>
                       )}
+                    </div>
 
-                      {/* CTA */}
+                    {/* Action Row */}
+                    <div className="border-t border-border/40 grid grid-cols-2 divide-x divide-border/40">
                       <button
                         onClick={() => setPricingDrawerOpen(true)}
-                        className="w-full py-3 rounded-xl bg-success text-success-foreground font-bold text-sm shadow-md hover:shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                        className="flex items-center justify-center gap-2 py-3 text-xs font-bold text-success hover:bg-success/5 transition-colors active:scale-[0.98]"
                       >
-                        <IndianRupee className="h-4 w-4" />
+                        <IndianRupee className="h-3.5 w-3.5" />
                         Get Best Price
                       </button>
+                      <Link to={`/car/${car.slug}/on-road-price`} className="flex items-center justify-center gap-1.5 py-3 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
+                        Full Breakup <ChevronRight className="h-3 w-3" />
+                      </Link>
                     </div>
                   </div>
                 </div>
 
-                {/* Mobile: Key Features - Single collapsible dropdown below price */}
+                {/* Mobile/Tablet: About Car + Key Features — unified accordion */}
                 {car.specifications?.features && car.specifications.features.length > 0 && (
                   <div className="lg:hidden">
-                    <Accordion type="single" collapsible className="w-full">
+                    <Accordion type="single" collapsible className="w-full space-y-2">
+                      {/* About Car */}
+                      {car.overview && (
+                        <AccordionItem value="about-car" className="rounded-2xl border border-border/50 overflow-hidden bg-card">
+                          <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/30">
+                            <div className="flex items-center gap-2 flex-1">
+                              <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                                <Sparkles className="h-3.5 w-3.5 text-primary" />
+                              </div>
+                              <span className="text-xs font-bold uppercase tracking-wide">About {car.name}</span>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="px-4 pb-3 text-xs text-muted-foreground leading-relaxed">
+                            {car.overview}
+                          </AccordionContent>
+                        </AccordionItem>
+                      )}
+
+                      {/* Key Features */}
                       <AccordionItem value="key-features" className="rounded-2xl border border-border/50 overflow-hidden bg-card">
-                        <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/50">
+                        <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/30">
                           <div className="flex items-center gap-2 flex-1">
                             <div className="w-7 h-7 rounded-lg bg-success/10 flex items-center justify-center">
-                              <Sparkles className="h-3.5 w-3.5 text-success" />
+                              <Check className="h-3.5 w-3.5 text-success" />
                             </div>
                             <span className="text-xs font-bold uppercase tracking-wide">Key Features</span>
                             <Badge variant="outline" className="text-[9px] px-1.5 py-0 ml-auto mr-2 border-success/30 text-success">
