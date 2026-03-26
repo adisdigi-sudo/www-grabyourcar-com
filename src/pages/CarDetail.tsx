@@ -384,7 +384,7 @@ const CarDetail = () => {
                     <div className="border-t border-border/40 grid grid-cols-2">
                       <button
                         onClick={() => setPricingDrawerOpen(true)}
-                        className="flex items-center justify-center gap-2 py-3.5 text-xs font-bold text-primary-foreground bg-gradient-to-r from-primary to-primary-glow shadow-glow hover:shadow-accent-glow transition-all active:scale-[0.98]"
+                        className="flex items-center justify-center gap-2 py-3.5 text-xs font-bold text-primary-foreground bg-primary hover:bg-primary/90 transition-all active:scale-[0.98]"
                       >
                         <IndianRupee className="h-3.5 w-3.5" />
                         Get Best Price
