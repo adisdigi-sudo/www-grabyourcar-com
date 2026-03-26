@@ -972,6 +972,19 @@ const CarDetail = () => {
           </div>
         </DrawerContent>
       </Drawer>
+
+      {/* Mobile Booking Drawer */}
+      <Drawer open={bookingDrawerOpen} onOpenChange={setBookingDrawerOpen}>
+        <DrawerContent className="max-h-[90vh]">
+          <DrawerHeader className="pb-2">
+            <DrawerTitle>Book Your {car.name}</DrawerTitle>
+            <DrawerDescription>Fill in your details to book this car</DrawerDescription>
+          </DrawerHeader>
+          <div className="overflow-y-auto px-4 pb-6">
+            <BookingForm carName={car.name} carBrand={car.brand} />
+          </div>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 };
