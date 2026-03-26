@@ -91,6 +91,24 @@ const CompareButton = ({ carId }: { carId: string | number }) => {
   );
 };
 
+const MobileCompareButton = ({ carId }: { carId: string | number }) => {
+  const { addToCompare, removeFromCompare, isInCompare, canAddMore } = useCompare();
+  const inCompare = isInCompare(carId);
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => inCompare ? removeFromCompare(carId) : canAddMore && addToCompare(carId)}
+      disabled={!inCompare && !canAddMore}
+      className={`flex flex-col items-center gap-1 h-auto py-3 text-[10px] font-semibold ${inCompare ? 'border-primary bg-primary/10' : 'border-primary/30'}`}
+    >
+      <GitCompareArrows className="h-5 w-5 text-primary" />
+      {inCompare ? 'Added' : 'Compare'}
+    </Button>
+  );
+};
+
 const CarDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   
