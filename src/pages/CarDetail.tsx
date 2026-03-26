@@ -936,26 +936,24 @@ const CarDetail = () => {
           </div>
         </section>
 
-        {/* AI Car Recommendations Section */}
-        <section className="py-8 md:py-12 bg-secondary/30">
-          <div className="container mx-auto px-4">
+        {/* Cross-Sell + AI Recommendations Combined Section */}
+        <section className="py-6 md:py-10 bg-secondary/30">
+          <div className="container mx-auto px-4 space-y-6">
+            {/* Cross-Sell: 2x2 icon grid on mobile */}
+            <CrossSellWidget 
+              context="carDetail" 
+              title="Complete Your Purchase" 
+              maxItems={4}
+              layout="compact-grid"
+            />
+
+            {/* AI Recommendations */}
             <AICarRecommendations
               carName={car.name}
               brand={car.brand}
               price={car.price}
               fuelTypes={car.fuelTypes}
               transmission={car.transmission}
-            />
-          </div>
-        </section>
-
-        {/* Cross-Sell Services */}
-        <section className="py-8 md:py-12 bg-muted/30">
-          <div className="container mx-auto px-4">
-            <CrossSellWidget 
-              context="carDetail" 
-              title="Complete Your Purchase" 
-              maxItems={4} 
             />
           </div>
         </section>
