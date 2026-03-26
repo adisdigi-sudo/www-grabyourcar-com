@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Sparkles, ArrowRight, RefreshCw, Fuel, Eye } from "lucide-react";
+import { Sparkles, ArrowRight, Fuel, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { allCars, Car } from "@/data/cars";
 import { motion } from "framer-motion";
@@ -145,23 +144,11 @@ export const AICarRecommendations = ({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 bg-success/10 rounded-lg">
-            <Sparkles className="h-4 w-4 text-success" />
-          </div>
-          <h3 className="font-bold text-base">AI Picks For You</h3>
+      <div className="flex items-center gap-2">
+        <div className="p-1.5 bg-success/10 rounded-lg">
+          <Sparkles className="h-4 w-4 text-success" />
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={fetchRecommendations}
-          disabled={isLoading}
-          className="text-success hover:text-success/80 hover:bg-success/10 h-8 px-2 text-xs"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 mr-1 ${isLoading ? "animate-spin" : ""}`} />
-          Refresh
-        </Button>
+        <h3 className="font-bold text-base">AI Picks For You</h3>
       </div>
 
       {isLoading ? (
@@ -268,9 +255,6 @@ export const AICarRecommendations = ({
             </Link>
           )}
 
-          <p className="text-center text-[10px] text-muted-foreground/50">
-            🔄 AI suggestions refresh based on your browsing
-          </p>
         </>
       ) : (
         <div className="text-center py-4 text-muted-foreground text-sm">
