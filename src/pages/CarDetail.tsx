@@ -243,16 +243,7 @@ const CarDetail = () => {
                     <IndianRupee className="h-5 w-5 text-primary" />
                     Best Price
                   </Button>
-                  <button
-                    onClick={() => {
-                      const { addToCompare, removeFromCompare, isInCompare, canAddMore } = require("@/hooks/useCompare").useCompare ? {} : {};
-                      // handled inline below
-                    }}
-                    className="flex flex-col items-center gap-1 h-auto py-3 text-[10px] font-semibold border border-primary/30 rounded-lg bg-background hover:bg-muted transition-colors"
-                  >
-                    <GitCompareArrows className="h-5 w-5 text-primary" />
-                    Compare
-                  </button>
+                  <MobileCompareButton carId={car.id} />
                   <a href="tel:+1155578093" className="w-full">
                     <Button variant="outline" size="sm" className="w-full flex flex-col items-center gap-1 h-auto py-3 text-[10px] font-semibold border-success/30">
                       <Phone className="h-5 w-5 text-success" />
