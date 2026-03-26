@@ -256,7 +256,7 @@ const CarDetail = () => {
                 <div className="grid grid-cols-4 gap-2 lg:hidden">
                   <button
                     onClick={() => setPricingDrawerOpen(true)}
-                    className="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-gradient-to-b from-primary to-primary-glow text-primary-foreground shadow-glow hover:shadow-accent-glow transition-all active:scale-95"
+                    className="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-primary text-primary-foreground shadow-md hover:shadow-lg transition-all active:scale-95"
                   >
                     <IndianRupee className="h-5 w-5" />
                     <span className="text-[10px] font-bold leading-tight">Best Price</span>
