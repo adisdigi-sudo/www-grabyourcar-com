@@ -236,6 +236,13 @@ const CarDetail = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12">
               {/* Left Column: Gallery + Desktop Booking + Desktop Why Buy */}
               <div className="space-y-4">
+                {/* Car Name & Brand - Top */}
+                <div>
+                  <p className="text-muted-foreground font-medium text-sm">{car.brand}</p>
+                  <h1 className="font-heading text-2xl md:text-3xl lg:text-4xl font-bold text-foreground">{car.name}</h1>
+                  {car.tagline && <p className="text-muted-foreground text-sm mt-1">{car.tagline}</p>}
+                </div>
+
                 {/* Hot/Limited Badges */}
                 {(car.isHot || car.isLimited) && (
                   <div className="flex gap-2 mb-2">
