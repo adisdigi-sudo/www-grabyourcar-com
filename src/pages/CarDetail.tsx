@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, lazy, Suspense } from "react";
+import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
 import { useEventTracking } from "@/hooks/useEventTracking";
 import { useParams, Link } from "react-router-dom";
 import { GlobalSEO } from "@/components/seo/GlobalSEO";
