@@ -236,6 +236,13 @@ const CarDetail = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12">
               {/* Left Column: Gallery + Desktop Booking + Desktop Why Buy */}
               <div className="space-y-4">
+                {/* Car Name & Brand - Top */}
+                <div>
+                  <p className="text-muted-foreground font-medium text-sm">{car.brand}</p>
+                  <h1 className="font-heading text-2xl md:text-3xl lg:text-4xl font-bold text-foreground">{car.name}</h1>
+                  {car.tagline && <p className="text-muted-foreground text-sm mt-1">{car.tagline}</p>}
+                </div>
+
                 {/* Hot/Limited Badges */}
                 {(car.isHot || car.isLimited) && (
                   <div className="flex gap-2 mb-2">
@@ -253,13 +260,6 @@ const CarDetail = () => {
                   onColorChange={setSelectedColor}
                 />
 
-                {/* Complete Your Purchase - Cross-sell */}
-                <CrossSellWidget 
-                  context="carDetail" 
-                  title="Complete Your Purchase" 
-                  maxItems={4}
-                  layout="compact-grid"
-                />
 
                 {/* WhatsApp Quick Actions below color patches */}
                 <WhatsAppQuickActions
@@ -478,14 +478,6 @@ const CarDetail = () => {
 
               {/* Car Info - Right Column */}
               <div className="space-y-6">
-                <div>
-                  <p className="text-foreground font-medium mb-1">{car.brand}</p>
-                  <h1 className="font-heading text-3xl md:text-4xl font-bold text-foreground mb-2">
-                    {car.name}
-                  </h1>
-                  <p className="text-muted-foreground text-lg">{car.tagline}</p>
-                </div>
-
                 {/* Quick Price Display - Desktop only (mobile has merged card above) */}
                 <div className="hidden lg:block bg-gradient-to-r from-primary/10 via-success/10 to-primary/10 rounded-xl p-4 border border-primary/20">
                   <div className="flex items-center justify-between flex-wrap gap-4">
@@ -947,6 +939,14 @@ const CarDetail = () => {
               price={car.price}
               fuelTypes={car.fuelTypes}
               transmission={car.transmission}
+            />
+
+            {/* Cross-Sell */}
+            <CrossSellWidget 
+              context="carDetail" 
+              title="Complete Your Purchase" 
+              maxItems={4}
+              layout="compact-grid"
             />
           </div>
         </section>
