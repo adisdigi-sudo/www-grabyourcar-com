@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, lazy, Suspense } from "react";
+import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
 import { useEventTracking } from "@/hooks/useEventTracking";
 import { useParams, Link } from "react-router-dom";
 import { GlobalSEO } from "@/components/seo/GlobalSEO";
@@ -416,7 +417,7 @@ const CarDetail = () => {
                 </div>
 
                 {/* About Car + Key Features — FAQ accordion */}
-                {car.specifications?.features && car.specifications.features.length > 0 && (
+                {car.specifications?.features && Array.isArray(car.specifications.features) && car.specifications.features.length > 0 && (
                   <div>
                     <Accordion type="single" collapsible className="w-full space-y-2">
                       {/* About Car */}
@@ -484,12 +485,12 @@ const CarDetail = () => {
                   <div className="bg-card border border-border rounded-xl p-3 md:p-4 text-center">
                     <Fuel className="h-5 w-5 md:h-6 md:w-6 mx-auto mb-1.5 md:mb-2 text-primary" />
                     <p className="text-[10px] md:text-sm text-muted-foreground">Fuel</p>
-                    <p className="font-semibold text-[10px] md:text-sm">{car.fuelTypes.join(" / ")}</p>
+                    <p className="font-semibold text-[10px] md:text-sm">{car.fuelTypes?.join(" / ") || "—"}</p>
                   </div>
                   <div className="bg-card border border-border rounded-xl p-3 md:p-4 text-center">
                     <Cog className="h-5 w-5 md:h-6 md:w-6 mx-auto mb-1.5 md:mb-2 text-primary" />
                     <p className="text-[10px] md:text-sm text-muted-foreground">Gearbox</p>
-                    <p className="font-semibold text-[10px] md:text-sm">{car.transmission.join(" / ")}</p>
+                    <p className="font-semibold text-[10px] md:text-sm">{car.transmission?.join(" / ") || "—"}</p>
                   </div>
                   <div className="bg-card border border-border rounded-xl p-3 md:p-4 text-center">
                     <Clock className="h-5 w-5 md:h-6 md:w-6 mx-auto mb-1.5 md:mb-2 text-primary" />
@@ -499,7 +500,7 @@ const CarDetail = () => {
                   <div className="bg-card border border-border rounded-xl p-3 md:p-4 text-center">
                     <Shield className="h-5 w-5 md:h-6 md:w-6 mx-auto mb-1.5 md:mb-2 text-primary" />
                     <p className="text-[10px] md:text-sm text-muted-foreground">Safety</p>
-                    <p className="font-semibold text-[10px] md:text-sm">{car.specifications?.performance?.find(s => s.label.toLowerCase().includes('safety'))?.value || '5 Star'}</p>
+                    <p className="font-semibold text-[10px] md:text-sm">{(Array.isArray(car.specifications?.performance) ? car.specifications.performance.find(s => s.label?.toLowerCase().includes('safety'))?.value : null) || '5 Star'}</p>
                   </div>
                 </div>
 
@@ -536,6 +537,7 @@ const CarDetail = () => {
         </section>
 
         {/* Specifications & Details */}
+        <SectionErrorBoundary sectionName="specifications">
         <section className="py-8 bg-secondary/30">
           <div className="container mx-auto px-4">
             <Tabs defaultValue="specifications" className="space-y-4">
@@ -550,6 +552,7 @@ const CarDetail = () => {
               <TabsContent value="specifications" className="space-y-2">
                 <Accordion type="multiple" defaultValue={["engine"]} className="w-full space-y-2">
                   {/* Engine & Transmission */}
+                  {Array.isArray(car.specifications?.engine) && car.specifications.engine.length > 0 && (
                   <AccordionItem value="engine" className="rounded-2xl border border-border/50 overflow-hidden bg-card">
                     <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/30">
                       <div className="flex items-center gap-2">
@@ -573,8 +576,10 @@ const CarDetail = () => {
                       </div>
                     </AccordionContent>
                   </AccordionItem>
+                  )}
 
                   {/* Dimensions & Capacity */}
+                  {Array.isArray(car.specifications?.dimensions) && car.specifications.dimensions.length > 0 && (
                   <AccordionItem value="dimensions" className="rounded-2xl border border-border/50 overflow-hidden bg-card">
                     <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/30">
                       <div className="flex items-center gap-2">
@@ -598,8 +603,10 @@ const CarDetail = () => {
                       </div>
                     </AccordionContent>
                   </AccordionItem>
+                  )}
 
                   {/* Performance */}
+                  {Array.isArray(car.specifications?.performance) && car.specifications.performance.length > 0 && (
                   <AccordionItem value="performance" className="rounded-2xl border border-border/50 overflow-hidden bg-card">
                     <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/30">
                       <div className="flex items-center gap-2">
@@ -623,8 +630,10 @@ const CarDetail = () => {
                       </div>
                     </AccordionContent>
                   </AccordionItem>
+                  )}
 
                   {/* Features & Safety */}
+                  {Array.isArray(car.specifications?.features) && car.specifications.features.length > 0 && (
                   <AccordionItem value="features" className="rounded-2xl border border-border/50 overflow-hidden bg-card">
                     <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/30">
                       <div className="flex items-center gap-2">
@@ -648,6 +657,7 @@ const CarDetail = () => {
                       </div>
                     </AccordionContent>
                   </AccordionItem>
+                  )}
                 </Accordion>
               </TabsContent>
 
@@ -826,7 +836,7 @@ const CarDetail = () => {
 
               <TabsContent value="offers" className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {car.offers.map((offer) => (
+                  {(car.offers || []).map((offer) => (
                     <Card key={offer.id} className="overflow-hidden">
                       <CardContent className="p-0">
                         <div className="flex">
@@ -875,6 +885,7 @@ const CarDetail = () => {
             </Tabs>
           </div>
         </section>
+        </SectionErrorBoundary>
 
         {/* AI Recommendations Section */}
         <section className="py-6 md:py-10 bg-secondary/30">
