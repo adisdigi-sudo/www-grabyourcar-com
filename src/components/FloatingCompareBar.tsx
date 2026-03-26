@@ -48,7 +48,7 @@ export const FloatingCompareBar = () => {
                   className="w-12 h-8 object-cover rounded"
                 />
                 <div className="min-w-0">
-                  <p className="text-xs font-medium truncate max-w-[100px]">
+                  <p className="text-xs font-medium truncate max-w-[120px] sm:max-w-[160px]">
                     {car.name}
                   </p>
                   <p className="text-[10px] text-muted-foreground">{car.price.split(" - ")[0]}</p>
