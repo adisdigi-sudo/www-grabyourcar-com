@@ -940,6 +940,14 @@ const CarDetail = () => {
               fuelTypes={car.fuelTypes}
               transmission={car.transmission}
             />
+
+            {/* Cross-Sell */}
+            <CrossSellWidget 
+              context="carDetail" 
+              title="Complete Your Purchase" 
+              maxItems={4}
+              layout="compact-grid"
+            />
           </div>
         </section>
 
