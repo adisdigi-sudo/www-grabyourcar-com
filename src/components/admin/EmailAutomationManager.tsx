@@ -505,7 +505,12 @@ export default function EmailAutomationManager() {
           {previewTemplate && (
             <div className="space-y-4">
               <div className="border rounded-lg p-4 bg-white">
-                <div dangerouslySetInnerHTML={{ __html: previewTemplate.html_content }} />
+                <iframe
+                  sandbox="allow-same-origin"
+                  srcDoc={previewTemplate.html_content}
+                  style={{ width: '100%', minHeight: '400px', border: 'none' }}
+                  title="Email template preview"
+                />
               </div>
 
               {previewTemplate.variables && previewTemplate.variables.length > 0 && (
