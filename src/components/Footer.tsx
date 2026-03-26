@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import { Mail, Phone, MapPin, Facebook, Instagram, Linkedin, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,9 +34,11 @@ const footerLinks = {
   ],
 };
 
-export const Footer = () => {
+export const Footer = forwardRef<HTMLElement, React.ComponentPropsWithoutRef<"footer">>((props, ref) => {
+  const { className, ...restProps } = props;
+
   return (
-    <footer className="bg-foreground text-background">
+    <footer ref={ref} className={className ?? "bg-foreground text-background"} {...restProps}>
       {/* Main Footer */}
       <div className="container mx-auto px-4 py-12 md:py-16">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
@@ -199,4 +202,6 @@ export const Footer = () => {
       </div>
     </footer>
   );
-};
+});
+
+Footer.displayName = "Footer";
