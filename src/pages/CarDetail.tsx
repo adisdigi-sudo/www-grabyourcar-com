@@ -274,7 +274,7 @@ const CarDetail = () => {
                     <span className="text-[10px] font-bold leading-tight">{compareCtx.isInCompare(car.id) ? 'Added' : 'Compare'}</span>
                   </button>
                   <a href="tel:+1155578093" className="w-full">
-                    <button className="w-full flex flex-col items-center gap-1.5 py-3 rounded-xl bg-muted text-foreground border border-border/60 hover:border-primary/40 transition-all active:scale-95">
+                    <button className="w-full flex flex-col items-center gap-1.5 py-3 rounded-xl bg-primary text-primary-foreground shadow-md hover:shadow-lg transition-all active:scale-95">
                       <Phone className="h-5 w-5" />
                       <span className="text-[10px] font-bold leading-tight">Talk Expert</span>
                     </button>
