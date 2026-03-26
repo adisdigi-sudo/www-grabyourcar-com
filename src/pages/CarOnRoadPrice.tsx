@@ -47,6 +47,7 @@ import { useCarBySlug } from "@/hooks/useCars";
 import { WhatsAppSalesCTA } from "@/components/WhatsAppCTA";
 import { EMICustomizerModal } from "@/components/EMICustomizerModal";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
 
 const CarOnRoadPrice = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -73,16 +74,25 @@ const CarOnRoadPrice = () => {
     return stateRates.map(s => ({ code: s.code, name: s.name }));
   }, [dbStates]);
 
+  const safeVariants = Array.isArray(car?.variants) ? car.variants : [];
+  const safeFuelTypes = Array.isArray(car?.fuelTypes) ? car.fuelTypes : [];
+  const safeTransmissions = Array.isArray(car?.transmission) ? car.transmission : [];
+  const safeVariantIndex = selectedVariant >= 0 && selectedVariant < safeVariants.length ? selectedVariant : 0;
+  const safeColorIndex = selectedColor >= 0 && selectedColor < displayColors.length ? selectedColor : 0;
+  const activeStateCode = availableStates.some((state) => state.code === selectedState)
+    ? selectedState
+    : (availableStates[0]?.code || "DL");
+
   // Use DB engine if rules available, fallback to hardcoded
-  const currentVariant = car?.variants?.[selectedVariant];
-  const exShowroomPrice = currentVariant?.priceNumeric || (parseFloat(car?.price?.match(/[\d.]+/)?.[0] || "0") * 100000);
-  const fuelType = currentVariant?.fuelType || car?.fuelTypes?.[0] || "petrol";
+  const currentVariant = safeVariants[safeVariantIndex] || null;
+  const exShowroomPrice = currentVariant?.priceNumeric || car?.priceNumeric || (parseFloat(car?.price?.match(/[\d.]+/)?.[0] || "0") * 100000);
+  const fuelType = currentVariant?.fuelType || safeFuelTypes[0] || "petrol";
 
   const breakup = useMemo(() => {
     if (taxRules && taxRules.length > 0) {
-      return calculateOnRoadPrice(taxRules, exShowroomPrice, selectedState, fuelType, selectedOwnership);
+      return calculateOnRoadPrice(taxRules, exShowroomPrice, activeStateCode, fuelType, selectedOwnership);
     }
-    const fallback = calculateStatePriceBreakup(exShowroomPrice, selectedState, fuelType);
+    const fallback = calculateStatePriceBreakup(exShowroomPrice, activeStateCode, fuelType);
     return {
       ...fallback,
       additionalCess: 0,
@@ -91,7 +101,7 @@ const CarOnRoadPrice = () => {
       fuelType,
       matchedRule: null,
     };
-  }, [taxRules, exShowroomPrice, selectedState, fuelType, selectedOwnership]);
+  }, [taxRules, exShowroomPrice, activeStateCode, fuelType, selectedOwnership]);
 
   const finalOnRoadPrice = breakup.onRoadPrice;
 
@@ -117,7 +127,9 @@ const CarOnRoadPrice = () => {
             <Skeleton className="h-48 w-full rounded-xl" />
           </div>
         </div>
-        <Footer />
+        <SectionErrorBoundary sectionName="car-on-road-price-footer-loading" fallback={null}>
+          <Footer />
+        </SectionErrorBoundary>
       </div>
     );
   }
@@ -131,7 +143,9 @@ const CarOnRoadPrice = () => {
           <p className="text-muted-foreground mb-8">The car you're looking for doesn't exist.</p>
           <Link to="/cars"><Button>Browse Cars</Button></Link>
         </div>
-        <Footer />
+        <SectionErrorBoundary sectionName="car-on-road-price-footer-not-found" fallback={null}>
+          <Footer />
+        </SectionErrorBoundary>
       </div>
     );
   }
@@ -188,6 +202,7 @@ const CarOnRoadPrice = () => {
         <section className="py-6">
           <div className="container mx-auto px-4">
             <div className="max-w-3xl mx-auto">
+              <SectionErrorBoundary sectionName="car-on-road-price-card">
               <Card className="border-2 border-primary/20 shadow-xl overflow-hidden">
                 {/* Header with Price */}
                 <div className="bg-gradient-to-r from-primary via-success to-primary/80 p-5 md:p-6">
@@ -204,7 +219,7 @@ const CarOnRoadPrice = () => {
                           {formatPrice(finalOnRoadPrice)}
                         </span>
                         <span className="text-sm opacity-70">
-                          in {availableStates.find(s => s.code === selectedState)?.name}
+                          in {availableStates.find(s => s.code === activeStateCode)?.name || breakup.stateName}
                         </span>
                       </motion.div>
                       {taxLoading && <span className="text-xs opacity-60">Loading latest rates...</span>}
@@ -223,24 +238,29 @@ const CarOnRoadPrice = () => {
                       <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
                         Select Variant
                       </label>
-                      <Select 
-                        value={selectedVariant.toString()} 
+                        <Select 
+                          value={safeVariantIndex.toString()} 
                         onValueChange={(v) => setSelectedVariant(parseInt(v))}
+                          disabled={safeVariants.length === 0}
                       >
                         <SelectTrigger className="h-12">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {car.variants.map((variant, index) => (
+                          {safeVariants.length > 0 ? safeVariants.map((variant, index) => (
                             <SelectItem key={index} value={index.toString()} className="py-3">
                               <div className="flex flex-col items-start">
                                 <span className="font-medium">{variant.name}</span>
                                 <span className="text-xs text-muted-foreground">
-                                  {variant.fuelType || car.fuelTypes[0]} • {variant.transmission || car.transmission[0]}
+                                  {variant.fuelType || safeFuelTypes[0] || "—"} • {variant.transmission || safeTransmissions[0] || "—"}
                                 </span>
                               </div>
                             </SelectItem>
-                          ))}
+                          )) : (
+                            <SelectItem value="0" disabled className="py-3">
+                              Variant data unavailable
+                            </SelectItem>
+                          )}
                         </SelectContent>
                       </Select>
                     </div>
@@ -250,7 +270,7 @@ const CarOnRoadPrice = () => {
                         <MapPin className="h-3 w-3" />
                         State
                       </label>
-                      <Select value={selectedState} onValueChange={setSelectedState}>
+                      <Select value={activeStateCode} onValueChange={setSelectedState}>
                         <SelectTrigger className="h-12">
                           <SelectValue />
                         </SelectTrigger>
@@ -296,13 +316,13 @@ const CarOnRoadPrice = () => {
                                 <button
                                   onClick={() => setSelectedColor(index)}
                                   className={`w-9 h-9 rounded-full border-2 transition-all ${
-                                    selectedColor === index 
+                                     safeColorIndex === index 
                                       ? "border-primary scale-110 ring-2 ring-primary/30" 
                                       : "border-border hover:scale-105"
                                   }`}
-                                  style={{ backgroundColor: color.hex }}
+                                   style={{ backgroundColor: color.hex || "hsl(var(--muted))" }}
                                 >
-                                  {selectedColor === index && (
+                                   {safeColorIndex === index && (
                                     <Check className="h-4 w-4 m-auto text-white drop-shadow-md" />
                                   )}
                                 </button>
@@ -312,8 +332,8 @@ const CarOnRoadPrice = () => {
                           </TooltipProvider>
                         ))}
                       </div>
-                      {displayColors[selectedColor] && (
-                        <p className="text-xs text-muted-foreground mt-2">{displayColors[selectedColor].name}</p>
+                      {displayColors[safeColorIndex] && (
+                        <p className="text-xs text-muted-foreground mt-2">{displayColors[safeColorIndex].name}</p>
                       )}
                     </div>
                   )}
@@ -434,7 +454,7 @@ const CarOnRoadPrice = () => {
                       {selectedOwnership === "corporate" ? "Corporate" : "Individual"} Registration
                     </Badge>
                     <Badge variant="outline" className="text-xs">
-                      {availableStates.find(s => s.code === selectedState)?.name}
+                      {availableStates.find(s => s.code === activeStateCode)?.name || breakup.stateName}
                     </Badge>
                     {taxRules && taxRules.length > 0 && (
                       <Badge variant="secondary" className="text-xs bg-success/10 text-foreground border-success/20">
@@ -451,7 +471,7 @@ const CarOnRoadPrice = () => {
                       </div>
                       <div>
                         <p className="font-semibold">EMI Calculator</p>
-                        <p className="text-xs text-muted-foreground">{currentVariant?.name}</p>
+                      <p className="text-xs text-muted-foreground">{currentVariant?.name || car.name}</p>
                       </div>
                     </div>
                     
@@ -459,7 +479,7 @@ const CarOnRoadPrice = () => {
                       <div className="bg-background/80 rounded-lg p-4 border">
                         <div className="flex justify-between items-center">
                           <span className="text-sm text-muted-foreground">Selected Variant</span>
-                          <span className="font-semibold">{currentVariant?.name}</span>
+                          <span className="font-semibold">{currentVariant?.name || car.name}</span>
                         </div>
                         <div className="flex justify-between items-center mt-2">
                           <span className="text-sm text-muted-foreground">On-Road Price</span>
@@ -500,12 +520,14 @@ const CarOnRoadPrice = () => {
 
                   {/* CTA Buttons */}
                   <div className="grid grid-cols-2 gap-3 pt-2">
-                    <WhatsAppSalesCTA 
-                      carName={`${car.brand} ${car.name}`} 
-                      type="price" 
-                      size="lg"
-                      className="w-full"
-                    />
+                    <div className="w-full">
+                      <WhatsAppSalesCTA 
+                        carName={`${car.brand} ${car.name}`} 
+                        type="price" 
+                        size="lg"
+                        className="w-full"
+                      />
+                    </div>
                     <a href="tel:+1155578093" className="w-full">
                       <Button variant="call" size="lg" className="w-full">
                         <Phone className="h-5 w-5 mr-2" />
@@ -515,6 +537,7 @@ const CarOnRoadPrice = () => {
                   </div>
                 </CardContent>
               </Card>
+              </SectionErrorBoundary>
 
               {/* Back Link */}
               <div className="text-center mt-6">
@@ -529,27 +552,31 @@ const CarOnRoadPrice = () => {
         </section>
       </main>
 
-      <Footer />
+      <SectionErrorBoundary sectionName="car-on-road-price-footer" fallback={null}>
+        <Footer />
+      </SectionErrorBoundary>
 
       {/* EMI Customizer Modal */}
-      <EMICustomizerModal
-        open={showEMIModal}
-        onOpenChange={setShowEMIModal}
-        carName={`${car.brand} ${car.name}`}
-        variantName={currentVariant?.name || ""}
-        onRoadPrice={{
-          exShowroom: breakup.exShowroom,
-          rto: breakup.roadTax,
-          insurance: breakup.insurance,
-          tcs: breakup.tcs,
-          fastag: breakup.fastag,
-          registration: breakup.registration,
-          handling: breakup.handling,
-          onRoadPrice: breakup.onRoadPrice
-        }}
-        selectedColor={displayColors[selectedColor]?.name}
-        selectedCity={availableStates.find(s => s.code === selectedState)?.name}
-      />
+      <SectionErrorBoundary sectionName="car-on-road-price-emi-modal" fallback={null}>
+        <EMICustomizerModal
+          open={showEMIModal}
+          onOpenChange={setShowEMIModal}
+          carName={`${car.brand} ${car.name}`}
+          variantName={currentVariant?.name || car.name}
+          onRoadPrice={{
+            exShowroom: breakup.exShowroom,
+            rto: breakup.roadTax,
+            insurance: breakup.insurance,
+            tcs: breakup.tcs,
+            fastag: breakup.fastag,
+            registration: breakup.registration,
+            handling: breakup.handling,
+            onRoadPrice: breakup.onRoadPrice
+          }}
+          selectedColor={displayColors[safeColorIndex]?.name}
+          selectedCity={availableStates.find(s => s.code === activeStateCode)?.name || breakup.stateName}
+        />
+      </SectionErrorBoundary>
     </div>
   );
 };

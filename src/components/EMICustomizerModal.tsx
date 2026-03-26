@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { forwardRef, useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -47,7 +47,7 @@ interface EMICustomizerModalProps {
   pdfConfig?: Partial<EMIPDFConfig>;
 }
 
-export const EMICustomizerModal = ({
+export const EMICustomizerModal = forwardRef<HTMLDivElement, EMICustomizerModalProps>(({ 
   open,
   onOpenChange,
   carName,
@@ -56,7 +56,7 @@ export const EMICustomizerModal = ({
   selectedCity,
   onRoadPrice,
   pdfConfig,
-}: EMICustomizerModalProps) => {
+}, ref) => {
   const basePrice = onRoadPrice.onRoadPrice;
   
   // Default values
@@ -178,7 +178,7 @@ export const EMICustomizerModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent ref={ref} className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calculator className="h-5 w-5 text-foreground" />
@@ -448,4 +448,6 @@ export const EMICustomizerModal = ({
       </DialogContent>
     </Dialog>
   );
-};
+});
+
+EMICustomizerModal.displayName = "EMICustomizerModal";
