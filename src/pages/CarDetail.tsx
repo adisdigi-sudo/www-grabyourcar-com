@@ -230,7 +230,7 @@ const CarDetail = () => {
                 </div>
 
         {/* Car Details Section */}
-        <section className="py-6 md:py-12">
+        <section className="py-6 lg:py-12">
           <div className="container mx-auto px-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12">
               {/* Left Column: Gallery + Desktop Booking + Desktop Why Buy */}
@@ -253,7 +253,7 @@ const CarDetail = () => {
                 />
 
                 {/* Mobile: 4 Action Buttons Grid right below car image */}
-                <div className="grid grid-cols-4 gap-2 md:hidden">
+                <div className="grid grid-cols-4 gap-2 lg:hidden">
                   <button
                     onClick={() => setPricingDrawerOpen(true)}
                     className="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-success text-success-foreground shadow-md hover:shadow-lg transition-all active:scale-95"
@@ -289,7 +289,7 @@ const CarDetail = () => {
                 </div>
 
                 {/* Mobile: Why Buy - Auto-scrolling marquee */}
-                <div className="md:hidden overflow-hidden rounded-xl border border-border/50 bg-gradient-to-r from-card to-secondary/20 p-3">
+                <div className="lg:hidden overflow-hidden rounded-xl border border-border/50 bg-gradient-to-r from-card to-secondary/20 p-3">
                   <div className="flex items-center gap-2 mb-2">
                     <Star className="h-4 w-4 text-accent" />
                     <span className="text-xs font-semibold">Why Buy From Grabyourcar?</span>
@@ -319,7 +319,7 @@ const CarDetail = () => {
                 </div>
 
                 {/* Mobile: Need Help bar */}
-                <div className="md:hidden p-3 rounded-xl bg-gradient-to-r from-primary/10 to-success/10 border border-primary/20">
+                <div className="lg:hidden p-3 rounded-xl bg-gradient-to-r from-primary/10 to-success/10 border border-primary/20">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Phone className="h-4 w-4 text-primary" />
@@ -335,7 +335,7 @@ const CarDetail = () => {
                 </div>
 
                 {/* Mobile: Unified Price Card with Variant Selector */}
-                <div className="md:hidden">
+                <div className="lg:hidden">
                   <div className="rounded-2xl overflow-hidden border border-success/20 shadow-lg">
                     {/* Header strip */}
                     <div className="bg-gradient-to-r from-success via-success/90 to-success px-4 py-2.5 flex items-center justify-between">
@@ -405,7 +405,7 @@ const CarDetail = () => {
 
                 {/* Mobile: Key Features - Single collapsible dropdown below price */}
                 {car.specifications?.features && car.specifications.features.length > 0 && (
-                  <div className="md:hidden">
+                  <div className="lg:hidden">
                     <Accordion type="single" collapsible className="w-full">
                       <AccordionItem value="key-features" className="rounded-2xl border border-border/50 overflow-hidden bg-card">
                         <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/50">
@@ -439,12 +439,12 @@ const CarDetail = () => {
                   </div>
                 )}
 
-                <div className="mt-6 hidden md:block">
+                <div className="mt-6 hidden lg:block">
                   <BookingForm carName={car.name} carBrand={car.brand} />
                 </div>
 
                 {/* Desktop: Why Buy From Us */}
-                <Card className="mt-6 hidden md:block border-border/50 bg-gradient-to-br from-card to-secondary/20">
+                <Card className="mt-6 hidden lg:block border-border/50 bg-gradient-to-br from-card to-secondary/20">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base flex items-center gap-2">
                       <Star className="h-5 w-5 text-accent" />
@@ -518,7 +518,7 @@ const CarDetail = () => {
                 </div>
 
                 {/* Quick Price Display - Desktop only (mobile has merged card above) */}
-                <div className="hidden md:block bg-gradient-to-r from-primary/10 via-success/10 to-primary/10 rounded-xl p-4 border border-primary/20">
+                <div className="hidden lg:block bg-gradient-to-r from-primary/10 via-success/10 to-primary/10 rounded-xl p-4 border border-primary/20">
                   <div className="flex items-center justify-between flex-wrap gap-4">
                     <div>
                       <p className="text-xs text-muted-foreground">Starting Price</p>
@@ -622,7 +622,7 @@ const CarDetail = () => {
                 </div>
 
                 {/* Full Pricing Configurator - Hidden on mobile, shown on md+ */}
-                <div className="hidden md:block">
+                <div className="hidden lg:block">
                   <CarPricingConfigurator
                     car={car}
                     colors={displayColors}
@@ -1001,7 +1001,7 @@ const CarDetail = () => {
         </section>
 
         {/* WhatsApp Conversion Section */}
-        <section className="py-8 md:py-12">
+        <section className="py-8 lg:py-12">
           <div className="container mx-auto px-4">
             <div className="max-w-2xl mx-auto">
               <WhatsAppConversionCard
@@ -1015,13 +1015,13 @@ const CarDetail = () => {
 
       </main>
       {/* Spacer for mobile sticky bottom bar */}
-      <div className="h-20 md:hidden" />
+      <div className="h-20 lg:hidden" />
 
       <Footer />
       <FloatingCTA />
 
       {/* Mobile Sticky Bottom Bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-card border-t border-border shadow-[0_-4px_20px_-4px_hsl(var(--foreground)/0.1)]">
+      <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-card border-t border-border shadow-[0_-4px_20px_-4px_hsl(var(--foreground)/0.1)]">
         <div className="flex items-center justify-between px-4 py-3">
           <div>
             <p className="text-[10px] text-muted-foreground font-medium">On-Road Price</p>
