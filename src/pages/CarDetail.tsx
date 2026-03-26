@@ -256,7 +256,7 @@ const CarDetail = () => {
                 <div className="grid grid-cols-4 gap-2 lg:hidden">
                   <button
                     onClick={() => setPricingDrawerOpen(true)}
-                    className="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-success text-success-foreground shadow-md hover:shadow-lg transition-all active:scale-95"
+                    className="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-gradient-to-b from-primary to-primary-glow text-primary-foreground shadow-glow hover:shadow-accent-glow transition-all active:scale-95"
                   >
                     <IndianRupee className="h-5 w-5" />
                     <span className="text-[10px] font-bold leading-tight">Best Price</span>
@@ -268,20 +268,20 @@ const CarDetail = () => {
                       if (inCompare) removeFromCompare(car.id);
                       else if (canAddMore) addToCompare(car.id);
                     }}
-                    className="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-success text-success-foreground shadow-md hover:shadow-lg transition-all active:scale-95"
+                    className="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-muted text-foreground border border-border/60 hover:border-primary/40 transition-all active:scale-95"
                   >
                     <GitCompareArrows className="h-5 w-5" />
                     <span className="text-[10px] font-bold leading-tight">{compareCtx.isInCompare(car.id) ? 'Added' : 'Compare'}</span>
                   </button>
                   <a href="tel:+1155578093" className="w-full">
-                    <button className="w-full flex flex-col items-center gap-1.5 py-3 rounded-xl bg-success text-success-foreground shadow-md hover:shadow-lg transition-all active:scale-95">
+                    <button className="w-full flex flex-col items-center gap-1.5 py-3 rounded-xl bg-muted text-foreground border border-border/60 hover:border-primary/40 transition-all active:scale-95">
                       <Phone className="h-5 w-5" />
                       <span className="text-[10px] font-bold leading-tight">Talk Expert</span>
                     </button>
                   </a>
                   <button
                     onClick={() => setBookingDrawerOpen(true)}
-                    className="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-success text-success-foreground shadow-md hover:shadow-lg transition-all active:scale-95"
+                    className="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-gradient-to-b from-primary to-primary-glow text-primary-foreground shadow-glow hover:shadow-accent-glow transition-all active:scale-95"
                   >
                     <Calendar className="h-5 w-5" />
                     <span className="text-[10px] font-bold leading-tight">Book Car</span>
@@ -368,8 +368,8 @@ const CarDetail = () => {
                                 onClick={() => { setSelectedVariant(i); trackVariantClick(car.slug, v.name); }}
                                 className={`flex-shrink-0 text-[10px] px-3 py-1.5 rounded-full font-semibold transition-all border ${
                                   selectedVariant === i
-                                    ? 'bg-success text-success-foreground border-success shadow-sm'
-                                    : 'bg-card text-muted-foreground border-border hover:border-success/50'
+                                    ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                                    : 'bg-card text-muted-foreground border-border hover:border-primary/50'
                                 }`}
                               >
                                 {v.name}
@@ -381,15 +381,15 @@ const CarDetail = () => {
                     </div>
 
                     {/* Action Row */}
-                    <div className="border-t border-border/40 grid grid-cols-2 divide-x divide-border/40">
+                    <div className="border-t border-border/40 grid grid-cols-2">
                       <button
                         onClick={() => setPricingDrawerOpen(true)}
-                        className="flex items-center justify-center gap-2 py-3 text-xs font-bold text-success hover:bg-success/5 transition-colors active:scale-[0.98]"
+                        className="flex items-center justify-center gap-2 py-3.5 text-xs font-bold text-primary-foreground bg-gradient-to-r from-primary to-primary-glow shadow-glow hover:shadow-accent-glow transition-all active:scale-[0.98]"
                       >
                         <IndianRupee className="h-3.5 w-3.5" />
                         Get Best Price
                       </button>
-                      <Link to={`/car/${car.slug}/on-road-price`} className="flex items-center justify-center gap-1.5 py-3 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
+                      <Link to={`/car/${car.slug}/on-road-price`} className="flex items-center justify-center gap-1.5 py-3.5 text-xs font-semibold text-foreground bg-muted/50 hover:bg-muted transition-colors border-l border-border/40">
                         Full Breakup <ChevronRight className="h-3 w-3" />
                       </Link>
                     </div>
