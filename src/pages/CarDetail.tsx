@@ -461,13 +461,6 @@ const CarDetail = () => {
                   </div>
                 )}
 
-                {/* Complete Your Purchase - Cross-sell */}
-                <CrossSellWidget 
-                  context="carDetail" 
-                  title="Complete Your Purchase" 
-                  maxItems={4}
-                  layout="compact-grid"
-                />
 
                 <div className="mt-6 hidden lg:block">
                   <BookingForm carName={car.name} carBrand={car.brand} />
