@@ -670,24 +670,6 @@ const CarDetail = () => {
                 {/* Selected Variant Details - Only show if variants exist */}
                 {car.variants && car.variants.length > 0 && car.variants[selectedVariant] ? (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Price Breakup */}
-                    <div className="space-y-4">
-                      {(() => {
-                        const selectedVar = car.variants[selectedVariant];
-                        const priceMatch = selectedVar?.price?.match(/[\d.]+/);
-                        const priceInLakh = priceMatch ? parseFloat(priceMatch[0]) : 0;
-                        const exShowroomPrice = selectedVar?.priceNumeric || priceInLakh * 100000 || car.priceNumeric || 0;
-                        
-                        return (
-                          <PriceBreakup
-                            variantName={selectedVar?.name || 'Base'}
-                            carName={car.name}
-                            exShowroomPrice={exShowroomPrice}
-                          />
-                        );
-                      })()}
-                    </div>
-                    
                     {/* Features for selected variant */}
                     <Card>
                       <CardHeader className="pb-3">
