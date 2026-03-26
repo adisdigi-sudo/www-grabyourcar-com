@@ -120,8 +120,8 @@ export const Header = () => {
             </button>
 
             {/* Logo - Responsive & Backend-Managed */}
-            <Link to="/" className="flex items-center flex-shrink-0 max-w-[130px] sm:max-w-[160px] md:max-w-none overflow-hidden">
-              <ResponsiveLogo variant="header" className="h-8 md:h-10 lg:h-12" />
+            <Link to="/" className="flex items-center flex-shrink-0">
+              <ResponsiveLogo variant="header" className="h-8 md:h-10 lg:h-12 w-auto" />
             </Link>
 
             {/* Desktop Navigation with Mega Menu */}
