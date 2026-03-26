@@ -196,8 +196,7 @@ export function CrossSellWidget({
                 <div className="flex flex-col items-center text-center gap-2.5">
                   <div className={`w-11 h-11 rounded-xl ${offer.iconBg || 'bg-success/10'} flex items-center justify-center ${offer.iconColor || 'text-success'} group-hover:scale-110 transition-transform`}>
                     {offer.icon}
-                  </div>
-                  </div>
+                   </div>
                   <div className="space-y-0.5">
                     <h4 className="font-semibold text-xs leading-tight line-clamp-2">{offer.title}</h4>
                     <p className="text-[10px] text-muted-foreground leading-tight line-clamp-1">{offer.subtitle}</p>
