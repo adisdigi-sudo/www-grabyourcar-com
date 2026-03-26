@@ -268,7 +268,7 @@ const CarDetail = () => {
                       if (inCompare) removeFromCompare(car.id);
                       else if (canAddMore) addToCompare(car.id);
                     }}
-                    className="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-muted text-foreground border border-border/60 hover:border-primary/40 transition-all active:scale-95"
+                    className="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-primary text-primary-foreground shadow-md hover:shadow-lg transition-all active:scale-95"
                   >
                     <GitCompareArrows className="h-5 w-5" />
                     <span className="text-[10px] font-bold leading-tight">{compareCtx.isInCompare(car.id) ? 'Added' : 'Compare'}</span>
