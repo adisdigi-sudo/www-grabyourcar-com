@@ -537,6 +537,7 @@ const CarDetail = () => {
         </section>
 
         {/* Specifications & Details */}
+        <SectionErrorBoundary sectionName="specifications">
         <section className="py-8 bg-secondary/30">
           <div className="container mx-auto px-4">
             <Tabs defaultValue="specifications" className="space-y-4">
