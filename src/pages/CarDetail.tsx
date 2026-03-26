@@ -368,8 +368,8 @@ const CarDetail = () => {
                                 onClick={() => { setSelectedVariant(i); trackVariantClick(car.slug, v.name); }}
                                 className={`flex-shrink-0 text-[10px] px-3 py-1.5 rounded-full font-semibold transition-all border ${
                                   selectedVariant === i
-                                    ? 'bg-success text-success-foreground border-success shadow-sm'
-                                    : 'bg-card text-muted-foreground border-border hover:border-success/50'
+                                    ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                                    : 'bg-card text-muted-foreground border-border hover:border-primary/50'
                                 }`}
                               >
                                 {v.name}
