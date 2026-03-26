@@ -271,7 +271,7 @@ const CarDetail = () => {
                 />
 
                 {/* Mobile: 4 Action Buttons Grid right below car image */}
-                <div className="grid grid-cols-4 gap-2 lg:hidden">
+                <div className="grid grid-cols-4 gap-2">
                   <button
                     onClick={() => setPricingDrawerOpen(true)}
                     className="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-primary text-primary-foreground shadow-md hover:shadow-lg transition-all active:scale-95"
@@ -353,7 +353,7 @@ const CarDetail = () => {
                 </div>
 
                 {/* Mobile/Tablet: Structured Price & Variants Card */}
-                <div className="lg:hidden">
+                <div>
                   <div className="rounded-2xl overflow-hidden border border-border/60 shadow-sm bg-card">
                     {/* Price Row */}
                     <div className="p-4 space-y-3">
@@ -470,7 +470,7 @@ const CarDetail = () => {
                 )}
 
 
-                <div className="mt-6 hidden lg:block">
+                <div className="mt-6">
                   <BookingForm carName={car.name} carBrand={car.brand} />
                 </div>
 
@@ -478,24 +478,6 @@ const CarDetail = () => {
 
               {/* Car Info - Right Column */}
               <div className="space-y-6">
-                {/* Quick Price Display - Desktop only (mobile has merged card above) */}
-                <div className="hidden lg:block bg-gradient-to-r from-primary/10 via-success/10 to-primary/10 rounded-xl p-4 border border-primary/20">
-                  <div className="flex items-center justify-between flex-wrap gap-4">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Starting Price</p>
-                      <p className="text-2xl md:text-3xl font-bold text-foreground">{car.price}</p>
-                      <p className="text-xs text-muted-foreground">Ex-showroom price</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Link to={`/car/${car.slug}/on-road-price`}>
-                        <Button variant="cta" size="sm">
-                          <IndianRupee className="h-4 w-4 mr-1" />
-                          On Road Price
-                        </Button>
-                      </Link>
-                    </div>
-                  </div>
-                </div>
 
                 {/* Quick Specs - 4 columns on mobile, 4 on desktop */}
                 <div className="grid grid-cols-4 gap-2 md:gap-4">
@@ -521,41 +503,6 @@ const CarDetail = () => {
                   </div>
                 </div>
 
-                {/* CTA Buttons - Desktop only */}
-                <div className="hidden lg:flex flex-wrap gap-3">
-                  <Button variant="cta" size="lg" className="flex-1 font-semibold hover:scale-105 transition-transform" onClick={() => setPricingDrawerOpen(true)}>
-                    Get Best Price
-                  </Button>
-                  <CompareButton carId={car.id} />
-                  <ShareButtons title={`Check out ${car.name} on Grabyourcar`} />
-                  {car.brochureUrl && (
-                    <BrochureLeadGate
-                      brochureUrl={car.brochureUrl}
-                      carName={`${car.brand} ${car.name}`}
-                      carSlug={car.slug}
-                    >
-                      <Button 
-                        variant="outline" 
-                        size="lg" 
-                        className="font-semibold hover:scale-105 transition-transform"
-                      >
-                        <FileText className="h-5 w-5 mr-2" />
-                        Brochure
-                      </Button>
-                    </BrochureLeadGate>
-                  )}
-                  <WhatsAppSalesCTA 
-                    carName={`${car.brand} ${car.name}`} 
-                    type="price" 
-                    size="lg"
-                  />
-                  <a href="tel:+1155578093">
-                    <Button variant="call" size="lg" className="font-semibold hover:scale-105 transition-transform">
-                      <Phone className="h-5 w-5 mr-2" />
-                      Talk to Expert
-                    </Button>
-                  </a>
-                </div>
 
 
                 {/* Trust Badges - compact highlighted strip */}
@@ -577,7 +524,7 @@ const CarDetail = () => {
                 </div>
 
                 {/* Full Pricing Configurator - Hidden on mobile, shown on md+ */}
-                <div className="hidden lg:block">
+                <div>
                   <CarPricingConfigurator
                     car={car}
                     colors={displayColors}
