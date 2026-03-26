@@ -124,7 +124,7 @@ const TrackOrder = () => {
         {/* Hero Section */}
         <div className="bg-gradient-to-br from-primary/10 via-background to-accent/10 py-12 sm:py-16">
           <div className="container max-w-2xl mx-auto px-4 text-center">
-            <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-4">
+            <div className="inline-flex items-center gap-2 bg-primary/10 text-foreground px-4 py-2 rounded-full text-sm font-medium mb-4">
               <Package className="h-4 w-4" />
               Order Tracking
             </div>
@@ -188,7 +188,7 @@ const TrackOrder = () => {
                   {/* Courier Info */}
                   {order.tracking_number && (
                     <div className="flex items-center gap-3 p-3 bg-secondary/50 rounded-lg text-sm">
-                      <Truck className="h-4 w-4 text-primary flex-shrink-0" />
+                      <Truck className="h-4 w-4 text-foreground flex-shrink-0" />
                       <div className="flex-1">
                         <span className="font-medium">{order.courier_name || "Courier"}</span>
                         <span className="text-muted-foreground mx-2">•</span>
@@ -196,7 +196,7 @@ const TrackOrder = () => {
                       </div>
                       {order.courier_tracking_url && (
                         <a href={order.courier_tracking_url} target="_blank" rel="noopener noreferrer"
-                          className="text-primary hover:underline inline-flex items-center gap-1 text-xs font-medium">
+                          className="text-foreground hover:underline inline-flex items-center gap-1 text-xs font-medium">
                           Track <ExternalLink className="h-3 w-3" />
                         </a>
                       )}

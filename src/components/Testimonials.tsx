@@ -47,7 +47,7 @@ const ReviewCard = ({ review, index }: { review: GoogleReviewDisplay; index: num
           <div className="flex items-center gap-2 mb-0.5">
             <p className="font-semibold text-foreground text-sm truncate">{review.authorName}</p>
             {review.isLocalGuide && (
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-accent/20 text-accent border-0">Local Guide</Badge>
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-accent/20 text-foreground border-0">Local Guide</Badge>
             )}
           </div>
           <div className="flex items-center gap-2">
@@ -177,7 +177,7 @@ export const Testimonials = () => {
           {stats.map((stat, index) => (
             <motion.div key={index} initial={{ opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ delay: index * 0.1 }}
               className="text-center p-3 md:p-5 rounded-xl bg-card border border-border/50 shadow-sm hover:shadow-md transition-shadow">
-              <stat.icon className="h-5 w-5 md:h-7 md:w-7 text-primary mx-auto mb-2" />
+              <stat.icon className="h-5 w-5 md:h-7 md:w-7 text-foreground mx-auto mb-2" />
               <p className="font-heading text-lg md:text-2xl font-bold text-foreground">{stat.value}</p>
               <p className="text-[10px] md:text-xs text-muted-foreground">{stat.label}</p>
             </motion.div>

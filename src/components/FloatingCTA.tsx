@@ -300,7 +300,7 @@ export const FloatingCTA = () => {
                       size="icon"
                       className="h-12 w-12 rounded-full shadow-lg group-hover:scale-110 transition-transform border-2 border-primary"
                     >
-                      <CalendarClock className="h-5 w-5 text-primary" />
+                      <CalendarClock className="h-5 w-5 text-foreground" />
                     </Button>
                   </button>
 
@@ -427,7 +427,7 @@ export const FloatingCTA = () => {
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle className="font-heading text-xl flex items-center gap-2">
-              <Zap className="h-5 w-5 text-primary" />
+              <Zap className="h-5 w-5 text-foreground" />
               Get Best Deal
             </DialogTitle>
             <DialogDescription>
@@ -493,7 +493,7 @@ export const FloatingCTA = () => {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="font-heading text-xl flex items-center gap-2">
-              <CalendarClock className="h-5 w-5 text-primary" />
+              <CalendarClock className="h-5 w-5 text-foreground" />
               Schedule a Call
             </DialogTitle>
             <DialogDescription>

@@ -51,7 +51,7 @@ export function InsuranceCoverageCards() {
           className="text-center max-w-2xl mx-auto mb-16"
         >
           <h2 className="text-3xl md:text-5xl font-heading font-bold mb-4">
-            Choose the right <span className="text-primary">coverage</span> for your car
+            Choose the right <span className="text-foreground">coverage</span> for your car
           </h2>
           <p className="text-lg text-muted-foreground">
             From basic mandatory coverage to comprehensive protection with add-ons
@@ -85,7 +85,7 @@ export function InsuranceCoverageCards() {
                   <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-6 ${
                     coverage.popular ? "bg-primary/15" : "bg-primary/8"
                   }`}>
-                    <coverage.icon className="h-8 w-8 text-primary" />
+                    <coverage.icon className="h-8 w-8 text-foreground" />
                   </div>
 
                   {/* Title */}
@@ -94,8 +94,8 @@ export function InsuranceCoverageCards() {
 
                   {/* Highlight */}
                   <div className="flex items-center gap-2 mb-6">
-                    <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-                    <span className="text-sm font-semibold text-primary">{coverage.highlight}</span>
+                    <CheckCircle2 className="h-4 w-4 text-foreground shrink-0" />
+                    <span className="text-sm font-semibold text-foreground">{coverage.highlight}</span>
                   </div>
 
                   {/* Price */}
@@ -111,7 +111,7 @@ export function InsuranceCoverageCards() {
                   <ul className="space-y-3 mb-8 flex-1">
                     {coverage.features.map((feature) => (
                       <li key={feature} className="flex items-start gap-2.5 text-sm">
-                        <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                        <CheckCircle2 className="h-4 w-4 text-foreground mt-0.5 shrink-0" />
                         <span className="text-foreground/80">{feature}</span>
                       </li>
                     ))}

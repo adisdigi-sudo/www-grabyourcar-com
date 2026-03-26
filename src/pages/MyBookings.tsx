@@ -327,7 +327,7 @@ const MyBookings = () => {
                         <div className="flex items-start justify-between">
                           <div>
                             <CardTitle className="text-lg flex items-center gap-2">
-                              <Car className="h-5 w-5 text-primary" />
+                              <Car className="h-5 w-5 text-foreground" />
                               {booking.vehicle_name}
                             </CardTitle>
                             <CardDescription>
@@ -403,7 +403,7 @@ const MyBookings = () => {
                         <div className="flex items-center justify-between pt-3 border-t">
                           <div>
                             <p className="text-xs text-muted-foreground">Total Amount</p>
-                            <p className="text-xl font-bold text-primary">{formatCurrency(booking.total_amount)}</p>
+                            <p className="text-xl font-bold text-foreground">{formatCurrency(booking.total_amount)}</p>
                           </div>
                           <div className="flex gap-2">
                             {agreement?.share_token && !agreement.client_signed_at && (
@@ -480,7 +480,7 @@ const MyBookings = () => {
                       <div className="flex items-start justify-between">
                         <div>
                           <CardTitle className="text-lg flex items-center gap-2">
-                            <Shield className="h-5 w-5 text-primary" />
+                            <Shield className="h-5 w-5 text-foreground" />
                             {booking.registration_number}
                           </CardTitle>
                           <CardDescription>{booking.vehicle_class} • {booking.service_type}</CardDescription>
@@ -512,7 +512,7 @@ const MyBookings = () => {
                         )}
                       </div>
                       <div className="flex items-center justify-between pt-3 border-t">
-                        <p className="text-lg font-bold text-primary">{formatCurrency(booking.payment_amount)}</p>
+                        <p className="text-lg font-bold text-foreground">{formatCurrency(booking.payment_amount)}</p>
                         {getStatusBadge(booking.payment_status)}
                       </div>
                     </CardContent>

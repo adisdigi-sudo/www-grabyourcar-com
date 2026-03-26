@@ -357,9 +357,9 @@ export default function AgreementSignPage() {
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Car className="h-4 w-4 text-primary" />
+                  <Car className="h-4 w-4 text-foreground" />
                 </div>
-                <span className="font-bold text-sm text-primary" style={{ fontFamily: "'Outfit', sans-serif" }}>GrabYourCar</span>
+                <span className="font-bold text-sm text-foreground" style={{ fontFamily: "'Outfit', sans-serif" }}>GrabYourCar</span>
               </div>
               <Badge variant="outline" className="text-[10px]">{agreement.agreement_number}</Badge>
             </div>
@@ -386,7 +386,7 @@ export default function AgreementSignPage() {
               <Card className="shadow-md border-primary/15 overflow-hidden">
                 <div className="bg-primary/5 px-4 py-2.5 border-b">
                   <h3 className="font-semibold text-sm flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-primary" /> Booking Details
+                    <FileText className="h-4 w-4 text-foreground" /> Booking Details
                   </h3>
                 </div>
                 <CardContent className="py-4">
@@ -406,7 +406,7 @@ export default function AgreementSignPage() {
                   <div className="mt-4 flex gap-3">
                     <div className="flex-1 bg-primary/5 rounded-xl p-3 text-center">
                       <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Rental</div>
-                      <div className="text-lg font-bold text-primary">₹{(agreement.rental_amount || 0).toLocaleString("en-IN")}</div>
+                      <div className="text-lg font-bold text-foreground">₹{(agreement.rental_amount || 0).toLocaleString("en-IN")}</div>
                     </div>
                     <div className="flex-1 bg-amber-50 dark:bg-amber-950/20 rounded-xl p-3 text-center">
                       <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Deposit</div>
@@ -420,7 +420,7 @@ export default function AgreementSignPage() {
               <Card className="shadow-sm">
                 <CardContent className="py-4">
                   <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-primary" /> Terms & Conditions
+                    <FileText className="h-4 w-4 text-foreground" /> Terms & Conditions
                   </h3>
                   <div className="prose prose-sm max-w-none text-xs leading-relaxed max-h-48 overflow-y-auto pr-2 border rounded-lg p-3 bg-muted/30"
                     dangerouslySetInnerHTML={{ __html: agreement.terms_html }}
@@ -504,7 +504,7 @@ export default function AgreementSignPage() {
                           : "border-muted hover:border-primary/40"
                       }`}
                     >
-                      <Type className="h-6 w-6 mx-auto mb-1.5 text-primary" />
+                      <Type className="h-6 w-6 mx-auto mb-1.5 text-foreground" />
                       <div className="text-sm font-semibold">Type Name</div>
                       <div className="text-[10px] text-muted-foreground">Quick & easy</div>
                     </button>
@@ -516,7 +516,7 @@ export default function AgreementSignPage() {
                           : "border-muted hover:border-primary/40"
                       }`}
                     >
-                      <Pen className="h-6 w-6 mx-auto mb-1.5 text-primary" />
+                      <Pen className="h-6 w-6 mx-auto mb-1.5 text-foreground" />
                       <div className="text-sm font-semibold">Draw Signature</div>
                       <div className="text-[10px] text-muted-foreground">Hand-drawn</div>
                     </button>
@@ -629,7 +629,7 @@ export default function AgreementSignPage() {
                     <div className="flex justify-between"><span className="text-muted-foreground">Vehicle</span><span className="font-medium">{agreement.vehicle_name || "TBD"}</span></div>
                     {agreement.pickup_date && <div className="flex justify-between"><span className="text-muted-foreground">Pickup</span><span className="font-medium">{agreement.pickup_date}</span></div>}
                     {agreement.dropoff_date && <div className="flex justify-between"><span className="text-muted-foreground">Dropoff</span><span className="font-medium">{agreement.dropoff_date}</span></div>}
-                    <div className="flex justify-between border-t pt-2"><span className="text-muted-foreground">Amount</span><span className="font-bold text-primary">₹{(agreement.rental_amount || 0).toLocaleString("en-IN")}</span></div>
+                    <div className="flex justify-between border-t pt-2"><span className="text-muted-foreground">Amount</span><span className="font-bold text-foreground">₹{(agreement.rental_amount || 0).toLocaleString("en-IN")}</span></div>
                   </div>
 
                   {/* Actions */}
@@ -651,7 +651,7 @@ export default function AgreementSignPage() {
                 <Card className="shadow-md animate-in fade-in slide-in-from-bottom-2 duration-300">
                   <CardContent className="py-5 space-y-4">
                     <div className="flex items-center gap-2">
-                      <ShieldCheck className="h-5 w-5 text-primary" />
+                      <ShieldCheck className="h-5 w-5 text-foreground" />
                       <h3 className="font-semibold text-sm" style={{ fontFamily: "'Outfit', sans-serif" }}>KYC Verification</h3>
                     </div>
                     <p className="text-xs text-muted-foreground">Upload documents for identity verification before pickup.</p>

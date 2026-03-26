@@ -67,7 +67,7 @@ export const HSRPOrderTracker = () => {
     <Card className="border-primary/20">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
-          <Search className="h-5 w-5 text-primary" />
+          <Search className="h-5 w-5 text-foreground" />
           Track Your HSRP Order
         </CardTitle>
         <p className="text-sm text-muted-foreground">Enter your order ID, vehicle number, or phone number</p>
@@ -123,7 +123,7 @@ export const HSRPOrderTracker = () => {
                       } ${isCurrent ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""}`}>
                         <Icon className="h-4 w-4" />
                       </div>
-                      <span className={`text-[10px] mt-1 text-center ${isComplete ? "text-primary font-medium" : "text-muted-foreground"}`}>
+                      <span className={`text-[10px] mt-1 text-center ${isComplete ? "text-foreground font-medium" : "text-muted-foreground"}`}>
                         {stage.label}
                       </span>
                     </div>

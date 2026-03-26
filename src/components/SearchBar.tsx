@@ -55,7 +55,7 @@ export const SearchBar = ({ onSearch }: SearchBarProps) => {
                       setShowSuggestions(false);
                     }}
                   >
-                    <Car className="h-4 w-4 text-primary" />
+                    <Car className="h-4 w-4 text-foreground" />
                     <span>{brand}</span>
                   </button>
                 ))}
@@ -76,7 +76,7 @@ export const SearchBar = ({ onSearch }: SearchBarProps) => {
             <button
               key={car}
               onClick={() => setQuery(car)}
-              className="text-sm text-primary hover:text-primary/80 hover:underline transition-colors"
+              className="text-sm text-foreground hover:text-primary/80 hover:underline transition-colors"
             >
               {car}
             </button>

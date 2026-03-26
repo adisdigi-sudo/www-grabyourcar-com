@@ -72,11 +72,11 @@ const NoWaitingCars = () => {
         {/* Hero */}
         <section className="bg-gradient-to-b from-primary/10 to-background py-16 md:py-24">
           <div className="container mx-auto px-4 max-w-4xl text-center">
-            <Badge className="mb-4 bg-success/10 text-success border-success/30">
+            <Badge className="mb-4 bg-success/10 text-foreground border-success/30">
               <Zap className="h-3 w-3 mr-1" /> Zero Waiting Period
             </Badge>
             <h1 className="text-3xl md:text-5xl font-heading font-bold text-foreground mb-4">
-              Drive Home <span className="text-primary">Today</span> — No Waiting
+              Drive Home <span className="text-foreground">Today</span> — No Waiting
             </h1>
             <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
               Skip months of waiting. Get ready-stock cars at the best prices with instant delivery.
@@ -93,8 +93,8 @@ const NoWaitingCars = () => {
                 {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Car className="h-4 w-4 mr-2" /> Get Instant Delivery Deals</>}
               </Button>
               <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1"><Shield className="h-3 w-3 text-success" /> 100% Free</span>
-                <span className="flex items-center gap-1"><Clock className="h-3 w-3 text-success" /> Callback in 30 min</span>
+                <span className="flex items-center gap-1"><Shield className="h-3 w-3 text-foreground" /> 100% Free</span>
+                <span className="flex items-center gap-1"><Clock className="h-3 w-3 text-foreground" /> Callback in 30 min</span>
               </div>
             </form>
 
@@ -119,7 +119,7 @@ const NoWaitingCars = () => {
           <div className="container mx-auto px-4">
             <h2 className="text-2xl font-heading font-bold text-center mb-8">Ready Stock Cars</h2>
             {isLoading ? (
-              <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+              <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-foreground" /></div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-5xl mx-auto">
                 {cars?.map((car) => (
@@ -128,9 +128,9 @@ const NoWaitingCars = () => {
                       <div>
                         <p className="text-xs text-muted-foreground">{car.brand}</p>
                         <p className="font-bold text-foreground">{car.name}</p>
-                        <p className="text-sm text-primary font-semibold">{car.price_range || "Price on request"}</p>
+                        <p className="text-sm text-foreground font-semibold">{car.price_range || "Price on request"}</p>
                       </div>
-                      <Badge variant="outline" className="text-success border-success/30">
+                      <Badge variant="outline" className="text-foreground border-success/30">
                         <CheckCircle className="h-3 w-3 mr-1" /> In Stock
                       </Badge>
                     </div>
@@ -147,7 +147,7 @@ const NoWaitingCars = () => {
             <div className="flex flex-wrap justify-center gap-8 text-sm text-muted-foreground">
               {["500+ Happy Customers", "50+ Brand Partners", "Zero Hidden Charges", "Pan-India Delivery"].map((t) => (
                 <div key={t} className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-primary" />
+                  <CheckCircle className="h-4 w-4 text-foreground" />
                   <span className="font-medium">{t}</span>
                 </div>
               ))}

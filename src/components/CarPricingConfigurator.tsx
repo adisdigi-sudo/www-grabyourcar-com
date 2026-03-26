@@ -292,7 +292,7 @@ export const CarPricingConfigurator = ({ car, colors: dbColors }: CarPricingConf
                       Taxes & Charges
                       {showFullBreakup ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                     </span>
-                    <span className="font-medium text-primary">
+                    <span className="font-medium text-foreground">
                       {formatPrice(breakup.onRoadPrice - breakup.exShowroom)}
                     </span>
                   </div>
@@ -353,7 +353,7 @@ export const CarPricingConfigurator = ({ car, colors: dbColors }: CarPricingConf
                       <Package className="h-3 w-3" />
                       Accessories ({selectedAccessories.length})
                     </span>
-                    <span className="font-medium text-accent">{formatPrice(accessoriesTotal)}</span>
+                    <span className="font-medium text-foreground">{formatPrice(accessoriesTotal)}</span>
                   </div>
                 )}
 
@@ -364,7 +364,7 @@ export const CarPricingConfigurator = ({ car, colors: dbColors }: CarPricingConf
                     key={finalOnRoadPrice}
                     initial={{ scale: 1.1 }}
                     animate={{ scale: 1 }}
-                    className="font-bold text-primary text-lg"
+                    className="font-bold text-foreground text-lg"
                   >
                     {formatPrice(finalOnRoadPrice)}
                   </motion.span>
@@ -377,7 +377,7 @@ export const CarPricingConfigurator = ({ car, colors: dbColors }: CarPricingConf
           <div className="bg-gradient-to-br from-primary/5 via-success/5 to-accent/5 rounded-xl p-4 border border-primary/20">
             <div className="flex items-center gap-2 mb-3">
               <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Calculator className="h-4 w-4 text-primary" />
+                <Calculator className="h-4 w-4 text-foreground" />
               </div>
               <div>
                 <p className="text-sm font-semibold">EMI Calculator</p>
@@ -389,7 +389,7 @@ export const CarPricingConfigurator = ({ car, colors: dbColors }: CarPricingConf
               <div className="grid grid-cols-2 gap-2">
                 <div className="bg-background/80 rounded-lg p-2.5 text-center border">
                   <p className="text-xs text-muted-foreground">Down Payment</p>
-                  <p className="font-bold text-sm text-primary">{formatPrice(downPayment)}</p>
+                  <p className="font-bold text-sm text-foreground">{formatPrice(downPayment)}</p>
                 </div>
                 <div className="bg-background/80 rounded-lg p-2.5 text-center border">
                   <p className="text-xs text-muted-foreground">Loan Amount</p>
@@ -399,7 +399,7 @@ export const CarPricingConfigurator = ({ car, colors: dbColors }: CarPricingConf
               
               <div className="bg-primary/10 rounded-xl p-4 text-center border border-primary/20">
                 <p className="text-xs text-muted-foreground mb-1">Monthly EMI (Estimated)</p>
-                <p className="text-2xl font-bold text-primary">
+                <p className="text-2xl font-bold text-foreground">
                   ₹{emi.toLocaleString('en-IN')}
                   <span className="text-xs font-normal text-muted-foreground">/month</span>
                 </p>
@@ -424,7 +424,7 @@ export const CarPricingConfigurator = ({ car, colors: dbColors }: CarPricingConf
             <CollapsibleTrigger asChild>
               <button className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-secondary/50 transition-colors border border-border">
                 <div className="flex items-center gap-2">
-                  <Gift className="h-4 w-4 text-accent" />
+                  <Gift className="h-4 w-4 text-foreground" />
                   <span className="text-sm font-medium">Add Accessories (Optional)</span>
                   {selectedAccessories.length > 0 && (
                     <Badge variant="secondary" className="text-xs">
@@ -457,7 +457,7 @@ export const CarPricingConfigurator = ({ car, colors: dbColors }: CarPricingConf
                           <p className="font-medium text-sm">{acc.name}</p>
                           <p className="text-xs text-muted-foreground">{acc.description}</p>
                         </div>
-                        <span className="font-semibold text-sm text-primary">
+                        <span className="font-semibold text-sm text-foreground">
                           ₹{acc.price.toLocaleString('en-IN')}
                         </span>
                       </div>
@@ -468,7 +468,7 @@ export const CarPricingConfigurator = ({ car, colors: dbColors }: CarPricingConf
                 {selectedAccessories.length > 0 && (
                   <div className="flex justify-between items-center pt-3 border-t border-border">
                     <span className="font-medium text-sm">Accessories Total</span>
-                    <span className="font-bold text-accent">{formatPrice(accessoriesTotal)}</span>
+                    <span className="font-bold text-foreground">{formatPrice(accessoriesTotal)}</span>
                   </div>
                 )}
               </div>

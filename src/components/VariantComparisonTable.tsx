@@ -75,7 +75,7 @@ export const VariantComparisonTable = ({
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <CardTitle className="text-xl flex items-center gap-2">
-              <IndianRupee className="h-5 w-5 text-primary" />
+              <IndianRupee className="h-5 w-5 text-foreground" />
               Variant Comparison
             </CardTitle>
             <p className="text-sm text-muted-foreground mt-1">
@@ -138,10 +138,10 @@ export const VariantComparisonTable = ({
                 const price = getNumericPrice(variant);
                 return (
                   <div key={index} className="p-4 text-center">
-                    <p className="font-bold text-lg text-primary">{variant.price}</p>
+                    <p className="font-bold text-lg text-foreground">{variant.price}</p>
                     <p className={cn(
                       "text-xs mt-1",
-                      formatPriceDiff(price) === "Base" ? "text-muted-foreground" : "text-success font-medium"
+                      formatPriceDiff(price) === "Base" ? "text-muted-foreground" : "text-foreground font-medium"
                     )}>
                       {formatPriceDiff(price)}
                     </p>
@@ -155,7 +155,7 @@ export const VariantComparisonTable = ({
               <div className="p-4 sticky left-0 bg-success/5 z-10">
                 <div className="flex flex-col gap-2">
                   <span className="font-semibold text-sm text-foreground flex items-center gap-1">
-                    <MapPin className="h-4 w-4 text-primary" />
+                    <MapPin className="h-4 w-4 text-foreground" />
                     On-Road Price
                   </span>
                   <Select value={selectedState} onValueChange={setSelectedState}>
@@ -178,7 +178,7 @@ export const VariantComparisonTable = ({
                 const selectedStateName = stateRates.find(s => s.code === selectedState)?.name || "Delhi";
                 return (
                   <div key={index} className="p-4 text-center">
-                    <p className="font-bold text-lg text-success">
+                    <p className="font-bold text-lg text-foreground">
                       ₹{(breakup.onRoadPrice / 100000).toFixed(2)} L
                     </p>
                     <p className="text-xs text-muted-foreground">{selectedStateName}</p>
@@ -218,7 +218,7 @@ export const VariantComparisonTable = ({
                 <div 
                   className={cn(
                     "p-3 text-sm sticky left-0 z-10 flex items-center gap-2 cursor-pointer hover:text-primary transition-colors",
-                    selectedState === city.code ? "bg-primary/5 text-primary font-medium" : "bg-card"
+                    selectedState === city.code ? "bg-primary/5 text-foreground font-medium" : "bg-card"
                   )}
                   onClick={() => setSelectedState(city.code)}
                 >
@@ -264,7 +264,7 @@ export const VariantComparisonTable = ({
                     <div key={variantIndex} className="p-3 flex items-center justify-center">
                       {hasFeature ? (
                         <div className="flex items-center justify-center w-6 h-6 rounded-full bg-success/10">
-                          <Check className="h-4 w-4 text-success" />
+                          <Check className="h-4 w-4 text-foreground" />
                         </div>
                       ) : (
                         <div className="flex items-center justify-center w-6 h-6 rounded-full bg-muted">

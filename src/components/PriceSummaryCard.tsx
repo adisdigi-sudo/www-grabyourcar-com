@@ -288,7 +288,7 @@ export const PriceSummaryCard = ({
                     Taxes & Charges
                     {showFullBreakup ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                   </span>
-                  <span className="font-medium text-primary">
+                  <span className="font-medium text-foreground">
                     {formatPrice(breakup.onRoadPrice - breakup.exShowroom - accessoriesTotal)}
                   </span>
                 </div>
@@ -359,7 +359,7 @@ export const PriceSummaryCard = ({
                     <Package className="h-3 w-3" />
                     Accessories ({selectedAccessories.length})
                   </span>
-                  <span className="font-medium text-accent">{formatPrice(accessoriesTotal)}</span>
+                  <span className="font-medium text-foreground">{formatPrice(accessoriesTotal)}</span>
                 </div>
               )}
 
@@ -370,7 +370,7 @@ export const PriceSummaryCard = ({
                   key={finalOnRoadPrice}
                   initial={{ scale: 1.1 }}
                   animate={{ scale: 1 }}
-                  className="font-bold text-primary text-lg"
+                  className="font-bold text-foreground text-lg"
                 >
                   {formatPrice(finalOnRoadPrice)}
                 </motion.span>
@@ -383,7 +383,7 @@ export const PriceSummaryCard = ({
         <div className="bg-gradient-to-br from-primary/5 via-success/5 to-accent/5 rounded-xl p-4 border border-primary/20">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Calculator className="h-4 w-4 text-primary" />
+              <Calculator className="h-4 w-4 text-foreground" />
             </div>
             <div>
               <p className="text-sm font-semibold">EMI Calculator</p>
@@ -413,14 +413,14 @@ export const PriceSummaryCard = ({
                   </div>
                   <div className="flex justify-between items-center mt-1">
                     <span className="text-xs text-muted-foreground">On-Road Price</span>
-                    <span className="font-bold text-primary">{formatPrice(finalOnRoadPrice)}</span>
+                    <span className="font-bold text-foreground">{formatPrice(finalOnRoadPrice)}</span>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
                   <div className="bg-background/80 rounded-lg p-2.5 text-center border">
                     <p className="text-xs text-muted-foreground">Down Payment</p>
-                    <p className="font-bold text-sm text-primary">{formatPrice(downPayment)}</p>
+                    <p className="font-bold text-sm text-foreground">{formatPrice(downPayment)}</p>
                   </div>
                   <div className="bg-background/80 rounded-lg p-2.5 text-center border">
                     <p className="text-xs text-muted-foreground">Loan Amount</p>
@@ -430,7 +430,7 @@ export const PriceSummaryCard = ({
                 
                 <div className="bg-primary/10 rounded-xl p-4 text-center border border-primary/20">
                   <p className="text-xs text-muted-foreground mb-1">Monthly EMI (Estimated)</p>
-                  <p className="text-2xl font-bold text-primary">
+                  <p className="text-2xl font-bold text-foreground">
                     ₹{emi.toLocaleString('en-IN')}
                     <span className="text-xs font-normal text-muted-foreground">/month</span>
                   </p>
@@ -478,7 +478,7 @@ export const PriceSummaryCard = ({
           <CollapsibleTrigger className="w-full">
             <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
               <span className="text-sm font-medium flex items-center gap-2">
-                <Package className="h-4 w-4 text-primary" />
+                <Package className="h-4 w-4 text-foreground" />
                 Add Accessories (Optional)
               </span>
               <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -503,7 +503,7 @@ export const PriceSummaryCard = ({
                     <p className="text-sm font-medium">{acc.name}</p>
                     <p className="text-xs text-muted-foreground">{acc.description}</p>
                   </div>
-                  <span className="text-sm font-semibold text-primary">
+                  <span className="text-sm font-semibold text-foreground">
                     +{formatPrice(acc.price)}
                   </span>
                 </label>
@@ -516,8 +516,8 @@ export const PriceSummaryCard = ({
         <div className="bg-gradient-to-r from-primary/10 via-success/10 to-primary/10 rounded-xl p-4 border border-primary/20">
           <div className="text-center mb-3">
             <p className="text-sm font-medium">
-              <span className="text-primary font-bold">Contact us</span> for the{" "}
-              <span className="text-success font-bold">Best Deal</span>
+              <span className="text-foreground font-bold">Contact us</span> for the{" "}
+              <span className="text-foreground font-bold">Best Deal</span>
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">
               Exclusive offers available only via direct inquiry
@@ -543,7 +543,7 @@ export const PriceSummaryCard = ({
         {brochureUrl && brochureUrl.includes('supabase.co') && (
           <BrochureLeadGate brochureUrl={brochureUrl} carName={`${carBrand} ${carName}`}>
             <div className="flex items-center justify-center gap-2 p-3 bg-secondary/50 rounded-lg hover:bg-secondary transition-colors group cursor-pointer">
-              <FileText className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
+              <FileText className="h-4 w-4 text-foreground group-hover:scale-110 transition-transform" />
               <span className="text-sm font-medium">Download Brochure</span>
               <Download className="h-4 w-4 text-muted-foreground" />
             </div>
@@ -553,15 +553,15 @@ export const PriceSummaryCard = ({
         {/* Trust Indicators */}
         <div className="flex flex-wrap gap-3 text-xs text-muted-foreground pt-2 border-t border-border">
           <span className="flex items-center gap-1">
-            <Check className="h-3 w-3 text-success" />
+            <Check className="h-3 w-3 text-foreground" />
             No Hidden Charges
           </span>
           <span className="flex items-center gap-1">
-            <Check className="h-3 w-3 text-success" />
+            <Check className="h-3 w-3 text-foreground" />
             100% Verified Dealers
           </span>
           <span className="flex items-center gap-1">
-            <Check className="h-3 w-3 text-success" />
+            <Check className="h-3 w-3 text-foreground" />
             Pan-India Delivery
           </span>
         </div>

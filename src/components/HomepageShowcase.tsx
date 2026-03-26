@@ -41,12 +41,12 @@ export const CarShowcaseScroll = () => {
           transition={{ duration: 0.6 }}
           className="text-center"
         >
-          <Badge className="mb-4 bg-primary/20 text-primary border-primary/30 py-1.5 px-4">
+          <Badge className="mb-4 bg-primary/20 text-foreground border-primary/30 py-1.5 px-4">
             <Star className="h-3.5 w-3.5 mr-1.5" />
             Featured Collection
           </Badge>
           <h2 className="text-4xl md:text-5xl lg:text-6xl font-heading font-bold text-background mb-4 tracking-tight">
-            Drive Your <span className="text-primary">Dream</span>
+            Drive Your <span className="text-foreground">Dream</span>
           </h2>
           <p className="text-background/60 text-lg max-w-2xl mx-auto">
             Explore India's most popular cars — no waiting, best prices, delivered to your doorstep
@@ -112,7 +112,7 @@ export const CarShowcaseScroll = () => {
                 <h3 className="text-background font-bold text-lg leading-tight">
                   {car.brand} {car.name}
                 </h3>
-                <p className="text-primary font-semibold text-sm mt-0.5">
+                <p className="text-foreground font-semibold text-sm mt-0.5">
                   {car.price}
                 </p>
               </div>
@@ -151,7 +151,7 @@ export const UpcomingCarsStrip = () => {
           className="text-center mb-10"
         >
           <Badge variant="outline" className="mb-3 py-1.5 px-4 border-primary/30">
-            <TrendingUp className="h-3.5 w-3.5 mr-1.5 text-primary" />
+            <TrendingUp className="h-3.5 w-3.5 mr-1.5 text-foreground" />
             Coming Soon
           </Badge>
           <h2 className="text-3xl md:text-4xl font-heading font-bold">
@@ -190,7 +190,7 @@ export const UpcomingCarsStrip = () => {
                   </div>
                   <div className="p-3">
                     <h3 className="font-semibold text-sm truncate">{car.brand} {car.name}</h3>
-                    <p className="text-xs text-primary font-medium mt-0.5">{car.price || 'Price TBA'}</p>
+                    <p className="text-xs text-foreground font-medium mt-0.5">{car.price || 'Price TBA'}</p>
                   </div>
                 </div>
               </Link>

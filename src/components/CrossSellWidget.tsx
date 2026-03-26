@@ -173,7 +173,7 @@ export function CrossSellWidget({
         {showTitle && (
           <div className="flex items-center gap-2">
             <div className="p-1.5 bg-success/10 rounded-lg">
-              <Zap className="h-4 w-4 text-success" />
+              <Zap className="h-4 w-4 text-foreground" />
             </div>
             <h3 className="font-bold text-base">{title}</h3>
           </div>
@@ -203,13 +203,13 @@ export function CrossSellWidget({
                   </div>
                   {offer.price && (
                     <div className="flex items-center gap-1">
-                      <span className="text-sm font-bold text-success">{offer.price}</span>
+                      <span className="text-sm font-bold text-foreground">{offer.price}</span>
                       {offer.originalPrice && (
                         <span className="text-[10px] text-muted-foreground line-through">{offer.originalPrice}</span>
                       )}
                     </div>
                   )}
-                  <span className="text-[10px] font-medium text-success flex items-center gap-0.5">
+                  <span className="text-[10px] font-medium text-foreground flex items-center gap-0.5">
                     {offer.ctaText} <ArrowRight className="h-3 w-3" />
                   </span>
                 </div>
@@ -226,7 +226,7 @@ export function CrossSellWidget({
       <div className="space-y-3">
         {showTitle && (
           <div className="flex items-center gap-2">
-            <Gift className="h-4 w-4 text-primary" />
+            <Gift className="h-4 w-4 text-foreground" />
             <h4 className="font-semibold text-sm">{title}</h4>
           </div>
         )}
@@ -250,7 +250,7 @@ export function CrossSellWidget({
                 </div>
                 {offer.price && (
                   <div className="text-right shrink-0">
-                    <span className="text-sm font-bold text-primary">{offer.price}</span>
+                    <span className="text-sm font-bold text-foreground">{offer.price}</span>
                     {offer.originalPrice && (
                       <span className="text-xs text-muted-foreground line-through ml-1">
                         {offer.originalPrice}
@@ -271,9 +271,9 @@ export function CrossSellWidget({
     <section className="py-8">
       {showTitle && (
         <div className="flex items-center gap-2 mb-6">
-          <Zap className="h-5 w-5 text-primary" />
+          <Zap className="h-5 w-5 text-foreground" />
           <h3 className="text-xl font-bold">{title}</h3>
-          <Badge className="bg-primary/10 text-primary border-primary/20 text-xs">
+          <Badge className="bg-primary/10 text-foreground border-primary/20 text-xs">
             Recommended
           </Badge>
         </div>
@@ -327,7 +327,7 @@ export function CrossSellWidget({
                   <div className="flex items-center justify-between">
                     {offer.price ? (
                       <div>
-                        <span className="text-xl font-bold text-primary">{offer.price}</span>
+                        <span className="text-xl font-bold text-foreground">{offer.price}</span>
                         {offer.originalPrice && (
                           <span className="text-sm text-muted-foreground line-through ml-2">
                             {offer.originalPrice}
@@ -365,7 +365,7 @@ export function CrossSellStrip({
   return (
     <div className="bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 border border-primary/20 rounded-xl p-4">
       <div className="flex items-center gap-2 mb-3">
-        <Gift className="h-4 w-4 text-primary" />
+        <Gift className="h-4 w-4 text-foreground" />
         <span className="font-semibold text-sm">Add to Your Order</span>
         <Badge variant="secondary" className="text-[10px]">
           Special Offers
@@ -391,7 +391,7 @@ export function CrossSellStrip({
               </div>
               {offer.price && (
                 <div className="flex items-center gap-1">
-                  <span className="text-sm font-bold text-primary">{offer.price}</span>
+                  <span className="text-sm font-bold text-foreground">{offer.price}</span>
                   {offer.originalPrice && (
                     <span className="text-xs text-muted-foreground line-through">
                       {offer.originalPrice}

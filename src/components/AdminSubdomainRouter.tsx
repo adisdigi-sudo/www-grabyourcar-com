@@ -28,7 +28,7 @@ export const AdminSubdomainRouter = ({ children }: AdminSubdomainRouterProps) =>
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <Loader2 className="h-8 w-8 animate-spin text-foreground" />
       </div>
     );
   }

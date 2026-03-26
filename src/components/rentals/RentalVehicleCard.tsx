@@ -35,7 +35,7 @@ export const RentalVehicleCard = ({ vehicle, serviceType, onBook }: RentalVehicl
         <div className="p-4 pb-2 flex items-start justify-between">
           <div>
             <h3 className="font-bold text-foreground text-lg">{vehicle.name}</h3>
-            <p className="text-xs text-primary font-medium">{vehicle.vehicle_type} • {vehicle.brand}</p>
+            <p className="text-xs text-foreground font-medium">{vehicle.vehicle_type} • {vehicle.brand}</p>
           </div>
           <Badge variant="secondary" className="flex items-center gap-1">
             <ServiceIcon className="h-3 w-3" />

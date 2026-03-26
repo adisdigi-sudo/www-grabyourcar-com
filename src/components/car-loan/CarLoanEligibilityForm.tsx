@@ -180,7 +180,7 @@ export const CarLoanEligibilityForm = ({ onEligibilityResult }: Props) => {
         <div className="max-w-2xl mx-auto">
           {/* Header */}
           <div className="text-center mb-8">
-            <Badge variant="outline" className="mb-3 border-primary/30 text-primary">
+            <Badge variant="outline" className="mb-3 border-primary/30 text-foreground">
               <Sparkles className="w-3.5 h-3.5 mr-1.5" />
               Instant Eligibility Check
             </Badge>
@@ -232,7 +232,7 @@ export const CarLoanEligibilityForm = ({ onEligibilityResult }: Props) => {
                   <motion.div key="phone" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.3 }}>
                     <div className="text-center mb-6">
                       <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                        <Phone className="w-7 h-7 text-primary" />
+                        <Phone className="w-7 h-7 text-foreground" />
                       </div>
                       <h3 className="text-xl font-bold text-foreground mb-1">Enter Your Mobile Number</h3>
                       <p className="text-sm text-muted-foreground">Enter your mobile number to check eligibility</p>
@@ -280,7 +280,7 @@ export const CarLoanEligibilityForm = ({ onEligibilityResult }: Props) => {
                   <motion.div key="pan" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.3 }}>
                     <div className="text-center mb-6">
                       <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                        <CreditCard className="w-7 h-7 text-primary" />
+                        <CreditCard className="w-7 h-7 text-foreground" />
                       </div>
                       <h3 className="text-xl font-bold text-foreground mb-1">Enter Your PAN</h3>
                       <p className="text-sm text-muted-foreground">Required for eligibility & credit assessment</p>
@@ -307,7 +307,7 @@ export const CarLoanEligibilityForm = ({ onEligibilityResult }: Props) => {
                         </Button>
                       </div>
                       <div className="bg-muted/50 rounded-lg p-3 flex items-start gap-2">
-                        <Shield className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                        <Shield className="w-4 h-4 text-foreground mt-0.5 shrink-0" />
                         <p className="text-xs text-muted-foreground">
                           Your PAN is used only for credit assessment. We follow strict data privacy guidelines and never share your information.
                         </p>
@@ -321,7 +321,7 @@ export const CarLoanEligibilityForm = ({ onEligibilityResult }: Props) => {
                   <motion.div key="details" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.3 }}>
                     <div className="text-center mb-6">
                       <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                        <Briefcase className="w-7 h-7 text-primary" />
+                        <Briefcase className="w-7 h-7 text-foreground" />
                       </div>
                       <h3 className="text-xl font-bold text-foreground mb-1">Financial Details</h3>
                       <p className="text-sm text-muted-foreground">Almost there! Just a few more details.</p>
@@ -403,7 +403,7 @@ export const CarLoanEligibilityForm = ({ onEligibilityResult }: Props) => {
                           transition={{ type: "spring", bounce: 0.5, delay: 0.2 }}
                         >
                           <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                            <CheckCircle2 className="w-10 h-10 text-primary" />
+                            <CheckCircle2 className="w-10 h-10 text-foreground" />
                           </div>
                         </motion.div>
 
@@ -417,7 +417,7 @@ export const CarLoanEligibilityForm = ({ onEligibilityResult }: Props) => {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                           <div className="bg-primary/5 rounded-xl p-4 border border-primary/10">
                             <p className="text-xs text-muted-foreground mb-1">Max Loan Amount</p>
-                            <p className="text-2xl font-bold text-primary">
+                            <p className="text-2xl font-bold text-foreground">
                               ₹{result.maxLoan.toLocaleString("en-IN")}
                             </p>
                           </div>

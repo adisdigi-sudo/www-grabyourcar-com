@@ -114,7 +114,7 @@ export const BrochureLeadGate = ({ brochureUrl, carName, carSlug, children }: Br
               <motion.div key="form" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-primary" />
+                    <FileText className="h-5 w-5 text-foreground" />
                     Download {carName} Brochure
                   </DialogTitle>
                   <DialogDescription>
@@ -151,7 +151,7 @@ export const BrochureLeadGate = ({ brochureUrl, carName, carSlug, children }: Br
 
             {step === "success" && (
               <motion.div key="success" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-8">
-                <CheckCircle className="h-16 w-16 text-success mx-auto mb-4" />
+                <CheckCircle className="h-16 w-16 text-foreground mx-auto mb-4" />
                 <h3 className="text-xl font-bold mb-2">Brochure Downloaded! 🎉</h3>
                 <p className="text-muted-foreground text-sm">
                   Check your downloads. Our team will also share exclusive offers on WhatsApp.

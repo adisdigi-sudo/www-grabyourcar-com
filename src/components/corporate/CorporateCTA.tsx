@@ -87,7 +87,7 @@ export const CorporateCTA = () => {
           <div className="text-white">
             <h2 className="font-heading text-3xl md:text-4xl font-bold mb-4">
               Looking for a Reliable{" "}
-              <span className="text-primary">Corporate Vehicle Partner?</span>
+              <span className="text-foreground">Corporate Vehicle Partner?</span>
             </h2>
             <p className="text-slate-300 text-lg mb-8 leading-relaxed">
               Let's discuss how Grabyourcar can streamline your organization's 
@@ -103,7 +103,7 @@ export const CorporateCTA = () => {
                 "Comprehensive after-sales support",
               ].map((item) => (
                 <div key={item} className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                  <CheckCircle className="h-5 w-5 text-foreground flex-shrink-0 mt-0.5" />
                   <span className="text-slate-300">{item}</span>
                 </div>
               ))}
@@ -115,7 +115,7 @@ export const CorporateCTA = () => {
                 className="flex items-center gap-3 text-slate-300 hover:text-white transition-colors"
               >
                 <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                  <Phone className="h-5 w-5 text-primary" />
+                  <Phone className="h-5 w-5 text-foreground" />
                 </div>
                 <div>
                   <p className="text-xs text-slate-400">Call our corporate desk</p>
@@ -127,7 +127,7 @@ export const CorporateCTA = () => {
                 className="flex items-center gap-3 text-slate-300 hover:text-white transition-colors"
               >
                 <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                  <Mail className="h-5 w-5 text-primary" />
+                  <Mail className="h-5 w-5 text-foreground" />
                 </div>
                 <div>
                   <p className="text-xs text-slate-400">Email us</p>

@@ -113,7 +113,7 @@ export const Header = () => {
               onClick={() => setMenuOpen(!menuOpen)}
               className={cn(
                 "lg:hidden flex items-center justify-center h-9 w-9 rounded-lg transition-colors flex-shrink-0",
-                menuOpen ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                menuOpen ? "text-foreground bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted"
               )}
             >
               {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -141,7 +141,7 @@ export const Header = () => {
                             className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted transition-colors group"
                           >
                             <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
-                              <service.icon className="h-5 w-5 text-primary" />
+                              <service.icon className="h-5 w-5 text-foreground" />
                             </div>
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
@@ -319,7 +319,7 @@ export const Header = () => {
                   onClick={() => setMenuOpen(false)}
                 >
                   <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <service.icon className="h-4 w-4 text-primary" />
+                    <service.icon className="h-4 w-4 text-foreground" />
                   </div>
                   <span className="flex-1">{service.title}</span>
                 </Link>
@@ -364,7 +364,7 @@ export const Header = () => {
               ) : (
                 <Link
                   to="/auth"
-                  className="px-3 py-2.5 text-sm font-medium text-primary hover:bg-muted rounded-lg transition-colors flex items-center gap-3"
+                  className="px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted rounded-lg transition-colors flex items-center gap-3"
                   onClick={() => setMenuOpen(false)}
                 >
                   <User className="h-4 w-4" />

@@ -61,7 +61,7 @@ const Auth = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <Loader2 className="h-8 w-8 animate-spin text-foreground" />
       </div>
     );
   }
@@ -77,7 +77,7 @@ const Auth = () => {
               <div className="relative w-16 h-16 rounded-full bg-gradient-to-br from-success to-success/70 flex items-center justify-center mx-auto mb-4 glow-border-pulse">
                 <Car className="h-8 w-8 text-white" />
                 <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-sm border border-success/20">
-                  <Bot className="h-4 w-4 text-success" />
+                  <Bot className="h-4 w-4 text-foreground" />
                 </div>
               </div>
               <h1 className="text-3xl font-heading font-bold">Welcome to Grabyourcar</h1>
@@ -99,7 +99,7 @@ const Auth = () => {
                     >
                       {isSubmitting ? (
                         <div className="flex flex-col items-center justify-center gap-3 py-8">
-                          <Loader2 className="h-8 w-8 animate-spin text-success" />
+                          <Loader2 className="h-8 w-8 animate-spin text-foreground" />
                           <p className="text-sm text-muted-foreground">Signing you in...</p>
                         </div>
                       ) : (
@@ -131,7 +131,7 @@ const Auth = () => {
                           </Button>
 
                           <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1 justify-center">
-                            <Shield className="h-3.5 w-3.5 text-success" />
+                            <Shield className="h-3.5 w-3.5 text-foreground" />
                             <span><strong className="text-foreground">100% Secure</strong></span>
                           </div>
                         </>

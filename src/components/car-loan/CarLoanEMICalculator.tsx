@@ -195,7 +195,7 @@ export const CarLoanEMICalculator = () => {
                         setLoanAmountText(clamped.toLocaleString("en-IN"));
                       }}
                       onFocus={(e) => e.target.select()}
-                      className="w-32 h-8 text-right font-bold text-primary text-sm border-primary/20"
+                      className="w-32 h-8 text-right font-bold text-foreground text-sm border-primary/20"
                     />
                   </div>
                   <Slider value={[loanAmount]} onValueChange={(v) => { setLoanAmount(v[0]); setLoanAmountText(v[0].toLocaleString("en-IN")); }} min={200000} max={50000000} step={50000} />
@@ -216,7 +216,7 @@ export const CarLoanEMICalculator = () => {
                 <div>
                   <div className="flex justify-between items-center mb-3">
                     <label className="text-sm font-medium text-foreground">Interest Rate</label>
-                    <span className="text-sm font-bold text-primary">{interestRate}% p.a.</span>
+                    <span className="text-sm font-bold text-foreground">{interestRate}% p.a.</span>
                   </div>
                   <Slider value={[interestRate]} onValueChange={(v) => setInterestRate(v[0])} min={6} max={18} step={0.25} />
                   <div className="flex justify-between text-xs text-muted-foreground mt-1"><span>6%</span><span>18%</span></div>
@@ -243,7 +243,7 @@ export const CarLoanEMICalculator = () => {
                 >
                   <p className="text-sm text-muted-foreground mb-1">Your Monthly EMI</p>
                   <div className="flex items-center justify-center gap-1">
-                    <IndianRupee className="w-7 h-7 text-primary" />
+                    <IndianRupee className="w-7 h-7 text-foreground" />
                     <span className="text-4xl md:text-5xl font-extrabold text-foreground">
                       {emi.toLocaleString("en-IN")}
                     </span>
@@ -297,7 +297,7 @@ export const CarLoanEMICalculator = () => {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg">
-              <Building2 className="w-5 h-5 text-primary" />
+              <Building2 className="w-5 h-5 text-foreground" />
               Bank Comparison — Generate PDF
             </DialogTitle>
             <DialogDescription>
@@ -330,7 +330,7 @@ export const CarLoanEMICalculator = () => {
               </div>
               <div>
                 <p className="text-[10px] text-muted-foreground uppercase">Loan Amount</p>
-                <p className="text-sm font-bold text-primary">{formatCurrency(effectiveLoan)}</p>
+                <p className="text-sm font-bold text-foreground">{formatCurrency(effectiveLoan)}</p>
               </div>
             </div>
 
@@ -387,7 +387,7 @@ export const CarLoanEMICalculator = () => {
                       {bankEmi > 0 && (
                         <div className="bg-primary/5 rounded-lg p-2.5 flex items-center justify-between border border-primary/10">
                           <span className="text-xs text-muted-foreground">EMI Preview</span>
-                          <span className="text-base font-bold text-primary">₹{bankEmi.toLocaleString("en-IN")}/mo</span>
+                          <span className="text-base font-bold text-foreground">₹{bankEmi.toLocaleString("en-IN")}/mo</span>
                         </div>
                       )}
                     </CardContent>

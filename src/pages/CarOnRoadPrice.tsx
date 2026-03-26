@@ -333,7 +333,7 @@ const CarOnRoadPrice = () => {
                               Taxes & Charges
                               {showFullBreakup ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                             </span>
-                            <span className="font-semibold text-primary">
+                            <span className="font-semibold text-foreground">
                               {formatPrice(breakup.onRoadPrice - breakup.exShowroom)}
                             </span>
                           </div>
@@ -416,7 +416,7 @@ const CarOnRoadPrice = () => {
                             key={finalOnRoadPrice}
                             initial={{ scale: 1.1 }}
                             animate={{ scale: 1 }}
-                            className="font-bold text-primary text-2xl"
+                            className="font-bold text-foreground text-2xl"
                           >
                             {formatPrice(finalOnRoadPrice)}
                           </motion.span>
@@ -437,7 +437,7 @@ const CarOnRoadPrice = () => {
                       {availableStates.find(s => s.code === selectedState)?.name}
                     </Badge>
                     {taxRules && taxRules.length > 0 && (
-                      <Badge variant="secondary" className="text-xs bg-success/10 text-success border-success/20">
+                      <Badge variant="secondary" className="text-xs bg-success/10 text-foreground border-success/20">
                         ✓ Live Tax Data
                       </Badge>
                     )}
@@ -447,7 +447,7 @@ const CarOnRoadPrice = () => {
                   <div className="bg-gradient-to-br from-primary/5 via-success/5 to-accent/5 rounded-xl p-5 border border-primary/20">
                     <div className="flex items-center gap-3 mb-4">
                       <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <Calculator className="h-5 w-5 text-primary" />
+                        <Calculator className="h-5 w-5 text-foreground" />
                       </div>
                       <div>
                         <p className="font-semibold">EMI Calculator</p>
@@ -463,14 +463,14 @@ const CarOnRoadPrice = () => {
                         </div>
                         <div className="flex justify-between items-center mt-2">
                           <span className="text-sm text-muted-foreground">On-Road Price</span>
-                          <span className="font-bold text-primary text-lg">{formatPrice(finalOnRoadPrice)}</span>
+                          <span className="font-bold text-foreground text-lg">{formatPrice(finalOnRoadPrice)}</span>
                         </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-3">
                         <div className="bg-background/80 rounded-lg p-4 text-center border">
                           <p className="text-xs text-muted-foreground">Down Payment</p>
-                          <p className="font-bold text-lg text-primary">{formatPrice(downPayment)}</p>
+                          <p className="font-bold text-lg text-foreground">{formatPrice(downPayment)}</p>
                         </div>
                         <div className="bg-background/80 rounded-lg p-4 text-center border">
                           <p className="text-xs text-muted-foreground">Loan Amount</p>
@@ -480,7 +480,7 @@ const CarOnRoadPrice = () => {
                       
                       <div className="bg-primary/10 rounded-xl p-5 text-center border border-primary/20">
                         <p className="text-sm text-muted-foreground mb-1">Monthly EMI (Estimated)</p>
-                        <p className="text-3xl font-bold text-primary">
+                        <p className="text-3xl font-bold text-foreground">
                           ₹{emi.toLocaleString('en-IN')}
                           <span className="text-sm font-normal text-muted-foreground">/month</span>
                         </p>

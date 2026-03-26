@@ -21,7 +21,7 @@ export const RentalDocRequirements = () => (
           const Icon = req.icon;
           return (
             <div key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Icon className="h-4 w-4 text-primary" />
+              <Icon className="h-4 w-4 text-foreground" />
               <span>{req.title}</span>
             </div>
           );

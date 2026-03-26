@@ -43,7 +43,7 @@ export const BrowseByBudget = () => {
             </p>
           </div>
           <Link to="/cars">
-            <Button variant="ghost" size="sm" className="text-primary gap-1 text-xs md:text-sm">
+            <Button variant="ghost" size="sm" className="text-foreground gap-1 text-xs md:text-sm">
               View All <ArrowRight className="h-3.5 w-3.5" />
             </Button>
           </Link>
@@ -82,7 +82,7 @@ export const BrowseByBudget = () => {
                   onClick={() => setSelectedBudget(i)}
                   className={`shrink-0 text-xs font-medium px-3.5 py-1.5 rounded-full border transition-colors ${
                     selectedBudget === i
-                      ? "bg-primary/10 border-primary text-primary"
+                      ? "bg-primary/10 border-primary text-foreground"
                       : "border-border text-muted-foreground hover:border-primary/50"
                   }`}
                 >
@@ -95,7 +95,7 @@ export const BrowseByBudget = () => {
                   onClick={() => setSelectedBody(i)}
                   className={`shrink-0 text-xs font-medium px-3.5 py-1.5 rounded-full border transition-colors ${
                     selectedBody === i
-                      ? "bg-primary/10 border-primary text-primary"
+                      ? "bg-primary/10 border-primary text-foreground"
                       : "border-border text-muted-foreground hover:border-primary/50"
                   }`}
                 >
@@ -136,7 +136,7 @@ export const BrowseByBudget = () => {
                   <h3 className="font-semibold text-xs md:text-sm truncate text-foreground">
                     {car.brand} {car.name}
                   </h3>
-                  <p className="text-[11px] md:text-xs text-primary font-medium mt-0.5 truncate">
+                  <p className="text-[11px] md:text-xs text-foreground font-medium mt-0.5 truncate">
                     {car.price || "Price on Request"}
                   </p>
                 </div>

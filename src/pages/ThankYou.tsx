@@ -26,7 +26,7 @@ const ThankYou = () => {
       <div className="min-h-screen flex items-center justify-center bg-background px-4">
         <div className="max-w-md w-full text-center space-y-6">
           <div className="w-20 h-20 rounded-full bg-success/10 flex items-center justify-center mx-auto">
-            <CheckCircle className="h-10 w-10 text-success" />
+            <CheckCircle className="h-10 w-10 text-foreground" />
           </div>
 
           <h1 className="text-3xl font-heading font-bold text-foreground">

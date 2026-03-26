@@ -123,7 +123,7 @@ export const ExitIntentPopup = () => {
         >
           {isSubmitted ? (
             <div className="p-8 text-center">
-              <CheckCircle className="h-14 w-14 text-success mx-auto mb-3" />
+              <CheckCircle className="h-14 w-14 text-foreground mx-auto mb-3" />
               <h3 className="text-xl font-heading font-bold mb-2">You're Locked In! 🔒</h3>
               <p className="text-sm text-muted-foreground">We'll share priority delivery offers on WhatsApp.</p>
             </div>

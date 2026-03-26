@@ -84,7 +84,7 @@ export const CorporateProcessTimeline = () => {
           viewport={{ once: true }}
           className="text-center mb-12 md:mb-16"
         >
-          <span className="inline-block px-4 py-1.5 mb-4 text-xs font-semibold uppercase tracking-wider text-primary bg-primary/10 rounded-full border border-primary/20">
+          <span className="inline-block px-4 py-1.5 mb-4 text-xs font-semibold uppercase tracking-wider text-foreground bg-primary/10 rounded-full border border-primary/20">
             How It Works
           </span>
           <h2 className="font-heading text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4">
@@ -172,7 +172,7 @@ export const CorporateProcessTimeline = () => {
                           animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: -10 }}
                           transition={{ duration: 0.3, delay: 1.1 + index * 0.3 }}
                         >
-                          <ArrowRight className="w-4 h-4 text-primary" />
+                          <ArrowRight className="w-4 h-4 text-foreground" />
                         </motion.div>
                       </div>
                     )}
@@ -198,7 +198,7 @@ export const CorporateProcessTimeline = () => {
                       "bg-gradient-to-br from-card to-secondary border border-primary/20",
                       "shadow-lg group-hover:border-primary/50 transition-all duration-300"
                     )}>
-                      <step.icon className="h-6 w-6 text-primary" />
+                      <step.icon className="h-6 w-6 text-foreground" />
                     </div>
                   </div>
 
@@ -209,7 +209,7 @@ export const CorporateProcessTimeline = () => {
                     "transition-all duration-300"
                   )}>
                     {/* Duration Badge */}
-                    <div className="inline-block px-3 py-1 mb-3 text-xs font-semibold rounded-full bg-accent/10 text-accent border border-accent/20">
+                    <div className="inline-block px-3 py-1 mb-3 text-xs font-semibold rounded-full bg-accent/10 text-foreground border border-accent/20">
                       {step.duration}
                     </div>
 
@@ -224,7 +224,7 @@ export const CorporateProcessTimeline = () => {
                     <ul className="space-y-2">
                       {step.details.map((detail, i) => (
                         <li key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
-                          <CheckCircle className="h-3.5 w-3.5 text-primary flex-shrink-0 mt-0.5" />
+                          <CheckCircle className="h-3.5 w-3.5 text-foreground flex-shrink-0 mt-0.5" />
                           <span>{detail}</span>
                         </li>
                       ))}
@@ -266,8 +266,8 @@ export const CorporateProcessTimeline = () => {
                   "hover:border-primary/30 transition-colors"
                 )}>
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xs font-bold text-primary">Step {step.step}</span>
-                    <span className="px-2 py-0.5 text-xs rounded-full bg-accent/10 text-accent">
+                    <span className="text-xs font-bold text-foreground">Step {step.step}</span>
+                    <span className="px-2 py-0.5 text-xs rounded-full bg-accent/10 text-foreground">
                       {step.duration}
                     </span>
                   </div>
@@ -280,7 +280,7 @@ export const CorporateProcessTimeline = () => {
                   <ul className="space-y-1.5">
                     {step.details.map((detail, i) => (
                       <li key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <CheckCircle className="h-3 w-3 text-primary flex-shrink-0" />
+                        <CheckCircle className="h-3 w-3 text-foreground flex-shrink-0" />
                         <span>{detail}</span>
                       </li>
                     ))}

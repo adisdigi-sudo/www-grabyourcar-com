@@ -105,7 +105,7 @@ const MobileCompareButton = ({ carId }: { carId: string | number }) => {
       disabled={!inCompare && !canAddMore}
       className={`flex flex-col items-center gap-1 h-auto py-3 text-[10px] font-semibold ${inCompare ? 'border-primary bg-primary/10' : 'border-primary/30'}`}
     >
-      <GitCompareArrows className="h-5 w-5 text-primary" />
+      <GitCompareArrows className="h-5 w-5 text-foreground" />
       {inCompare ? 'Added' : 'Compare'}
     </Button>
   );
@@ -309,20 +309,20 @@ const CarDetail = () => {
                 {/* Mobile: Why Buy - Auto-scrolling marquee */}
                 <div className="lg:hidden overflow-hidden rounded-xl border border-border/50 bg-gradient-to-r from-card to-secondary/20 p-3">
                   <div className="flex items-center gap-2 mb-2">
-                    <Star className="h-4 w-4 text-accent" />
+                    <Star className="h-4 w-4 text-foreground" />
                     <span className="text-xs font-semibold">Why Buy From Grabyourcar?</span>
                   </div>
                   <div className="overflow-hidden">
                     <div className="flex gap-3 animate-marquee">
                       {[
-                        { icon: <TrendingDown className="h-3.5 w-3.5 text-success" />, label: "Best Price", sub: "Guaranteed lowest" },
-                        { icon: <Clock className="h-3.5 w-3.5 text-success" />, label: "Fast Delivery", sub: "Priority slots" },
-                        { icon: <Gift className="h-3.5 w-3.5 text-success" />, label: "Free Accessories", sub: "₹25,000+ worth" },
-                        { icon: <Shield className="h-3.5 w-3.5 text-success" />, label: "100% Genuine", sub: "Authorized dealer" },
-                        { icon: <TrendingDown className="h-3.5 w-3.5 text-success" />, label: "Best Price", sub: "Guaranteed lowest" },
-                        { icon: <Clock className="h-3.5 w-3.5 text-success" />, label: "Fast Delivery", sub: "Priority slots" },
-                        { icon: <Gift className="h-3.5 w-3.5 text-success" />, label: "Free Accessories", sub: "₹25,000+ worth" },
-                        { icon: <Shield className="h-3.5 w-3.5 text-success" />, label: "100% Genuine", sub: "Authorized dealer" },
+                        { icon: <TrendingDown className="h-3.5 w-3.5 text-foreground" />, label: "Best Price", sub: "Guaranteed lowest" },
+                        { icon: <Clock className="h-3.5 w-3.5 text-foreground" />, label: "Fast Delivery", sub: "Priority slots" },
+                        { icon: <Gift className="h-3.5 w-3.5 text-foreground" />, label: "Free Accessories", sub: "₹25,000+ worth" },
+                        { icon: <Shield className="h-3.5 w-3.5 text-foreground" />, label: "100% Genuine", sub: "Authorized dealer" },
+                        { icon: <TrendingDown className="h-3.5 w-3.5 text-foreground" />, label: "Best Price", sub: "Guaranteed lowest" },
+                        { icon: <Clock className="h-3.5 w-3.5 text-foreground" />, label: "Fast Delivery", sub: "Priority slots" },
+                        { icon: <Gift className="h-3.5 w-3.5 text-foreground" />, label: "Free Accessories", sub: "₹25,000+ worth" },
+                        { icon: <Shield className="h-3.5 w-3.5 text-foreground" />, label: "100% Genuine", sub: "Authorized dealer" },
                       ].map((item, i) => (
                         <div key={i} className="flex-shrink-0 flex items-center gap-1.5 bg-background/60 border border-border/30 rounded-lg px-3 py-2">
                           <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center flex-shrink-0">{item.icon}</div>
@@ -340,11 +340,11 @@ const CarDetail = () => {
                 <div className="lg:hidden p-3 rounded-xl bg-gradient-to-r from-primary/10 to-success/10 border border-primary/20">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-primary" />
+                      <Phone className="h-4 w-4 text-foreground" />
                       <span className="text-xs font-semibold">Need Help?</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <a href="tel:+1155578093" className="text-xs font-bold text-primary hover:underline">
+                      <a href="tel:+1155578093" className="text-xs font-bold text-foreground hover:underline">
                         +1 155578093
                       </a>
                       <WhatsAppSalesCTA carName={`${car.brand} ${car.name}`} type="price" size="sm" />
@@ -425,7 +425,7 @@ const CarDetail = () => {
                           <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/30">
                             <div className="flex items-center gap-2 flex-1">
                               <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
-                                <Sparkles className="h-3.5 w-3.5 text-primary" />
+                                <Sparkles className="h-3.5 w-3.5 text-foreground" />
                               </div>
                               <span className="text-xs font-bold uppercase tracking-wide">About {car.name}</span>
                             </div>
@@ -441,10 +441,10 @@ const CarDetail = () => {
                         <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/30">
                           <div className="flex items-center gap-2 flex-1">
                             <div className="w-7 h-7 rounded-lg bg-success/10 flex items-center justify-center">
-                              <Check className="h-3.5 w-3.5 text-success" />
+                              <Check className="h-3.5 w-3.5 text-foreground" />
                             </div>
                             <span className="text-xs font-bold uppercase tracking-wide">Key Features</span>
-                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 ml-auto mr-2 border-success/30 text-success">
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 ml-auto mr-2 border-success/30 text-foreground">
                               {car.specifications.features.length}
                             </Badge>
                           </div>
@@ -454,7 +454,7 @@ const CarDetail = () => {
                             {car.specifications.features.slice(0, 8).map((feature, index) => (
                               <div key={index} className="flex items-center gap-3 px-4 py-2.5">
                                 <div className="w-6 h-6 rounded-full bg-success/10 flex items-center justify-center shrink-0">
-                                  <Check className="h-3 w-3 text-success" />
+                                  <Check className="h-3 w-3 text-foreground" />
                                 </div>
                                 <div className="min-w-0">
                                   <span className="font-medium text-xs block">{feature.label}</span>
@@ -477,7 +477,7 @@ const CarDetail = () => {
                 <Card className="mt-6 hidden lg:block border-border/50 bg-gradient-to-br from-card to-secondary/20">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base flex items-center gap-2">
-                      <Star className="h-5 w-5 text-accent" />
+                      <Star className="h-5 w-5 text-foreground" />
                       Why Buy From Grabyourcar?
                     </CardTitle>
                   </CardHeader>
@@ -485,7 +485,7 @@ const CarDetail = () => {
                     <div className="grid grid-cols-2 gap-3">
                       <div className="flex items-start gap-2 p-2.5 rounded-lg bg-background/60 border border-border/30">
                         <div className="w-8 h-8 rounded-full bg-success/10 flex items-center justify-center flex-shrink-0">
-                          <TrendingDown className="h-4 w-4 text-success" />
+                          <TrendingDown className="h-4 w-4 text-foreground" />
                         </div>
                         <div>
                           <p className="text-xs font-semibold text-foreground">Best Price</p>
@@ -494,7 +494,7 @@ const CarDetail = () => {
                       </div>
                       <div className="flex items-start gap-2 p-2.5 rounded-lg bg-background/60 border border-border/30">
                         <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                          <Clock className="h-4 w-4 text-primary" />
+                          <Clock className="h-4 w-4 text-foreground" />
                         </div>
                         <div>
                           <p className="text-xs font-semibold text-foreground">Fast Delivery</p>
@@ -503,7 +503,7 @@ const CarDetail = () => {
                       </div>
                       <div className="flex items-start gap-2 p-2.5 rounded-lg bg-background/60 border border-border/30">
                         <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0">
-                          <Gift className="h-4 w-4 text-accent" />
+                          <Gift className="h-4 w-4 text-foreground" />
                         </div>
                         <div>
                           <p className="text-xs font-semibold text-foreground">Free Accessories</p>
@@ -512,7 +512,7 @@ const CarDetail = () => {
                       </div>
                       <div className="flex items-start gap-2 p-2.5 rounded-lg bg-background/60 border border-border/30">
                         <div className="w-8 h-8 rounded-full bg-success/10 flex items-center justify-center flex-shrink-0">
-                          <Shield className="h-4 w-4 text-success" />
+                          <Shield className="h-4 w-4 text-foreground" />
                         </div>
                         <div>
                           <p className="text-xs font-semibold text-foreground">100% Genuine</p>
@@ -525,10 +525,10 @@ const CarDetail = () => {
                     <div className="mt-4 p-3 rounded-lg bg-gradient-to-r from-primary/10 to-success/10 border border-primary/20">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4 text-primary" />
+                          <Phone className="h-4 w-4 text-foreground" />
                           <span className="text-xs font-medium">Need Help?</span>
                         </div>
-                        <a href="tel:+1155578093" className="text-xs font-bold text-primary hover:underline">
+                        <a href="tel:+1155578093" className="text-xs font-bold text-foreground hover:underline">
                           +1 155578093
                         </a>
                       </div>
@@ -540,7 +540,7 @@ const CarDetail = () => {
               {/* Car Info - Right Column */}
               <div className="space-y-6">
                 <div>
-                  <p className="text-primary font-medium mb-1">{car.brand}</p>
+                  <p className="text-foreground font-medium mb-1">{car.brand}</p>
                   <h1 className="font-heading text-3xl md:text-4xl font-bold text-foreground mb-2">
                     {car.name}
                   </h1>
@@ -552,7 +552,7 @@ const CarDetail = () => {
                   <div className="flex items-center justify-between flex-wrap gap-4">
                     <div>
                       <p className="text-xs text-muted-foreground">Starting Price</p>
-                      <p className="text-2xl md:text-3xl font-bold text-primary">{car.price}</p>
+                      <p className="text-2xl md:text-3xl font-bold text-foreground">{car.price}</p>
                       <p className="text-xs text-muted-foreground">Ex-showroom price</p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -569,22 +569,22 @@ const CarDetail = () => {
                 {/* Quick Specs - 4 columns on mobile, 4 on desktop */}
                 <div className="grid grid-cols-4 gap-2 md:gap-4">
                   <div className="bg-card border border-border rounded-xl p-3 md:p-4 text-center">
-                    <Fuel className="h-5 w-5 md:h-6 md:w-6 mx-auto mb-1.5 md:mb-2 text-primary" />
+                    <Fuel className="h-5 w-5 md:h-6 md:w-6 mx-auto mb-1.5 md:mb-2 text-foreground" />
                     <p className="text-[10px] md:text-sm text-muted-foreground">Fuel</p>
                     <p className="font-semibold text-[10px] md:text-sm">{car.fuelTypes.join(" / ")}</p>
                   </div>
                   <div className="bg-card border border-border rounded-xl p-3 md:p-4 text-center">
-                    <Cog className="h-5 w-5 md:h-6 md:w-6 mx-auto mb-1.5 md:mb-2 text-primary" />
+                    <Cog className="h-5 w-5 md:h-6 md:w-6 mx-auto mb-1.5 md:mb-2 text-foreground" />
                     <p className="text-[10px] md:text-sm text-muted-foreground">Gearbox</p>
                     <p className="font-semibold text-[10px] md:text-sm">{car.transmission.join(" / ")}</p>
                   </div>
                   <div className="bg-card border border-border rounded-xl p-3 md:p-4 text-center">
-                    <Clock className="h-5 w-5 md:h-6 md:w-6 mx-auto mb-1.5 md:mb-2 text-success" />
+                    <Clock className="h-5 w-5 md:h-6 md:w-6 mx-auto mb-1.5 md:mb-2 text-foreground" />
                     <p className="text-[10px] md:text-sm text-muted-foreground">Delivery</p>
-                    <p className="font-semibold text-[10px] md:text-sm text-success">{car.availability}</p>
+                    <p className="font-semibold text-[10px] md:text-sm text-foreground">{car.availability}</p>
                   </div>
                   <div className="bg-card border border-border rounded-xl p-3 md:p-4 text-center">
-                    <Shield className="h-5 w-5 md:h-6 md:w-6 mx-auto mb-1.5 md:mb-2 text-accent" />
+                    <Shield className="h-5 w-5 md:h-6 md:w-6 mx-auto mb-1.5 md:mb-2 text-foreground" />
                     <p className="text-[10px] md:text-sm text-muted-foreground">Safety</p>
                     <p className="font-semibold text-[10px] md:text-sm">{car.specifications?.performance?.find(s => s.label.toLowerCase().includes('safety'))?.value || '5 Star'}</p>
                   </div>
@@ -638,18 +638,18 @@ const CarDetail = () => {
                 {/* Trust Badges - compact highlighted strip */}
                 <div className="flex items-center gap-3 bg-success/10 border border-success/20 rounded-xl px-3 py-2">
                   <div className="flex items-center gap-1">
-                    <Shield className="h-3.5 w-3.5 text-success" />
-                    <span className="text-[11px] font-semibold text-success">Verified Dealer</span>
+                    <Shield className="h-3.5 w-3.5 text-foreground" />
+                    <span className="text-[11px] font-semibold text-foreground">Verified Dealer</span>
                   </div>
                   <div className="w-px h-4 bg-success/30" />
                   <div className="flex items-center gap-1">
-                    <Star className="h-3.5 w-3.5 text-success fill-success" />
-                    <span className="text-[11px] font-semibold text-success">4.8/5</span>
+                    <Star className="h-3.5 w-3.5 text-foreground fill-success" />
+                    <span className="text-[11px] font-semibold text-foreground">4.8/5</span>
                   </div>
                   <div className="w-px h-4 bg-success/30" />
                   <div className="flex items-center gap-1">
-                    <MapPin className="h-3.5 w-3.5 text-success" />
-                    <span className="text-[11px] font-semibold text-success">15+ Showrooms</span>
+                    <MapPin className="h-3.5 w-3.5 text-foreground" />
+                    <span className="text-[11px] font-semibold text-foreground">15+ Showrooms</span>
                   </div>
                 </div>
 
@@ -776,7 +776,7 @@ const CarDetail = () => {
                     <Card>
                       <CardHeader className="pb-3">
                         <CardTitle className="text-base flex items-center gap-2">
-                          <Check className="h-5 w-5 text-success" />
+                          <Check className="h-5 w-5 text-foreground" />
                           Features - {car.name} {car.variants[selectedVariant]?.name || ''}
                         </CardTitle>
                       </CardHeader>
@@ -784,7 +784,7 @@ const CarDetail = () => {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           {(car.variants[selectedVariant]?.features || []).map((feature, fIndex) => (
                             <div key={fIndex} className="flex items-center gap-2 py-1.5 px-2 bg-muted/30 rounded-lg">
-                              <Check className="h-4 w-4 text-success flex-shrink-0" />
+                              <Check className="h-4 w-4 text-foreground flex-shrink-0" />
                               <span className="text-sm">{feature}</span>
                             </div>
                           ))}
@@ -828,7 +828,7 @@ const CarDetail = () => {
                              <div>
                                <p className="text-sm text-muted-foreground font-medium">Calculate EMI for</p>
                                <h3 className="font-bold text-xl mt-1">{car.brand} {car.name}</h3>
-                               <p className="text-sm font-semibold text-primary mt-0.5">{selectedVar?.name || 'Base Variant'}</p>
+                               <p className="text-sm font-semibold text-foreground mt-0.5">{selectedVar?.name || 'Base Variant'}</p>
                                <p className="text-xs text-muted-foreground mt-2">
                                  {selectedVar?.fuelType || car.fuelTypes?.[0] || 'Petrol'} • {selectedVar?.transmission || car.transmission?.[0] || 'Manual'}
                                </p>
@@ -836,7 +836,7 @@ const CarDetail = () => {
                              <div className="flex flex-col items-end gap-3">
                                <div>
                                  <p className="text-sm text-muted-foreground mb-1">Starting On-Road Price</p>
-                                 <p className="text-3xl font-bold text-primary">
+                                 <p className="text-3xl font-bold text-foreground">
                                    ₹{(breakup.onRoadPrice / 100000).toFixed(2)} Lakh
                                  </p>
                                </div>
@@ -869,7 +869,7 @@ const CarDetail = () => {
                       <Card>
                         <CardHeader>
                           <CardTitle className="text-lg flex items-center gap-2">
-                            <Calculator className="h-5 w-5 text-primary" />
+                            <Calculator className="h-5 w-5 text-foreground" />
                             Quick EMI Reference
                           </CardTitle>
                         </CardHeader>
@@ -894,7 +894,7 @@ const CarDetail = () => {
                                   className="bg-secondary/50 rounded-xl p-4 text-center hover:bg-secondary transition-colors"
                                 >
                                   <p className="text-sm text-muted-foreground mb-1">{months / 12} Years</p>
-                                  <p className="text-xl font-bold text-primary">₹{emi.toLocaleString("en-IN")}</p>
+                                  <p className="text-xl font-bold text-foreground">₹{emi.toLocaleString("en-IN")}</p>
                                   <p className="text-xs text-muted-foreground mt-1">@ {rate}% p.a.</p>
                                 </div>
                               );
@@ -929,9 +929,9 @@ const CarDetail = () => {
                           <div className="p-5 flex-1">
                             <div className="flex items-start gap-4">
                               <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                                offer.type === "cashback" ? "bg-success/10 text-success" :
-                                offer.type === "exchange" ? "bg-primary/10 text-primary" :
-                                offer.type === "accessory" ? "bg-accent/10 text-accent" :
+                                offer.type === "cashback" ? "bg-success/10 text-foreground" :
+                                offer.type === "exchange" ? "bg-primary/10 text-foreground" :
+                                offer.type === "accessory" ? "bg-accent/10 text-foreground" :
                                 "bg-blue-500/10 text-blue-500"
                               }`}>
                                 {getOfferIcon(offer.type)}
@@ -940,7 +940,7 @@ const CarDetail = () => {
                                 <h4 className="font-semibold mb-1">{offer.title}</h4>
                                 <p className="text-sm text-muted-foreground mb-2">{offer.description}</p>
                                 <div className="flex items-center justify-between">
-                                  <span className="font-bold text-lg text-primary">{offer.discount}</span>
+                                  <span className="font-bold text-lg text-foreground">{offer.discount}</span>
                                   <span className="text-xs text-muted-foreground">Valid till {offer.validTill}</span>
                                 </div>
                               </div>
