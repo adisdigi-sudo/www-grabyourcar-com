@@ -353,7 +353,7 @@ const CarDetail = () => {
                 </div>
 
                 {/* Mobile/Tablet: Structured Price & Variants Card */}
-                <div className="lg:hidden">
+                <div>
                   <div className="rounded-2xl overflow-hidden border border-border/60 shadow-sm bg-card">
                     {/* Price Row */}
                     <div className="p-4 space-y-3">
