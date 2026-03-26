@@ -550,6 +550,7 @@ const CarDetail = () => {
               <TabsContent value="specifications" className="space-y-2">
                 <Accordion type="multiple" defaultValue={["engine"]} className="w-full space-y-2">
                   {/* Engine & Transmission */}
+                  {Array.isArray(car.specifications?.engine) && car.specifications.engine.length > 0 && (
                   <AccordionItem value="engine" className="rounded-2xl border border-border/50 overflow-hidden bg-card">
                     <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/30">
                       <div className="flex items-center gap-2">
@@ -573,8 +574,10 @@ const CarDetail = () => {
                       </div>
                     </AccordionContent>
                   </AccordionItem>
+                  )}
 
                   {/* Dimensions & Capacity */}
+                  {Array.isArray(car.specifications?.dimensions) && car.specifications.dimensions.length > 0 && (
                   <AccordionItem value="dimensions" className="rounded-2xl border border-border/50 overflow-hidden bg-card">
                     <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/30">
                       <div className="flex items-center gap-2">
@@ -598,8 +601,10 @@ const CarDetail = () => {
                       </div>
                     </AccordionContent>
                   </AccordionItem>
+                  )}
 
                   {/* Performance */}
+                  {Array.isArray(car.specifications?.performance) && car.specifications.performance.length > 0 && (
                   <AccordionItem value="performance" className="rounded-2xl border border-border/50 overflow-hidden bg-card">
                     <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/30">
                       <div className="flex items-center gap-2">
@@ -623,8 +628,10 @@ const CarDetail = () => {
                       </div>
                     </AccordionContent>
                   </AccordionItem>
+                  )}
 
                   {/* Features & Safety */}
+                  {Array.isArray(car.specifications?.features) && car.specifications.features.length > 0 && (
                   <AccordionItem value="features" className="rounded-2xl border border-border/50 overflow-hidden bg-card">
                     <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/30">
                       <div className="flex items-center gap-2">
@@ -648,6 +655,7 @@ const CarDetail = () => {
                       </div>
                     </AccordionContent>
                   </AccordionItem>
+                  )}
                 </Accordion>
               </TabsContent>
 
