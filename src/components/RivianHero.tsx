@@ -157,7 +157,7 @@ export const RivianHero = () => {
       </AnimatePresence>
 
       {/* Content */}
-      <div className="relative z-10 h-full flex items-end pb-20 md:items-center md:pb-0">
+      <div className="relative z-10 h-full flex items-end pb-14 md:items-center md:pb-0">
         <div className="container mx-auto px-4 md:px-12 lg:px-20">
           <AnimatePresence mode="wait">
             <motion.div
