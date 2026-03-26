@@ -328,8 +328,8 @@ const CarDetail = () => {
                   </div>
                 </div>
 
-                {/* Mobile: Need Help bar */}
-                <div className="lg:hidden p-3 rounded-xl bg-gradient-to-r from-primary/10 to-success/10 border border-primary/20">
+                {/* Need Help bar */}
+                <div className="p-3 rounded-xl bg-gradient-to-r from-primary/10 to-success/10 border border-primary/20">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Phone className="h-4 w-4 text-foreground" />
