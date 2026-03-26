@@ -14,7 +14,7 @@ import {
   Upload, FileText, ClipboardPaste, Table2,
   CheckCircle2, Loader2, X, Download, Database, FileSpreadsheet,
 } from "lucide-react";
-import * as XLSX from "xlsx";
+import { parseSpreadsheetToObjects } from "@/lib/spreadsheetUtils";
 
 type ParsedProspect = {
   phone: string;
@@ -260,20 +260,15 @@ function ProspectExcel({ onParsed }: { onParsed: (c: ParsedProspect[]) => void }
   const [fileName, setFileName] = useState("");
   const [parsing, setParsing] = useState(false);
 
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
     setFileName(file.name);
     setParsing(true);
 
-    const reader = new FileReader();
-    reader.onload = (ev) => {
       try {
-        const data = new Uint8Array(ev.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: "array" });
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: "" });
+        const rows = await parseSpreadsheetToObjects(file);
 
-        if (!rows.length) { toast.error("No data found in Excel file"); setParsing(false); return; }
+        if (!rows.length) { toast.error("No data found in file"); setParsing(false); return; }
 
         // Build column map from headers
         const headers = Object.keys(rows[0]);
@@ -329,19 +324,17 @@ function ProspectExcel({ onParsed }: { onParsed: (c: ParsedProspect[]) => void }
         onParsed(prospects);
         toast.success(`Parsed ${prospects.length.toLocaleString()} prospects from Excel`);
       } catch (err) {
-        toast.error("Failed to parse Excel file");
+        toast.error("Failed to parse file");
         console.error(err);
       } finally {
         setParsing(false);
       }
-    };
-    reader.readAsArrayBuffer(file);
   };
 
   return (
     <div className="space-y-3">
       <div className="p-3 rounded-lg bg-muted/30 border text-xs text-muted-foreground">
-        <p className="font-medium text-foreground text-sm mb-1">Upload Excel File (.xlsx, .xls)</p>
+        <p className="font-medium text-foreground text-sm mb-1">Upload CSV File</p>
         <p>Auto-detects columns: Name, Mobile/Phone, City, State, Model, Submodel, Vehicle No, Email, Insurer</p>
         <p className="mt-1 text-emerald-600 font-medium">✓ Supports large files (10K-100K+ records)</p>
       </div>
@@ -351,9 +344,9 @@ function ProspectExcel({ onParsed }: { onParsed: (c: ParsedProspect[]) => void }
         ) : (
           <FileSpreadsheet className="h-8 w-8 text-muted-foreground mb-2" />
         )}
-        <span className="text-sm font-medium">{parsing ? "Parsing..." : fileName || "Click to select Excel file"}</span>
-        <span className="text-xs text-muted-foreground mt-1">.xlsx, .xls supported</span>
-        <Input id="prospect-excel-upload" type="file" accept=".xlsx,.xls" className="hidden" onChange={handleFile} />
+        <span className="text-sm font-medium">{parsing ? "Parsing..." : fileName || "Click to select CSV file"}</span>
+        <span className="text-xs text-muted-foreground mt-1">.csv supported</span>
+        <Input id="prospect-excel-upload" type="file" accept=".csv" className="hidden" onChange={handleFile} />
       </Label>
     </div>
   );

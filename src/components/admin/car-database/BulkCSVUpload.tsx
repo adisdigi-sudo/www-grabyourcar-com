@@ -11,7 +11,7 @@ import {
   Loader2, Trash2, Save, Download, Eye, X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import * as XLSX from "xlsx";
+import { parseCSV, downloadCSVFile } from "@/lib/spreadsheetUtils";
 
 interface ParsedCar {
   id: string;
@@ -54,7 +54,6 @@ export const BulkCSVUpload = ({ onClose }: { onClose?: () => void }) => {
   const [parsing, setParsing] = useState(false);
 
   const downloadTemplate = () => {
-    const wb = XLSX.utils.book_new();
     const sampleData = [
       TEMPLATE_HEADERS,
       ['Maruti Suzuki', 'Swift', 'Hatchback', 'Petrol', 'Manual, AMT', 'Play Bold', 'The all-new Swift...', '₹25,000', '', 'TRUE', '', '',
@@ -74,32 +73,7 @@ export const BulkCSVUpload = ({ onClose }: { onClose?: () => void }) => {
         'Flame Red', '#FF2200',
         'engine', 'Displacement', '1199 cc'],
     ];
-    const ws = XLSX.utils.aoa_to_sheet(sampleData);
-    ws['!cols'] = TEMPLATE_HEADERS.map(() => ({ wch: 18 }));
-    XLSX.utils.book_append_sheet(wb, ws, 'Car Data');
-    
-    const instructions = [
-      ['Car Database Bulk Upload — Instructions'],
-      [''],
-      ['HOW IT WORKS:'],
-      ['- Row with Brand + Car Name = NEW car entry'],
-      ['- Rows below without Brand/Name = additional variants/colors/specs for the SAME car'],
-      ['- You can add multiple variants, colors, and specs per car'],
-      [''],
-      ['FIELDS:'],
-      ['- Brand* and Car Name* are REQUIRED for the first row of each car'],
-      ['- Fuel Types: comma-separated (Petrol, Diesel, Electric, Hybrid, CNG, LPG)'],
-      ['- Transmission: comma-separated (Manual, Automatic, AMT, CVT, DCT, iMT)'],
-      ['- Boolean flags: TRUE or FALSE (Is Hot, Is New, Is Upcoming, Is Bestseller)'],
-      ['- Ex-Showroom: number only (e.g., 799000 not ₹7.99L)'],
-      ['- Spec Category: engine, dimensions, performance, features, safety'],
-      ['- Color Hex: include # (e.g., #FF0000)'],
-    ];
-    const ws2 = XLSX.utils.aoa_to_sheet(instructions);
-    ws2['!cols'] = [{ wch: 80 }];
-    XLSX.utils.book_append_sheet(wb, ws2, 'Instructions');
-    
-    XLSX.writeFile(wb, 'car-bulk-upload-template.xlsx');
+    downloadCSVFile(sampleData, 'car-bulk-upload-template.csv');
     toast.success('Template downloaded!');
   };
 
@@ -107,10 +81,8 @@ export const BulkCSVUpload = ({ onClose }: { onClose?: () => void }) => {
     setParsing(true);
     setFileName(file.name);
     try {
-      const buffer = await file.arrayBuffer();
-      const wb = XLSX.read(buffer, { type: 'array' });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      const text = await file.text();
+      const rows: string[][] = parseCSV(text);
 
       if (rows.length < 2) throw new Error('File has no data rows');
 
