@@ -28,6 +28,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Separator } from "@/components/ui/separator";
 import { 
   ChevronLeft, 
@@ -626,23 +627,29 @@ const CarDetail = () => {
                   </CardContent>
                 </Card>
 
-                {/* Key Features */}
+                {/* Key Features - FAQ/Accordion Style */}
                 <Card>
                   <CardHeader>
                     <CardTitle>Key Features</CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <CardContent className="p-0">
+                    <Accordion type="multiple" className="w-full">
                       {car.specifications.features.map((feature, index) => (
-                        <div key={index} className="flex items-center gap-3 p-3 bg-secondary/50 rounded-lg">
-                          <Check className="h-5 w-5 text-success flex-shrink-0" />
-                          <div>
-                            <p className="font-medium text-sm">{feature.label}</p>
-                            <p className="text-sm text-muted-foreground">{feature.value}</p>
-                          </div>
-                        </div>
+                        <AccordionItem key={index} value={`feature-${index}`} className="border-b border-border/50 last:border-0 px-6">
+                          <AccordionTrigger className="py-3.5 hover:no-underline gap-3">
+                            <div className="flex items-center gap-3 text-left">
+                              <div className="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
+                                <Check className="h-4 w-4 text-success" />
+                              </div>
+                              <span className="font-medium text-sm">{feature.label}</span>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="pb-4 pl-11 text-sm text-muted-foreground">
+                            {feature.value}
+                          </AccordionContent>
+                        </AccordionItem>
                       ))}
-                    </div>
+                    </Accordion>
                   </CardContent>
                 </Card>
               </TabsContent>
