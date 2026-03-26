@@ -461,6 +461,14 @@ const CarDetail = () => {
                   </div>
                 )}
 
+                {/* Complete Your Purchase - Cross-sell */}
+                <CrossSellWidget 
+                  context="carDetail" 
+                  title="Complete Your Purchase" 
+                  maxItems={4}
+                  layout="compact-grid"
+                />
+
                 <div className="mt-6 hidden lg:block">
                   <BookingForm carName={car.name} carBrand={car.brand} />
                 </div>
@@ -928,17 +936,9 @@ const CarDetail = () => {
           </div>
         </section>
 
-        {/* Cross-Sell + AI Recommendations Combined Section */}
+        {/* AI Recommendations Section */}
         <section className="py-6 md:py-10 bg-secondary/30">
           <div className="container mx-auto px-4 space-y-6">
-            {/* Cross-Sell: 2x2 icon grid on mobile */}
-            <CrossSellWidget 
-              context="carDetail" 
-              title="Complete Your Purchase" 
-              maxItems={4}
-              layout="compact-grid"
-            />
-
             {/* AI Recommendations */}
             <AICarRecommendations
               carName={car.name}
