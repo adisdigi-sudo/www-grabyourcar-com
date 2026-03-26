@@ -381,15 +381,15 @@ const CarDetail = () => {
                     </div>
 
                     {/* Action Row */}
-                    <div className="border-t border-border/40 grid grid-cols-2 divide-x divide-border/40">
+                    <div className="border-t border-border/40 grid grid-cols-2">
                       <button
                         onClick={() => setPricingDrawerOpen(true)}
-                        className="flex items-center justify-center gap-2 py-3 text-xs font-bold text-success hover:bg-success/5 transition-colors active:scale-[0.98]"
+                        className="flex items-center justify-center gap-2 py-3.5 text-xs font-bold text-primary-foreground bg-gradient-to-r from-primary to-primary-glow shadow-glow hover:shadow-accent-glow transition-all active:scale-[0.98]"
                       >
                         <IndianRupee className="h-3.5 w-3.5" />
                         Get Best Price
                       </button>
-                      <Link to={`/car/${car.slug}/on-road-price`} className="flex items-center justify-center gap-1.5 py-3 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
+                      <Link to={`/car/${car.slug}/on-road-price`} className="flex items-center justify-center gap-1.5 py-3.5 text-xs font-semibold text-foreground bg-muted/50 hover:bg-muted transition-colors border-l border-border/40">
                         Full Breakup <ChevronRight className="h-3 w-3" />
                       </Link>
                     </div>
