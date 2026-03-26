@@ -561,7 +561,7 @@ const CarDetail = () => {
                 </div>
 
                 {/* CTA Buttons - Desktop only */}
-                <div className="hidden md:flex flex-wrap gap-3">
+                <div className="hidden lg:flex flex-wrap gap-3">
                   <Button variant="cta" size="lg" className="flex-1 font-semibold hover:scale-105 transition-transform" onClick={() => setPricingDrawerOpen(true)}>
                     Get Best Price
                   </Button>
