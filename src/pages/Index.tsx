@@ -4,6 +4,7 @@ import { Header } from "@/components/Header";
 import { RivianHero } from "@/components/RivianHero";
 import { CategoryGrid } from "@/components/CategoryGrid";
 import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
+const BrowseByBudget = lazy(() => import("@/components/BrowseByBudget").then(m => ({ default: m.BrowseByBudget })));
 
 // Lazy-load below-the-fold sections to reduce initial bundle
 const CarListings = lazy(() => import("@/components/CarListings").then(m => ({ default: m.CarListings })));
