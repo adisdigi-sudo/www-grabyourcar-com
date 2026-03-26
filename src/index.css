@@ -50,19 +50,19 @@
 
 @layer base {
   :root {
-    /* Primary - Green */
-    --primary: 142 70% 45%;
+    /* Brand Green - #22A84E = hsl(142 66% 40%) */
+    --primary: 142 66% 40%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 142 80% 50%;
+    --primary-glow: 142 66% 40%;
 
     /* Secondary - Light Gray */
     --secondary: 210 20% 96%;
     --secondary-foreground: 210 20% 20%;
 
-    /* Accent - Green (Deals/CTA) */
-    --accent: 142 70% 45%;
+    /* Accent - Same Brand Green */
+    --accent: 142 66% 40%;
     --accent-foreground: 0 0% 100%;
-    --accent-glow: 142 80% 50%;
+    --accent-glow: 142 66% 40%;
 
     /* Background & Surface - White */
     --background: 0 0% 100%;
