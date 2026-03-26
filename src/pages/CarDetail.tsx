@@ -409,9 +409,9 @@ const CarDetail = () => {
                   </div>
                 </div>
 
-                {/* Mobile/Tablet: About Car + Key Features — unified accordion */}
+                {/* About Car + Key Features — FAQ accordion */}
                 {car.specifications?.features && car.specifications.features.length > 0 && (
-                  <div className="lg:hidden">
+                  <div>
                     <Accordion type="single" collapsible className="w-full space-y-2">
                       {/* About Car */}
                       {car.overview && (
@@ -419,12 +419,12 @@ const CarDetail = () => {
                           <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/30">
                             <div className="flex items-center gap-2 flex-1">
                               <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
-                                <Sparkles className="h-3.5 w-3.5 text-foreground" />
+                                <Sparkles className="h-3.5 w-3.5 text-primary" />
                               </div>
-                              <span className="text-xs font-bold uppercase tracking-wide">About {car.name}</span>
+                              <span className="text-xs lg:text-sm font-bold uppercase tracking-wide">About {car.name}</span>
                             </div>
                           </AccordionTrigger>
-                          <AccordionContent className="px-4 pb-3 text-xs text-muted-foreground leading-relaxed">
+                          <AccordionContent className="px-4 pb-3 text-xs lg:text-sm text-muted-foreground leading-relaxed">
                             {car.overview}
                           </AccordionContent>
                         </AccordionItem>
@@ -434,11 +434,11 @@ const CarDetail = () => {
                       <AccordionItem value="key-features" className="rounded-2xl border border-border/50 overflow-hidden bg-card">
                         <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/30">
                           <div className="flex items-center gap-2 flex-1">
-                            <div className="w-7 h-7 rounded-lg bg-success/10 flex items-center justify-center">
-                              <Check className="h-3.5 w-3.5 text-foreground" />
+                            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                              <Check className="h-3.5 w-3.5 text-primary" />
                             </div>
-                            <span className="text-xs font-bold uppercase tracking-wide">Key Features</span>
-                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 ml-auto mr-2 border-success/30 text-foreground">
+                            <span className="text-xs lg:text-sm font-bold uppercase tracking-wide">Key Features</span>
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 ml-auto mr-2 border-border text-foreground">
                               {car.specifications.features.length}
                             </Badge>
                           </div>
@@ -447,12 +447,12 @@ const CarDetail = () => {
                           <div className="divide-y divide-border/30">
                             {car.specifications.features.slice(0, 8).map((feature, index) => (
                               <div key={index} className="flex items-center gap-3 px-4 py-2.5">
-                                <div className="w-6 h-6 rounded-full bg-success/10 flex items-center justify-center shrink-0">
-                                  <Check className="h-3 w-3 text-foreground" />
+                                <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                                  <Check className="h-3 w-3 text-primary" />
                                 </div>
                                 <div className="min-w-0">
-                                  <span className="font-medium text-xs block">{feature.label}</span>
-                                  <span className="text-[10px] text-muted-foreground">{feature.value}</span>
+                                  <span className="font-medium text-xs lg:text-sm block">{feature.label}</span>
+                                  <span className="text-[10px] lg:text-xs text-muted-foreground">{feature.value}</span>
                                 </div>
                               </div>
                             ))}
