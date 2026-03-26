@@ -410,7 +410,7 @@ const CarDetail = () => {
                       </button>
                       <Link to={`/car/${car.slug}/on-road-price`} className="flex items-center justify-center gap-2 py-3.5 text-xs font-bold text-primary-foreground bg-primary hover:bg-primary/90 transition-all active:scale-[0.98]">
                         <FileText className="h-3.5 w-3.5" />
-                        Full Breakup
+                        On-Road Breakup
                       </Link>
                     </div>
                   </div>
