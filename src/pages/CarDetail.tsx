@@ -298,12 +298,12 @@ const CarDetail = () => {
                     <div className="flex gap-3 animate-marquee">
                       {[
                         { icon: <TrendingDown className="h-3.5 w-3.5 text-success" />, label: "Best Price", sub: "Guaranteed lowest" },
-                        { icon: <Clock className="h-3.5 w-3.5 text-primary" />, label: "Fast Delivery", sub: "Priority slots" },
-                        { icon: <Gift className="h-3.5 w-3.5 text-accent" />, label: "Free Accessories", sub: "₹25,000+ worth" },
+                        { icon: <Clock className="h-3.5 w-3.5 text-success" />, label: "Fast Delivery", sub: "Priority slots" },
+                        { icon: <Gift className="h-3.5 w-3.5 text-success" />, label: "Free Accessories", sub: "₹25,000+ worth" },
                         { icon: <Shield className="h-3.5 w-3.5 text-success" />, label: "100% Genuine", sub: "Authorized dealer" },
                         { icon: <TrendingDown className="h-3.5 w-3.5 text-success" />, label: "Best Price", sub: "Guaranteed lowest" },
-                        { icon: <Clock className="h-3.5 w-3.5 text-primary" />, label: "Fast Delivery", sub: "Priority slots" },
-                        { icon: <Gift className="h-3.5 w-3.5 text-accent" />, label: "Free Accessories", sub: "₹25,000+ worth" },
+                        { icon: <Clock className="h-3.5 w-3.5 text-success" />, label: "Fast Delivery", sub: "Priority slots" },
+                        { icon: <Gift className="h-3.5 w-3.5 text-success" />, label: "Free Accessories", sub: "₹25,000+ worth" },
                         { icon: <Shield className="h-3.5 w-3.5 text-success" />, label: "100% Genuine", sub: "Authorized dealer" },
                       ].map((item, i) => (
                         <div key={i} className="flex-shrink-0 flex items-center gap-1.5 bg-background/60 border border-border/30 rounded-lg px-3 py-2">
