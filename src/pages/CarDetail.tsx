@@ -363,8 +363,8 @@ const CarDetail = () => {
                           <p className="text-xl font-bold text-foreground">{car.price}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-[10px] text-success font-medium uppercase tracking-wider">On-Road Price*</p>
-                          <p className="text-xl font-bold text-success">
+                          <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">On-Road Price*</p>
+                          <p className="text-xl font-bold text-foreground">
                             ₹{((car.variants?.[selectedVariant]?.priceNumeric || car.priceNumeric) / 100000).toFixed(2)} L
                           </p>
                         </div>
