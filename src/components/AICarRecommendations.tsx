@@ -6,7 +6,6 @@ import { Sparkles, ArrowRight, Fuel, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { allCars, Car } from "@/data/cars";
 import { motion } from "framer-motion";
-import { motion } from "framer-motion";
 
 interface Recommendation {
   name: string;
