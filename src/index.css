@@ -115,11 +115,11 @@
     --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.1), 0 4px 6px -4px hsl(0 0% 0% / 0.1);
     --shadow-glow: 0 0 40px hsla(142 66% 40% / 0.2);
     --shadow-accent-glow: 0 8px 32px hsla(142 66% 40% / 0.3);
-    --chart-1: 142 70% 45%;
-    --chart-2: 142 60% 55%;
-    --chart-3: 142 50% 40%;
-    --chart-4: 160 60% 45%;
-    --chart-5: 180 50% 40%;
+    --chart-1: 142 66% 40%;
+    --chart-2: 142 56% 50%;
+    --chart-3: 142 46% 35%;
+    --chart-4: 160 56% 40%;
+    --chart-5: 180 46% 35%;
     --sidebar: 0 0% 98%;
     --font-sans: 'Work Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
     --font-serif: 'Lora', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
