@@ -403,37 +403,39 @@ const CarDetail = () => {
                   </div>
                 </div>
 
-                {/* Mobile: Key Features Accordion - Right below price for instant value validation */}
+                {/* Mobile: Key Features - Single collapsible dropdown below price */}
                 {car.specifications?.features && car.specifications.features.length > 0 && (
                   <div className="md:hidden">
-                    <div className="rounded-2xl border border-border/50 overflow-hidden bg-card">
-                      <div className="px-4 py-2.5 bg-muted/50 border-b border-border/30 flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-lg bg-success/10 flex items-center justify-center">
-                          <Sparkles className="h-3.5 w-3.5 text-success" />
-                        </div>
-                        <h3 className="text-xs font-bold uppercase tracking-wide text-foreground">Key Features</h3>
-                        <Badge variant="outline" className="text-[9px] px-1.5 py-0 ml-auto border-success/30 text-success">
-                          {car.specifications.features.length} Features
-                        </Badge>
-                      </div>
-                      <Accordion type="multiple" className="w-full">
-                        {car.specifications.features.slice(0, 8).map((feature, index) => (
-                          <AccordionItem key={index} value={`mobile-feature-${index}`} className="border-b border-border/30 last:border-0">
-                            <AccordionTrigger className="px-4 py-3 hover:no-underline text-left">
-                              <div className="flex items-center gap-3">
-                                <div className="w-7 h-7 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
-                                  <Check className="h-3.5 w-3.5 text-success" />
+                    <Accordion type="single" collapsible className="w-full">
+                      <AccordionItem value="key-features" className="rounded-2xl border border-border/50 overflow-hidden bg-card">
+                        <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/50">
+                          <div className="flex items-center gap-2 flex-1">
+                            <div className="w-7 h-7 rounded-lg bg-success/10 flex items-center justify-center">
+                              <Sparkles className="h-3.5 w-3.5 text-success" />
+                            </div>
+                            <span className="text-xs font-bold uppercase tracking-wide">Key Features</span>
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 ml-auto mr-2 border-success/30 text-success">
+                              {car.specifications.features.length}
+                            </Badge>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="divide-y divide-border/30">
+                            {car.specifications.features.slice(0, 8).map((feature, index) => (
+                              <div key={index} className="flex items-center gap-3 px-4 py-2.5">
+                                <div className="w-6 h-6 rounded-full bg-success/10 flex items-center justify-center shrink-0">
+                                  <Check className="h-3 w-3 text-success" />
                                 </div>
-                                <span className="font-medium text-xs">{feature.label}</span>
+                                <div className="min-w-0">
+                                  <span className="font-medium text-xs block">{feature.label}</span>
+                                  <span className="text-[10px] text-muted-foreground">{feature.value}</span>
+                                </div>
                               </div>
-                            </AccordionTrigger>
-                            <AccordionContent className="px-4 pb-3 pl-14 text-xs text-muted-foreground">
-                              {feature.value}
-                            </AccordionContent>
-                          </AccordionItem>
-                        ))}
-                      </Accordion>
-                    </div>
+                            ))}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    </Accordion>
                   </div>
                 )}
 
