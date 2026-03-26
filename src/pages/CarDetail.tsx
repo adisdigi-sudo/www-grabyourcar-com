@@ -834,7 +834,7 @@ const CarDetail = () => {
 
               <TabsContent value="offers" className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {car.offers.map((offer) => (
+                  {(car.offers || []).map((offer) => (
                     <Card key={offer.id} className="overflow-hidden">
                       <CardContent className="p-0">
                         <div className="flex">
