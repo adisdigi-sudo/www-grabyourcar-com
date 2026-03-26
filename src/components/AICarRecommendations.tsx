@@ -251,7 +251,7 @@ export const AICarRecommendations = ({
                   <img
                     src={recommendations[2].image}
                     alt={recommendations[2].name}
-                    className="h-12 w-16 object-contain rounded-lg bg-muted/30 shrink-0"
+                    className="h-12 w-16 object-cover rounded-lg shrink-0"
                   />
                 ) : (
                   <div className="h-12 w-16 rounded-lg bg-success/10 flex items-center justify-center shrink-0 text-success font-bold">
