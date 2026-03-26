@@ -260,13 +260,11 @@ function ProspectExcel({ onParsed }: { onParsed: (c: ParsedProspect[]) => void }
   const [fileName, setFileName] = useState("");
   const [parsing, setParsing] = useState(false);
 
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
     setFileName(file.name);
     setParsing(true);
 
-    const reader = new FileReader();
-    reader.onload = async (ev) => {
       try {
         const rows = await parseSpreadsheetToObjects(file);
 
