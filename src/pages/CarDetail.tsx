@@ -647,7 +647,7 @@ const CarDetail = () => {
         {/* Specifications & Details */}
         <section className="py-12 bg-secondary/30">
           <div className="container mx-auto px-4">
-            <Tabs defaultValue="overview" className="space-y-8">
+            <Tabs defaultValue="specifications" className="space-y-8">
               <TabsList className="flex flex-wrap h-auto gap-2 bg-background p-2 rounded-xl">
                 <TabsTrigger value="specifications" className="rounded-lg data-[state=active]:bg-success data-[state=active]:text-success-foreground">Specifications</TabsTrigger>
                 <TabsTrigger value="variants" className="rounded-lg data-[state=active]:bg-success data-[state=active]:text-success-foreground">Variants & Price</TabsTrigger>
