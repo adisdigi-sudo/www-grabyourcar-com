@@ -416,7 +416,7 @@ const CarDetail = () => {
                 </div>
 
                 {/* About Car + Key Features — FAQ accordion */}
-                {car.specifications?.features && car.specifications.features.length > 0 && (
+                {car.specifications?.features && Array.isArray(car.specifications.features) && car.specifications.features.length > 0 && (
                   <div>
                     <Accordion type="single" collapsible className="w-full space-y-2">
                       {/* About Car */}
