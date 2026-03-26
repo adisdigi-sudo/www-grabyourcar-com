@@ -209,10 +209,10 @@ const CarDetail = () => {
 
 
         {/* Car Details Section */}
-        <section className="py-8 md:py-12">
+        <section className="py-6 md:py-12">
           <div className="container mx-auto px-4">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
-              {/* Color Gallery Viewer */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12">
+              {/* Left Column: Gallery + Desktop Booking + Desktop Why Buy */}
               <div className="space-y-4">
                 {/* Hot/Limited Badges */}
                 {(car.isHot || car.isLimited) && (
@@ -231,13 +231,139 @@ const CarDetail = () => {
                   onColorChange={setSelectedColor}
                 />
 
-                {/* Book Your Car Form - Left Side */}
-                <div className="mt-6">
+                {/* Mobile: 4 Action Buttons Grid right below car image */}
+                <div className="grid grid-cols-4 gap-2 md:hidden">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex flex-col items-center gap-1 h-auto py-3 text-[10px] font-semibold border-primary/30"
+                    onClick={() => setPricingDrawerOpen(true)}
+                  >
+                    <IndianRupee className="h-5 w-5 text-primary" />
+                    Best Price
+                  </Button>
+                  <CompareButton carId={car.id} />
+                  <a href="tel:+1155578093" className="w-full">
+                    <Button variant="outline" size="sm" className="w-full flex flex-col items-center gap-1 h-auto py-3 text-[10px] font-semibold border-success/30">
+                      <Phone className="h-5 w-5 text-success" />
+                      Talk Expert
+                    </Button>
+                  </a>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex flex-col items-center gap-1 h-auto py-3 text-[10px] font-semibold border-accent/30"
+                    onClick={() => setBookingDrawerOpen(true)}
+                  >
+                    <Calendar className="h-5 w-5 text-accent" />
+                    Book Car
+                  </Button>
+                </div>
+
+                {/* Mobile: Why Buy - Auto-scrolling marquee */}
+                <div className="md:hidden overflow-hidden rounded-xl border border-border/50 bg-gradient-to-r from-card to-secondary/20 p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Star className="h-4 w-4 text-accent" />
+                    <span className="text-xs font-semibold">Why Buy From Grabyourcar?</span>
+                  </div>
+                  <div className="overflow-hidden">
+                    <div className="flex gap-3 animate-marquee">
+                      {[
+                        { icon: <TrendingDown className="h-3.5 w-3.5 text-success" />, label: "Best Price", sub: "Guaranteed lowest" },
+                        { icon: <Clock className="h-3.5 w-3.5 text-primary" />, label: "Fast Delivery", sub: "Priority slots" },
+                        { icon: <Gift className="h-3.5 w-3.5 text-accent" />, label: "Free Accessories", sub: "₹25,000+ worth" },
+                        { icon: <Shield className="h-3.5 w-3.5 text-success" />, label: "100% Genuine", sub: "Authorized dealer" },
+                        { icon: <TrendingDown className="h-3.5 w-3.5 text-success" />, label: "Best Price", sub: "Guaranteed lowest" },
+                        { icon: <Clock className="h-3.5 w-3.5 text-primary" />, label: "Fast Delivery", sub: "Priority slots" },
+                        { icon: <Gift className="h-3.5 w-3.5 text-accent" />, label: "Free Accessories", sub: "₹25,000+ worth" },
+                        { icon: <Shield className="h-3.5 w-3.5 text-success" />, label: "100% Genuine", sub: "Authorized dealer" },
+                      ].map((item, i) => (
+                        <div key={i} className="flex-shrink-0 flex items-center gap-1.5 bg-background/60 border border-border/30 rounded-lg px-3 py-2">
+                          <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center flex-shrink-0">{item.icon}</div>
+                          <div>
+                            <p className="text-[10px] font-semibold text-foreground whitespace-nowrap">{item.label}</p>
+                            <p className="text-[8px] text-muted-foreground whitespace-nowrap">{item.sub}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Mobile: Need Help bar */}
+                <div className="md:hidden p-3 rounded-xl bg-gradient-to-r from-primary/10 to-success/10 border border-primary/20">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-primary" />
+                      <span className="text-xs font-semibold">Need Help?</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <a href="tel:+1155578093" className="text-xs font-bold text-primary hover:underline">
+                        +1 155578093
+                      </a>
+                      <WhatsAppSalesCTA carName={`${car.brand} ${car.name}`} type="price" size="sm" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Mobile: On-Road Price with Variant Selector */}
+                <div className="md:hidden space-y-3">
+                  <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-success/5">
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-bold flex items-center gap-1.5">
+                          <IndianRupee className="h-4 w-4 text-primary" />
+                          On-Road Price
+                        </h3>
+                        <Link to={`/car/${car.slug}/on-road-price`}>
+                          <Button variant="ghost" size="sm" className="text-xs text-primary h-7 px-2">
+                            View Details <ChevronRight className="h-3 w-3 ml-0.5" />
+                          </Button>
+                        </Link>
+                      </div>
+                      {/* Variant Selector */}
+                      {car.variants && car.variants.length > 0 && (
+                        <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
+                          {car.variants.map((v, i) => (
+                            <button
+                              key={i}
+                              onClick={() => { setSelectedVariant(i); trackVariantClick(car.slug, v.name); }}
+                              className={`flex-shrink-0 text-[10px] px-3 py-1.5 rounded-full font-medium transition-all ${
+                                selectedVariant === i
+                                  ? 'bg-primary text-primary-foreground shadow-sm'
+                                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                              }`}
+                            >
+                              {v.name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      <div className="flex items-end justify-between">
+                        <div>
+                          <p className="text-[10px] text-muted-foreground">
+                            {car.variants?.[selectedVariant]?.name || 'Base'} • {car.variants?.[selectedVariant]?.fuelType || car.fuelTypes?.[0]}
+                          </p>
+                          <p className="text-2xl font-bold text-primary">
+                            ₹{((car.variants?.[selectedVariant]?.priceNumeric || car.priceNumeric) / 100000).toFixed(2)} L
+                          </p>
+                          <p className="text-[10px] text-muted-foreground">Estimated on-road price</p>
+                        </div>
+                        <Button variant="cta" size="sm" className="font-semibold" onClick={() => setPricingDrawerOpen(true)}>
+                          Get Best Price
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Desktop: Book Your Car Form */}
+                <div className="mt-6 hidden md:block">
                   <BookingForm carName={car.name} carBrand={car.brand} />
                 </div>
 
-                {/* Why Buy From Us - Utilizing blank space */}
-                <Card className="mt-6 border-border/50 bg-gradient-to-br from-card to-secondary/20">
+                {/* Desktop: Why Buy From Us */}
+                <Card className="mt-6 hidden md:block border-border/50 bg-gradient-to-br from-card to-secondary/20">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base flex items-center gap-2">
                       <Star className="h-5 w-5 text-accent" />
@@ -300,7 +426,7 @@ const CarDetail = () => {
                 </Card>
               </div>
 
-              {/* Car Info */}
+              {/* Car Info - Right Column */}
               <div className="space-y-6">
                 <div>
                   <p className="text-primary font-medium mb-1">{car.brand}</p>
@@ -310,7 +436,7 @@ const CarDetail = () => {
                   <p className="text-muted-foreground text-lg">{car.tagline}</p>
                 </div>
 
-                {/* Quick Price Display - Links to top section */}
+                {/* Quick Price Display */}
                 <div className="bg-gradient-to-r from-primary/10 via-success/10 to-primary/10 rounded-xl p-4 border border-primary/20">
                   <div className="flex items-center justify-between flex-wrap gap-4">
                     <div>
@@ -329,28 +455,33 @@ const CarDetail = () => {
                   </div>
                 </div>
 
-                {/* Quick Specs - Moved after Price Card */}
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="bg-card border border-border rounded-xl p-4 text-center">
-                    <Fuel className="h-6 w-6 mx-auto mb-2 text-primary" />
-                    <p className="text-sm text-muted-foreground">Fuel Type</p>
-                    <p className="font-semibold text-sm">{car.fuelTypes.join(" / ")}</p>
+                {/* Quick Specs - 4 columns on mobile, 4 on desktop */}
+                <div className="grid grid-cols-4 gap-2 md:gap-4">
+                  <div className="bg-card border border-border rounded-xl p-3 md:p-4 text-center">
+                    <Fuel className="h-5 w-5 md:h-6 md:w-6 mx-auto mb-1.5 md:mb-2 text-primary" />
+                    <p className="text-[10px] md:text-sm text-muted-foreground">Fuel</p>
+                    <p className="font-semibold text-[10px] md:text-sm">{car.fuelTypes.join(" / ")}</p>
                   </div>
-                  <div className="bg-card border border-border rounded-xl p-4 text-center">
-                    <Cog className="h-6 w-6 mx-auto mb-2 text-primary" />
-                    <p className="text-sm text-muted-foreground">Transmission</p>
-                    <p className="font-semibold text-sm">{car.transmission.join(" / ")}</p>
+                  <div className="bg-card border border-border rounded-xl p-3 md:p-4 text-center">
+                    <Cog className="h-5 w-5 md:h-6 md:w-6 mx-auto mb-1.5 md:mb-2 text-primary" />
+                    <p className="text-[10px] md:text-sm text-muted-foreground">Gearbox</p>
+                    <p className="font-semibold text-[10px] md:text-sm">{car.transmission.join(" / ")}</p>
                   </div>
-                  <div className="bg-card border border-border rounded-xl p-4 text-center">
-                    <Clock className="h-6 w-6 mx-auto mb-2 text-success" />
-                    <p className="text-sm text-muted-foreground">Availability</p>
-                    <p className="font-semibold text-sm text-success">{car.availability}</p>
+                  <div className="bg-card border border-border rounded-xl p-3 md:p-4 text-center">
+                    <Clock className="h-5 w-5 md:h-6 md:w-6 mx-auto mb-1.5 md:mb-2 text-success" />
+                    <p className="text-[10px] md:text-sm text-muted-foreground">Delivery</p>
+                    <p className="font-semibold text-[10px] md:text-sm text-success">{car.availability}</p>
+                  </div>
+                  <div className="bg-card border border-border rounded-xl p-3 md:p-4 text-center">
+                    <Shield className="h-5 w-5 md:h-6 md:w-6 mx-auto mb-1.5 md:mb-2 text-accent" />
+                    <p className="text-[10px] md:text-sm text-muted-foreground">Safety</p>
+                    <p className="font-semibold text-[10px] md:text-sm">{car.specifications?.performance?.find(s => s.label.toLowerCase().includes('safety'))?.value || '5 Star'}</p>
                   </div>
                 </div>
 
-                {/* CTA Buttons - Sales-Driven */}
-                <div className="flex flex-wrap gap-3">
-                  <Button variant="cta" size="lg" className="flex-1 font-semibold hover:scale-105 transition-transform hidden md:flex" onClick={() => setPricingDrawerOpen(true)}>
+                {/* CTA Buttons - Desktop only */}
+                <div className="hidden md:flex flex-wrap gap-3">
+                  <Button variant="cta" size="lg" className="flex-1 font-semibold hover:scale-105 transition-transform" onClick={() => setPricingDrawerOpen(true)}>
                     Get Best Price
                   </Button>
                   <CompareButton carId={car.id} />
@@ -384,8 +515,7 @@ const CarDetail = () => {
                   </a>
                 </div>
 
-                {/* Additional WhatsApp CTAs */}
-                {/* WhatsApp Lead Engine - Quick Actions */}
+                {/* WhatsApp Quick Actions */}
                 <WhatsAppQuickActions
                   carName={`${car.brand} ${car.name}`}
                   variant={car.variants?.[selectedVariant]?.name}
