@@ -126,6 +126,7 @@ const CarDetail = () => {
   const [pricingDrawerOpen, setPricingDrawerOpen] = useState(false);
   const [bookingDrawerOpen, setBookingDrawerOpen] = useState(false);
   const { trackCarView, trackBrochureDownload, trackVariantClick, trackColorChange } = useEventTracking();
+  const compareCtx = useCompare();
 
   // Track car view
   useEffect(() => {
@@ -252,31 +253,38 @@ const CarDetail = () => {
 
                 {/* Mobile: 4 Action Buttons Grid right below car image */}
                 <div className="grid grid-cols-4 gap-2 md:hidden">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex flex-col items-center gap-1 h-auto py-3 text-[10px] font-semibold border-primary/30"
+                  <button
                     onClick={() => setPricingDrawerOpen(true)}
+                    className="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-success text-success-foreground shadow-md hover:shadow-lg transition-all active:scale-95"
                   >
-                    <IndianRupee className="h-5 w-5 text-primary" />
-                    Best Price
-                  </Button>
-                  <MobileCompareButton carId={car.id} />
+                    <IndianRupee className="h-5 w-5" />
+                    <span className="text-[10px] font-bold leading-tight">Best Price</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      const { addToCompare, removeFromCompare, isInCompare, canAddMore } = compareCtx;
+                      const inCompare = isInCompare(car.id);
+                      if (inCompare) removeFromCompare(car.id);
+                      else if (canAddMore) addToCompare(car.id);
+                    }}
+                    className="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-success text-success-foreground shadow-md hover:shadow-lg transition-all active:scale-95"
+                  >
+                    <GitCompareArrows className="h-5 w-5" />
+                    <span className="text-[10px] font-bold leading-tight">{compareCtx.isInCompare(car.id) ? 'Added' : 'Compare'}</span>
+                  </button>
                   <a href="tel:+1155578093" className="w-full">
-                    <Button variant="outline" size="sm" className="w-full flex flex-col items-center gap-1 h-auto py-3 text-[10px] font-semibold border-success/30">
-                      <Phone className="h-5 w-5 text-success" />
-                      Talk Expert
-                    </Button>
+                    <button className="w-full flex flex-col items-center gap-1.5 py-3 rounded-xl bg-success text-success-foreground shadow-md hover:shadow-lg transition-all active:scale-95">
+                      <Phone className="h-5 w-5" />
+                      <span className="text-[10px] font-bold leading-tight">Talk Expert</span>
+                    </button>
                   </a>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex flex-col items-center gap-1 h-auto py-3 text-[10px] font-semibold border-accent/30"
+                  <button
                     onClick={() => setBookingDrawerOpen(true)}
+                    className="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-success text-success-foreground shadow-md hover:shadow-lg transition-all active:scale-95"
                   >
-                    <Calendar className="h-5 w-5 text-accent" />
-                    Book Car
-                  </Button>
+                    <Calendar className="h-5 w-5" />
+                    <span className="text-[10px] font-bold leading-tight">Book Car</span>
+                  </button>
                 </div>
 
                 {/* Mobile: Why Buy - Auto-scrolling marquee */}
