@@ -503,41 +503,6 @@ const CarDetail = () => {
                   </div>
                 </div>
 
-                {/* CTA Buttons - Desktop only */}
-                <div className="hidden lg:flex flex-wrap gap-3">
-                  <Button variant="cta" size="lg" className="flex-1 font-semibold hover:scale-105 transition-transform" onClick={() => setPricingDrawerOpen(true)}>
-                    Get Best Price
-                  </Button>
-                  <CompareButton carId={car.id} />
-                  <ShareButtons title={`Check out ${car.name} on Grabyourcar`} />
-                  {car.brochureUrl && (
-                    <BrochureLeadGate
-                      brochureUrl={car.brochureUrl}
-                      carName={`${car.brand} ${car.name}`}
-                      carSlug={car.slug}
-                    >
-                      <Button 
-                        variant="outline" 
-                        size="lg" 
-                        className="font-semibold hover:scale-105 transition-transform"
-                      >
-                        <FileText className="h-5 w-5 mr-2" />
-                        Brochure
-                      </Button>
-                    </BrochureLeadGate>
-                  )}
-                  <WhatsAppSalesCTA 
-                    carName={`${car.brand} ${car.name}`} 
-                    type="price" 
-                    size="lg"
-                  />
-                  <a href="tel:+1155578093">
-                    <Button variant="call" size="lg" className="font-semibold hover:scale-105 transition-transform">
-                      <Phone className="h-5 w-5 mr-2" />
-                      Talk to Expert
-                    </Button>
-                  </a>
-                </div>
 
 
                 {/* Trust Badges - compact highlighted strip */}
