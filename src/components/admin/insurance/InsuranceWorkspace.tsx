@@ -26,7 +26,7 @@ import { InsuranceKpiDetailDialog } from "./InsuranceKpiDetailDialog";
 import { InsuranceRenewalCampaign } from "./InsuranceRenewalCampaign";
 import { InsurancePerformance } from "./InsurancePerformance";
 
-type ActiveView = "pipeline" | "policy_book" | "renewals" | "overdue" | "bulk_tools" | "calculator" | "renewal_campaign";
+type ActiveView = "pipeline" | "policy_book" | "renewals" | "overdue" | "bulk_tools" | "calculator" | "renewal_campaign" | "performance";
 type KpiType = "total_leads" | "in_pipeline" | "won" | "active_policies" | "conversion" | null;
 
 type LegacyInsuranceLead = {
