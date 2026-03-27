@@ -163,12 +163,19 @@ export const generateInsuranceQuotePdf = (data: InsuranceQuoteData) => {
   doc.setFillColor(...green);
   doc.rect(0, 30, pw, 8, "F");
 
-  // Subtle decorative circles
-  doc.setFillColor(255, 255, 255);
-  doc.setGState(new (doc as any).GState({ opacity: 0.04 }));
-  doc.circle(pw - 18, 10, 16, "F");
-  doc.circle(pw - 5, 26, 12, "F");
-  doc.setGState(new (doc as any).GState({ opacity: 1 }));
+  // Subtle decorative circles (using safe opacity approach)
+  try {
+    doc.setFillColor(255, 255, 255);
+    const GState = (doc as any).GState;
+    if (GState) {
+      doc.setGState(new GState({ opacity: 0.04 }));
+      doc.circle(pw - 18, 10, 16, "F");
+      doc.circle(pw - 5, 26, 12, "F");
+      doc.setGState(new GState({ opacity: 1 }));
+    }
+  } catch {
+    // GState not supported in this jsPDF version — skip decorative circles
+  }
 
   if (brandLogoUrl) {
     try { doc.addImage(brandLogoUrl, "PNG", m, 7, 24, 13); } catch {}
