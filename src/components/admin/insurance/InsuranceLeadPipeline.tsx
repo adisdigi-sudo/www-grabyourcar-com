@@ -264,6 +264,7 @@ function WonPolicyDialog({
         premium_amount: premium ? parseFloat(premium) : null,
         start_date: nextStartDate,
         expiry_date: nextExpiryDate,
+        booking_date: bookingDate ? format(bookingDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"),
         status: "active",
         is_renewal: Boolean(previousPolicy),
         previous_policy_id: previousPolicy?.id || null,
