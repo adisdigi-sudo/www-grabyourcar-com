@@ -114,15 +114,77 @@ export function InsuranceWorkspace() {
     },
   });
 
+  const getClientPolicyDate = (client: Client) => (
+    client.policy_start_date ||
+    client.booking_date ||
+    client.journey_last_event_at ||
+    client.updated_at ||
+    client.created_at
+  );
+
+  const isWon = (c: Client) => {
+    const stage = normalizeStage(c.pipeline_stage, c.lead_status);
+    return stage === "won" || stage === "policy_issued";
+  };
+  const isLost = (c: Client) => normalizeStage(c.pipeline_stage, c.lead_status) === "lost";
+
+  const policyBookPolicies = useMemo(() => {
+    const existingClientIds = new Set(
+      allPolicies
+        .filter((policy) => ["active", "renewed"].includes(policy.status || ""))
+        .map((policy) => policy.client_id)
+        .filter(Boolean) as string[]
+    );
+
+    const fallbackPolicies: PolicyRecord[] = clients
+      .filter((client) => isWon(client) && !existingClientIds.has(client.id))
+      .map((client) => ({
+        id: `fallback-${client.id}`,
+        client_id: client.id,
+        policy_number: client.current_policy_number || null,
+        policy_type: client.current_policy_type || null,
+        insurer: client.current_insurer || client.quote_insurer || null,
+        premium_amount: client.current_premium || client.quote_amount || null,
+        start_date: client.policy_start_date || client.booking_date || null,
+        expiry_date: client.policy_expiry_date || null,
+        status: "active",
+        is_renewal: false,
+        issued_date: client.booking_date || null,
+        plan_name: null,
+        idv: null,
+        policy_document_url: null,
+        source_label: "Recovered Won Client",
+        renewal_count: 0,
+        previous_policy_id: null,
+        booking_date: client.booking_date || client.policy_start_date || null,
+        created_at: client.created_at,
+        updated_at: client.updated_at,
+        insurance_clients: {
+          customer_name: client.customer_name || "—",
+          phone: client.phone || "",
+          city: client.city || null,
+          vehicle_number: client.vehicle_number || null,
+          vehicle_make: client.vehicle_make || null,
+          vehicle_model: client.vehicle_model || null,
+          lead_source: client.lead_source || null,
+          booking_date: client.booking_date || null,
+          updated_at: client.updated_at,
+          created_at: client.created_at,
+        },
+      }));
+
+    return [...fallbackPolicies, ...allPolicies];
+  }, [allPolicies, clients]);
+
   // Split policies into running (Policy Book) vs overdue (expired)
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const runningPolicies = useMemo(() =>
-    allPolicies.filter(p => {
-      if (p.status === "renewed") return true; // renewed records stay in book as historical
-      if (!p.expiry_date) return true; // no expiry = show in book
+    policyBookPolicies.filter(p => {
+      if (p.status === "renewed") return true;
+      if (!p.expiry_date) return true;
       return new Date(p.expiry_date) >= today;
-    }), [allPolicies, today.toDateString()]
+    }), [policyBookPolicies, today.toDateString()]
   );
   const RESOLVED_STATUSES = ["renewed", "lapsed", "cancelled", "lost"];
   const overduePolicies = useMemo(() =>
@@ -133,38 +195,34 @@ export function InsuranceWorkspace() {
     }), [allPolicies, today.toDateString()]
   );
 
-  const isWon = (c: Client) => {
-    const stage = normalizeStage(c.pipeline_stage, c.lead_status);
-    return stage === "won" || stage === "policy_issued";
-  };
-  const isLost = (c: Client) => normalizeStage(c.pipeline_stage, c.lead_status) === "lost";
-
   const totalLeads = clients.length;
   const wonCount = clients.filter(isWon).length;
   const lostCount = clients.filter(isLost).length;
   const inPipeline = totalLeads - wonCount - lostCount;
 
-  // Month-wise conversion calculation
+  // Month-wise conversion calculation based on real booking/policy dates
   const monthWiseConversion = useMemo(() => {
-    const monthMap: Record<string, { total: number; won: number; renewals: number; rollovers: number }> = {};
-    // Group leads by created_at month for total count
-    clients.forEach(c => {
-      const d = c.created_at ? new Date(c.created_at) : new Date();
+    const monthMap: Record<string, { total: number; won: number; renewals: number; rollovers: number; wonClients: Set<string> }> = {};
+
+    clients.forEach((client) => {
+      const d = new Date(getClientPolicyDate(client));
       const key = format(d, "yyyy-MM");
-      if (!monthMap[key]) monthMap[key] = { total: 0, won: 0, renewals: 0, rollovers: 0 };
+      if (!monthMap[key]) monthMap[key] = { total: 0, won: 0, renewals: 0, rollovers: 0, wonClients: new Set() };
       monthMap[key].total++;
-      const src = (c.lead_source || "").toLowerCase();
+      const src = (client.lead_source || "").toLowerCase();
       if (src.includes("renewal") || src.includes("renew")) monthMap[key].renewals++;
       if (src.includes("rollover") || src.includes("roll")) monthMap[key].rollovers++;
     });
-    // Group won leads by booking_date first so monthly won filters reflect the booked month
-    clients.filter(isWon).forEach(c => {
-      const wonDate = c.booking_date || c.policy_start_date || c.journey_last_event_at || c.updated_at || c.created_at;
-      const d = wonDate ? new Date(wonDate) : new Date();
+
+    policyBookPolicies.forEach((policy) => {
+      const policyDate = policy.start_date || policy.booking_date || policy.issued_date || policy.created_at;
+      const d = new Date(policyDate);
       const key = format(d, "yyyy-MM");
-      if (!monthMap[key]) monthMap[key] = { total: 0, won: 0, renewals: 0, rollovers: 0 };
+      if (!monthMap[key]) monthMap[key] = { total: 0, won: 0, renewals: 0, rollovers: 0, wonClients: new Set() };
       monthMap[key].won++;
+      if (policy.client_id) monthMap[key].wonClients.add(policy.client_id);
     });
+
     return Object.entries(monthMap)
       .sort((a, b) => b[0].localeCompare(a[0]))
       .slice(0, 12)
@@ -172,11 +230,11 @@ export function InsuranceWorkspace() {
         month: format(new Date(month + "-01"), "MMM yyyy"),
         total: d.total,
         won: d.won,
-        rate: d.total > 0 ? ((d.won / d.total) * 100).toFixed(1) : "0",
+        rate: d.total > 0 ? ((d.wonClients.size / d.total) * 100).toFixed(1) : "0",
         renewals: d.renewals,
         rollovers: d.rollovers,
       }));
-  }, [clients]);
+  }, [clients, policyBookPolicies]);
 
   // Current month conversion rate
   const currentMonthKey = format(new Date(), "MMM yyyy");
