@@ -107,6 +107,7 @@ const sourceBadgeClass = (label: string) => {
 export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
   const [search, setSearch] = useState("");
   const [partnerFilter, setPartnerFilter] = useState("all");
+  const [periodFilter, setPeriodFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
