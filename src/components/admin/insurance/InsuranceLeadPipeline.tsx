@@ -70,6 +70,8 @@ export type Client = {
   picked_up_at: string | null;
   booking_date: string | null;
   booked_by: string | null;
+  duplicate_count: number | null;
+  is_duplicate: boolean | null;
   updated_at: string;
   created_at: string;
 };
