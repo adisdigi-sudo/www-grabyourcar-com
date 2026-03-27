@@ -495,7 +495,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
       const uniqueLeads = new Map<string, Client>();
 
     for (const client of clients) {
-      const stage = normalizeStage(client.pipeline_stage, client.lead_status);
+      const stage = normalizeStage(client.pipeline_stage, client.lead_status, client);
       if (stage === "policy_issued") continue;
 
         const dedupeKey = getClientIdentityKey(client);
