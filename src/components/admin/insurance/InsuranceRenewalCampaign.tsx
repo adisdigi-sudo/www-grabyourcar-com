@@ -37,7 +37,7 @@ export function InsuranceRenewalCampaign() {
   const [enrichmentResult, setEnrichmentResult] = useState<any>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [sendingCampaign, setSendingCampaign] = useState(false);
-  const [pasteText, setPasteText] = useState("");
+  const [pasteText, setPasteText] = useState("Anshdeep Singh\t9855924442\thr26ey7114\tAnshduggal997@gmail.com\tGurgram\nparag\t9818284935\tdl3cab2377\thrgyb1@gmail.com\tGurugram\nNitin\t7042050522\thr26et4528\tAdisdigi@gmail.com\tDelhi\nisha\t7206607985\thr26eu1117\tMakethemoney11@gmail.com\tferozepur\nkaran\t9855645947\thr26ey7115\tInsurancegyc@gmail.com\tnoida");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const currentBatch = enrichmentResult?.batch_label || batchLabel;
