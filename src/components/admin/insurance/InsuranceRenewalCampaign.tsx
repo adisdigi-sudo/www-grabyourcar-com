@@ -304,8 +304,8 @@ export function InsuranceRenewalCampaign() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Upload a CSV with columns: <strong>name, phone, vehicle_number</strong> (required). 
-              Optional: email, city. Max 500 per batch.
+              Upload a CSV or paste data directly. Columns: <strong>Name, Phone, Vehicle Number</strong> (required). 
+              Optional: Email, City. Max 500 per batch.
             </p>
             
             <div className="flex flex-wrap gap-3">
@@ -321,6 +321,21 @@ export function InsuranceRenewalCampaign() {
                   onChange={handleFileUpload}
                 />
               </div>
+            </div>
+
+            {/* Paste Data Section */}
+            <div className="space-y-2 border rounded-lg p-3 bg-muted/30">
+              <Label className="text-sm font-medium">Or Paste Data (Tab / Comma separated)</Label>
+              <Textarea
+                value={pasteText}
+                onChange={e => setPasteText(e.target.value)}
+                placeholder={"Anshdeep Singh\t9855924442\thr26ey7114\tanshdeep@email.com\tGurugram\nParag\t9818284935\tdl3cab2377\tparag@email.com\tDelhi"}
+                rows={5}
+                className="font-mono text-xs"
+              />
+              <Button variant="secondary" size="sm" onClick={handlePasteData} disabled={!pasteText.trim()}>
+                <Users className="h-4 w-4 mr-2" /> Load Pasted Data
+              </Button>
             </div>
 
             {prospects.length > 0 && (
