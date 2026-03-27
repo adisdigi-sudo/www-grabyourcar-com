@@ -329,6 +329,7 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
                   <TableHead className="text-[10px] font-bold uppercase">Policy No.</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase">Type</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase">Premium</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase">Booking</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase">Issued</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase">Expiry</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase">Source</TableHead>
