@@ -33,6 +33,7 @@ export type PolicyRecord = {
   source_label: string | null;
   renewal_count: number | null;
   previous_policy_id: string | null;
+  booking_date: string | null;
   created_at: string;
   updated_at?: string;
   insurance_clients: {

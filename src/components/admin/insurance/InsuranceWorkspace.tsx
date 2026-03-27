@@ -96,7 +96,7 @@ export function InsuranceWorkspace() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("insurance_policies")
-        .select("id, client_id, policy_number, policy_type, insurer, premium_amount, start_date, expiry_date, status, is_renewal, issued_date, plan_name, idv, policy_document_url, source_label, renewal_count, previous_policy_id, created_at, updated_at, insurance_clients(customer_name, phone, city, vehicle_number, vehicle_make, vehicle_model, lead_source)")
+        .select("id, client_id, policy_number, policy_type, insurer, premium_amount, start_date, expiry_date, status, is_renewal, issued_date, plan_name, idv, policy_document_url, source_label, renewal_count, previous_policy_id, booking_date, created_at, updated_at, insurance_clients(customer_name, phone, city, vehicle_number, vehicle_make, vehicle_model, lead_source)")
         .in("status", ["active", "renewed"])
         .order("updated_at", { ascending: false })
         .order("created_at", { ascending: false });
