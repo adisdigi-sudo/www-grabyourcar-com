@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { format, startOfMonth, endOfMonth, subMonths, parseISO } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -57,10 +57,17 @@ function getCurrentSlab(count: number): string {
 interface InsurancePerformanceProps {
   clients: Client[];
   policies: PolicyRecord[];
+  initialMonth?: string;
 }
 
-export function InsurancePerformance({ clients, policies }: InsurancePerformanceProps) {
-  const [selectedMonth, setSelectedMonth] = useState(format(new Date(), "yyyy-MM"));
+export function InsurancePerformance({ clients, policies, initialMonth }: InsurancePerformanceProps) {
+  const [selectedMonth, setSelectedMonth] = useState(initialMonth || format(new Date(), "yyyy-MM"));
+
+  useEffect(() => {
+    if (initialMonth) {
+      setSelectedMonth(initialMonth);
+    }
+  }, [initialMonth]);
 
   const monthOptions = useMemo(() => {
     const opts = [];
@@ -121,11 +128,11 @@ export function InsurancePerformance({ clients, policies }: InsurancePerformance
   }, [clients, monthStart, monthEnd]);
 
   const isWon = (client: Client) => {
-    const stage = normalizeStage(client.pipeline_stage, client.lead_status);
+    const stage = normalizeStage(client.pipeline_stage, client.lead_status, client);
     return stage === "won" || stage === "policy_issued";
   };
 
-  const isLost = (client: Client) => normalizeStage(client.pipeline_stage, client.lead_status) === "lost";
+  const isLost = (client: Client) => normalizeStage(client.pipeline_stage, client.lead_status, client) === "lost";
 
   const policiesThisMonth = useMemo(() => {
     return dedupedPolicies.filter((policy) => {

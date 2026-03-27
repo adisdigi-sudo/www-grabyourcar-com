@@ -1,4 +1,5 @@
 import type { Client } from "@/components/admin/insurance/InsuranceLeadPipeline";
+import type { PolicyRecord } from "@/components/admin/insurance/InsurancePolicyBook";
 
 export const normalizePhoneNumber = (value: string | null | undefined) =>
   (value || "").replace(/\D/g, "").trim();
@@ -52,6 +53,49 @@ export const dedupeInsuranceClients = (clients: Client[]) => {
     const key = getClientIdentityKey(client);
     const existing = unique.get(key);
     unique.set(key, existing ? choosePreferredClient(existing, client) : client);
+  }
+
+  return Array.from(unique.values());
+};
+
+export const getClientEffectiveDate = (client: Pick<Client, "policy_start_date" | "booking_date" | "created_at">) => (
+  client.policy_start_date || client.booking_date || client.created_at
+);
+
+export const getPolicyEffectiveDate = (policy: Pick<PolicyRecord, "start_date" | "booking_date" | "issued_date" | "created_at" | "insurance_clients">) => (
+  policy.start_date ||
+  policy.booking_date ||
+  policy.issued_date ||
+  policy.insurance_clients?.booking_date ||
+  policy.created_at
+);
+
+export const dedupeInsurancePolicies = (policies: PolicyRecord[]) => {
+  const unique = new Map<string, PolicyRecord>();
+
+  for (const policy of policies) {
+    if (!policy.policy_number?.trim()) continue;
+
+    const normalizedStatus = (policy.status || "").toLowerCase();
+    if (["renewed", "lapsed", "cancelled", "lost"].includes(normalizedStatus)) continue;
+
+    const vehicleKey = normalizeVehicleRegistration(policy.insurance_clients?.vehicle_number);
+    const key = vehicleKey || `policy:${normalizePolicyNumber(policy.policy_number) || `${policy.client_id || "no-client"}:${policy.id}`}`;
+    const existing = unique.get(key);
+
+    if (!existing) {
+      unique.set(key, policy);
+      continue;
+    }
+
+    const existingDate = new Date(getPolicyEffectiveDate(existing)).getTime();
+    const nextDate = new Date(getPolicyEffectiveDate(policy)).getTime();
+    const existingStamp = new Date(existing.updated_at || existing.created_at).getTime();
+    const nextStamp = new Date(policy.updated_at || policy.created_at).getTime();
+
+    if (nextDate > existingDate || (nextDate === existingDate && nextStamp > existingStamp)) {
+      unique.set(key, policy);
+    }
   }
 
   return Array.from(unique.values());

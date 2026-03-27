@@ -9,8 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { dedupeInsuranceClients, normalizePhoneNumber, normalizeVehicleRegistration } from "@/lib/insuranceIdentity";
-import { differenceInDays, format, startOfMonth, endOfMonth } from "date-fns";
+import { dedupeInsuranceClients, dedupeInsurancePolicies, getClientEffectiveDate, getPolicyEffectiveDate, normalizePhoneNumber, normalizeVehicleRegistration } from "@/lib/insuranceIdentity";
+import { differenceInDays, format, startOfMonth, endOfMonth, parse } from "date-fns";
+import { fetchAllPages } from "@/lib/fetchAllPages";
 import {
   UserPlus, Clock, CheckCircle2, Shield, TrendingUp,
   Plus, FileSpreadsheet, BookOpen, CalendarClock, Wrench, AlertTriangle, Calculator, ArrowRight, Rocket
@@ -44,6 +45,7 @@ export function InsuranceWorkspace() {
   const [showCalcDialog, setShowCalcDialog] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showAddLead, setShowAddLead] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState(format(new Date(), "yyyy-MM"));
   const [newLead, setNewLead] = useState({
     customer_name: "", phone: "", email: "", city: "",
     vehicle_number: "", vehicle_make: "", vehicle_model: "",
@@ -88,42 +90,38 @@ export function InsuranceWorkspace() {
   const { data: clients = [], isLoading } = useQuery({
     queryKey: ["ins-workspace-clients"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("insurance_clients")
-        .select("id, customer_name, phone, email, city, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_insurer, current_policy_type, current_premium, ncb_percentage, previous_claim, policy_expiry_date, policy_start_date, current_policy_number, lead_source, lead_status, assigned_executive, priority, pipeline_stage, contact_attempts, quote_amount, quote_insurer, lost_reason, follow_up_date, follow_up_time, call_status, call_remarks, renewal_reminder_set, renewal_reminder_date, incentive_eligible, notes, retarget_status, journey_last_event, journey_last_event_at, picked_up_by, picked_up_at, booking_date, booked_by, overdue_reason, overdue_custom_reason, overdue_marked_at, duplicate_count, is_duplicate, created_at, updated_at")
-        .eq("is_legacy", false)
-        .order("updated_at", { ascending: false })
-        .order("created_at", { ascending: false })
-        .limit(1000);
+      const data = await fetchAllPages<Client>(async (from, to) =>
+        supabase
+          .from("insurance_clients")
+          .select("id, customer_name, phone, email, city, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_insurer, current_policy_type, current_premium, ncb_percentage, previous_claim, policy_expiry_date, policy_start_date, current_policy_number, lead_source, lead_status, assigned_executive, priority, pipeline_stage, contact_attempts, quote_amount, quote_insurer, lost_reason, follow_up_date, follow_up_time, call_status, call_remarks, renewal_reminder_set, renewal_reminder_date, incentive_eligible, notes, retarget_status, journey_last_event, journey_last_event_at, picked_up_by, picked_up_at, booking_date, booked_by, overdue_reason, overdue_custom_reason, overdue_marked_at, duplicate_count, is_duplicate, created_at, updated_at")
+          .eq("is_legacy", false)
+          .order("updated_at", { ascending: false })
+          .order("created_at", { ascending: false })
+          .range(from, to)
+      );
 
-      if (error) throw error;
-      return (data || []) as Client[];
+      return data;
     },
   });
 
   const { data: allPolicies = [] } = useQuery({
     queryKey: ["ins-policies-book"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("insurance_policies")
-        .select("id, client_id, policy_number, policy_type, insurer, premium_amount, start_date, expiry_date, status, is_renewal, issued_date, plan_name, idv, policy_document_url, source_label, renewal_count, previous_policy_id, booking_date, created_at, updated_at, insurance_clients(customer_name, phone, city, vehicle_number, vehicle_make, vehicle_model, lead_source, booking_date, updated_at, created_at)")
-        .in("status", ["active", "renewed"])
-        .order("updated_at", { ascending: false })
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data || []) as PolicyRecord[];
+      const data = await fetchAllPages<PolicyRecord>(async (from, to) =>
+        supabase
+          .from("insurance_policies")
+          .select("id, client_id, policy_number, policy_type, insurer, premium_amount, start_date, expiry_date, status, is_renewal, issued_date, plan_name, idv, policy_document_url, source_label, renewal_count, previous_policy_id, booking_date, created_at, updated_at, insurance_clients(customer_name, phone, city, vehicle_number, vehicle_make, vehicle_model, lead_source, booking_date, updated_at, created_at)")
+          .in("status", ["active", "renewed"])
+          .order("updated_at", { ascending: false })
+          .order("created_at", { ascending: false })
+          .range(from, to)
+      );
+
+      return data;
     },
   });
 
   const dedupedClients = useMemo(() => dedupeInsuranceClients(clients), [clients]);
-
-  const getClientPolicyDate = (client: Client) => (
-    client.booking_date ||
-    client.policy_start_date ||
-    client.journey_last_event_at ||
-    client.updated_at ||
-    client.created_at
-  );
 
   const isWon = (c: Client) => {
     const stage = normalizeStage(c.pipeline_stage, c.lead_status, c);
@@ -175,8 +173,50 @@ export function InsuranceWorkspace() {
         },
       }));
 
-    return [...fallbackPolicies, ...allPolicies];
+    return dedupeInsurancePolicies([...fallbackPolicies, ...allPolicies]);
   }, [allPolicies, dedupedClients]);
+
+  const monthOptions = useMemo(() => {
+    const keys = new Set<string>();
+
+    dedupedClients.forEach((client) => {
+      const date = getClientEffectiveDate(client);
+      if (date) keys.add(format(new Date(date), "yyyy-MM"));
+    });
+
+    policyBookPolicies.forEach((policy) => {
+      const date = getPolicyEffectiveDate(policy);
+      if (date) keys.add(format(new Date(date), "yyyy-MM"));
+    });
+
+    keys.add(format(new Date(), "yyyy-MM"));
+
+    return Array.from(keys)
+      .sort((a, b) => b.localeCompare(a))
+      .slice(0, 18)
+      .map((value) => ({ value, label: format(parse(`${value}-01`, "yyyy-MM-dd", new Date()), "MMM yyyy") }));
+  }, [dedupedClients, policyBookPolicies]);
+
+  const monthStart = useMemo(() => startOfMonth(parse(`${selectedMonth}-01`, "yyyy-MM-dd", new Date())), [selectedMonth]);
+  const monthEnd = useMemo(() => endOfMonth(monthStart), [monthStart]);
+
+  const monthFilteredClients = useMemo(() =>
+    dedupedClients.filter((client) => {
+      const rawDate = getClientEffectiveDate(client);
+      if (!rawDate) return false;
+      const date = new Date(rawDate);
+      return date >= monthStart && date <= monthEnd;
+    }),
+  [dedupedClients, monthEnd, monthStart]);
+
+  const monthFilteredPolicies = useMemo(() =>
+    policyBookPolicies.filter((policy) => {
+      const rawDate = getPolicyEffectiveDate(policy);
+      if (!rawDate) return false;
+      const date = new Date(rawDate);
+      return date >= monthStart && date <= monthEnd;
+    }),
+  [monthEnd, monthStart, policyBookPolicies]);
 
   // Split policies into running (Policy Book) vs overdue (expired)
   const today = new Date();
@@ -203,9 +243,9 @@ export function InsuranceWorkspace() {
     }), [allPolicies, today.toDateString()]
   );
 
-  const totalLeads = dedupedClients.length;
-  const wonCount = dedupedClients.filter(isWon).length;
-  const lostCount = dedupedClients.filter(isLost).length;
+  const totalLeads = monthFilteredClients.length;
+  const wonCount = monthFilteredPolicies.filter((policy) => (policy.status || "").toLowerCase() === "active").length;
+  const lostCount = monthFilteredClients.filter(isLost).length;
   const inPipeline = totalLeads - wonCount - lostCount;
 
   // Month-wise conversion calculation based on real booking/policy dates
@@ -213,7 +253,9 @@ export function InsuranceWorkspace() {
     const monthMap: Record<string, { total: number; won: number; renewals: number; rollovers: number; wonClients: Set<string> }> = {};
 
     dedupedClients.forEach((client) => {
-      const d = new Date(getClientPolicyDate(client));
+      const effectiveDate = getClientEffectiveDate(client);
+      if (!effectiveDate) return;
+      const d = new Date(effectiveDate);
       const key = format(d, "yyyy-MM");
       if (!monthMap[key]) monthMap[key] = { total: 0, won: 0, renewals: 0, rollovers: 0, wonClients: new Set() };
       monthMap[key].total++;
@@ -223,7 +265,8 @@ export function InsuranceWorkspace() {
     });
 
     policyBookPolicies.forEach((policy) => {
-      const policyDate = policy.start_date || policy.booking_date || policy.issued_date || policy.created_at;
+      const policyDate = getPolicyEffectiveDate(policy);
+      if (!policyDate) return;
       const d = new Date(policyDate);
       const key = format(d, "yyyy-MM");
       if (!monthMap[key]) monthMap[key] = { total: 0, won: 0, renewals: 0, rollovers: 0, wonClients: new Set() };
@@ -245,11 +288,11 @@ export function InsuranceWorkspace() {
   }, [dedupedClients, policyBookPolicies]);
 
   // Current month conversion rate
-  const currentMonthKey = format(new Date(), "MMM yyyy");
-  const currentMonthData = monthWiseConversion.find(m => m.month === currentMonthKey);
+  const selectedMonthLabel = format(parse(`${selectedMonth}-01`, "yyyy-MM-dd", new Date()), "MMM yyyy");
+  const currentMonthData = monthWiseConversion.find(m => m.month === selectedMonthLabel);
   const convRate = currentMonthData ? currentMonthData.rate : "0";
 
-  const activePolicies = runningPolicies.filter(p => p.status === "active").length;
+  const activePolicies = monthFilteredPolicies.filter(p => (p.status || "").toLowerCase() === "active").length;
   const renewalsDue = useMemo(() => {
     const now = new Date();
     return runningPolicies.filter(p => p.expiry_date && p.status !== "renewed" && differenceInDays(new Date(p.expiry_date), now) >= 0 && differenceInDays(new Date(p.expiry_date), now) <= 60).length;
@@ -347,6 +390,16 @@ export function InsuranceWorkspace() {
               Insurance Workspace
             </h2>
             <div className="flex gap-2 flex-wrap">
+              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                <SelectTrigger className="h-9 w-[140px] bg-white/15 text-white border-white/20 backdrop-blur-sm [&>svg]:text-white/80">
+                  <SelectValue placeholder="Month" />
+                </SelectTrigger>
+                <SelectContent>
+                  {monthOptions.map((month) => (
+                    <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Button size="sm" onClick={() => setShowImport(true)} className="gap-1.5 bg-white/15 hover:bg-white/25 backdrop-blur-sm text-white border border-white/20">
                 <FileSpreadsheet className="h-4 w-4" /> Rollover
               </Button>
@@ -361,7 +414,7 @@ export function InsuranceWorkspace() {
               { label: "In Pipeline", value: inPipeline, icon: Clock, bgc: "bg-orange-400/20", kpi: "in_pipeline" as KpiType },
               { label: "Won / Issued", value: wonCount, icon: CheckCircle2, bgc: "bg-emerald-400/20", kpi: "won" as KpiType },
               { label: "Active Policies", value: activePolicies, icon: BookOpen, bgc: "bg-cyan-400/20", kpi: "active_policies" as KpiType },
-              { label: "Conv (This Month)", value: `${convRate}%`, icon: TrendingUp, bgc: "bg-violet-400/20", kpi: "conversion" as KpiType },
+              { label: `Conv (${selectedMonthLabel})`, value: `${convRate}%`, icon: TrendingUp, bgc: "bg-violet-400/20", kpi: "conversion" as KpiType },
             ].map(kpi => (
               <div
                 key={kpi.label}
@@ -478,7 +531,7 @@ export function InsuranceWorkspace() {
       {activeView === "overdue" && <div><InsuranceOverdueRenewals policies={overduePolicies as PolicyRecord[]} clients={dedupedClients} /></div>}
       {activeView === "bulk_tools" && <BulkRenewalQuoteGenerator onClose={() => setActiveView("pipeline")} />}
       {activeView === "renewal_campaign" && <InsuranceRenewalCampaign />}
-      {activeView === "performance" && <InsurancePerformance clients={dedupedClients} policies={policyBookPolicies as PolicyRecord[]} />}
+      {activeView === "performance" && <InsurancePerformance clients={dedupedClients} policies={policyBookPolicies as PolicyRecord[]} initialMonth={selectedMonth} />}
 
       <Dialog open={showCalcDialog} onOpenChange={setShowCalcDialog}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
@@ -550,8 +603,8 @@ export function InsuranceWorkspace() {
         open={!!kpiDetail}
         onOpenChange={(v) => { if (!v) setKpiDetail(null); }}
         kpiType={kpiDetail}
-        clients={dedupedClients}
-        policies={runningPolicies.filter(p => p.status === "active")}
+        clients={monthFilteredClients}
+        policies={monthFilteredPolicies.filter(p => (p.status || "").toLowerCase() === "active")}
         monthWiseConversion={monthWiseConversion}
       />
     </div>
