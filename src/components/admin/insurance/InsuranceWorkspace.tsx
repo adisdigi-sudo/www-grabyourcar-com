@@ -474,59 +474,310 @@ export function InsuranceWorkspace() {
 
       {insNotifications.length > 0 && <StageNotificationBanner items={insNotifications} />}
 
-      <LeadImportDialog open={showImport} onOpenChange={setShowImport} title="Rollover Insurance Data"
-        templateColumns={["name", "phone", "city", "vehicle_number", "vehicle_make", "vehicle_model", "source"]}
-        onImport={async (leads) => {
-          let inserted = 0;
-          let duplicated = 0;
-          for (const l of leads) {
-            const cleanPhone = normalizePhoneNumber(l.phone || l.mobile || "");
-            const cleanVehicle = normalizeVehicleRegistration(l.vehicle_number || "") || null;
-            if (!cleanPhone) continue;
+      <LeadImportDialog
+        open={showImport}
+        onOpenChange={setShowImport}
+        title="Rollover Insurance Data"
+        requirePhone={false}
+        templateColumns={["booking_date", "insured_name", "registration_number", "insurer", "policy_no", "premium", "status"]}
+        onImport={async (rows) => {
+          const normalizeImportKey = (value: string) =>
+            value
+              .trim()
+              .toLowerCase()
+              .replace(/^\ufeff/, "")
+              .replace(/[^a-z0-9]+/g, "_")
+              .replace(/^_+|_+$/g, "");
 
-            // Check for existing by phone or vehicle
-            let matchQuery = supabase.from("insurance_clients").select("id, customer_name, vehicle_number, duplicate_count");
-            if (cleanVehicle) {
-              matchQuery = matchQuery.or(`phone.eq.${cleanPhone},vehicle_number.eq.${cleanVehicle}`);
-            } else {
-              matchQuery = matchQuery.eq("phone", cleanPhone);
+          const normalizeImportPolicyNumber = (value: string | null | undefined) =>
+            (value || "")
+              .replace(/^#+/, "")
+              .replace(/\s+/g, "")
+              .toUpperCase()
+              .trim();
+
+          const getRowValue = (row: Record<string, string>, keys: string[]) => {
+            const entries = new Map(
+              Object.entries(row).map(([key, value]) => [normalizeImportKey(key), String(value || "").trim()])
+            );
+
+            for (const key of keys) {
+              const match = entries.get(normalizeImportKey(key));
+              if (match) return match;
             }
-            const { data: existing } = await matchQuery.limit(1);
 
-            if (existing && existing.length > 0) {
-              const dup = existing[0];
-              await supabase.from("insurance_clients").update({
-                duplicate_count: (dup.duplicate_count || 0) + 1,
-                is_duplicate: true,
-                customer_name: l.name || l.customer_name || dup.customer_name,
-                vehicle_number: cleanVehicle || dup.vehicle_number,
-                vehicle_make: l.vehicle_make || undefined,
-                vehicle_model: l.vehicle_model || undefined,
-                updated_at: new Date().toISOString(),
-              }).eq("id", dup.id);
-              duplicated++;
+            return "";
+          };
+
+          const parseImportDate = (value: string) => value.match(/\d{4}-\d{2}-\d{2}/)?.[0] || null;
+
+          const parseImportNumber = (value: string) => {
+            const cleaned = value.replace(/[^0-9.]/g, "");
+            if (!cleaned) return null;
+            const parsed = Number(cleaned);
+            return Number.isFinite(parsed) ? parsed : null;
+          };
+
+          const deriveExpiryDate = (startDate: string | null) => {
+            if (!startDate) return null;
+            const next = new Date(`${startDate}T00:00:00`);
+            if (Number.isNaN(next.getTime())) return null;
+            next.setFullYear(next.getFullYear() + 1);
+            next.setDate(next.getDate() - 1);
+            return format(next, "yyyy-MM-dd");
+          };
+
+          const clientByPolicy = new Map<string, string>();
+          const clientByVehicle = new Map<string, string>();
+          const clientByPhone = new Map<string, string>();
+          const policyByNumber = new Map<string, Pick<PolicyRecord, "id" | "client_id" | "policy_number">>();
+
+          const rememberClient = (clientId: string, policyNumber?: string | null, vehicleNumber?: string | null, phone?: string | null) => {
+            if (policyNumber) clientByPolicy.set(policyNumber, clientId);
+            if (vehicleNumber) clientByVehicle.set(vehicleNumber, clientId);
+            if (phone) clientByPhone.set(phone, clientId);
+          };
+
+          clients.forEach((client) => {
+            rememberClient(
+              client.id,
+              normalizeImportPolicyNumber(client.current_policy_number || ""),
+              normalizeVehicleRegistration(client.vehicle_number || "") || null,
+              normalizePhoneNumber(client.phone || "") || null
+            );
+          });
+
+          allPolicies.forEach((policy) => {
+            const key = normalizeImportPolicyNumber(policy.policy_number || "");
+            if (!key) return;
+            policyByNumber.set(key, { id: policy.id, client_id: policy.client_id, policy_number: policy.policy_number });
+            if (policy.client_id) clientByPolicy.set(key, policy.client_id);
+          });
+
+          let inserted = 0;
+          let updated = 0;
+          let skipped = 0;
+          let duplicatesInFile = 0;
+          let failed = 0;
+          const seenUploadKeys = new Set<string>();
+
+          for (const row of rows) {
+            const policyNumber = normalizeImportPolicyNumber(getRowValue(row, ["policy_no", "policy_number"]));
+            const vehicleNumber = normalizeVehicleRegistration(getRowValue(row, ["registration_number", "vehicle_number"])) || null;
+            const cleanPhone = normalizePhoneNumber(getRowValue(row, ["phone", "mobile"])) || null;
+            const leadId = getRowValue(row, ["lead_id"]);
+            const rowKey = policyNumber ? `policy:${policyNumber}` : vehicleNumber ? `vehicle:${vehicleNumber}` : cleanPhone ? `phone:${cleanPhone}` : leadId ? `lead:${leadId}` : "";
+
+            if (!rowKey) {
+              skipped++;
+              continue;
+            }
+
+            if (seenUploadKeys.has(rowKey)) {
+              duplicatesInFile++;
+              continue;
+            }
+            seenUploadKeys.add(rowKey);
+
+            const statusText = getRowValue(row, ["status"]);
+            const statusLower = statusText.toLowerCase();
+            const isSaleComplete = statusLower === "sale complete";
+            const isRejected = statusLower.includes("reject");
+            const customerName = getRowValue(row, ["insured_name", "customer_name", "name"]) || "Insurance Client";
+            const bookingDate = parseImportDate(getRowValue(row, ["booking_date", "ticket_raised_on"])) || parseImportDate(getRowValue(row, ["issuance_rej_date"]));
+            const issuedDate = parseImportDate(getRowValue(row, ["issuance_rej_date"])) || bookingDate;
+            const policyStartDate = issuedDate || bookingDate;
+            const policyExpiryDate = deriveExpiryDate(policyStartDate);
+            const premium = parseImportNumber(getRowValue(row, ["premium"]));
+            const netPremium = parseImportNumber(getRowValue(row, ["net_premium"]));
+            const idv = parseImportNumber(getRowValue(row, ["sum_insured"]));
+            const tpPremium = parseImportNumber(getRowValue(row, ["tp_premium"]));
+            const discount = parseImportNumber(getRowValue(row, ["discount"]));
+            const insurer = getRowValue(row, ["insurer"]);
+            const policyType = getRowValue(row, ["policy_type"]);
+            const planName = getRowValue(row, ["plan_name"]);
+            const vehicleModel = getRowValue(row, ["vehicle_model_name", "vehicle_model"]);
+            const vehicleMake = getRowValue(row, ["make_name", "vehicle_make"]);
+            const city = getRowValue(row, ["city"]);
+            const state = getRowValue(row, ["state"]);
+            const pincode = getRowValue(row, ["pin_code", "pincode"]);
+            const email = getRowValue(row, ["email"]);
+            const dateOfBirth = parseImportDate(getRowValue(row, ["dob"]));
+            const vehicleRegistrationDate = parseImportDate(getRowValue(row, ["registration_date"]));
+            const vehicleFuelType = getRowValue(row, ["fuel_type"]);
+            const bookingMode = getRowValue(row, ["booking_mode"]);
+            const partnerName = getRowValue(row, ["partner_name"]);
+            const businessType = getRowValue(row, ["business_type"]);
+            const applicationNumber = getRowValue(row, ["application_no"]);
+            const fallbackPhone = `MISSING_PHONE_${policyNumber || vehicleNumber || leadId || Date.now()}`;
+            const noteParts = [
+              planName && `Plan: ${planName}`,
+              applicationNumber && `Application: ${applicationNumber}`,
+              businessType && `Business: ${businessType}`,
+              bookingMode && `Mode: ${bookingMode}`,
+              partnerName && `Partner: ${partnerName}`,
+              !cleanPhone && "Phone missing in CSV import",
+            ].filter(Boolean);
+            const notes = noteParts.length ? noteParts.join(" • ").slice(0, 500) : null;
+            const leadStatus = isSaleComplete ? "won" : isRejected ? "lost" : "new";
+            const pipelineStage = isSaleComplete ? "policy_issued" : isRejected ? "lost" : "new_lead";
+            const sourceLabel = businessType.toLowerCase() === "rollover" ? "Won (Renewal)" : "Won (New)";
+
+            let clientId =
+              (policyNumber ? clientByPolicy.get(policyNumber) : undefined) ||
+              (vehicleNumber ? clientByVehicle.get(vehicleNumber) : undefined) ||
+              (cleanPhone ? clientByPhone.get(cleanPhone) : undefined);
+
+            const existingPolicy = policyNumber ? policyByNumber.get(policyNumber) : undefined;
+            if (!clientId && existingPolicy?.client_id) clientId = existingPolicy.client_id;
+
+            if (!clientId && policyNumber) {
+              const { data } = await supabase
+                .from("insurance_clients")
+                .select("id, phone, vehicle_number, current_policy_number")
+                .eq("current_policy_number", policyNumber)
+                .limit(1)
+                .maybeSingle();
+
+              if (data?.id) {
+                clientId = data.id;
+                rememberClient(data.id, normalizeImportPolicyNumber(data.current_policy_number || ""), normalizeVehicleRegistration(data.vehicle_number || "") || null, normalizePhoneNumber(data.phone || "") || null);
+              }
+            }
+
+            if (!clientId && vehicleNumber) {
+              const { data } = await supabase
+                .from("insurance_clients")
+                .select("id, phone, vehicle_number, current_policy_number")
+                .ilike("vehicle_number", vehicleNumber)
+                .limit(1)
+                .maybeSingle();
+
+              if (data?.id) {
+                clientId = data.id;
+                rememberClient(data.id, normalizeImportPolicyNumber(data.current_policy_number || ""), normalizeVehicleRegistration(data.vehicle_number || "") || null, normalizePhoneNumber(data.phone || "") || null);
+              }
+            }
+
+            if (!clientId && cleanPhone) {
+              const { data } = await supabase
+                .from("insurance_clients")
+                .select("id, phone, vehicle_number, current_policy_number")
+                .eq("phone", cleanPhone)
+                .limit(1)
+                .maybeSingle();
+
+              if (data?.id) {
+                clientId = data.id;
+                rememberClient(data.id, normalizeImportPolicyNumber(data.current_policy_number || ""), normalizeVehicleRegistration(data.vehicle_number || "") || null, normalizePhoneNumber(data.phone || "") || null);
+              }
+            }
+
+            const clientPayload = {
+              customer_name: customerName,
+              lead_source: "CSV Booking Report",
+              lead_status: leadStatus,
+              pipeline_stage: pipelineStage,
+              priority: "medium",
+              is_legacy: false,
+              updated_at: new Date().toISOString(),
+              ...(cleanPhone ? { phone: cleanPhone } : {}),
+              ...(email ? { email } : {}),
+              ...(city ? { city } : {}),
+              ...(state ? { state } : {}),
+              ...(pincode ? { pincode } : {}),
+              ...(dateOfBirth ? { date_of_birth: dateOfBirth } : {}),
+              ...(vehicleNumber ? { vehicle_number: vehicleNumber } : {}),
+              ...(vehicleMake ? { vehicle_make: vehicleMake } : {}),
+              ...(vehicleModel ? { vehicle_model: vehicleModel } : {}),
+              ...(vehicleFuelType ? { vehicle_fuel_type: vehicleFuelType } : {}),
+              ...(vehicleRegistrationDate ? { vehicle_registration_date: vehicleRegistrationDate } : {}),
+              ...(insurer ? { current_insurer: insurer, quote_insurer: insurer } : {}),
+              ...(policyNumber ? { current_policy_number: policyNumber } : {}),
+              ...(policyType ? { current_policy_type: policyType } : {}),
+              ...(policyStartDate && isSaleComplete ? { policy_start_date: policyStartDate, policy_expiry_date: policyExpiryDate, renewal_reminder_set: true, renewal_reminder_date: policyExpiryDate } : {}),
+              ...(premium !== null ? { current_premium: premium, quote_amount: premium } : {}),
+              ...(bookingDate ? { booking_date: bookingDate } : {}),
+              ...(isRejected ? { lost_reason: statusText } : {}),
+              ...(isSaleComplete ? { incentive_eligible: true } : {}),
+              ...(notes ? { notes } : {}),
+            };
+
+            if (clientId) {
+              const { error } = await supabase.from("insurance_clients").update(clientPayload).eq("id", clientId);
+              if (error) {
+                failed++;
+                continue;
+              }
+              updated++;
             } else {
-              await supabase.from("insurance_clients").insert({
-                customer_name: l.name || l.customer_name || "Unknown",
-                phone: cleanPhone,
-                city: l.city || null,
-                vehicle_number: cleanVehicle,
-                vehicle_make: l.vehicle_make || null,
-                vehicle_model: l.vehicle_model || null,
-                lead_source: "Rollover",
-                pipeline_stage: "new_lead",
-                lead_status: "new",
-                priority: "medium",
-                duplicate_count: 0,
-                is_duplicate: false,
-              });
+              const { data, error } = await supabase
+                .from("insurance_clients")
+                .insert({
+                  ...clientPayload,
+                  phone: cleanPhone || fallbackPhone,
+                  duplicate_count: 0,
+                  is_duplicate: false,
+                })
+                .select("id")
+                .single();
+
+              if (error || !data?.id) {
+                failed++;
+                continue;
+              }
+
+              clientId = data.id;
               inserted++;
             }
+
+            if (!clientId) {
+              failed++;
+              continue;
+            }
+
+            rememberClient(clientId, policyNumber, vehicleNumber, cleanPhone || fallbackPhone);
+
+            if (isSaleComplete && policyNumber) {
+              const policyPayload = {
+                client_id: clientId,
+                policy_number: policyNumber,
+                status: "active",
+                is_renewal: businessType.toLowerCase() === "rollover",
+                source_label: sourceLabel,
+                ...(policyType ? { policy_type: policyType } : {}),
+                ...(insurer ? { insurer } : {}),
+                ...(planName ? { plan_name: planName } : {}),
+                ...(premium !== null ? { premium_amount: premium } : {}),
+                ...(netPremium !== null ? { net_premium: netPremium } : {}),
+                ...(premium !== null && netPremium !== null ? { gst_amount: Math.max(premium - netPremium, 0) } : {}),
+                ...(idv !== null ? { idv } : {}),
+                ...(discount !== null ? { ncb_discount: discount } : {}),
+                ...(policyStartDate ? { start_date: policyStartDate } : {}),
+                ...(policyExpiryDate ? { expiry_date: policyExpiryDate } : {}),
+                ...(issuedDate ? { issued_date: issuedDate } : {}),
+                ...(bookingDate ? { booking_date: bookingDate } : {}),
+                ...(tpPremium !== null ? { addon_premium: tpPremium } : {}),
+                updated_at: new Date().toISOString(),
+              };
+
+              if (existingPolicy?.id) {
+                await supabase.from("insurance_policies").update(policyPayload).eq("id", existingPolicy.id);
+              } else {
+                await supabase.from("insurance_policies").insert({ ...policyPayload, renewal_count: businessType.toLowerCase() === "rollover" ? 1 : 0 });
+              }
+            }
           }
-          if (duplicated > 0) {
-            toast.info(`${duplicated} duplicate leads merged, ${inserted} new leads added`);
+
+          if (duplicatesInFile > 0 || skipped > 0) {
+            toast.info(`${duplicatesInFile} duplicate rows skipped, ${skipped} rows could not be matched`);
           }
+          if (failed > 0) {
+            toast.error(`${failed} rows failed during sync`);
+          }
+          toast.success(`${inserted} new entries added, ${updated} existing entries synced`);
           queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
+          queryClient.invalidateQueries({ queryKey: ["ins-policies-book"] });
         }}
       />
 
