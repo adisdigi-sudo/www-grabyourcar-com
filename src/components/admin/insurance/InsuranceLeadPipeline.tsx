@@ -534,8 +534,8 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
       : selectedStage === "retarget"
         ? pipelineClients.filter(c => c.retarget_status === "scheduled")
         : selectedStage === "lost"
-          ? pipelineClients.filter(c => normalizeStage(c.pipeline_stage, c.lead_status) === "lost" && c.retarget_status !== "scheduled")
-          : pipelineClients.filter(c => normalizeStage(c.pipeline_stage, c.lead_status) === selectedStage);
+          ? pipelineClients.filter(c => normalizeStage(c.pipeline_stage, c.lead_status, c) === "lost" && c.retarget_status !== "scheduled")
+          : pipelineClients.filter(c => normalizeStage(c.pipeline_stage, c.lead_status, c) === selectedStage);
     if (search.trim()) {
       const s = search.toLowerCase();
       result = result.filter(c =>
