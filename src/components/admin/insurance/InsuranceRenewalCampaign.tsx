@@ -196,17 +196,24 @@ export function InsuranceRenewalCampaign() {
 
       try {
         const cleanPhone = quote.phone.replace(/\D/g, "").replace(/^91/, "");
+        const fullPhone = `91${cleanPhone}`;
         const message = `🚗 *Insurance Renewal Quote*\n\nDear ${quote.customer_name},\n\nYour vehicle *${quote.vehicle_make} ${quote.vehicle_model}* (${quote.vehicle_number}) insurance renewal is due!\n\n📋 *Quote Details:*\n• IDV: ₹${quote.idv?.toLocaleString("en-IN")}\n• OD Premium: ₹${quote.basic_od?.toLocaleString("en-IN")}\n• Third Party: ₹${quote.third_party?.toLocaleString("en-IN")}\n• NCB Discount: ₹${quote.ncb_discount?.toLocaleString("en-IN")}\n💰 *Total Premium: ₹${quote.secure_premium?.toLocaleString("en-IN")}*\n\n_Insurer: ${quote.insurance_company}_\n\nReply YES to proceed or call us for a better deal! 📞\n\n— GrabYourCar Insurance`;
 
-        const { error } = await supabase.functions.invoke("whatsapp-send", {
-          body: {
-            to: `91${cleanPhone}`,
-            message,
-            messageType: "text",
-          },
-        });
+        let apiSuccess = false;
+        try {
+          const { error } = await supabase.functions.invoke("whatsapp-send", {
+            body: { to: fullPhone, message, messageType: "text" },
+          });
+          if (!error) apiSuccess = true;
+        } catch {
+          // API unavailable — fall through to wa.me
+        }
 
-        if (error) throw error;
+        if (!apiSuccess) {
+          // Open wa.me link as manual fallback
+          const waUrl = `https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`;
+          window.open(waUrl, "_blank");
+        }
 
         await updateQuote.mutateAsync({
           id: quote.id,
@@ -221,7 +228,7 @@ export function InsuranceRenewalCampaign() {
 
       // Small delay between messages
       if (sent + failed < selected.length) {
-        await new Promise(r => setTimeout(r, 500));
+        await new Promise(r => setTimeout(r, 1500));
       }
     }
 
