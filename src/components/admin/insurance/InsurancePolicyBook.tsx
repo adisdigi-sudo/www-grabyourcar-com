@@ -137,12 +137,38 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
     let result = deduplicatedPolicies;
     if (partnerFilter !== "all") result = result.filter(p => p.insurer === partnerFilter);
 
+    // Period quick filter (uses booking_date or issued_date)
+    if (periodFilter !== "all") {
+      const now = new Date();
+      let pStart: Date, pEnd: Date;
+      if (periodFilter === "this_month") {
+        pStart = startOfMonth(now); pEnd = endOfMonth(now);
+      } else if (periodFilter === "last_month") {
+        const lm = subMonths(now, 1);
+        pStart = startOfMonth(lm); pEnd = endOfMonth(lm);
+      } else if (periodFilter === "this_week") {
+        pStart = startOfWeek(now, { weekStartsOn: 1 }); pEnd = endOfWeek(now, { weekStartsOn: 1 });
+      } else {
+        // month offset e.g. "-2", "-3"
+        const offset = parseInt(periodFilter);
+        const m = subMonths(now, Math.abs(offset));
+        pStart = startOfMonth(m); pEnd = endOfMonth(m);
+      }
+      result = result.filter(p => {
+        const d = p.booking_date || p.issued_date;
+        if (!d) return false;
+        const dt = new Date(d);
+        return dt >= pStart && dt <= pEnd;
+      });
+    }
+
     if (dateFrom || dateTo) {
       result = result.filter(p => {
-        if (!p.issued_date) return false;
-        const issuedAt = new Date(p.issued_date);
-        if (dateFrom && issuedAt < dateFrom) return false;
-        if (dateTo && issuedAt > dateTo) return false;
+        const d = p.booking_date || p.issued_date;
+        if (!d) return false;
+        const dt = new Date(d);
+        if (dateFrom && dt < dateFrom) return false;
+        if (dateTo && dt > dateTo) return false;
         return true;
       });
     }
@@ -162,7 +188,9 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
     }
 
     return result;
-  }, [deduplicatedPolicies, partnerFilter, search, dateFrom, dateTo]);
+  }, [deduplicatedPolicies, partnerFilter, periodFilter, search, dateFrom, dateTo]);
+
+  const totalPremium = useMemo(() => filtered.reduce((sum, p) => sum + (p.premium_amount || 0), 0), [filtered]);
 
   const toggleSelect = (id: string) => setSelectedIds(prev => {
     const next = new Set(prev);
