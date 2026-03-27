@@ -277,6 +277,7 @@ function WonPolicyDialog({
       await supabase.from("insurance_clients").update({
         pipeline_stage: "policy_issued",
         lead_status: "won",
+        booking_date: bookingDate ? format(bookingDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"),
         current_policy_number: nextPolicyNumber,
         current_insurer: insurer.trim(),
         current_premium: premium ? parseFloat(premium) : null,
@@ -287,7 +288,7 @@ function WonPolicyDialog({
         incentive_eligible: true,
         retarget_status: "none",
         retargeting_enabled: false,
-      }).eq("id", client.id);
+      } as any).eq("id", client.id);
 
       await supabase.from("insurance_activity_log").insert({
         client_id: client.id,
