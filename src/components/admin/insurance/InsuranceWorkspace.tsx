@@ -419,20 +419,55 @@ export function InsuranceWorkspace() {
       <LeadImportDialog open={showImport} onOpenChange={setShowImport} title="Rollover Insurance Data"
         templateColumns={["name", "phone", "city", "vehicle_number", "vehicle_make", "vehicle_model", "source"]}
         onImport={async (leads) => {
-          const rows = leads.map(l => ({
-            customer_name: l.name || l.customer_name || "Unknown",
-            phone: (l.phone || l.mobile || "").replace(/\D/g, ""),
-            city: l.city || null,
-            vehicle_number: l.vehicle_number || null,
-            vehicle_make: l.vehicle_make || null,
-            vehicle_model: l.vehicle_model || null,
-            lead_source: "Rollover",
-            pipeline_stage: "new_lead",
-            lead_status: "new",
-            priority: "medium",
-          }));
-          const { error } = await supabase.from("insurance_clients").insert(rows);
-          if (error) throw error;
+          let inserted = 0;
+          let duplicated = 0;
+          for (const l of leads) {
+            const cleanPhone = normalizePhoneNumber(l.phone || l.mobile || "");
+            const cleanVehicle = normalizeVehicleRegistration(l.vehicle_number || "") || null;
+            if (!cleanPhone) continue;
+
+            // Check for existing by phone or vehicle
+            let matchQuery = supabase.from("insurance_clients").select("id, customer_name, vehicle_number, duplicate_count");
+            if (cleanVehicle) {
+              matchQuery = matchQuery.or(`phone.eq.${cleanPhone},vehicle_number.eq.${cleanVehicle}`);
+            } else {
+              matchQuery = matchQuery.eq("phone", cleanPhone);
+            }
+            const { data: existing } = await matchQuery.limit(1);
+
+            if (existing && existing.length > 0) {
+              const dup = existing[0];
+              await supabase.from("insurance_clients").update({
+                duplicate_count: (dup.duplicate_count || 0) + 1,
+                is_duplicate: true,
+                customer_name: l.name || l.customer_name || dup.customer_name,
+                vehicle_number: cleanVehicle || dup.vehicle_number,
+                vehicle_make: l.vehicle_make || undefined,
+                vehicle_model: l.vehicle_model || undefined,
+                updated_at: new Date().toISOString(),
+              }).eq("id", dup.id);
+              duplicated++;
+            } else {
+              await supabase.from("insurance_clients").insert({
+                customer_name: l.name || l.customer_name || "Unknown",
+                phone: cleanPhone,
+                city: l.city || null,
+                vehicle_number: cleanVehicle,
+                vehicle_make: l.vehicle_make || null,
+                vehicle_model: l.vehicle_model || null,
+                lead_source: "Rollover",
+                pipeline_stage: "new_lead",
+                lead_status: "new",
+                priority: "medium",
+                duplicate_count: 0,
+                is_duplicate: false,
+              });
+              inserted++;
+            }
+          }
+          if (duplicated > 0) {
+            toast.info(`${duplicated} duplicate leads merged, ${inserted} new leads added`);
+          }
           queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
         }}
       />

@@ -111,13 +111,17 @@ const STAGE_MAP: Record<string, string> = {
   not_interested: "lost",
 };
 
-export const normalizeStage = (stage: string | null, leadStatus?: string | null): string => {
+export const normalizeStage = (stage: string | null, leadStatus?: string | null, client?: Pick<Client, "current_policy_number"> | null): string => {
   const normalizedStage = stage ? STAGE_MAP[stage] : undefined;
   const normalizedLeadStatus = leadStatus ? STAGE_MAP[leadStatus] : undefined;
 
   if (normalizedStage === "policy_issued" || normalizedLeadStatus === "policy_issued") return "policy_issued";
   if (normalizedLeadStatus === "won") return "won";
   if (normalizedStage === "won") return "won";
+
+  // If client has a policy number, they are won regardless of stage/status fields
+  if (client && client.current_policy_number && client.current_policy_number.trim()) return "policy_issued";
+
   if (normalizedLeadStatus === "lost") return "lost";
   if (normalizedStage) return normalizedStage;
   if (normalizedLeadStatus) return normalizedLeadStatus;
