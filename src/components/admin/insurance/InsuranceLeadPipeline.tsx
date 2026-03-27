@@ -228,19 +228,20 @@ function WonPolicyDialog({
   const [expiryDate, setExpiryDate] = useState<Date | undefined>();
   const [saving, setSaving] = useState(false);
 
+  const buildExpiryDate = (start: Date) => {
+    const next = new Date(start);
+    next.setFullYear(next.getFullYear() + 1);
+    next.setDate(next.getDate() - 1);
+    return next;
+  };
+
   useEffect(() => {
     if (!open || !client) return;
 
     const bookingBase = client.booking_date ? new Date(client.booking_date) : new Date();
     const startBase = client.policy_start_date ? new Date(client.policy_start_date) : bookingBase;
-    const expiryBase = client.policy_expiry_date
-      ? new Date(client.policy_expiry_date)
-      : (() => {
-          const next = new Date(startBase);
-          next.setFullYear(next.getFullYear() + 1);
-          next.setDate(next.getDate() - 1);
-          return next;
-        })();
+    const rawExpiryBase = client.policy_expiry_date ? new Date(client.policy_expiry_date) : null;
+    const expiryBase = rawExpiryBase && rawExpiryBase >= startBase ? rawExpiryBase : buildExpiryDate(startBase);
 
     setPolicyNumber(client.current_policy_number || "");
     setInsurer(client.current_insurer || client.quote_insurer || "");
@@ -258,8 +259,10 @@ function WonPolicyDialog({
     setSaving(true);
     try {
       const nextPolicyNumber = policyNumber.trim().toUpperCase();
-      const nextStartDate = startDate ? format(startDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd");
-      const nextExpiryDate = format(expiryDate, "yyyy-MM-dd");
+      const resolvedStartDate = startDate || bookingDate || new Date();
+      const resolvedExpiryDate = !expiryDate || expiryDate < resolvedStartDate ? buildExpiryDate(resolvedStartDate) : expiryDate;
+      const nextStartDate = format(resolvedStartDate, "yyyy-MM-dd");
+      const nextExpiryDate = format(resolvedExpiryDate, "yyyy-MM-dd");
 
       const { data: activePolicies, error: activePoliciesError } = await supabase
         .from("insurance_policies")
@@ -1073,6 +1076,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                     )}
                     <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowQuoteModal(true)}><FileText className="h-3.5 w-3.5" /> Quote</Button>
                     <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowUploadPolicy(true)}><Upload className="h-3.5 w-3.5" /> Upload Policy</Button>
+                    <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowWonDialog(true)}><CheckCircle2 className="h-3.5 w-3.5" /> Create / Fix Policy</Button>
                   </div>
 
                   {/* Move to Stage */}
