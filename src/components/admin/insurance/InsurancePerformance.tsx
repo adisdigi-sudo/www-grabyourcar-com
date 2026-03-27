@@ -78,9 +78,14 @@ export function InsurancePerformance({ clients, policies }: InsurancePerformance
   const monthEnd = endOfMonth(monthStart);
 
   // Filter clients and policies for selected month
+  // Count leads relevant to this month - use the best available date
+  const getClientRelevantDate = (c: Client) => {
+    return c.policy_start_date || c.booking_date || c.journey_last_event_at || c.created_at;
+  };
+
   const monthClients = useMemo(() => {
     return clients.filter(c => {
-      const d = new Date(c.created_at);
+      const d = new Date(getClientRelevantDate(c));
       return d >= monthStart && d <= monthEnd;
     });
   }, [clients, monthStart, monthEnd]);
