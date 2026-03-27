@@ -228,11 +228,38 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
 
   return (
     <div className="space-y-4">
+      {/* Summary stats */}
+      <div className="flex gap-3 flex-wrap">
+        <div className="bg-muted/40 rounded-lg px-4 py-2 text-center">
+          <p className="text-lg font-bold text-foreground">{filtered.length}</p>
+          <p className="text-[10px] text-muted-foreground">Policies</p>
+        </div>
+        <div className="bg-muted/40 rounded-lg px-4 py-2 text-center">
+          <p className="text-lg font-bold text-foreground">₹{totalPremium.toLocaleString("en-IN")}</p>
+          <p className="text-[10px] text-muted-foreground">Total Premium</p>
+        </div>
+      </div>
+
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center flex-wrap">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Search name, phone, vehicle, policy no., insurer..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 h-9 text-sm" />
         </div>
+
+        <Select value={periodFilter} onValueChange={(v) => { setPeriodFilter(v); if (v !== "all") { setDateFrom(undefined); setDateTo(undefined); } }}>
+          <SelectTrigger className="w-[150px] h-9 text-xs"><SelectValue placeholder="All Time" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Time</SelectItem>
+            <SelectItem value="this_week">This Week</SelectItem>
+            <SelectItem value="this_month">This Month</SelectItem>
+            <SelectItem value="last_month">Last Month</SelectItem>
+            <SelectItem value="-2">{format(subMonths(new Date(), 2), "MMM yyyy")}</SelectItem>
+            <SelectItem value="-3">{format(subMonths(new Date(), 3), "MMM yyyy")}</SelectItem>
+            <SelectItem value="-4">{format(subMonths(new Date(), 4), "MMM yyyy")}</SelectItem>
+            <SelectItem value="-5">{format(subMonths(new Date(), 5), "MMM yyyy")}</SelectItem>
+          </SelectContent>
+        </Select>
+
         <Select value={partnerFilter} onValueChange={setPartnerFilter}>
           <SelectTrigger className="w-[160px] h-9 text-xs"><SelectValue placeholder="All Insurers" /></SelectTrigger>
           <SelectContent>
@@ -249,15 +276,15 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-3 space-y-2">
-            <p className="text-xs font-medium">Issued Date Range</p>
+            <p className="text-xs font-medium">Booking / Issued Date Range</p>
             <div className="flex gap-3">
               <div className="space-y-1">
                 <p className="text-[10px] text-muted-foreground">From</p>
-                <SmartDatePicker date={dateFrom} onSelect={setDateFrom} placeholder="Start date" yearRange={[new Date().getFullYear() - 3, new Date().getFullYear()]} />
+                <SmartDatePicker date={dateFrom} onSelect={(d) => { setDateFrom(d); setPeriodFilter("all"); }} placeholder="Start date" yearRange={[new Date().getFullYear() - 3, new Date().getFullYear()]} />
               </div>
               <div className="space-y-1">
                 <p className="text-[10px] text-muted-foreground">To</p>
-                <SmartDatePicker date={dateTo} onSelect={setDateTo} placeholder="End date" yearRange={[new Date().getFullYear() - 3, new Date().getFullYear()]} />
+                <SmartDatePicker date={dateTo} onSelect={(d) => { setDateTo(d); setPeriodFilter("all"); }} placeholder="End date" yearRange={[new Date().getFullYear() - 3, new Date().getFullYear()]} />
               </div>
             </div>
             {(dateFrom || dateTo) && <Button variant="ghost" size="sm" className="text-xs" onClick={() => { setDateFrom(undefined); setDateTo(undefined); }}>Clear</Button>}
@@ -285,7 +312,6 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
             <Send className="h-3.5 w-3.5" /> Bulk Send ({selectedIds.size})
           </Button>
         )}
-        <Badge variant="outline" className="text-xs">{filtered.length} policies</Badge>
       </div>
 
       <Card>
