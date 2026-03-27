@@ -109,9 +109,9 @@ const sourceBadgeClass = (label: string) => {
 
 const getEffectiveBookingDate = (policy: PolicyRecord) => {
   return (
-    policy.start_date ||
     policy.booking_date ||
     policy.insurance_clients?.booking_date ||
+    policy.start_date ||
     policy.issued_date ||
     policy.insurance_clients?.updated_at ||
     policy.insurance_clients?.created_at ||
@@ -138,7 +138,7 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
 
   const deduplicatedPolicies = useMemo(() => {
     const map = new Map<string, PolicyRecord>();
-    for (const policy of policies) {
+    for (const policy of policies.filter((item) => Boolean(item.policy_number?.trim()))) {
       const vehicleKey = policy.insurance_clients?.vehicle_number?.replace(/\s+/g, "").toUpperCase();
       const fallbackKey = policy.client_id || policy.policy_number || policy.id;
       const key = vehicleKey || fallbackKey;
@@ -149,10 +149,20 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
         continue;
       }
 
+      const currentStatusPriority = (current.status || "").toLowerCase() === "active" ? 2 : 1;
+      const nextStatusPriority = (policy.status || "").toLowerCase() === "active" ? 2 : 1;
+      if (nextStatusPriority > currentStatusPriority) {
+        map.set(key, policy);
+        continue;
+      }
+      if (nextStatusPriority < currentStatusPriority) {
+        continue;
+      }
+
       const currentDate = getEffectiveBookingDate(current);
       const nextDate = getEffectiveBookingDate(policy);
 
-      if ((nextDate || "") > (currentDate || "")) {
+      if ((nextDate || "") > (currentDate || "") || ((nextDate || "") === (currentDate || "") && (policy.updated_at || policy.created_at) > (current.updated_at || current.created_at))) {
         map.set(key, policy);
       }
     }

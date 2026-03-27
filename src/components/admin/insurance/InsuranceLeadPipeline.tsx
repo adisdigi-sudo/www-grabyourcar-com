@@ -263,25 +263,27 @@ function WonPolicyDialog({
 
       const { data: activePolicies, error: activePoliciesError } = await supabase
         .from("insurance_policies")
-        .select("id, renewal_count")
+        .select("id, renewal_count, policy_number")
         .eq("client_id", client.id)
         .eq("status", "active")
         .order("updated_at", { ascending: false });
 
       if (activePoliciesError) throw activePoliciesError;
 
-      const previousPolicy = activePolicies?.[0] || null;
-      if (activePolicies && activePolicies.length > 0) {
+      const matchedActivePolicy = activePolicies?.find((policy) => !policy.policy_number || policy.policy_number === nextPolicyNumber) || null;
+      const policiesToRenew = (activePolicies || []).filter((policy) => policy.id !== matchedActivePolicy?.id);
+      const previousPolicy = policiesToRenew[0] || null;
+
+      if (policiesToRenew.length > 0) {
         const { error: renewError } = await supabase
           .from("insurance_policies")
           .update({ status: "renewed", renewal_status: "renewed" })
-          .eq("client_id", client.id)
-          .eq("status", "active");
+          .in("id", policiesToRenew.map((policy) => policy.id));
 
         if (renewError) throw renewError;
       }
 
-      await supabase.from("insurance_policies").insert({
+      const policyPayload = {
         client_id: client.id,
         policy_number: nextPolicyNumber,
         insurer: insurer.trim(),
@@ -296,7 +298,13 @@ function WonPolicyDialog({
         source_label: previousPolicy ? "Won (Renewal)" : "Won (New)",
         renewal_count: previousPolicy ? (previousPolicy.renewal_count || 0) + 1 : 0,
         policy_type: client.current_policy_type || "comprehensive",
-      } as any);
+      } as any;
+
+      const { error: savePolicyError } = matchedActivePolicy
+        ? await supabase.from("insurance_policies").update(policyPayload).eq("id", matchedActivePolicy.id)
+        : await supabase.from("insurance_policies").insert(policyPayload);
+
+      if (savePolicyError) throw savePolicyError;
 
       await supabase.from("insurance_clients").update({
         pipeline_stage: "policy_issued",

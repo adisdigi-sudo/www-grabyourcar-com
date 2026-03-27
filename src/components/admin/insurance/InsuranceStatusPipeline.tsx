@@ -190,16 +190,20 @@ export function InsuranceStatusPipeline() {
         // Find existing active policies for this vehicle
         const { data: existingPolicies } = await supabase
           .from("insurance_policies")
-          .select("id")
+          .select("id, policy_number")
           .eq("client_id", clientId)
           .eq("status", "active");
 
-        if (existingPolicies && existingPolicies.length > 0) {
+        const currentPolicyNumber = client.current_policy_number?.trim() || null;
+        const matchedExistingPolicy = existingPolicies?.find((policy) => !policy.policy_number || policy.policy_number === currentPolicyNumber) || null;
+        const policiesToRenew = (existingPolicies || []).filter((policy) => policy.id !== matchedExistingPolicy?.id);
+
+        if (policiesToRenew.length > 0) {
           // Mark all existing active policies as "renewed"
           await supabase
             .from("insurance_policies")
             .update({ status: "renewed", renewal_status: "renewed" })
-            .in("id", existingPolicies.map(p => p.id));
+            .in("id", policiesToRenew.map(p => p.id));
         }
 
         // Also check if another client has same vehicle_number with active policy
@@ -225,19 +229,32 @@ export function InsuranceStatusPipeline() {
       const startDate = client.policy_start_date || today.toISOString().split("T")[0];
       const expiryDate = client.policy_expiry_date || new Date(today.getFullYear() + 1, today.getMonth(), today.getDate()).toISOString().split("T")[0];
 
-      // Create new policy in policy book
-      const { error: policyError } = await supabase.from("insurance_policies").insert({
-        client_id: clientId,
-        policy_number: client.current_policy_number || null,
-        policy_type: client.current_policy_type || "comprehensive",
-        insurer: client.current_insurer || client.quote_insurer || "Unknown",
-        premium_amount: client.quote_amount || client.current_premium || null,
-        start_date: startDate,
-        expiry_date: expiryDate,
-        status: "active",
-        is_renewal: false,
-        issued_date: today.toISOString().split("T")[0],
-      });
+        const activePolicyNumber = client.current_policy_number?.trim() || null;
+        const { data: existingActivePolicies } = await supabase
+          .from("insurance_policies")
+          .select("id, policy_number")
+          .eq("client_id", clientId)
+          .eq("status", "active")
+          .order("updated_at", { ascending: false });
+
+        const matchedActivePolicy = existingActivePolicies?.find((policy) => !policy.policy_number || policy.policy_number === activePolicyNumber) || null;
+
+        const policyPayload = {
+          client_id: clientId,
+          policy_number: client.current_policy_number || null,
+          policy_type: client.current_policy_type || "comprehensive",
+          insurer: client.current_insurer || client.quote_insurer || "Unknown",
+          premium_amount: client.quote_amount || client.current_premium || null,
+          start_date: startDate,
+          expiry_date: expiryDate,
+          status: "active",
+          is_renewal: false,
+          issued_date: today.toISOString().split("T")[0],
+        };
+
+        const { error: policyError } = matchedActivePolicy
+          ? await supabase.from("insurance_policies").update(policyPayload).eq("id", matchedActivePolicy.id)
+          : await supabase.from("insurance_policies").insert(policyPayload);
 
       if (policyError) {
         console.error("Policy creation failed:", policyError);
@@ -278,16 +295,38 @@ export function InsuranceStatusPipeline() {
     if (!policyForm.policy_number) { toast.error("Policy number required"); return; }
     setSavingPolicy(true);
     try {
-      const { error } = await supabase.from("insurance_policies").insert({
+      const trimmedPolicyNumber = policyForm.policy_number.trim();
+      const { data: activePolicies } = await supabase
+        .from("insurance_policies")
+        .select("id, policy_number")
+        .eq("client_id", selectedClient.id)
+        .eq("status", "active")
+        .order("updated_at", { ascending: false });
+
+      const matchedActivePolicy = activePolicies?.find((policy) => !policy.policy_number || policy.policy_number === trimmedPolicyNumber) || null;
+      const otherActivePolicies = (activePolicies || []).filter((policy) => policy.id !== matchedActivePolicy?.id);
+
+      if (otherActivePolicies.length > 0) {
+        await supabase
+          .from("insurance_policies")
+          .update({ status: "renewed", renewal_status: "renewed" })
+          .in("id", otherActivePolicies.map((policy) => policy.id));
+      }
+
+      const payload = {
         client_id: selectedClient.id,
-        policy_number: policyForm.policy_number,
+        policy_number: trimmedPolicyNumber,
         policy_type: policyForm.policy_type,
         insurer: policyForm.insurer || null,
         premium_amount: policyForm.premium_amount ? Number(policyForm.premium_amount) : null,
         start_date: policyForm.start_date || null,
         expiry_date: policyForm.expiry_date || null,
         status: policyForm.status,
-      });
+      };
+
+      const { error } = matchedActivePolicy
+        ? await supabase.from("insurance_policies").update(payload).eq("id", matchedActivePolicy.id)
+        : await supabase.from("insurance_policies").insert(payload);
       if (error) throw error;
       await supabase.from("insurance_activity_log").insert({
         client_id: selectedClient.id,
