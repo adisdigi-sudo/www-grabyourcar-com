@@ -68,6 +68,8 @@ export type Client = {
   journey_last_event_at: string | null;
   picked_up_by: string | null;
   picked_up_at: string | null;
+  booking_date: string | null;
+  booked_by: string | null;
   updated_at: string;
   created_at: string;
 };
