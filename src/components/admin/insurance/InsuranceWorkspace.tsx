@@ -474,8 +474,8 @@ export function InsuranceWorkspace() {
 
       {activeView === "pipeline" && <InsuranceLeadPipeline clients={dedupedClients} isLoading={isLoading} />}
       {activeView === "policy_book" && <InsurancePolicyBook policies={runningPolicies} />}
-      {activeView === "renewals" && <InsuranceComingRenewals policies={runningPolicies as PolicyRecord[]} />}
-      {activeView === "overdue" && <InsuranceOverdueRenewals policies={overduePolicies as PolicyRecord[]} clients={dedupedClients} />}
+      {activeView === "renewals" && <div><InsuranceComingRenewals policies={runningPolicies as PolicyRecord[]} /></div>}
+      {activeView === "overdue" && <div><InsuranceOverdueRenewals policies={overduePolicies as PolicyRecord[]} clients={dedupedClients} /></div>}
       {activeView === "bulk_tools" && <BulkRenewalQuoteGenerator onClose={() => setActiveView("pipeline")} />}
       {activeView === "renewal_campaign" && <InsuranceRenewalCampaign />}
       {activeView === "performance" && <InsurancePerformance clients={dedupedClients} policies={policyBookPolicies as PolicyRecord[]} />}
