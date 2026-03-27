@@ -8051,6 +8051,7 @@ export type Database = {
           current_premium: number | null
           customer_name: string | null
           date_of_birth: string | null
+          duplicate_count: number | null
           email: string | null
           engine_number: string | null
           fitness_expiry: string | null
@@ -8060,6 +8061,7 @@ export type Database = {
           id: string
           incentive_eligible: boolean | null
           is_active: boolean | null
+          is_duplicate: boolean | null
           is_legacy: boolean | null
           is_otp_verified: boolean | null
           journey_drop_off_page: string | null
@@ -8132,6 +8134,7 @@ export type Database = {
           current_premium?: number | null
           customer_name?: string | null
           date_of_birth?: string | null
+          duplicate_count?: number | null
           email?: string | null
           engine_number?: string | null
           fitness_expiry?: string | null
@@ -8141,6 +8144,7 @@ export type Database = {
           id?: string
           incentive_eligible?: boolean | null
           is_active?: boolean | null
+          is_duplicate?: boolean | null
           is_legacy?: boolean | null
           is_otp_verified?: boolean | null
           journey_drop_off_page?: string | null
@@ -8213,6 +8217,7 @@ export type Database = {
           current_premium?: number | null
           customer_name?: string | null
           date_of_birth?: string | null
+          duplicate_count?: number | null
           email?: string | null
           engine_number?: string | null
           fitness_expiry?: string | null
@@ -8222,6 +8227,7 @@ export type Database = {
           id?: string
           incentive_eligible?: boolean | null
           is_active?: boolean | null
+          is_duplicate?: boolean | null
           is_legacy?: boolean | null
           is_otp_verified?: boolean | null
           journey_drop_off_page?: string | null
