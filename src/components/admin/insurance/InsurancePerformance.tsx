@@ -13,9 +13,11 @@ import { normalizeStage, type Client } from "./InsuranceLeadPipeline";
 import type { PolicyRecord } from "./InsurancePolicyBook";
 
 const getClientWonDate = (client: Client) => {
+  // Prefer policy_start_date as it reflects actual policy month,
+  // then booking_date, then journey event, then updated/created
   return (
-    client.booking_date ||
     client.policy_start_date ||
+    client.booking_date ||
     client.journey_last_event_at ||
     client.updated_at ||
     client.created_at
@@ -24,10 +26,10 @@ const getClientWonDate = (client: Client) => {
 
 const getPolicyBookingDate = (policy: PolicyRecord) => {
   return (
+    policy.start_date ||
     policy.booking_date ||
     policy.insurance_clients?.booking_date ||
     policy.issued_date ||
-    policy.start_date ||
     policy.created_at
   );
 };
