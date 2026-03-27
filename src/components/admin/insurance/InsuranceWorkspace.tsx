@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { differenceInDays, format, startOfMonth, endOfMonth } from "date-fns";
 import {
   UserPlus, Clock, CheckCircle2, Shield, TrendingUp,
-  Plus, FileSpreadsheet, BookOpen, CalendarClock, Wrench, AlertTriangle, Calculator, ArrowRight
+  Plus, FileSpreadsheet, BookOpen, CalendarClock, Wrench, AlertTriangle, Calculator, ArrowRight, Rocket
 } from "lucide-react";
 import { LeadImportDialog } from "../shared/LeadImportDialog";
 import { StageNotificationBanner, buildInsuranceNotifications } from "../shared/StageNotificationBanner";
@@ -23,8 +23,9 @@ import { InsuranceComingRenewals } from "./InsuranceComingRenewals";
 import { InsuranceOverdueRenewals } from "./InsuranceOverdueRenewals";
 import { InsurancePremiumCalculator } from "./InsurancePremiumCalculator";
 import { InsuranceKpiDetailDialog } from "./InsuranceKpiDetailDialog";
+import { InsuranceRenewalCampaign } from "./InsuranceRenewalCampaign";
 
-type ActiveView = "pipeline" | "policy_book" | "renewals" | "overdue" | "bulk_tools" | "calculator";
+type ActiveView = "pipeline" | "policy_book" | "renewals" | "overdue" | "bulk_tools" | "calculator" | "renewal_campaign";
 type KpiType = "total_leads" | "in_pipeline" | "won" | "active_policies" | "conversion" | null;
 
 type LegacyInsuranceLead = {
@@ -215,6 +216,7 @@ export function InsuranceWorkspace() {
     { key: "overdue" as const, label: "Overdue", icon: AlertTriangle, count: overdueCount, urgent: overdueCount > 0 },
     { key: "bulk_tools" as const, label: "Bulk Tools", icon: Wrench, count: 0, urgent: false },
     { key: "calculator" as const, label: "Calculator", icon: Calculator, count: 0, urgent: false },
+    { key: "renewal_campaign" as const, label: "Renewal Campaign", icon: Rocket, count: 0, urgent: false },
   ];
 
   return (
@@ -328,6 +330,7 @@ export function InsuranceWorkspace() {
       {activeView === "overdue" && <InsuranceOverdueRenewals policies={overduePolicies as PolicyRecord[]} clients={clients} />}
       {activeView === "bulk_tools" && <BulkRenewalQuoteGenerator onClose={() => setActiveView("pipeline")} />}
       {activeView === "calculator" && <InsurancePremiumCalculator />}
+      {activeView === "renewal_campaign" && <InsuranceRenewalCampaign />}
 
       <Dialog open={showAddLead} onOpenChange={setShowAddLead}>
         <DialogContent className="max-w-md">

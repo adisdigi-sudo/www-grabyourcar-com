@@ -16,7 +16,7 @@ import { WAMessageStatusTracker } from "./wa/WAMessageStatusTracker";
 import { WAAgentConfig } from "./wa/WAAgentConfig";
 import { WALiveConversations } from "./wa/WALiveConversations";
 import { WAPerformanceDashboard } from "./wa/WAPerformanceDashboard";
-import { WARenewalCampaign } from "./wa/WARenewalCampaign";
+
 
 export function WhatsAppMarketingPortal() {
   const [activeTab, setActiveTab] = useState("campaigns");
@@ -85,10 +85,6 @@ export function WhatsAppMarketingPortal() {
             <Settings className="h-4 w-4" />
             <span className="hidden sm:inline">Integration</span>
           </TabsTrigger>
-          <TabsTrigger value="renewal" className="gap-2 bg-green-500/10">
-            <Shield className="h-4 w-4" />
-            <span className="hidden sm:inline">Renewal Campaign</span>
-          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="campaigns"><WACampaignDashboard /></TabsContent>
@@ -103,7 +99,7 @@ export function WhatsAppMarketingPortal() {
         <TabsContent value="analytics"><WAAnalyticsDashboard /></TabsContent>
         <TabsContent value="compliance"><WACompliancePanel /></TabsContent>
         <TabsContent value="integration"><WAIntegrationHub /></TabsContent>
-        <TabsContent value="renewal"><WARenewalCampaign /></TabsContent>
+        
       </Tabs>
     </div>
   );

@@ -27,7 +27,7 @@ interface Prospect {
 
 type Step = "upload" | "processing" | "review" | "campaign";
 
-export function WARenewalCampaign() {
+export function InsuranceRenewalCampaign() {
   const [step, setStep] = useState<Step>("upload");
   const [prospects, setProspects] = useState<Prospect[]>([]);
   const [batchLabel, setBatchLabel] = useState("");
