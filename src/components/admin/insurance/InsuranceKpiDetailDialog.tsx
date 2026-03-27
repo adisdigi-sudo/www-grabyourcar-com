@@ -41,13 +41,13 @@ export function InsuranceKpiDetailDialog({ open, onOpenChange, kpiType, clients,
       case "total_leads": return clients;
       case "in_pipeline": {
         return clients.filter(c => {
-          const st = normalizeStage(c.pipeline_stage, c.lead_status);
+          const st = normalizeStage(c.pipeline_stage, c.lead_status, c);
           return st !== "won" && st !== "lost";
         });
       }
       case "won": {
         return clients.filter(c => {
-          const st = normalizeStage(c.pipeline_stage, c.lead_status);
+          const st = normalizeStage(c.pipeline_stage, c.lead_status, c);
           return st === "won";
         });
       }
