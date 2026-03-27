@@ -228,6 +228,28 @@ function WonPolicyDialog({
   const [expiryDate, setExpiryDate] = useState<Date | undefined>();
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    if (!open || !client) return;
+
+    const bookingBase = client.booking_date ? new Date(client.booking_date) : new Date();
+    const startBase = client.policy_start_date ? new Date(client.policy_start_date) : bookingBase;
+    const expiryBase = client.policy_expiry_date
+      ? new Date(client.policy_expiry_date)
+      : (() => {
+          const next = new Date(startBase);
+          next.setFullYear(next.getFullYear() + 1);
+          next.setDate(next.getDate() - 1);
+          return next;
+        })();
+
+    setPolicyNumber(client.current_policy_number || "");
+    setInsurer(client.current_insurer || client.quote_insurer || "");
+    setPremium(client.current_premium ? String(client.current_premium) : client.quote_amount ? String(client.quote_amount) : "");
+    setBookingDate(bookingBase);
+    setStartDate(startBase);
+    setExpiryDate(expiryBase);
+  }, [open, client]);
+
   const handleSave = async () => {
     if (!client || !policyNumber.trim() || !insurer.trim() || !expiryDate) {
       toast.error("Fill all required fields");
@@ -290,6 +312,8 @@ function WonPolicyDialog({
         incentive_eligible: true,
         retarget_status: "none",
         retargeting_enabled: false,
+        journey_last_event: previousPolicy ? "renewal_policy_issued" : "policy_issued",
+        journey_last_event_at: new Date().toISOString(),
       } as any).eq("id", client.id);
 
       await supabase.from("insurance_activity_log").insert({
@@ -989,11 +1013,42 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                             notes: editFields.notes?.trim() || null,
                           };
 
+                          const normalizedStage = normalizeStage(selectedClient.pipeline_stage, selectedClient.lead_status);
+                          const fallbackBookingDate =
+                            selectedClient.booking_date ||
+                            selectedClient.policy_start_date ||
+                            selectedClient.updated_at?.split("T")[0] ||
+                            selectedClient.created_at?.split("T")[0] ||
+                            new Date().toISOString().split("T")[0];
+
+                          const updates: Record<string, any> = {
+                            customer_name: editFields.customer_name?.trim() || null,
+                            phone: editFields.phone || selectedClient.phone,
+                            email: editFields.email?.trim() || null,
+                            city: editFields.city?.trim() || null,
+                            vehicle_number: editFields.vehicle_number?.trim() || null,
+                            vehicle_make: editFields.vehicle_make?.trim() || null,
+                            vehicle_model: editFields.vehicle_model?.trim() || null,
+                            vehicle_year: editFields.vehicle_year ? Number(editFields.vehicle_year) : null,
+                            current_insurer: editFields.current_insurer?.trim() || null,
+                            current_policy_number: editFields.current_policy_number?.trim() || null,
+                            current_premium: editFields.current_premium ? Number(editFields.current_premium) : null,
+                            notes: editFields.notes?.trim() || null,
+                          };
+
+                          if (normalizedStage === "won" || normalizedStage === "policy_issued") {
+                            updates.lead_status = "won";
+                            updates.pipeline_stage = "policy_issued";
+                            updates.booking_date = selectedClient.booking_date || fallbackBookingDate;
+                            updates.journey_last_event = selectedClient.journey_last_event || "policy_issued";
+                            updates.journey_last_event_at = selectedClient.journey_last_event_at || new Date().toISOString();
+                          }
+
                           const { data, error } = await supabase
                             .from("insurance_clients")
                             .update(updates)
                             .eq("id", selectedClient.id)
-                            .select("id, customer_name, phone, email, city, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_insurer, current_policy_type, current_premium, ncb_percentage, previous_claim, policy_expiry_date, policy_start_date, current_policy_number, lead_source, lead_status, assigned_executive, priority, pipeline_stage, contact_attempts, quote_amount, quote_insurer, lost_reason, follow_up_date, follow_up_time, call_status, call_remarks, renewal_reminder_set, renewal_reminder_date, incentive_eligible, notes, retarget_status, journey_last_event, journey_last_event_at, picked_up_by, picked_up_at, created_at")
+                            .select("id, customer_name, phone, email, city, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_insurer, current_policy_type, current_premium, ncb_percentage, previous_claim, policy_expiry_date, policy_start_date, current_policy_number, lead_source, lead_status, assigned_executive, priority, pipeline_stage, contact_attempts, quote_amount, quote_insurer, lost_reason, follow_up_date, follow_up_time, call_status, call_remarks, renewal_reminder_set, renewal_reminder_date, incentive_eligible, notes, retarget_status, journey_last_event, journey_last_event_at, picked_up_by, picked_up_at, booking_date, booked_by, updated_at, created_at")
                             .maybeSingle();
                           if (error) throw error;
                           if (!data) throw new Error("Lead was not found in the CRM database. Please refresh once.");

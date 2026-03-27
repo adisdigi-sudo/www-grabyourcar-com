@@ -12,6 +12,26 @@ import {
 import { normalizeStage, type Client } from "./InsuranceLeadPipeline";
 import type { PolicyRecord } from "./InsurancePolicyBook";
 
+const getClientWonDate = (client: Client) => {
+  return (
+    client.booking_date ||
+    client.policy_start_date ||
+    client.journey_last_event_at ||
+    client.updated_at ||
+    client.created_at
+  );
+};
+
+const getPolicyBookingDate = (policy: PolicyRecord) => {
+  return (
+    policy.booking_date ||
+    policy.insurance_clients?.booking_date ||
+    policy.issued_date ||
+    policy.start_date ||
+    policy.created_at
+  );
+};
+
 // Incentive slab config
 const INCENTIVE_SLABS = [
   { min: 1, max: 5, rate: 300, label: "1-5 policies" },
@@ -69,11 +89,11 @@ export function InsurancePerformance({ clients, policies }: InsurancePerformance
   };
   const isLost = (c: Client) => normalizeStage(c.pipeline_stage, c.lead_status) === "lost";
 
-  // Won clients this month (by booking_date or updated_at)
+  // Won clients this month (prefer booking date)
   const wonThisMonth = useMemo(() => {
     return clients.filter(c => {
       if (!isWon(c)) return false;
-      const dateStr = c.booking_date || c.updated_at;
+      const dateStr = getClientWonDate(c);
       const d = new Date(dateStr);
       return d >= monthStart && d <= monthEnd;
     });
@@ -90,7 +110,7 @@ export function InsurancePerformance({ clients, policies }: InsurancePerformance
   // Policies issued this month
   const policiesThisMonth = useMemo(() => {
     return policies.filter(p => {
-      const dateStr = (p as any).booking_date || p.issued_date || p.created_at;
+      const dateStr = getPolicyBookingDate(p);
       const d = new Date(dateStr);
       return d >= monthStart && d <= monthEnd;
     });
@@ -158,7 +178,7 @@ export function InsurancePerformance({ clients, policies }: InsurancePerformance
       const total = clients.filter(c => { const cd = new Date(c.created_at); return cd >= ms && cd <= me; }).length;
       const won = clients.filter(c => {
         if (!isWon(c)) return false;
-        const dateStr = c.booking_date || c.updated_at;
+        const dateStr = getClientWonDate(c);
         const cd = new Date(dateStr);
         return cd >= ms && cd <= me;
       }).length;

@@ -157,9 +157,10 @@ export function InsuranceWorkspace() {
       if (src.includes("renewal") || src.includes("renew")) monthMap[key].renewals++;
       if (src.includes("rollover") || src.includes("roll")) monthMap[key].rollovers++;
     });
-    // Group won leads by updated_at (when they were actually converted)
+    // Group won leads by booking_date first so monthly won filters reflect the booked month
     clients.filter(isWon).forEach(c => {
-      const d = c.updated_at ? new Date(c.updated_at) : (c.created_at ? new Date(c.created_at) : new Date());
+      const wonDate = c.booking_date || c.policy_start_date || c.journey_last_event_at || c.updated_at || c.created_at;
+      const d = wonDate ? new Date(wonDate) : new Date();
       const key = format(d, "yyyy-MM");
       if (!monthMap[key]) monthMap[key] = { total: 0, won: 0, renewals: 0, rollovers: 0 };
       monthMap[key].won++;
