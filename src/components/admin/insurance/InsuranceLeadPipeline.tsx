@@ -119,7 +119,18 @@ export const normalizeStage = (stage: string | null, leadStatus?: string | null,
   if (normalizedLeadStatus === "won") return "won";
   if (normalizedStage === "won") return "won";
 
-  // If client has a policy number, they are won regardless of stage/status fields
+  // If lead_status was explicitly changed away from 'won' (e.g. retarget, new), respect the manual override
+  // even if the client still has a policy number from a previous term
+  const isManuallyMovedBack = normalizedLeadStatus && !["won", "policy_issued"].includes(normalizedLeadStatus);
+  const hasExplicitPipelineStage = normalizedStage && !["won", "policy_issued"].includes(normalizedStage);
+
+  if (isManuallyMovedBack || hasExplicitPipelineStage) {
+    // Respect the explicit stage/status — user moved this client back into pipeline
+    if (normalizedStage && normalizedStage !== "policy_issued") return normalizedStage;
+    if (normalizedLeadStatus) return normalizedLeadStatus;
+  }
+
+  // If client has a policy number and wasn't manually moved, they are won
   if (client && client.current_policy_number && client.current_policy_number.trim()) return "policy_issued";
 
   if (normalizedLeadStatus === "lost") return "lost";
