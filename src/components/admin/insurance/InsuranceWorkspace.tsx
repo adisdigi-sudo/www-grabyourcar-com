@@ -177,24 +177,29 @@ export function InsuranceWorkspace() {
   }, [allPolicies, dedupedClients]);
 
   const monthOptions = useMemo(() => {
-    const keys = new Set<string>();
-
+    // Find earliest date from data
+    let earliest = new Date();
     dedupedClients.forEach((client) => {
-      const date = getClientEffectiveDate(client);
-      if (date) keys.add(format(new Date(date), "yyyy-MM"));
+      const d = getClientEffectiveDate(client);
+      if (d) { const dt = new Date(d); if (dt < earliest) earliest = dt; }
     });
-
     policyBookPolicies.forEach((policy) => {
-      const date = getPolicyEffectiveDate(policy);
-      if (date) keys.add(format(new Date(date), "yyyy-MM"));
+      const d = getPolicyEffectiveDate(policy);
+      if (d) { const dt = new Date(d); if (dt < earliest) earliest = dt; }
     });
 
-    keys.add(format(new Date(), "yyyy-MM"));
-
-    return Array.from(keys)
-      .sort((a, b) => b.localeCompare(a))
-      .slice(0, 18)
-      .map((value) => ({ value, label: format(parse(`${value}-01`, "yyyy-MM-dd", new Date()), "MMM yyyy") }));
+    // Generate continuous range from earliest month to current month
+    const now = new Date();
+    const startMonth = startOfMonth(earliest);
+    const endMonth = startOfMonth(now);
+    const months: { value: string; label: string }[] = [];
+    let cursor = endMonth;
+    while (cursor >= startMonth && months.length < 24) {
+      const value = format(cursor, "yyyy-MM");
+      months.push({ value, label: format(cursor, "MMM yyyy") });
+      cursor = new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1);
+    }
+    return months;
   }, [dedupedClients, policyBookPolicies]);
 
   const monthStart = useMemo(() => startOfMonth(parse(`${selectedMonth}-01`, "yyyy-MM-dd", new Date())), [selectedMonth]);
