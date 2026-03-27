@@ -115,8 +115,8 @@ export function InsuranceWorkspace() {
   });
 
   const getClientPolicyDate = (client: Client) => (
-    client.policy_start_date ||
     client.booking_date ||
+    client.policy_start_date ||
     client.journey_last_event_at ||
     client.updated_at ||
     client.created_at
@@ -131,13 +131,12 @@ export function InsuranceWorkspace() {
   const policyBookPolicies = useMemo(() => {
     const existingClientIds = new Set(
       allPolicies
-        .filter((policy) => ["active", "renewed"].includes(policy.status || ""))
         .map((policy) => policy.client_id)
         .filter(Boolean) as string[]
     );
 
     const fallbackPolicies: PolicyRecord[] = clients
-      .filter((client) => isWon(client) && !existingClientIds.has(client.id))
+      .filter((client) => isWon(client) && !existingClientIds.has(client.id) && Boolean(client.current_policy_number?.trim()))
       .map((client) => ({
         id: `fallback-${client.id}`,
         client_id: client.id,
@@ -181,7 +180,9 @@ export function InsuranceWorkspace() {
   today.setHours(0, 0, 0, 0);
   const runningPolicies = useMemo(() =>
     policyBookPolicies.filter(p => {
-      if (p.status === "renewed") return true;
+      const status = (p.status || "").toLowerCase();
+      if (!p.policy_number?.trim()) return false;
+      if (["renewed", "lapsed", "cancelled", "lost"].includes(status)) return false;
       if (!p.expiry_date) return true;
       return new Date(p.expiry_date) >= today;
     }), [policyBookPolicies, today.toDateString()]
@@ -189,6 +190,7 @@ export function InsuranceWorkspace() {
   const RESOLVED_STATUSES = ["renewed", "lapsed", "cancelled", "lost"];
   const overduePolicies = useMemo(() =>
     allPolicies.filter(p => {
+      if (!p.policy_number?.trim()) return false;
       if (!p.expiry_date) return false;
       if (RESOLVED_STATUSES.includes(p.status || "")) return false;
       return new Date(p.expiry_date) < today;
