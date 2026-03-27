@@ -506,7 +506,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
           continue;
       }
 
-        const existingStage = normalizeStage(existing.pipeline_stage, existing.lead_status);
+        const existingStage = normalizeStage(existing.pipeline_stage, existing.lead_status, existing);
         if (["policy_issued", "won"].includes(stage) || (!["policy_issued", "won"].includes(existingStage) && new Date(client.updated_at).getTime() >= new Date(existing.updated_at).getTime())) {
           uniqueLeads.set(dedupeKey, client);
         }
