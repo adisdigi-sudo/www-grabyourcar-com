@@ -8037,6 +8037,8 @@ export type Database = {
           anniversary_date: string | null
           assigned_advisor_id: string | null
           assigned_executive: string | null
+          booked_by: string | null
+          booking_date: string | null
           call_remarks: string | null
           call_status: string | null
           chassis_number: string | null
@@ -8116,6 +8118,8 @@ export type Database = {
           anniversary_date?: string | null
           assigned_advisor_id?: string | null
           assigned_executive?: string | null
+          booked_by?: string | null
+          booking_date?: string | null
           call_remarks?: string | null
           call_status?: string | null
           chassis_number?: string | null
@@ -8195,6 +8199,8 @@ export type Database = {
           anniversary_date?: string | null
           assigned_advisor_id?: string | null
           assigned_executive?: string | null
+          booked_by?: string | null
+          booking_date?: string | null
           call_remarks?: string | null
           call_status?: string | null
           chassis_number?: string | null
@@ -8692,6 +8698,7 @@ export type Database = {
         Row: {
           addon_premium: number | null
           addons: string[] | null
+          booking_date: string | null
           client_id: string
           created_at: string
           document_file_name: string | null
@@ -8724,6 +8731,7 @@ export type Database = {
         Insert: {
           addon_premium?: number | null
           addons?: string[] | null
+          booking_date?: string | null
           client_id: string
           created_at?: string
           document_file_name?: string | null
@@ -8756,6 +8764,7 @@ export type Database = {
         Update: {
           addon_premium?: number | null
           addons?: string[] | null
+          booking_date?: string | null
           client_id?: string
           created_at?: string
           document_file_name?: string | null
