@@ -284,24 +284,22 @@ export function InsuranceWorkspace() {
         ))}
       </div>
 
-      {activeView !== "calculator" && (
-        <div className="rounded-2xl border border-border bg-card p-4 sm:p-5">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-1">
-              <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                <Calculator className="h-3.5 w-3.5" />
-                New premium engine is live
-              </div>
-              <h3 className="text-lg font-bold text-foreground">Generate quotes with your own OD, TP, NCB and add-on pricing</h3>
-              <p className="text-sm text-muted-foreground">Open the calculator to create fast manual quotes with live premium breakdown and copy-ready output.</p>
+      <div className="rounded-2xl border border-border bg-card p-4 sm:p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+              <Calculator className="h-3.5 w-3.5" />
+              Premium Calculator
             </div>
-            <Button onClick={() => setActiveView("calculator")} className="gap-2 self-start sm:self-auto">
-              Open Calculator
-              <ArrowRight className="h-4 w-4" />
-            </Button>
+            <h3 className="text-lg font-bold text-foreground">Generate quotes with OD, TP, NCB and add-on pricing</h3>
+            <p className="text-sm text-muted-foreground">Create quotes, generate PDF, share via WhatsApp — all quotes auto-saved.</p>
           </div>
+          <Button onClick={() => setShowCalcDialog(true)} className="gap-2 self-start sm:self-auto">
+            Open Calculator
+            <ArrowRight className="h-4 w-4" />
+          </Button>
         </div>
-      )}
+      </div>
 
       {insNotifications.length > 0 && <StageNotificationBanner items={insNotifications} />}
 
