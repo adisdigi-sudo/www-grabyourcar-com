@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -36,6 +37,7 @@ export function InsuranceRenewalCampaign() {
   const [enrichmentResult, setEnrichmentResult] = useState<any>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [sendingCampaign, setSendingCampaign] = useState(false);
+  const [pasteText, setPasteText] = useState("Anshdeep Singh\t9855924442\thr26ey7114\tAnshduggal997@gmail.com\tGurgram\nparag\t9818284935\tdl3cab2377\thrgyb1@gmail.com\tGurugram\nNitin\t7042050522\thr26et4528\tAdisdigi@gmail.com\tDelhi\nisha\t7206607985\thr26eu1117\tMakethemoney11@gmail.com\tferozepur\nkaran\t9855645947\thr26ey7115\tInsurancegyc@gmail.com\tnoida");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const currentBatch = enrichmentResult?.batch_label || batchLabel;
@@ -93,6 +95,34 @@ export function InsuranceRenewalCampaign() {
       toast.error("Failed to parse CSV file");
     }
   }, []);
+
+  const handlePasteData = useCallback(() => {
+    if (!pasteText.trim()) {
+      toast.error("Paste some data first");
+      return;
+    }
+    const lines = pasteText.trim().split("\n").filter(l => l.trim());
+    const parsed: Prospect[] = [];
+    for (const line of lines) {
+      const cols = line.split(/\t|,/).map(c => c.trim());
+      if (cols.length < 3) continue;
+      // Try to detect: name, phone, vehicle_number, email?, city?
+      parsed.push({
+        name: cols[0] || "",
+        phone: cols[1] || "",
+        vehicle_number: cols[2] || "",
+        email: cols[3] || undefined,
+        city: cols[4] || undefined,
+      });
+    }
+    if (parsed.length === 0) {
+      toast.error("No valid rows found. Format: Name, Phone, Vehicle Number (tab or comma separated)");
+      return;
+    }
+    setProspects(parsed);
+    setBatchLabel(`Renewal-${new Date().toISOString().split("T")[0]}-${parsed.length}`);
+    toast.success(`${parsed.length} prospects loaded`);
+  }, [pasteText]);
 
   const handleEnrich = useCallback(async () => {
     if (prospects.length === 0) return;
@@ -274,8 +304,8 @@ export function InsuranceRenewalCampaign() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Upload a CSV with columns: <strong>name, phone, vehicle_number</strong> (required). 
-              Optional: email, city. Max 500 per batch.
+              Upload a CSV or paste data directly. Columns: <strong>Name, Phone, Vehicle Number</strong> (required). 
+              Optional: Email, City. Max 500 per batch.
             </p>
             
             <div className="flex flex-wrap gap-3">
@@ -291,6 +321,21 @@ export function InsuranceRenewalCampaign() {
                   onChange={handleFileUpload}
                 />
               </div>
+            </div>
+
+            {/* Paste Data Section */}
+            <div className="space-y-2 border rounded-lg p-3 bg-muted/30">
+              <Label className="text-sm font-medium">Or Paste Data (Tab / Comma separated)</Label>
+              <Textarea
+                value={pasteText}
+                onChange={e => setPasteText(e.target.value)}
+                placeholder={"Anshdeep Singh\t9855924442\thr26ey7114\tanshdeep@email.com\tGurugram\nParag\t9818284935\tdl3cab2377\tparag@email.com\tDelhi"}
+                rows={5}
+                className="font-mono text-xs"
+              />
+              <Button variant="secondary" size="sm" onClick={handlePasteData} disabled={!pasteText.trim()}>
+                <Users className="h-4 w-4 mr-2" /> Load Pasted Data
+              </Button>
             </div>
 
             {prospects.length > 0 && (
