@@ -16,6 +16,7 @@ import { WAMessageStatusTracker } from "./wa/WAMessageStatusTracker";
 import { WAAgentConfig } from "./wa/WAAgentConfig";
 import { WALiveConversations } from "./wa/WALiveConversations";
 import { WAPerformanceDashboard } from "./wa/WAPerformanceDashboard";
+import { WARenewalCampaign } from "./wa/WARenewalCampaign";
 
 export function WhatsAppMarketingPortal() {
   const [activeTab, setActiveTab] = useState("campaigns");
