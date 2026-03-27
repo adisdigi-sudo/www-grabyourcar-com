@@ -951,6 +951,9 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                       <Badge className="bg-violet-100 text-violet-700 border-violet-200">🔄 Retarget Next Year</Badge>
                     )}
                     {selectedClient.incentive_eligible && <Badge className="bg-amber-100 text-amber-700 border-amber-200">⭐ Incentive</Badge>}
+                    {(selectedClient.duplicate_count ?? 0) > 0 && (
+                      <Badge className="bg-orange-100 text-orange-700 border-orange-300">⚠️ Duplicate Entry #{(selectedClient.duplicate_count ?? 0) + 1}</Badge>
+                    )}
                   </div>
 
                   {/* Editable Lead Details */}

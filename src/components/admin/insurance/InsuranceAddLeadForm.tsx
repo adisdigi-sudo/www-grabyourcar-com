@@ -34,26 +34,35 @@ export function InsuranceAddLeadForm({ onSuccess }: { onSuccess?: () => void }) 
     }
     setSaving(true);
     try {
-      // Check if client exists
       const phone = form.phone.replace(/\D/g, "");
-      const { data: existing } = await supabase
-        .from("insurance_clients")
-        .select("id")
-        .eq("phone", phone)
-        .limit(1);
+      const cleanVehicle = form.vehicle_number.replace(/\s+/g, "").toUpperCase() || null;
+
+      // Check for existing client by phone or vehicle number
+      let matchQuery = supabase.from("insurance_clients").select("id, customer_name, vehicle_number, duplicate_count");
+      if (cleanVehicle) {
+        matchQuery = matchQuery.or(`phone.eq.${phone},vehicle_number.ilike.${cleanVehicle}`);
+      } else {
+        matchQuery = matchQuery.eq("phone", phone);
+      }
+      const { data: existing } = await matchQuery.limit(1);
 
       if (existing && existing.length > 0) {
-        // Update existing
+        const dup = existing[0];
+        const newDupCount = (dup.duplicate_count || 0) + 1;
+
+        // Update existing with new info
         await supabase.from("insurance_clients").update({
-          customer_name: form.customer_name || undefined,
+          duplicate_count: newDupCount,
+          is_duplicate: true,
+          customer_name: form.customer_name || dup.customer_name || undefined,
           email: form.email || undefined,
-          vehicle_number: form.vehicle_number || undefined,
+          vehicle_number: cleanVehicle || dup.vehicle_number || undefined,
           vehicle_make: form.vehicle_make || undefined,
           vehicle_model: form.vehicle_model || undefined,
           current_policy_type: form.current_policy_type || undefined,
           current_insurer: form.current_insurer || undefined,
           notes: form.notes || undefined,
-        }).eq("id", existing[0].id);
+        }).eq("id", dup.id);
 
         await supabase.from("insurance_activity_log").insert({
           client_id: existing[0].id,
