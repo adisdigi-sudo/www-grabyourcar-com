@@ -531,7 +531,7 @@ export function InsuranceWorkspace() {
       {activeView === "overdue" && <div><InsuranceOverdueRenewals policies={overduePolicies as PolicyRecord[]} clients={dedupedClients} /></div>}
       {activeView === "bulk_tools" && <BulkRenewalQuoteGenerator onClose={() => setActiveView("pipeline")} />}
       {activeView === "renewal_campaign" && <InsuranceRenewalCampaign />}
-      {activeView === "performance" && <InsurancePerformance clients={dedupedClients} policies={policyBookPolicies as PolicyRecord[]} initialMonth={selectedMonth} />}
+      {activeView === "performance" && <InsurancePerformance clients={dedupedClients} policies={policyBookPolicies as PolicyRecord[]} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} monthOptions={monthOptions} />}
 
       <Dialog open={showCalcDialog} onOpenChange={setShowCalcDialog}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
@@ -606,6 +606,7 @@ export function InsuranceWorkspace() {
         clients={monthFilteredClients}
         policies={monthFilteredPolicies.filter(p => (p.status || "").toLowerCase() === "active")}
         monthWiseConversion={monthWiseConversion}
+        monthLabel={selectedMonthLabel}
       />
     </div>
   );

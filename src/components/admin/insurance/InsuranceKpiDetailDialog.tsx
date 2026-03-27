@@ -15,6 +15,7 @@ interface Props {
   clients: Client[];
   policies: PolicyRecord[];
   monthWiseConversion: { month: string; total: number; won: number; rate: string; renewals: number; rollovers: number }[];
+  monthLabel?: string;
 }
 
 function normalizeStage(stage?: string | null, status?: string | null, client?: Pick<Client, "current_policy_number"> | null): string {
@@ -24,14 +25,14 @@ function normalizeStage(stage?: string | null, status?: string | null, client?: 
   return result;
 }
 
-export function InsuranceKpiDetailDialog({ open, onOpenChange, kpiType, clients, policies, monthWiseConversion }: Props) {
+export function InsuranceKpiDetailDialog({ open, onOpenChange, kpiType, clients, policies, monthWiseConversion, monthLabel }: Props) {
   if (!kpiType) return null;
 
   const titles: Record<string, string> = {
-    total_leads: "All Leads",
-    in_pipeline: "In Pipeline",
-    won: "Won / Policy Issued",
-    active_policies: "Active Policies",
+    total_leads: `All Leads${monthLabel ? ` — ${monthLabel}` : ""}`,
+    in_pipeline: `In Pipeline${monthLabel ? ` — ${monthLabel}` : ""}`,
+    won: `Won / Policy Issued${monthLabel ? ` — ${monthLabel}` : ""}`,
+    active_policies: `Active Policies${monthLabel ? ` — ${monthLabel}` : ""}`,
     conversion: "Monthly Conversion Rate",
   };
 
@@ -136,8 +137,35 @@ export function InsuranceKpiDetailDialog({ open, onOpenChange, kpiType, clients,
             </div>
           )}
 
-          {/* Client lists for total/pipeline/won */}
-          {["total_leads", "in_pipeline", "won"].includes(kpiType) && (
+          {/* Won policies detail - show actual policy records */}
+          {kpiType === "won" && (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground mb-2">{policies.length} won policies{monthLabel ? ` in ${monthLabel}` : ""}</p>
+              {policies.map(p => {
+                const client = (p as any).insurance_clients;
+                return (
+                  <div key={p.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/30 transition-colors">
+                    <div className="space-y-0.5">
+                      <p className="font-medium text-sm">{client?.customer_name || "—"}</p>
+                      <p className="text-xs text-muted-foreground">{client?.phone || ""} • {client?.vehicle_number || ""}</p>
+                      <p className="text-xs text-muted-foreground">{p.insurer || "—"} • {p.policy_type || "—"}</p>
+                      {p.policy_number && <p className="text-[10px] font-mono text-muted-foreground">{p.policy_number}</p>}
+                    </div>
+                    <div className="text-right space-y-0.5">
+                      <p className="font-semibold text-sm">₹{(p.premium_amount || 0).toLocaleString("en-IN")}</p>
+                      {p.start_date && <p className="text-xs text-muted-foreground">Start: {format(new Date(p.start_date), "dd MMM yyyy")}</p>}
+                      {p.expiry_date && <p className="text-xs text-muted-foreground">Exp: {format(new Date(p.expiry_date), "dd MMM yyyy")}</p>}
+                      <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200">Won</Badge>
+                    </div>
+                  </div>
+                );
+              })}
+              {policies.length === 0 && <p className="text-center py-6 text-muted-foreground">No won policies{monthLabel ? ` in ${monthLabel}` : ""}</p>}
+            </div>
+          )}
+
+          {/* Client lists for total/pipeline */}
+          {["total_leads", "in_pipeline"].includes(kpiType) && (
             <div className="space-y-2">
               <p className="text-xs text-muted-foreground mb-2">{filteredClients.length} records</p>
               {filteredClients.slice(0, 100).map(c => (
