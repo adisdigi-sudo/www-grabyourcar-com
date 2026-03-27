@@ -1104,7 +1104,13 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                     <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowUploadPolicy(true)}><Upload className="h-3.5 w-3.5" /> Upload Policy</Button>
                     <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setPendingMoveClient(selectedClient); setShowWonDialog(true); }}><CheckCircle2 className="h-3.5 w-3.5" /> Create / Fix Policy</Button>
                   </div>
-...
+                </div>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
       {/* ── WON POLICY DIALOG ── */}
       <WonPolicyDialog
         open={showWonDialog}
