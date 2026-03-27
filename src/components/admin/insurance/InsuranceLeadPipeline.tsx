@@ -520,7 +520,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
     const counts: Record<string, number> = {};
     PIPELINE_STAGES.forEach(s => { counts[s.value] = 0; });
     pipelineClients.forEach(c => {
-      const stage = normalizeStage(c.pipeline_stage, c.lead_status);
+      const stage = normalizeStage(c.pipeline_stage, c.lead_status, c);
       if (stage === "lost" && c.retarget_status === "scheduled") return;
       if (counts[stage] !== undefined) counts[stage]++;
     });
