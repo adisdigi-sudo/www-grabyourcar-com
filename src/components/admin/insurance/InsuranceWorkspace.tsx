@@ -397,7 +397,7 @@ export function InsuranceWorkspace() {
       {activeView === "overdue" && <InsuranceOverdueRenewals policies={overduePolicies as PolicyRecord[]} clients={clients} />}
       {activeView === "bulk_tools" && <BulkRenewalQuoteGenerator onClose={() => setActiveView("pipeline")} />}
       {activeView === "renewal_campaign" && <InsuranceRenewalCampaign />}
-      {activeView === "performance" && <InsurancePerformance clients={clients} policies={allPolicies as PolicyRecord[]} />}
+      {activeView === "performance" && <InsurancePerformance clients={clients} policies={policyBookPolicies as PolicyRecord[]} />}
 
       <Dialog open={showCalcDialog} onOpenChange={setShowCalcDialog}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">

@@ -64,7 +64,6 @@ interface InsurancePerformanceProps {
 export function InsurancePerformance({ clients, policies }: InsurancePerformanceProps) {
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), "yyyy-MM"));
 
-  // Generate last 12 months for dropdown
   const monthOptions = useMemo(() => {
     const opts = [];
     for (let i = 0; i < 12; i++) {
@@ -77,122 +76,159 @@ export function InsurancePerformance({ clients, policies }: InsurancePerformance
   const monthStart = startOfMonth(parseISO(selectedMonth + "-01"));
   const monthEnd = endOfMonth(monthStart);
 
-  // Filter clients and policies for selected month
-  // Count leads relevant to this month - use the best available date
-  const getClientRelevantDate = (c: Client) => {
-    return c.policy_start_date || c.booking_date || c.journey_last_event_at || c.created_at;
-  };
+  const clientById = useMemo(() => new Map(clients.map((client) => [client.id, client])), [clients]);
+
+  const dedupedPolicies = useMemo(() => {
+    const map = new Map<string, PolicyRecord>();
+
+    for (const policy of policies) {
+      const key = [
+        policy.client_id || "no-client",
+        policy.policy_number || "no-policy",
+        policy.start_date || policy.booking_date || policy.issued_date || policy.created_at,
+      ].join("::");
+
+      const current = map.get(key);
+      const currentStamp = current ? (current.updated_at || current.created_at) : "";
+      const nextStamp = policy.updated_at || policy.created_at;
+
+      if (!current || nextStamp > currentStamp) {
+        map.set(key, policy);
+      }
+    }
+
+    return Array.from(map.values());
+  }, [policies]);
+
+  const getClientRelevantDate = (client: Client) => (
+    client.policy_start_date ||
+    client.booking_date ||
+    client.journey_last_event_at ||
+    client.created_at
+  );
 
   const monthClients = useMemo(() => {
-    return clients.filter(c => {
-      const d = new Date(getClientRelevantDate(c));
+    return clients.filter((client) => {
+      const d = new Date(getClientRelevantDate(client));
       return d >= monthStart && d <= monthEnd;
     });
   }, [clients, monthStart, monthEnd]);
 
-  const isWon = (c: Client) => {
-    const stage = normalizeStage(c.pipeline_stage, c.lead_status);
+  const isWon = (client: Client) => {
+    const stage = normalizeStage(client.pipeline_stage, client.lead_status);
     return stage === "won" || stage === "policy_issued";
   };
-  const isLost = (c: Client) => normalizeStage(c.pipeline_stage, c.lead_status) === "lost";
 
-  // Won clients this month (prefer booking date)
-  const wonThisMonth = useMemo(() => {
-    return clients.filter(c => {
-      if (!isWon(c)) return false;
-      const dateStr = getClientWonDate(c);
+  const isLost = (client: Client) => normalizeStage(client.pipeline_stage, client.lead_status) === "lost";
+
+  const policiesThisMonth = useMemo(() => {
+    return dedupedPolicies.filter((policy) => {
+      const dateStr = getPolicyBookingDate(policy);
       const d = new Date(dateStr);
       return d >= monthStart && d <= monthEnd;
     });
-  }, [clients, monthStart, monthEnd]);
+  }, [dedupedPolicies, monthStart, monthEnd]);
+
+  const wonClientIdsThisMonth = useMemo(
+    () => new Set(policiesThisMonth.map((policy) => policy.client_id).filter(Boolean) as string[]),
+    [policiesThisMonth]
+  );
+
+  const wonThisMonth = useMemo(() => {
+    const matchedClients = clients.filter((client) => wonClientIdsThisMonth.has(client.id));
+
+    if (matchedClients.length > 0) {
+      return matchedClients;
+    }
+
+    return clients.filter((client) => {
+      if (!isWon(client)) return false;
+      const dateStr = getClientWonDate(client);
+      const d = new Date(dateStr);
+      return d >= monthStart && d <= monthEnd;
+    });
+  }, [clients, wonClientIdsThisMonth, monthStart, monthEnd]);
 
   const lostThisMonth = useMemo(() => {
-    return clients.filter(c => {
-      if (!isLost(c)) return false;
-      const d = new Date(c.updated_at);
+    return clients.filter((client) => {
+      if (!isLost(client)) return false;
+      const d = new Date(client.updated_at);
       return d >= monthStart && d <= monthEnd;
     });
   }, [clients, monthStart, monthEnd]);
 
-  // Policies issued this month
-  const policiesThisMonth = useMemo(() => {
-    return policies.filter(p => {
-      const dateStr = getPolicyBookingDate(p);
-      const d = new Date(dateStr);
-      return d >= monthStart && d <= monthEnd;
-    });
-  }, [policies, monthStart, monthEnd]);
-
   const totalLeadsMonth = monthClients.length;
-  const wonCount = wonThisMonth.length;
+  const wonCount = policiesThisMonth.length;
   const lostCount = lostThisMonth.length;
-  const convRate = totalLeadsMonth > 0 ? ((wonCount / totalLeadsMonth) * 100).toFixed(1) : "0";
+  const convRate = totalLeadsMonth > 0 ? ((wonThisMonth.length / totalLeadsMonth) * 100).toFixed(1) : "0";
 
-  const totalPremium = wonThisMonth.reduce((sum, c) => sum + (c.current_premium || 0), 0);
-  const avgPremium = wonCount > 0 ? Math.round(totalPremium / wonCount) : 0;
+  const totalPremium = policiesThisMonth.reduce((sum, policy) => sum + (policy.premium_amount || 0), 0);
 
-  // Incentive calculation
   const incentiveRate = getIncentiveRate(wonCount);
   const totalIncentive = getIncentiveAmount(wonCount);
-  const currentSlab = getCurrentSlab(wonCount);
-  const nextSlabInfo = INCENTIVE_SLABS.find(s => wonCount < s.min);
+  const nextSlabInfo = INCENTIVE_SLABS.find((slab) => wonCount < slab.min);
 
-  // Breakdown by insurer
   const insurerBreakdown = useMemo(() => {
     const map: Record<string, { count: number; premium: number }> = {};
-    wonThisMonth.forEach(c => {
-      const key = c.current_insurer || "Unknown";
+    policiesThisMonth.forEach((policy) => {
+      const key = policy.insurer || "Unknown";
       if (!map[key]) map[key] = { count: 0, premium: 0 };
       map[key].count++;
-      map[key].premium += c.current_premium || 0;
+      map[key].premium += policy.premium_amount || 0;
     });
     return Object.entries(map).sort((a, b) => b[1].count - a[1].count);
-  }, [wonThisMonth]);
+  }, [policiesThisMonth]);
 
-  // Breakdown by policy type
   const typeBreakdown = useMemo(() => {
     const map: Record<string, { count: number; premium: number }> = {};
-    wonThisMonth.forEach(c => {
-      const key = c.current_policy_type || "Comprehensive";
+    policiesThisMonth.forEach((policy) => {
+      const key = policy.policy_type || "Comprehensive";
       if (!map[key]) map[key] = { count: 0, premium: 0 };
       map[key].count++;
-      map[key].premium += c.current_premium || 0;
+      map[key].premium += policy.premium_amount || 0;
     });
     return Object.entries(map).sort((a, b) => b[1].count - a[1].count);
-  }, [wonThisMonth]);
+  }, [policiesThisMonth]);
 
-  // Breakdown by executive
   const execBreakdown = useMemo(() => {
     const map: Record<string, { count: number; premium: number; incentive: number }> = {};
-    wonThisMonth.forEach(c => {
-      const key = c.picked_up_by || c.assigned_executive || c.booked_by || "Unassigned";
+    policiesThisMonth.forEach((policy) => {
+      const client = policy.client_id ? clientById.get(policy.client_id) : undefined;
+      const key = client?.picked_up_by || client?.assigned_executive || client?.booked_by || "Unassigned";
       if (!map[key]) map[key] = { count: 0, premium: 0, incentive: 0 };
       map[key].count++;
-      map[key].premium += c.current_premium || 0;
+      map[key].premium += policy.premium_amount || 0;
     });
-    // Calculate incentive per exec
-    Object.values(map).forEach(v => { v.incentive = getIncentiveAmount(v.count); });
+    Object.values(map).forEach((value) => {
+      value.incentive = getIncentiveAmount(value.count);
+    });
     return Object.entries(map).sort((a, b) => b[1].count - a[1].count);
-  }, [wonThisMonth]);
+  }, [policiesThisMonth, clientById]);
 
-  // Month-over-month trend
   const monthTrend = useMemo(() => {
     const trend = [];
     for (let i = 5; i >= 0; i--) {
       const d = subMonths(new Date(), i);
       const ms = startOfMonth(d);
       const me = endOfMonth(d);
-      const total = clients.filter(c => { const cd = new Date(getClientRelevantDate(c)); return cd >= ms && cd <= me; }).length;
-      const won = clients.filter(c => {
-        if (!isWon(c)) return false;
-        const dateStr = getClientWonDate(c);
-        const cd = new Date(dateStr);
+      const total = clients.filter((client) => {
+        const cd = new Date(getClientRelevantDate(client));
         return cd >= ms && cd <= me;
       }).length;
-      trend.push({ month: format(d, "MMM"), total, won, rate: total > 0 ? ((won / total) * 100).toFixed(1) : "0" });
+      const monthPolicies = dedupedPolicies.filter((policy) => {
+        const pd = new Date(getPolicyBookingDate(policy));
+        return pd >= ms && pd <= me;
+      });
+      const monthWonClients = new Set(monthPolicies.map((policy) => policy.client_id).filter(Boolean));
+      trend.push({
+        month: format(d, "MMM"),
+        total,
+        won: monthPolicies.length,
+        rate: total > 0 ? ((monthWonClients.size / total) * 100).toFixed(1) : "0",
+      });
     }
     return trend;
-  }, [clients]);
+  }, [clients, dedupedPolicies]);
 
   return (
     <div className="space-y-4">
@@ -417,28 +453,30 @@ export function InsurancePerformance({ clients, policies }: InsurancePerformance
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {wonThisMonth.length === 0 ? (
+                {policiesThisMonth.length === 0 ? (
                   <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">No won policies this month</TableCell></TableRow>
-                ) : wonThisMonth.map((c, i) => (
-                  <TableRow key={c.id}>
-                    <TableCell className="text-xs text-muted-foreground">{i + 1}</TableCell>
-                    <TableCell className="text-xs font-medium">{c.customer_name}</TableCell>
-                    <TableCell className="text-xs">
-                      <span className="font-mono">{c.vehicle_number || "—"}</span>
-                      <br />
-                      <span className="text-[10px] text-muted-foreground">{[c.vehicle_make, c.vehicle_model].filter(Boolean).join(" ")}</span>
-                    </TableCell>
-                    <TableCell className="text-xs">{c.current_insurer || "—"}</TableCell>
-                    <TableCell className="text-xs font-mono">{c.current_policy_number || "—"}</TableCell>
-                    <TableCell className="text-xs text-right font-mono font-semibold">
-                      {c.current_premium ? `₹${c.current_premium.toLocaleString("en-IN")}` : "—"}
-                    </TableCell>
-                    <TableCell className="text-xs">
-                      {c.booking_date ? format(new Date(c.booking_date), "dd MMM yyyy") : "—"}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{c.picked_up_by || c.booked_by || "—"}</TableCell>
-                  </TableRow>
-                ))}
+                ) : policiesThisMonth.map((policy, i) => {
+                  const client = policy.client_id ? clientById.get(policy.client_id) : undefined;
+                  const bookingDate = getPolicyBookingDate(policy);
+                  return (
+                    <TableRow key={policy.id}>
+                      <TableCell className="text-xs text-muted-foreground">{i + 1}</TableCell>
+                      <TableCell className="text-xs font-medium">{client?.customer_name || policy.insurance_clients?.customer_name || "—"}</TableCell>
+                      <TableCell className="text-xs">
+                        <span className="font-mono">{client?.vehicle_number || policy.insurance_clients?.vehicle_number || "—"}</span>
+                        <br />
+                        <span className="text-[10px] text-muted-foreground">{[client?.vehicle_make || policy.insurance_clients?.vehicle_make, client?.vehicle_model || policy.insurance_clients?.vehicle_model].filter(Boolean).join(" ")}</span>
+                      </TableCell>
+                      <TableCell className="text-xs">{policy.insurer || client?.current_insurer || "—"}</TableCell>
+                      <TableCell className="text-xs font-mono">{policy.policy_number || client?.current_policy_number || "—"}</TableCell>
+                      <TableCell className="text-xs text-right font-mono font-semibold">
+                        {policy.premium_amount ? `₹${policy.premium_amount.toLocaleString("en-IN")}` : "—"}
+                      </TableCell>
+                      <TableCell className="text-xs">{bookingDate ? format(new Date(bookingDate), "dd MMM yyyy") : "—"}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{client?.picked_up_by || client?.booked_by || client?.assigned_executive || "—"}</TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
