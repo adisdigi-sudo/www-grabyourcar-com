@@ -200,27 +200,29 @@ export function InsuranceWorkspace() {
   const lostCount = clients.filter(isLost).length;
   const inPipeline = totalLeads - wonCount - lostCount;
 
-  // Month-wise conversion calculation
+  // Month-wise conversion calculation based on real booking/policy dates
   const monthWiseConversion = useMemo(() => {
-    const monthMap: Record<string, { total: number; won: number; renewals: number; rollovers: number }> = {};
-    // Group leads by created_at month for total count
-    clients.forEach(c => {
-      const d = c.created_at ? new Date(c.created_at) : new Date();
+    const monthMap: Record<string, { total: number; won: number; renewals: number; rollovers: number; wonClients: Set<string> }> = {};
+
+    clients.forEach((client) => {
+      const d = new Date(getClientPolicyDate(client));
       const key = format(d, "yyyy-MM");
-      if (!monthMap[key]) monthMap[key] = { total: 0, won: 0, renewals: 0, rollovers: 0 };
+      if (!monthMap[key]) monthMap[key] = { total: 0, won: 0, renewals: 0, rollovers: 0, wonClients: new Set() };
       monthMap[key].total++;
-      const src = (c.lead_source || "").toLowerCase();
+      const src = (client.lead_source || "").toLowerCase();
       if (src.includes("renewal") || src.includes("renew")) monthMap[key].renewals++;
       if (src.includes("rollover") || src.includes("roll")) monthMap[key].rollovers++;
     });
-    // Group won leads by booking_date first so monthly won filters reflect the booked month
-    clients.filter(isWon).forEach(c => {
-      const wonDate = c.booking_date || c.policy_start_date || c.journey_last_event_at || c.updated_at || c.created_at;
-      const d = wonDate ? new Date(wonDate) : new Date();
+
+    policyBookPolicies.forEach((policy) => {
+      const policyDate = policy.start_date || policy.booking_date || policy.issued_date || policy.created_at;
+      const d = new Date(policyDate);
       const key = format(d, "yyyy-MM");
-      if (!monthMap[key]) monthMap[key] = { total: 0, won: 0, renewals: 0, rollovers: 0 };
+      if (!monthMap[key]) monthMap[key] = { total: 0, won: 0, renewals: 0, rollovers: 0, wonClients: new Set() };
       monthMap[key].won++;
+      if (policy.client_id) monthMap[key].wonClients.add(policy.client_id);
     });
+
     return Object.entries(monthMap)
       .sort((a, b) => b[0].localeCompare(a[0]))
       .slice(0, 12)
@@ -228,11 +230,11 @@ export function InsuranceWorkspace() {
         month: format(new Date(month + "-01"), "MMM yyyy"),
         total: d.total,
         won: d.won,
-        rate: d.total > 0 ? ((d.won / d.total) * 100).toFixed(1) : "0",
+        rate: d.total > 0 ? ((d.wonClients.size / d.total) * 100).toFixed(1) : "0",
         renewals: d.renewals,
         rollovers: d.rollovers,
       }));
-  }, [clients]);
+  }, [clients, policyBookPolicies]);
 
   // Current month conversion rate
   const currentMonthKey = format(new Date(), "MMM yyyy");

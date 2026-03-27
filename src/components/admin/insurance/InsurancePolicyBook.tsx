@@ -109,6 +109,7 @@ const sourceBadgeClass = (label: string) => {
 
 const getEffectiveBookingDate = (policy: PolicyRecord) => {
   return (
+    policy.start_date ||
     policy.booking_date ||
     policy.insurance_clients?.booking_date ||
     policy.issued_date ||
