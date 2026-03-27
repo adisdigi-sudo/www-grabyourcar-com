@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import type { Client } from "./InsuranceLeadPipeline";
+import { normalizeStage as sharedNormalizeStage, type Client } from "./InsuranceLeadPipeline";
 import type { PolicyRecord } from "./InsurancePolicyBook";
 
 type KpiType = "total_leads" | "in_pipeline" | "won" | "active_policies" | "conversion" | null;
@@ -18,11 +18,10 @@ interface Props {
 }
 
 function normalizeStage(stage?: string | null, status?: string | null, client?: Pick<Client, "current_policy_number"> | null): string {
-  const s = (stage || status || "new_lead").toLowerCase().replace(/[\s-]+/g, "_");
-  if (["won", "policy_issued", "closed", "converted"].includes(s)) return "won";
-  if (client && client.current_policy_number && client.current_policy_number.trim()) return "won";
-  if (s === "lost" || s === "not_interested") return "lost";
-  return s;
+  const result = sharedNormalizeStage(stage || null, status || null, client || null);
+  // Map policy_issued to won for KPI display
+  if (result === "policy_issued") return "won";
+  return result;
 }
 
 export function InsuranceKpiDetailDialog({ open, onOpenChange, kpiType, clients, policies, monthWiseConversion }: Props) {

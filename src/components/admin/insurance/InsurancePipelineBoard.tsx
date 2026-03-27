@@ -84,8 +84,40 @@ interface Client {
   lost_reason: string | null;
   follow_up_date: string | null;
   current_premium: number | null;
+  current_policy_number: string | null;
   notes: string | null;
   created_at: string;
+}
+
+// Normalize stage based on lead_status and current_policy_number
+function normalizeClientStage(client: Client): string {
+  const stage = (client.pipeline_stage || "").toLowerCase();
+  const status = (client.lead_status || "").toLowerCase();
+
+  // If client has a policy number assigned, they are policy_issued
+  if (client.current_policy_number && client.current_policy_number.trim()) return "policy_issued";
+  if (stage === "policy_issued" || status === "won" || status === "converted") return "policy_issued";
+  if (stage === "lost" || status === "lost" || status === "not_interested") return "lost";
+
+  // Map known stages
+  const STAGE_LOOKUP: Record<string, string> = {
+    new_lead: "new_lead", new: "new_lead",
+    contact_attempted: "contact_attempted",
+    requirement_collected: "requirement_collected",
+    smart_calling: "contact_attempted",
+    contacted: "contact_attempted",
+    in_process: "contact_attempted",
+    quote_shared: "quote_shared",
+    follow_up: "follow_up",
+    interested: "follow_up",
+    hot_prospect: "follow_up",
+    payment_pending: "payment_pending",
+    renewal_queue: "renewal_queue",
+    won: "policy_issued",
+    converted: "policy_issued",
+  };
+
+  return STAGE_LOOKUP[stage] || STAGE_LOOKUP[status] || "new_lead";
 }
 
 export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardProps = {}) {
@@ -119,13 +151,14 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
     queryFn: async () => {
       const { data, error } = await supabase
         .from("insurance_clients")
-        .select("id, customer_name, phone, email, city, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_insurer, policy_expiry_date, current_policy_type, ncb_percentage, previous_claim, lead_source, lead_status, assigned_executive, priority, pipeline_stage, contact_attempts, quote_amount, quote_insurer, lost_reason, follow_up_date, current_premium, notes, created_at")
+        .select("id, customer_name, phone, email, city, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_insurer, policy_expiry_date, current_policy_type, ncb_percentage, previous_claim, lead_source, lead_status, assigned_executive, priority, pipeline_stage, contact_attempts, quote_amount, quote_insurer, lost_reason, follow_up_date, current_premium, current_policy_number, notes, created_at")
+        .eq("is_legacy", false)
         .order("created_at", { ascending: false })
         .limit(1000);
       if (error) throw error;
       return ((data || []).map((client) => ({
         ...client,
-        pipeline_stage: client.pipeline_stage || "new_lead",
+        pipeline_stage: normalizeClientStage(client),
       }))) as Client[];
     },
   });
