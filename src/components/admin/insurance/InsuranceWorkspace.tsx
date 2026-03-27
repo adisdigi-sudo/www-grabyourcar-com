@@ -606,6 +606,7 @@ export function InsuranceWorkspace() {
         clients={monthFilteredClients}
         policies={monthFilteredPolicies.filter(p => (p.status || "").toLowerCase() === "active")}
         monthWiseConversion={monthWiseConversion}
+        monthLabel={selectedMonthLabel}
       />
     </div>
   );
