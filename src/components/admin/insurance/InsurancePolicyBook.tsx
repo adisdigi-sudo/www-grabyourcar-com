@@ -44,6 +44,9 @@ export type PolicyRecord = {
     vehicle_make: string | null;
     vehicle_model: string | null;
     lead_source: string | null;
+    booking_date?: string | null;
+    updated_at?: string | null;
+    created_at?: string | null;
   } | null;
 };
 
@@ -104,6 +107,18 @@ const sourceBadgeClass = (label: string) => {
   return colors[label] || "bg-muted text-muted-foreground border-border";
 };
 
+const getEffectiveBookingDate = (policy: PolicyRecord) => {
+  return (
+    policy.booking_date ||
+    policy.insurance_clients?.booking_date ||
+    policy.issued_date ||
+    policy.insurance_clients?.updated_at ||
+    policy.insurance_clients?.created_at ||
+    policy.created_at ||
+    null
+  );
+};
+
 export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
   const [search, setSearch] = useState("");
   const [partnerFilter, setPartnerFilter] = useState("all");
@@ -126,7 +141,17 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
       const vehicleKey = policy.insurance_clients?.vehicle_number?.replace(/\s+/g, "").toUpperCase();
       const fallbackKey = policy.client_id || policy.policy_number || policy.id;
       const key = vehicleKey || fallbackKey;
-      if (!map.has(key)) {
+      const current = map.get(key);
+
+      if (!current) {
+        map.set(key, policy);
+        continue;
+      }
+
+      const currentDate = getEffectiveBookingDate(current);
+      const nextDate = getEffectiveBookingDate(policy);
+
+      if ((nextDate || "") > (currentDate || "")) {
         map.set(key, policy);
       }
     }
@@ -137,7 +162,6 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
     let result = deduplicatedPolicies;
     if (partnerFilter !== "all") result = result.filter(p => p.insurer === partnerFilter);
 
-    // Period quick filter (uses booking_date or issued_date)
     if (periodFilter !== "all") {
       const now = new Date();
       let pStart: Date, pEnd: Date;
@@ -149,13 +173,12 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
       } else if (periodFilter === "this_week") {
         pStart = startOfWeek(now, { weekStartsOn: 1 }); pEnd = endOfWeek(now, { weekStartsOn: 1 });
       } else {
-        // month offset e.g. "-2", "-3"
         const offset = parseInt(periodFilter);
         const m = subMonths(now, Math.abs(offset));
         pStart = startOfMonth(m); pEnd = endOfMonth(m);
       }
       result = result.filter(p => {
-        const d = p.booking_date || p.issued_date;
+        const d = getEffectiveBookingDate(p);
         if (!d) return false;
         const dt = new Date(d);
         return dt >= pStart && dt <= pEnd;
@@ -164,7 +187,7 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
 
     if (dateFrom || dateTo) {
       result = result.filter(p => {
-        const d = p.booking_date || p.issued_date;
+        const d = getEffectiveBookingDate(p);
         if (!d) return false;
         const dt = new Date(d);
         if (dateFrom && dt < dateFrom) return false;
@@ -200,12 +223,13 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
 
   const sourceLabel = (policy: PolicyRecord) => {
     const leadSource = normalizeLeadSourceLabel(policy.insurance_clients?.lead_source || null);
+    const effectiveBookingDate = getEffectiveBookingDate(policy);
 
     return (
       <div className="flex flex-col gap-1">
         {isRenewalPolicy(policy) ? (
           <Badge variant="outline" className="text-[9px] bg-blue-100 text-blue-700 border-blue-200">
-            🔄 Renewed {(policy.booking_date || policy.issued_date) ? format(new Date((policy.booking_date || policy.issued_date)!), "dd MMM yyyy") : ""}
+            🔄 Renewed {effectiveBookingDate ? format(new Date(effectiveBookingDate), "dd MMM yyyy") : ""}
           </Badge>
         ) : isRolloverPolicy(policy) ? (
           <Badge variant="outline" className="text-[9px] bg-violet-100 text-violet-700 border-violet-200">
@@ -228,7 +252,6 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
 
   return (
     <div className="space-y-4">
-      {/* Summary stats */}
       <div className="flex gap-3 flex-wrap">
         <div className="bg-muted/40 rounded-lg px-4 py-2 text-center">
           <p className="text-lg font-bold text-foreground">{filtered.length}</p>
@@ -276,7 +299,7 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-3 space-y-2">
-            <p className="text-xs font-medium">Booking / Issued Date Range</p>
+            <p className="text-xs font-medium">Booking / Won Date Range</p>
             <div className="flex gap-3">
               <div className="space-y-1">
                 <p className="text-[10px] text-muted-foreground">From</p>
@@ -345,6 +368,7 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
                 ) : filtered.map((policy, idx) => {
                   const client = policy.insurance_clients;
                   const phone = displayPhone(client?.phone || null);
+                  const effectiveBookingDate = getEffectiveBookingDate(policy);
                   return (
                     <TableRow key={policy.id} className="text-xs hover:bg-muted/30">
                       <TableCell onClick={e => e.stopPropagation()}><input type="checkbox" className="rounded" checked={selectedIds.has(policy.id)} onChange={() => toggleSelect(policy.id)} /></TableCell>
@@ -371,7 +395,7 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
                       <TableCell className="font-mono text-xs">{policy.policy_number || "—"}</TableCell>
                       <TableCell className="text-xs capitalize">{policy.policy_type || "—"}</TableCell>
                       <TableCell className="font-semibold text-xs">{policy.premium_amount ? `₹${policy.premium_amount.toLocaleString("en-IN")}` : "—"}</TableCell>
-                      <TableCell className="text-xs">{policy.booking_date ? format(new Date(policy.booking_date), "dd MMM yyyy") : "—"}</TableCell>
+                      <TableCell className="text-xs">{effectiveBookingDate ? format(new Date(effectiveBookingDate), "dd MMM yyyy") : "—"}</TableCell>
                       <TableCell className="text-xs">{policy.issued_date ? format(new Date(policy.issued_date), "dd MMM yyyy") : "—"}</TableCell>
                       <TableCell className="text-xs">{policy.expiry_date ? format(new Date(policy.expiry_date), "dd MMM yyyy") : "—"}</TableCell>
                       <TableCell>{sourceLabel(policy)}</TableCell>
