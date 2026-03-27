@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import type { Client } from "./InsuranceLeadPipeline";
+import { normalizeStage as sharedNormalizeStage, type Client } from "./InsuranceLeadPipeline";
 import type { PolicyRecord } from "./InsurancePolicyBook";
 
 type KpiType = "total_leads" | "in_pipeline" | "won" | "active_policies" | "conversion" | null;
