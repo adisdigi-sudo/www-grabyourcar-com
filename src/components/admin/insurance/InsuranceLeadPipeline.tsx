@@ -770,7 +770,14 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                             <User className="h-3 w-3 text-white" />
                           </div>
                           <div className="min-w-0 flex flex-col gap-0.5">
-                            <p className="font-semibold text-xs leading-tight truncate">{client.customer_name || "Unknown"}</p>
+                            <p className="font-semibold text-xs leading-tight truncate flex items-center gap-1">
+                              {client.customer_name || "Unknown"}
+                              {(client.duplicate_count ?? 0) > 0 && (
+                                <Badge className="bg-orange-100 text-orange-700 border-orange-300 text-[8px] px-1 py-0 h-3.5 shrink-0">
+                                  Dup {(client.duplicate_count ?? 0) + 1}
+                                </Badge>
+                              )}
+                            </p>
                             <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
                               <Select
                                 value={normStage}
