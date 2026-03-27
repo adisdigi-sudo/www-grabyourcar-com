@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { format, startOfMonth, endOfMonth, subMonths, parseISO } from "date-fns";
+import { useMemo } from "react";
+import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,26 +11,7 @@ import {
 } from "lucide-react";
 import { normalizeStage, type Client } from "./InsuranceLeadPipeline";
 import type { PolicyRecord } from "./InsurancePolicyBook";
-
-const getClientWonDate = (client: Client) => {
-  return (
-    client.booking_date ||
-    client.policy_start_date ||
-    client.journey_last_event_at ||
-    client.updated_at ||
-    client.created_at
-  );
-};
-
-const getPolicyBookingDate = (policy: PolicyRecord) => {
-  return (
-    policy.booking_date ||
-    policy.insurance_clients?.booking_date ||
-    policy.start_date ||
-    policy.issued_date ||
-    policy.created_at
-  );
-};
+import { getClientEffectiveDate, getPolicyEffectiveDate, dedupeInsurancePolicies } from "@/lib/insuranceIdentity";
 
 // Incentive slab config
 const INCENTIVE_SLABS = [
@@ -57,72 +38,24 @@ function getCurrentSlab(count: number): string {
 interface InsurancePerformanceProps {
   clients: Client[];
   policies: PolicyRecord[];
-  initialMonth?: string;
+  selectedMonth: string;
+  onMonthChange: (month: string) => void;
+  monthOptions: { value: string; label: string }[];
 }
 
-export function InsurancePerformance({ clients, policies, initialMonth }: InsurancePerformanceProps) {
-  const [selectedMonth, setSelectedMonth] = useState(initialMonth || format(new Date(), "yyyy-MM"));
-
-  useEffect(() => {
-    if (initialMonth) {
-      setSelectedMonth(initialMonth);
-    }
-  }, [initialMonth]);
-
-  const monthOptions = useMemo(() => {
-    const opts = [];
-    for (let i = 0; i < 12; i++) {
-      const d = subMonths(new Date(), i);
-      opts.push({ value: format(d, "yyyy-MM"), label: format(d, "MMM yyyy") });
-    }
-    return opts;
-  }, []);
-
-  const monthStart = startOfMonth(parseISO(selectedMonth + "-01"));
-  const monthEnd = endOfMonth(monthStart);
+export function InsurancePerformance({ clients, policies, selectedMonth, onMonthChange, monthOptions }: InsurancePerformanceProps) {
+  const monthStart = useMemo(() => startOfMonth(new Date(selectedMonth + "-01")), [selectedMonth]);
+  const monthEnd = useMemo(() => endOfMonth(monthStart), [monthStart]);
 
   const clientById = useMemo(() => new Map(clients.map((client) => [client.id, client])), [clients]);
 
-  const dedupedPolicies = useMemo(() => {
-    const map = new Map<string, PolicyRecord>();
-
-    for (const policy of policies) {
-      if (!policy.policy_number?.trim()) continue;
-      const normalizedStatus = (policy.status || "").toLowerCase();
-      if (["renewed", "lapsed", "cancelled", "lost"].includes(normalizedStatus)) continue;
-
-      const vehicleKey = policy.insurance_clients?.vehicle_number?.replace(/\s+/g, "").toUpperCase();
-      const key = vehicleKey || [policy.client_id || "no-client", policy.policy_number].join("::");
-      const current = map.get(key);
-
-      if (!current) {
-        map.set(key, policy);
-        continue;
-      }
-
-      const currentDate = getPolicyBookingDate(current) || current.updated_at || current.created_at;
-      const nextDate = getPolicyBookingDate(policy) || policy.updated_at || policy.created_at;
-      const currentStamp = current.updated_at || current.created_at;
-      const nextStamp = policy.updated_at || policy.created_at;
-
-      if (nextDate > currentDate || (nextDate === currentDate && nextStamp > currentStamp)) {
-        map.set(key, policy);
-      }
-    }
-
-    return Array.from(map.values());
-  }, [policies]);
-
-  const getClientRelevantDate = (client: Client) => (
-    client.booking_date ||
-    client.policy_start_date ||
-    client.journey_last_event_at ||
-    client.created_at
-  );
+  const dedupedPolicies = useMemo(() => dedupeInsurancePolicies(policies), [policies]);
 
   const monthClients = useMemo(() => {
     return clients.filter((client) => {
-      const d = new Date(getClientRelevantDate(client));
+      const rawDate = getClientEffectiveDate(client);
+      if (!rawDate) return false;
+      const d = new Date(rawDate);
       return d >= monthStart && d <= monthEnd;
     });
   }, [clients, monthStart, monthEnd]);
@@ -136,7 +69,8 @@ export function InsurancePerformance({ clients, policies, initialMonth }: Insura
 
   const policiesThisMonth = useMemo(() => {
     return dedupedPolicies.filter((policy) => {
-      const dateStr = getPolicyBookingDate(policy);
+      const dateStr = getPolicyEffectiveDate(policy);
+      if (!dateStr) return false;
       const d = new Date(dateStr);
       return d >= monthStart && d <= monthEnd;
     });
@@ -149,17 +83,15 @@ export function InsurancePerformance({ clients, policies, initialMonth }: Insura
 
   const wonThisMonth = useMemo(() => {
     const matchedClients = clients.filter((client) => wonClientIdsThisMonth.has(client.id));
-
-    if (matchedClients.length > 0) {
-      return matchedClients;
-    }
-
-    return clients.filter((client) => {
+    const wonByDate = clients.filter((client) => {
+      if (wonClientIdsThisMonth.has(client.id)) return false;
       if (!isWon(client)) return false;
-      const dateStr = getClientWonDate(client);
+      const dateStr = getClientEffectiveDate(client);
+      if (!dateStr) return false;
       const d = new Date(dateStr);
       return d >= monthStart && d <= monthEnd;
     });
+    return [...matchedClients, ...wonByDate];
   }, [clients, wonClientIdsThisMonth, monthStart, monthEnd]);
 
   const lostThisMonth = useMemo(() => {
@@ -225,11 +157,15 @@ export function InsurancePerformance({ clients, policies, initialMonth }: Insura
       const ms = startOfMonth(d);
       const me = endOfMonth(d);
       const total = clients.filter((client) => {
-        const cd = new Date(getClientRelevantDate(client));
+        const rawDate = getClientEffectiveDate(client);
+        if (!rawDate) return false;
+        const cd = new Date(rawDate);
         return cd >= ms && cd <= me;
       }).length;
       const monthPolicies = dedupedPolicies.filter((policy) => {
-        const pd = new Date(getPolicyBookingDate(policy));
+        const rawDate = getPolicyEffectiveDate(policy);
+        if (!rawDate) return false;
+        const pd = new Date(rawDate);
         return pd >= ms && pd <= me;
       });
       const monthWonClients = new Set(monthPolicies.map((policy) => policy.client_id).filter(Boolean));
@@ -254,7 +190,7 @@ export function InsurancePerformance({ clients, policies, initialMonth }: Insura
           <Calendar className="h-4 w-4 text-muted-foreground" />
           <select
             value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
+            onChange={(e) => onMonthChange(e.target.value)}
             className="h-9 w-[160px] rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
           >
             {monthOptions.map((month) => (
@@ -471,7 +407,7 @@ export function InsurancePerformance({ clients, policies, initialMonth }: Insura
                   <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">No won policies this month</TableCell></TableRow>
                 ) : policiesThisMonth.map((policy, i) => {
                   const client = policy.client_id ? clientById.get(policy.client_id) : undefined;
-                  const bookingDate = getPolicyBookingDate(policy);
+                      const bookingDate = getPolicyEffectiveDate(policy);
                   return (
                     <TableRow key={policy.id}>
                       <TableCell className="text-xs text-muted-foreground">{i + 1}</TableCell>
