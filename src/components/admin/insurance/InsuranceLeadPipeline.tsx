@@ -14,6 +14,7 @@ import { SmartDatePicker } from "@/components/ui/smart-date-picker";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { getClientIdentityKey, normalizePolicyNumber } from "@/lib/insuranceIdentity";
 import { format, differenceInDays, formatDistanceToNow } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
@@ -112,9 +113,13 @@ const STAGE_MAP: Record<string, string> = {
 
 export const normalizeStage = (stage: string | null, leadStatus?: string | null): string => {
   const normalizedStage = stage ? STAGE_MAP[stage] : undefined;
-  if (normalizedStage) return normalizedStage;
-
   const normalizedLeadStatus = leadStatus ? STAGE_MAP[leadStatus] : undefined;
+
+  if (normalizedStage === "policy_issued" || normalizedLeadStatus === "policy_issued") return "policy_issued";
+  if (normalizedLeadStatus === "won") return "won";
+  if (normalizedStage === "won") return "won";
+  if (normalizedLeadStatus === "lost") return "lost";
+  if (normalizedStage) return normalizedStage;
   if (normalizedLeadStatus) return normalizedLeadStatus;
 
   return "new_lead";
@@ -261,7 +266,7 @@ function WonPolicyDialog({
 
     setSaving(true);
     try {
-      const nextPolicyNumber = policyNumber.trim().toUpperCase();
+      const nextPolicyNumber = normalizePolicyNumber(policyNumber);
       const nextStartDate = format(startDate, "yyyy-MM-dd");
       const nextExpiryDate = format(expiryDate, "yyyy-MM-dd");
       const nextBookingDate = nextStartDate;
@@ -483,19 +488,24 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
 
   // Filter - exclude policy_issued leads from pipeline and deduplicate same lead/vehicle
   const pipelineClients = useMemo(() => {
-    const uniqueLeads = new Map<string, Client>();
+      const uniqueLeads = new Map<string, Client>();
 
     for (const client of clients) {
       const stage = normalizeStage(client.pipeline_stage, client.lead_status);
       if (stage === "policy_issued") continue;
 
-      const phoneKey = client.phone?.replace(/\D/g, "") || client.id;
-      const vehicleKey = client.vehicle_number?.replace(/\s+/g, "").toUpperCase() || "no-vehicle";
-      const dedupeKey = `${phoneKey}_${vehicleKey}`;
+        const dedupeKey = getClientIdentityKey(client);
 
-      if (!uniqueLeads.has(dedupeKey)) {
-        uniqueLeads.set(dedupeKey, client);
+        const existing = uniqueLeads.get(dedupeKey);
+        if (!existing) {
+          uniqueLeads.set(dedupeKey, client);
+          continue;
       }
+
+        const existingStage = normalizeStage(existing.pipeline_stage, existing.lead_status);
+        if (["policy_issued", "won"].includes(stage) || (!["policy_issued", "won"].includes(existingStage) && new Date(client.updated_at).getTime() >= new Date(existing.updated_at).getTime())) {
+          uniqueLeads.set(dedupeKey, client);
+        }
     }
 
     return Array.from(uniqueLeads.values());
