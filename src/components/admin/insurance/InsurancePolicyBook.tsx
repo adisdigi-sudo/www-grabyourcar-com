@@ -205,7 +205,7 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
       <div className="flex flex-col gap-1">
         {isRenewalPolicy(policy) ? (
           <Badge variant="outline" className="text-[9px] bg-blue-100 text-blue-700 border-blue-200">
-            🔄 Renewed {policy.issued_date ? format(new Date(policy.issued_date), "dd MMM yyyy") : ""}
+            🔄 Renewed {(policy.booking_date || policy.issued_date) ? format(new Date((policy.booking_date || policy.issued_date)!), "dd MMM yyyy") : ""}
           </Badge>
         ) : isRolloverPolicy(policy) ? (
           <Badge variant="outline" className="text-[9px] bg-violet-100 text-violet-700 border-violet-200">
