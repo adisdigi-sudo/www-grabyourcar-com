@@ -662,6 +662,26 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
         )}
       </div>
 
+      {/* Won Summary Bar */}
+      {selectedStage === "won" && (() => {
+        const wonTotal = stageCounts["won"] || 0;
+        const totalAll = pipelineClients.length;
+        const convPct = totalAll > 0 ? ((wonTotal / totalAll) * 100).toFixed(1) : "0";
+        const wonPremium = filtered.reduce((s, c) => s + (c.current_premium || 0), 0);
+        return (
+          <div className="flex items-center gap-4 p-3 rounded-xl border bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800">
+            <div className="flex items-center gap-1.5">
+              <Target className="h-4 w-4 text-emerald-600" />
+              <span className="text-xs font-semibold">Conversion: <span className="text-emerald-700 dark:text-emerald-400">{convPct}%</span></span>
+            </div>
+            <div className="h-4 w-px bg-emerald-300 dark:bg-emerald-700" />
+            <span className="text-xs">Won: <strong>{wonTotal}</strong> / {totalAll} leads</span>
+            <div className="h-4 w-px bg-emerald-300 dark:bg-emerald-700" />
+            <span className="text-xs">Premium: <strong>₹{wonPremium.toLocaleString("en-IN")}</strong></span>
+          </div>
+        );
+      })()}
+
       {/* Search */}
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
