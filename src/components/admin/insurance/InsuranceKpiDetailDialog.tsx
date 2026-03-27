@@ -17,9 +17,10 @@ interface Props {
   monthWiseConversion: { month: string; total: number; won: number; rate: string; renewals: number; rollovers: number }[];
 }
 
-function normalizeStage(stage?: string | null, status?: string | null): string {
+function normalizeStage(stage?: string | null, status?: string | null, client?: Pick<Client, "current_policy_number"> | null): string {
   const s = (stage || status || "new_lead").toLowerCase().replace(/[\s-]+/g, "_");
   if (["won", "policy_issued", "closed", "converted"].includes(s)) return "won";
+  if (client && client.current_policy_number && client.current_policy_number.trim()) return "won";
   if (s === "lost" || s === "not_interested") return "lost";
   return s;
 }
@@ -40,13 +41,13 @@ export function InsuranceKpiDetailDialog({ open, onOpenChange, kpiType, clients,
       case "total_leads": return clients;
       case "in_pipeline": {
         return clients.filter(c => {
-          const st = normalizeStage(c.pipeline_stage, c.lead_status);
+          const st = normalizeStage(c.pipeline_stage, c.lead_status, c);
           return st !== "won" && st !== "lost";
         });
       }
       case "won": {
         return clients.filter(c => {
-          const st = normalizeStage(c.pipeline_stage, c.lead_status);
+          const st = normalizeStage(c.pipeline_stage, c.lead_status, c);
           return st === "won";
         });
       }

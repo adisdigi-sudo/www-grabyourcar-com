@@ -111,13 +111,17 @@ const STAGE_MAP: Record<string, string> = {
   not_interested: "lost",
 };
 
-export const normalizeStage = (stage: string | null, leadStatus?: string | null): string => {
+export const normalizeStage = (stage: string | null, leadStatus?: string | null, client?: Pick<Client, "current_policy_number"> | null): string => {
   const normalizedStage = stage ? STAGE_MAP[stage] : undefined;
   const normalizedLeadStatus = leadStatus ? STAGE_MAP[leadStatus] : undefined;
 
   if (normalizedStage === "policy_issued" || normalizedLeadStatus === "policy_issued") return "policy_issued";
   if (normalizedLeadStatus === "won") return "won";
   if (normalizedStage === "won") return "won";
+
+  // If client has a policy number, they are won regardless of stage/status fields
+  if (client && client.current_policy_number && client.current_policy_number.trim()) return "policy_issued";
+
   if (normalizedLeadStatus === "lost") return "lost";
   if (normalizedStage) return normalizedStage;
   if (normalizedLeadStatus) return normalizedLeadStatus;
@@ -491,7 +495,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
       const uniqueLeads = new Map<string, Client>();
 
     for (const client of clients) {
-      const stage = normalizeStage(client.pipeline_stage, client.lead_status);
+      const stage = normalizeStage(client.pipeline_stage, client.lead_status, client);
       if (stage === "policy_issued") continue;
 
         const dedupeKey = getClientIdentityKey(client);
@@ -502,7 +506,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
           continue;
       }
 
-        const existingStage = normalizeStage(existing.pipeline_stage, existing.lead_status);
+        const existingStage = normalizeStage(existing.pipeline_stage, existing.lead_status, existing);
         if (["policy_issued", "won"].includes(stage) || (!["policy_issued", "won"].includes(existingStage) && new Date(client.updated_at).getTime() >= new Date(existing.updated_at).getTime())) {
           uniqueLeads.set(dedupeKey, client);
         }
@@ -516,7 +520,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
     const counts: Record<string, number> = {};
     PIPELINE_STAGES.forEach(s => { counts[s.value] = 0; });
     pipelineClients.forEach(c => {
-      const stage = normalizeStage(c.pipeline_stage, c.lead_status);
+      const stage = normalizeStage(c.pipeline_stage, c.lead_status, c);
       if (stage === "lost" && c.retarget_status === "scheduled") return;
       if (counts[stage] !== undefined) counts[stage]++;
     });
@@ -530,8 +534,8 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
       : selectedStage === "retarget"
         ? pipelineClients.filter(c => c.retarget_status === "scheduled")
         : selectedStage === "lost"
-          ? pipelineClients.filter(c => normalizeStage(c.pipeline_stage, c.lead_status) === "lost" && c.retarget_status !== "scheduled")
-          : pipelineClients.filter(c => normalizeStage(c.pipeline_stage, c.lead_status) === selectedStage);
+          ? pipelineClients.filter(c => normalizeStage(c.pipeline_stage, c.lead_status, c) === "lost" && c.retarget_status !== "scheduled")
+          : pipelineClients.filter(c => normalizeStage(c.pipeline_stage, c.lead_status, c) === selectedStage);
     if (search.trim()) {
       const s = search.toLowerCase();
       result = result.filter(c =>
@@ -779,7 +783,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                     <p className="text-sm">No leads found</p>
                   </TableCell></TableRow>
                 ) : filtered.map((client, idx) => {
-                  const normStage = normalizeStage(client.pipeline_stage, client.lead_status);
+                  const normStage = normalizeStage(client.pipeline_stage, client.lead_status, client);
                   const stage = ALL_STAGES.find(s => s.value === normStage) || PIPELINE_STAGES[0];
                   const phone = displayPhone(client.phone);
                   const daysToExpiry = client.policy_expiry_date ? differenceInDays(new Date(client.policy_expiry_date), new Date()) : null;
