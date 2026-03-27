@@ -200,6 +200,28 @@ export function InsuranceAddPolicyForm({ onSuccess }: { onSuccess?: () => void }
       }).select("id").single();
       if (policyErr) throw policyErr;
 
+      const bookingDate = form.start_date || new Date().toISOString().split("T")[0];
+
+      await supabase
+        .from("insurance_clients")
+        .update({
+          current_policy_number: form.policy_number,
+          current_policy_type: form.policy_type,
+          current_insurer: form.insurer || "Unknown",
+          current_premium: form.premium_amount ? Number(form.premium_amount) : null,
+          policy_start_date: form.start_date || bookingDate,
+          policy_expiry_date: form.expiry_date || null,
+          booking_date: bookingDate,
+          lead_status: "won",
+          pipeline_stage: "policy_issued",
+          renewal_reminder_set: Boolean(form.expiry_date),
+          renewal_reminder_date: form.expiry_date || null,
+          incentive_eligible: true,
+          journey_last_event: "policy_issued",
+          journey_last_event_at: new Date().toISOString(),
+        } as any)
+        .eq("id", finalClientId);
+
       // Upload document if provided
       if (docFile && newPolicy) {
         const docUrl = await uploadDocument(newPolicy.id);

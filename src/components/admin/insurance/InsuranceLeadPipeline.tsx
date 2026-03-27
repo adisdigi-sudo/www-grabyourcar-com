@@ -998,21 +998,6 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                         }
                         setSavingEdit(true);
                         try {
-                          const updates: Record<string, any> = {
-                            customer_name: editFields.customer_name?.trim() || null,
-                            phone: editFields.phone || selectedClient.phone,
-                            email: editFields.email?.trim() || null,
-                            city: editFields.city?.trim() || null,
-                            vehicle_number: editFields.vehicle_number?.trim() || null,
-                            vehicle_make: editFields.vehicle_make?.trim() || null,
-                            vehicle_model: editFields.vehicle_model?.trim() || null,
-                            vehicle_year: editFields.vehicle_year ? Number(editFields.vehicle_year) : null,
-                            current_insurer: editFields.current_insurer?.trim() || null,
-                            current_policy_number: editFields.current_policy_number?.trim() || null,
-                            current_premium: editFields.current_premium ? Number(editFields.current_premium) : null,
-                            notes: editFields.notes?.trim() || null,
-                          };
-
                           const normalizedStage = normalizeStage(selectedClient.pipeline_stage, selectedClient.lead_status);
                           const fallbackBookingDate =
                             selectedClient.booking_date ||
