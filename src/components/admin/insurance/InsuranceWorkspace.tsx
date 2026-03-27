@@ -764,10 +764,43 @@ export function InsuranceWorkspace() {
               if (existingPolicy?.id) {
                 await supabase.from("insurance_policies").update(policyPayload).eq("id", existingPolicy.id);
               } else {
-                await supabase.from("insurance_policies").insert({
-                  ...policyPayload,
-                  renewal_count: businessType.toLowerCase() === "rollover" ? 1 : 0,
-                } as any);
+                // Check for existing policy with same client + policy_number to prevent duplicates
+                const { data: existingDup } = await supabase
+                  .from("insurance_policies")
+                  .select("id")
+                  .eq("client_id", clientId)
+                  .eq("policy_number", policyNumber)
+                  .limit(1)
+                  .maybeSingle();
+
+                if (existingDup?.id) {
+                  // Update existing instead of inserting duplicate
+                  await supabase.from("insurance_policies").update(policyPayload).eq("id", existingDup.id);
+                  policyByNumber.set(policyNumber, { id: existingDup.id, client_id: clientId, policy_number: policyNumber });
+                } else {
+                  // Also check for any active policy for same client to prevent vehicle-based duplicates
+                  const { data: activeForClient } = await supabase
+                    .from("insurance_policies")
+                    .select("id")
+                    .eq("client_id", clientId)
+                    .eq("status", "active")
+                    .limit(1)
+                    .maybeSingle();
+
+                  if (activeForClient?.id) {
+                    // Update the existing active policy rather than creating a new one
+                    await supabase.from("insurance_policies").update(policyPayload).eq("id", activeForClient.id);
+                    policyByNumber.set(policyNumber, { id: activeForClient.id, client_id: clientId, policy_number: policyNumber });
+                  } else {
+                    const { data: newPol } = await supabase.from("insurance_policies").insert({
+                      ...policyPayload,
+                      renewal_count: businessType.toLowerCase() === "rollover" ? 1 : 0,
+                    } as any).select("id").maybeSingle();
+                    if (newPol?.id) {
+                      policyByNumber.set(policyNumber, { id: newPol.id, client_id: clientId, policy_number: policyNumber });
+                    }
+                  }
+                }
               }
             }
           }
