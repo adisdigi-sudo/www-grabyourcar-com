@@ -329,9 +329,15 @@ export function InsuranceWorkspace() {
       {activeView === "renewals" && <InsuranceComingRenewals policies={runningPolicies as PolicyRecord[]} />}
       {activeView === "overdue" && <InsuranceOverdueRenewals policies={overduePolicies as PolicyRecord[]} clients={clients} />}
       {activeView === "bulk_tools" && <BulkRenewalQuoteGenerator onClose={() => setActiveView("pipeline")} />}
-      {activeView === "calculator" && <InsurancePremiumCalculator />}
       {activeView === "renewal_campaign" && <InsuranceRenewalCampaign />}
       {activeView === "performance" && <InsurancePerformance clients={clients} policies={allPolicies as PolicyRecord[]} />}
+
+      <Dialog open={showCalcDialog} onOpenChange={setShowCalcDialog}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><Calculator className="h-5 w-5 text-primary" /> Premium Calculator</DialogTitle></DialogHeader>
+          <InsurancePremiumCalculator onQuoteSaved={() => queryClient.invalidateQueries({ queryKey: ["ins-bulk-quotes"] })} />
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showAddLead} onOpenChange={setShowAddLead}>
         <DialogContent className="max-w-md">
