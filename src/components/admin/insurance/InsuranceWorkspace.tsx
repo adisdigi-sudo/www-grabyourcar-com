@@ -217,7 +217,6 @@ export function InsuranceWorkspace() {
     { key: "renewals" as const, label: "Coming Renewals", icon: CalendarClock, count: renewalsDue, urgent: urgentRenewals > 0 },
     { key: "overdue" as const, label: "Overdue", icon: AlertTriangle, count: overdueCount, urgent: overdueCount > 0 },
     { key: "bulk_tools" as const, label: "Bulk Tools", icon: Wrench, count: 0, urgent: false },
-    { key: "calculator" as const, label: "Calculator", icon: Calculator, count: 0, urgent: false },
     { key: "renewal_campaign" as const, label: "Renewal Campaign", icon: Rocket, count: 0, urgent: false },
     { key: "performance" as const, label: "Performance", icon: TrendingUp, count: wonCount, urgent: false },
   ];
