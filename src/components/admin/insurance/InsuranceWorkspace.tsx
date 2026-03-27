@@ -126,10 +126,10 @@ export function InsuranceWorkspace() {
   );
 
   const isWon = (c: Client) => {
-    const stage = normalizeStage(c.pipeline_stage, c.lead_status);
+    const stage = normalizeStage(c.pipeline_stage, c.lead_status, c);
     return stage === "won" || stage === "policy_issued";
   };
-  const isLost = (c: Client) => normalizeStage(c.pipeline_stage, c.lead_status) === "lost";
+  const isLost = (c: Client) => normalizeStage(c.pipeline_stage, c.lead_status, c) === "lost";
 
   const policyBookPolicies = useMemo(() => {
     const existingClientIds = new Set(

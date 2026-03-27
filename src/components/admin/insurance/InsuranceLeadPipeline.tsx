@@ -783,7 +783,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                     <p className="text-sm">No leads found</p>
                   </TableCell></TableRow>
                 ) : filtered.map((client, idx) => {
-                  const normStage = normalizeStage(client.pipeline_stage, client.lead_status);
+                  const normStage = normalizeStage(client.pipeline_stage, client.lead_status, client);
                   const stage = ALL_STAGES.find(s => s.value === normStage) || PIPELINE_STAGES[0];
                   const phone = displayPhone(client.phone);
                   const daysToExpiry = client.policy_expiry_date ? differenceInDays(new Date(client.policy_expiry_date), new Date()) : null;
