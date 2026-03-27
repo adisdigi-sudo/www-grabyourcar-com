@@ -1102,42 +1102,25 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                     )}
                     <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowQuoteModal(true)}><FileText className="h-3.5 w-3.5" /> Quote</Button>
                     <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowUploadPolicy(true)}><Upload className="h-3.5 w-3.5" /> Upload Policy</Button>
-                    <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowWonDialog(true)}><CheckCircle2 className="h-3.5 w-3.5" /> Create / Fix Policy</Button>
+                    <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setPendingMoveClient(selectedClient); setShowWonDialog(true); }}><CheckCircle2 className="h-3.5 w-3.5" /> Create / Fix Policy</Button>
                   </div>
-
-                  {/* Move to Stage */}
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase">Move to Stage</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {PIPELINE_STAGES.filter(s => s.value !== normStage).map(s => {
-                        const SIcon = s.icon;
-                        return (
-                          <Button key={s.value} size="sm" variant="outline" className={cn("text-xs gap-1", s.text, "border", s.border)}
-                            onClick={() => handleMove(selectedClient, s.value)}>
-                            <SIcon className="h-3 w-3" /> {s.label}
-                          </Button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              </>
-            );
-          })()}
-        </DialogContent>
-      </Dialog>
-
+...
       {/* ── WON POLICY DIALOG ── */}
       <WonPolicyDialog
         open={showWonDialog}
-        onOpenChange={setShowWonDialog}
-        client={pendingMoveClient}
+        onOpenChange={(open) => {
+          setShowWonDialog(open);
+          if (!open) setPendingMoveClient(null);
+        }}
+        client={pendingMoveClient || selectedClient}
         onSuccess={() => {
+          const targetClient = pendingMoveClient || selectedClient;
           queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
           queryClient.invalidateQueries({ queryKey: ["ins-policies-book"] });
           setShowWonDialog(false);
-          if (pendingMoveClient) {
-            setSelectedClient(pendingMoveClient);
+          setPendingMoveClient(null);
+          if (targetClient) {
+            setSelectedClient(targetClient);
             setShowUploadPolicy(true);
           } else {
             setSelectedClient(null);
