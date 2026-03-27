@@ -200,9 +200,9 @@ export function InsuranceRenewalCampaign() {
 
         const { error } = await supabase.functions.invoke("whatsapp-send", {
           body: {
-            phone: `91${cleanPhone}`,
+            to: `91${cleanPhone}`,
             message,
-            type: "text",
+            messageType: "text",
           },
         });
 
