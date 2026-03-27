@@ -89,7 +89,7 @@ export function InsuranceWorkspace() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("insurance_clients")
-        .select("id, customer_name, phone, email, city, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_insurer, current_policy_type, current_premium, ncb_percentage, previous_claim, policy_expiry_date, policy_start_date, current_policy_number, lead_source, lead_status, assigned_executive, priority, pipeline_stage, contact_attempts, quote_amount, quote_insurer, lost_reason, follow_up_date, follow_up_time, call_status, call_remarks, renewal_reminder_set, renewal_reminder_date, incentive_eligible, notes, retarget_status, journey_last_event, journey_last_event_at, picked_up_by, picked_up_at, booking_date, booked_by, overdue_reason, overdue_custom_reason, overdue_marked_at, created_at, updated_at")
+        .select("id, customer_name, phone, email, city, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_insurer, current_policy_type, current_premium, ncb_percentage, previous_claim, policy_expiry_date, policy_start_date, current_policy_number, lead_source, lead_status, assigned_executive, priority, pipeline_stage, contact_attempts, quote_amount, quote_insurer, lost_reason, follow_up_date, follow_up_time, call_status, call_remarks, renewal_reminder_set, renewal_reminder_date, incentive_eligible, notes, retarget_status, journey_last_event, journey_last_event_at, picked_up_by, picked_up_at, booking_date, booked_by, overdue_reason, overdue_custom_reason, overdue_marked_at, duplicate_count, is_duplicate, created_at, updated_at")
         .eq("is_legacy", false)
         .order("updated_at", { ascending: false })
         .order("created_at", { ascending: false })
@@ -262,12 +262,48 @@ export function InsuranceWorkspace() {
   const addLead = async () => {
     if (!newLead.phone.trim()) { toast.error("Phone is required"); return; }
     if (!newLead.customer_name.trim()) { toast.error("Name is required"); return; }
+
+    const cleanPhone = newLead.phone.trim().replace(/\D/g, "");
+    const cleanVehicle = newLead.vehicle_number.trim().replace(/\s+/g, "").toUpperCase() || null;
+
+    // Check for existing client by phone or vehicle number
+    let existingQuery = supabase.from("insurance_clients").select("id, customer_name, vehicle_number, duplicate_count").or(`phone.eq.${cleanPhone}`);
+    if (cleanVehicle) {
+      existingQuery = supabase.from("insurance_clients").select("id, customer_name, vehicle_number, duplicate_count")
+        .or(`phone.eq.${cleanPhone},vehicle_number.ilike.${cleanVehicle}`);
+    }
+    const { data: existing } = await existingQuery.limit(1);
+
+    if (existing && existing.length > 0) {
+      const dup = existing[0];
+      const newDupCount = (dup.duplicate_count || 0) + 1;
+      await supabase.from("insurance_clients").update({
+        duplicate_count: newDupCount,
+        is_duplicate: true,
+        customer_name: newLead.customer_name.trim() || dup.customer_name,
+        email: newLead.email.trim() || undefined,
+        city: newLead.city.trim() || undefined,
+        vehicle_number: cleanVehicle || dup.vehicle_number,
+        vehicle_make: newLead.vehicle_make.trim() || undefined,
+        vehicle_model: newLead.vehicle_model.trim() || undefined,
+        notes: newLead.notes.trim() || undefined,
+        updated_at: new Date().toISOString(),
+      }).eq("id", dup.id);
+      toast.info(`⚠️ Duplicate lead detected (Entry #${newDupCount + 1}) — existing record updated`, {
+        description: `${dup.customer_name} • ${dup.vehicle_number || cleanPhone}`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
+      setShowAddLead(false);
+      setNewLead({ customer_name: "", phone: "", email: "", city: "", vehicle_number: "", vehicle_make: "", vehicle_model: "", lead_source: "Manual", notes: "" });
+      return;
+    }
+
     const { error } = await supabase.from("insurance_clients").insert({
       customer_name: newLead.customer_name.trim(),
       phone: newLead.phone.trim(),
       email: newLead.email.trim() || null,
       city: newLead.city.trim() || null,
-      vehicle_number: newLead.vehicle_number.trim() || null,
+      vehicle_number: cleanVehicle,
       vehicle_make: newLead.vehicle_make.trim() || null,
       vehicle_model: newLead.vehicle_model.trim() || null,
       lead_source: newLead.lead_source || "Manual",
@@ -275,6 +311,8 @@ export function InsuranceWorkspace() {
       pipeline_stage: "new_lead",
       lead_status: "new",
       priority: "medium",
+      duplicate_count: 0,
+      is_duplicate: false,
     });
     if (error) { toast.error(error.message); return; }
     toast.success("✅ New lead added!");

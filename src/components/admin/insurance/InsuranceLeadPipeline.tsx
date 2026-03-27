@@ -70,6 +70,8 @@ export type Client = {
   picked_up_at: string | null;
   booking_date: string | null;
   booked_by: string | null;
+  duplicate_count: number | null;
+  is_duplicate: boolean | null;
   updated_at: string;
   created_at: string;
 };
@@ -263,6 +265,21 @@ function WonPolicyDialog({
       const resolvedExpiryDate = !expiryDate || expiryDate < resolvedStartDate ? buildExpiryDate(resolvedStartDate) : expiryDate;
       const nextStartDate = format(resolvedStartDate, "yyyy-MM-dd");
       const nextExpiryDate = format(resolvedExpiryDate, "yyyy-MM-dd");
+
+      // Cross-client vehicle dedup: check if this policy number already exists for another client
+      const { data: existingPolicyByNumber } = await supabase
+        .from("insurance_policies")
+        .select("id, client_id, policy_number")
+        .eq("policy_number", nextPolicyNumber)
+        .eq("status", "active")
+        .neq("client_id", client.id)
+        .limit(1);
+
+      if (existingPolicyByNumber && existingPolicyByNumber.length > 0) {
+        toast.error("⚠️ This policy number already exists for another client. Duplicate not allowed.");
+        setSaving(false);
+        return;
+      }
 
       const { data: activePolicies, error: activePoliciesError } = await supabase
         .from("insurance_policies")
@@ -768,7 +785,14 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                             <User className="h-3 w-3 text-white" />
                           </div>
                           <div className="min-w-0 flex flex-col gap-0.5">
-                            <p className="font-semibold text-xs leading-tight truncate">{client.customer_name || "Unknown"}</p>
+                            <p className="font-semibold text-xs leading-tight truncate flex items-center gap-1">
+                              {client.customer_name || "Unknown"}
+                              {(client.duplicate_count ?? 0) > 0 && (
+                                <Badge className="bg-orange-100 text-orange-700 border-orange-300 text-[8px] px-1 py-0 h-3.5 shrink-0">
+                                  Dup {(client.duplicate_count ?? 0) + 1}
+                                </Badge>
+                              )}
+                            </p>
                             <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
                               <Select
                                 value={normStage}
@@ -942,6 +966,9 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                       <Badge className="bg-violet-100 text-violet-700 border-violet-200">🔄 Retarget Next Year</Badge>
                     )}
                     {selectedClient.incentive_eligible && <Badge className="bg-amber-100 text-amber-700 border-amber-200">⭐ Incentive</Badge>}
+                    {(selectedClient.duplicate_count ?? 0) > 0 && (
+                      <Badge className="bg-orange-100 text-orange-700 border-orange-300">⚠️ Duplicate Entry #{(selectedClient.duplicate_count ?? 0) + 1}</Badge>
+                    )}
                   </div>
 
                   {/* Editable Lead Details */}
