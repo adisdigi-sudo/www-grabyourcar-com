@@ -7,11 +7,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Calculator, Car, Shield, Percent, IndianRupee, Zap,
-  ChevronDown, ChevronUp, Info, CheckCircle2, Copy, Download
+  ChevronDown, ChevronUp, Info, Copy, Send, FileText
 } from "lucide-react";
 import { toast } from "sonner";
+import jsPDF from "jspdf";
 
 // ── Zone logic ──
 const METRO_CITIES = ["delhi", "delhi ncr", "ncr", "new delhi", "noida", "gurgaon", "gurugram", "faridabad", "ghaziabad", "bangalore", "bengaluru"];
@@ -62,8 +64,11 @@ type Addon = typeof DEFAULT_ADDONS[number];
 
 const fmt = (n: number) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n);
 
-export function InsurancePremiumCalculator() {
-  // Inputs
+interface Props {
+  onQuoteSaved?: () => void;
+}
+
+export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
   const [idv, setIdv] = useState<string>("");
   const [cc, setCc] = useState<string>("");
   const [city, setCity] = useState<string>("Delhi NCR");
@@ -73,6 +78,13 @@ export function InsurancePremiumCalculator() {
   const [customAddonName, setCustomAddonName] = useState("");
   const [customAddonPrice, setCustomAddonPrice] = useState("");
   const [showAddons, setShowAddons] = useState(true);
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [vehicleMake, setVehicleMake] = useState("");
+  const [vehicleModel, setVehicleModel] = useState("");
+  const [vehicleNumber, setVehicleNumber] = useState("");
+  const [vehicleYear, setVehicleYear] = useState<string>(String(new Date().getFullYear()));
+  const [isSaving, setIsSaving] = useState(false);
 
   const zone = getZone(city);
   const ccNum = parseInt(cc) || 0;
@@ -91,9 +103,7 @@ export function InsurancePremiumCalculator() {
     const netOD = odAfterDiscount - ncbDiscount;
 
     const tp = getTPPremium(ccNum);
-
     const addonTotal = addons.filter(a => a.enabled).reduce((s, a) => s + a.price, 0);
-
     const subtotal = netOD + tp + addonTotal;
     const gst = (subtotal * GST_RATE) / 100;
     const total = subtotal + gst;
@@ -123,10 +133,12 @@ export function InsurancePremiumCalculator() {
     toast.success(`Add-on "${newAddon.name}" added`);
   };
 
-  const copyQuote = () => {
-    if (!calc) return;
+  const getQuoteText = () => {
+    if (!calc) return "";
     const lines = [
       `🚗 Insurance Quote`,
+      customerName ? `Customer: ${customerName}` : null,
+      vehicleNumber ? `Vehicle: ${vehicleNumber}` : null,
       `IDV: ${fmt(idvNum)} | CC: ${ccNum} | Zone: ${zone} (${city})`,
       `──────────────────`,
       `Basic OD: ${fmt(calc.basicOD)} (${calc.odRate}%)`,
@@ -140,33 +152,222 @@ export function InsurancePremiumCalculator() {
       `GST (18%): ${fmt(calc.gst)}`,
       `✅ Total Premium: ${fmt(calc.total)}`,
     ].filter(Boolean).join("\n");
-    navigator.clipboard.writeText(lines);
+    return lines;
+  };
+
+  const copyQuote = () => {
+    if (!calc) return;
+    navigator.clipboard.writeText(getQuoteText());
     toast.success("Quote copied to clipboard!");
+  };
+
+  const generatePDF = () => {
+    if (!calc) return null;
+    const doc = new jsPDF();
+    const pageW = doc.internal.pageSize.getWidth();
+    let y = 20;
+
+    // Header
+    doc.setFillColor(16, 185, 129);
+    doc.rect(0, 0, pageW, 40, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(20);
+    doc.setFont("helvetica", "bold");
+    doc.text("Insurance Premium Quote", 15, 25);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Generated: ${new Date().toLocaleDateString("en-IN")}`, pageW - 15, 25, { align: "right" });
+    doc.text("GrabYourCar Insurance", pageW - 15, 32, { align: "right" });
+
+    y = 52;
+    doc.setTextColor(0, 0, 0);
+
+    // Customer Info
+    if (customerName || vehicleNumber) {
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text("Customer Details", 15, y);
+      y += 8;
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      if (customerName) { doc.text(`Name: ${customerName}`, 15, y); y += 6; }
+      if (customerPhone) { doc.text(`Phone: ${customerPhone}`, 15, y); y += 6; }
+      if (vehicleNumber) { doc.text(`Vehicle: ${vehicleNumber}`, 15, y); y += 6; }
+      if (vehicleMake || vehicleModel) { doc.text(`${vehicleMake} ${vehicleModel}`.trim(), 15, y); y += 6; }
+      y += 4;
+    }
+
+    // Vehicle & Pricing Summary
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("Vehicle & Pricing", 15, y);
+    y += 8;
+
+    const rows: [string, string][] = [
+      ["IDV (Insured Declared Value)", fmt(idvNum)],
+      ["Engine CC", `${ccNum}cc`],
+      ["Zone", `${zone} (${city})`],
+      ["", ""],
+      ["Basic OD Premium (" + calc.odRate + "%)", fmt(calc.basicOD)],
+    ];
+    if (discountPct > 0) rows.push(["OD Discount (" + discountPct + "%)", "-" + fmt(calc.odDiscount)]);
+    if (ncb > 0) rows.push(["NCB Discount (" + ncb + "%)", "-" + fmt(calc.ncbDiscount)]);
+    rows.push(["Net OD Premium", fmt(calc.netOD)]);
+    rows.push(["", ""]);
+    rows.push(["Third Party Premium", fmt(calc.tp)]);
+
+    if (calc.addonTotal > 0) {
+      rows.push(["", ""]);
+      rows.push(["ADD-ONS", ""]);
+      addons.filter(a => a.enabled).forEach(a => {
+        rows.push(["  " + a.name, fmt(a.price)]);
+      });
+      rows.push(["Total Add-ons", fmt(calc.addonTotal)]);
+    }
+
+    rows.push(["", ""]);
+    rows.push(["Subtotal", fmt(calc.subtotal)]);
+    rows.push(["GST (18%)", fmt(calc.gst)]);
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    rows.forEach(([label, value]) => {
+      if (!label && !value) { y += 3; return; }
+      if (label === "ADD-ONS") {
+        doc.setFont("helvetica", "bold");
+        doc.text(label, 15, y);
+        doc.setFont("helvetica", "normal");
+        y += 6;
+        return;
+      }
+      doc.text(label, 15, y);
+      doc.text(value, pageW - 15, y, { align: "right" });
+      y += 6;
+    });
+
+    // Grand Total
+    y += 4;
+    doc.setFillColor(16, 185, 129);
+    doc.roundedRect(12, y - 5, pageW - 24, 16, 3, 3, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("Total Premium", 18, y + 5);
+    doc.text(fmt(calc.total), pageW - 18, y + 5, { align: "right" });
+
+    // Footer
+    doc.setTextColor(150, 150, 150);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    const footerY = doc.internal.pageSize.getHeight() - 15;
+    doc.text("This is a system-generated quote. Final premium may vary based on insurer underwriting.", 15, footerY);
+    doc.text("© GrabYourCar Insurance", pageW - 15, footerY, { align: "right" });
+
+    return doc;
+  };
+
+  const downloadPDF = () => {
+    const doc = generatePDF();
+    if (!doc) return;
+    const fileName = `Quote_${customerName || "Customer"}_${new Date().toISOString().slice(0, 10)}.pdf`;
+    doc.save(fileName);
+    toast.success("PDF downloaded!");
+  };
+
+  const saveAndShareQuote = async (method: "whatsapp" | "pdf_only") => {
+    if (!calc) return;
+    setIsSaving(true);
+    try {
+      // Save to bulk_renewal_quotes
+      const enabledAddons = addons.filter(a => a.enabled).map(a => a.name);
+      const { error } = await supabase.from("bulk_renewal_quotes").insert({
+        customer_name: customerName || "Manual Quote",
+        phone: customerPhone || null,
+        city: city || null,
+        vehicle_make: vehicleMake || "Unknown",
+        vehicle_model: vehicleModel || "Model",
+        vehicle_number: vehicleNumber || null,
+        vehicle_year: parseInt(vehicleYear) || new Date().getFullYear(),
+        fuel_type: "Petrol",
+        insurance_company: "Calculator Quote",
+        policy_type: "Comprehensive",
+        idv: idvNum,
+        basic_od: Math.round(calc.basicOD),
+        od_discount: Math.round(calc.odDiscount),
+        ncb_discount: Math.round(calc.ncbDiscount),
+        third_party: Math.round(calc.tp),
+        secure_premium: Math.round(calc.total),
+        addon_premium: Math.round(calc.addonTotal),
+        addons: enabledAddons,
+        status: method === "whatsapp" ? "sent" : "draft",
+        batch_label: `Calculator-${new Date().toISOString().slice(0, 10)}`,
+        notes: `Zone: ${zone} | OD Discount: ${discountPct}% | NCB: ${ncb}% | GST: ${fmt(calc.gst)}`,
+        pdf_generated: true,
+        pdf_generated_at: new Date().toISOString(),
+        whatsapp_sent: method === "whatsapp",
+        whatsapp_sent_at: method === "whatsapp" ? new Date().toISOString() : null,
+      });
+
+      if (error) throw error;
+
+      onQuoteSaved?.();
+
+      if (method === "whatsapp") {
+        const quoteText = getQuoteText();
+        const phone = customerPhone?.replace(/\D/g, "") || "";
+        const waPhone = phone.startsWith("91") ? phone : `91${phone}`;
+        const waUrl = `https://wa.me/${waPhone}?text=${encodeURIComponent(quoteText)}`;
+        window.open(waUrl, "_blank");
+        toast.success("Quote saved & WhatsApp opened!");
+      } else {
+        downloadPDF();
+        toast.success("Quote saved & PDF generated!");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save quote");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
-            <Calculator className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <h2 className="text-lg font-heading font-bold text-foreground">Premium Calculator</h2>
-            <p className="text-xs text-muted-foreground">Auto-calculate OD + TP + Add-ons + GST</p>
-          </div>
-        </div>
-        {calc && (
-          <Button size="sm" variant="outline" onClick={copyQuote} className="gap-1.5">
-            <Copy className="h-3.5 w-3.5" /> Copy Quote
-          </Button>
-        )}
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         {/* ── LEFT: Inputs ── */}
         <div className="lg:col-span-2 space-y-4">
+          {/* Customer Info */}
+          <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+            <div className="flex items-center gap-2 mb-1">
+              <Info className="h-4 w-4 text-primary" />
+              <span className="text-sm font-bold text-foreground">Customer Info</span>
+              <Badge variant="secondary" className="ml-auto text-[10px]">For Quote</Badge>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Name</Label>
+                <Input placeholder="Customer name" value={customerName} onChange={e => setCustomerName(e.target.value)} className="h-8 text-sm mt-1" />
+              </div>
+              <div>
+                <Label className="text-xs">Phone</Label>
+                <Input placeholder="Mobile" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} className="h-8 text-sm mt-1" />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <Label className="text-xs">Vehicle No.</Label>
+                <Input placeholder="HR26XX1234" value={vehicleNumber} onChange={e => setVehicleNumber(e.target.value)} className="h-8 text-sm mt-1" />
+              </div>
+              <div>
+                <Label className="text-xs">Make</Label>
+                <Input placeholder="Maruti" value={vehicleMake} onChange={e => setVehicleMake(e.target.value)} className="h-8 text-sm mt-1" />
+              </div>
+              <div>
+                <Label className="text-xs">Model</Label>
+                <Input placeholder="Swift" value={vehicleModel} onChange={e => setVehicleModel(e.target.value)} className="h-8 text-sm mt-1" />
+              </div>
+            </div>
+          </div>
+
           {/* Vehicle Details Card */}
           <div className="rounded-xl border border-border bg-card p-4 space-y-3">
             <div className="flex items-center gap-2 mb-1">
@@ -179,25 +380,13 @@ export function InsurancePremiumCalculator() {
               <Label className="text-xs">IDV (Insured Declared Value)</Label>
               <div className="relative mt-1">
                 <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                <Input
-                  type="number"
-                  placeholder="e.g. 500000"
-                  value={idv}
-                  onChange={e => setIdv(e.target.value)}
-                  className="pl-8 h-9 text-sm"
-                />
+                <Input type="number" placeholder="e.g. 500000" value={idv} onChange={e => setIdv(e.target.value)} className="pl-8 h-9 text-sm" />
               </div>
             </div>
 
             <div>
               <Label className="text-xs">Engine CC</Label>
-              <Input
-                type="number"
-                placeholder="e.g. 1199"
-                value={cc}
-                onChange={e => setCc(e.target.value)}
-                className="h-9 text-sm mt-1"
-              />
+              <Input type="number" placeholder="e.g. 1199" value={cc} onChange={e => setCc(e.target.value)} className="h-9 text-sm mt-1" />
               {ccNum > 0 && (
                 <p className="text-[10px] text-muted-foreground mt-1">
                   TP: {ccNum < 1000 ? "< 1000cc → ₹2,094" : ccNum <= 1500 ? "1000-1500cc → ₹3,416" : "> 1500cc → ₹7,897"}
@@ -207,12 +396,7 @@ export function InsurancePremiumCalculator() {
 
             <div>
               <Label className="text-xs">City / RTO Zone</Label>
-              <Input
-                placeholder="e.g. Delhi NCR, Bangalore, Jaipur"
-                value={city}
-                onChange={e => setCity(e.target.value)}
-                className="h-9 text-sm mt-1"
-              />
+              <Input placeholder="e.g. Delhi NCR, Bangalore, Jaipur" value={city} onChange={e => setCity(e.target.value)} className="h-9 text-sm mt-1" />
               <p className="text-[10px] text-muted-foreground mt-1">
                 {zone === "A" ? "🏙 Metro (Delhi NCR / Bangalore)" : "🌍 Non-Metro"} — OD Rate: {ccNum > 1500 ? OD_RATES[zone].above1500 : OD_RATES[zone].upto1500}%
               </p>
@@ -228,24 +412,13 @@ export function InsurancePremiumCalculator() {
 
             <div>
               <Label className="text-xs">OD Discount (%)</Label>
-              <Input
-                type="number"
-                placeholder="0"
-                min={0}
-                max={100}
-                value={discount}
-                onChange={e => setDiscount(e.target.value)}
-                className="h-9 text-sm mt-1"
-              />
-              <p className="text-[10px] text-muted-foreground mt-1">Deal-specific discount on OD premium</p>
+              <Input type="number" placeholder="0" min={0} max={100} value={discount} onChange={e => setDiscount(e.target.value)} className="h-9 text-sm mt-1" />
             </div>
 
             <div>
               <Label className="text-xs">No Claim Bonus (NCB)</Label>
               <Select value={String(ncb)} onValueChange={v => setNcb(Number(v))}>
-                <SelectTrigger className="h-9 text-sm mt-1">
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger className="h-9 text-sm mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {NCB_OPTIONS.map(o => (
                     <SelectItem key={o.value} value={String(o.value)}>{o.label}</SelectItem>
@@ -263,15 +436,10 @@ export function InsurancePremiumCalculator() {
 
           {/* Add-ons Card */}
           <div className="rounded-xl border border-border bg-card p-4 space-y-3">
-            <button
-              onClick={() => setShowAddons(!showAddons)}
-              className="flex items-center gap-2 w-full"
-            >
+            <button onClick={() => setShowAddons(!showAddons)} className="flex items-center gap-2 w-full">
               <Zap className="h-4 w-4 text-primary" />
               <span className="text-sm font-bold text-foreground">Add-ons</span>
-              <Badge variant="outline" className="ml-1 text-[10px]">
-                {addons.filter(a => a.enabled).length} selected
-              </Badge>
+              <Badge variant="outline" className="ml-1 text-[10px]">{addons.filter(a => a.enabled).length} selected</Badge>
               <div className="ml-auto">
                 {showAddons ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </div>
@@ -279,52 +447,20 @@ export function InsurancePremiumCalculator() {
 
             <AnimatePresence>
               {showAddons && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="space-y-2 overflow-hidden"
-                >
+                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="space-y-2 overflow-hidden">
                   {addons.map(addon => (
-                    <div key={addon.id} className={cn(
-                      "flex items-center gap-3 p-2 rounded-lg border transition-colors",
-                      addon.enabled ? "border-primary/30 bg-primary/5" : "border-border/50"
-                    )}>
-                      <Switch
-                        checked={addon.enabled}
-                        onCheckedChange={() => toggleAddon(addon.id)}
-                        className="scale-75"
-                      />
-                      <span className={cn("text-xs flex-1", addon.enabled ? "font-semibold text-foreground" : "text-muted-foreground")}>
-                        {addon.name}
-                      </span>
+                    <div key={addon.id} className={cn("flex items-center gap-3 p-2 rounded-lg border transition-colors", addon.enabled ? "border-primary/30 bg-primary/5" : "border-border/50")}>
+                      <Switch checked={addon.enabled} onCheckedChange={() => toggleAddon(addon.id)} className="scale-75" />
+                      <span className={cn("text-xs flex-1", addon.enabled ? "font-semibold text-foreground" : "text-muted-foreground")}>{addon.name}</span>
                       <div className="relative w-20">
                         <IndianRupee className="absolute left-1.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                        <Input
-                          type="number"
-                          value={addon.price}
-                          onChange={e => updateAddonPrice(addon.id, parseFloat(e.target.value) || 0)}
-                          className="h-7 text-xs pl-5 pr-1"
-                        />
+                        <Input type="number" value={addon.price} onChange={e => updateAddonPrice(addon.id, parseFloat(e.target.value) || 0)} className="h-7 text-xs pl-5 pr-1" />
                       </div>
                     </div>
                   ))}
-
-                  {/* Custom add-on */}
                   <div className="flex gap-2 pt-2 border-t border-border/40">
-                    <Input
-                      placeholder="Add-on name"
-                      value={customAddonName}
-                      onChange={e => setCustomAddonName(e.target.value)}
-                      className="h-7 text-xs flex-1"
-                    />
-                    <Input
-                      type="number"
-                      placeholder="Price"
-                      value={customAddonPrice}
-                      onChange={e => setCustomAddonPrice(e.target.value)}
-                      className="h-7 text-xs w-20"
-                    />
+                    <Input placeholder="Add-on name" value={customAddonName} onChange={e => setCustomAddonName(e.target.value)} className="h-7 text-xs flex-1" />
+                    <Input type="number" placeholder="Price" value={customAddonPrice} onChange={e => setCustomAddonPrice(e.target.value)} className="h-7 text-xs w-20" />
                     <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={addCustomAddon}>+</Button>
                   </div>
                 </motion.div>
@@ -342,46 +478,32 @@ export function InsurancePremiumCalculator() {
               <p className="text-xs text-muted-foreground/60 mt-1">Premium will auto-calculate</p>
             </div>
           ) : (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="space-y-4 sticky top-4"
-            >
+            <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="space-y-4 sticky top-4">
               {/* Total Hero */}
               <div className="rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-background border border-primary/20 p-5">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-xs font-bold uppercase tracking-wider text-primary">Total Premium</span>
                   <Badge className="bg-primary/20 text-primary border-0 text-[10px]">Incl. 18% GST</Badge>
                 </div>
-                <div className="text-3xl md:text-4xl font-heading font-black text-foreground">
-                  {fmt(calc.total)}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Zone {zone} • {ccNum}cc • IDV {fmt(idvNum)}
-                </p>
+                <div className="text-3xl md:text-4xl font-heading font-black text-foreground">{fmt(calc.total)}</div>
+                <p className="text-xs text-muted-foreground mt-1">Zone {zone} • {ccNum}cc • IDV {fmt(idvNum)}</p>
               </div>
 
               {/* Breakdown */}
               <div className="rounded-xl border border-border bg-card divide-y divide-border">
-                {/* OD Section */}
                 <div className="p-4 space-y-2">
                   <div className="flex items-center gap-2 mb-2">
                     <Shield className="h-3.5 w-3.5 text-blue-500" />
                     <span className="text-xs font-bold text-foreground uppercase tracking-wide">Own Damage (OD)</span>
                   </div>
                   <Row label={`Basic OD (${calc.odRate}% of IDV)`} value={fmt(calc.basicOD)} />
-                  {discountPct > 0 && (
-                    <Row label={`OD Discount (${discountPct}%)`} value={`-${fmt(calc.odDiscount)}`} negative />
-                  )}
-                  {ncb > 0 && (
-                    <Row label={`NCB Discount (${ncb}%)`} value={`-${fmt(calc.ncbDiscount)}`} negative />
-                  )}
+                  {discountPct > 0 && <Row label={`OD Discount (${discountPct}%)`} value={`-${fmt(calc.odDiscount)}`} negative />}
+                  {ncb > 0 && <Row label={`NCB Discount (${ncb}%)`} value={`-${fmt(calc.ncbDiscount)}`} negative />}
                   <div className="pt-1 border-t border-dashed border-border/60">
                     <Row label="Net OD Premium" value={fmt(calc.netOD)} bold />
                   </div>
                 </div>
 
-                {/* TP Section */}
                 <div className="p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <Car className="h-3.5 w-3.5 text-green-500" />
@@ -391,7 +513,6 @@ export function InsurancePremiumCalculator() {
                   <Row label={`TP Premium (${ccNum < 1000 ? "<1000" : ccNum <= 1500 ? "1000-1500" : ">1500"}cc)`} value={fmt(calc.tp)} bold />
                 </div>
 
-                {/* Add-ons Section */}
                 {calc.addonTotal > 0 && (
                   <div className="p-4 space-y-2">
                     <div className="flex items-center gap-2 mb-2">
@@ -407,7 +528,6 @@ export function InsurancePremiumCalculator() {
                   </div>
                 )}
 
-                {/* Subtotal & GST */}
                 <div className="p-4 space-y-2">
                   <Row label="Subtotal" value={fmt(calc.subtotal)} />
                   <Row label="GST (18%)" value={fmt(calc.gst)} />
@@ -420,19 +540,30 @@ export function InsurancePremiumCalculator() {
                 </div>
               </div>
 
-              {/* Quick Actions */}
-              <div className="flex gap-2">
-                <Button size="sm" className="flex-1 gap-1.5" onClick={copyQuote}>
+              {/* Actions */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <Button size="sm" variant="outline" className="gap-1.5" onClick={copyQuote}>
                   <Copy className="h-3.5 w-3.5" /> Copy Quote
                 </Button>
-                <Button size="sm" variant="outline" className="flex-1 gap-1.5" onClick={() => {
-                  setIdv(""); setCc(""); setDiscount("0"); setNcb(0);
-                  setAddons(DEFAULT_ADDONS);
-                  toast.info("Calculator reset");
-                }}>
-                  Reset
+                <Button size="sm" variant="outline" className="gap-1.5" onClick={downloadPDF}>
+                  <FileText className="h-3.5 w-3.5" /> Download PDF
+                </Button>
+                <Button size="sm" className="gap-1.5" onClick={() => saveAndShareQuote("whatsapp")} disabled={isSaving}>
+                  <Send className="h-3.5 w-3.5" /> Share WhatsApp
+                </Button>
+                <Button size="sm" variant="secondary" className="gap-1.5" onClick={() => saveAndShareQuote("pdf_only")} disabled={isSaving}>
+                  <FileText className="h-3.5 w-3.5" /> Save & PDF
                 </Button>
               </div>
+
+              <Button size="sm" variant="ghost" className="w-full text-xs" onClick={() => {
+                setIdv(""); setCc(""); setDiscount("0"); setNcb(0);
+                setAddons(DEFAULT_ADDONS); setCustomerName(""); setCustomerPhone("");
+                setVehicleMake(""); setVehicleModel(""); setVehicleNumber("");
+                toast.info("Calculator reset");
+              }}>
+                Reset Calculator
+              </Button>
             </motion.div>
           )}
         </div>
