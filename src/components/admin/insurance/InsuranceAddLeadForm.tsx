@@ -65,13 +65,15 @@ export function InsuranceAddLeadForm({ onSuccess }: { onSuccess?: () => void }) 
         }).eq("id", dup.id);
 
         await supabase.from("insurance_activity_log").insert({
-          client_id: existing[0].id,
-          activity_type: "lead_created",
-          title: "Lead updated manually",
-          description: `Lead info updated via manual entry`,
+          client_id: dup.id,
+          activity_type: "duplicate_lead",
+          title: `Duplicate entry #${newDupCount + 1}`,
+          description: `Duplicate lead detected via manual entry. Vehicle: ${cleanVehicle || 'N/A'}, Phone: ${phone}`,
         });
 
-        toast.success("Existing client updated!");
+        toast.info(`⚠️ Duplicate lead (Entry #${newDupCount + 1}) — record updated`, {
+          description: `${dup.customer_name} • ${dup.vehicle_number || phone}`,
+        });
       } else {
         // Create new
         const { data: newClient } = await supabase.from("insurance_clients").insert({
