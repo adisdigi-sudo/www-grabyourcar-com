@@ -183,8 +183,11 @@ export function InsuranceWorkspace() {
       const status = (p.status || "").toLowerCase();
       if (!p.policy_number?.trim()) return false;
       if (["renewed", "lapsed", "cancelled", "lost"].includes(status)) return false;
-      if (!p.expiry_date) return true;
-      return new Date(p.expiry_date) >= today;
+      if (!p.expiry_date || !p.start_date) return true;
+      const expiry = new Date(p.expiry_date);
+      const start = new Date(p.start_date);
+      if (expiry < start) return true;
+      return expiry >= today;
     }), [policyBookPolicies, today.toDateString()]
   );
   const RESOLVED_STATUSES = ["renewed", "lapsed", "cancelled", "lost"];
