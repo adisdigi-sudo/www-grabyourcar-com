@@ -8,7 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SmartDatePicker } from "@/components/ui/smart-date-picker";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, subMonths } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Search, BookOpen, User, Download, Eye, CalendarIcon, Send, Upload } from "lucide-react";
 import { toast } from "sonner";
@@ -33,6 +33,7 @@ export type PolicyRecord = {
   source_label: string | null;
   renewal_count: number | null;
   previous_policy_id: string | null;
+  booking_date: string | null;
   created_at: string;
   updated_at?: string;
   insurance_clients: {
@@ -106,6 +107,7 @@ const sourceBadgeClass = (label: string) => {
 export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
   const [search, setSearch] = useState("");
   const [partnerFilter, setPartnerFilter] = useState("all");
+  const [periodFilter, setPeriodFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -135,12 +137,38 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
     let result = deduplicatedPolicies;
     if (partnerFilter !== "all") result = result.filter(p => p.insurer === partnerFilter);
 
+    // Period quick filter (uses booking_date or issued_date)
+    if (periodFilter !== "all") {
+      const now = new Date();
+      let pStart: Date, pEnd: Date;
+      if (periodFilter === "this_month") {
+        pStart = startOfMonth(now); pEnd = endOfMonth(now);
+      } else if (periodFilter === "last_month") {
+        const lm = subMonths(now, 1);
+        pStart = startOfMonth(lm); pEnd = endOfMonth(lm);
+      } else if (periodFilter === "this_week") {
+        pStart = startOfWeek(now, { weekStartsOn: 1 }); pEnd = endOfWeek(now, { weekStartsOn: 1 });
+      } else {
+        // month offset e.g. "-2", "-3"
+        const offset = parseInt(periodFilter);
+        const m = subMonths(now, Math.abs(offset));
+        pStart = startOfMonth(m); pEnd = endOfMonth(m);
+      }
+      result = result.filter(p => {
+        const d = p.booking_date || p.issued_date;
+        if (!d) return false;
+        const dt = new Date(d);
+        return dt >= pStart && dt <= pEnd;
+      });
+    }
+
     if (dateFrom || dateTo) {
       result = result.filter(p => {
-        if (!p.issued_date) return false;
-        const issuedAt = new Date(p.issued_date);
-        if (dateFrom && issuedAt < dateFrom) return false;
-        if (dateTo && issuedAt > dateTo) return false;
+        const d = p.booking_date || p.issued_date;
+        if (!d) return false;
+        const dt = new Date(d);
+        if (dateFrom && dt < dateFrom) return false;
+        if (dateTo && dt > dateTo) return false;
         return true;
       });
     }
@@ -160,7 +188,9 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
     }
 
     return result;
-  }, [deduplicatedPolicies, partnerFilter, search, dateFrom, dateTo]);
+  }, [deduplicatedPolicies, partnerFilter, periodFilter, search, dateFrom, dateTo]);
+
+  const totalPremium = useMemo(() => filtered.reduce((sum, p) => sum + (p.premium_amount || 0), 0), [filtered]);
 
   const toggleSelect = (id: string) => setSelectedIds(prev => {
     const next = new Set(prev);
@@ -198,11 +228,38 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
 
   return (
     <div className="space-y-4">
+      {/* Summary stats */}
+      <div className="flex gap-3 flex-wrap">
+        <div className="bg-muted/40 rounded-lg px-4 py-2 text-center">
+          <p className="text-lg font-bold text-foreground">{filtered.length}</p>
+          <p className="text-[10px] text-muted-foreground">Policies</p>
+        </div>
+        <div className="bg-muted/40 rounded-lg px-4 py-2 text-center">
+          <p className="text-lg font-bold text-foreground">₹{totalPremium.toLocaleString("en-IN")}</p>
+          <p className="text-[10px] text-muted-foreground">Total Premium</p>
+        </div>
+      </div>
+
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center flex-wrap">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Search name, phone, vehicle, policy no., insurer..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 h-9 text-sm" />
         </div>
+
+        <Select value={periodFilter} onValueChange={(v) => { setPeriodFilter(v); if (v !== "all") { setDateFrom(undefined); setDateTo(undefined); } }}>
+          <SelectTrigger className="w-[150px] h-9 text-xs"><SelectValue placeholder="All Time" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Time</SelectItem>
+            <SelectItem value="this_week">This Week</SelectItem>
+            <SelectItem value="this_month">This Month</SelectItem>
+            <SelectItem value="last_month">Last Month</SelectItem>
+            <SelectItem value="-2">{format(subMonths(new Date(), 2), "MMM yyyy")}</SelectItem>
+            <SelectItem value="-3">{format(subMonths(new Date(), 3), "MMM yyyy")}</SelectItem>
+            <SelectItem value="-4">{format(subMonths(new Date(), 4), "MMM yyyy")}</SelectItem>
+            <SelectItem value="-5">{format(subMonths(new Date(), 5), "MMM yyyy")}</SelectItem>
+          </SelectContent>
+        </Select>
+
         <Select value={partnerFilter} onValueChange={setPartnerFilter}>
           <SelectTrigger className="w-[160px] h-9 text-xs"><SelectValue placeholder="All Insurers" /></SelectTrigger>
           <SelectContent>
@@ -219,15 +276,15 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-3 space-y-2">
-            <p className="text-xs font-medium">Issued Date Range</p>
+            <p className="text-xs font-medium">Booking / Issued Date Range</p>
             <div className="flex gap-3">
               <div className="space-y-1">
                 <p className="text-[10px] text-muted-foreground">From</p>
-                <SmartDatePicker date={dateFrom} onSelect={setDateFrom} placeholder="Start date" yearRange={[new Date().getFullYear() - 3, new Date().getFullYear()]} />
+                <SmartDatePicker date={dateFrom} onSelect={(d) => { setDateFrom(d); setPeriodFilter("all"); }} placeholder="Start date" yearRange={[new Date().getFullYear() - 3, new Date().getFullYear()]} />
               </div>
               <div className="space-y-1">
                 <p className="text-[10px] text-muted-foreground">To</p>
-                <SmartDatePicker date={dateTo} onSelect={setDateTo} placeholder="End date" yearRange={[new Date().getFullYear() - 3, new Date().getFullYear()]} />
+                <SmartDatePicker date={dateTo} onSelect={(d) => { setDateTo(d); setPeriodFilter("all"); }} placeholder="End date" yearRange={[new Date().getFullYear() - 3, new Date().getFullYear()]} />
               </div>
             </div>
             {(dateFrom || dateTo) && <Button variant="ghost" size="sm" className="text-xs" onClick={() => { setDateFrom(undefined); setDateTo(undefined); }}>Clear</Button>}
@@ -255,7 +312,6 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
             <Send className="h-3.5 w-3.5" /> Bulk Send ({selectedIds.size})
           </Button>
         )}
-        <Badge variant="outline" className="text-xs">{filtered.length} policies</Badge>
       </div>
 
       <Card>
@@ -273,6 +329,7 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
                   <TableHead className="text-[10px] font-bold uppercase">Policy No.</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase">Type</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase">Premium</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase">Booking</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase">Issued</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase">Expiry</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase">Source</TableHead>
@@ -281,7 +338,7 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 ? (
-                  <TableRow><TableCell colSpan={13} className="text-center py-12 text-muted-foreground">
+                  <TableRow><TableCell colSpan={14} className="text-center py-12 text-muted-foreground">
                     <BookOpen className="h-8 w-8 mx-auto mb-2 opacity-30" />
                     <p className="text-sm">No policies found</p>
                   </TableCell></TableRow>
@@ -314,6 +371,7 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
                       <TableCell className="font-mono text-xs">{policy.policy_number || "—"}</TableCell>
                       <TableCell className="text-xs capitalize">{policy.policy_type || "—"}</TableCell>
                       <TableCell className="font-semibold text-xs">{policy.premium_amount ? `₹${policy.premium_amount.toLocaleString("en-IN")}` : "—"}</TableCell>
+                      <TableCell className="text-xs">{policy.booking_date ? format(new Date(policy.booking_date), "dd MMM yyyy") : "—"}</TableCell>
                       <TableCell className="text-xs">{policy.issued_date ? format(new Date(policy.issued_date), "dd MMM yyyy") : "—"}</TableCell>
                       <TableCell className="text-xs">{policy.expiry_date ? format(new Date(policy.expiry_date), "dd MMM yyyy") : "—"}</TableCell>
                       <TableCell>{sourceLabel(policy)}</TableCell>
