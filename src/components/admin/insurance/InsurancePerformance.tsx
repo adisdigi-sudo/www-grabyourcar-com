@@ -79,18 +79,26 @@ export function InsurancePerformance({ clients, policies }: InsurancePerformance
   const dedupedPolicies = useMemo(() => {
     const map = new Map<string, PolicyRecord>();
 
-    for (const policy of policies.filter((item) => Boolean(item.policy_number?.trim()))) {
-      const key = [
-        policy.client_id || "no-client",
-        policy.policy_number || "no-policy",
-        policy.start_date || policy.booking_date || policy.issued_date || policy.created_at,
-      ].join("::");
+    for (const policy of policies) {
+      if (!policy.policy_number?.trim()) continue;
+      const normalizedStatus = (policy.status || "").toLowerCase();
+      if (["renewed", "lapsed", "cancelled", "lost"].includes(normalizedStatus)) continue;
 
+      const vehicleKey = policy.insurance_clients?.vehicle_number?.replace(/\s+/g, "").toUpperCase();
+      const key = vehicleKey || [policy.client_id || "no-client", policy.policy_number].join("::");
       const current = map.get(key);
-      const currentStamp = current ? (current.updated_at || current.created_at) : "";
+
+      if (!current) {
+        map.set(key, policy);
+        continue;
+      }
+
+      const currentDate = getPolicyBookingDate(current) || current.updated_at || current.created_at;
+      const nextDate = getPolicyBookingDate(policy) || policy.updated_at || policy.created_at;
+      const currentStamp = current.updated_at || current.created_at;
       const nextStamp = policy.updated_at || policy.created_at;
 
-      if (!current || nextStamp > currentStamp) {
+      if (nextDate > currentDate || (nextDate === currentDate && nextStamp > currentStamp)) {
         map.set(key, policy);
       }
     }
@@ -237,16 +245,17 @@ export function InsurancePerformance({ clients, policies }: InsurancePerformance
         </h3>
         <div className="flex items-center gap-2">
           <Calendar className="h-4 w-4 text-muted-foreground" />
-          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-            <SelectTrigger className="w-[160px] h-9">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {monthOptions.map(m => (
-                <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <select
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            className="h-9 w-[160px] rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          >
+            {monthOptions.map((month) => (
+              <option key={month.value} value={month.value}>
+                {month.label}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 

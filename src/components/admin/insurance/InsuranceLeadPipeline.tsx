@@ -225,48 +225,47 @@ function WonPolicyDialog({
   const [policyNumber, setPolicyNumber] = useState("");
   const [insurer, setInsurer] = useState("");
   const [premium, setPremium] = useState("");
-  const [bookingDate, setBookingDate] = useState<Date | undefined>(new Date());
   const [startDate, setStartDate] = useState<Date | undefined>(new Date());
-  const [expiryDate, setExpiryDate] = useState<Date | undefined>();
   const [saving, setSaving] = useState(false);
 
   const buildExpiryDate = (start: Date) => {
     const next = new Date(start);
     next.setFullYear(next.getFullYear() + 1);
+    next.setHours(0, 0, 0, 0);
     next.setDate(next.getDate() - 1);
     return next;
   };
 
+  const expiryDate = useMemo(() => (startDate ? buildExpiryDate(startDate) : undefined), [startDate]);
+
   useEffect(() => {
     if (!open || !client) return;
 
-    const bookingBase = client.booking_date ? new Date(client.booking_date) : new Date();
-    const startBase = client.policy_start_date ? new Date(client.policy_start_date) : bookingBase;
-    const rawExpiryBase = client.policy_expiry_date ? new Date(client.policy_expiry_date) : null;
-    const expiryBase = rawExpiryBase && rawExpiryBase >= startBase ? rawExpiryBase : buildExpiryDate(startBase);
+    const startBase = client.policy_start_date
+      ? new Date(client.policy_start_date)
+      : client.booking_date
+        ? new Date(client.booking_date)
+        : new Date();
 
     setPolicyNumber(client.current_policy_number || "");
     setInsurer(client.current_insurer || client.quote_insurer || "");
     setPremium(client.current_premium ? String(client.current_premium) : client.quote_amount ? String(client.quote_amount) : "");
-    setBookingDate(bookingBase);
     setStartDate(startBase);
-    setExpiryDate(expiryBase);
   }, [open, client]);
 
   const handleSave = async () => {
-    if (!client || !policyNumber.trim() || !insurer.trim() || !expiryDate) {
+    if (!client || !policyNumber.trim() || !insurer.trim() || !startDate || !expiryDate) {
       toast.error("Fill all required fields");
       return;
     }
+
     setSaving(true);
     try {
       const nextPolicyNumber = policyNumber.trim().toUpperCase();
-      const resolvedStartDate = startDate || bookingDate || new Date();
-      const resolvedExpiryDate = !expiryDate || expiryDate < resolvedStartDate ? buildExpiryDate(resolvedStartDate) : expiryDate;
-      const nextStartDate = format(resolvedStartDate, "yyyy-MM-dd");
-      const nextExpiryDate = format(resolvedExpiryDate, "yyyy-MM-dd");
+      const nextStartDate = format(startDate, "yyyy-MM-dd");
+      const nextExpiryDate = format(expiryDate, "yyyy-MM-dd");
+      const nextBookingDate = nextStartDate;
 
-      // Cross-client vehicle dedup: check if this policy number already exists for another client
       const { data: existingPolicyByNumber } = await supabase
         .from("insurance_policies")
         .select("id, client_id, policy_number")
@@ -276,8 +275,7 @@ function WonPolicyDialog({
         .limit(1);
 
       if (existingPolicyByNumber && existingPolicyByNumber.length > 0) {
-        toast.error("⚠️ This policy number already exists for another client. Duplicate not allowed.");
-        setSaving(false);
+        toast.error("This policy number already exists for another client");
         return;
       }
 
@@ -310,11 +308,11 @@ function WonPolicyDialog({
         premium_amount: premium ? parseFloat(premium) : null,
         start_date: nextStartDate,
         expiry_date: nextExpiryDate,
-        booking_date: bookingDate ? format(bookingDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"),
+        booking_date: nextBookingDate,
         status: "active",
         is_renewal: Boolean(previousPolicy),
         previous_policy_id: previousPolicy?.id || null,
-        issued_date: format(new Date(), "yyyy-MM-dd"),
+        issued_date: nextBookingDate,
         source_label: previousPolicy ? "Won (Renewal)" : "Won (New)",
         renewal_count: previousPolicy ? (previousPolicy.renewal_count || 0) + 1 : 0,
         policy_type: client.current_policy_type || "comprehensive",
@@ -326,10 +324,10 @@ function WonPolicyDialog({
 
       if (savePolicyError) throw savePolicyError;
 
-      await supabase.from("insurance_clients").update({
+      const { error: clientUpdateError } = await supabase.from("insurance_clients").update({
         pipeline_stage: "policy_issued",
         lead_status: "won",
-        booking_date: bookingDate ? format(bookingDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"),
+        booking_date: nextBookingDate,
         current_policy_number: nextPolicyNumber,
         current_insurer: insurer.trim(),
         current_premium: premium ? parseFloat(premium) : null,
@@ -344,21 +342,25 @@ function WonPolicyDialog({
         journey_last_event_at: new Date().toISOString(),
       } as any).eq("id", client.id);
 
+      if (clientUpdateError) throw clientUpdateError;
+
       await supabase.from("insurance_activity_log").insert({
         client_id: client.id,
         activity_type: "stage_change",
         title: previousPolicy ? "Pipeline → Won (Renewal)" : "Pipeline → Won",
-        description: `Policy ${nextPolicyNumber} issued by ${insurer}`,
+        description: `Policy ${nextPolicyNumber} issued by ${insurer.trim()}`,
         metadata: {
           new_stage: "policy_issued",
           policy_number: nextPolicyNumber,
-          insurer,
+          insurer: insurer.trim(),
           premium,
+          start_date: nextStartDate,
+          expiry_date: nextExpiryDate,
           previous_policy_id: previousPolicy?.id || null,
         } as any,
       });
 
-      toast.success("🎉 Policy issued! Added to Policy Book");
+      toast.success("Policy issued and synced to Policy Book");
       onSuccess();
       onOpenChange(false);
     } catch (e: any) {
@@ -395,25 +397,22 @@ function WonPolicyDialog({
               <Label className="text-xs">Premium (₹)</Label>
               <Input type="number" value={premium} onChange={e => setPremium(e.target.value)} placeholder="e.g. 12500" className="h-9 text-sm" />
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs">Booking Date *</Label>
-                <SmartDatePicker date={bookingDate} onSelect={setBookingDate} placeholder="Booking date" yearRange={[new Date().getFullYear() - 1, new Date().getFullYear()]} />
+                <Label className="text-xs">Start Date *</Label>
+                <SmartDatePicker date={startDate} onSelect={setStartDate} placeholder="Pick start date" yearRange={[new Date().getFullYear() - 1, new Date().getFullYear() + 2]} />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Start Date</Label>
-                <SmartDatePicker date={startDate} onSelect={setStartDate} placeholder="Pick date" yearRange={[new Date().getFullYear() - 1, new Date().getFullYear() + 2]} />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Expiry Date *</Label>
-                <SmartDatePicker date={expiryDate} onSelect={setExpiryDate} placeholder="Pick date" yearRange={[new Date().getFullYear(), new Date().getFullYear() + 3]} />
+                <Label className="text-xs">Expiry Date</Label>
+                <Input value={expiryDate ? format(expiryDate, "dd MMM yyyy") : ""} readOnly className="h-9 text-sm bg-muted/40" />
+                <p className="text-[10px] text-muted-foreground">Auto-set to one day before same date next year</p>
               </div>
             </div>
           </div>
         )}
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave} disabled={saving || !policyNumber.trim() || !insurer.trim() || !expiryDate} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5">
+          <Button onClick={handleSave} disabled={saving || !policyNumber.trim() || !insurer.trim() || !startDate} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5">
             {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
             Issue Policy
           </Button>
@@ -1103,23 +1102,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                     )}
                     <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowQuoteModal(true)}><FileText className="h-3.5 w-3.5" /> Quote</Button>
                     <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowUploadPolicy(true)}><Upload className="h-3.5 w-3.5" /> Upload Policy</Button>
-                    <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowWonDialog(true)}><CheckCircle2 className="h-3.5 w-3.5" /> Create / Fix Policy</Button>
-                  </div>
-
-                  {/* Move to Stage */}
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase">Move to Stage</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {PIPELINE_STAGES.filter(s => s.value !== normStage).map(s => {
-                        const SIcon = s.icon;
-                        return (
-                          <Button key={s.value} size="sm" variant="outline" className={cn("text-xs gap-1", s.text, "border", s.border)}
-                            onClick={() => handleMove(selectedClient, s.value)}>
-                            <SIcon className="h-3 w-3" /> {s.label}
-                          </Button>
-                        );
-                      })}
-                    </div>
+                    <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setPendingMoveClient(selectedClient); setShowWonDialog(true); }}><CheckCircle2 className="h-3.5 w-3.5" /> Create / Fix Policy</Button>
                   </div>
                 </div>
               </>
@@ -1131,14 +1114,19 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
       {/* ── WON POLICY DIALOG ── */}
       <WonPolicyDialog
         open={showWonDialog}
-        onOpenChange={setShowWonDialog}
-        client={pendingMoveClient}
+        onOpenChange={(open) => {
+          setShowWonDialog(open);
+          if (!open) setPendingMoveClient(null);
+        }}
+        client={pendingMoveClient || selectedClient}
         onSuccess={() => {
+          const targetClient = pendingMoveClient || selectedClient;
           queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
           queryClient.invalidateQueries({ queryKey: ["ins-policies-book"] });
           setShowWonDialog(false);
-          if (pendingMoveClient) {
-            setSelectedClient(pendingMoveClient);
+          setPendingMoveClient(null);
+          if (targetClient) {
+            setSelectedClient(targetClient);
             setShowUploadPolicy(true);
           } else {
             setSelectedClient(null);
