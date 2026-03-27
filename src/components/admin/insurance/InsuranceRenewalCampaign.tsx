@@ -37,6 +37,7 @@ export function InsuranceRenewalCampaign() {
   const [enrichmentResult, setEnrichmentResult] = useState<any>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [sendingCampaign, setSendingCampaign] = useState(false);
+  const [pasteText, setPasteText] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const currentBatch = enrichmentResult?.batch_label || batchLabel;
