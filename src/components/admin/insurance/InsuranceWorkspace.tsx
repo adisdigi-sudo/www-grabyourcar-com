@@ -764,7 +764,10 @@ export function InsuranceWorkspace() {
               if (existingPolicy?.id) {
                 await supabase.from("insurance_policies").update(policyPayload).eq("id", existingPolicy.id);
               } else {
-                await supabase.from("insurance_policies").insert({ ...policyPayload, renewal_count: businessType.toLowerCase() === "rollover" ? 1 : 0 });
+                await supabase.from("insurance_policies").insert({
+                  ...policyPayload,
+                  renewal_count: businessType.toLowerCase() === "rollover" ? 1 : 0,
+                } as any);
               }
             }
           }
