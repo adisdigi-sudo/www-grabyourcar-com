@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { UserPlus, Loader2, Save } from "lucide-react";
+import { normalizePhoneNumber, normalizeVehicleRegistration } from "@/lib/insuranceIdentity";
 
 export function InsuranceAddLeadForm({ onSuccess }: { onSuccess?: () => void }) {
   const [saving, setSaving] = useState(false);
@@ -34,13 +35,13 @@ export function InsuranceAddLeadForm({ onSuccess }: { onSuccess?: () => void }) 
     }
     setSaving(true);
     try {
-      const phone = form.phone.replace(/\D/g, "");
-      const cleanVehicle = form.vehicle_number.replace(/\s+/g, "").toUpperCase() || null;
+      const phone = normalizePhoneNumber(form.phone);
+      const cleanVehicle = normalizeVehicleRegistration(form.vehicle_number) || null;
 
       // Check for existing client by phone or vehicle number
       let matchQuery = supabase.from("insurance_clients").select("id, customer_name, vehicle_number, duplicate_count");
       if (cleanVehicle) {
-        matchQuery = matchQuery.or(`phone.eq.${phone},vehicle_number.ilike.${cleanVehicle}`);
+        matchQuery = matchQuery.or(`phone.eq.${phone},vehicle_number.eq.${cleanVehicle}`);
       } else {
         matchQuery = matchQuery.eq("phone", phone);
       }
@@ -80,7 +81,7 @@ export function InsuranceAddLeadForm({ onSuccess }: { onSuccess?: () => void }) 
           phone,
           customer_name: form.customer_name || null,
           email: form.email || null,
-          vehicle_number: form.vehicle_number || null,
+          vehicle_number: cleanVehicle,
           vehicle_make: form.vehicle_make || null,
           vehicle_model: form.vehicle_model || null,
           current_policy_type: form.current_policy_type || null,

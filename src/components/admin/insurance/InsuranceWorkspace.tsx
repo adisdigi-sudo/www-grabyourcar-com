@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { dedupeInsuranceClients, normalizePhoneNumber, normalizeVehicleRegistration } from "@/lib/insuranceIdentity";
 import { differenceInDays, format, startOfMonth, endOfMonth } from "date-fns";
 import {
   UserPlus, Clock, CheckCircle2, Shield, TrendingUp,
@@ -114,6 +115,8 @@ export function InsuranceWorkspace() {
     },
   });
 
+  const dedupedClients = useMemo(() => dedupeInsuranceClients(clients), [clients]);
+
   const getClientPolicyDate = (client: Client) => (
     client.booking_date ||
     client.policy_start_date ||
@@ -136,6 +139,7 @@ export function InsuranceWorkspace() {
     );
 
     const fallbackPolicies: PolicyRecord[] = clients
+      .filter((client, index, arr) => arr.findIndex((entry) => entry.id === client.id) === index)
       .filter((client) => isWon(client) && !existingClientIds.has(client.id) && Boolean(client.current_policy_number?.trim()))
       .map((client) => ({
         id: `fallback-${client.id}`,
@@ -173,7 +177,7 @@ export function InsuranceWorkspace() {
       }));
 
     return [...fallbackPolicies, ...allPolicies];
-  }, [allPolicies, clients]);
+  }, [allPolicies, dedupedClients]);
 
   // Split policies into running (Policy Book) vs overdue (expired)
   const today = new Date();
@@ -200,16 +204,16 @@ export function InsuranceWorkspace() {
     }), [allPolicies, today.toDateString()]
   );
 
-  const totalLeads = clients.length;
-  const wonCount = clients.filter(isWon).length;
-  const lostCount = clients.filter(isLost).length;
+  const totalLeads = dedupedClients.length;
+  const wonCount = dedupedClients.filter(isWon).length;
+  const lostCount = dedupedClients.filter(isLost).length;
   const inPipeline = totalLeads - wonCount - lostCount;
 
   // Month-wise conversion calculation based on real booking/policy dates
   const monthWiseConversion = useMemo(() => {
     const monthMap: Record<string, { total: number; won: number; renewals: number; rollovers: number; wonClients: Set<string> }> = {};
 
-    clients.forEach((client) => {
+    dedupedClients.forEach((client) => {
       const d = new Date(getClientPolicyDate(client));
       const key = format(d, "yyyy-MM");
       if (!monthMap[key]) monthMap[key] = { total: 0, won: 0, renewals: 0, rollovers: 0, wonClients: new Set() };
@@ -239,7 +243,7 @@ export function InsuranceWorkspace() {
         renewals: d.renewals,
         rollovers: d.rollovers,
       }));
-  }, [clients, policyBookPolicies]);
+  }, [dedupedClients, policyBookPolicies]);
 
   // Current month conversion rate
   const currentMonthKey = format(new Date(), "MMM yyyy");
@@ -257,20 +261,20 @@ export function InsuranceWorkspace() {
   }, [runningPolicies]);
   const overdueCount = overduePolicies.length;
 
-  const insNotifications = useMemo(() => buildInsuranceNotifications(clients), [clients]);
+  const insNotifications = useMemo(() => buildInsuranceNotifications(dedupedClients), [dedupedClients]);
 
   const addLead = async () => {
     if (!newLead.phone.trim()) { toast.error("Phone is required"); return; }
     if (!newLead.customer_name.trim()) { toast.error("Name is required"); return; }
 
-    const cleanPhone = newLead.phone.trim().replace(/\D/g, "");
-    const cleanVehicle = newLead.vehicle_number.trim().replace(/\s+/g, "").toUpperCase() || null;
+    const cleanPhone = normalizePhoneNumber(newLead.phone);
+    const cleanVehicle = normalizeVehicleRegistration(newLead.vehicle_number) || null;
 
     // Check for existing client by phone or vehicle number
     let existingQuery = supabase.from("insurance_clients").select("id, customer_name, vehicle_number, duplicate_count").or(`phone.eq.${cleanPhone}`);
     if (cleanVehicle) {
       existingQuery = supabase.from("insurance_clients").select("id, customer_name, vehicle_number, duplicate_count")
-        .or(`phone.eq.${cleanPhone},vehicle_number.ilike.${cleanVehicle}`);
+        .or(`phone.eq.${cleanPhone},vehicle_number.eq.${cleanVehicle}`);
     }
     const { data: existing } = await existingQuery.limit(1);
 
@@ -301,6 +305,7 @@ export function InsuranceWorkspace() {
     const { error } = await supabase.from("insurance_clients").insert({
       customer_name: newLead.customer_name.trim(),
       phone: newLead.phone.trim(),
+      phone: cleanPhone,
       email: newLead.email.trim() || null,
       city: newLead.city.trim() || null,
       vehicle_number: cleanVehicle,
@@ -434,13 +439,13 @@ export function InsuranceWorkspace() {
         }}
       />
 
-      {activeView === "pipeline" && <InsuranceLeadPipeline clients={clients} isLoading={isLoading} />}
+      {activeView === "pipeline" && <InsuranceLeadPipeline clients={dedupedClients} isLoading={isLoading} />}
       {activeView === "policy_book" && <InsurancePolicyBook policies={runningPolicies} />}
       {activeView === "renewals" && <InsuranceComingRenewals policies={runningPolicies as PolicyRecord[]} />}
-      {activeView === "overdue" && <InsuranceOverdueRenewals policies={overduePolicies as PolicyRecord[]} clients={clients} />}
+      {activeView === "overdue" && <InsuranceOverdueRenewals policies={overduePolicies as PolicyRecord[]} clients={dedupedClients} />}
       {activeView === "bulk_tools" && <BulkRenewalQuoteGenerator onClose={() => setActiveView("pipeline")} />}
       {activeView === "renewal_campaign" && <InsuranceRenewalCampaign />}
-      {activeView === "performance" && <InsurancePerformance clients={clients} policies={policyBookPolicies as PolicyRecord[]} />}
+      {activeView === "performance" && <InsurancePerformance clients={dedupedClients} policies={policyBookPolicies as PolicyRecord[]} />}
 
       <Dialog open={showCalcDialog} onOpenChange={setShowCalcDialog}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
@@ -512,7 +517,7 @@ export function InsuranceWorkspace() {
         open={!!kpiDetail}
         onOpenChange={(v) => { if (!v) setKpiDetail(null); }}
         kpiType={kpiDetail}
-        clients={clients}
+        clients={dedupedClients}
         policies={runningPolicies.filter(p => p.status === "active")}
         monthWiseConversion={monthWiseConversion}
       />
