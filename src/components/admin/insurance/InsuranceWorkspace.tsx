@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { differenceInDays, format, startOfMonth, endOfMonth } from "date-fns";
 import {
   UserPlus, Clock, CheckCircle2, Shield, TrendingUp,
-  Plus, FileSpreadsheet, BookOpen, CalendarClock, Wrench, AlertTriangle, Calculator, ArrowRight
+  Plus, FileSpreadsheet, BookOpen, CalendarClock, Wrench, AlertTriangle, Calculator, ArrowRight, Rocket
 } from "lucide-react";
 import { LeadImportDialog } from "../shared/LeadImportDialog";
 import { StageNotificationBanner, buildInsuranceNotifications } from "../shared/StageNotificationBanner";
