@@ -338,7 +338,7 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 ? (
-                  <TableRow><TableCell colSpan={13} className="text-center py-12 text-muted-foreground">
+                  <TableRow><TableCell colSpan={14} className="text-center py-12 text-muted-foreground">
                     <BookOpen className="h-8 w-8 mx-auto mb-2 opacity-30" />
                     <p className="text-sm">No policies found</p>
                   </TableCell></TableRow>
