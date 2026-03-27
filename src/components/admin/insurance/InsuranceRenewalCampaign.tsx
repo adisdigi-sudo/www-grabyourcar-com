@@ -228,7 +228,7 @@ export function InsuranceRenewalCampaign() {
 
       // Small delay between messages
       if (sent + failed < selected.length) {
-        await new Promise(r => setTimeout(r, apiSuccess ? 500 : 2000));
+        await new Promise(r => setTimeout(r, 1500));
       }
     }
 
