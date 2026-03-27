@@ -26,7 +26,7 @@ import { InsuranceKpiDetailDialog } from "./InsuranceKpiDetailDialog";
 import { InsuranceRenewalCampaign } from "./InsuranceRenewalCampaign";
 import { InsurancePerformance } from "./InsurancePerformance";
 
-type ActiveView = "pipeline" | "policy_book" | "renewals" | "overdue" | "bulk_tools" | "calculator" | "renewal_campaign" | "performance";
+type ActiveView = "pipeline" | "policy_book" | "renewals" | "overdue" | "bulk_tools" | "renewal_campaign" | "performance";
 type KpiType = "total_leads" | "in_pipeline" | "won" | "active_policies" | "conversion" | null;
 
 type LegacyInsuranceLead = {
@@ -40,6 +40,7 @@ export function InsuranceWorkspace() {
   const queryClient = useQueryClient();
   const [activeView, setActiveView] = useState<ActiveView>("pipeline");
   const [kpiDetail, setKpiDetail] = useState<KpiType>(null);
+  const [showCalcDialog, setShowCalcDialog] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showAddLead, setShowAddLead] = useState(false);
   const [newLead, setNewLead] = useState({
@@ -216,7 +217,6 @@ export function InsuranceWorkspace() {
     { key: "renewals" as const, label: "Coming Renewals", icon: CalendarClock, count: renewalsDue, urgent: urgentRenewals > 0 },
     { key: "overdue" as const, label: "Overdue", icon: AlertTriangle, count: overdueCount, urgent: overdueCount > 0 },
     { key: "bulk_tools" as const, label: "Bulk Tools", icon: Wrench, count: 0, urgent: false },
-    { key: "calculator" as const, label: "Calculator", icon: Calculator, count: 0, urgent: false },
     { key: "renewal_campaign" as const, label: "Renewal Campaign", icon: Rocket, count: 0, urgent: false },
     { key: "performance" as const, label: "Performance", icon: TrendingUp, count: wonCount, urgent: false },
   ];
@@ -284,24 +284,22 @@ export function InsuranceWorkspace() {
         ))}
       </div>
 
-      {activeView !== "calculator" && (
-        <div className="rounded-2xl border border-border bg-card p-4 sm:p-5">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-1">
-              <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                <Calculator className="h-3.5 w-3.5" />
-                New premium engine is live
-              </div>
-              <h3 className="text-lg font-bold text-foreground">Generate quotes with your own OD, TP, NCB and add-on pricing</h3>
-              <p className="text-sm text-muted-foreground">Open the calculator to create fast manual quotes with live premium breakdown and copy-ready output.</p>
+      <div className="rounded-2xl border border-border bg-card p-4 sm:p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+              <Calculator className="h-3.5 w-3.5" />
+              Premium Calculator
             </div>
-            <Button onClick={() => setActiveView("calculator")} className="gap-2 self-start sm:self-auto">
-              Open Calculator
-              <ArrowRight className="h-4 w-4" />
-            </Button>
+            <h3 className="text-lg font-bold text-foreground">Generate quotes with OD, TP, NCB and add-on pricing</h3>
+            <p className="text-sm text-muted-foreground">Create quotes, generate PDF, share via WhatsApp — all quotes auto-saved.</p>
           </div>
+          <Button onClick={() => setShowCalcDialog(true)} className="gap-2 self-start sm:self-auto">
+            Open Calculator
+            <ArrowRight className="h-4 w-4" />
+          </Button>
         </div>
-      )}
+      </div>
 
       {insNotifications.length > 0 && <StageNotificationBanner items={insNotifications} />}
 
@@ -331,9 +329,15 @@ export function InsuranceWorkspace() {
       {activeView === "renewals" && <InsuranceComingRenewals policies={runningPolicies as PolicyRecord[]} />}
       {activeView === "overdue" && <InsuranceOverdueRenewals policies={overduePolicies as PolicyRecord[]} clients={clients} />}
       {activeView === "bulk_tools" && <BulkRenewalQuoteGenerator onClose={() => setActiveView("pipeline")} />}
-      {activeView === "calculator" && <InsurancePremiumCalculator />}
       {activeView === "renewal_campaign" && <InsuranceRenewalCampaign />}
       {activeView === "performance" && <InsurancePerformance clients={clients} policies={allPolicies as PolicyRecord[]} />}
+
+      <Dialog open={showCalcDialog} onOpenChange={setShowCalcDialog}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><Calculator className="h-5 w-5 text-primary" /> Premium Calculator</DialogTitle></DialogHeader>
+          <InsurancePremiumCalculator onQuoteSaved={() => queryClient.invalidateQueries({ queryKey: ["ins-bulk-quotes"] })} />
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showAddLead} onOpenChange={setShowAddLead}>
         <DialogContent className="max-w-md">
