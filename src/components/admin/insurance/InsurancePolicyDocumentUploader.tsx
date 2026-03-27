@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,21 @@ type PolicyOption = {
   created_at: string;
 };
 
+type ClientPolicySeed = {
+  id: string;
+  booking_date: string | null;
+  created_at: string;
+  updated_at: string;
+  current_policy_number: string | null;
+  current_policy_type: string | null;
+  current_insurer: string | null;
+  current_premium: number | null;
+  quote_amount: number | null;
+  quote_insurer: string | null;
+  policy_start_date: string | null;
+  policy_expiry_date: string | null;
+};
+
 interface InsurancePolicyDocumentUploaderProps {
   defaultPolicyId?: string;
   defaultClientId?: string;
@@ -29,13 +44,17 @@ export function InsurancePolicyDocumentUploader({
   defaultClientId,
   onDone,
 }: InsurancePolicyDocumentUploaderProps) {
+  const queryClient = useQueryClient();
   const [selectedPolicyId, setSelectedPolicyId] = useState<string>(defaultPolicyId || "");
   const [docFile, setDocFile] = useState<File | null>(null);
   const [typedPolicyNumber, setTypedPolicyNumber] = useState("");
   const [saving, setSaving] = useState(false);
+  const [autoCreatingPolicy, setAutoCreatingPolicy] = useState(false);
+  const [autoCreateError, setAutoCreateError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const autoCreateAttemptedRef = useRef(false);
 
-  const { data: policies = [], isLoading } = useQuery({
+  const { data: policies = [], isLoading, refetch: refetchPolicies } = useQuery({
     queryKey: ["insurance-policy-doc-uploader", defaultClientId || "all", defaultPolicyId || "none"],
     queryFn: async () => {
       let query = supabase
@@ -56,6 +75,104 @@ export function InsurancePolicyDocumentUploader({
     },
   });
 
+  const { data: clientSeed } = useQuery({
+    queryKey: ["insurance-policy-doc-client", defaultClientId || "none"],
+    enabled: Boolean(defaultClientId),
+    queryFn: async () => {
+      if (!defaultClientId) return null;
+
+      const { data, error } = await supabase
+        .from("insurance_clients")
+        .select("id, booking_date, created_at, updated_at, current_policy_number, current_policy_type, current_insurer, current_premium, quote_amount, quote_insurer, policy_start_date, policy_expiry_date")
+        .eq("id", defaultClientId)
+        .maybeSingle();
+
+      if (error) throw error;
+      return (data || null) as ClientPolicySeed | null;
+    },
+  });
+
+  const buildExpiryDate = (startDateValue: string) => {
+    const nextExpiry = new Date(startDateValue);
+    nextExpiry.setFullYear(nextExpiry.getFullYear() + 1);
+    nextExpiry.setDate(nextExpiry.getDate() - 1);
+    return nextExpiry.toISOString().split("T")[0];
+  };
+
+  const createMissingPolicyRecord = async () => {
+    if (!defaultClientId || !clientSeed || autoCreatingPolicy) return;
+
+    setAutoCreatingPolicy(true);
+    setAutoCreateError(null);
+
+    try {
+      const fallbackBookingDate =
+        clientSeed.booking_date ||
+        clientSeed.policy_start_date ||
+        clientSeed.updated_at?.split("T")[0] ||
+        clientSeed.created_at?.split("T")[0] ||
+        new Date().toISOString().split("T")[0];
+
+      const startDate = clientSeed.policy_start_date || fallbackBookingDate;
+      const expiryDate = clientSeed.policy_expiry_date || buildExpiryDate(startDate);
+
+      const { data: insertedPolicy, error: insertError } = await supabase
+        .from("insurance_policies")
+        .insert({
+          client_id: defaultClientId,
+          policy_number: clientSeed.current_policy_number,
+          policy_type: clientSeed.current_policy_type || "comprehensive",
+          insurer: clientSeed.current_insurer || clientSeed.quote_insurer || "Unknown",
+          premium_amount: clientSeed.current_premium || clientSeed.quote_amount || null,
+          start_date: startDate,
+          expiry_date: expiryDate,
+          issued_date: fallbackBookingDate,
+          booking_date: fallbackBookingDate,
+          status: "active",
+          is_renewal: false,
+          source_label: "Auto Upload Recovery",
+        } as any)
+        .select("id, client_id, policy_number")
+        .single();
+
+      if (insertError) throw insertError;
+
+      const { error: clientUpdateError } = await supabase
+        .from("insurance_clients")
+        .update({
+          lead_status: "won",
+          pipeline_stage: "policy_issued",
+          booking_date: clientSeed.booking_date || fallbackBookingDate,
+          journey_last_event: "policy_issued",
+          journey_last_event_at: new Date().toISOString(),
+          renewal_reminder_set: true,
+          renewal_reminder_date: expiryDate,
+        } as any)
+        .eq("id", defaultClientId);
+
+      if (clientUpdateError) throw clientUpdateError;
+
+      await supabase.from("insurance_activity_log").insert({
+        client_id: defaultClientId,
+        policy_id: insertedPolicy.id,
+        activity_type: "policy_created",
+        title: "Policy record auto-created for upload",
+        description: `Recovered missing policy row for ${insertedPolicy.policy_number || insertedPolicy.id}`,
+        metadata: { source: "policy_document_uploader", recovered: true },
+      });
+
+      await refetchPolicies();
+      setSelectedPolicyId(insertedPolicy.id);
+      queryClient.invalidateQueries({ queryKey: ["ins-policies-book"] });
+      queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
+      toast.success("Missing policy record created automatically");
+    } catch (error: any) {
+      setAutoCreateError(error?.message || "Failed to prepare policy record for upload");
+    } finally {
+      setAutoCreatingPolicy(false);
+    }
+  };
+
   useEffect(() => {
     if (defaultPolicyId) {
       setSelectedPolicyId(defaultPolicyId);
@@ -66,6 +183,22 @@ export function InsurancePolicyDocumentUploader({
       setSelectedPolicyId(policies[0].id);
     }
   }, [defaultPolicyId, selectedPolicyId, policies]);
+
+  useEffect(() => {
+    if (
+      !defaultClientId ||
+      defaultPolicyId ||
+      isLoading ||
+      !clientSeed ||
+      policies.length > 0 ||
+      autoCreateAttemptedRef.current
+    ) {
+      return;
+    }
+
+    autoCreateAttemptedRef.current = true;
+    void createMissingPolicyRecord();
+  }, [defaultClientId, defaultPolicyId, isLoading, clientSeed, policies.length]);
 
   const selectedPolicy = useMemo(
     () => policies.find((p) => p.id === selectedPolicyId) || null,
@@ -149,7 +282,12 @@ export function InsurancePolicyDocumentUploader({
         </div>
       ) : policies.length === 0 ? (
         <div className="rounded-md border bg-muted/30 p-3 text-sm text-muted-foreground">
-          No policy records found for upload.
+          {autoCreatingPolicy ? "Preparing policy record for upload..." : autoCreateError || "No policy records found for upload."}
+          {!autoCreatingPolicy && defaultClientId && (
+            <Button type="button" variant="outline" size="sm" className="mt-3" onClick={createMissingPolicyRecord}>
+              Create policy record
+            </Button>
+          )}
         </div>
       ) : (
         <>
