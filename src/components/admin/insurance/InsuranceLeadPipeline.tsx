@@ -221,6 +221,7 @@ function WonPolicyDialog({
   const [policyNumber, setPolicyNumber] = useState("");
   const [insurer, setInsurer] = useState("");
   const [premium, setPremium] = useState("");
+  const [bookingDate, setBookingDate] = useState<Date | undefined>(new Date());
   const [startDate, setStartDate] = useState<Date | undefined>(new Date());
   const [expiryDate, setExpiryDate] = useState<Date | undefined>();
   const [saving, setSaving] = useState(false);
