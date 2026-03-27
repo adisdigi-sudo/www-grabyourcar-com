@@ -371,6 +371,7 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
                       <TableCell className="font-mono text-xs">{policy.policy_number || "—"}</TableCell>
                       <TableCell className="text-xs capitalize">{policy.policy_type || "—"}</TableCell>
                       <TableCell className="font-semibold text-xs">{policy.premium_amount ? `₹${policy.premium_amount.toLocaleString("en-IN")}` : "—"}</TableCell>
+                      <TableCell className="text-xs">{policy.booking_date ? format(new Date(policy.booking_date), "dd MMM yyyy") : "—"}</TableCell>
                       <TableCell className="text-xs">{policy.issued_date ? format(new Date(policy.issued_date), "dd MMM yyyy") : "—"}</TableCell>
                       <TableCell className="text-xs">{policy.expiry_date ? format(new Date(policy.expiry_date), "dd MMM yyyy") : "—"}</TableCell>
                       <TableCell>{sourceLabel(policy)}</TableCell>
