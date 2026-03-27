@@ -182,7 +182,7 @@ export function InsurancePerformance({ clients, policies }: InsurancePerformance
       const d = subMonths(new Date(), i);
       const ms = startOfMonth(d);
       const me = endOfMonth(d);
-      const total = clients.filter(c => { const cd = new Date(c.created_at); return cd >= ms && cd <= me; }).length;
+      const total = clients.filter(c => { const cd = new Date(getClientRelevantDate(c)); return cd >= ms && cd <= me; }).length;
       const won = clients.filter(c => {
         if (!isWon(c)) return false;
         const dateStr = getClientWonDate(c);
