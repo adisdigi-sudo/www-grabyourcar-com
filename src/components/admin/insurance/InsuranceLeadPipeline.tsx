@@ -341,7 +341,11 @@ function WonPolicyDialog({
               <Label className="text-xs">Premium (₹)</Label>
               <Input type="number" value={premium} onChange={e => setPremium(e.target.value)} placeholder="e.g. 12500" className="h-9 text-sm" />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Booking Date *</Label>
+                <SmartDatePicker date={bookingDate} onSelect={setBookingDate} placeholder="Booking date" yearRange={[new Date().getFullYear() - 1, new Date().getFullYear()]} />
+              </div>
               <div className="space-y-1">
                 <Label className="text-xs">Start Date</Label>
                 <SmartDatePicker date={startDate} onSelect={setStartDate} placeholder="Pick date" yearRange={[new Date().getFullYear() - 1, new Date().getFullYear() + 2]} />
