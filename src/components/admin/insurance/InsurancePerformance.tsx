@@ -453,28 +453,30 @@ export function InsurancePerformance({ clients, policies }: InsurancePerformance
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {wonThisMonth.length === 0 ? (
+                {policiesThisMonth.length === 0 ? (
                   <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">No won policies this month</TableCell></TableRow>
-                ) : wonThisMonth.map((c, i) => (
-                  <TableRow key={c.id}>
-                    <TableCell className="text-xs text-muted-foreground">{i + 1}</TableCell>
-                    <TableCell className="text-xs font-medium">{c.customer_name}</TableCell>
-                    <TableCell className="text-xs">
-                      <span className="font-mono">{c.vehicle_number || "—"}</span>
-                      <br />
-                      <span className="text-[10px] text-muted-foreground">{[c.vehicle_make, c.vehicle_model].filter(Boolean).join(" ")}</span>
-                    </TableCell>
-                    <TableCell className="text-xs">{c.current_insurer || "—"}</TableCell>
-                    <TableCell className="text-xs font-mono">{c.current_policy_number || "—"}</TableCell>
-                    <TableCell className="text-xs text-right font-mono font-semibold">
-                      {c.current_premium ? `₹${c.current_premium.toLocaleString("en-IN")}` : "—"}
-                    </TableCell>
-                    <TableCell className="text-xs">
-                      {c.booking_date ? format(new Date(c.booking_date), "dd MMM yyyy") : "—"}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{c.picked_up_by || c.booked_by || "—"}</TableCell>
-                  </TableRow>
-                ))}
+                ) : policiesThisMonth.map((policy, i) => {
+                  const client = policy.client_id ? clientById.get(policy.client_id) : undefined;
+                  const bookingDate = getPolicyBookingDate(policy);
+                  return (
+                    <TableRow key={policy.id}>
+                      <TableCell className="text-xs text-muted-foreground">{i + 1}</TableCell>
+                      <TableCell className="text-xs font-medium">{client?.customer_name || policy.insurance_clients?.customer_name || "—"}</TableCell>
+                      <TableCell className="text-xs">
+                        <span className="font-mono">{client?.vehicle_number || policy.insurance_clients?.vehicle_number || "—"}</span>
+                        <br />
+                        <span className="text-[10px] text-muted-foreground">{[client?.vehicle_make || policy.insurance_clients?.vehicle_make, client?.vehicle_model || policy.insurance_clients?.vehicle_model].filter(Boolean).join(" ")}</span>
+                      </TableCell>
+                      <TableCell className="text-xs">{policy.insurer || client?.current_insurer || "—"}</TableCell>
+                      <TableCell className="text-xs font-mono">{policy.policy_number || client?.current_policy_number || "—"}</TableCell>
+                      <TableCell className="text-xs text-right font-mono font-semibold">
+                        {policy.premium_amount ? `₹${policy.premium_amount.toLocaleString("en-IN")}` : "—"}
+                      </TableCell>
+                      <TableCell className="text-xs">{bookingDate ? format(new Date(bookingDate), "dd MMM yyyy") : "—"}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{client?.picked_up_by || client?.booked_by || client?.assigned_executive || "—"}</TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
