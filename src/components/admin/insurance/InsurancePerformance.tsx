@@ -13,9 +13,11 @@ import { normalizeStage, type Client } from "./InsuranceLeadPipeline";
 import type { PolicyRecord } from "./InsurancePolicyBook";
 
 const getClientWonDate = (client: Client) => {
+  // Prefer policy_start_date as it reflects actual policy month,
+  // then booking_date, then journey event, then updated/created
   return (
-    client.booking_date ||
     client.policy_start_date ||
+    client.booking_date ||
     client.journey_last_event_at ||
     client.updated_at ||
     client.created_at
@@ -24,10 +26,10 @@ const getClientWonDate = (client: Client) => {
 
 const getPolicyBookingDate = (policy: PolicyRecord) => {
   return (
+    policy.start_date ||
     policy.booking_date ||
     policy.insurance_clients?.booking_date ||
     policy.issued_date ||
-    policy.start_date ||
     policy.created_at
   );
 };
@@ -76,9 +78,14 @@ export function InsurancePerformance({ clients, policies }: InsurancePerformance
   const monthEnd = endOfMonth(monthStart);
 
   // Filter clients and policies for selected month
+  // Count leads relevant to this month - use the best available date
+  const getClientRelevantDate = (c: Client) => {
+    return c.policy_start_date || c.booking_date || c.journey_last_event_at || c.created_at;
+  };
+
   const monthClients = useMemo(() => {
     return clients.filter(c => {
-      const d = new Date(c.created_at);
+      const d = new Date(getClientRelevantDate(c));
       return d >= monthStart && d <= monthEnd;
     });
   }, [clients, monthStart, monthEnd]);
@@ -175,7 +182,7 @@ export function InsurancePerformance({ clients, policies }: InsurancePerformance
       const d = subMonths(new Date(), i);
       const ms = startOfMonth(d);
       const me = endOfMonth(d);
-      const total = clients.filter(c => { const cd = new Date(c.created_at); return cd >= ms && cd <= me; }).length;
+      const total = clients.filter(c => { const cd = new Date(getClientRelevantDate(c)); return cd >= ms && cd <= me; }).length;
       const won = clients.filter(c => {
         if (!isWon(c)) return false;
         const dateStr = getClientWonDate(c);

@@ -57,16 +57,28 @@ export function InsuranceAddPolicyForm({ onSuccess }: { onSuccess?: () => void }
     }
     setSearching(true);
     try {
+      const cleanPhone = searchPhone.replace(/\D/g, "");
       const { data } = await supabase
         .from("insurance_clients")
-        .select("id, customer_name, phone")
-        .eq("phone", searchPhone.replace(/\D/g, ""))
+        .select("id, customer_name, phone, email, vehicle_number, vehicle_make, vehicle_model, current_insurer, current_policy_type, current_premium, current_policy_number, policy_start_date, policy_expiry_date, ncb_percentage")
+        .eq("phone", cleanPhone)
         .limit(1);
 
       if (data && data.length > 0) {
-        setClientId(data[0].id);
-        setClientName(data[0].customer_name || data[0].phone);
-        toast.success(`Found client: ${data[0].customer_name || data[0].phone}`);
+        const client = data[0];
+        setClientId(client.id);
+        setClientName(client.customer_name || client.phone);
+        
+        // Pre-fill form with existing client's previous policy data
+        setForm(prev => ({
+          ...prev,
+          insurer: client.current_insurer || prev.insurer,
+          policy_type: client.current_policy_type || prev.policy_type,
+          premium_amount: client.current_premium ? String(client.current_premium) : prev.premium_amount,
+          ncb_percentage: client.ncb_percentage ? String(client.ncb_percentage) : prev.ncb_percentage,
+        }));
+        
+        toast.success(`Found client: ${client.customer_name || client.phone}. Previous policy data loaded.`);
       } else {
         toast.error("Client not found. Switch to 'New Client' tab to add.");
         setClientId(null);
