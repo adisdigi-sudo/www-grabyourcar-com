@@ -98,7 +98,12 @@ export const generateInsuranceQuotePdf = (data: InsuranceQuoteData) => {
     rows.forEach((row, index) => {
       const valueLines = splitRightText(doc, row[1], 78);
       const rowHeight = Math.max(8, 4.5 + valueLines.length * 4.2);
-      doc.setFillColor(...(row[2] ? mint : index % 2 === 0 ? [255, 255, 255] : [248, 250, 252]));
+      const rowFill: [number, number, number] = row[2]
+        ? mint
+        : index % 2 === 0
+          ? [255, 255, 255]
+          : [248, 250, 252];
+      doc.setFillColor(...rowFill);
       doc.rect(m, rowY, contentW, rowHeight, "F");
       doc.setDrawColor(...lightGray);
       doc.line(m, rowY + rowHeight, pw - m, rowY + rowHeight);
@@ -181,7 +186,7 @@ export const generateInsuranceQuotePdf = (data: InsuranceQuoteData) => {
 
   y = drawSectionLabel("VEHICLE & POLICY DETAILS", y);
 
-  const vehicleRows = [
+  const vehicleRows: [string, string, boolean?][] = [
     ["Insurance Provider", data.insuranceCompany || "-"],
     ["Vehicle", `${data.vehicleMake} ${data.vehicleModel}`.toUpperCase()],
     ["Registration Number", (data.vehicleNumber || "-").toUpperCase()],

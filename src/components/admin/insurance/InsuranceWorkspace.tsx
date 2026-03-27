@@ -138,8 +138,7 @@ export function InsuranceWorkspace() {
         .filter(Boolean) as string[]
     );
 
-    const fallbackPolicies: PolicyRecord[] = clients
-      .filter((client, index, arr) => arr.findIndex((entry) => entry.id === client.id) === index)
+    const fallbackPolicies: PolicyRecord[] = dedupedClients
       .filter((client) => isWon(client) && !existingClientIds.has(client.id) && Boolean(client.current_policy_number?.trim()))
       .map((client) => ({
         id: `fallback-${client.id}`,
@@ -304,7 +303,6 @@ export function InsuranceWorkspace() {
 
     const { error } = await supabase.from("insurance_clients").insert({
       customer_name: newLead.customer_name.trim(),
-      phone: newLead.phone.trim(),
       phone: cleanPhone,
       email: newLead.email.trim() || null,
       city: newLead.city.trim() || null,
