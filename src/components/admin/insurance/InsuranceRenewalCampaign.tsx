@@ -96,6 +96,34 @@ export function InsuranceRenewalCampaign() {
     }
   }, []);
 
+  const handlePasteData = useCallback(() => {
+    if (!pasteText.trim()) {
+      toast.error("Paste some data first");
+      return;
+    }
+    const lines = pasteText.trim().split("\n").filter(l => l.trim());
+    const parsed: Prospect[] = [];
+    for (const line of lines) {
+      const cols = line.split(/\t|,/).map(c => c.trim());
+      if (cols.length < 3) continue;
+      // Try to detect: name, phone, vehicle_number, email?, city?
+      parsed.push({
+        name: cols[0] || "",
+        phone: cols[1] || "",
+        vehicle_number: cols[2] || "",
+        email: cols[3] || undefined,
+        city: cols[4] || undefined,
+      });
+    }
+    if (parsed.length === 0) {
+      toast.error("No valid rows found. Format: Name, Phone, Vehicle Number (tab or comma separated)");
+      return;
+    }
+    setProspects(parsed);
+    setBatchLabel(`Renewal-${new Date().toISOString().split("T")[0]}-${parsed.length}`);
+    toast.success(`${parsed.length} prospects loaded`);
+  }, [pasteText]);
+
   const handleEnrich = useCallback(async () => {
     if (prospects.length === 0) return;
     if (prospects.length > 500) {
