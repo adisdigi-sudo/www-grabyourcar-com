@@ -99,7 +99,7 @@ export function WhatsAppMarketingPortal() {
         <TabsContent value="analytics"><WAAnalyticsDashboard /></TabsContent>
         <TabsContent value="compliance"><WACompliancePanel /></TabsContent>
         <TabsContent value="integration"><WAIntegrationHub /></TabsContent>
-        <TabsContent value="renewal"><WARenewalCampaign /></TabsContent>
+        
       </Tabs>
     </div>
   );
