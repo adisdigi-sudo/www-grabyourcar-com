@@ -79,18 +79,26 @@ export function InsurancePerformance({ clients, policies }: InsurancePerformance
   const dedupedPolicies = useMemo(() => {
     const map = new Map<string, PolicyRecord>();
 
-    for (const policy of policies.filter((item) => Boolean(item.policy_number?.trim()))) {
-      const key = [
-        policy.client_id || "no-client",
-        policy.policy_number || "no-policy",
-        policy.start_date || policy.booking_date || policy.issued_date || policy.created_at,
-      ].join("::");
+    for (const policy of policies) {
+      if (!policy.policy_number?.trim()) continue;
+      const normalizedStatus = (policy.status || "").toLowerCase();
+      if (["renewed", "lapsed", "cancelled", "lost"].includes(normalizedStatus)) continue;
 
+      const vehicleKey = policy.insurance_clients?.vehicle_number?.replace(/\s+/g, "").toUpperCase();
+      const key = vehicleKey || [policy.client_id || "no-client", policy.policy_number].join("::");
       const current = map.get(key);
-      const currentStamp = current ? (current.updated_at || current.created_at) : "";
+
+      if (!current) {
+        map.set(key, policy);
+        continue;
+      }
+
+      const currentDate = getPolicyBookingDate(current) || current.updated_at || current.created_at;
+      const nextDate = getPolicyBookingDate(policy) || policy.updated_at || policy.created_at;
+      const currentStamp = current.updated_at || current.created_at;
       const nextStamp = policy.updated_at || policy.created_at;
 
-      if (!current || nextStamp > currentStamp) {
+      if (nextDate > currentDate || (nextDate === currentDate && nextStamp > currentStamp)) {
         map.set(key, policy);
       }
     }
