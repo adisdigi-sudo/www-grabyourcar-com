@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -98,6 +98,31 @@ export function InsuranceCRMDashboard() {
 
   const now = useMemo(() => new Date(), []);
 
+  useEffect(() => {
+    const channel = supabase
+      .channel("insurance-crm-dashboard-live")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "insurance_clients" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["ins-dash-clients-policy-book"] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "insurance_policies" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["ins-dash-policies"] });
+          queryClient.invalidateQueries({ queryKey: ["ins-dash-clients-policy-book"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
   const { data: clients } = useQuery({
     queryKey: ["ins-dash-clients-policy-book"],
     queryFn: async () => {
@@ -150,6 +175,7 @@ export function InsuranceCRMDashboard() {
         .then(({ error }) => {
           if (error) { toast.error("Failed to update status"); return; }
           queryClient.invalidateQueries({ queryKey: ["ins-dash-clients-policy-book"] });
+          queryClient.invalidateQueries({ queryKey: ["ins-dash-policies"] });
           toast.success("🎉 Client marked as WON! Upload their policy now.");
           setWonClientForUpload(clientId);
           setShowUploadPolicy(true);

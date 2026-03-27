@@ -69,6 +69,14 @@ export function InsuranceWorkspace() {
         { event: "*", schema: "public", table: "insurance_leads" },
         (payload) => notifyAndRefresh(payload.new as LegacyInsuranceLead)
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "insurance_policies" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["ins-policies-book"] });
+          queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
+        }
+      )
       .subscribe();
 
     return () => {
