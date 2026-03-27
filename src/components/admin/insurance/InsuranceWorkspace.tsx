@@ -24,8 +24,9 @@ import { InsuranceOverdueRenewals } from "./InsuranceOverdueRenewals";
 import { InsurancePremiumCalculator } from "./InsurancePremiumCalculator";
 import { InsuranceKpiDetailDialog } from "./InsuranceKpiDetailDialog";
 import { InsuranceRenewalCampaign } from "./InsuranceRenewalCampaign";
+import { InsurancePerformance } from "./InsurancePerformance";
 
-type ActiveView = "pipeline" | "policy_book" | "renewals" | "overdue" | "bulk_tools" | "calculator" | "renewal_campaign";
+type ActiveView = "pipeline" | "policy_book" | "renewals" | "overdue" | "bulk_tools" | "calculator" | "renewal_campaign" | "performance";
 type KpiType = "total_leads" | "in_pipeline" | "won" | "active_policies" | "conversion" | null;
 
 type LegacyInsuranceLead = {
@@ -79,7 +80,7 @@ export function InsuranceWorkspace() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("insurance_clients")
-        .select("id, customer_name, phone, email, city, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_insurer, current_policy_type, current_premium, ncb_percentage, previous_claim, policy_expiry_date, policy_start_date, current_policy_number, lead_source, lead_status, assigned_executive, priority, pipeline_stage, contact_attempts, quote_amount, quote_insurer, lost_reason, follow_up_date, follow_up_time, call_status, call_remarks, renewal_reminder_set, renewal_reminder_date, incentive_eligible, notes, retarget_status, journey_last_event, journey_last_event_at, picked_up_by, picked_up_at, overdue_reason, overdue_custom_reason, overdue_marked_at, created_at, updated_at")
+        .select("id, customer_name, phone, email, city, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_insurer, current_policy_type, current_premium, ncb_percentage, previous_claim, policy_expiry_date, policy_start_date, current_policy_number, lead_source, lead_status, assigned_executive, priority, pipeline_stage, contact_attempts, quote_amount, quote_insurer, lost_reason, follow_up_date, follow_up_time, call_status, call_remarks, renewal_reminder_set, renewal_reminder_date, incentive_eligible, notes, retarget_status, journey_last_event, journey_last_event_at, picked_up_by, picked_up_at, booking_date, booked_by, overdue_reason, overdue_custom_reason, overdue_marked_at, created_at, updated_at")
         .eq("is_legacy", false)
         .order("updated_at", { ascending: false })
         .order("created_at", { ascending: false })
@@ -217,6 +218,7 @@ export function InsuranceWorkspace() {
     { key: "bulk_tools" as const, label: "Bulk Tools", icon: Wrench, count: 0, urgent: false },
     { key: "calculator" as const, label: "Calculator", icon: Calculator, count: 0, urgent: false },
     { key: "renewal_campaign" as const, label: "Renewal Campaign", icon: Rocket, count: 0, urgent: false },
+    { key: "performance" as const, label: "Performance", icon: TrendingUp, count: wonCount, urgent: false },
   ];
 
   return (
@@ -331,6 +333,7 @@ export function InsuranceWorkspace() {
       {activeView === "bulk_tools" && <BulkRenewalQuoteGenerator onClose={() => setActiveView("pipeline")} />}
       {activeView === "calculator" && <InsurancePremiumCalculator />}
       {activeView === "renewal_campaign" && <InsuranceRenewalCampaign />}
+      {activeView === "performance" && <InsurancePerformance clients={clients} policies={allPolicies as PolicyRecord[]} />}
 
       <Dialog open={showAddLead} onOpenChange={setShowAddLead}>
         <DialogContent className="max-w-md">

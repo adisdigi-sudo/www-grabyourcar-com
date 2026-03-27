@@ -19,7 +19,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import {
   UserPlus, Phone, FileText, Clock, CheckCircle2, XCircle, Search,
   PhoneCall, User, Shield, Send, MessageSquare, CalendarIcon, Bell, Plus,
-  ChevronRight, Upload, RefreshCw
+  ChevronRight, Upload, RefreshCw, Target
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { LeadForwardDialog, ForwardedBadge } from "../shared/LeadForwardDialog";
@@ -68,6 +68,8 @@ export type Client = {
   journey_last_event_at: string | null;
   picked_up_by: string | null;
   picked_up_at: string | null;
+  booking_date: string | null;
+  booked_by: string | null;
   updated_at: string;
   created_at: string;
 };
@@ -221,6 +223,7 @@ function WonPolicyDialog({
   const [policyNumber, setPolicyNumber] = useState("");
   const [insurer, setInsurer] = useState("");
   const [premium, setPremium] = useState("");
+  const [bookingDate, setBookingDate] = useState<Date | undefined>(new Date());
   const [startDate, setStartDate] = useState<Date | undefined>(new Date());
   const [expiryDate, setExpiryDate] = useState<Date | undefined>();
   const [saving, setSaving] = useState(false);
@@ -263,6 +266,7 @@ function WonPolicyDialog({
         premium_amount: premium ? parseFloat(premium) : null,
         start_date: nextStartDate,
         expiry_date: nextExpiryDate,
+        booking_date: bookingDate ? format(bookingDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"),
         status: "active",
         is_renewal: Boolean(previousPolicy),
         previous_policy_id: previousPolicy?.id || null,
@@ -275,6 +279,7 @@ function WonPolicyDialog({
       await supabase.from("insurance_clients").update({
         pipeline_stage: "policy_issued",
         lead_status: "won",
+        booking_date: bookingDate ? format(bookingDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"),
         current_policy_number: nextPolicyNumber,
         current_insurer: insurer.trim(),
         current_premium: premium ? parseFloat(premium) : null,
@@ -285,7 +290,7 @@ function WonPolicyDialog({
         incentive_eligible: true,
         retarget_status: "none",
         retargeting_enabled: false,
-      }).eq("id", client.id);
+      } as any).eq("id", client.id);
 
       await supabase.from("insurance_activity_log").insert({
         client_id: client.id,
@@ -338,7 +343,11 @@ function WonPolicyDialog({
               <Label className="text-xs">Premium (₹)</Label>
               <Input type="number" value={premium} onChange={e => setPremium(e.target.value)} placeholder="e.g. 12500" className="h-9 text-sm" />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Booking Date *</Label>
+                <SmartDatePicker date={bookingDate} onSelect={setBookingDate} placeholder="Booking date" yearRange={[new Date().getFullYear() - 1, new Date().getFullYear()]} />
+              </div>
               <div className="space-y-1">
                 <Label className="text-xs">Start Date</Label>
                 <SmartDatePicker date={startDate} onSelect={setStartDate} placeholder="Pick date" yearRange={[new Date().getFullYear() - 1, new Date().getFullYear() + 2]} />
@@ -652,6 +661,26 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
           </Button>
         )}
       </div>
+
+      {/* Won Summary Bar */}
+      {selectedStage === "won" && (() => {
+        const wonTotal = stageCounts["won"] || 0;
+        const totalAll = pipelineClients.length;
+        const convPct = totalAll > 0 ? ((wonTotal / totalAll) * 100).toFixed(1) : "0";
+        const wonPremium = filtered.reduce((s, c) => s + (c.current_premium || 0), 0);
+        return (
+          <div className="flex items-center gap-4 p-3 rounded-xl border bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800">
+            <div className="flex items-center gap-1.5">
+              <Target className="h-4 w-4 text-emerald-600" />
+              <span className="text-xs font-semibold">Conversion: <span className="text-emerald-700 dark:text-emerald-400">{convPct}%</span></span>
+            </div>
+            <div className="h-4 w-px bg-emerald-300 dark:bg-emerald-700" />
+            <span className="text-xs">Won: <strong>{wonTotal}</strong> / {totalAll} leads</span>
+            <div className="h-4 w-px bg-emerald-300 dark:bg-emerald-700" />
+            <span className="text-xs">Premium: <strong>₹{wonPremium.toLocaleString("en-IN")}</strong></span>
+          </div>
+        );
+      })()}
 
       {/* Search */}
       <div className="relative max-w-md">
