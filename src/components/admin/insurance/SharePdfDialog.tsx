@@ -144,6 +144,7 @@ export function SharePdfDialog({
     const cleanPhone = (phone || "").replace(/\D/g, "");
     if (cleanPhone.length < 10) { toast.error("Please enter a valid phone number"); return; }
     const { doc, fileName } = generatePdf();
+    doc.save(fileName);
     const msg = shareMessage || `Hi ${customerName}! Please find the attached ${title}. For any queries, contact us at +91 98559 24442. - Grabyourcar Insurance`;
     const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
     await sendWhatsApp({ phone: cleanPhone, message: msg + `\n\nDocument: ${fileName}`, name: customerName, logEvent: "pdf_share" });
