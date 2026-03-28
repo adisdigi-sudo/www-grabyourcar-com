@@ -73,7 +73,7 @@ export function InsuranceOverdueRenewals({ policies, clients }: Props) {
           ? normalizeStage(p.clientData.pipeline_stage, p.clientData.lead_status, p.clientData)
           : null;
 
-        if (normalizedClientStage && ["new_lead", "smart_calling", "quote_shared", "follow_up", "policy_issued", "won"].includes(normalizedClientStage)) {
+        if (normalizedClientStage && ["new_lead", "smart_calling", "quote_shared", "follow_up"].includes(normalizedClientStage)) {
           return false;
         }
 

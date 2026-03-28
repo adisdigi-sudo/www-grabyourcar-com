@@ -4,8 +4,16 @@ import type { PolicyRecord } from "@/components/admin/insurance/InsurancePolicyB
 export const normalizePhoneNumber = (value: string | null | undefined) =>
   (value || "").replace(/\D/g, "").trim();
 
-export const normalizeVehicleRegistration = (value: string | null | undefined) =>
-  (value || "").replace(/\s+/g, "").toUpperCase().trim();
+export const normalizeVehicleRegistration = (value: string | null | undefined) => {
+  const compact = (value || "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase().trim();
+  if (!compact) return "";
+
+  const indianPlateMatch = compact.match(/^([A-Z]{2})(\d{1,2})([A-Z]{1,3})(\d{1,4})$/);
+  if (!indianPlateMatch) return compact;
+
+  const [, stateCode, districtCode, seriesCode, serialNumber] = indianPlateMatch;
+  return `${stateCode}${String(Number(districtCode))}${seriesCode}${String(Number(serialNumber))}`;
+};
 
 export const normalizePolicyNumber = (value: string | null | undefined) =>
   (value || "").replace(/\s+/g, "").toUpperCase().trim();
@@ -41,14 +49,8 @@ const getNormalizedLifecycleStage = (pipelineStage: string | null | undefined, l
 };
 
 export const getClientIdentityKey = (client: Pick<Client, "id" | "phone" | "vehicle_number" | "current_policy_number">) => {
-  const policyKey = normalizePolicyNumber(client.current_policy_number);
-  if (policyKey) return `policy:${policyKey}`;
-
   const vehicleKey = normalizeVehicleRegistration(client.vehicle_number);
   if (vehicleKey) return `vehicle:${vehicleKey}`;
-
-  const phoneKey = normalizePhoneNumber(client.phone);
-  if (phoneKey) return `phone:${phoneKey}`;
 
   return `id:${client.id}`;
 };

@@ -244,10 +244,10 @@ export function InsuranceWorkspace() {
       if (!p.policy_number?.trim()) return false;
       if (!p.expiry_date) return false;
       if (RESOLVED_STATUSES.includes((p.status || "").toLowerCase())) return false;
-      const client = dedupedClients.find(c => c.id === p.client_id);
+       const client = dedupedClients.find(c => c.id === p.client_id);
       if (client) {
         const normalizedClientStage = normalizeStage(client.pipeline_stage, client.lead_status, client);
-        if (["new_lead", "smart_calling", "quote_shared", "follow_up", "policy_issued", "won"].includes(normalizedClientStage)) return false;
+         if (["new_lead", "smart_calling", "quote_shared", "follow_up"].includes(normalizedClientStage)) return false;
         if (client.retarget_status === "scheduled") return false;
       }
       return new Date(p.expiry_date) < today;
@@ -334,9 +334,9 @@ export function InsuranceWorkspace() {
       const { data } = await supabase
         .from("insurance_clients")
         .select("id, customer_name, vehicle_number, duplicate_count")
-        .eq("vehicle_number", cleanVehicle)
-        .limit(1);
-      existing = data;
+        .limit(200);
+
+      existing = (data || []).filter((client) => normalizeVehicleRegistration(client.vehicle_number) === cleanVehicle).slice(0, 1);
     }
 
     if (existing && existing.length > 0) {

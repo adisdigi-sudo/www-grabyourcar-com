@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { normalizeStage, type Client } from "./InsuranceLeadPipeline";
 import type { PolicyRecord } from "./InsurancePolicyBook";
-import { getClientEffectiveDate, getPolicyEffectiveDate, dedupeInsurancePolicies } from "@/lib/insuranceIdentity";
+import { getClientEffectiveDate, getPolicyEffectiveDate, dedupeInsuranceClients, dedupeInsurancePolicies } from "@/lib/insuranceIdentity";
 
 // Incentive slab config
 const INCENTIVE_SLABS = [
@@ -66,18 +66,20 @@ export function InsurancePerformance({ clients, policies, selectedMonth, onMonth
     return { start: monthStart, end: monthEnd };
   }, [filterMode, dateFrom, dateTo, monthStart, monthEnd]);
 
-  const clientById = useMemo(() => new Map(clients.map((client) => [client.id, client])), [clients]);
+  const dedupedClients = useMemo(() => dedupeInsuranceClients(clients), [clients]);
+
+  const clientById = useMemo(() => new Map(dedupedClients.map((client) => [client.id, client])), [dedupedClients]);
 
   const dedupedPolicies = useMemo(() => dedupeInsurancePolicies(policies), [policies]);
 
   const monthClients = useMemo(() => {
-    return clients.filter((client) => {
+    return dedupedClients.filter((client) => {
       const rawDate = getClientEffectiveDate(client);
       if (!rawDate) return false;
       const d = new Date(rawDate);
       return d >= effectiveRange.start && d <= effectiveRange.end;
     });
-  }, [clients, effectiveRange]);
+  }, [dedupedClients, effectiveRange]);
 
   const isWon = (client: Client) => {
     const stage = normalizeStage(client.pipeline_stage, client.lead_status, client);
@@ -101,8 +103,8 @@ export function InsurancePerformance({ clients, policies, selectedMonth, onMonth
   );
 
   const wonThisMonth = useMemo(() => {
-    const matchedClients = clients.filter((client) => wonClientIdsThisMonth.has(client.id));
-    const wonByDate = clients.filter((client) => {
+    const matchedClients = dedupedClients.filter((client) => wonClientIdsThisMonth.has(client.id));
+    const wonByDate = dedupedClients.filter((client) => {
       if (wonClientIdsThisMonth.has(client.id)) return false;
       if (!isWon(client)) return false;
       const dateStr = getClientEffectiveDate(client);
@@ -111,15 +113,15 @@ export function InsurancePerformance({ clients, policies, selectedMonth, onMonth
       return d >= effectiveRange.start && d <= effectiveRange.end;
     });
     return [...matchedClients, ...wonByDate];
-  }, [clients, wonClientIdsThisMonth, effectiveRange]);
+  }, [dedupedClients, wonClientIdsThisMonth, effectiveRange]);
 
   const lostThisMonth = useMemo(() => {
-    return clients.filter((client) => {
+    return dedupedClients.filter((client) => {
       if (!isLost(client)) return false;
       const d = new Date(client.updated_at);
       return d >= effectiveRange.start && d <= effectiveRange.end;
     });
-  }, [clients, effectiveRange]);
+  }, [dedupedClients, effectiveRange]);
 
   const totalLeadsMonth = monthClients.length;
   const wonCount = policiesThisMonth.length;
@@ -175,7 +177,7 @@ export function InsurancePerformance({ clients, policies, selectedMonth, onMonth
       const d = subMonths(new Date(), i);
       const ms = startOfMonth(d);
       const me = endOfMonth(d);
-      const total = clients.filter((client) => {
+       const total = dedupedClients.filter((client) => {
         const rawDate = getClientEffectiveDate(client);
         if (!rawDate) return false;
         const cd = new Date(rawDate);
@@ -196,7 +198,7 @@ export function InsurancePerformance({ clients, policies, selectedMonth, onMonth
       });
     }
     return trend;
-  }, [clients, dedupedPolicies]);
+  }, [dedupedClients, dedupedPolicies]);
 
   const activeRangeLabel = useMemo(() => {
     if (filterMode === "preset" && activePreset) return activePreset;
