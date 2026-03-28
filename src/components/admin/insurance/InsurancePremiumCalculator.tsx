@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { persistInsuranceQuoteHistory } from "@/lib/insuranceQuotePersistence";
+import { INSURANCE_COMPANIES } from "@/lib/insuranceCompanies";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Calculator, Car, Shield, Percent, IndianRupee, Zap,
@@ -87,15 +88,24 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
   const [vehicleModel, setVehicleModel] = useState("");
   const [vehicleNumber, setVehicleNumber] = useState("");
   const [vehicleYear, setVehicleYear] = useState<string>(String(new Date().getFullYear()));
+  const [insuranceCompany, setInsuranceCompany] = useState("");
+  const [customInsurer, setCustomInsurer] = useState("");
+  const [fuelType, setFuelType] = useState("Petrol");
+  const [policyType, setPolicyType] = useState("Comprehensive");
+  const [securePremium, setSecurePremium] = useState<string>("0");
   const [claimTaken, setClaimTaken] = useState(false);
   const [expiredOver90Days, setExpiredOver90Days] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  const resolvedInsurer = insuranceCompany === "__custom" ? customInsurer : insuranceCompany;
 
   const zone = getZone(city);
   const ccNum = parseInt(cc) || 0;
   const idvNum = parseFloat(idv) || 0;
   const discountPct = parseFloat(discount) || 0;
   const ncbLocked = claimTaken || expiredOver90Days;
+
+  const securePremiumNum = parseFloat(securePremium) || 0;
 
   const calc = useMemo(() => {
     if (!idvNum || !ccNum) return null;
@@ -111,12 +121,12 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
 
     const tp = getTPPremium(ccNum);
     const addonTotal = addons.filter(a => a.enabled).reduce((s, a) => s + a.price, 0);
-    const subtotal = netOD + tp + addonTotal;
+    const subtotal = netOD + tp + securePremiumNum + addonTotal;
     const gst = (subtotal * GST_RATE) / 100;
     const total = subtotal + gst;
 
-    return { odRate, basicOD, odDiscount, odAfterDiscount, ncbDiscount, netOD, tp, addonTotal, subtotal, gst, total };
-  }, [idvNum, ccNum, zone, discountPct, ncb, addons, ncbLocked]);
+    return { odRate, basicOD, odDiscount, odAfterDiscount, ncbDiscount, netOD, tp, securePremium: securePremiumNum, addonTotal, subtotal, gst, total };
+  }, [idvNum, ccNum, zone, discountPct, ncb, addons, ncbLocked, securePremiumNum]);
 
   const toggleAddon = (id: string) => {
     setAddons(prev => prev.map(a => a.id === id ? { ...a, enabled: !a.enabled } : a));
@@ -146,13 +156,16 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
       `🚗 Insurance Quote`,
       customerName ? `Customer: ${customerName}` : null,
       vehicleNumber ? `Vehicle: ${vehicleNumber}` : null,
+      resolvedInsurer ? `Insurer: ${resolvedInsurer}` : null,
       `IDV: ${fmt(idvNum)} | CC: ${ccNum} | Zone: ${zone} (${city})`,
+      `Policy: ${policyType} | Fuel: ${fuelType}`,
       `──────────────────`,
       `Basic OD: ${fmt(calc.basicOD)} (${calc.odRate}%)`,
       discountPct > 0 ? `OD Discount: -${fmt(calc.odDiscount)} (${discountPct}%)` : null,
       !ncbLocked && ncb > 0 ? `NCB Discount: -${fmt(calc.ncbDiscount)} (${ncb}%)` : null,
       `Net OD Premium: ${fmt(calc.netOD)}`,
       `Third Party: ${fmt(calc.tp)}`,
+      securePremiumNum > 0 ? `Secure Premium: ${fmt(securePremiumNum)}` : null,
       calc.addonTotal > 0 ? `Add-ons: ${fmt(calc.addonTotal)}` : null,
       `──────────────────`,
       `Subtotal: ${fmt(calc.subtotal)}`,
@@ -174,8 +187,8 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
       vehicleMake: vehicleMake || null,
       vehicleModel: vehicleModel || null,
       vehicleYear: vehicleYear || null,
-      insuranceCompany: "Calculator Quote",
-      policyType: "Comprehensive",
+      insuranceCompany: resolvedInsurer || "Calculator Quote",
+      policyType: policyType,
       idv: idvNum,
       totalPremium: Math.round(calc.total),
       premiumBreakup: {
@@ -184,13 +197,14 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
         ncbDiscount: Math.round(calc.ncbDiscount),
         netOD: Math.round(calc.netOD),
         tp: Math.round(calc.tp),
+        securePremium: Math.round(securePremiumNum),
         addonTotal: Math.round(calc.addonTotal),
         subtotal: Math.round(calc.subtotal),
         gst: Math.round(calc.gst),
         total: Math.round(calc.total),
       },
       addons: addons.filter((addon) => addon.enabled).map((addon) => addon.name),
-      notes: `Zone: ${zone} | OD Discount: ${discountPct}% | NCB: ${ncbLocked ? 0 : ncb}% | Claim Taken: ${claimTaken ? "Yes" : "No"} | Expired > 90 Days: ${expiredOver90Days ? "Yes" : "No"}`,
+      notes: `Zone: ${zone} | Fuel: ${fuelType} | Policy: ${policyType} | OD Discount: ${discountPct}% | NCB: ${ncbLocked ? 0 : ncb}% | Claim Taken: ${claimTaken ? "Yes" : "No"} | Expired > 90 Days: ${expiredOver90Days ? "Yes" : "No"}`,
       ncbPercentage: ncbLocked ? 0 : ncb,
       previousClaim: ncbLocked,
     };
@@ -208,20 +222,20 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
       vehicle_model: vehicleModel || "Model",
       vehicle_number: vehicleNumber || null,
       vehicle_year: parseInt(vehicleYear) || new Date().getFullYear(),
-      fuel_type: "Petrol",
-      insurance_company: "Calculator Quote",
-      policy_type: "Comprehensive",
+      fuel_type: fuelType,
+      insurance_company: resolvedInsurer || "Calculator Quote",
+      policy_type: policyType,
       idv: idvNum,
       basic_od: Math.round(calc.basicOD),
       od_discount: Math.round(calc.odDiscount),
       ncb_discount: Math.round(calc.ncbDiscount),
       third_party: Math.round(calc.tp),
-      secure_premium: Math.round(calc.total),
+      secure_premium: Math.round(securePremiumNum),
       addon_premium: Math.round(calc.addonTotal),
       addons: enabledAddons,
       status,
       batch_label: `Calculator-${new Date().toISOString().slice(0, 10)}`,
-      notes: `Zone: ${zone} | OD Discount: ${discountPct}% | NCB: ${ncbLocked ? 0 : ncb}% | Claim Taken: ${claimTaken ? "Yes" : "No"}`,
+      notes: `Zone: ${zone} | Fuel: ${fuelType} | Policy: ${policyType} | OD Discount: ${discountPct}% | NCB: ${ncbLocked ? 0 : ncb}% | Claim Taken: ${claimTaken ? "Yes" : "No"}`,
       pdf_generated: true,
       pdf_generated_at: new Date().toISOString(),
       whatsapp_sent: status === "sent",
@@ -439,7 +453,9 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
     const rightH = drawInfoCard(m + cardW + 4, y, cardW, "VEHICLE DETAILS", [
       `${vehicleMake} ${vehicleModel}`.trim() || "Vehicle",
       `Reg: ${(vehicleNumber || "-").toUpperCase()}`,
-      `Year: ${vehicleYear || "-"}  |  Fuel: Petrol`,
+      `Year: ${vehicleYear || "-"}  |  Fuel: ${fuelType}`,
+      `Insurer: ${resolvedInsurer || "Not selected"}`,
+      `Policy: ${policyType}`,
     ], darkGreen);
     y += Math.max(leftH, rightH) + 6;
 
@@ -455,6 +471,9 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
     addRow("IDV (Insured Declared Value)", fmt(idvNum));
     addRow("Engine CC", `${ccNum}cc`);
     addRow("Zone", `${zone} (${city})`);
+    if (resolvedInsurer) addRow("Insurance Company", resolvedInsurer);
+    addRow("Policy Type", policyType);
+    addRow("Fuel Type", fuelType);
     y += 3; rowIdx = 0;
 
     addRow(`Basic OD Premium (${calc.odRate}%)`, fmt(calc.basicOD));
@@ -464,6 +483,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
     y += 3; rowIdx = 0;
 
     addRow("Third Party Premium", fmt(calc.tp));
+    if (securePremiumNum > 0) addRow("Secure Premium", fmt(securePremiumNum));
 
     // ── Add-ons ──
     const enabledAddons = addons.filter(a => a.enabled);
@@ -626,6 +646,51 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
                 <Input placeholder="Swift" value={vehicleModel} onChange={e => setVehicleModel(e.target.value)} className="h-8 text-sm mt-1" />
               </div>
             </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Vehicle Year</Label>
+                <Input type="number" placeholder="2024" value={vehicleYear} onChange={e => setVehicleYear(e.target.value)} className="h-8 text-sm mt-1" />
+              </div>
+              <div>
+                <Label className="text-xs">Insurance Company</Label>
+                <Select value={insuranceCompany} onValueChange={setInsuranceCompany}>
+                  <SelectTrigger className="h-8 text-sm mt-1"><SelectValue placeholder="Select insurer" /></SelectTrigger>
+                  <SelectContent>
+                    {INSURANCE_COMPANIES.map(co => (
+                      <SelectItem key={co} value={co}>{co}</SelectItem>
+                    ))}
+                    <SelectItem value="__custom">+ Add Custom</SelectItem>
+                  </SelectContent>
+                </Select>
+                {insuranceCompany === "__custom" && (
+                  <Input placeholder="Enter insurer name" value={customInsurer} onChange={e => setCustomInsurer(e.target.value)} className="h-8 text-sm mt-1" />
+                )}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Fuel Type</Label>
+                <Select value={fuelType} onValueChange={setFuelType}>
+                  <SelectTrigger className="h-8 text-sm mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {["Petrol", "Diesel", "CNG", "Electric", "Hybrid", "LPG"].map(f => (
+                      <SelectItem key={f} value={f}>{f}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">Policy Type</Label>
+                <Select value={policyType} onValueChange={setPolicyType}>
+                  <SelectTrigger className="h-8 text-sm mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Comprehensive">Comprehensive</SelectItem>
+                    <SelectItem value="Third Party">Third Party Only</SelectItem>
+                    <SelectItem value="Standalone OD">Standalone OD</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
 
           {/* Vehicle Details Card */}
@@ -660,6 +725,14 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
               <p className="text-[10px] text-muted-foreground mt-1">
                 {zone === "A" ? "🏙 Metro (Delhi NCR / Bangalore)" : "🌍 Non-Metro"} — OD Rate: {ccNum > 1500 ? OD_RATES[zone].above1500 : OD_RATES[zone].upto1500}%
               </p>
+            </div>
+
+            <div>
+              <Label className="text-xs">Secure Premium</Label>
+              <div className="relative mt-1">
+                <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input type="number" placeholder="0" value={securePremium} onChange={e => setSecurePremium(e.target.value)} className="pl-8 h-9 text-sm" />
+              </div>
             </div>
           </div>
 
@@ -770,7 +843,9 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
                   <Badge className="bg-primary/20 text-primary border-0 text-[10px]">Incl. 18% GST</Badge>
                 </div>
                 <div className="text-3xl md:text-4xl font-heading font-black text-foreground">{fmt(calc.total)}</div>
-                <p className="text-xs text-muted-foreground mt-1">Zone {zone} • {ccNum}cc • IDV {fmt(idvNum)}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {resolvedInsurer ? `${resolvedInsurer} • ` : ""}{policyType} • {fuelType} • Zone {zone} • {ccNum}cc • IDV {fmt(idvNum)}
+                </p>
               </div>
 
               {/* Breakdown */}
@@ -797,6 +872,11 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
                   <Row label={`TP Premium (${ccNum < 1000 ? "<1000" : ccNum <= 1500 ? "1000-1500" : ">1500"}cc)`} value={fmt(calc.tp)} bold />
                 </div>
 
+                {securePremiumNum > 0 && (
+                  <div className="p-4">
+                    <Row label="Secure Premium" value={fmt(securePremiumNum)} bold />
+                  </div>
+                )}
                 {calc.addonTotal > 0 && (
                   <div className="p-4 space-y-2">
                     <div className="flex items-center gap-2 mb-2">
@@ -844,6 +924,8 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
                 setIdv(""); setCc(""); setDiscount("0"); setNcb(0); setClaimTaken(false); setExpiredOver90Days(false);
                 setAddons(DEFAULT_ADDONS); setCustomerName(""); setCustomerPhone("");
                 setVehicleMake(""); setVehicleModel(""); setVehicleNumber("");
+                setInsuranceCompany(""); setCustomInsurer(""); setFuelType("Petrol");
+                setPolicyType("Comprehensive"); setSecurePremium("0");
                 toast.info("Calculator reset");
               }}>
                 Reset Calculator
