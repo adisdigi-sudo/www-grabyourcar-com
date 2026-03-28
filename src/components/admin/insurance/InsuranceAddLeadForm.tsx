@@ -38,14 +38,16 @@ export function InsuranceAddLeadForm({ onSuccess }: { onSuccess?: () => void }) 
       const phone = normalizePhoneNumber(form.phone);
       const cleanVehicle = normalizeVehicleRegistration(form.vehicle_number) || null;
 
-      // Check for existing client by phone or vehicle number
-      let matchQuery = supabase.from("insurance_clients").select("id, customer_name, vehicle_number, duplicate_count");
+      // Check for existing client ONLY by vehicle registration number
+      let existing: any[] | null = null;
       if (cleanVehicle) {
-        matchQuery = matchQuery.or(`phone.eq.${phone},vehicle_number.eq.${cleanVehicle}`);
-      } else {
-        matchQuery = matchQuery.eq("phone", phone);
+        const { data } = await supabase
+          .from("insurance_clients")
+          .select("id, customer_name, vehicle_number, duplicate_count")
+          .eq("vehicle_number", cleanVehicle)
+          .limit(1);
+        existing = data;
       }
-      const { data: existing } = await matchQuery.limit(1);
 
       if (existing && existing.length > 0) {
         const dup = existing[0];

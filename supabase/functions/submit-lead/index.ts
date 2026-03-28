@@ -219,34 +219,31 @@ serve(async (req) => {
         const vehicleNumber = body.vehicleNumber?.trim() || null;
         const normalizedVehicle = vehicleNumber ? vehicleNumber.replace(/\s+/g, '').toUpperCase() : null;
 
-        // Fetch all phone matches to decide intelligently
-        const { data: phoneMatches } = await supabaseAdmin
-          .from('insurance_clients')
-          .select('id, vehicle_number')
-          .in('phone', phoneCandidates)
-          .order('created_at', { ascending: false });
-
+        // Match ONLY by vehicle registration number — never by phone alone
         let targetClient: { id: string; vehicle_number: string | null } | null = null;
 
-        if (phoneMatches && phoneMatches.length > 0) {
-          if (normalizedVehicle) {
-            // 1. Exact vehicle match (same phone + same vehicle → update)
-            targetClient = phoneMatches.find(c =>
-              c.vehicle_number &&
-              c.vehicle_number.replace(/\s+/g, '').toUpperCase() === normalizedVehicle
-            ) || null;
+        if (normalizedVehicle) {
+          const { data: vehicleMatches } = await supabaseAdmin
+            .from('insurance_clients')
+            .select('id, vehicle_number')
+            .eq('vehicle_number', vehicleNumber)
+            .order('created_at', { ascending: false })
+            .limit(1);
 
-            // 2. Client with no vehicle yet (fill in the vehicle)
-            if (!targetClient) {
-              targetClient = phoneMatches.find(c => !c.vehicle_number) || null;
-            }
-
-            // 3. All matches have DIFFERENT vehicles → create new record (targetClient stays null)
+          // Also try normalized form
+          if (!vehicleMatches || vehicleMatches.length === 0) {
+            const { data: normalizedMatches } = await supabaseAdmin
+              .from('insurance_clients')
+              .select('id, vehicle_number')
+              .ilike('vehicle_number', normalizedVehicle)
+              .order('created_at', { ascending: false })
+              .limit(1);
+            targetClient = normalizedMatches?.[0] || null;
           } else {
-            // No vehicle on new lead → match most recent phone record
-            targetClient = phoneMatches[0];
+            targetClient = vehicleMatches[0];
           }
         }
+        // If no vehicle number provided, always create new (no phone-based matching)
 
         if (targetClient) {
           await supabaseAdmin.from('insurance_clients').update({
