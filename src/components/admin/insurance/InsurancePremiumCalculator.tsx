@@ -169,7 +169,6 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
     const m = 14;
     const contentW = pw - 2 * m;
 
-    // Color palette
     const green: [number, number, number] = [16, 185, 129];
     const darkGreen: [number, number, number] = [6, 95, 70];
     const lightGreen: [number, number, number] = [236, 253, 245];
@@ -181,14 +180,37 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
 
     const footerH = 22;
     const footerYPos = ph - footerH;
-
     let y = 0;
+    let pageNum = 0;
 
     const checkPageBreak = (needed: number) => {
       if (y + needed > footerYPos - 6) {
         drawFooter();
         doc.addPage();
+        pageNum++;
+        drawWatermark();
         y = 16;
+      }
+    };
+
+    // ── Diagonal watermark ──
+    const drawWatermark = () => {
+      try {
+        const GState = (doc as any).GState;
+        if (GState) {
+          doc.saveGraphicsState();
+          doc.setGState(new GState({ opacity: 0.04 }));
+          doc.setTextColor(16, 185, 129);
+          doc.setFontSize(60);
+          doc.setFont("helvetica", "bold");
+          const cx = pw / 2;
+          const cy = ph / 2;
+          doc.text("GRABYOURCAR", cx, cy, { align: "center", angle: 35 });
+          doc.setGState(new GState({ opacity: 1 }));
+          doc.restoreGraphicsState();
+        }
+      } catch {
+        // GState not supported — skip watermark
       }
     };
 
@@ -261,6 +283,9 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
       doc.text("MS 228, 2nd Floor, DT Mega Mall, Sector 28, Gurugram, Haryana - 122001", pw - m, fy + 18, { align: "right" });
     };
 
+    // ── WATERMARK on page 1 ──
+    drawWatermark();
+
     // ── HEADER ──
     doc.setFillColor(...darkGreen);
     doc.rect(0, 0, pw, 38, "F");
@@ -281,6 +306,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
     y = 46;
 
     // ── Title ──
+    const quoteRef = `GYC-INS-${Date.now().toString().slice(-6)}`;
     doc.setFontSize(15);
     doc.setTextColor(...dark);
     doc.setFont("helvetica", "bold");
@@ -289,7 +315,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...gray);
     doc.text(`Prepared for ${customerName || "Valued Customer"}  --  ${new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}`, m, y + 5.5);
-    doc.text(`Ref: GYC-INS-${Date.now().toString().slice(-6)}`, pw - m, y + 5.5, { align: "right" });
+    doc.text(`Ref: ${quoteRef}`, pw - m, y + 5.5, { align: "right" });
     y += 12;
 
     // ── Info Cards ──
@@ -355,14 +381,42 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
     doc.text(fmt(calc.total), pw - m - 5, y + 10.8, { align: "right" });
     y += 21;
 
-    // ── Notes ──
+    // ── Terms & Conditions ──
+    checkPageBreak(60);
+    y = drawSectionLabel("TERMS & CONDITIONS", y);
+    const tcItems = [
+      "This quotation is issued by Grabyourcar (Adis Makethemoney Services Pvt Ltd), a licensed Insurance Broking entity.",
+      "This is an indicative premium quotation only. Final premium is subject to insurer underwriting, vehicle inspection, and claim/NCB verification.",
+      "The quote is valid for 7 days from the date of issue. Premiums may change post-validity due to rate revisions by the insurer.",
+      "Policy issuance is subject to receipt of complete KYC documents, vehicle inspection (if applicable), and full premium payment.",
+      "Grabyourcar acts as an insurance broker and does not underwrite risk. All policies are issued by the respective insurance companies.",
+      "GST at 18% is applicable on the net premium as per prevailing tax regulations.",
+      "NCB (No Claim Bonus) discount is subject to verification of previous policy claims history by the insurer.",
+      "Add-on covers are optional and available at additional cost. Coverage details are as per the insurer's policy wordings.",
+      "In case of any claim, the policyholder must intimate the insurance company directly as per policy terms.",
+      "For grievance redressal, contact Grabyourcar Insurance Desk at +91 98559 24442 or hello@grabyourcar.com.",
+    ];
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(6.5);
+    doc.setTextColor(...gray);
+    tcItems.forEach((item, i) => {
+      const tcLine = `${i + 1}. ${item}`;
+      const wrapped = doc.splitTextToSize(tcLine, contentW - 8) as string[];
+      const lineH = wrapped.length * 3.2 + 1;
+      checkPageBreak(lineH);
+      doc.text(wrapped, m + 4, y);
+      y += lineH;
+    });
+    y += 4;
+
+    // ── Important Notes ──
     checkPageBreak(24);
     doc.setFillColor(...lightGreen);
     doc.setDrawColor(...mint);
     const notes = [
-      "This is an indicative quotation. Final premium may vary as per underwriting, inspection and claim history.",
+      "Grabyourcar (Adis Makethemoney Services Pvt Ltd) is a registered Insurance Broking firm.",
       `Quote validity: 7 days from ${new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}.`,
-      "Policy issuance is subject to insurer approval and receipt of complete documents/payment.",
+      "All premiums are inclusive of applicable taxes unless stated otherwise.",
     ];
     const noteText = notes.map((n) => `- ${n}`);
     const noteLines = noteText.flatMap((n) => doc.splitTextToSize(n, contentW - 10) as string[]);
@@ -380,7 +434,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
     // ── Footer ──
     drawFooter();
 
-    return doc;
+    return { doc, quoteRef };
   };
 
   const downloadPDF = () => {
