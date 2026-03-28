@@ -383,6 +383,19 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
               </div>
             </div>
 
+            {/* OD Discount + Secure Premium */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs font-semibold text-muted-foreground">OD Discount (%)</Label>
+                <Input type="number" min={0} max={100} value={odDiscountPct} onChange={e => setOdDiscountPct(e.target.value)} className="h-8 text-xs mt-1" placeholder="0" />
+                <p className="text-[9px] text-muted-foreground mt-0.5">Deal-specific discount on OD</p>
+              </div>
+              <div>
+                <Label className="text-xs font-semibold text-muted-foreground">Secure Premium (₹)</Label>
+                <Input type="number" value={securePremium} onChange={e => setSecurePremium(e.target.value)} className="h-8 text-xs mt-1" placeholder="500" />
+              </div>
+            </div>
+
             <Separator />
 
             {/* Add-ons */}
