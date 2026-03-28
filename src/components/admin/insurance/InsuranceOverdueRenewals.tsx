@@ -55,23 +55,37 @@ export function InsuranceOverdueRenewals({ policies, clients }: Props) {
   const [moveTarget, setMoveTarget] = useState<"retarget" | "pipeline">("retarget");
   const [retargetNextYear, setRetargetNextYear] = useState(true);
 
-  // Get overdue policies (expiry_date < today)
+  // Get overdue policies (expiry_date < today) that are still actively in overdue workflow
   const overdueItems = useMemo(() => {
     const now = new Date();
-    const resolvedStatuses = ["renewed", "cancelled", "lost"];
+    const resolvedStatuses = ["renewed", "cancelled", "lost", "lapsed"];
     let items = policies
+      .map(p => {
+        const client = clients.find(c => c.id === p.client_id);
+        return { ...p, clientData: client };
+      })
       .filter(p => {
         if (!p.expiry_date) return false;
-        if (resolvedStatuses.includes(p.status || "")) return false;
-        return differenceInDays(new Date(p.expiry_date), now) < 0;
-      })
-      .map(p => {
-        const daysOverdue = Math.abs(differenceInDays(new Date(p.expiry_date!), now));
-        const client = clients.find(c => c.id === p.client_id);
-        return { ...p, daysOverdue, clientData: client };
-      });
+        if (resolvedStatuses.includes((p.status || "").toLowerCase())) return false;
+        if (differenceInDays(new Date(p.expiry_date), now) >= 0) return false;
 
-    // Filter by reason
+        const normalizedClientStage = p.clientData
+          ? normalizeStage(p.clientData.pipeline_stage, p.clientData.lead_status, p.clientData)
+          : null;
+
+        if (normalizedClientStage && ["new_lead", "smart_calling", "quote_shared", "follow_up", "policy_issued", "won"].includes(normalizedClientStage)) {
+          return false;
+        }
+
+        if ((p.clientData as any)?.retarget_status === "scheduled") return false;
+
+        return true;
+      })
+      .map(p => ({
+        ...p,
+        daysOverdue: Math.abs(differenceInDays(new Date(p.expiry_date!), now)),
+      }));
+
     if (filterReason !== "all") {
       if (filterReason === "unmarked") {
         items = items.filter(i => !(i.clientData as any)?.overdue_reason);
@@ -80,7 +94,6 @@ export function InsuranceOverdueRenewals({ policies, clients }: Props) {
       }
     }
 
-    // Search
     if (search.trim()) {
       const s = search.toLowerCase();
       items = items.filter(i =>
@@ -92,7 +105,6 @@ export function InsuranceOverdueRenewals({ policies, clients }: Props) {
       );
     }
 
-    // Sort
     return items.sort((a, b) => {
       if (sort === "name") return (a.insurance_clients?.customer_name || "").localeCompare(b.insurance_clients?.customer_name || "");
       if (sort === "days_asc") return a.daysOverdue - b.daysOverdue;
