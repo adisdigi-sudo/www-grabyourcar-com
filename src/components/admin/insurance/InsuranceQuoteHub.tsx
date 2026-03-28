@@ -270,7 +270,7 @@ export function InsuranceQuoteHub() {
             vehicle_year: shareClient.vehicle_year || undefined,
             current_insurer: shareClient.current_insurer || undefined,
             current_policy_type: shareClient.current_policy_type || undefined,
-            quote_amount: shareClient.quote_amount || undefined,
+            quote_amount: shareClient.current_premium || undefined,
           }}
           shareMessage={`Hi ${shareClient.customer_name}! Here is your insurance quote for your ${shareClient.vehicle_make || ""} ${shareClient.vehicle_model || ""}.\n\nVehicle: ${shareClient.vehicle_number || "N/A"}\nInsurer: ${shareClient.current_insurer || "Best Available"}\n\nPlease review and let us know if you'd like to proceed.\n\nPhone: +91 98559 24442\nwww.grabyourcar.com\n- Grabyourcar Insurance`}
           generatePdf={() => generateInsuranceQuotePdf({
