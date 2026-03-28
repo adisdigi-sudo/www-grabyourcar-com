@@ -47,8 +47,24 @@ interface InsurancePerformanceProps {
 }
 
 export function InsurancePerformance({ clients, policies, selectedMonth, onMonthChange, monthOptions }: InsurancePerformanceProps) {
+  const [filterMode, setFilterMode] = useState<"month" | "range" | "preset">("month");
+  const [dateFrom, setDateFrom] = useState<Date | undefined>();
+  const [dateTo, setDateTo] = useState<Date | undefined>();
+  const [activePreset, setActivePreset] = useState<string | null>(null);
+
   const monthStart = useMemo(() => startOfMonth(new Date(selectedMonth + "-01")), [selectedMonth]);
   const monthEnd = useMemo(() => endOfMonth(monthStart), [monthStart]);
+
+  // Compute effective date range based on filter mode
+  const effectiveRange = useMemo(() => {
+    if (filterMode === "range" && dateFrom && dateTo) {
+      return { start: dateFrom, end: dateTo };
+    }
+    if (filterMode === "preset" && dateFrom && dateTo) {
+      return { start: dateFrom, end: dateTo };
+    }
+    return { start: monthStart, end: monthEnd };
+  }, [filterMode, dateFrom, dateTo, monthStart, monthEnd]);
 
   const clientById = useMemo(() => new Map(clients.map((client) => [client.id, client])), [clients]);
 
