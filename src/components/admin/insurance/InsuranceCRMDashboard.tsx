@@ -139,10 +139,12 @@ export function InsuranceCRMDashboard() {
   const { data: policies } = useQuery({
     queryKey: ["ins-dash-policies"],
     queryFn: async () => {
+      // Only fetch active/lapsed policies — exclude 'renewed'/'cancelled' to prevent duplicate entries
       const { data, error } = await supabase
         .from("insurance_policies")
         .select("id, client_id, policy_number, insurer, premium_amount, expiry_date, status, start_date, policy_type, plan_name, created_at, policy_document_url")
-        .order("created_at", { ascending: false });
+        .in("status", ["active", "lapsed"])
+        .order("expiry_date", { ascending: true });
       if (error) throw error;
       return data;
     },
@@ -308,10 +310,10 @@ export function InsuranceCRMDashboard() {
     return result;
   }, [rows, filter, statusFilterVal, search, searchField, showPendingDocs, dateFrom, dateTo]);
 
-  // Upcoming renewals (expiring within 60 days)
+   // Upcoming renewals: expiring within 60 days OR recently expired (within last 15 days) for actionability
   const upcomingRenewals = useMemo(() => {
     return rows
-      .filter(r => r.daysUntilRenewal !== null && r.daysUntilRenewal >= 0 && r.daysUntilRenewal <= 60)
+      .filter(r => r.daysUntilRenewal !== null && r.daysUntilRenewal >= -15 && r.daysUntilRenewal <= 60)
       .sort((a, b) => (a.daysUntilRenewal || 0) - (b.daysUntilRenewal || 0));
   }, [rows]);
 

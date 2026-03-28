@@ -53,14 +53,15 @@ export function InsuranceComingRenewals({ policies }: InsuranceComingRenewalsPro
 
   const summary = useMemo(() => {
     const now = new Date();
-    const all = policies.filter(p => p.expiry_date && p.status !== "renewed");
-    const upcoming = all.filter(p => { const d = differenceInDays(new Date(p.expiry_date!), now); return d >= 0 && d <= 90; });
+    // Exclude 'renewed' status to avoid duplicate entries; include recently expired (within -15 days) for actionability
+    const all = policies.filter(p => p.expiry_date && p.status !== "renewed" && p.status !== "cancelled");
+    const upcoming = all.filter(p => { const d = differenceInDays(new Date(p.expiry_date!), now); return d >= -15 && d <= 90; });
     return {
-      within7: upcoming.filter(p => differenceInDays(new Date(p.expiry_date!), now) <= 7).length,
-      within15: upcoming.filter(p => differenceInDays(new Date(p.expiry_date!), now) <= 15).length,
-      within30: upcoming.filter(p => differenceInDays(new Date(p.expiry_date!), now) <= 30).length,
-      within45: upcoming.filter(p => differenceInDays(new Date(p.expiry_date!), now) <= 45).length,
-      within60: upcoming.filter(p => differenceInDays(new Date(p.expiry_date!), now) <= 60).length,
+      within7: upcoming.filter(p => differenceInDays(new Date(p.expiry_date!), now) <= 7 && differenceInDays(new Date(p.expiry_date!), now) >= -15).length,
+      within15: upcoming.filter(p => differenceInDays(new Date(p.expiry_date!), now) <= 15 && differenceInDays(new Date(p.expiry_date!), now) >= -15).length,
+      within30: upcoming.filter(p => differenceInDays(new Date(p.expiry_date!), now) <= 30 && differenceInDays(new Date(p.expiry_date!), now) >= -15).length,
+      within45: upcoming.filter(p => differenceInDays(new Date(p.expiry_date!), now) <= 45 && differenceInDays(new Date(p.expiry_date!), now) >= -15).length,
+      within60: upcoming.filter(p => differenceInDays(new Date(p.expiry_date!), now) <= 60 && differenceInDays(new Date(p.expiry_date!), now) >= -15).length,
       total: upcoming.length,
     };
   }, [policies]);
@@ -68,9 +69,9 @@ export function InsuranceComingRenewals({ policies }: InsuranceComingRenewalsPro
   const filtered = useMemo(() => {
     const now = new Date();
     let all = policies.filter(p => {
-      if (!p.expiry_date || p.status === "renewed") return false;
+      if (!p.expiry_date || p.status === "renewed" || p.status === "cancelled") return false;
       const d = differenceInDays(new Date(p.expiry_date), now);
-      return d >= 0 && d <= 90; // Only upcoming, overdue handled in separate tab
+      return d >= -15 && d <= 90; // Include recently expired (within 15 days) for follow-up
     });
 
     if (window_ !== "all") {
