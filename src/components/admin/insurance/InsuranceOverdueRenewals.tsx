@@ -83,6 +83,7 @@ export function InsuranceOverdueRenewals({ policies, clients }: Props) {
         if (resolvedStatuses.includes((p.status || "").toLowerCase())) return false;
         if (differenceInDays(new Date(p.expiry_date), now) >= 0) return false;
         if ((p.clientData as any)?.retarget_status === "scheduled") return false;
+        if (["removed", "moved_to_pipeline"].includes((p.clientData as any)?.overdue_reason || "")) return false;
         return true;
       })
       .map(p => ({
@@ -203,9 +204,9 @@ export function InsuranceOverdueRenewals({ policies, clients }: Props) {
         await supabase.from("insurance_clients").update({
           pipeline_stage: "new_lead",
           lead_status: "new",
-          overdue_reason: null,
+          overdue_reason: "moved_to_pipeline",
           overdue_custom_reason: null,
-          overdue_marked_at: null,
+          overdue_marked_at: new Date().toISOString(),
           retarget_status: "none",
           retargeting_enabled: false,
         } as any).eq("id", targetPolicy.client_id);
@@ -246,9 +247,9 @@ export function InsuranceOverdueRenewals({ policies, clients }: Props) {
           await supabase.from("insurance_clients").update({
             pipeline_stage: "new_lead",
             lead_status: "new",
-            overdue_reason: null,
+            overdue_reason: "moved_to_pipeline",
             overdue_custom_reason: null,
-            overdue_marked_at: null,
+            overdue_marked_at: new Date().toISOString(),
             retarget_status: "none",
             retargeting_enabled: false,
           } as any).eq("id", item.client_id);
