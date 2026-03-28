@@ -321,13 +321,17 @@ export function InsuranceWorkspace() {
     const cleanPhone = normalizePhoneNumber(newLead.phone);
     const cleanVehicle = normalizeVehicleRegistration(newLead.vehicle_number) || null;
 
-    // Check for existing client by phone or vehicle number
-    let existingQuery = supabase.from("insurance_clients").select("id, customer_name, vehicle_number, duplicate_count").or(`phone.eq.${cleanPhone}`);
+    // Duplicate detection must be strict: only same vehicle registration counts as duplicate
+    let existing: Array<{ id: string; customer_name: string | null; vehicle_number: string | null; duplicate_count: number | null }> | null = null;
+
     if (cleanVehicle) {
-      existingQuery = supabase.from("insurance_clients").select("id, customer_name, vehicle_number, duplicate_count")
-        .or(`phone.eq.${cleanPhone},vehicle_number.eq.${cleanVehicle}`);
+      const { data } = await supabase
+        .from("insurance_clients")
+        .select("id, customer_name, vehicle_number, duplicate_count")
+        .eq("vehicle_number", cleanVehicle)
+        .limit(1);
+      existing = data;
     }
-    const { data: existing } = await existingQuery.limit(1);
 
     if (existing && existing.length > 0) {
       const dup = existing[0];
@@ -345,7 +349,7 @@ export function InsuranceWorkspace() {
         updated_at: new Date().toISOString(),
       }).eq("id", dup.id);
       toast.info(`⚠️ Duplicate lead detected (Entry #${newDupCount + 1}) — existing record updated`, {
-        description: `${dup.customer_name} • ${dup.vehicle_number || cleanPhone}`,
+        description: `${dup.customer_name} • ${dup.vehicle_number || cleanVehicle}`,
       });
       queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
       setShowAddLead(false);
