@@ -1,13 +1,16 @@
-import { useMemo } from "react";
-import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
+import { useMemo, useState } from "react";
+import { format, startOfMonth, endOfMonth, subMonths, subDays, startOfYear, parse } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { SmartDatePicker } from "@/components/ui/smart-date-picker";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import {
   TrendingUp, Target, Award, IndianRupee, Users, BarChart3,
-  CheckCircle2, XCircle, Shield, Calendar
+  CheckCircle2, XCircle, Shield, Calendar, CalendarIcon, Filter
 } from "lucide-react";
 import { normalizeStage, type Client } from "./InsuranceLeadPipeline";
 import type { PolicyRecord } from "./InsurancePolicyBook";

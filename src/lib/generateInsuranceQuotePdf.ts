@@ -322,6 +322,44 @@ export const generateInsuranceQuotePdf = (data: InsuranceQuoteData) => {
   doc.text(formatINR(totalPremium), pw - m - 5, y + 10.8, { align: "right" });
   y += 21;
 
+  // ── EXPIRY DATE RED FLAG WARNING ──
+  checkPageBreak(32);
+  const red: [number, number, number] = [220, 38, 38];
+  const lightRed: [number, number, number] = [254, 226, 226];
+  const darkRed: [number, number, number] = [153, 27, 27];
+
+  doc.setFillColor(...lightRed);
+  doc.setDrawColor(...red);
+  doc.setLineWidth(0.6);
+  doc.roundedRect(m, y, contentW, 26, 3, 3, "FD");
+  doc.setLineWidth(0.2);
+
+  // Red flag icon area
+  doc.setFillColor(...red);
+  doc.roundedRect(m, y, 8, 26, 3, 0, "F");
+  doc.rect(m + 3, y, 5, 26, "F");
+  doc.setTextColor(...white);
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.text("!", m + 3.5, y + 15);
+
+  // Warning text
+  doc.setTextColor(...darkRed);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.text("IMPORTANT: POLICY EXPIRY WARNING", m + 12, y + 7);
+  doc.setFontSize(7.5);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...red);
+  const warningLines = doc.splitTextToSize(
+    "Driving without valid insurance is a punishable offence under the Motor Vehicles Act, 1988. " +
+    "Penalty: Fine upto Rs. 25,000/- and/or imprisonment upto 3 months. " +
+    "Additionally, any accident claim will be entirely borne by the vehicle owner. Renew your policy before expiry!",
+    contentW - 16
+  ) as string[];
+  doc.text(warningLines, m + 12, y + 12);
+  y += 30;
+
   // ── Terms & Conditions ──
   checkPageBreak(60);
   y = drawSectionLabel("TERMS & CONDITIONS", y);
