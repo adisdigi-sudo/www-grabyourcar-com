@@ -116,6 +116,7 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
   const [ncb, setNcb] = useState<number>(
     policy?.ncb_discount ? policy.ncb_discount : client.ncb_percentage ? client.ncb_percentage : 0
   );
+  const [claimTaken, setClaimTaken] = useState(false);
   const [odDiscountPct, setOdDiscountPct] = useState<string>("0");
   const [addons, setAddons] = useState<Addon[]>(DEFAULT_ADDONS);
   const [securePremium, setSecurePremium] = useState<string>("500");
