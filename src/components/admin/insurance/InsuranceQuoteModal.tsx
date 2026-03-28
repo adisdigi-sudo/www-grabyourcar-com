@@ -174,6 +174,7 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
       securePremium: securePremiumNum,
       addonPremium: calc.addonTotal,
       addons: addons.filter(a => a.enabled).map(a => a.name),
+      claimTaken,
     };
   };
 
