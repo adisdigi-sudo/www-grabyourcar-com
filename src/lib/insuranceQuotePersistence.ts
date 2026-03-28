@@ -43,6 +43,35 @@ const normalizeLower = (value?: string | null) => (value || "").trim().toLowerCa
 const normalizePhoneDigits = (value?: string | null) => (value || "").replace(/\D/g, "");
 const normalizeVehicleNumber = (value?: string | null) => (value || "").replace(/\s+/g, "").toUpperCase();
 
+const createQuoteStageLog = async ({
+  clientId,
+  quoteRef,
+  shareMethod,
+  totalPremium,
+}: {
+  clientId: string;
+  quoteRef: string;
+  shareMethod: string;
+  totalPremium?: number | null;
+}) => {
+  const { error } = await supabase.from("insurance_activity_log").insert({
+    client_id: clientId,
+    activity_type: "stage_change",
+    title: "Pipeline → Quote Shared",
+    description: `Quote ${quoteRef} saved via ${shareMethod}${totalPremium ? ` • Rs. ${Math.round(totalPremium).toLocaleString("en-IN")}` : ""}`,
+    metadata: {
+      new_stage: "quote_shared",
+      quote_ref: quoteRef,
+      share_method: shareMethod,
+      total_premium: totalPremium ?? null,
+    },
+  });
+
+  if (error) {
+    console.warn("Quote activity log insert failed:", error.message);
+  }
+};
+
 const uploadQuotePdf = async (doc: jsPDF, fileName: string) => {
   const pdfBlob = doc.output("blob");
   const storagePath = `quotes/${new Date().toISOString().slice(0, 10)}/${fileName}`;
@@ -227,7 +256,14 @@ export async function persistInsuranceQuoteHistory(input: PersistQuoteHistoryInp
     if (clientUpdateError) {
       throw new Error(`Client quote update failed: ${clientUpdateError.message}`);
     }
+
+    await createQuoteStageLog({
+      clientId: resolvedClientId,
+      quoteRef,
+      shareMethod: input.shareMethod,
+      totalPremium: input.totalPremium ?? input.quoteAmount ?? null,
+    });
   }
 
-  return { pdfStoragePath, quoteRef };
+  return { pdfStoragePath, quoteRef, clientId: resolvedClientId };
 }
