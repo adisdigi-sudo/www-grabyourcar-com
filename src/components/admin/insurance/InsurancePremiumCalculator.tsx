@@ -453,7 +453,9 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
     const rightH = drawInfoCard(m + cardW + 4, y, cardW, "VEHICLE DETAILS", [
       `${vehicleMake} ${vehicleModel}`.trim() || "Vehicle",
       `Reg: ${(vehicleNumber || "-").toUpperCase()}`,
-      `Year: ${vehicleYear || "-"}  |  Fuel: Petrol`,
+      `Year: ${vehicleYear || "-"}  |  Fuel: ${fuelType}`,
+      `Insurer: ${resolvedInsurer || "Not selected"}`,
+      `Policy: ${policyType}`,
     ], darkGreen);
     y += Math.max(leftH, rightH) + 6;
 
@@ -469,6 +471,9 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
     addRow("IDV (Insured Declared Value)", fmt(idvNum));
     addRow("Engine CC", `${ccNum}cc`);
     addRow("Zone", `${zone} (${city})`);
+    if (resolvedInsurer) addRow("Insurance Company", resolvedInsurer);
+    addRow("Policy Type", policyType);
+    addRow("Fuel Type", fuelType);
     y += 3; rowIdx = 0;
 
     addRow(`Basic OD Premium (${calc.odRate}%)`, fmt(calc.basicOD));
@@ -478,6 +483,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
     y += 3; rowIdx = 0;
 
     addRow("Third Party Premium", fmt(calc.tp));
+    if (securePremiumNum > 0) addRow("Secure Premium", fmt(securePremiumNum));
 
     // ── Add-ons ──
     const enabledAddons = addons.filter(a => a.enabled);
