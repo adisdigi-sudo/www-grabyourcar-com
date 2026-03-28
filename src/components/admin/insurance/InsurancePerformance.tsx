@@ -1,13 +1,16 @@
-import { useMemo } from "react";
-import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
+import { useMemo, useState } from "react";
+import { format, startOfMonth, endOfMonth, subMonths, subDays, startOfYear, parse } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { SmartDatePicker } from "@/components/ui/smart-date-picker";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import {
   TrendingUp, Target, Award, IndianRupee, Users, BarChart3,
-  CheckCircle2, XCircle, Shield, Calendar
+  CheckCircle2, XCircle, Shield, Calendar, CalendarIcon, Filter
 } from "lucide-react";
 import { normalizeStage, type Client } from "./InsuranceLeadPipeline";
 import type { PolicyRecord } from "./InsurancePolicyBook";
@@ -44,8 +47,24 @@ interface InsurancePerformanceProps {
 }
 
 export function InsurancePerformance({ clients, policies, selectedMonth, onMonthChange, monthOptions }: InsurancePerformanceProps) {
+  const [filterMode, setFilterMode] = useState<"month" | "range" | "preset">("month");
+  const [dateFrom, setDateFrom] = useState<Date | undefined>();
+  const [dateTo, setDateTo] = useState<Date | undefined>();
+  const [activePreset, setActivePreset] = useState<string | null>(null);
+
   const monthStart = useMemo(() => startOfMonth(new Date(selectedMonth + "-01")), [selectedMonth]);
   const monthEnd = useMemo(() => endOfMonth(monthStart), [monthStart]);
+
+  // Compute effective date range based on filter mode
+  const effectiveRange = useMemo(() => {
+    if (filterMode === "range" && dateFrom && dateTo) {
+      return { start: dateFrom, end: dateTo };
+    }
+    if (filterMode === "preset" && dateFrom && dateTo) {
+      return { start: dateFrom, end: dateTo };
+    }
+    return { start: monthStart, end: monthEnd };
+  }, [filterMode, dateFrom, dateTo, monthStart, monthEnd]);
 
   const clientById = useMemo(() => new Map(clients.map((client) => [client.id, client])), [clients]);
 
@@ -56,9 +75,9 @@ export function InsurancePerformance({ clients, policies, selectedMonth, onMonth
       const rawDate = getClientEffectiveDate(client);
       if (!rawDate) return false;
       const d = new Date(rawDate);
-      return d >= monthStart && d <= monthEnd;
+      return d >= effectiveRange.start && d <= effectiveRange.end;
     });
-  }, [clients, monthStart, monthEnd]);
+  }, [clients, effectiveRange]);
 
   const isWon = (client: Client) => {
     const stage = normalizeStage(client.pipeline_stage, client.lead_status, client);
@@ -72,9 +91,9 @@ export function InsurancePerformance({ clients, policies, selectedMonth, onMonth
       const dateStr = getPolicyEffectiveDate(policy);
       if (!dateStr) return false;
       const d = new Date(dateStr);
-      return d >= monthStart && d <= monthEnd;
+      return d >= effectiveRange.start && d <= effectiveRange.end;
     });
-  }, [dedupedPolicies, monthStart, monthEnd]);
+  }, [dedupedPolicies, effectiveRange]);
 
   const wonClientIdsThisMonth = useMemo(
     () => new Set(policiesThisMonth.map((policy) => policy.client_id).filter(Boolean) as string[]),
@@ -89,18 +108,18 @@ export function InsurancePerformance({ clients, policies, selectedMonth, onMonth
       const dateStr = getClientEffectiveDate(client);
       if (!dateStr) return false;
       const d = new Date(dateStr);
-      return d >= monthStart && d <= monthEnd;
+      return d >= effectiveRange.start && d <= effectiveRange.end;
     });
     return [...matchedClients, ...wonByDate];
-  }, [clients, wonClientIdsThisMonth, monthStart, monthEnd]);
+  }, [clients, wonClientIdsThisMonth, effectiveRange]);
 
   const lostThisMonth = useMemo(() => {
     return clients.filter((client) => {
       if (!isLost(client)) return false;
       const d = new Date(client.updated_at);
-      return d >= monthStart && d <= monthEnd;
+      return d >= effectiveRange.start && d <= effectiveRange.end;
     });
-  }, [clients, monthStart, monthEnd]);
+  }, [clients, effectiveRange]);
 
   const totalLeadsMonth = monthClients.length;
   const wonCount = policiesThisMonth.length;
@@ -179,27 +198,108 @@ export function InsurancePerformance({ clients, policies, selectedMonth, onMonth
     return trend;
   }, [clients, dedupedPolicies]);
 
+  const activeRangeLabel = useMemo(() => {
+    if (filterMode === "preset" && activePreset) return activePreset;
+    if (filterMode === "range" && dateFrom && dateTo) return `${format(dateFrom, "dd MMM")} - ${format(dateTo, "dd MMM yyyy")}`;
+    return monthOptions.find(m => m.value === selectedMonth)?.label || selectedMonth;
+  }, [filterMode, activePreset, dateFrom, dateTo, selectedMonth, monthOptions]);
+
+  const handlePreset = (label: string, from: Date, to: Date) => {
+    setFilterMode("preset");
+    setActivePreset(label);
+    setDateFrom(from);
+    setDateTo(to);
+  };
+
+  const handleMonthSelect = (month: string) => {
+    setFilterMode("month");
+    setActivePreset(null);
+    setDateFrom(undefined);
+    setDateTo(undefined);
+    onMonthChange(month);
+  };
+
   return (
     <div className="space-y-4">
-      {/* Month Filter */}
-      <div className="flex items-center justify-between">
+      {/* Universal Date Filter */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h3 className="text-lg font-bold flex items-center gap-2">
           <BarChart3 className="h-5 w-5 text-primary" /> Performance Dashboard
         </h3>
-        <div className="flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-muted-foreground" />
-          <select
-            value={selectedMonth}
-            onChange={(e) => onMonthChange(e.target.value)}
-            className="h-9 w-[160px] rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
-          >
-            {monthOptions.map((month) => (
-              <option key={month.value} value={month.value}>
-                {month.label}
-              </option>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Quick Presets */}
+          <div className="flex gap-1 flex-wrap">
+            {[
+              { label: "Today", fn: () => { const t = new Date(); t.setHours(0,0,0,0); const e = new Date(); e.setHours(23,59,59,999); handlePreset("Today", t, e); } },
+              { label: "7 Days", fn: () => handlePreset("7 Days", subDays(new Date(), 7), new Date()) },
+              { label: "30 Days", fn: () => handlePreset("30 Days", subDays(new Date(), 30), new Date()) },
+              { label: "90 Days", fn: () => handlePreset("90 Days", subDays(new Date(), 90), new Date()) },
+              { label: "This Year", fn: () => handlePreset("This Year", startOfYear(new Date()), new Date()) },
+              { label: "All Time", fn: () => {
+                const earliest = monthOptions.length > 0 ? new Date(monthOptions[monthOptions.length - 1].value + "-01") : subMonths(new Date(), 12);
+                handlePreset("All Time", earliest, new Date());
+              }},
+            ].map(p => (
+              <Button
+                key={p.label}
+                variant={activePreset === p.label ? "default" : "outline"}
+                size="sm"
+                className="h-7 text-[10px] px-2"
+                onClick={p.fn}
+              >
+                {p.label}
+              </Button>
             ))}
-          </select>
+          </div>
+
+          {/* Month Selector */}
+          <Select value={filterMode === "month" ? selectedMonth : "__custom"} onValueChange={(v) => { if (v !== "__custom") handleMonthSelect(v); }}>
+            <SelectTrigger className="h-8 w-[140px] text-xs">
+              <Calendar className="h-3.5 w-3.5 mr-1" />
+              <SelectValue placeholder="Month" />
+            </SelectTrigger>
+            <SelectContent>
+              {monthOptions.map((month) => (
+                <SelectItem key={month.value} value={month.value}>
+                  {month.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Custom Range Picker */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 text-[10px] gap-1">
+                <CalendarIcon className="h-3.5 w-3.5" />
+                {filterMode === "range" && dateFrom && dateTo ? `${format(dateFrom, "dd MMM")} - ${format(dateTo, "dd MMM")}` : "Custom"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-3 space-y-2" align="end">
+              <p className="text-xs font-medium">Custom Date Range</p>
+              <div className="flex gap-3">
+                <div className="space-y-1">
+                  <p className="text-[10px] text-muted-foreground">From</p>
+                  <SmartDatePicker date={dateFrom} onSelect={(d) => { setDateFrom(d); if (d && dateTo) { setFilterMode("range"); setActivePreset(null); } }} placeholder="Start" yearRange={[new Date().getFullYear() - 3, new Date().getFullYear()]} />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] text-muted-foreground">To</p>
+                  <SmartDatePicker date={dateTo} onSelect={(d) => { setDateTo(d); if (dateFrom && d) { setFilterMode("range"); setActivePreset(null); } }} placeholder="End" yearRange={[new Date().getFullYear() - 3, new Date().getFullYear()]} />
+                </div>
+              </div>
+              {(dateFrom || dateTo) && (
+                <Button variant="ghost" size="sm" className="text-xs" onClick={() => { setDateFrom(undefined); setDateTo(undefined); setFilterMode("month"); setActivePreset(null); }}>Clear</Button>
+              )}
+            </PopoverContent>
+          </Popover>
         </div>
+      </div>
+
+      {/* Active Filter Badge */}
+      <div className="flex items-center gap-2">
+        <Badge variant="secondary" className="text-xs gap-1">
+          <Filter className="h-3 w-3" /> Showing: {activeRangeLabel}
+        </Badge>
       </div>
 
       {/* KPI Cards */}
@@ -384,7 +484,7 @@ export function InsurancePerformance({ clients, policies, selectedMonth, onMonth
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 text-emerald-600" /> Won Policies — {monthOptions.find(m => m.value === selectedMonth)?.label}
+            <CheckCircle2 className="h-4 w-4 text-emerald-600" /> Won Policies — {activeRangeLabel}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
