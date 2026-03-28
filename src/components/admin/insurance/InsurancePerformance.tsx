@@ -117,9 +117,9 @@ export function InsurancePerformance({ clients, policies, selectedMonth, onMonth
     return clients.filter((client) => {
       if (!isLost(client)) return false;
       const d = new Date(client.updated_at);
-      return d >= monthStart && d <= monthEnd;
+      return d >= effectiveRange.start && d <= effectiveRange.end;
     });
-  }, [clients, monthStart, monthEnd]);
+  }, [clients, effectiveRange]);
 
   const totalLeadsMonth = monthClients.length;
   const wonCount = policiesThisMonth.length;
