@@ -310,10 +310,10 @@ export function InsuranceCRMDashboard() {
     return result;
   }, [rows, filter, statusFilterVal, search, searchField, showPendingDocs, dateFrom, dateTo]);
 
-  // Upcoming renewals (expiring within 60 days)
+   // Upcoming renewals: expiring within 60 days OR recently expired (within last 15 days) for actionability
   const upcomingRenewals = useMemo(() => {
     return rows
-      .filter(r => r.daysUntilRenewal !== null && r.daysUntilRenewal >= 0 && r.daysUntilRenewal <= 60)
+      .filter(r => r.daysUntilRenewal !== null && r.daysUntilRenewal >= -15 && r.daysUntilRenewal <= 60)
       .sort((a, b) => (a.daysUntilRenewal || 0) - (b.daysUntilRenewal || 0));
   }, [rows]);
 
