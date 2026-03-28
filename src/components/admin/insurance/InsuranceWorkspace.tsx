@@ -249,9 +249,13 @@ export function InsuranceWorkspace() {
   );
 
   const totalLeads = monthFilteredClients.length;
-  const wonCount = monthFilteredPolicies.filter((policy) => (policy.status || "").toLowerCase() === "active").length;
+  const wonCountMonth = monthFilteredPolicies.filter((policy) => (policy.status || "").toLowerCase() === "active").length;
   const lostCount = monthFilteredClients.filter(isLost).length;
-  const inPipeline = totalLeads - wonCount - lostCount;
+  const inPipeline = totalLeads - wonCountMonth - lostCount;
+
+  // Total counts (not month-filtered) for tab badges
+  const totalRunningPolicies = runningPolicies.length;
+  const totalWonPolicies = policyBookPolicies.filter(p => (p.status || "").toLowerCase() === "active").length;
 
   // Month-wise conversion calculation based on real booking/policy dates
   const monthWiseConversion = useMemo(() => {
