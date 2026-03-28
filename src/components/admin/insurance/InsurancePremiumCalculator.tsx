@@ -160,10 +160,110 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
     return lines;
   };
 
-  const copyQuote = () => {
+  const buildPersistencePayload = () => {
+    if (!calc) {
+      throw new Error("Enter IDV & CC first");
+    }
+
+    return {
+      customerName: customerName || "Manual Quote",
+      customerPhone: customerPhone || null,
+      vehicleNumber: vehicleNumber || null,
+      vehicleMake: vehicleMake || null,
+      vehicleModel: vehicleModel || null,
+      vehicleYear: vehicleYear || null,
+      insuranceCompany: "Calculator Quote",
+      policyType: "Comprehensive",
+      idv: idvNum,
+      totalPremium: Math.round(calc.total),
+      premiumBreakup: {
+        basicOD: Math.round(calc.basicOD),
+        odDiscount: Math.round(calc.odDiscount),
+        ncbDiscount: Math.round(calc.ncbDiscount),
+        netOD: Math.round(calc.netOD),
+        tp: Math.round(calc.tp),
+        addonTotal: Math.round(calc.addonTotal),
+        subtotal: Math.round(calc.subtotal),
+        gst: Math.round(calc.gst),
+        total: Math.round(calc.total),
+      },
+      addons: addons.filter((addon) => addon.enabled).map((addon) => addon.name),
+      notes: `Zone: ${zone} | OD Discount: ${discountPct}% | NCB: ${ncbLocked ? 0 : ncb}% | Claim Taken: ${claimTaken ? "Yes" : "No"} | Expired > 90 Days: ${expiredOver90Days ? "Yes" : "No"}`,
+      ncbPercentage: ncbLocked ? 0 : ncb,
+      previousClaim: ncbLocked,
+    };
+  };
+
+  const saveBulkQuoteRecord = async (status: "draft" | "sent") => {
     if (!calc) return;
-    navigator.clipboard.writeText(getQuoteText());
-    toast.success("Quote copied to clipboard!");
+
+    const enabledAddons = addons.filter((addon) => addon.enabled).map((addon) => addon.name);
+    const { error } = await supabase.from("bulk_renewal_quotes").insert({
+      customer_name: customerName || "Manual Quote",
+      phone: customerPhone || null,
+      city: city || null,
+      vehicle_make: vehicleMake || "Unknown",
+      vehicle_model: vehicleModel || "Model",
+      vehicle_number: vehicleNumber || null,
+      vehicle_year: parseInt(vehicleYear) || new Date().getFullYear(),
+      fuel_type: "Petrol",
+      insurance_company: "Calculator Quote",
+      policy_type: "Comprehensive",
+      idv: idvNum,
+      basic_od: Math.round(calc.basicOD),
+      od_discount: Math.round(calc.odDiscount),
+      ncb_discount: Math.round(calc.ncbDiscount),
+      third_party: Math.round(calc.tp),
+      secure_premium: Math.round(calc.total),
+      addon_premium: Math.round(calc.addonTotal),
+      addons: enabledAddons,
+      status,
+      batch_label: `Calculator-${new Date().toISOString().slice(0, 10)}`,
+      notes: `Zone: ${zone} | OD Discount: ${discountPct}% | NCB: ${ncbLocked ? 0 : ncb}% | Claim Taken: ${claimTaken ? "Yes" : "No"}`,
+      pdf_generated: true,
+      pdf_generated_at: new Date().toISOString(),
+      whatsapp_sent: status === "sent",
+      whatsapp_sent_at: status === "sent" ? new Date().toISOString() : null,
+    });
+
+    if (error) {
+      console.warn("Calculator bulk quote save skipped:", error.message);
+    }
+  };
+
+  const persistQuoteAction = async (shareMethod: "copy_quote" | "pdf_download" | "whatsapp" | "save_quote") => {
+    const result = generatePDF();
+    if (!result) throw new Error("Failed to generate PDF");
+
+    const { doc } = result;
+    const fileName = `Quote_${(customerName || "Customer").replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.pdf`;
+
+    await persistInsuranceQuoteHistory({
+      doc,
+      fileName,
+      shareMethod,
+      ...buildPersistencePayload(),
+    });
+
+    await saveBulkQuoteRecord(shareMethod === "whatsapp" ? "sent" : "draft");
+
+    return { doc, fileName };
+  };
+
+  const copyQuote = async () => {
+    if (!calc) return;
+
+    setIsSaving(true);
+    try {
+      await persistQuoteAction("copy_quote");
+      await navigator.clipboard.writeText(getQuoteText());
+      onQuoteSaved?.();
+      toast.success("Quote copied & auto-saved!");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to copy quote");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const generatePDF = () => {
@@ -442,171 +542,27 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
     return { doc, quoteRef };
   };
 
-  const uploadPdfToStorage = async (doc: any, fileName: string): Promise<string | null> => {
-    try {
-      const pdfBlob = doc.output("blob");
-      const storagePath = `quotes/${new Date().toISOString().slice(0, 10)}/${fileName}`;
-      const { error } = await supabase.storage.from("quote-pdfs").upload(storagePath, pdfBlob, {
-        contentType: "application/pdf",
-        upsert: true,
-      });
-      if (error) { console.error("PDF upload error:", error); return null; }
-      return storagePath;
-    } catch { return null; }
-  };
-
-  const saveShareHistory = async (shareMethod: string, pdfPath: string | null, quoteRef: string) => {
-    if (!calc) return;
-    const netOD = Math.max(0, calc.basicOD - calc.odDiscount - calc.ncbDiscount);
-    const netPremium = netOD + calc.tp + calc.addonTotal;
-    const gst = Math.round(netPremium * 0.18);
-
-    await supabase.from("quote_share_history" as any).insert({
-      customer_name: customerName || "Manual Quote",
-      customer_phone: customerPhone || null,
-      vehicle_number: vehicleNumber || null,
-      vehicle_make: vehicleMake || null,
-      vehicle_model: vehicleModel || null,
-      vehicle_year: vehicleYear || null,
-      insurance_company: "Calculator Quote",
-      policy_type: "Comprehensive",
-      idv: idvNum,
-      total_premium: calc.total,
-      premium_breakup: {
-        basicOD: Math.round(calc.basicOD),
-        odDiscount: Math.round(calc.odDiscount),
-        ncbDiscount: Math.round(calc.ncbDiscount),
-        netOD: Math.round(calc.netOD),
-        tp: Math.round(calc.tp),
-        addonTotal: Math.round(calc.addonTotal),
-        subtotal: Math.round(calc.subtotal),
-        gst: Math.round(calc.gst),
-        total: Math.round(calc.total),
-      },
-      addons: addons.filter(a => a.enabled).map(a => a.name),
-      share_method: shareMethod,
-      pdf_storage_path: pdfPath,
-      quote_ref: quoteRef,
-      notes: `Zone: ${zone} | OD Discount: ${discountPct}% | NCB: ${ncbLocked ? 0 : ncb}% | Claim Taken: ${ncbLocked ? "Yes" : "No"}`,
-    } as any);
-  };
-
   const downloadPDF = async () => {
-    const result = generatePDF();
-    if (!result) return;
-    const { doc, quoteRef } = result;
-    const fileName = `Quote_${(customerName || "Customer").replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.pdf`;
-    doc.save(fileName);
+    if (!calc) return;
 
-    // Upload and save history in background
-    await persistInsuranceQuoteHistory({
-      doc,
-      fileName,
-      shareMethod: "pdf_download",
-      customerName: customerName || "Manual Quote",
-      customerPhone: customerPhone || null,
-      vehicleNumber: vehicleNumber || null,
-      vehicleMake: vehicleMake || null,
-      vehicleModel: vehicleModel || null,
-      vehicleYear: vehicleYear || null,
-      insuranceCompany: "Calculator Quote",
-      policyType: "Comprehensive",
-      idv: idvNum,
-      totalPremium: Math.round(calc.total),
-      premiumBreakup: {
-        basicOD: Math.round(calc.basicOD),
-        odDiscount: Math.round(calc.odDiscount),
-        ncbDiscount: Math.round(calc.ncbDiscount),
-        netOD: Math.round(calc.netOD),
-        tp: Math.round(calc.tp),
-        addonTotal: Math.round(calc.addonTotal),
-        subtotal: Math.round(calc.subtotal),
-        gst: Math.round(calc.gst),
-        total: Math.round(calc.total),
-      },
-      addons: addons.filter(a => a.enabled).map(a => a.name),
-      notes: `Zone: ${zone} | OD Discount: ${discountPct}% | NCB: ${ncbLocked ? 0 : ncb}% | Claim Taken: ${ncbLocked ? "Yes" : "No"}`,
-      ncbPercentage: ncbLocked ? 0 : ncb,
-      previousClaim: ncbLocked,
-    });
-    toast.success("PDF downloaded & saved!");
+    setIsSaving(true);
+    try {
+      const { doc, fileName } = await persistQuoteAction("pdf_download");
+      doc.save(fileName);
+      onQuoteSaved?.();
+      toast.success("PDF downloaded & auto-saved!");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to download PDF");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const saveAndShareQuote = async (method: "whatsapp" | "pdf_only") => {
     if (!calc) return;
     setIsSaving(true);
     try {
-      const result = generatePDF();
-      if (!result) throw new Error("Failed to generate PDF");
-      const { doc, quoteRef } = result;
-      const fileName = `Quote_${(customerName || "Customer").replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.pdf`;
-
-      // Upload PDF to storage
-      await uploadPdfToStorage(doc, fileName);
-
-      // Save to bulk_renewal_quotes
-      const enabledAddons = addons.filter(a => a.enabled).map(a => a.name);
-      const { error } = await supabase.from("bulk_renewal_quotes").insert({
-        customer_name: customerName || "Manual Quote",
-        phone: customerPhone || null,
-        city: city || null,
-        vehicle_make: vehicleMake || "Unknown",
-        vehicle_model: vehicleModel || "Model",
-        vehicle_number: vehicleNumber || null,
-        vehicle_year: parseInt(vehicleYear) || new Date().getFullYear(),
-        fuel_type: "Petrol",
-        insurance_company: "Calculator Quote",
-        policy_type: "Comprehensive",
-        idv: idvNum,
-        basic_od: Math.round(calc.basicOD),
-        od_discount: Math.round(calc.odDiscount),
-        ncb_discount: Math.round(calc.ncbDiscount),
-        third_party: Math.round(calc.tp),
-        secure_premium: Math.round(calc.total),
-        addon_premium: Math.round(calc.addonTotal),
-        addons: enabledAddons,
-        status: method === "whatsapp" ? "sent" : "draft",
-        batch_label: `Calculator-${new Date().toISOString().slice(0, 10)}`,
-        notes: `Zone: ${zone} | OD Discount: ${discountPct}% | NCB: ${ncb}% | GST: ${fmt(calc.gst)}`,
-        pdf_generated: true,
-        pdf_generated_at: new Date().toISOString(),
-        whatsapp_sent: method === "whatsapp",
-        whatsapp_sent_at: method === "whatsapp" ? new Date().toISOString() : null,
-      });
-
-      if (error) throw error;
-
-      // Save share history
-      await persistInsuranceQuoteHistory({
-        doc,
-        fileName,
-        shareMethod: method === "whatsapp" ? "whatsapp" : "pdf_download",
-        customerName: customerName || "Manual Quote",
-        customerPhone: customerPhone || null,
-        vehicleNumber: vehicleNumber || null,
-        vehicleMake: vehicleMake || null,
-        vehicleModel: vehicleModel || null,
-        vehicleYear: vehicleYear || null,
-        insuranceCompany: "Calculator Quote",
-        policyType: "Comprehensive",
-        idv: idvNum,
-        totalPremium: Math.round(calc.total),
-        premiumBreakup: {
-          basicOD: Math.round(calc.basicOD),
-          odDiscount: Math.round(calc.odDiscount),
-          ncbDiscount: Math.round(calc.ncbDiscount),
-          netOD: Math.round(calc.netOD),
-          tp: Math.round(calc.tp),
-          addonTotal: Math.round(calc.addonTotal),
-          subtotal: Math.round(calc.subtotal),
-          gst: Math.round(calc.gst),
-          total: Math.round(calc.total),
-        },
-        addons: enabledAddons,
-        notes: `Zone: ${zone} | OD Discount: ${discountPct}% | NCB: ${ncbLocked ? 0 : ncb}% | Claim Taken: ${ncbLocked ? "Yes" : "No"}`,
-        ncbPercentage: ncbLocked ? 0 : ncb,
-        previousClaim: ncbLocked,
-      });
+      const { doc, fileName } = await persistQuoteAction(method === "whatsapp" ? "whatsapp" : "save_quote");
 
       onQuoteSaved?.();
 
@@ -864,10 +820,10 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
 
               {/* Actions */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <Button size="sm" variant="outline" className="gap-1.5" onClick={copyQuote}>
+                <Button size="sm" variant="outline" className="gap-1.5" onClick={copyQuote} disabled={isSaving}>
                   <Copy className="h-3.5 w-3.5" /> Copy Quote
                 </Button>
-                <Button size="sm" variant="outline" className="gap-1.5" onClick={downloadPDF}>
+                <Button size="sm" variant="outline" className="gap-1.5" onClick={downloadPDF} disabled={isSaving}>
                   <FileText className="h-3.5 w-3.5" /> Download PDF
                 </Button>
                 <Button size="sm" className="gap-1.5" onClick={() => saveAndShareQuote("whatsapp")} disabled={isSaving}>
