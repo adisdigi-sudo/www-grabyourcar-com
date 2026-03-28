@@ -65,6 +65,7 @@ export const generateInsuranceQuotePdf = (data: InsuranceQuoteData) => {
     if (y + needed > footerY - 6) {
       drawFooter();
       doc.addPage();
+      drawWatermark();
       y = 16;
     }
   };
