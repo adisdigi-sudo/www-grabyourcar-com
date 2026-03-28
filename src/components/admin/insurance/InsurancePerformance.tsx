@@ -198,27 +198,108 @@ export function InsurancePerformance({ clients, policies, selectedMonth, onMonth
     return trend;
   }, [clients, dedupedPolicies]);
 
+  const activeRangeLabel = useMemo(() => {
+    if (filterMode === "preset" && activePreset) return activePreset;
+    if (filterMode === "range" && dateFrom && dateTo) return `${format(dateFrom, "dd MMM")} - ${format(dateTo, "dd MMM yyyy")}`;
+    return monthOptions.find(m => m.value === selectedMonth)?.label || selectedMonth;
+  }, [filterMode, activePreset, dateFrom, dateTo, selectedMonth, monthOptions]);
+
+  const handlePreset = (label: string, from: Date, to: Date) => {
+    setFilterMode("preset");
+    setActivePreset(label);
+    setDateFrom(from);
+    setDateTo(to);
+  };
+
+  const handleMonthSelect = (month: string) => {
+    setFilterMode("month");
+    setActivePreset(null);
+    setDateFrom(undefined);
+    setDateTo(undefined);
+    onMonthChange(month);
+  };
+
   return (
     <div className="space-y-4">
-      {/* Month Filter */}
-      <div className="flex items-center justify-between">
+      {/* Universal Date Filter */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h3 className="text-lg font-bold flex items-center gap-2">
           <BarChart3 className="h-5 w-5 text-primary" /> Performance Dashboard
         </h3>
-        <div className="flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-muted-foreground" />
-          <select
-            value={selectedMonth}
-            onChange={(e) => onMonthChange(e.target.value)}
-            className="h-9 w-[160px] rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
-          >
-            {monthOptions.map((month) => (
-              <option key={month.value} value={month.value}>
-                {month.label}
-              </option>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Quick Presets */}
+          <div className="flex gap-1 flex-wrap">
+            {[
+              { label: "Today", fn: () => { const t = new Date(); t.setHours(0,0,0,0); const e = new Date(); e.setHours(23,59,59,999); handlePreset("Today", t, e); } },
+              { label: "7 Days", fn: () => handlePreset("7 Days", subDays(new Date(), 7), new Date()) },
+              { label: "30 Days", fn: () => handlePreset("30 Days", subDays(new Date(), 30), new Date()) },
+              { label: "90 Days", fn: () => handlePreset("90 Days", subDays(new Date(), 90), new Date()) },
+              { label: "This Year", fn: () => handlePreset("This Year", startOfYear(new Date()), new Date()) },
+              { label: "All Time", fn: () => {
+                const earliest = monthOptions.length > 0 ? new Date(monthOptions[monthOptions.length - 1].value + "-01") : subMonths(new Date(), 12);
+                handlePreset("All Time", earliest, new Date());
+              }},
+            ].map(p => (
+              <Button
+                key={p.label}
+                variant={activePreset === p.label ? "default" : "outline"}
+                size="sm"
+                className="h-7 text-[10px] px-2"
+                onClick={p.fn}
+              >
+                {p.label}
+              </Button>
             ))}
-          </select>
+          </div>
+
+          {/* Month Selector */}
+          <Select value={filterMode === "month" ? selectedMonth : "__custom"} onValueChange={(v) => { if (v !== "__custom") handleMonthSelect(v); }}>
+            <SelectTrigger className="h-8 w-[140px] text-xs">
+              <Calendar className="h-3.5 w-3.5 mr-1" />
+              <SelectValue placeholder="Month" />
+            </SelectTrigger>
+            <SelectContent>
+              {monthOptions.map((month) => (
+                <SelectItem key={month.value} value={month.value}>
+                  {month.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Custom Range Picker */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 text-[10px] gap-1">
+                <CalendarIcon className="h-3.5 w-3.5" />
+                {filterMode === "range" && dateFrom && dateTo ? `${format(dateFrom, "dd MMM")} - ${format(dateTo, "dd MMM")}` : "Custom"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-3 space-y-2" align="end">
+              <p className="text-xs font-medium">Custom Date Range</p>
+              <div className="flex gap-3">
+                <div className="space-y-1">
+                  <p className="text-[10px] text-muted-foreground">From</p>
+                  <SmartDatePicker date={dateFrom} onSelect={(d) => { setDateFrom(d); if (d && dateTo) { setFilterMode("range"); setActivePreset(null); } }} placeholder="Start" yearRange={[new Date().getFullYear() - 3, new Date().getFullYear()]} />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] text-muted-foreground">To</p>
+                  <SmartDatePicker date={dateTo} onSelect={(d) => { setDateTo(d); if (dateFrom && d) { setFilterMode("range"); setActivePreset(null); } }} placeholder="End" yearRange={[new Date().getFullYear() - 3, new Date().getFullYear()]} />
+                </div>
+              </div>
+              {(dateFrom || dateTo) && (
+                <Button variant="ghost" size="sm" className="text-xs" onClick={() => { setDateFrom(undefined); setDateTo(undefined); setFilterMode("month"); setActivePreset(null); }}>Clear</Button>
+              )}
+            </PopoverContent>
+          </Popover>
         </div>
+      </div>
+
+      {/* Active Filter Badge */}
+      <div className="flex items-center gap-2">
+        <Badge variant="secondary" className="text-xs gap-1">
+          <Filter className="h-3 w-3" /> Showing: {activeRangeLabel}
+        </Badge>
       </div>
 
       {/* KPI Cards */}
