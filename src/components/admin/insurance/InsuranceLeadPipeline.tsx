@@ -71,6 +71,9 @@ export type Client = {
   picked_up_at: string | null;
   booking_date: string | null;
   booked_by: string | null;
+  overdue_reason: string | null;
+  overdue_custom_reason: string | null;
+  overdue_marked_at: string | null;
   duplicate_count: number | null;
   is_duplicate: boolean | null;
   updated_at: string;
