@@ -872,6 +872,11 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
                   <Row label={`TP Premium (${ccNum < 1000 ? "<1000" : ccNum <= 1500 ? "1000-1500" : ">1500"}cc)`} value={fmt(calc.tp)} bold />
                 </div>
 
+                {securePremiumNum > 0 && (
+                  <div className="p-4">
+                    <Row label="Secure Premium" value={fmt(securePremiumNum)} bold />
+                  </div>
+                )}
                 {calc.addonTotal > 0 && (
                   <div className="p-4 space-y-2">
                     <div className="flex items-center gap-2 mb-2">
