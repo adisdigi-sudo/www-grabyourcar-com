@@ -44,9 +44,8 @@ export function InsuranceAddLeadForm({ onSuccess }: { onSuccess?: () => void }) 
         const { data } = await supabase
           .from("insurance_clients")
           .select("id, customer_name, vehicle_number, duplicate_count")
-          .eq("vehicle_number", cleanVehicle)
-          .limit(1);
-        existing = data;
+          .limit(200);
+        existing = (data || []).filter((client) => normalizeVehicleRegistration(client.vehicle_number) === cleanVehicle).slice(0, 1);
       }
 
       if (existing && existing.length > 0) {
