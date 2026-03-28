@@ -262,8 +262,7 @@ export function InsuranceWorkspace() {
       .filter((client) => {
         if (!client.policy_expiry_date) return false;
         if (client.retarget_status === "scheduled") return false;
-        const stage = normalizeStage(client.pipeline_stage, client.lead_status, client);
-        if (stage === "lost") return false;
+        // Don't exclude active pipeline stages — overdue stays visible until explicitly resolved
         if (new Date(client.policy_expiry_date) >= today) return false;
 
         const key =

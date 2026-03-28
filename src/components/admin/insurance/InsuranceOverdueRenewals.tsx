@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -16,7 +17,7 @@ import { cn } from "@/lib/utils";
 import { format, differenceInDays } from "date-fns";
 import {
   AlertTriangle, Search, PhoneCall, MessageSquare, ArrowUpDown,
-  XCircle, Target, ArrowRight, CalendarClock, Clock
+  XCircle, Target, ArrowRight, CalendarClock, Clock, CheckSquare, Trash2
 } from "lucide-react";
 import type { PolicyRecord } from "./InsurancePolicyBook";
 import { normalizeStage, type Client } from "./InsuranceLeadPipeline";
@@ -31,6 +32,12 @@ const OVERDUE_REASONS = [
 ];
 
 const displayPhone = (phone: string | null) => (!phone || phone.startsWith("IB_")) ? null : phone;
+
+const getRealPolicyId = (policyId: string | undefined | null): string | null => {
+  if (!policyId) return null;
+  if (policyId.startsWith("overdue-fallback")) return null;
+  return policyId;
+};
 
 interface Props {
   policies: PolicyRecord[];
@@ -55,7 +62,14 @@ export function InsuranceOverdueRenewals({ policies, clients }: Props) {
   const [moveTarget, setMoveTarget] = useState<"retarget" | "pipeline">("retarget");
   const [retargetNextYear, setRetargetNextYear] = useState(true);
 
-  // Get overdue policies (expiry_date < today) that are still actively in overdue workflow
+  // Bulk selection
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkAction, setBulkAction] = useState<"pipeline" | "retarget" | "remove" | "reason" | null>(null);
+  const [showBulkReasonDialog, setShowBulkReasonDialog] = useState(false);
+  const [bulkReason, setBulkReason] = useState("");
+  const [bulkCustomReason, setBulkCustomReason] = useState("");
+
+  // Get overdue policies
   const overdueItems = useMemo(() => {
     const now = new Date();
     const resolvedStatuses = ["renewed", "cancelled", "lost", "lapsed"];
@@ -69,7 +83,6 @@ export function InsuranceOverdueRenewals({ policies, clients }: Props) {
         if (resolvedStatuses.includes((p.status || "").toLowerCase())) return false;
         if (differenceInDays(new Date(p.expiry_date), now) >= 0) return false;
         if ((p.clientData as any)?.retarget_status === "scheduled") return false;
-
         return true;
       })
       .map(p => ({
@@ -110,11 +123,35 @@ export function InsuranceOverdueRenewals({ policies, clients }: Props) {
     return { total: overdueItems.length, unmarked, marked, critical };
   }, [overdueItems]);
 
+  const invalidateAll = () => {
+    queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
+    queryClient.invalidateQueries({ queryKey: ["ins-policies-book"] });
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === overdueItems.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(overdueItems.map(i => i.id)));
+    }
+  };
+
+  const getSelectedItems = () => overdueItems.filter(i => selectedIds.has(i.id));
+
   const handleMarkReason = async () => {
     if (!targetPolicy || !selectedReason) { toast.error("Select a reason"); return; }
     if (selectedReason === "custom" && !customReason.trim()) { toast.error("Enter custom reason"); return; }
     setSaving(true);
     try {
+      const realPolicyId = getRealPolicyId(targetPolicy.id);
       await supabase.from("insurance_clients").update({
         overdue_reason: selectedReason,
         overdue_custom_reason: selectedReason === "custom" ? customReason.trim() : null,
@@ -123,15 +160,14 @@ export function InsuranceOverdueRenewals({ policies, clients }: Props) {
 
       await supabase.from("insurance_activity_log").insert({
         client_id: targetPolicy.client_id,
-        policy_id: targetPolicy.id,
+        policy_id: realPolicyId,
         activity_type: "overdue_reason_marked",
         title: "Overdue Reason Marked",
         description: `Reason: ${selectedReason === "custom" ? customReason.trim() : OVERDUE_REASONS.find(r => r.value === selectedReason)?.label}`,
         metadata: { reason: selectedReason, custom_reason: customReason } as any,
       });
 
-      queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
-      queryClient.invalidateQueries({ queryKey: ["ins-policies-book"] });
+      invalidateAll();
       toast.success("Overdue reason marked");
       setShowReasonDialog(false);
     } catch (e: any) {
@@ -145,6 +181,8 @@ export function InsuranceOverdueRenewals({ policies, clients }: Props) {
     if (!targetPolicy) return;
     setSaving(true);
     try {
+      const realPolicyId = getRealPolicyId(targetPolicy.id);
+
       if (moveTarget === "retarget") {
         await supabase.from("insurance_clients").update({
           pipeline_stage: "lost",
@@ -156,10 +194,12 @@ export function InsuranceOverdueRenewals({ policies, clients }: Props) {
             : OVERDUE_REASONS.find(r => r.value === (targetPolicy as any).clientData?.overdue_reason)?.label || "Overdue - not renewed",
         }).eq("id", targetPolicy.client_id);
 
-        await supabase.from("insurance_policies").update({ status: "lapsed" }).eq("id", targetPolicy.id);
+        if (realPolicyId) {
+          await supabase.from("insurance_policies").update({ status: "lapsed" }).eq("id", realPolicyId);
+        }
         toast.success("Moved to Retarget queue");
       } else {
-        // Move back to pipeline as new_lead
+        // Move back to pipeline as new_lead — also lapse the policy so it exits overdue
         await supabase.from("insurance_clients").update({
           pipeline_stage: "new_lead",
           lead_status: "new",
@@ -170,20 +210,107 @@ export function InsuranceOverdueRenewals({ policies, clients }: Props) {
           retargeting_enabled: false,
         } as any).eq("id", targetPolicy.client_id);
 
+        if (realPolicyId) {
+          await supabase.from("insurance_policies").update({ status: "lapsed" }).eq("id", realPolicyId);
+        }
         toast.success("Moved back to Lead Pipeline");
       }
 
       await supabase.from("insurance_activity_log").insert({
         client_id: targetPolicy.client_id,
-        policy_id: targetPolicy.id,
+        policy_id: realPolicyId,
         activity_type: "stage_change",
         title: moveTarget === "retarget" ? "Overdue → Retarget" : "Overdue → Lead Pipeline",
         description: `Client moved from overdue to ${moveTarget === "retarget" ? "retarget queue" : "lead pipeline"}`,
       });
 
-      queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
-      queryClient.invalidateQueries({ queryKey: ["ins-policies-book"] });
+      invalidateAll();
       setShowMoveDialog(false);
+    } catch (e: any) {
+      toast.error(e?.message || "Failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ── BULK ACTIONS ──
+  const handleBulkAction = async (action: "pipeline" | "retarget" | "remove") => {
+    const items = getSelectedItems();
+    if (items.length === 0) { toast.error("No items selected"); return; }
+    setSaving(true);
+    try {
+      for (const item of items) {
+        const realPolicyId = getRealPolicyId(item.id);
+
+        if (action === "pipeline") {
+          await supabase.from("insurance_clients").update({
+            pipeline_stage: "new_lead",
+            lead_status: "new",
+            overdue_reason: null,
+            overdue_custom_reason: null,
+            overdue_marked_at: null,
+            retarget_status: "none",
+            retargeting_enabled: false,
+          } as any).eq("id", item.client_id);
+          if (realPolicyId) {
+            await supabase.from("insurance_policies").update({ status: "lapsed" }).eq("id", realPolicyId);
+          }
+        } else if (action === "retarget") {
+          await supabase.from("insurance_clients").update({
+            pipeline_stage: "lost",
+            lead_status: "lost",
+            retarget_status: "scheduled",
+            retargeting_enabled: true,
+            lost_reason: "Overdue - bulk retarget",
+          }).eq("id", item.client_id);
+          if (realPolicyId) {
+            await supabase.from("insurance_policies").update({ status: "lapsed" }).eq("id", realPolicyId);
+          }
+        } else if (action === "remove") {
+          if (realPolicyId) {
+            await supabase.from("insurance_policies").update({ status: "lapsed" }).eq("id", realPolicyId);
+          }
+          // Mark client overdue as resolved without moving to pipeline
+          await supabase.from("insurance_clients").update({
+            overdue_reason: "removed",
+            overdue_marked_at: new Date().toISOString(),
+          } as any).eq("id", item.client_id);
+        }
+      }
+
+      const labels: Record<string, string> = {
+        pipeline: "Moved to Pipeline",
+        retarget: "Moved to Retarget",
+        remove: "Removed from Overdue",
+      };
+      toast.success(`${items.length} items: ${labels[action]}`);
+      setSelectedIds(new Set());
+      invalidateAll();
+    } catch (e: any) {
+      toast.error(e?.message || "Bulk action failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleBulkMarkReason = async () => {
+    if (!bulkReason) { toast.error("Select a reason"); return; }
+    if (bulkReason === "custom" && !bulkCustomReason.trim()) { toast.error("Enter custom reason"); return; }
+    const items = getSelectedItems();
+    if (items.length === 0) { toast.error("No items selected"); return; }
+    setSaving(true);
+    try {
+      for (const item of items) {
+        await supabase.from("insurance_clients").update({
+          overdue_reason: bulkReason,
+          overdue_custom_reason: bulkReason === "custom" ? bulkCustomReason.trim() : null,
+          overdue_marked_at: new Date().toISOString(),
+        } as any).eq("id", item.client_id);
+      }
+      toast.success(`Reason marked for ${items.length} items`);
+      setSelectedIds(new Set());
+      setShowBulkReasonDialog(false);
+      invalidateAll();
     } catch (e: any) {
       toast.error(e?.message || "Failed");
     } finally {
@@ -257,6 +384,35 @@ export function InsuranceOverdueRenewals({ policies, clients }: Props) {
         <Badge variant="outline" className="text-xs text-red-600 border-red-200">{overdueItems.length} overdue</Badge>
       </div>
 
+      {/* Bulk Action Bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex flex-wrap items-center gap-2 p-3 bg-primary/5 border border-primary/20 rounded-lg">
+          <CheckSquare className="h-4 w-4 text-primary" />
+          <span className="text-xs font-semibold text-primary">{selectedIds.size} selected</span>
+          <div className="flex gap-1.5 ml-auto flex-wrap">
+            <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1" disabled={saving}
+              onClick={() => handleBulkAction("pipeline")}>
+              <ArrowRight className="h-3 w-3" /> Move to Pipeline
+            </Button>
+            <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1" disabled={saving}
+              onClick={() => handleBulkAction("retarget")}>
+              <Target className="h-3 w-3" /> Move to Retarget
+            </Button>
+            <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1" disabled={saving}
+              onClick={() => handleBulkAction("remove")}>
+              <Trash2 className="h-3 w-3" /> Remove from Overdue
+            </Button>
+            <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 text-amber-600 border-amber-200" disabled={saving}
+              onClick={() => { setBulkReason(""); setBulkCustomReason(""); setShowBulkReasonDialog(true); }}>
+              <AlertTriangle className="h-3 w-3" /> Mark Reason
+            </Button>
+            <Button size="sm" variant="ghost" className="h-7 text-[10px]" onClick={() => setSelectedIds(new Set())}>
+              Clear
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Table */}
       <Card>
         <CardContent className="p-0">
@@ -264,6 +420,12 @@ export function InsuranceOverdueRenewals({ policies, clients }: Props) {
             <Table>
               <TableHeader>
                 <TableRow className="bg-red-50/50 dark:bg-red-950/10">
+                  <TableHead className="w-10 px-2">
+                    <Checkbox
+                      checked={overdueItems.length > 0 && selectedIds.size === overdueItems.length}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </TableHead>
                   <TableHead className="text-[10px] font-bold uppercase w-8">#</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase">Customer</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase">Phone</TableHead>
@@ -279,7 +441,7 @@ export function InsuranceOverdueRenewals({ policies, clients }: Props) {
               </TableHeader>
               <TableBody>
                 {overdueItems.length === 0 ? (
-                  <TableRow><TableCell colSpan={11} className="text-center py-12 text-muted-foreground">
+                  <TableRow><TableCell colSpan={12} className="text-center py-12 text-muted-foreground">
                     <CalendarClock className="h-8 w-8 mx-auto mb-2 opacity-30" />
                     <p className="text-sm">No overdue renewals — all caught up! 🎉</p>
                   </TableCell></TableRow>
@@ -294,6 +456,12 @@ export function InsuranceOverdueRenewals({ policies, clients }: Props) {
                       isCritical ? "bg-red-50/40 dark:bg-red-950/10" :
                       "hover:bg-muted/30"
                     )}>
+                      <TableCell className="px-2" onClick={e => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selectedIds.has(item.id)}
+                          onCheckedChange={() => toggleSelect(item.id)}
+                        />
+                      </TableCell>
                       <TableCell className="font-mono text-muted-foreground">{idx + 1}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -477,6 +645,53 @@ export function InsuranceOverdueRenewals({ policies, clients }: Props) {
             <Button disabled={saving} onClick={handleMove} className="bg-violet-600 hover:bg-violet-700 text-white gap-1.5">
               {saving ? <Clock className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
               {moveTarget === "retarget" ? "Move to Retarget" : "Move to Pipeline"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── BULK MARK REASON DIALOG ── */}
+      <Dialog open={showBulkReasonDialog} onOpenChange={setShowBulkReasonDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-600" /> Bulk Mark Reason ({selectedIds.size} items)
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-xs font-semibold mb-2 block">Why are these renewals overdue? *</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {OVERDUE_REASONS.map(r => (
+                  <button
+                    key={r.value}
+                    type="button"
+                    className={cn(
+                      "inline-flex h-9 items-center justify-start gap-2 rounded-md border px-3 text-xs font-medium transition-colors",
+                      bulkReason === r.value
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "border-input bg-background hover:bg-accent hover:text-accent-foreground"
+                    )}
+                    onClick={() => setBulkReason(r.value)}
+                  >
+                    <span>{r.icon}</span> {r.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {bulkReason === "custom" && (
+              <div className="space-y-1">
+                <Label className="text-xs">Custom Reason *</Label>
+                <Textarea placeholder="Enter the specific reason..." value={bulkCustomReason} onChange={e => setBulkCustomReason(e.target.value)} className="h-20" />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowBulkReasonDialog(false)}>Cancel</Button>
+            <Button disabled={saving || !bulkReason || (bulkReason === "custom" && !bulkCustomReason.trim())}
+              onClick={handleBulkMarkReason} className="bg-amber-600 hover:bg-amber-700 text-white gap-1.5">
+              {saving ? <Clock className="h-4 w-4 animate-spin" /> : <AlertTriangle className="h-4 w-4" />} Mark Reason ({selectedIds.size})
             </Button>
           </DialogFooter>
         </DialogContent>
