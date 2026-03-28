@@ -843,7 +843,9 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
                   <Badge className="bg-primary/20 text-primary border-0 text-[10px]">Incl. 18% GST</Badge>
                 </div>
                 <div className="text-3xl md:text-4xl font-heading font-black text-foreground">{fmt(calc.total)}</div>
-                <p className="text-xs text-muted-foreground mt-1">Zone {zone} • {ccNum}cc • IDV {fmt(idvNum)}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {resolvedInsurer ? `${resolvedInsurer} • ` : ""}{policyType} • {fuelType} • Zone {zone} • {ccNum}cc • IDV {fmt(idvNum)}
+                </p>
               </div>
 
               {/* Breakdown */}
