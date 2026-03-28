@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { persistInsuranceQuoteHistory } from "@/lib/insuranceQuotePersistence";
+import { INSURANCE_COMPANIES } from "@/lib/insuranceCompanies";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Calculator, Car, Shield, Percent, IndianRupee, Zap,
