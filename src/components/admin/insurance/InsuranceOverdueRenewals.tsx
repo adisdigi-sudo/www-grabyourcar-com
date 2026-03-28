@@ -19,7 +19,7 @@ import {
   XCircle, Target, ArrowRight, CalendarClock, Clock
 } from "lucide-react";
 import type { PolicyRecord } from "./InsurancePolicyBook";
-import type { Client } from "./InsuranceLeadPipeline";
+import { normalizeStage, type Client } from "./InsuranceLeadPipeline";
 
 const OVERDUE_REASONS = [
   { value: "not_interested", label: "Not Interested", icon: "🚫" },
