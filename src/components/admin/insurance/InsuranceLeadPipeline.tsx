@@ -541,6 +541,15 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
 
     for (const client of clients) {
       const stage = normalizeStage(client.pipeline_stage, client.lead_status, client);
+      const isExpiredLead = Boolean(
+        client.policy_expiry_date &&
+        new Date(client.policy_expiry_date) < new Date() &&
+        stage !== "lost" &&
+        client.retarget_status !== "scheduled"
+      );
+
+      if (isExpiredLead) continue;
+
       if (stage === "policy_issued" || stage === "won") continue;
 
       const dedupeKey = getClientIdentityKey(client);

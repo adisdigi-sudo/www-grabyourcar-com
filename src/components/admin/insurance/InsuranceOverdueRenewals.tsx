@@ -396,11 +396,19 @@ export function InsuranceOverdueRenewals({ policies, clients }: Props) {
                 <Label className="text-xs font-semibold mb-2 block">Why is this renewal overdue? *</Label>
                 <div className="grid grid-cols-2 gap-2">
                   {OVERDUE_REASONS.map(r => (
-                    <Button key={r.value} variant={selectedReason === r.value ? "default" : "outline"}
-                      size="sm" className="justify-start gap-2 h-9 text-xs"
-                      onClick={() => setSelectedReason(r.value)}>
+                    <button
+                      key={r.value}
+                      type="button"
+                      className={cn(
+                        "inline-flex h-9 items-center justify-start gap-2 rounded-md border px-3 text-xs font-medium transition-colors",
+                        selectedReason === r.value
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "border-input bg-background hover:bg-accent hover:text-accent-foreground"
+                      )}
+                      onClick={() => setSelectedReason(r.value)}
+                    >
                       <span>{r.icon}</span> {r.label}
-                    </Button>
+                    </button>
                   ))}
                 </div>
               </div>
