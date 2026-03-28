@@ -89,10 +89,11 @@ export function InsuranceReportsModule() {
   const { data: policies = [] } = useQuery({
     queryKey: ["ins-report-policies"],
     queryFn: async () => {
+      // Fetch all policies ordered by expiry_date for correct renewal reporting
       const { data } = await supabase
         .from("insurance_policies")
         .select("*")
-        .order("created_at", { ascending: false });
+        .order("expiry_date", { ascending: true });
       return (data || []) as Policy[];
     },
   });
