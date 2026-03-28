@@ -924,6 +924,8 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
                 setIdv(""); setCc(""); setDiscount("0"); setNcb(0); setClaimTaken(false); setExpiredOver90Days(false);
                 setAddons(DEFAULT_ADDONS); setCustomerName(""); setCustomerPhone("");
                 setVehicleMake(""); setVehicleModel(""); setVehicleNumber("");
+                setInsuranceCompany(""); setCustomInsurer(""); setFuelType("Petrol");
+                setPolicyType("Comprehensive"); setSecurePremium("0");
                 toast.info("Calculator reset");
               }}>
                 Reset Calculator
