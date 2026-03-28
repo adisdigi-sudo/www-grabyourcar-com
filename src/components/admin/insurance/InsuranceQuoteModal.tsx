@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { persistInsuranceQuoteHistory } from "@/lib/insuranceQuotePersistence";
 import {
   Download, MessageCircle, Mail, Copy, Shield, IndianRupee,
   Plus, Check, X, Car, Percent, Zap, Info, Calculator,
@@ -64,6 +65,7 @@ type Addon = typeof DEFAULT_ADDONS[number];
 const FUEL_TYPES = ["Petrol", "Diesel", "CNG", "Electric", "Hybrid", "LPG"];
 
 interface ClientData {
+  id?: string;
   customer_name: string | null;
   phone: string;
   email: string | null;
@@ -76,6 +78,8 @@ interface ClientData {
   current_policy_type: string | null;
   ncb_percentage: number | null;
   current_premium: number | null;
+  policy_expiry_date?: string | null;
+  previous_claim?: boolean | null;
 }
 
 interface PolicyData {
@@ -97,6 +101,13 @@ interface Props {
 
 const fmt = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
 
+const getDaysSinceDate = (value?: string | null) => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
+};
+
 export default function InsuranceQuoteModal({ open, onOpenChange, client, policy, onQuoteSent }: Props) {
   // Insurer
   const [showCustomInsurer, setShowCustomInsurer] = useState(false);
@@ -113,10 +124,13 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
   const [idv, setIdv] = useState<string>(String(policy?.idv || 500000));
   const [cc, setCc] = useState<string>("1199");
   const [city, setCity] = useState<string>(client.city || "Delhi NCR");
+  const claimLockedByExpiry = (getDaysSinceDate(client.policy_expiry_date) ?? -1) > 90;
   const [ncb, setNcb] = useState<number>(
-    policy?.ncb_discount ? policy.ncb_discount : client.ncb_percentage ? client.ncb_percentage : 0
+    claimLockedByExpiry || client.previous_claim
+      ? 0
+      : policy?.ncb_discount ? policy.ncb_discount : client.ncb_percentage ? client.ncb_percentage : 0
   );
-  const [claimTaken, setClaimTaken] = useState(false);
+  const [claimTaken, setClaimTaken] = useState(Boolean(client.previous_claim || claimLockedByExpiry));
   const [odDiscountPct, setOdDiscountPct] = useState<string>("0");
   const [addons, setAddons] = useState<Addon[]>(DEFAULT_ADDONS);
   const [securePremium, setSecurePremium] = useState<string>("500");
@@ -127,6 +141,13 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
   const idvNum = parseFloat(idv) || 0;
   const discountPct = parseFloat(odDiscountPct) || 0;
   const securePremiumNum = parseFloat(securePremium) || 0;
+  const ncbLocked = claimTaken || claimLockedByExpiry;
+  const expiryDays = getDaysSinceDate(client.policy_expiry_date);
+  const ncbLockReason = claimLockedByExpiry
+    ? "Policy expired more than 90 days ago — NCB is not eligible."
+    : claimTaken
+      ? "Claim declared — NCB is locked to 0%."
+      : null;
 
   const calc = useMemo(() => {
     if (!idvNum || !ccNum) return null;
@@ -135,7 +156,7 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
     const basicOD = (idvNum * odRate) / 100;
     const odDiscount = (basicOD * discountPct) / 100;
     const odAfterDiscount = basicOD - odDiscount;
-    const ncbDiscount = (odAfterDiscount * ncb) / 100;
+    const ncbDiscount = (odAfterDiscount * (ncbLocked ? 0 : ncb)) / 100;
     const netOD = odAfterDiscount - ncbDiscount;
     const tp = getTPPremium(ccNum);
     const addonTotal = addons.filter(a => a.enabled).reduce((s, a) => s + a.price, 0);
@@ -143,7 +164,7 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
     const gst = Math.round(subtotal * 0.18);
     const total = subtotal + gst;
     return { odRate, basicOD, odDiscount, ncbDiscount, netOD, tp, addonTotal, subtotal, gst, total };
-  }, [idvNum, ccNum, zone, discountPct, ncb, addons, securePremiumNum]);
+  }, [idvNum, ccNum, zone, discountPct, ncb, addons, securePremiumNum, ncbLocked]);
 
   const toggleAddon = (id: string) => {
     setAddons(prev => prev.map(a => a.id === id ? { ...a, enabled: !a.enabled } : a));
@@ -174,36 +195,96 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
       securePremium: securePremiumNum,
       addonPremium: calc.addonTotal,
       addons: addons.filter(a => a.enabled).map(a => a.name),
-      claimTaken,
+      claimTaken: ncbLocked,
     };
   };
 
-  const handleDownload = () => {
+  const saveQuoteHistory = async (doc: ReturnType<typeof generateInsuranceQuotePdf>["doc"], fileName: string, shareMethod: string) => {
+    if (!calc) return;
+
+    await persistInsuranceQuoteHistory({
+      doc,
+      fileName,
+      shareMethod,
+      customerName: client.customer_name || "Customer",
+      customerPhone: client.phone,
+      customerEmail: client.email || null,
+      vehicleNumber: client.vehicle_number || null,
+      vehicleMake: client.vehicle_make || null,
+      vehicleModel: client.vehicle_model || null,
+      vehicleYear: client.vehicle_year || null,
+      insuranceCompany,
+      policyType,
+      idv: idvNum,
+      totalPremium: Math.round(calc.total),
+      premiumBreakup: {
+        basicOD: Math.round(calc.basicOD),
+        odDiscount: Math.round(calc.odDiscount),
+        ncbDiscount: Math.round(calc.ncbDiscount),
+        netOD: Math.round(calc.netOD),
+        tp: Math.round(calc.tp),
+        securePremium: Math.round(securePremiumNum),
+        addonTotal: Math.round(calc.addonTotal),
+        subtotal: Math.round(calc.subtotal),
+        gst: Math.round(calc.gst),
+        total: Math.round(calc.total),
+      },
+      addons: addons.filter(a => a.enabled).map(a => a.name),
+      notes: `Claim Taken: ${ncbLocked ? "Yes" : "No"} | NCB: ${ncbLocked ? 0 : ncb}% | OD Discount: ${discountPct}%${claimLockedByExpiry ? ` | Expired ${expiryDays} days ago` : ""}`,
+      clientId: client.id,
+      quoteAmount: Math.round(calc.total),
+      quoteInsurer: insuranceCompany,
+      ncbPercentage: ncbLocked ? 0 : ncb,
+      previousClaim: ncbLocked,
+    });
+  };
+
+  const handleDownload = async () => {
     const data = buildQuoteData();
     if (!data) { toast.error("Enter IDV & CC first"); return; }
-    generateInsuranceQuotePdf(data);
-    toast.success("📄 Quote PDF downloaded!");
+    try {
+      const { doc, fileName } = generateInsuranceQuotePdf(data);
+      await saveQuoteHistory(doc, fileName, "pdf_download");
+      toast.success("📄 Quote saved and downloaded!");
+      onQuoteSent?.();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to save quote");
+      return;
+    }
     onQuoteSent?.();
   };
 
   const handleWhatsApp = async () => {
     const data = buildQuoteData();
     if (!data || !calc) { toast.error("Enter IDV & CC first"); return; }
-    generateInsuranceQuotePdf(data);
+    try {
+      const { doc, fileName } = generateInsuranceQuotePdf(data);
+      await saveQuoteHistory(doc, fileName, "whatsapp");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to save quote");
+      return;
+    }
     const msg = `Hi ${client.customer_name || ""}! 🚗\n\nHere's your *Motor Insurance Quotation* from Grabyourcar:\n\n🏢 Insurer: ${insuranceCompany}\n🚘 Vehicle: ${client.vehicle_make || ""} ${client.vehicle_model || ""}\n📋 Reg: ${client.vehicle_number || "N/A"}\n💰 IDV: ${fmt(idvNum)}\n\n📊 *Premium Breakup:*\nNet OD: ${fmt(calc.netOD)}\nThird Party: ${fmt(calc.tp)}\nAdd-ons: ${fmt(calc.addonTotal)}\nGST (18%): ${fmt(calc.gst)}\n*Total: ${fmt(calc.total)}*\n\n✅ Coverage: ${addons.filter(a => a.enabled).map(a => a.name).join(", ")}\n\nPlease find the detailed PDF quote attached.\n\n— Grabyourcar Insurance Desk\n📞 +91 98559 24442`;
     const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
     await sendWhatsApp({ phone: client.phone || "", message: msg, name: client.customer_name, logEvent: "insurance_quote" });
+    toast.success("📲 Quote saved & WhatsApp opened!");
     onQuoteSent?.();
   };
 
-  const handleEmail = () => {
+  const handleEmail = async () => {
     const data = buildQuoteData();
     if (!data || !calc) { toast.error("Enter IDV & CC first"); return; }
-    generateInsuranceQuotePdf(data);
+    try {
+      const { doc, fileName } = generateInsuranceQuotePdf(data);
+      await saveQuoteHistory(doc, fileName, "email");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to save quote");
+      return;
+    }
     const subject = `Motor Insurance Quote – ${client.vehicle_make || ""} ${client.vehicle_model || ""} | Grabyourcar`;
     const body = `Dear ${client.customer_name || "Customer"},\n\nInsurer: ${insuranceCompany}\nVehicle: ${client.vehicle_make || ""} ${client.vehicle_model || ""}\nReg: ${client.vehicle_number || "N/A"}\nIDV: ${fmt(idvNum)}\n\nTotal Premium: ${fmt(calc.total)}\n\nRegards,\nGrabyourcar Insurance Desk\n+91 98559 24442`;
     window.open(`mailto:${client.email || ""}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, "_blank");
-    toast.success("📧 PDF downloaded & Email opened");
+    toast.success("📧 Quote saved & Email opened");
     onQuoteSent?.();
   };
 
@@ -320,10 +401,11 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
                 <Label className="text-xs font-semibold text-muted-foreground">Claim Taken in Previous Year?</Label>
                 <div className="flex items-center gap-3 mt-1.5">
                   <button
-                    onClick={() => { setClaimTaken(false); }}
+                      onClick={() => { if (!claimLockedByExpiry) setClaimTaken(false); }}
+                      disabled={claimLockedByExpiry}
                     className={cn(
                       "px-3 py-1.5 rounded-md text-xs font-semibold border transition-all",
-                      !claimTaken
+                        !ncbLocked
                         ? "bg-emerald-500 text-white border-emerald-500 shadow-sm"
                         : "bg-muted text-muted-foreground border-border hover:bg-accent"
                     )}
@@ -331,10 +413,10 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
                     No Claim
                   </button>
                   <button
-                    onClick={() => { setClaimTaken(true); setNcb(0); }}
+                      onClick={() => { setClaimTaken(true); setNcb(0); }}
                     className={cn(
                       "px-3 py-1.5 rounded-md text-xs font-semibold border transition-all",
-                      claimTaken
+                        ncbLocked
                         ? "bg-red-500 text-white border-red-500 shadow-sm"
                         : "bg-muted text-muted-foreground border-border hover:bg-accent"
                     )}
@@ -342,42 +424,43 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
                     Yes, Claim Taken
                   </button>
                 </div>
-                {claimTaken && (
-                  <p className="text-[10px] text-red-500 font-medium mt-1">⚠ NCB is not applicable — set to 0%</p>
+                {ncbLockReason && (
+                  <p className="text-[10px] text-red-500 font-medium mt-1">⚠ {ncbLockReason}</p>
                 )}
               </div>
               <div>
                 <Label className="text-xs font-semibold text-muted-foreground">NCB</Label>
                 <Select
-                  value={String(ncb)}
-                  onValueChange={v => { if (!claimTaken) setNcb(Number(v)); }}
-                  disabled={claimTaken}
+                  value={String(ncbLocked ? 0 : ncb)}
+                  onValueChange={v => { if (!ncbLocked) setNcb(Number(v)); }}
+                  disabled={ncbLocked}
                 >
-                  <SelectTrigger className={cn("h-8 text-xs mt-1", claimTaken && "opacity-50")}>
+                  <SelectTrigger className={cn("h-8 text-xs mt-1", ncbLocked && "opacity-50")}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>{NCB_OPTIONS.map(o => <SelectItem key={o.value} value={String(o.value)}>{o.label}</SelectItem>)}</SelectContent>
                 </Select>
-                {claimTaken && <p className="text-[9px] text-red-400 mt-0.5">NCB locked to 0% due to claim</p>}
+                {ncbLocked && <p className="text-[9px] text-red-400 mt-0.5">NCB locked to 0% and cannot be edited</p>}
               </div>
             </div>
 
             {/* NCB Claim Disclaimer */}
             <div className={cn(
               "flex items-start gap-1.5 p-2.5 rounded-lg border",
-              claimTaken
+               ncbLocked
                 ? "bg-red-500/10 border-red-500/30"
                 : "bg-amber-500/10 border-amber-500/20"
             )}>
-              <Info className={cn("h-3.5 w-3.5 mt-0.5 shrink-0", claimTaken ? "text-red-600" : "text-amber-600")} />
+               <Info className={cn("h-3.5 w-3.5 mt-0.5 shrink-0", ncbLocked ? "text-red-600" : "text-amber-600")} />
               <div>
-                <p className={cn("text-[10px] font-bold", claimTaken ? "text-red-700 dark:text-red-400" : "text-amber-700 dark:text-amber-400")}>
-                  {claimTaken
+                 <p className={cn("text-[10px] font-bold", ncbLocked ? "text-red-700 dark:text-red-400" : "text-amber-700 dark:text-amber-400")}>
+                   {ncbLocked
                     ? "CLAIM DECLARED — NCB Not Applicable"
                     : "NCB Eligibility Declaration Required"}
                 </p>
-                <p className={cn("text-[9px] mt-0.5", claimTaken ? "text-red-600 dark:text-red-300" : "text-amber-600 dark:text-amber-300")}>
+                 <p className={cn("text-[9px] mt-0.5", ncbLocked ? "text-red-600 dark:text-red-300" : "text-amber-600 dark:text-amber-300")}>
                   NCB is only applicable if no claim was made during the previous policy period (up to 5 years).
+                   {claimLockedByExpiry ? " Policies expired more than 90 days are also not eligible for NCB." : ""}
                   Providing false information about claim/NCB status will void the NCB discount and the insurer reserves the right to reject claims.
                 </p>
               </div>
@@ -387,8 +470,8 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs font-semibold text-muted-foreground">OD Discount (%)</Label>
-                <Input type="number" min={0} max={100} value={odDiscountPct} onChange={e => setOdDiscountPct(e.target.value)} className="h-8 text-xs mt-1" placeholder="0" />
-                <p className="text-[9px] text-muted-foreground mt-0.5">Deal-specific discount on OD</p>
+                <Input type="number" min={0} max={100} value={odDiscountPct} onChange={e => setOdDiscountPct(e.target.value)} className="h-8 text-xs mt-1" placeholder="0" disabled={ncbLocked} />
+                <p className="text-[9px] text-muted-foreground mt-0.5">{ncbLocked ? "OD discount edit disabled due to claim/NCB ineligibility." : "Deal-specific discount on OD"}</p>
               </div>
               <div>
                 <Label className="text-xs font-semibold text-muted-foreground">Secure Premium (₹)</Label>
@@ -441,7 +524,7 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
 
                 <PremRow label={`Basic OD (${calc.odRate}% of IDV)`} value={fmt(calc.basicOD)} />
                 {discountPct > 0 && <PremRow label={`OD Discount (${discountPct}%)`} value={`-${fmt(calc.odDiscount)}`} negative />}
-                {ncb > 0 && <PremRow label={`NCB Discount (${ncb}%)`} value={`-${fmt(calc.ncbDiscount)}`} negative />}
+                {!ncbLocked && ncb > 0 && <PremRow label={`NCB Discount (${ncb}%)`} value={`-${fmt(calc.ncbDiscount)}`} negative />}
                 <div className="border-t border-dashed border-border/60 pt-1">
                   <PremRow label="Net OD Premium" value={fmt(calc.netOD)} bold />
                 </div>

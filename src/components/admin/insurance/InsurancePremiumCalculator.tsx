@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { persistInsuranceQuoteHistory } from "@/lib/insuranceQuotePersistence";
 import {
   Calculator, Car, Shield, Percent, IndianRupee, Zap,
   ChevronDown, ChevronUp, Info, Copy, Send, FileText
@@ -84,12 +85,15 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
   const [vehicleModel, setVehicleModel] = useState("");
   const [vehicleNumber, setVehicleNumber] = useState("");
   const [vehicleYear, setVehicleYear] = useState<string>(String(new Date().getFullYear()));
+  const [claimTaken, setClaimTaken] = useState(false);
+  const [expiredOver90Days, setExpiredOver90Days] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   const zone = getZone(city);
   const ccNum = parseInt(cc) || 0;
   const idvNum = parseFloat(idv) || 0;
   const discountPct = parseFloat(discount) || 0;
+  const ncbLocked = claimTaken || expiredOver90Days;
 
   const calc = useMemo(() => {
     if (!idvNum || !ccNum) return null;
@@ -99,7 +103,8 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
     const basicOD = (idvNum * odRate) / 100;
     const odDiscount = (basicOD * discountPct) / 100;
     const odAfterDiscount = basicOD - odDiscount;
-    const ncbDiscount = (odAfterDiscount * ncb) / 100;
+    const effectiveNcb = ncbLocked ? 0 : ncb;
+    const ncbDiscount = (odAfterDiscount * effectiveNcb) / 100;
     const netOD = odAfterDiscount - ncbDiscount;
 
     const tp = getTPPremium(ccNum);
@@ -109,7 +114,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
     const total = subtotal + gst;
 
     return { odRate, basicOD, odDiscount, odAfterDiscount, ncbDiscount, netOD, tp, addonTotal, subtotal, gst, total };
-  }, [idvNum, ccNum, zone, discountPct, ncb, addons]);
+  }, [idvNum, ccNum, zone, discountPct, ncb, addons, ncbLocked]);
 
   const toggleAddon = (id: string) => {
     setAddons(prev => prev.map(a => a.id === id ? { ...a, enabled: !a.enabled } : a));
@@ -143,7 +148,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
       `──────────────────`,
       `Basic OD: ${fmt(calc.basicOD)} (${calc.odRate}%)`,
       discountPct > 0 ? `OD Discount: -${fmt(calc.odDiscount)} (${discountPct}%)` : null,
-      ncb > 0 ? `NCB Discount: -${fmt(calc.ncbDiscount)} (${ncb}%)` : null,
+      !ncbLocked && ncb > 0 ? `NCB Discount: -${fmt(calc.ncbDiscount)} (${ncb}%)` : null,
       `Net OD Premium: ${fmt(calc.netOD)}`,
       `Third Party: ${fmt(calc.tp)}`,
       calc.addonTotal > 0 ? `Add-ons: ${fmt(calc.addonTotal)}` : null,
@@ -482,7 +487,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
       share_method: shareMethod,
       pdf_storage_path: pdfPath,
       quote_ref: quoteRef,
-      notes: `Zone: ${zone} | OD Discount: ${discountPct}% | NCB: ${ncb}%`,
+      notes: `Zone: ${zone} | OD Discount: ${discountPct}% | NCB: ${ncbLocked ? 0 : ncb}% | Claim Taken: ${ncbLocked ? "Yes" : "No"}`,
     } as any);
   };
 
@@ -494,8 +499,36 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
     doc.save(fileName);
 
     // Upload and save history in background
-    const pdfPath = await uploadPdfToStorage(doc, fileName);
-    await saveShareHistory("pdf_download", pdfPath, quoteRef);
+    await persistInsuranceQuoteHistory({
+      doc,
+      fileName,
+      shareMethod: "pdf_download",
+      customerName: customerName || "Manual Quote",
+      customerPhone: customerPhone || null,
+      vehicleNumber: vehicleNumber || null,
+      vehicleMake: vehicleMake || null,
+      vehicleModel: vehicleModel || null,
+      vehicleYear: vehicleYear || null,
+      insuranceCompany: "Calculator Quote",
+      policyType: "Comprehensive",
+      idv: idvNum,
+      totalPremium: Math.round(calc.total),
+      premiumBreakup: {
+        basicOD: Math.round(calc.basicOD),
+        odDiscount: Math.round(calc.odDiscount),
+        ncbDiscount: Math.round(calc.ncbDiscount),
+        netOD: Math.round(calc.netOD),
+        tp: Math.round(calc.tp),
+        addonTotal: Math.round(calc.addonTotal),
+        subtotal: Math.round(calc.subtotal),
+        gst: Math.round(calc.gst),
+        total: Math.round(calc.total),
+      },
+      addons: addons.filter(a => a.enabled).map(a => a.name),
+      notes: `Zone: ${zone} | OD Discount: ${discountPct}% | NCB: ${ncbLocked ? 0 : ncb}% | Claim Taken: ${ncbLocked ? "Yes" : "No"}`,
+      ncbPercentage: ncbLocked ? 0 : ncb,
+      previousClaim: ncbLocked,
+    });
     toast.success("PDF downloaded & saved!");
   };
 
@@ -509,7 +542,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
       const fileName = `Quote_${(customerName || "Customer").replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.pdf`;
 
       // Upload PDF to storage
-      const pdfPath = await uploadPdfToStorage(doc, fileName);
+      await uploadPdfToStorage(doc, fileName);
 
       // Save to bulk_renewal_quotes
       const enabledAddons = addons.filter(a => a.enabled).map(a => a.name);
@@ -544,7 +577,36 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
       if (error) throw error;
 
       // Save share history
-      await saveShareHistory(method === "whatsapp" ? "whatsapp" : "pdf_download", pdfPath, quoteRef);
+      await persistInsuranceQuoteHistory({
+        doc,
+        fileName,
+        shareMethod: method === "whatsapp" ? "whatsapp" : "pdf_download",
+        customerName: customerName || "Manual Quote",
+        customerPhone: customerPhone || null,
+        vehicleNumber: vehicleNumber || null,
+        vehicleMake: vehicleMake || null,
+        vehicleModel: vehicleModel || null,
+        vehicleYear: vehicleYear || null,
+        insuranceCompany: "Calculator Quote",
+        policyType: "Comprehensive",
+        idv: idvNum,
+        totalPremium: Math.round(calc.total),
+        premiumBreakup: {
+          basicOD: Math.round(calc.basicOD),
+          odDiscount: Math.round(calc.odDiscount),
+          ncbDiscount: Math.round(calc.ncbDiscount),
+          netOD: Math.round(calc.netOD),
+          tp: Math.round(calc.tp),
+          addonTotal: Math.round(calc.addonTotal),
+          subtotal: Math.round(calc.subtotal),
+          gst: Math.round(calc.gst),
+          total: Math.round(calc.total),
+        },
+        addons: enabledAddons,
+        notes: `Zone: ${zone} | OD Discount: ${discountPct}% | NCB: ${ncbLocked ? 0 : ncb}% | Claim Taken: ${ncbLocked ? "Yes" : "No"}`,
+        ncbPercentage: ncbLocked ? 0 : ncb,
+        previousClaim: ncbLocked,
+      });
 
       onQuoteSaved?.();
 
@@ -648,12 +710,36 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
 
             <div>
               <Label className="text-xs">OD Discount (%)</Label>
-              <Input type="number" placeholder="0" min={0} max={100} value={discount} onChange={e => setDiscount(e.target.value)} className="h-9 text-sm mt-1" />
+              <Input type="number" placeholder="0" min={0} max={100} value={discount} onChange={e => setDiscount(e.target.value)} className="h-9 text-sm mt-1" disabled={ncbLocked} />
+            </div>
+
+            <div>
+              <Label className="text-xs">Claim Taken in Previous Year?</Label>
+              <div className="flex items-center gap-2 mt-1">
+                <Button type="button" variant={ncbLocked ? "outline" : "default"} size="sm" className="h-8 text-xs" onClick={() => { if (!expiredOver90Days) setClaimTaken(false); }} disabled={expiredOver90Days}>
+                  No
+                </Button>
+                <Button type="button" variant={ncbLocked ? "default" : "outline"} size="sm" className="h-8 text-xs" onClick={() => { setClaimTaken(true); setNcb(0); }}>
+                  Yes
+                </Button>
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-xs">Insurance Expired Over 90 Days?</Label>
+              <div className="flex items-center gap-2 mt-1">
+                <Button type="button" variant={expiredOver90Days ? "outline" : "default"} size="sm" className="h-8 text-xs" onClick={() => setExpiredOver90Days(false)}>
+                  No
+                </Button>
+                <Button type="button" variant={expiredOver90Days ? "default" : "outline"} size="sm" className="h-8 text-xs" onClick={() => { setExpiredOver90Days(true); setClaimTaken(true); setNcb(0); }}>
+                  Yes
+                </Button>
+              </div>
             </div>
 
             <div>
               <Label className="text-xs">No Claim Bonus (NCB)</Label>
-              <Select value={String(ncb)} onValueChange={v => setNcb(Number(v))}>
+              <Select value={String(ncbLocked ? 0 : ncb)} onValueChange={v => setNcb(Number(v))} disabled={ncbLocked}>
                 <SelectTrigger className="h-9 text-sm mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {NCB_OPTIONS.map(o => (
@@ -664,7 +750,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
               <div className="flex items-start gap-1.5 mt-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
                 <Info className="h-3 w-3 text-amber-600 mt-0.5 shrink-0" />
                 <p className="text-[10px] text-amber-700 dark:text-amber-400 leading-relaxed">
-                  NCB is only eligible if no claim was made during the previous policy year.
+                  NCB is only eligible if no claim was made during the previous policy year. If claim is taken or insurance expired over 90 days, NCB becomes 0 and editing is disabled.
                 </p>
               </div>
             </div>
@@ -734,7 +820,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
                   </div>
                   <Row label={`Basic OD (${calc.odRate}% of IDV)`} value={fmt(calc.basicOD)} />
                   {discountPct > 0 && <Row label={`OD Discount (${discountPct}%)`} value={`-${fmt(calc.odDiscount)}`} negative />}
-                  {ncb > 0 && <Row label={`NCB Discount (${ncb}%)`} value={`-${fmt(calc.ncbDiscount)}`} negative />}
+                  {!ncbLocked && ncb > 0 && <Row label={`NCB Discount (${ncb}%)`} value={`-${fmt(calc.ncbDiscount)}`} negative />}
                   <div className="pt-1 border-t border-dashed border-border/60">
                     <Row label="Net OD Premium" value={fmt(calc.netOD)} bold />
                   </div>
@@ -793,7 +879,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
               </div>
 
               <Button size="sm" variant="ghost" className="w-full text-xs" onClick={() => {
-                setIdv(""); setCc(""); setDiscount("0"); setNcb(0);
+                setIdv(""); setCc(""); setDiscount("0"); setNcb(0); setClaimTaken(false); setExpiredOver90Days(false);
                 setAddons(DEFAULT_ADDONS); setCustomerName(""); setCustomerPhone("");
                 setVehicleMake(""); setVehicleModel(""); setVehicleNumber("");
                 toast.info("Calculator reset");
