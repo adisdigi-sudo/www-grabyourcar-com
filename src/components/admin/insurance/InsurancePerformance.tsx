@@ -108,10 +108,10 @@ export function InsurancePerformance({ clients, policies, selectedMonth, onMonth
       const dateStr = getClientEffectiveDate(client);
       if (!dateStr) return false;
       const d = new Date(dateStr);
-      return d >= monthStart && d <= monthEnd;
+      return d >= effectiveRange.start && d <= effectiveRange.end;
     });
     return [...matchedClients, ...wonByDate];
-  }, [clients, wonClientIdsThisMonth, monthStart, monthEnd]);
+  }, [clients, wonClientIdsThisMonth, effectiveRange]);
 
   const lostThisMonth = useMemo(() => {
     return clients.filter((client) => {
