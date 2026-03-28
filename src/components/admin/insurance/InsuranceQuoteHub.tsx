@@ -259,6 +259,19 @@ export function InsuranceQuoteHub() {
           defaultPhone={displayPhone(shareClient.phone) || ""}
           defaultEmail={shareClient.email || ""}
           customerName={shareClient.customer_name}
+          clientDetails={{
+            id: shareClient.id,
+            customer_name: shareClient.customer_name,
+            phone: shareClient.phone,
+            email: shareClient.email || undefined,
+            vehicle_number: shareClient.vehicle_number || undefined,
+            vehicle_make: shareClient.vehicle_make || undefined,
+            vehicle_model: shareClient.vehicle_model || undefined,
+            vehicle_year: shareClient.vehicle_year || undefined,
+            current_insurer: shareClient.current_insurer || undefined,
+            current_policy_type: shareClient.current_policy_type || undefined,
+            quote_amount: shareClient.current_premium || undefined,
+          }}
           shareMessage={`Hi ${shareClient.customer_name}! Here is your insurance quote for your ${shareClient.vehicle_make || ""} ${shareClient.vehicle_model || ""}.\n\nVehicle: ${shareClient.vehicle_number || "N/A"}\nInsurer: ${shareClient.current_insurer || "Best Available"}\n\nPlease review and let us know if you'd like to proceed.\n\nPhone: +91 98559 24442\nwww.grabyourcar.com\n- Grabyourcar Insurance`}
           generatePdf={() => generateInsuranceQuotePdf({
             customerName: shareClient.customer_name || "Customer",
