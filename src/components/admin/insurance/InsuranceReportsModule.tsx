@@ -125,9 +125,11 @@ export function InsuranceReportsModule() {
       case "upcoming": {
         const days = parseInt(daysRange);
         list = list.filter((p) => {
-          if (!p.expiry_date || p.status === "expired" || p.status === "cancelled") return false;
+          if (!p.expiry_date || p.status === "expired" || p.status === "cancelled" || p.status === "renewed") return false;
           const exp = parseISO(p.expiry_date);
-          return isAfter(exp, now) && isBefore(exp, addDays(now, days));
+          // Include recently expired (within 15 days) for actionability
+          const daysLeft = differenceInDays(exp, now);
+          return daysLeft >= -15 && daysLeft <= days;
         });
         break;
       }
