@@ -105,6 +105,8 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
   const discountPct = parseFloat(discount) || 0;
   const ncbLocked = claimTaken || expiredOver90Days;
 
+  const securePremiumNum = parseFloat(securePremium) || 0;
+
   const calc = useMemo(() => {
     if (!idvNum || !ccNum) return null;
 
@@ -119,12 +121,12 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
 
     const tp = getTPPremium(ccNum);
     const addonTotal = addons.filter(a => a.enabled).reduce((s, a) => s + a.price, 0);
-    const subtotal = netOD + tp + addonTotal;
+    const subtotal = netOD + tp + securePremiumNum + addonTotal;
     const gst = (subtotal * GST_RATE) / 100;
     const total = subtotal + gst;
 
-    return { odRate, basicOD, odDiscount, odAfterDiscount, ncbDiscount, netOD, tp, addonTotal, subtotal, gst, total };
-  }, [idvNum, ccNum, zone, discountPct, ncb, addons, ncbLocked]);
+    return { odRate, basicOD, odDiscount, odAfterDiscount, ncbDiscount, netOD, tp, securePremium: securePremiumNum, addonTotal, subtotal, gst, total };
+  }, [idvNum, ccNum, zone, discountPct, ncb, addons, ncbLocked, securePremiumNum]);
 
   const toggleAddon = (id: string) => {
     setAddons(prev => prev.map(a => a.id === id ? { ...a, enabled: !a.enabled } : a));
