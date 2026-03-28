@@ -23,6 +23,7 @@ export interface InsuranceQuoteData {
   addonPremium: number;
   addons: string[];
   insurerLogoUrl?: string;
+  claimTaken?: boolean;
 }
 
 const formatINR = (amount: number): string =>
@@ -359,6 +360,48 @@ export const generateInsuranceQuotePdf = (data: InsuranceQuoteData) => {
   ) as string[];
   doc.text(warningLines, m + 12, y + 12);
   y += 30;
+
+  // ── NCB / CLAIM FRAUD DISCLAIMER ──
+  checkPageBreak(34);
+  const orange: [number, number, number] = [234, 88, 12];
+  const lightOrange: [number, number, number] = [255, 237, 213];
+  const darkOrange: [number, number, number] = [154, 52, 18];
+
+  doc.setFillColor(...lightOrange);
+  doc.setDrawColor(...orange);
+  doc.setLineWidth(0.6);
+  doc.roundedRect(m, y, contentW, 30, 3, 3, "FD");
+  doc.setLineWidth(0.2);
+
+  // Orange bar
+  doc.setFillColor(...orange);
+  doc.roundedRect(m, y, 8, 30, 3, 0, "F");
+  doc.rect(m + 3, y, 5, 30, "F");
+  doc.setTextColor(...white);
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.text("⚠", m + 2.5, y + 17);
+
+  // Disclaimer text
+  doc.setTextColor(...darkOrange);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.text("NCB CLAIM STATUS DECLARATION", m + 12, y + 7);
+  doc.setFontSize(7.5);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...orange);
+  const ncbWarning = doc.splitTextToSize(
+    (data.claimTaken
+      ? "CLAIM DECLARED: The customer has declared that a claim was made during the previous policy period. NCB (No Claim Bonus) discount is NOT applicable. "
+      : "") +
+    "IMPORTANT: The NCB discount applied in this quotation is based on the customer's self-declaration of no claims made during the previous policy year(s). " +
+    "If this information is found to be false or misleading, the insurer reserves the right to: (a) Cancel the NCB discount and recover the differential premium, " +
+    "(b) Reject any future claims arising under this policy, and (c) Cancel the policy with immediate effect. " +
+    "Grabyourcar (Adis Makethemoney Services Pvt Ltd) shall not be held liable for any consequences arising from incorrect claim/NCB declarations.",
+    contentW - 16
+  ) as string[];
+  doc.text(ncbWarning, m + 12, y + 12);
+  y += 34;
 
   // ── Terms & Conditions ──
   checkPageBreak(60);
