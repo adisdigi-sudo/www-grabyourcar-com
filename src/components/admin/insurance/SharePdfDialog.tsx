@@ -190,6 +190,7 @@ export function SharePdfDialog({
 
   const handleDownload = async () => {
     const { doc, fileName } = generatePdf();
+    doc.save(fileName);
     await autoSaveQuote(doc, fileName, "pdf_download");
     toast.success("📋 PDF downloaded & quote auto-saved!");
     onShared?.();
