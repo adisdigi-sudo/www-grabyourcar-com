@@ -142,7 +142,7 @@ export function InsuranceReportsModule() {
         break;
       case "expired":
         list = list.filter(
-          (p) => p.status === "expired" || (p.expiry_date && isBefore(parseISO(p.expiry_date), now))
+          (p) => (p.status === "expired" || p.status === "lapsed" || (p.expiry_date && isBefore(parseISO(p.expiry_date), now))) && p.status !== "renewed" && p.status !== "cancelled"
         );
         break;
       case "renewal":
