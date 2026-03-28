@@ -23,6 +23,7 @@ export interface InsuranceQuoteData {
   addonPremium: number;
   addons: string[];
   insurerLogoUrl?: string;
+  claimTaken?: boolean;
 }
 
 const formatINR = (amount: number): string =>
