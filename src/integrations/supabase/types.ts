@@ -11933,6 +11933,78 @@ export type Database = {
         }
         Relationships: []
       }
+      quote_share_history: {
+        Row: {
+          addons: string[] | null
+          created_at: string
+          customer_email: string | null
+          customer_name: string
+          customer_phone: string | null
+          expires_at: string
+          id: string
+          idv: number | null
+          insurance_company: string | null
+          notes: string | null
+          pdf_storage_path: string | null
+          policy_type: string | null
+          premium_breakup: Json | null
+          quote_ref: string | null
+          share_method: string
+          shared_by: string | null
+          total_premium: number | null
+          vehicle_make: string | null
+          vehicle_model: string | null
+          vehicle_number: string | null
+          vehicle_year: string | null
+        }
+        Insert: {
+          addons?: string[] | null
+          created_at?: string
+          customer_email?: string | null
+          customer_name: string
+          customer_phone?: string | null
+          expires_at?: string
+          id?: string
+          idv?: number | null
+          insurance_company?: string | null
+          notes?: string | null
+          pdf_storage_path?: string | null
+          policy_type?: string | null
+          premium_breakup?: Json | null
+          quote_ref?: string | null
+          share_method?: string
+          shared_by?: string | null
+          total_premium?: number | null
+          vehicle_make?: string | null
+          vehicle_model?: string | null
+          vehicle_number?: string | null
+          vehicle_year?: string | null
+        }
+        Update: {
+          addons?: string[] | null
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string
+          customer_phone?: string | null
+          expires_at?: string
+          id?: string
+          idv?: number | null
+          insurance_company?: string | null
+          notes?: string | null
+          pdf_storage_path?: string | null
+          policy_type?: string | null
+          premium_breakup?: Json | null
+          quote_ref?: string | null
+          share_method?: string
+          shared_by?: string | null
+          total_premium?: number | null
+          vehicle_make?: string | null
+          vehicle_model?: string | null
+          vehicle_number?: string | null
+          vehicle_year?: string | null
+        }
+        Relationships: []
+      }
       rental_agreement_history: {
         Row: {
           action: string
