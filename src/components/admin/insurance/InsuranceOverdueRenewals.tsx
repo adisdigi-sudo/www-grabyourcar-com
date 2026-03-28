@@ -83,6 +83,7 @@ export function InsuranceOverdueRenewals({ policies, clients }: Props) {
         if (resolvedStatuses.includes((p.status || "").toLowerCase())) return false;
         if (differenceInDays(new Date(p.expiry_date), now) >= 0) return false;
         if ((p.clientData as any)?.retarget_status === "scheduled") return false;
+        if (["removed", "moved_to_pipeline"].includes((p.clientData as any)?.overdue_reason || "")) return false;
         return true;
       })
       .map(p => ({
