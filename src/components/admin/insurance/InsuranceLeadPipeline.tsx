@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { forwardRef, useState, useMemo, useCallback, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -193,9 +193,26 @@ export function formatSource(source: string | null, createdAt: string): string {
 const displayPhone = (phone: string | null) => (!phone || phone.startsWith("IB_")) ? null : phone;
 const isLegacyClientId = (id: string) => id.startsWith("legacy-");
 const getSourceColor = (src: string | null) => SOURCE_COLORS[normalizeLeadSourceLabel(src)] || "bg-muted text-muted-foreground border-border";
+const ACTIVE_PIPELINE_VALUES = new Set(["new_lead", "smart_calling", "quote_shared", "follow_up"]);
+
+const getPipelineClientScore = (client: Client) => {
+  const normalizedStage = normalizeStage(client.pipeline_stage, client.lead_status, client);
+  let score = new Date(client.updated_at || client.created_at).getTime() / 1e13;
+
+  if (ACTIVE_PIPELINE_VALUES.has(normalizedStage)) score += 200;
+  if (normalizedStage === "quote_shared") score += 40;
+  if (normalizedStage === "follow_up") score += 30;
+  if (normalizedStage === "smart_calling") score += 20;
+  if (normalizedStage === "won") score += 80;
+  if (normalizedStage === "lost") score -= 30;
+  if (client.journey_last_event === "quote_shared") score += 20;
+  if (client.quote_amount || client.current_premium) score += 5;
+
+  return score;
+};
 
 // ── Journey Breadcrumb Component ──
-function JourneyBreadcrumb({ clientId }: { clientId: string }) {
+const JourneyBreadcrumb = forwardRef<HTMLDivElement, { clientId: string }>(({ clientId }, ref) => {
   const { data: events = [] } = useQuery({
     queryKey: ["ins-journey", clientId],
     queryFn: async () => {
@@ -214,7 +231,7 @@ function JourneyBreadcrumb({ clientId }: { clientId: string }) {
   if (events.length === 0) return null;
 
   return (
-    <div className="flex items-center gap-1 flex-wrap">
+    <div ref={ref} className="flex items-center gap-1 flex-wrap">
       {events.map((ev, i) => {
         const label = (ev.title || "").replace("Pipeline → ", "");
         return (
@@ -231,7 +248,9 @@ function JourneyBreadcrumb({ clientId }: { clientId: string }) {
       })}
     </div>
   );
-}
+});
+
+JourneyBreadcrumb.displayName = "JourneyBreadcrumb";
 
 // ── Won Policy Dialog ──
 function WonPolicyDialog({ 
@@ -503,24 +522,23 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
 
   // Filter - exclude policy_issued leads from pipeline and deduplicate same lead/vehicle
   const pipelineClients = useMemo(() => {
-      const uniqueLeads = new Map<string, Client>();
+    const uniqueLeads = new Map<string, Client>();
 
     for (const client of clients) {
       const stage = normalizeStage(client.pipeline_stage, client.lead_status, client);
       if (stage === "policy_issued") continue;
 
-        const dedupeKey = getClientIdentityKey(client);
+      const dedupeKey = getClientIdentityKey(client);
 
-        const existing = uniqueLeads.get(dedupeKey);
-        if (!existing) {
-          uniqueLeads.set(dedupeKey, client);
-          continue;
+      const existing = uniqueLeads.get(dedupeKey);
+      if (!existing) {
+        uniqueLeads.set(dedupeKey, client);
+        continue;
       }
 
-        const existingStage = normalizeStage(existing.pipeline_stage, existing.lead_status, existing);
-        if (["policy_issued", "won"].includes(stage) || (!["policy_issued", "won"].includes(existingStage) && new Date(client.updated_at).getTime() >= new Date(existing.updated_at).getTime())) {
-          uniqueLeads.set(dedupeKey, client);
-        }
+      if (getPipelineClientScore(client) >= getPipelineClientScore(existing)) {
+        uniqueLeads.set(dedupeKey, client);
+      }
     }
 
     return Array.from(uniqueLeads.values());

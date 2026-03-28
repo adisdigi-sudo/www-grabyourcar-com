@@ -10,12 +10,42 @@ export const normalizeVehicleRegistration = (value: string | null | undefined) =
 export const normalizePolicyNumber = (value: string | null | undefined) =>
   (value || "").replace(/\s+/g, "").toUpperCase().trim();
 
-export const getClientIdentityKey = (client: Pick<Client, "id" | "phone" | "vehicle_number" | "current_policy_number">) => {
-  const vehicleKey = normalizeVehicleRegistration(client.vehicle_number);
-  if (vehicleKey) return `vehicle:${vehicleKey}`;
+const STAGE_ALIASES: Record<string, string> = {
+  new: "new_lead",
+  new_lead: "new_lead",
+  contact_attempted: "smart_calling",
+  requirement_collected: "smart_calling",
+  smart_calling: "smart_calling",
+  contacted: "smart_calling",
+  in_process: "smart_calling",
+  quote_shared: "quote_shared",
+  follow_up: "follow_up",
+  interested: "follow_up",
+  hot_prospect: "follow_up",
+  won: "won",
+  converted: "won",
+  policy_issued: "policy_issued",
+  lost: "lost",
+  not_interested: "lost",
+};
 
+const ACTIVE_PIPELINE_STAGES = new Set(["new_lead", "smart_calling", "quote_shared", "follow_up"]);
+
+const getNormalizedLifecycleStage = (pipelineStage: string | null | undefined, leadStatus: string | null | undefined) => {
+  const normalizedPipelineStage = pipelineStage ? STAGE_ALIASES[pipelineStage] : undefined;
+  const normalizedLeadStatus = leadStatus ? STAGE_ALIASES[leadStatus] : undefined;
+
+  if (normalizedPipelineStage && normalizedPipelineStage !== "policy_issued") return normalizedPipelineStage;
+  if (normalizedLeadStatus && normalizedLeadStatus !== "policy_issued") return normalizedLeadStatus;
+  return normalizedPipelineStage || normalizedLeadStatus || "new_lead";
+};
+
+export const getClientIdentityKey = (client: Pick<Client, "id" | "phone" | "vehicle_number" | "current_policy_number">) => {
   const policyKey = normalizePolicyNumber(client.current_policy_number);
   if (policyKey) return `policy:${policyKey}`;
+
+  const vehicleKey = normalizeVehicleRegistration(client.vehicle_number);
+  if (vehicleKey) return `vehicle:${vehicleKey}`;
 
   const phoneKey = normalizePhoneNumber(client.phone);
   if (phoneKey) return `phone:${phoneKey}`;
@@ -30,13 +60,19 @@ export const choosePreferredClient = (current: Client, candidate: Client) => {
   const candidateStatus = (candidate.lead_status || "").toLowerCase();
 
   const score = (item: Client, stage: string, status: string) => {
+    const normalizedStage = getNormalizedLifecycleStage(stage, status);
     let total = 0;
-    if (stage === "policy_issued") total += 100;
+
+    if (ACTIVE_PIPELINE_STAGES.has(normalizedStage)) total += 220;
+    if (normalizedStage === "quote_shared") total += 40;
+    if (normalizedStage === "follow_up") total += 30;
+    if (normalizedStage === "smart_calling") total += 20;
+    if (stage === "policy_issued") total += 120;
     if (["won", "converted"].includes(status)) total += 80;
     if (stage === "won") total += 70;
-    if (normalizePolicyNumber(item.current_policy_number)) total += 60;
-    if (item.policy_start_date || item.policy_expiry_date || item.booking_date) total += 40;
-    if (stage === "lost" || status === "lost") total -= 30;
+    if (normalizePolicyNumber(item.current_policy_number)) total += 20;
+    if (item.policy_start_date || item.policy_expiry_date || item.booking_date) total += 10;
+    if (normalizedStage === "lost") total -= 60;
     if (item.updated_at) total += new Date(item.updated_at).getTime() / 1e13;
     return total;
   };

@@ -821,7 +821,7 @@ export function InsuranceWorkspace() {
         }}
       />
 
-      {activeView === "pipeline" && <InsuranceLeadPipeline clients={dedupedClients} isLoading={isLoading} />}
+      {activeView === "pipeline" && <InsuranceLeadPipeline clients={clients} isLoading={isLoading} />}
       {activeView === "policy_book" && <InsurancePolicyBook policies={runningPolicies} />}
       {activeView === "renewals" && <div><InsuranceComingRenewals policies={runningPolicies as PolicyRecord[]} /></div>}
       {activeView === "overdue" && <div><InsuranceOverdueRenewals policies={overduePolicies as PolicyRecord[]} clients={dedupedClients} /></div>}
@@ -832,7 +832,10 @@ export function InsuranceWorkspace() {
       <Dialog open={showCalcDialog} onOpenChange={setShowCalcDialog}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle className="flex items-center gap-2"><Calculator className="h-5 w-5 text-primary" /> Premium Calculator</DialogTitle></DialogHeader>
-          <InsurancePremiumCalculator onQuoteSaved={() => queryClient.invalidateQueries({ queryKey: ["ins-bulk-quotes"] })} />
+          <InsurancePremiumCalculator onQuoteSaved={() => {
+            queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
+            queryClient.invalidateQueries({ queryKey: ["ins-bulk-quotes"] });
+          }} />
         </DialogContent>
       </Dialog>
 
