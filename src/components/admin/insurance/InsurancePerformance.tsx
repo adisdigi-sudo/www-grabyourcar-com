@@ -484,7 +484,7 @@ export function InsurancePerformance({ clients, policies, selectedMonth, onMonth
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 text-emerald-600" /> Won Policies — {monthOptions.find(m => m.value === selectedMonth)?.label}
+            <CheckCircle2 className="h-4 w-4 text-emerald-600" /> Won Policies — {activeRangeLabel}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
