@@ -80,11 +80,14 @@ export function SharePdfDialog({
           upsert: true,
         });
         if (!error) pdfPath = storagePath;
-      } catch {}
+        else console.warn("Quote PDF upload failed:", error.message);
+      } catch (uploadErr) {
+        console.warn("Quote PDF upload exception:", uploadErr);
+      }
 
       // 2. Save to quote_share_history
       const quoteRef = `QS-${Date.now().toString(36).toUpperCase()}`;
-      await supabase.from("quote_share_history" as any).insert({
+      const { error: insertError } = await supabase.from("quote_share_history" as any).insert({
         customer_name: name,
         customer_phone: cd?.phone || phone || null,
         customer_email: cd?.email || email || null,
@@ -100,6 +103,12 @@ export function SharePdfDialog({
         quote_ref: quoteRef,
         notes: `Auto-saved via ${title} share`,
       } as any);
+
+      if (insertError) {
+        console.error("Quote save to history failed:", insertError);
+        toast.error("Quote generated but failed to save to history: " + insertError.message);
+        return;
+      }
 
       // 3. Move client pipeline to quote_shared (only if not already won/policy_issued)
       if (cd?.id) {
@@ -127,6 +136,7 @@ export function SharePdfDialog({
       }
     } catch (err) {
       console.error("Auto-save quote error:", err);
+      toast.error("Quote save failed — check console for details");
     }
   };
 
