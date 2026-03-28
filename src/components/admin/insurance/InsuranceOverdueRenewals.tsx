@@ -68,15 +68,6 @@ export function InsuranceOverdueRenewals({ policies, clients }: Props) {
         if (!p.expiry_date) return false;
         if (resolvedStatuses.includes((p.status || "").toLowerCase())) return false;
         if (differenceInDays(new Date(p.expiry_date), now) >= 0) return false;
-
-        const normalizedClientStage = p.clientData
-          ? normalizeStage(p.clientData.pipeline_stage, p.clientData.lead_status, p.clientData)
-          : null;
-
-        if (normalizedClientStage && ["new_lead", "smart_calling", "quote_shared", "follow_up"].includes(normalizedClientStage)) {
-          return false;
-        }
-
         if ((p.clientData as any)?.retarget_status === "scheduled") return false;
 
         return true;
