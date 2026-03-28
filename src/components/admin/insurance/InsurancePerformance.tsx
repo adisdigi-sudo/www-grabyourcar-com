@@ -91,9 +91,9 @@ export function InsurancePerformance({ clients, policies, selectedMonth, onMonth
       const dateStr = getPolicyEffectiveDate(policy);
       if (!dateStr) return false;
       const d = new Date(dateStr);
-      return d >= monthStart && d <= monthEnd;
+      return d >= effectiveRange.start && d <= effectiveRange.end;
     });
-  }, [dedupedPolicies, monthStart, monthEnd]);
+  }, [dedupedPolicies, effectiveRange]);
 
   const wonClientIdsThisMonth = useMemo(
     () => new Set(policiesThisMonth.map((policy) => policy.client_id).filter(Boolean) as string[]),
