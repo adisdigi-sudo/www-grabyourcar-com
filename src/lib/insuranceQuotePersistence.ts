@@ -39,8 +39,6 @@ type PersistQuoteHistoryInput = {
   previousClaim?: boolean | null;
 };
 
-const TERMINAL_STAGES = new Set(["policy_issued", "won", "converted"]);
-
 const normalizeLower = (value?: string | null) => (value || "").trim().toLowerCase();
 const normalizePhoneDigits = (value?: string | null) => (value || "").replace(/\D/g, "");
 const normalizeVehicleNumber = (value?: string | null) => (value || "").replace(/\s+/g, "").toUpperCase();
@@ -178,10 +176,6 @@ export async function persistInsuranceQuoteHistory(input: PersistQuoteHistoryInp
       throw new Error(`Client fetch failed: ${currentError.message}`);
     }
 
-    const pipelineStage = normalizeLower(current?.pipeline_stage);
-    const leadStatus = normalizeLower(current?.lead_status);
-    const shouldKeepTerminal = TERMINAL_STAGES.has(pipelineStage) || TERMINAL_STAGES.has(leadStatus);
-
     const updates: {
       customer_name?: string;
       email?: string | null;
@@ -222,10 +216,8 @@ export async function persistInsuranceQuoteHistory(input: PersistQuoteHistoryInp
       updated_at: nowIso,
     };
 
-    if (!shouldKeepTerminal) {
-      updates.pipeline_stage = "quote_shared";
-      updates.lead_status = "quote_shared";
-    }
+    updates.pipeline_stage = "quote_shared";
+    updates.lead_status = "quote_shared";
 
     const { error: clientUpdateError } = await supabase
       .from("insurance_clients")
