@@ -14993,6 +14993,7 @@ export type Database = {
         }
         Returns: string
       }
+      cleanup_expired_quotes: { Args: never; Returns: undefined }
       get_crm_role: { Args: { _user_id: string }; Returns: string }
       get_user_tenant_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
