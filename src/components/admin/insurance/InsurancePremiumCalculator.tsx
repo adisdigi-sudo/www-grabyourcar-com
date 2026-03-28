@@ -62,7 +62,7 @@ const DEFAULT_ADDONS = [
 
 type Addon = typeof DEFAULT_ADDONS[number];
 
-const fmt = (n: number) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n);
+const fmt = (n: number) => `Rs. ${Math.round(n).toLocaleString("en-IN")}`;
 
 interface Props {
   onQuoteSaved?: () => void;
