@@ -245,8 +245,16 @@ export async function persistInsuranceQuoteHistory(input: PersistQuoteHistoryInp
       updated_at: nowIso,
     };
 
-    updates.pipeline_stage = "quote_shared";
-    updates.lead_status = "quote_shared";
+    // Only promote to quote_shared if the lead is in an earlier stage
+    const currentStage = (current?.pipeline_stage || "").toLowerCase();
+    const currentStatus = (current?.lead_status || "").toLowerCase();
+    const advancedStages = ["follow_up", "won", "policy_issued", "lost"];
+    if (!advancedStages.includes(currentStage)) {
+      updates.pipeline_stage = "quote_shared";
+    }
+    if (!advancedStages.includes(currentStatus)) {
+      updates.lead_status = "quote_shared";
+    }
 
     const { error: clientUpdateError } = await supabase
       .from("insurance_clients")
