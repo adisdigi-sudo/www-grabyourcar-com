@@ -246,6 +246,7 @@ export function InsuranceWorkspace() {
         if (RESOLVED_STATUSES.includes((p.status || "").toLowerCase())) return false;
         const client = dedupedClients.find((c) => c.id === p.client_id);
         if (client?.retarget_status === "scheduled") return false;
+        if (["removed", "moved_to_pipeline"].includes(client?.overdue_reason || "")) return false;
         return new Date(p.expiry_date) < today;
       })
     );
