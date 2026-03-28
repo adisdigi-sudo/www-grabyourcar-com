@@ -75,9 +75,9 @@ export function InsurancePerformance({ clients, policies, selectedMonth, onMonth
       const rawDate = getClientEffectiveDate(client);
       if (!rawDate) return false;
       const d = new Date(rawDate);
-      return d >= monthStart && d <= monthEnd;
+      return d >= effectiveRange.start && d <= effectiveRange.end;
     });
-  }, [clients, monthStart, monthEnd]);
+  }, [clients, effectiveRange]);
 
   const isWon = (client: Client) => {
     const stage = normalizeStage(client.pipeline_stage, client.lead_status, client);
