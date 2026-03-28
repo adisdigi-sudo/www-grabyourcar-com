@@ -1470,6 +1470,19 @@ export function InsuranceSmartCalling() {
           defaultPhone={currentClient.phone || ""}
           defaultEmail={currentClient.email || ""}
           customerName={currentClient.customer_name || "Customer"}
+          clientDetails={{
+            id: currentClient.id,
+            customer_name: currentClient.customer_name,
+            phone: currentClient.phone,
+            email: currentClient.email || undefined,
+            vehicle_number: currentClient.vehicle_number || undefined,
+            vehicle_make: currentClient.vehicle_make || undefined,
+            vehicle_model: currentClient.vehicle_model || undefined,
+            vehicle_year: currentClient.vehicle_year || undefined,
+            current_insurer: currentClient.current_insurer || undefined,
+            current_policy_type: currentClient.current_policy_type || undefined,
+            quote_amount: currentClient.quote_amount || undefined,
+          }}
           shareMessage={`Hi ${currentClient.customer_name || ""}! Here is your insurance quote for your ${currentClient.vehicle_make || ""} ${currentClient.vehicle_model || ""}.\n\nVehicle: ${currentClient.vehicle_number || "N/A"}\nPolicy Type: ${currentClient.current_policy_type || "Comprehensive"}\nInsurer: ${currentClient.current_insurer || "Best Available"}\n\nPlease review and let us know if you'd like to proceed.\n\nPhone: +91 98559 24442\nwww.grabyourcar.com\n- Grabyourcar Insurance`}
           generatePdf={() => generateInsuranceQuotePdf({
             customerName: currentClient.customer_name || "Customer",
