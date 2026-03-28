@@ -646,6 +646,51 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
                 <Input placeholder="Swift" value={vehicleModel} onChange={e => setVehicleModel(e.target.value)} className="h-8 text-sm mt-1" />
               </div>
             </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Vehicle Year</Label>
+                <Input type="number" placeholder="2024" value={vehicleYear} onChange={e => setVehicleYear(e.target.value)} className="h-8 text-sm mt-1" />
+              </div>
+              <div>
+                <Label className="text-xs">Insurance Company</Label>
+                <Select value={insuranceCompany} onValueChange={setInsuranceCompany}>
+                  <SelectTrigger className="h-8 text-sm mt-1"><SelectValue placeholder="Select insurer" /></SelectTrigger>
+                  <SelectContent>
+                    {INSURANCE_COMPANIES.map(co => (
+                      <SelectItem key={co} value={co}>{co}</SelectItem>
+                    ))}
+                    <SelectItem value="__custom">+ Add Custom</SelectItem>
+                  </SelectContent>
+                </Select>
+                {insuranceCompany === "__custom" && (
+                  <Input placeholder="Enter insurer name" value={customInsurer} onChange={e => setCustomInsurer(e.target.value)} className="h-8 text-sm mt-1" />
+                )}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Fuel Type</Label>
+                <Select value={fuelType} onValueChange={setFuelType}>
+                  <SelectTrigger className="h-8 text-sm mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {["Petrol", "Diesel", "CNG", "Electric", "Hybrid", "LPG"].map(f => (
+                      <SelectItem key={f} value={f}>{f}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">Policy Type</Label>
+                <Select value={policyType} onValueChange={setPolicyType}>
+                  <SelectTrigger className="h-8 text-sm mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Comprehensive">Comprehensive</SelectItem>
+                    <SelectItem value="Third Party">Third Party Only</SelectItem>
+                    <SelectItem value="Standalone OD">Standalone OD</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
 
           {/* Vehicle Details Card */}
@@ -680,6 +725,14 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
               <p className="text-[10px] text-muted-foreground mt-1">
                 {zone === "A" ? "🏙 Metro (Delhi NCR / Bangalore)" : "🌍 Non-Metro"} — OD Rate: {ccNum > 1500 ? OD_RATES[zone].above1500 : OD_RATES[zone].upto1500}%
               </p>
+            </div>
+
+            <div>
+              <Label className="text-xs">Secure Premium</Label>
+              <div className="relative mt-1">
+                <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input type="number" placeholder="0" value={securePremium} onChange={e => setSecurePremium(e.target.value)} className="pl-8 h-9 text-sm" />
+              </div>
             </div>
           </div>
 
