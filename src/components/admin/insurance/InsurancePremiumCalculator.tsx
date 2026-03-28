@@ -437,18 +437,80 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
     return { doc, quoteRef };
   };
 
-  const downloadPDF = () => {
-    const doc = generatePDF();
-    if (!doc) return;
-    const fileName = `Quote_${customerName || "Customer"}_${new Date().toISOString().slice(0, 10)}.pdf`;
+  const uploadPdfToStorage = async (doc: any, fileName: string): Promise<string | null> => {
+    try {
+      const pdfBlob = doc.output("blob");
+      const storagePath = `quotes/${new Date().toISOString().slice(0, 10)}/${fileName}`;
+      const { error } = await supabase.storage.from("quote-pdfs").upload(storagePath, pdfBlob, {
+        contentType: "application/pdf",
+        upsert: true,
+      });
+      if (error) { console.error("PDF upload error:", error); return null; }
+      return storagePath;
+    } catch { return null; }
+  };
+
+  const saveShareHistory = async (shareMethod: string, pdfPath: string | null, quoteRef: string) => {
+    if (!calc) return;
+    const netOD = Math.max(0, calc.basicOD - calc.odDiscount - calc.ncbDiscount);
+    const netPremium = netOD + calc.tp + calc.addonTotal;
+    const gst = Math.round(netPremium * 0.18);
+
+    await supabase.from("quote_share_history" as any).insert({
+      customer_name: customerName || "Manual Quote",
+      customer_phone: customerPhone || null,
+      vehicle_number: vehicleNumber || null,
+      vehicle_make: vehicleMake || null,
+      vehicle_model: vehicleModel || null,
+      vehicle_year: vehicleYear || null,
+      insurance_company: "Calculator Quote",
+      policy_type: "Comprehensive",
+      idv: idvNum,
+      total_premium: calc.total,
+      premium_breakup: {
+        basicOD: Math.round(calc.basicOD),
+        odDiscount: Math.round(calc.odDiscount),
+        ncbDiscount: Math.round(calc.ncbDiscount),
+        netOD: Math.round(calc.netOD),
+        tp: Math.round(calc.tp),
+        addonTotal: Math.round(calc.addonTotal),
+        subtotal: Math.round(calc.subtotal),
+        gst: Math.round(calc.gst),
+        total: Math.round(calc.total),
+      },
+      addons: addons.filter(a => a.enabled).map(a => a.name),
+      share_method: shareMethod,
+      pdf_storage_path: pdfPath,
+      quote_ref: quoteRef,
+      notes: `Zone: ${zone} | OD Discount: ${discountPct}% | NCB: ${ncb}%`,
+    } as any);
+  };
+
+  const downloadPDF = async () => {
+    const result = generatePDF();
+    if (!result) return;
+    const { doc, quoteRef } = result;
+    const fileName = `Quote_${(customerName || "Customer").replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.pdf`;
     doc.save(fileName);
-    toast.success("PDF downloaded!");
+
+    // Upload and save history in background
+    const pdfPath = await uploadPdfToStorage(doc, fileName);
+    await saveShareHistory("pdf_download", pdfPath, quoteRef);
+    toast.success("PDF downloaded & saved!");
   };
 
   const saveAndShareQuote = async (method: "whatsapp" | "pdf_only") => {
     if (!calc) return;
     setIsSaving(true);
     try {
+      const result = generatePDF();
+      if (!result) throw new Error("Failed to generate PDF");
+      const { doc, quoteRef } = result;
+      const fileName = `Quote_${(customerName || "Customer").replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.pdf`;
+
+      // Upload PDF to storage
+      const pdfPath = await uploadPdfToStorage(doc, fileName);
+
       // Save to bulk_renewal_quotes
       const enabledAddons = addons.filter(a => a.enabled).map(a => a.name);
       const { error } = await supabase.from("bulk_renewal_quotes").insert({
@@ -481,6 +543,9 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
 
       if (error) throw error;
 
+      // Save share history
+      await saveShareHistory(method === "whatsapp" ? "whatsapp" : "pdf_download", pdfPath, quoteRef);
+
       onQuoteSaved?.();
 
       if (method === "whatsapp") {
@@ -491,7 +556,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
         window.open(waUrl, "_blank");
         toast.success("Quote saved & WhatsApp opened!");
       } else {
-        downloadPDF();
+        doc.save(fileName);
         toast.success("Quote saved & PDF generated!");
       }
     } catch (err: any) {
