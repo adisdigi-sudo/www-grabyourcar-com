@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { forwardRef, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { persistInsuranceQuoteHistory } from "@/lib/insuranceQuotePersistence";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Calculator, Car, Shield, Percent, IndianRupee, Zap,
   ChevronDown, ChevronUp, Info, Copy, Send, FileText
@@ -70,6 +71,7 @@ interface Props {
 }
 
 export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
+  const queryClient = useQueryClient();
   const [idv, setIdv] = useState<string>("");
   const [cc, setCc] = useState<string>("");
   const [city, setCity] = useState<string>("Delhi NCR");
@@ -246,6 +248,10 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
     });
 
     await saveBulkQuoteRecord(shareMethod === "whatsapp" ? "sent" : "draft");
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] }),
+      queryClient.invalidateQueries({ queryKey: ["ins-bulk-quotes"] }),
+    ]);
 
     return { doc, fileName };
   };
@@ -850,11 +856,15 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
   );
 }
 
-function Row({ label, value, bold, negative }: { label: string; value: string; bold?: boolean; negative?: boolean }) {
-  return (
-    <div className="flex justify-between items-center">
-      <span className={cn("text-xs", bold ? "font-semibold text-foreground" : "text-muted-foreground")}>{label}</span>
-      <span className={cn("text-xs font-mono", bold ? "font-bold text-foreground" : negative ? "text-green-600" : "text-foreground")}>{value}</span>
-    </div>
-  );
-}
+const Row = forwardRef<HTMLDivElement, { label: string; value: string; bold?: boolean; negative?: boolean }>(
+  ({ label, value, bold, negative }, ref) => {
+    return (
+      <div ref={ref} className="flex justify-between items-center">
+        <span className={cn("text-xs", bold ? "font-semibold text-foreground" : "text-muted-foreground")}>{label}</span>
+        <span className={cn("text-xs font-mono", bold ? "font-bold text-foreground" : negative ? "text-green-600" : "text-foreground")}>{value}</span>
+      </div>
+    );
+  }
+);
+
+Row.displayName = "Row";
