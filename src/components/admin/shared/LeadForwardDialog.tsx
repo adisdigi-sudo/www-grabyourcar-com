@@ -185,7 +185,7 @@ export function LeadForwardDialog({
 }
 
 // Badge component to show forwarding status on lead rows
-export function ForwardedBadge({ leadId }: { leadId: string }) {
+export const ForwardedBadge = React.forwardRef<HTMLDivElement, { leadId: string }>(({ leadId }, ref) => {
   const { data: forwards } = useQuery({
     queryKey: ["lead-forwards-badge", leadId],
     queryFn: async () => {
@@ -215,11 +215,13 @@ export function ForwardedBadge({ leadId }: { leadId: string }) {
   const targetName = verticals.find(v => v.id === latest.to_vertical_id)?.name || "Team";
 
   return (
-    <Badge variant="outline" className="text-[9px] border-primary/30 text-primary gap-1">
+    <Badge ref={ref} variant="outline" className="text-[9px] border-primary/30 text-primary gap-1">
       <ArrowRight className="h-2.5 w-2.5" />
       Shared → {targetName}
       {latest.status === "pending" && <Clock className="h-2.5 w-2.5 text-yellow-500" />}
       {latest.status === "completed" && <CheckCircle2 className="h-2.5 w-2.5 text-green-500" />}
     </Badge>
   );
-}
+});
+
+ForwardedBadge.displayName = "ForwardedBadge";

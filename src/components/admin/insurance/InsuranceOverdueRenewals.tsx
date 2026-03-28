@@ -247,9 +247,9 @@ export function InsuranceOverdueRenewals({ policies, clients }: Props) {
           await supabase.from("insurance_clients").update({
             pipeline_stage: "new_lead",
             lead_status: "new",
-            overdue_reason: null,
+            overdue_reason: "moved_to_pipeline",
             overdue_custom_reason: null,
-            overdue_marked_at: null,
+            overdue_marked_at: new Date().toISOString(),
             retarget_status: "none",
             retargeting_enabled: false,
           } as any).eq("id", item.client_id);
