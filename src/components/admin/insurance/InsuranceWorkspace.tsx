@@ -421,8 +421,8 @@ export function InsuranceWorkspace() {
             {[
               { label: "Total Leads", value: totalLeads, icon: UserPlus, bgc: "bg-blue-500/20", kpi: "total_leads" as KpiType },
               { label: "In Pipeline", value: inPipeline, icon: Clock, bgc: "bg-orange-400/20", kpi: "in_pipeline" as KpiType },
-              { label: "Won / Issued", value: wonCount, icon: CheckCircle2, bgc: "bg-emerald-400/20", kpi: "won" as KpiType },
-              { label: "Active Policies", value: activePolicies, icon: BookOpen, bgc: "bg-cyan-400/20", kpi: "active_policies" as KpiType },
+              { label: "Won / Issued", value: wonCountMonth, icon: CheckCircle2, bgc: "bg-emerald-400/20", kpi: "won" as KpiType },
+              { label: "Active Policies", value: totalRunningPolicies, icon: BookOpen, bgc: "bg-cyan-400/20", kpi: "active_policies" as KpiType },
               { label: `Conv (${selectedMonthLabel})`, value: `${convRate}%`, icon: TrendingUp, bgc: "bg-violet-400/20", kpi: "conversion" as KpiType },
             ].map(kpi => (
               <div
