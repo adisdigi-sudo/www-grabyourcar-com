@@ -521,15 +521,27 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
     });
   }, [selectedClient]);
 
-  // Filter - exclude policy_issued leads from pipeline and deduplicate same lead/vehicle
+  // Filter - exclude won/policy_issued leads from pipeline and deduplicate same lead/vehicle
   const pipelineClients = useMemo(() => {
+    // First pass: identify all vehicle/policy keys that have a won or policy_issued record
+    const wonKeys = new Set<string>();
+    for (const client of clients) {
+      const stage = normalizeStage(client.pipeline_stage, client.lead_status, client);
+      if (stage === "policy_issued" || stage === "won") {
+        wonKeys.add(getClientIdentityKey(client));
+      }
+    }
+
     const uniqueLeads = new Map<string, Client>();
 
     for (const client of clients) {
       const stage = normalizeStage(client.pipeline_stage, client.lead_status, client);
-      if (stage === "policy_issued") continue;
+      if (stage === "policy_issued" || stage === "won") continue;
 
       const dedupeKey = getClientIdentityKey(client);
+
+      // If another record with the same vehicle/policy is already won, skip this one
+      if (wonKeys.has(dedupeKey)) continue;
 
       const existing = uniqueLeads.get(dedupeKey);
       if (!existing) {
