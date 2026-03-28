@@ -249,9 +249,13 @@ export function InsuranceWorkspace() {
   );
 
   const totalLeads = monthFilteredClients.length;
-  const wonCount = monthFilteredPolicies.filter((policy) => (policy.status || "").toLowerCase() === "active").length;
+  const wonCountMonth = monthFilteredPolicies.filter((policy) => (policy.status || "").toLowerCase() === "active").length;
   const lostCount = monthFilteredClients.filter(isLost).length;
-  const inPipeline = totalLeads - wonCount - lostCount;
+  const inPipeline = totalLeads - wonCountMonth - lostCount;
+
+  // Total counts (not month-filtered) for tab badges
+  const totalRunningPolicies = runningPolicies.length;
+  const totalWonPolicies = policyBookPolicies.filter(p => (p.status || "").toLowerCase() === "active").length;
 
   // Month-wise conversion calculation based on real booking/policy dates
   const monthWiseConversion = useMemo(() => {
@@ -374,12 +378,12 @@ export function InsuranceWorkspace() {
 
   const TABS = [
     { key: "pipeline" as const, label: "Lead Pipeline", icon: Shield, count: totalLeads, urgent: false },
-    { key: "policy_book" as const, label: "Policy Book", icon: BookOpen, count: activePolicies, urgent: false },
+    { key: "policy_book" as const, label: "Policy Book", icon: BookOpen, count: totalRunningPolicies, urgent: false },
     { key: "renewals" as const, label: "Coming Renewals", icon: CalendarClock, count: renewalsDue, urgent: urgentRenewals > 0 },
     { key: "overdue" as const, label: "Overdue", icon: AlertTriangle, count: overdueCount, urgent: overdueCount > 0 },
     { key: "bulk_tools" as const, label: "Bulk Tools", icon: Wrench, count: 0, urgent: false },
     { key: "renewal_campaign" as const, label: "Renewal Campaign", icon: Rocket, count: 0, urgent: false },
-    { key: "performance" as const, label: "Performance", icon: TrendingUp, count: wonCount, urgent: false },
+    { key: "performance" as const, label: "Performance", icon: TrendingUp, count: totalWonPolicies, urgent: false },
   ];
 
   return (
@@ -417,8 +421,8 @@ export function InsuranceWorkspace() {
             {[
               { label: "Total Leads", value: totalLeads, icon: UserPlus, bgc: "bg-blue-500/20", kpi: "total_leads" as KpiType },
               { label: "In Pipeline", value: inPipeline, icon: Clock, bgc: "bg-orange-400/20", kpi: "in_pipeline" as KpiType },
-              { label: "Won / Issued", value: wonCount, icon: CheckCircle2, bgc: "bg-emerald-400/20", kpi: "won" as KpiType },
-              { label: "Active Policies", value: activePolicies, icon: BookOpen, bgc: "bg-cyan-400/20", kpi: "active_policies" as KpiType },
+              { label: "Won / Issued", value: wonCountMonth, icon: CheckCircle2, bgc: "bg-emerald-400/20", kpi: "won" as KpiType },
+              { label: "Active Policies", value: totalRunningPolicies, icon: BookOpen, bgc: "bg-cyan-400/20", kpi: "active_policies" as KpiType },
               { label: `Conv (${selectedMonthLabel})`, value: `${convRate}%`, icon: TrendingUp, bgc: "bg-violet-400/20", kpi: "conversion" as KpiType },
             ].map(kpi => (
               <div
