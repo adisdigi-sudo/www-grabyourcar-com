@@ -42,6 +42,8 @@ type PersistQuoteHistoryInput = {
 const TERMINAL_STAGES = new Set(["policy_issued", "won", "converted"]);
 
 const normalizeLower = (value?: string | null) => (value || "").trim().toLowerCase();
+const normalizePhoneDigits = (value?: string | null) => (value || "").replace(/\D/g, "");
+const normalizeVehicleNumber = (value?: string | null) => (value || "").replace(/\s+/g, "").toUpperCase();
 
 const uploadQuotePdf = async (doc: jsPDF, fileName: string) => {
   const pdfBlob = doc.output("blob");
@@ -89,9 +91,11 @@ export async function persistInsuranceQuoteHistory(input: PersistQuoteHistoryInp
 
   // Resolve clientId — use provided ID or fall back to phone-based lookup
   let resolvedClientId = input.clientId || null;
+  const cleanPhone = normalizePhoneDigits(input.customerPhone);
+  const normalizedVehicle = normalizeVehicleNumber(input.vehicleNumber);
+  const nowIso = new Date().toISOString();
 
-  if (!resolvedClientId && input.customerPhone) {
-    const cleanPhone = (input.customerPhone || "").replace(/\D/g, "");
+  if (!resolvedClientId && cleanPhone) {
     if (cleanPhone.length >= 10) {
       const phoneSuffix = cleanPhone.slice(-10);
       const { data: matchedClient } = await supabase
@@ -105,6 +109,62 @@ export async function persistInsuranceQuoteHistory(input: PersistQuoteHistoryInp
         resolvedClientId = matchedClient.id;
       }
     }
+  }
+
+  if (!resolvedClientId && normalizedVehicle) {
+    const { data: matchedByVehicle } = await supabase
+      .from("insurance_clients")
+      .select("id")
+      .ilike("vehicle_number", input.vehicleNumber?.trim() || normalizedVehicle)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (matchedByVehicle) {
+      resolvedClientId = matchedByVehicle.id;
+    }
+  }
+
+  if (!resolvedClientId && cleanPhone.length >= 10) {
+    const { data: authData } = await supabase.auth.getUser();
+    const { data: createdClient, error: createClientError } = await supabase
+      .from("insurance_clients")
+      .insert({
+        phone: cleanPhone,
+        customer_name: input.customerName,
+        email: input.customerEmail ?? null,
+        vehicle_number: input.vehicleNumber ?? null,
+        vehicle_make: input.vehicleMake ?? null,
+        vehicle_model: input.vehicleModel ?? null,
+        vehicle_year: input.vehicleYear != null ? Number(input.vehicleYear) : null,
+        current_insurer: input.insuranceCompany ?? input.quoteInsurer ?? null,
+        current_policy_type: input.policyType ?? null,
+        current_premium: input.totalPremium ?? input.quoteAmount ?? null,
+        ncb_percentage: input.ncbPercentage ?? null,
+        previous_claim: input.previousClaim ?? null,
+        lead_source: "Manual Quote Calculator",
+        lead_status: "quote_shared",
+        pipeline_stage: "quote_shared",
+        assigned_advisor_id: authData.user?.id ?? null,
+        advisor_name: authData.user?.email ?? null,
+        priority: "medium",
+        quote_amount: input.quoteAmount ?? input.totalPremium ?? null,
+        quote_insurer: input.quoteInsurer ?? input.insuranceCompany ?? null,
+        notes: input.notes ?? null,
+        is_legacy: false,
+        duplicate_count: 0,
+        is_duplicate: false,
+        journey_last_event: "quote_shared",
+        journey_last_event_at: nowIso,
+      })
+      .select("id")
+      .single();
+
+    if (createClientError) {
+      throw new Error(`Client create failed: ${createClientError.message}`);
+    }
+
+    resolvedClientId = createdClient.id;
   }
 
   if (resolvedClientId) {
@@ -123,22 +183,48 @@ export async function persistInsuranceQuoteHistory(input: PersistQuoteHistoryInp
     const shouldKeepTerminal = TERMINAL_STAGES.has(pipelineStage) || TERMINAL_STAGES.has(leadStatus);
 
     const updates: {
+      customer_name?: string;
+      email?: string | null;
+      vehicle_number?: string | null;
+      vehicle_make?: string | null;
+      vehicle_model?: string | null;
+      vehicle_year?: number | null;
+      current_insurer?: string | null;
+      current_policy_type?: string | null;
+      current_premium?: number | null;
       pipeline_stage?: string;
+      lead_status?: string;
       quote_amount?: number | null;
       quote_insurer?: string | null;
       ncb_percentage?: number | null;
       previous_claim?: boolean | null;
+      notes?: string | null;
+      journey_last_event?: string;
+      journey_last_event_at?: string;
       updated_at: string;
     } = {
+      customer_name: input.customerName,
+      email: input.customerEmail ?? null,
+      vehicle_number: input.vehicleNumber ?? null,
+      vehicle_make: input.vehicleMake ?? null,
+      vehicle_model: input.vehicleModel ?? null,
+      vehicle_year: input.vehicleYear != null ? Number(input.vehicleYear) : null,
+      current_insurer: input.insuranceCompany ?? input.quoteInsurer ?? null,
+      current_policy_type: input.policyType ?? null,
+      current_premium: input.totalPremium ?? input.quoteAmount ?? null,
       quote_amount: input.quoteAmount ?? input.totalPremium ?? null,
       quote_insurer: input.quoteInsurer ?? input.insuranceCompany ?? null,
       ncb_percentage: input.ncbPercentage ?? null,
       previous_claim: input.previousClaim ?? null,
-      updated_at: new Date().toISOString(),
+      notes: input.notes ?? null,
+      journey_last_event: "quote_shared",
+      journey_last_event_at: nowIso,
+      updated_at: nowIso,
     };
 
     if (!shouldKeepTerminal) {
       updates.pipeline_stage = "quote_shared";
+      updates.lead_status = "quote_shared";
     }
 
     const { error: clientUpdateError } = await supabase
