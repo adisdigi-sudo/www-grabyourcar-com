@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { dedupeInsuranceClients, dedupeInsurancePolicies, getClientEffectiveDate, getPolicyEffectiveDate, normalizePhoneNumber, normalizeVehicleRegistration } from "@/lib/insuranceIdentity";
+import { dedupeInsuranceClients, dedupeInsurancePolicies, getClientEffectiveDate, getPolicyEffectiveDate, normalizePhoneNumber, normalizePolicyNumber, normalizeVehicleRegistration } from "@/lib/insuranceIdentity";
 import { differenceInDays, format, startOfMonth, endOfMonth, parse } from "date-fns";
 import { fetchAllPages } from "@/lib/fetchAllPages";
 import {
@@ -239,20 +239,77 @@ export function InsuranceWorkspace() {
     }), [policyBookPolicies, today.toDateString()]
   );
   const RESOLVED_STATUSES = ["renewed", "cancelled", "lost", "lapsed"];
-  const overduePolicies = useMemo(() =>
-    allPolicies.filter(p => {
-      if (!p.policy_number?.trim()) return false;
-      if (!p.expiry_date) return false;
-      if (RESOLVED_STATUSES.includes((p.status || "").toLowerCase())) return false;
-       const client = dedupedClients.find(c => c.id === p.client_id);
-      if (client) {
-        const normalizedClientStage = normalizeStage(client.pipeline_stage, client.lead_status, client);
-         if (["new_lead", "smart_calling", "quote_shared", "follow_up"].includes(normalizedClientStage)) return false;
+  const overduePolicies = useMemo(() => {
+    const persistedOverduePolicies = dedupeInsurancePolicies(
+      allPolicies.filter((p) => {
+        if (!p.expiry_date) return false;
+        if (RESOLVED_STATUSES.includes((p.status || "").toLowerCase())) return false;
+        const client = dedupedClients.find((c) => c.id === p.client_id);
+        if (client?.retarget_status === "scheduled") return false;
+        return new Date(p.expiry_date) < today;
+      })
+    );
+
+    const existingKeys = new Set(
+      persistedOverduePolicies.map((policy) =>
+        normalizeVehicleRegistration(policy.insurance_clients?.vehicle_number) ||
+        normalizePolicyNumber(policy.policy_number) ||
+        `client:${policy.client_id}`
+      )
+    );
+
+    const fallbackOverduePolicies: PolicyRecord[] = dedupedClients
+      .filter((client) => {
+        if (!client.policy_expiry_date) return false;
         if (client.retarget_status === "scheduled") return false;
-      }
-      return new Date(p.expiry_date) < today;
-    }), [allPolicies, dedupedClients, today.toDateString()]
-  );
+        const stage = normalizeStage(client.pipeline_stage, client.lead_status, client);
+        if (stage === "lost") return false;
+        if (new Date(client.policy_expiry_date) >= today) return false;
+
+        const key =
+          normalizeVehicleRegistration(client.vehicle_number) ||
+          normalizePolicyNumber(client.current_policy_number) ||
+          `client:${client.id}`;
+
+        return !existingKeys.has(key);
+      })
+      .map((client) => ({
+        id: `overdue-fallback-${client.id}`,
+        client_id: client.id,
+        policy_number: client.current_policy_number || null,
+        policy_type: client.current_policy_type || null,
+        insurer: client.current_insurer || client.quote_insurer || null,
+        premium_amount: client.current_premium || client.quote_amount || null,
+        start_date: client.policy_start_date || client.booking_date || null,
+        expiry_date: client.policy_expiry_date || null,
+        status: "overdue_fallback",
+        is_renewal: false,
+        issued_date: client.booking_date || null,
+        plan_name: null,
+        idv: null,
+        policy_document_url: null,
+        source_label: "Recovered Overdue Client",
+        renewal_count: 0,
+        previous_policy_id: null,
+        booking_date: client.booking_date || client.policy_start_date || null,
+        created_at: client.created_at,
+        updated_at: client.updated_at,
+        insurance_clients: {
+          customer_name: client.customer_name || "—",
+          phone: client.phone || "",
+          city: client.city || null,
+          vehicle_number: client.vehicle_number || null,
+          vehicle_make: client.vehicle_make || null,
+          vehicle_model: client.vehicle_model || null,
+          lead_source: client.lead_source || null,
+          booking_date: client.booking_date || null,
+          updated_at: client.updated_at,
+          created_at: client.created_at,
+        },
+      } as PolicyRecord));
+
+    return [...persistedOverduePolicies, ...fallbackOverduePolicies];
+  }, [allPolicies, dedupedClients, today]);
 
   const totalLeads = monthFilteredClients.length;
   const wonCountMonth = monthFilteredPolicies.filter((policy) => (policy.status || "").toLowerCase() === "active").length;
