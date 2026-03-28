@@ -87,11 +87,31 @@ export async function persistInsuranceQuoteHistory(input: PersistQuoteHistoryInp
     throw new Error(`Quote history save failed: ${historyError.message}`);
   }
 
-  if (input.clientId) {
+  // Resolve clientId — use provided ID or fall back to phone-based lookup
+  let resolvedClientId = input.clientId || null;
+
+  if (!resolvedClientId && input.customerPhone) {
+    const cleanPhone = (input.customerPhone || "").replace(/\D/g, "");
+    if (cleanPhone.length >= 10) {
+      const phoneSuffix = cleanPhone.slice(-10);
+      const { data: matchedClient } = await supabase
+        .from("insurance_clients")
+        .select("id")
+        .ilike("phone", `%${phoneSuffix}`)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (matchedClient) {
+        resolvedClientId = matchedClient.id;
+      }
+    }
+  }
+
+  if (resolvedClientId) {
     const { data: current, error: currentError } = await supabase
       .from("insurance_clients")
       .select("pipeline_stage, lead_status")
-      .eq("id", input.clientId)
+      .eq("id", resolvedClientId)
       .maybeSingle();
 
     if (currentError) {
@@ -124,7 +144,7 @@ export async function persistInsuranceQuoteHistory(input: PersistQuoteHistoryInp
     const { error: clientUpdateError } = await supabase
       .from("insurance_clients")
       .update(updates)
-      .eq("id", input.clientId);
+      .eq("id", resolvedClientId);
 
     if (clientUpdateError) {
       throw new Error(`Client quote update failed: ${clientUpdateError.message}`);
