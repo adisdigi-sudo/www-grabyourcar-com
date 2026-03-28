@@ -139,10 +139,12 @@ export function InsuranceCRMDashboard() {
   const { data: policies } = useQuery({
     queryKey: ["ins-dash-policies"],
     queryFn: async () => {
+      // Only fetch active/lapsed policies — exclude 'renewed'/'cancelled' to prevent duplicate entries
       const { data, error } = await supabase
         .from("insurance_policies")
         .select("id, client_id, policy_number, insurer, premium_amount, expiry_date, status, start_date, policy_type, plan_name, created_at, policy_document_url")
-        .order("created_at", { ascending: false });
+        .in("status", ["active", "lapsed"])
+        .order("expiry_date", { ascending: true });
       if (error) throw error;
       return data;
     },
