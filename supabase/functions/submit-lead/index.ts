@@ -216,30 +216,55 @@ serve(async (req) => {
     // Also route insurance leads into insurance_clients CRM
     if (isInsurance) {
       try {
-        // Upsert: check if already exists by phone
-        const { data: existingClient } = await supabaseAdmin
-          .from('insurance_clients')
-          .select('id')
-          .in('phone', phoneCandidates)
-          .limit(1);
+        const vehicleNumber = body.vehicleNumber?.trim() || null;
+        const normalizedVehicle = vehicleNumber ? vehicleNumber.replace(/\s+/g, '').toUpperCase() : null;
 
-        if (existingClient && existingClient.length > 0) {
+        // Fetch all phone matches to decide intelligently
+        const { data: phoneMatches } = await supabaseAdmin
+          .from('insurance_clients')
+          .select('id, vehicle_number')
+          .in('phone', phoneCandidates)
+          .order('created_at', { ascending: false });
+
+        let targetClient: { id: string; vehicle_number: string | null } | null = null;
+
+        if (phoneMatches && phoneMatches.length > 0) {
+          if (normalizedVehicle) {
+            // 1. Exact vehicle match (same phone + same vehicle → update)
+            targetClient = phoneMatches.find(c =>
+              c.vehicle_number &&
+              c.vehicle_number.replace(/\s+/g, '').toUpperCase() === normalizedVehicle
+            ) || null;
+
+            // 2. Client with no vehicle yet (fill in the vehicle)
+            if (!targetClient) {
+              targetClient = phoneMatches.find(c => !c.vehicle_number) || null;
+            }
+
+            // 3. All matches have DIFFERENT vehicles → create new record (targetClient stays null)
+          } else {
+            // No vehicle on new lead → match most recent phone record
+            targetClient = phoneMatches[0];
+          }
+        }
+
+        if (targetClient) {
           await supabaseAdmin.from('insurance_clients').update({
             customer_name: name,
             email: safeEmail || undefined,
             city: safeCity || undefined,
-            vehicle_number: body.vehicleNumber?.trim() || undefined,
+            vehicle_number: vehicleNumber || undefined,
             vehicle_make: safeCarBrand || undefined,
             vehicle_model: safeCarModel || undefined,
             notes: safeMessage || undefined,
-          }).eq('id', existingClient[0].id);
+          }).eq('id', targetClient.id);
         } else {
           await supabaseAdmin.from('insurance_clients').insert({
             phone,
             customer_name: name,
             email: safeEmail,
             city: safeCity,
-            vehicle_number: body.vehicleNumber?.trim() || null,
+            vehicle_number: vehicleNumber,
             vehicle_make: safeCarBrand,
             vehicle_model: safeCarModel,
             lead_source: 'Website',
