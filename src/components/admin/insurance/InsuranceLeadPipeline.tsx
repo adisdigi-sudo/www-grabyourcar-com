@@ -115,29 +115,30 @@ export const normalizeStage = (stage: string | null, leadStatus?: string | null,
   const normalizedStage = stage ? STAGE_MAP[stage] : undefined;
   const normalizedLeadStatus = leadStatus ? STAGE_MAP[leadStatus] : undefined;
 
-  if (normalizedStage === "policy_issued" || normalizedLeadStatus === "policy_issued") return "policy_issued";
-  if (normalizedLeadStatus === "won") return "won";
-  if (normalizedStage === "won") return "won";
-
-  // If lead_status was explicitly changed away from 'won' (e.g. retarget, new), respect the manual override
-  // even if the client still has a policy number from a previous term
-  const isManuallyMovedBack = normalizedLeadStatus && !["won", "policy_issued"].includes(normalizedLeadStatus);
-  const hasExplicitPipelineStage = normalizedStage && !["won", "policy_issued"].includes(normalizedStage);
-
-  if (isManuallyMovedBack || hasExplicitPipelineStage) {
-    // Respect the explicit stage/status — user moved this client back into pipeline
-    if (normalizedStage && normalizedStage !== "policy_issued") return normalizedStage;
-    if (normalizedLeadStatus) return normalizedLeadStatus;
+  // PRIORITY 1: Always respect explicit pipeline_stage if it's an active pipeline stage
+  // This ensures manual moves (follow_up, quote_shared, new_lead, smart_calling) are never overridden
+  const activePipelineStages = ["new_lead", "smart_calling", "quote_shared", "follow_up"];
+  if (normalizedStage && activePipelineStages.includes(normalizedStage)) {
+    return normalizedStage;
   }
 
-  // If client has a policy number and wasn't manually moved, they are won
+  // PRIORITY 2: Terminal stages from pipeline_stage
+  if (normalizedStage === "policy_issued") return "policy_issued";
+  if (normalizedStage === "won") return "won";
+  if (normalizedStage === "lost") return "lost";
+
+  // PRIORITY 3: If no pipeline_stage match, use lead_status
+  if (normalizedLeadStatus && activePipelineStages.includes(normalizedLeadStatus)) {
+    return normalizedLeadStatus;
+  }
+  if (normalizedLeadStatus === "policy_issued") return "policy_issued";
+  if (normalizedLeadStatus === "won") return "won";
+  if (normalizedLeadStatus === "lost") return "lost";
+
+  // PRIORITY 4: If client has a policy number and no explicit stage, infer policy_issued
   if (client && client.current_policy_number && client.current_policy_number.trim()) return "policy_issued";
 
-  if (normalizedLeadStatus === "lost") return "lost";
-  if (normalizedStage) return normalizedStage;
-  if (normalizedLeadStatus) return normalizedLeadStatus;
-
-  return "new_lead";
+  return normalizedStage || normalizedLeadStatus || "new_lead";
 };
 
 const CALL_STATUSES = ["Interested", "Not Interested", "Call Back", "No Answer", "Wrong Number"];
