@@ -523,12 +523,17 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
 
   // Filter - exclude won/policy_issued leads from pipeline and deduplicate same lead/vehicle
   const pipelineClients = useMemo(() => {
-    // First pass: identify all vehicle/policy keys that have a won or policy_issued record
-    const wonKeys = new Set<string>();
+    // First pass: identify all keys that have a won, policy_issued, or lost record
+    const terminalKeys = new Map<string, string>(); // key -> stage
     for (const client of clients) {
       const stage = normalizeStage(client.pipeline_stage, client.lead_status, client);
-      if (stage === "policy_issued" || stage === "won") {
-        wonKeys.add(getClientIdentityKey(client));
+      if (stage === "policy_issued" || stage === "won" || stage === "lost") {
+        const key = getClientIdentityKey(client);
+        const existing = terminalKeys.get(key);
+        // won/policy_issued take precedence over lost
+        if (!existing || stage === "policy_issued" || stage === "won") {
+          terminalKeys.set(key, stage);
+        }
       }
     }
 
@@ -540,8 +545,12 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
 
       const dedupeKey = getClientIdentityKey(client);
 
-      // If another record with the same vehicle/policy is already won, skip this one
-      if (wonKeys.has(dedupeKey)) continue;
+      // If another record with the same vehicle/policy is already won/policy_issued, skip entirely
+      const terminalStage = terminalKeys.get(dedupeKey);
+      if (terminalStage === "policy_issued" || terminalStage === "won") continue;
+
+      // If this lead is NOT lost but there's a lost terminal record, this active one wins (skip the terminal check)
+      // If this lead IS lost and the terminal is lost, keep it (it belongs in lost section)
 
       const existing = uniqueLeads.get(dedupeKey);
       if (!existing) {
@@ -549,7 +558,12 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
         continue;
       }
 
-      if (getPipelineClientScore(client) >= getPipelineClientScore(existing)) {
+      // STRICT RULE: Always prefer the most recently updated record
+      // This ensures that when a user moves a lead to a new stage, the latest update wins
+      const existingTime = new Date(existing.updated_at || existing.created_at).getTime();
+      const candidateTime = new Date(client.updated_at || client.created_at).getTime();
+
+      if (candidateTime > existingTime) {
         uniqueLeads.set(dedupeKey, client);
       }
     }
