@@ -155,9 +155,28 @@ export const generateInsuranceQuotePdf = (data: InsuranceQuoteData) => {
     doc.text("MS 228, 2nd Floor, DT Mega Mall, Sector 28, Gurugram, Haryana - 122001", pw - m, fy + 18, { align: "right" });
   };
 
+  // ── Diagonal watermark ──
+  const drawWatermark = () => {
+    try {
+      const GState = (doc as any).GState;
+      if (GState) {
+        doc.saveGraphicsState();
+        doc.setGState(new GState({ opacity: 0.04 }));
+        doc.setTextColor(16, 185, 129);
+        doc.setFontSize(60);
+        doc.setFont("helvetica", "bold");
+        doc.text("GRABYOURCAR", pw / 2, ph / 2, { align: "center", angle: 35 });
+        doc.setGState(new GState({ opacity: 1 }));
+        doc.restoreGraphicsState();
+      }
+    } catch {}
+  };
+
   // ══════════════════════════════════════════════
   // ── HEADER ──
   // ══════════════════════════════════════════════
+  drawWatermark();
+
   doc.setFillColor(...darkGreen);
   doc.rect(0, 0, pw, 38, "F");
   doc.setFillColor(...green);
