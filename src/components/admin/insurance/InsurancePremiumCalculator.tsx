@@ -163,105 +163,222 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
 
   const generatePDF = () => {
     if (!calc) return null;
-    const doc = new jsPDF();
-    const pageW = doc.internal.pageSize.getWidth();
-    let y = 20;
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const pw = doc.internal.pageSize.getWidth();
+    const ph = doc.internal.pageSize.getHeight();
+    const m = 14;
+    const contentW = pw - 2 * m;
 
-    // Header
-    doc.setFillColor(16, 185, 129);
-    doc.rect(0, 0, pageW, 40, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(20);
-    doc.setFont("helvetica", "bold");
-    doc.text("Insurance Premium Quote", 15, 25);
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Generated: ${new Date().toLocaleDateString("en-IN")}`, pageW - 15, 25, { align: "right" });
-    doc.text("GrabYourCar Insurance", pageW - 15, 32, { align: "right" });
+    // Color palette
+    const green: [number, number, number] = [16, 185, 129];
+    const darkGreen: [number, number, number] = [6, 95, 70];
+    const lightGreen: [number, number, number] = [236, 253, 245];
+    const mint: [number, number, number] = [209, 250, 229];
+    const dark: [number, number, number] = [15, 23, 42];
+    const gray: [number, number, number] = [100, 116, 139];
+    const lightGray: [number, number, number] = [226, 232, 240];
+    const white: [number, number, number] = [255, 255, 255];
 
-    y = 52;
-    doc.setTextColor(0, 0, 0);
+    const footerH = 22;
+    const footerYPos = ph - footerH;
 
-    // Customer Info
-    if (customerName || vehicleNumber) {
-      doc.setFontSize(12);
-      doc.setFont("helvetica", "bold");
-      doc.text("Customer Details", 15, y);
-      y += 8;
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      if (customerName) { doc.text(`Name: ${customerName}`, 15, y); y += 6; }
-      if (customerPhone) { doc.text(`Phone: ${customerPhone}`, 15, y); y += 6; }
-      if (vehicleNumber) { doc.text(`Vehicle: ${vehicleNumber}`, 15, y); y += 6; }
-      if (vehicleMake || vehicleModel) { doc.text(`${vehicleMake} ${vehicleModel}`.trim(), 15, y); y += 6; }
-      y += 4;
-    }
+    let y = 0;
 
-    // Vehicle & Pricing Summary
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.text("Vehicle & Pricing", 15, y);
-    y += 8;
-
-    const rows: [string, string][] = [
-      ["IDV (Insured Declared Value)", fmt(idvNum)],
-      ["Engine CC", `${ccNum}cc`],
-      ["Zone", `${zone} (${city})`],
-      ["", ""],
-      ["Basic OD Premium (" + calc.odRate + "%)", fmt(calc.basicOD)],
-    ];
-    if (discountPct > 0) rows.push(["OD Discount (" + discountPct + "%)", "-" + fmt(calc.odDiscount)]);
-    if (ncb > 0) rows.push(["NCB Discount (" + ncb + "%)", "-" + fmt(calc.ncbDiscount)]);
-    rows.push(["Net OD Premium", fmt(calc.netOD)]);
-    rows.push(["", ""]);
-    rows.push(["Third Party Premium", fmt(calc.tp)]);
-
-    if (calc.addonTotal > 0) {
-      rows.push(["", ""]);
-      rows.push(["ADD-ONS", ""]);
-      addons.filter(a => a.enabled).forEach(a => {
-        rows.push(["  " + a.name, fmt(a.price)]);
-      });
-      rows.push(["Total Add-ons", fmt(calc.addonTotal)]);
-    }
-
-    rows.push(["", ""]);
-    rows.push(["Subtotal", fmt(calc.subtotal)]);
-    rows.push(["GST (18%)", fmt(calc.gst)]);
-
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    rows.forEach(([label, value]) => {
-      if (!label && !value) { y += 3; return; }
-      if (label === "ADD-ONS") {
-        doc.setFont("helvetica", "bold");
-        doc.text(label, 15, y);
-        doc.setFont("helvetica", "normal");
-        y += 6;
-        return;
+    const checkPageBreak = (needed: number) => {
+      if (y + needed > footerYPos - 6) {
+        drawFooter();
+        doc.addPage();
+        y = 16;
       }
-      doc.text(label, 15, y);
-      doc.text(value, pageW - 15, y, { align: "right" });
-      y += 6;
-    });
+    };
 
-    // Grand Total
-    y += 4;
-    doc.setFillColor(16, 185, 129);
-    doc.roundedRect(12, y - 5, pageW - 24, 16, 3, 3, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(14);
+    const drawSectionLabel = (label: string, top: number) => {
+      checkPageBreak(12);
+      doc.setFillColor(...lightGreen);
+      doc.roundedRect(m, top, contentW, 8, 2, 2, "F");
+      doc.setTextColor(...darkGreen);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.text(label, m + 4, top + 5.4);
+      return top + 10;
+    };
+
+    const drawInfoCard = (x: number, top: number, width: number, title: string, lines: string[], tone: [number, number, number]) => {
+      const textLines = lines.flatMap((line) => doc.splitTextToSize(line, width - 10) as string[]);
+      const height = Math.max(26, 12 + textLines.length * 4.8);
+      doc.setFillColor(255, 255, 255);
+      doc.setDrawColor(...lightGray);
+      doc.roundedRect(x, top, width, height, 3, 3, "FD");
+      doc.setFillColor(...tone);
+      doc.roundedRect(x, top, width, 6, 3, 3, "F");
+      doc.rect(x, top + 3, width, 3, "F");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(7.5);
+      doc.setTextColor(...white);
+      doc.text(title, x + 4, top + 4.2);
+      doc.setTextColor(...dark);
+      doc.setFontSize(8.5);
+      doc.setFont("helvetica", "normal");
+      textLines.forEach((line, index) => {
+        doc.text(line, x + 4, top + 11 + index * 4.8);
+      });
+      return height;
+    };
+
+    const drawKeyValueRow = (label: string, value: string, rowY: number, index: number, highlight?: boolean) => {
+      const valueLines = doc.splitTextToSize(value || "-", 78) as string[];
+      const rowHeight = Math.max(8, 4.5 + valueLines.length * 4.2);
+      checkPageBreak(rowHeight);
+      const rowFill: [number, number, number] = highlight ? mint : index % 2 === 0 ? [255, 255, 255] : [248, 250, 252];
+      doc.setFillColor(...rowFill);
+      doc.rect(m, rowY, contentW, rowHeight, "F");
+      doc.setDrawColor(...lightGray);
+      doc.line(m, rowY + rowHeight, pw - m, rowY + rowHeight);
+      doc.setFont("helvetica", highlight ? "bold" : "normal");
+      doc.setFontSize(8.5);
+      doc.setTextColor(...(highlight ? darkGreen : gray));
+      doc.text(label, m + 4, rowY + 5.2);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...dark);
+      doc.text(valueLines, pw - m - 4, rowY + 5.2, { align: "right" });
+      return rowHeight;
+    };
+
+    const drawFooter = () => {
+      const fy = ph - footerH;
+      doc.setFillColor(...green);
+      doc.rect(0, fy, pw, footerH, "F");
+      doc.setFillColor(...darkGreen);
+      doc.rect(0, fy, pw, 1.5, "F");
+      doc.setFontSize(8);
+      doc.setTextColor(...white);
+      doc.setFont("helvetica", "bold");
+      doc.text("Grabyourcar Insurance Desk", m, fy + 7.5);
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "normal");
+      doc.text("Phone: +91 98559 24442  |  Email: hello@grabyourcar.com  |  Web: www.grabyourcar.com", m, fy + 12.5);
+      doc.setFontSize(6.5);
+      doc.text("MS 228, 2nd Floor, DT Mega Mall, Sector 28, Gurugram, Haryana - 122001", pw - m, fy + 18, { align: "right" });
+    };
+
+    // ── HEADER ──
+    doc.setFillColor(...darkGreen);
+    doc.rect(0, 0, pw, 38, "F");
+    doc.setFillColor(...green);
+    doc.rect(0, 30, pw, 8, "F");
+
+    doc.setFontSize(18);
+    doc.setTextColor(...white);
     doc.setFont("helvetica", "bold");
-    doc.text("Total Premium", 18, y + 5);
-    doc.text(fmt(calc.total), pageW - 18, y + 5, { align: "right" });
-
-    // Footer
-    doc.setTextColor(150, 150, 150);
+    doc.text("GRABYOURCAR", m, 15);
     doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
-    const footerY = doc.internal.pageSize.getHeight() - 15;
-    doc.text("This is a system-generated quote. Final premium may vary based on insurer underwriting.", 15, footerY);
-    doc.text("© GrabYourCar Insurance", pageW - 15, footerY, { align: "right" });
+    doc.text("India's Smarter Way to Buy New Cars", m, 21);
+    doc.setFontSize(8.5);
+    doc.setFont("helvetica", "bold");
+    doc.text("www.grabyourcar.com", pw - m, 14, { align: "right" });
+
+    y = 46;
+
+    // ── Title ──
+    doc.setFontSize(15);
+    doc.setTextColor(...dark);
+    doc.setFont("helvetica", "bold");
+    doc.text("Insurance Premium Quote", m, y);
+    doc.setFontSize(8.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...gray);
+    doc.text(`Prepared for ${customerName || "Valued Customer"}  --  ${new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}`, m, y + 5.5);
+    doc.text(`Ref: GYC-INS-${Date.now().toString().slice(-6)}`, pw - m, y + 5.5, { align: "right" });
+    y += 12;
+
+    // ── Info Cards ──
+    const cardW = (contentW - 4) / 2;
+    const leftH = drawInfoCard(m, y, cardW, "CUSTOMER DETAILS", [
+      customerName || "Valued Customer",
+      customerPhone || "Phone not provided",
+      city || "City not captured",
+    ], green);
+    const rightH = drawInfoCard(m + cardW + 4, y, cardW, "VEHICLE DETAILS", [
+      `${vehicleMake} ${vehicleModel}`.trim() || "Vehicle",
+      `Reg: ${(vehicleNumber || "-").toUpperCase()}`,
+      `Year: ${vehicleYear || "-"}  |  Fuel: Petrol`,
+    ], darkGreen);
+    y += Math.max(leftH, rightH) + 6;
+
+    // ── Vehicle & Pricing ──
+    y = drawSectionLabel("VEHICLE & PRICING DETAILS", y);
+    let rowIdx = 0;
+    const addRow = (label: string, value: string, highlight?: boolean) => {
+      const h = drawKeyValueRow(label, value, y, rowIdx, highlight);
+      y += h;
+      rowIdx++;
+    };
+
+    addRow("IDV (Insured Declared Value)", fmt(idvNum));
+    addRow("Engine CC", `${ccNum}cc`);
+    addRow("Zone", `${zone} (${city})`);
+    y += 3; rowIdx = 0;
+
+    addRow(`Basic OD Premium (${calc.odRate}%)`, fmt(calc.basicOD));
+    if (discountPct > 0) addRow(`OD Discount (${discountPct}%)`, `- ${fmt(calc.odDiscount)}`);
+    if (ncb > 0) addRow(`NCB Discount (${ncb}%)`, `- ${fmt(calc.ncbDiscount)}`);
+    addRow("Net OD Premium", fmt(calc.netOD), true);
+    y += 3; rowIdx = 0;
+
+    addRow("Third Party Premium", fmt(calc.tp));
+
+    // ── Add-ons ──
+    const enabledAddons = addons.filter(a => a.enabled);
+    if (enabledAddons.length > 0) {
+      y += 3;
+      y = drawSectionLabel("ADD-ONS", y);
+      rowIdx = 0;
+      enabledAddons.forEach(a => addRow(a.name, fmt(a.price)));
+      addRow("Total Add-ons", fmt(calc.addonTotal), true);
+    }
+
+    // ── Totals ──
+    y += 3; rowIdx = 0;
+    addRow("Subtotal", fmt(calc.subtotal));
+    addRow("GST (18%)", fmt(calc.gst));
+
+    // ── Total Premium Banner ──
+    checkPageBreak(20);
+    doc.setFillColor(...darkGreen);
+    doc.roundedRect(m, y + 3, contentW, 13, 4, 4, "F");
+    doc.setFontSize(9);
+    doc.setTextColor(...white);
+    doc.setFont("helvetica", "bold");
+    doc.text("TOTAL PREMIUM PAYABLE", m + 5, y + 10.8);
+    doc.setFontSize(13);
+    doc.text(fmt(calc.total), pw - m - 5, y + 10.8, { align: "right" });
+    y += 21;
+
+    // ── Notes ──
+    checkPageBreak(24);
+    doc.setFillColor(...lightGreen);
+    doc.setDrawColor(...mint);
+    const notes = [
+      "This is an indicative quotation. Final premium may vary as per underwriting, inspection and claim history.",
+      `Quote validity: 7 days from ${new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}.`,
+      "Policy issuance is subject to insurer approval and receipt of complete documents/payment.",
+    ];
+    const noteText = notes.map((n) => `- ${n}`);
+    const noteLines = noteText.flatMap((n) => doc.splitTextToSize(n, contentW - 10) as string[]);
+    const noteBoxH = Math.max(16, 8 + noteLines.length * 3.6);
+    doc.roundedRect(m, y, contentW, noteBoxH, 3, 3, "FD");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(...darkGreen);
+    doc.text("Important Notes", m + 4, y + 5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...dark);
+    doc.setFontSize(7);
+    doc.text(noteLines, m + 4, y + 9.5);
+
+    // ── Footer ──
+    drawFooter();
 
     return doc;
   };
