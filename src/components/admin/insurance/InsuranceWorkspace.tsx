@@ -111,7 +111,7 @@ export function InsuranceWorkspace() {
         supabase
           .from("insurance_policies")
           .select("id, client_id, policy_number, policy_type, insurer, premium_amount, start_date, expiry_date, status, is_renewal, issued_date, plan_name, idv, policy_document_url, source_label, renewal_count, previous_policy_id, booking_date, created_at, updated_at, insurance_clients(customer_name, phone, city, vehicle_number, vehicle_make, vehicle_model, lead_source, booking_date, updated_at, created_at)")
-          .in("status", ["active", "renewed"])
+          .order("expiry_date", { ascending: true })
           .order("updated_at", { ascending: false })
           .order("created_at", { ascending: false })
           .range(from, to)
@@ -238,12 +238,12 @@ export function InsuranceWorkspace() {
       return expiry >= today;
     }), [policyBookPolicies, today.toDateString()]
   );
-  const RESOLVED_STATUSES = ["renewed", "lapsed", "cancelled", "lost"];
+  const RESOLVED_STATUSES = ["renewed", "cancelled", "lost"];
   const overduePolicies = useMemo(() =>
     allPolicies.filter(p => {
       if (!p.policy_number?.trim()) return false;
       if (!p.expiry_date) return false;
-      if (RESOLVED_STATUSES.includes(p.status || "")) return false;
+      if (RESOLVED_STATUSES.includes((p.status || "").toLowerCase())) return false;
       return new Date(p.expiry_date) < today;
     }), [allPolicies, today.toDateString()]
   );
@@ -562,6 +562,25 @@ export function InsuranceWorkspace() {
             if (policy.client_id) clientByPolicy.set(key, policy.client_id);
           });
 
+          const latestPolicyStartByVehicle = new Map<string, string>();
+
+          rows.forEach((row) => {
+            const statusText = getRowValue(row, ["status"]);
+            if (statusText.toLowerCase() !== "sale complete") return;
+
+            const vehicleNumber = normalizeVehicleRegistration(getRowValue(row, ["registration_number", "vehicle_number"])) || null;
+            const bookingDate = parseImportDate(getRowValue(row, ["booking_date", "ticket_raised_on"])) || parseImportDate(getRowValue(row, ["issuance_rej_date"]));
+            const issuedDate = parseImportDate(getRowValue(row, ["issuance_rej_date"])) || bookingDate;
+            const policyStartDate = issuedDate || bookingDate;
+
+            if (!vehicleNumber || !policyStartDate) return;
+
+            const existing = latestPolicyStartByVehicle.get(vehicleNumber);
+            if (!existing || policyStartDate > existing) {
+              latestPolicyStartByVehicle.set(vehicleNumber, policyStartDate);
+            }
+          });
+
           let inserted = 0;
           let updated = 0;
           let skipped = 0;
@@ -574,7 +593,13 @@ export function InsuranceWorkspace() {
             const vehicleNumber = normalizeVehicleRegistration(getRowValue(row, ["registration_number", "vehicle_number"])) || null;
             const cleanPhone = normalizePhoneNumber(getRowValue(row, ["phone", "mobile"])) || null;
             const leadId = getRowValue(row, ["lead_id"]);
-            const rowKey = policyNumber ? `policy:${policyNumber}` : vehicleNumber ? `vehicle:${vehicleNumber}` : cleanPhone ? `phone:${cleanPhone}` : leadId ? `lead:${leadId}` : "";
+            const rowKey = vehicleNumber
+              ? `vehicle:${vehicleNumber}|policy:${policyNumber || "no-policy"}`
+              : policyNumber
+                ? `policy:${policyNumber}`
+                : leadId
+                  ? `lead:${leadId}`
+                  : "";
 
             if (!rowKey) {
               skipped++;
@@ -596,6 +621,7 @@ export function InsuranceWorkspace() {
             const issuedDate = parseImportDate(getRowValue(row, ["issuance_rej_date"])) || bookingDate;
             const policyStartDate = issuedDate || bookingDate;
             const policyExpiryDate = deriveExpiryDate(policyStartDate);
+            const latestVehiclePolicyStart = vehicleNumber ? latestPolicyStartByVehicle.get(vehicleNumber) : null;
             const premium = parseImportNumber(getRowValue(row, ["premium"]));
             const netPremium = parseImportNumber(getRowValue(row, ["net_premium"]));
             const idv = parseImportNumber(getRowValue(row, ["sum_insured"]));
@@ -630,11 +656,19 @@ export function InsuranceWorkspace() {
             const leadStatus = isSaleComplete ? "won" : isRejected ? "lost" : "new";
             const pipelineStage = isSaleComplete ? "policy_issued" : isRejected ? "lost" : "new_lead";
             const sourceLabel = businessType.toLowerCase() === "rollover" ? "Won (Renewal)" : "Won (New)";
+            const importedPolicyStatus = isSaleComplete
+              ? latestVehiclePolicyStart && policyStartDate && latestVehiclePolicyStart > policyStartDate
+                ? "renewed"
+                : policyExpiryDate && new Date(policyExpiryDate) < today
+                  ? "lapsed"
+                  : "active"
+              : isRejected
+                ? "cancelled"
+                : "draft";
 
             let clientId =
               (policyNumber ? clientByPolicy.get(policyNumber) : undefined) ||
-              (vehicleNumber ? clientByVehicle.get(vehicleNumber) : undefined) ||
-              (cleanPhone ? clientByPhone.get(cleanPhone) : undefined);
+              (vehicleNumber ? clientByVehicle.get(vehicleNumber) : undefined);
 
             const existingPolicy = policyNumber ? policyByNumber.get(policyNumber) : undefined;
             if (!clientId && existingPolicy?.client_id) clientId = existingPolicy.client_id;
@@ -667,19 +701,18 @@ export function InsuranceWorkspace() {
               }
             }
 
-            if (!clientId && cleanPhone) {
-              const { data } = await supabase
-                .from("insurance_clients")
-                .select("id, phone, vehicle_number, current_policy_number")
-                .eq("phone", cleanPhone)
-                .limit(1)
-                .maybeSingle();
+            const existingClient = clientId
+              ? ((clients as any[]).find((client) => client.id === clientId) || null)
+              : null;
 
-              if (data?.id) {
-                clientId = data.id;
-                rememberClient(data.id, normalizeImportPolicyNumber(data.current_policy_number || ""), normalizeVehicleRegistration(data.vehicle_number || "") || null, normalizePhoneNumber(data.phone || "") || null);
-              }
-            }
+            const shouldRefreshCurrentPolicy = Boolean(
+              isSaleComplete && (
+                !existingClient ||
+                !existingClient.policy_start_date ||
+                !policyStartDate ||
+                policyStartDate >= existingClient.policy_start_date
+              )
+            );
 
             const clientPayload = {
               customer_name: customerName,
@@ -700,11 +733,13 @@ export function InsuranceWorkspace() {
               ...(vehicleModel ? { vehicle_model: vehicleModel } : {}),
               ...(vehicleFuelType ? { vehicle_fuel_type: vehicleFuelType } : {}),
               ...(vehicleRegistrationDate ? { vehicle_registration_date: vehicleRegistrationDate } : {}),
-              ...(insurer ? { current_insurer: insurer, quote_insurer: insurer } : {}),
-              ...(policyNumber ? { current_policy_number: policyNumber } : {}),
-              ...(policyType ? { current_policy_type: policyType } : {}),
-              ...(policyStartDate && isSaleComplete ? { policy_start_date: policyStartDate, policy_expiry_date: policyExpiryDate, renewal_reminder_set: true, renewal_reminder_date: policyExpiryDate } : {}),
-              ...(premium !== null ? { current_premium: premium, quote_amount: premium } : {}),
+              ...(insurer ? { quote_insurer: insurer } : {}),
+              ...(premium !== null ? { quote_amount: premium } : {}),
+              ...(shouldRefreshCurrentPolicy && insurer ? { current_insurer: insurer } : {}),
+              ...(shouldRefreshCurrentPolicy && policyNumber ? { current_policy_number: policyNumber } : {}),
+              ...(shouldRefreshCurrentPolicy && policyType ? { current_policy_type: policyType } : {}),
+              ...(shouldRefreshCurrentPolicy && policyStartDate && isSaleComplete ? { policy_start_date: policyStartDate, policy_expiry_date: policyExpiryDate, renewal_reminder_set: true, renewal_reminder_date: policyExpiryDate } : {}),
+              ...(shouldRefreshCurrentPolicy && premium !== null ? { current_premium: premium } : {}),
               ...(bookingDate ? { booking_date: bookingDate } : {}),
               ...(isRejected ? { lost_reason: statusText } : {}),
               ...(isSaleComplete ? { incentive_eligible: true } : {}),
@@ -750,7 +785,8 @@ export function InsuranceWorkspace() {
               const policyPayload = {
                 client_id: clientId,
                 policy_number: policyNumber,
-                status: "active",
+                status: importedPolicyStatus,
+                renewal_status: importedPolicyStatus === "renewed" ? "renewed" : "pending",
                 is_renewal: businessType.toLowerCase() === "rollover",
                 source_label: sourceLabel,
                 ...(policyType ? { policy_type: policyType } : {}),
@@ -786,27 +822,20 @@ export function InsuranceWorkspace() {
                   await supabase.from("insurance_policies").update(policyPayload).eq("id", existingDup.id);
                   policyByNumber.set(policyNumber, { id: existingDup.id, client_id: clientId, policy_number: policyNumber });
                 } else {
-                  // Also check for any active policy for same client to prevent vehicle-based duplicates
-                  const { data: activeForClient } = await supabase
-                    .from("insurance_policies")
-                    .select("id")
-                    .eq("client_id", clientId)
-                    .eq("status", "active")
-                    .limit(1)
-                    .maybeSingle();
+                  if (importedPolicyStatus === "active") {
+                    await supabase
+                      .from("insurance_policies")
+                      .update({ status: "renewed", renewal_status: "renewed" })
+                      .eq("client_id", clientId)
+                      .eq("status", "active");
+                  }
 
-                  if (activeForClient?.id) {
-                    // Update the existing active policy rather than creating a new one
-                    await supabase.from("insurance_policies").update(policyPayload).eq("id", activeForClient.id);
-                    policyByNumber.set(policyNumber, { id: activeForClient.id, client_id: clientId, policy_number: policyNumber });
-                  } else {
-                    const { data: newPol } = await supabase.from("insurance_policies").insert({
-                      ...policyPayload,
-                      renewal_count: businessType.toLowerCase() === "rollover" ? 1 : 0,
-                    } as any).select("id").maybeSingle();
-                    if (newPol?.id) {
-                      policyByNumber.set(policyNumber, { id: newPol.id, client_id: clientId, policy_number: policyNumber });
-                    }
+                  const { data: newPol } = await supabase.from("insurance_policies").insert({
+                    ...policyPayload,
+                    renewal_count: businessType.toLowerCase() === "rollover" ? 1 : 0,
+                  } as any).select("id").maybeSingle();
+                  if (newPol?.id) {
+                    policyByNumber.set(policyNumber, { id: newPol.id, client_id: clientId, policy_number: policyNumber });
                   }
                 }
               }
