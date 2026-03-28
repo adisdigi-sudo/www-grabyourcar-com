@@ -297,8 +297,8 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
               </div>
             </div>
 
-            {/* Row 2: IDV, CC, City, NCB */}
-            <div className="grid grid-cols-4 gap-3">
+            {/* Row 2: IDV, CC, City */}
+            <div className="grid grid-cols-3 gap-3">
               <div>
                 <Label className="text-xs font-semibold text-muted-foreground">IDV (₹)</Label>
                 <Input type="number" value={idv} onChange={e => setIdv(e.target.value)} className="h-8 text-xs mt-1" placeholder="500000" />
@@ -312,34 +312,75 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
                 <Input value={city} onChange={e => setCity(e.target.value)} className="h-8 text-xs mt-1" placeholder="Delhi NCR" />
                 <p className="text-[9px] text-muted-foreground mt-0.5">Zone {zone} ({zone === "A" ? "Metro" : "Non-Metro"})</p>
               </div>
-              <div>
-                <Label className="text-xs font-semibold text-muted-foreground">NCB</Label>
-                <Select value={String(ncb)} onValueChange={v => setNcb(Number(v))}>
-                  <SelectTrigger className="h-8 text-xs mt-1"><SelectValue /></SelectTrigger>
-                  <SelectContent>{NCB_OPTIONS.map(o => <SelectItem key={o.value} value={String(o.value)}>{o.label}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
             </div>
 
-            {/* OD Discount + Secure Premium */}
+            {/* Row 3: Claim Taken + NCB */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs font-semibold text-muted-foreground">OD Discount (%)</Label>
-                <Input type="number" min={0} max={100} value={odDiscountPct} onChange={e => setOdDiscountPct(e.target.value)} className="h-8 text-xs mt-1" placeholder="0" />
-                <p className="text-[9px] text-muted-foreground mt-0.5">Deal-specific discount on OD</p>
+                <Label className="text-xs font-semibold text-muted-foreground">Claim Taken in Previous Year?</Label>
+                <div className="flex items-center gap-3 mt-1.5">
+                  <button
+                    onClick={() => { setClaimTaken(false); }}
+                    className={cn(
+                      "px-3 py-1.5 rounded-md text-xs font-semibold border transition-all",
+                      !claimTaken
+                        ? "bg-emerald-500 text-white border-emerald-500 shadow-sm"
+                        : "bg-muted text-muted-foreground border-border hover:bg-accent"
+                    )}
+                  >
+                    No Claim
+                  </button>
+                  <button
+                    onClick={() => { setClaimTaken(true); setNcb(0); }}
+                    className={cn(
+                      "px-3 py-1.5 rounded-md text-xs font-semibold border transition-all",
+                      claimTaken
+                        ? "bg-red-500 text-white border-red-500 shadow-sm"
+                        : "bg-muted text-muted-foreground border-border hover:bg-accent"
+                    )}
+                  >
+                    Yes, Claim Taken
+                  </button>
+                </div>
+                {claimTaken && (
+                  <p className="text-[10px] text-red-500 font-medium mt-1">⚠ NCB is not applicable — set to 0%</p>
+                )}
               </div>
               <div>
-                <Label className="text-xs font-semibold text-muted-foreground">Secure Premium (₹)</Label>
-                <Input type="number" value={securePremium} onChange={e => setSecurePremium(e.target.value)} className="h-8 text-xs mt-1" placeholder="500" />
+                <Label className="text-xs font-semibold text-muted-foreground">NCB</Label>
+                <Select
+                  value={String(ncb)}
+                  onValueChange={v => { if (!claimTaken) setNcb(Number(v)); }}
+                  disabled={claimTaken}
+                >
+                  <SelectTrigger className={cn("h-8 text-xs mt-1", claimTaken && "opacity-50")}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>{NCB_OPTIONS.map(o => <SelectItem key={o.value} value={String(o.value)}>{o.label}</SelectItem>)}</SelectContent>
+                </Select>
+                {claimTaken && <p className="text-[9px] text-red-400 mt-0.5">NCB locked to 0% due to claim</p>}
               </div>
             </div>
 
-            {/* NCB eligibility note */}
-            <div className="flex items-start gap-1.5 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
-              <Info className="h-3 w-3 text-amber-600 mt-0.5 shrink-0" />
-              <p className="text-[10px] text-amber-700 dark:text-amber-400">
-                NCB is only eligible if no claim was made during the previous policy year.
-              </p>
+            {/* NCB Claim Disclaimer */}
+            <div className={cn(
+              "flex items-start gap-1.5 p-2.5 rounded-lg border",
+              claimTaken
+                ? "bg-red-500/10 border-red-500/30"
+                : "bg-amber-500/10 border-amber-500/20"
+            )}>
+              <Info className={cn("h-3.5 w-3.5 mt-0.5 shrink-0", claimTaken ? "text-red-600" : "text-amber-600")} />
+              <div>
+                <p className={cn("text-[10px] font-bold", claimTaken ? "text-red-700 dark:text-red-400" : "text-amber-700 dark:text-amber-400")}>
+                  {claimTaken
+                    ? "CLAIM DECLARED — NCB Not Applicable"
+                    : "NCB Eligibility Declaration Required"}
+                </p>
+                <p className={cn("text-[9px] mt-0.5", claimTaken ? "text-red-600 dark:text-red-300" : "text-amber-600 dark:text-amber-300")}>
+                  NCB is only applicable if no claim was made during the previous policy period (up to 5 years).
+                  Providing false information about claim/NCB status will void the NCB discount and the insurer reserves the right to reject claims.
+                </p>
+              </div>
             </div>
 
             <Separator />
