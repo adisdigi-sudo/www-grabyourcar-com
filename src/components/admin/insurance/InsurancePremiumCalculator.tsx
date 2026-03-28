@@ -88,9 +88,16 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
   const [vehicleModel, setVehicleModel] = useState("");
   const [vehicleNumber, setVehicleNumber] = useState("");
   const [vehicleYear, setVehicleYear] = useState<string>(String(new Date().getFullYear()));
+  const [insuranceCompany, setInsuranceCompany] = useState("");
+  const [customInsurer, setCustomInsurer] = useState("");
+  const [fuelType, setFuelType] = useState("Petrol");
+  const [policyType, setPolicyType] = useState("Comprehensive");
+  const [securePremium, setSecurePremium] = useState<string>("0");
   const [claimTaken, setClaimTaken] = useState(false);
   const [expiredOver90Days, setExpiredOver90Days] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  const resolvedInsurer = insuranceCompany === "__custom" ? customInsurer : insuranceCompany;
 
   const zone = getZone(city);
   const ccNum = parseInt(cc) || 0;
