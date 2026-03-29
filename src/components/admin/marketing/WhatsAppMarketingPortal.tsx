@@ -4,7 +4,7 @@ import {
   Rocket, Send, MessageSquare, Target, Zap, BarChart3, 
   Users, Shield, Settings, ClipboardList, Brain, Eye, Activity
 } from "lucide-react";
-import { WACampaignDashboard } from "./wa/WACampaignDashboard";
+import { WACampaignCommandCenter } from "./wa/WACampaignCommandCenter";
 import { WAConversationInbox } from "./wa/WAConversationInbox";
 import { WAAutomationRules } from "./wa/WAAutomationRules";
 import { WAAnalyticsDashboard } from "./wa/WAAnalyticsDashboard";
@@ -87,7 +87,7 @@ export function WhatsAppMarketingPortal() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="campaigns"><WACampaignDashboard /></TabsContent>
+        <TabsContent value="campaigns"><WACampaignCommandCenter /></TabsContent>
         <TabsContent value="ai-agent"><WAAgentConfig /></TabsContent>
         <TabsContent value="live"><WALiveConversations /></TabsContent>
         <TabsContent value="performance"><WAPerformanceDashboard /></TabsContent>
