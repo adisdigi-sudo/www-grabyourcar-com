@@ -171,6 +171,17 @@ export function InsurancePerformance({ clients, policies, selectedMonth, onMonth
     return Object.entries(map).sort((a, b) => b[1].count - a[1].count);
   }, [policiesThisMonth, clientById]);
 
+  const groupedByDate = useMemo(() => {
+    const groups: Record<string, typeof policiesThisMonth> = {};
+    policiesThisMonth.forEach((policy) => {
+      const dateStr = getPolicyEffectiveDate(policy);
+      const dayKey = dateStr ? format(new Date(dateStr), "yyyy-MM-dd") : "unknown";
+      if (!groups[dayKey]) groups[dayKey] = [];
+      groups[dayKey].push(policy);
+    });
+    return Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]));
+  }, [policiesThisMonth]);
+
   const monthTrend = useMemo(() => {
     const trend = [];
     for (let i = 5; i >= 0; i--) {
