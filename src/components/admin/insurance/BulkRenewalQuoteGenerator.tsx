@@ -489,7 +489,46 @@ export function BulkRenewalQuoteGenerator({ onClose }: { onClose: () => void }) 
           <Button size="sm" variant={showAddRows ? "default" : "outline"} className="gap-1.5 text-xs" onClick={() => setShowAddRows(!showAddRows)}>
             <Plus className="h-3.5 w-3.5" /> {showAddRows ? "Close Entry" : "Add Quotes"}
           </Button>
-          <CSVImportButton onImport={q => addQuotes.mutate(q)} />
+          <CSVImportButton onImport={async (q) => {
+            const data = await addQuotes.mutateAsync(q);
+            if (data?.length) {
+              toast.info(`🔄 Auto-generating ${data.length} PDFs...`);
+              let pdfCount = 0;
+              for (const row of data) {
+                try {
+                  const quoteData: InsuranceQuoteData = {
+                    customerName: row.customer_name,
+                    phone: row.phone || "",
+                    email: row.email || undefined,
+                    city: row.city || undefined,
+                    vehicleMake: row.vehicle_make,
+                    vehicleModel: row.vehicle_model,
+                    vehicleNumber: row.vehicle_number || "",
+                    vehicleYear: row.vehicle_year,
+                    fuelType: row.fuel_type,
+                    insuranceCompany: row.insurance_company,
+                    policyType: row.policy_type,
+                    idv: row.idv,
+                    basicOD: row.basic_od,
+                    odDiscount: row.od_discount,
+                    ncbDiscount: row.ncb_discount,
+                    thirdParty: row.third_party,
+                    securePremium: row.secure_premium,
+                    addonPremium: row.addon_premium,
+                    addons: row.addons || [],
+                  };
+                  const { doc, fileName } = generateInsuranceQuotePdf(quoteData);
+                  // Upload PDF to storage
+                  const pdfBlob = doc.output("blob");
+                  const storagePath = `bulk/${row.id}/${fileName}`;
+                  await supabase.storage.from("quote-pdfs").upload(storagePath, pdfBlob, { contentType: "application/pdf", upsert: true });
+                  await supabase.from("bulk_renewal_quotes").update({ pdf_generated: true, pdf_generated_at: new Date().toISOString() } as any).eq("id", row.id);
+                  pdfCount++;
+                } catch (e) { console.error("PDF gen error:", e); }
+              }
+              toast.success(`✅ ${pdfCount}/${data.length} PDFs auto-generated!`);
+            }
+          }} />
           <Button size="sm" variant="outline" onClick={onClose} className="text-xs">Close</Button>
         </div>
       </div>
