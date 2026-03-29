@@ -248,11 +248,11 @@ export async function persistInsuranceQuoteHistory(input: PersistQuoteHistoryInp
     // Only promote to quote_shared if the lead is in an earlier stage
     const currentStage = (current?.pipeline_stage || "").toLowerCase();
     const currentStatus = (current?.lead_status || "").toLowerCase();
-    const advancedStages = ["follow_up", "won", "policy_issued", "lost"];
-    if (!advancedStages.includes(currentStage)) {
+    const protectedStages = ["follow_up", "negotiation", "payment_pending", "won", "policy_issued", "lost", "converted", "closed"];
+    if (!protectedStages.includes(currentStage)) {
       updates.pipeline_stage = "quote_shared";
     }
-    if (!advancedStages.includes(currentStatus)) {
+    if (!protectedStages.includes(currentStatus)) {
       updates.lead_status = "quote_shared";
     }
 
