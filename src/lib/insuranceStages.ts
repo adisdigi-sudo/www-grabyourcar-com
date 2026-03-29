@@ -111,6 +111,7 @@ export const getInsuranceStageDefinition = (stage: string | null | undefined) =>
 export const normalizeInsuranceStage = (
   stage: string | null | undefined,
   leadStatus?: string | null | undefined,
+  _client?: unknown,
 ): InsuranceStage => {
   const normalizedStage = stage ? INSURANCE_STAGE_ALIAS_MAP[stage.toLowerCase()] : undefined;
   const normalizedLeadStatus = leadStatus ? INSURANCE_STAGE_ALIAS_MAP[leadStatus.toLowerCase()] : undefined;
