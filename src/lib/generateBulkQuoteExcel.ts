@@ -100,15 +100,11 @@ export async function generateBulkQuoteExcel(prefilledLeads?: PrefilledLead[]) {
   // Add formulas for calculated columns (rows 2 to dataRows+1)
   for (let r = 2; r <= dataRows + 1; r++) {
     // T (col 20): IDV Auto-Calculator
-    // Logic: Vehicle Age = Current Year - Vehicle Year (H)
-    //   Age 0 (new/same year): 5% depreciation → Ex-Showroom × 0.95
-    //   Age 1: 15% depreciation → Ex-Showroom × 0.85
-    //   Age 2: 25% → × 0.75
-    //   Age 3: 35% → × 0.65
-    //   Age 4: 45% → × 0.55
-    //   Age 5+: 50% + 5% per extra year (capped at 90%)
-    // Formula: =IF(L{r}="","",ROUND(L{r}*MAX(0.1, IF(age=0,0.95, IF(age=1,0.85, 1-0.05-age*0.10))), 0))
-    const idvFormula = `IF(OR(L${r}="",H${r}=""),"",ROUND(L${r}*MAX(0.1,IF(${currentYear}-H${r}=0,0.95,IF(${currentYear}-H${r}=1,0.85,IF(${currentYear}-H${r}=2,0.75,IF(${currentYear}-H${r}=3,0.65,IF(${currentYear}-H${r}=4,0.55,MAX(0.1,1-0.05-(${currentYear}-H${r})*0.10))))))),0))`;
+    // Depreciation: Year 0 (new car) = 5%, then +10% every year
+    // Year 0: 5%, Year 1: 15%, Year 2: 25%, Year 3: 35%...
+    // Cap: minimum IDV = 10% of ex-showroom (max 90% depreciation)
+    // Formula: IDV = Ex-Showroom × MAX(0.10, 1 - (0.05 + age × 0.10))
+    const idvFormula = `IF(OR(L${r}="",H${r}=""),"",ROUND(L${r}*MAX(0.1,1-(0.05+(${currentYear}-H${r})*0.1)),0))`;
     ws.getCell(r, 20).value = { formula: idvFormula } as any;
 
     // U (col 21): NCB Discount = Basic_OD(M) * NCB%(O)
