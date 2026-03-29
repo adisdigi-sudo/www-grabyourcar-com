@@ -22,7 +22,7 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
-import { format, differenceInDays } from "date-fns";
+import { format, differenceInDays, startOfWeek, endOfWeek, startOfQuarter, endOfQuarter } from "date-fns";
 import { InsurancePolicyDocumentUploader } from "./InsurancePolicyDocumentUploader";
 
 // ── 9-Stage Pipeline (STRICT) ──
@@ -87,6 +87,9 @@ interface Client {
   current_policy_number: string | null;
   notes: string | null;
   created_at: string;
+  booking_date: string | null;
+  policy_start_date: string | null;
+  updated_at: string | null;
 }
 
 // Normalize stage based on lead_status and current_policy_number
@@ -151,7 +154,7 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
     queryFn: async () => {
       const { data, error } = await supabase
         .from("insurance_clients")
-        .select("id, customer_name, phone, email, city, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_insurer, policy_expiry_date, current_policy_type, ncb_percentage, previous_claim, lead_source, lead_status, assigned_executive, priority, pipeline_stage, contact_attempts, quote_amount, quote_insurer, lost_reason, follow_up_date, current_premium, current_policy_number, notes, created_at")
+        .select("id, customer_name, phone, email, city, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_insurer, policy_expiry_date, current_policy_type, ncb_percentage, previous_claim, lead_source, lead_status, assigned_executive, priority, pipeline_stage, contact_attempts, quote_amount, quote_insurer, lost_reason, follow_up_date, current_premium, current_policy_number, notes, created_at, booking_date, policy_start_date, updated_at")
         .eq("is_legacy", false)
         .order("created_at", { ascending: false })
         .limit(1000);
@@ -187,6 +190,16 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
   const activeFilterCount = [filterPriority, filterSource, filterCity, filterExecutive, filterDateRange, filterMonth].filter(f => f !== "all").length + (customDateFrom ? 1 : 0);
 
   // Get date cutoff based on filter
+  // Get the effective date for a client based on their stage
+  const getClientFilterDate = (c: Client) => {
+    const stage = c.pipeline_stage || "new_lead";
+    // For Won/Policy Issued clients, use booking or policy date
+    if (stage === "policy_issued") {
+      return c.booking_date || c.policy_start_date || c.updated_at || c.created_at;
+    }
+    return c.created_at;
+  };
+
   const getDateCutoff = (range: string): Date | null => {
     const now = new Date();
     if (range === "today") { const d = new Date(now); d.setHours(0,0,0,0); return d; }
@@ -194,6 +207,13 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
     if (range === "7days") { const d = new Date(now); d.setDate(d.getDate() - 7); return d; }
     if (range === "30days") { const d = new Date(now); d.setDate(d.getDate() - 30); return d; }
     if (range === "90days") { const d = new Date(now); d.setDate(d.getDate() - 90); return d; }
+    return null;
+  };
+
+  const getDateRange = (range: string): { start: Date; end: Date } | null => {
+    const now = new Date();
+    if (range === "this_week") return { start: startOfWeek(now, { weekStartsOn: 1 }), end: endOfWeek(now, { weekStartsOn: 1 }) };
+    if (range === "this_quarter") return { start: startOfQuarter(now), end: endOfQuarter(now) };
     return null;
   };
 
@@ -215,30 +235,37 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
     if (filterExecutive !== "all") result = result.filter(c => c.assigned_executive === filterExecutive);
     // Date range preset filter
     if (filterDateRange !== "all" && filterDateRange !== "custom") {
-      const cutoff = getDateCutoff(filterDateRange);
-      if (cutoff) {
-        if (filterDateRange === "today" || filterDateRange === "yesterday") {
-          const endOfDay = new Date(cutoff); endOfDay.setHours(23,59,59,999);
-          result = result.filter(c => { const d = new Date(c.created_at); return d >= cutoff && d <= endOfDay; });
-        } else {
-          result = result.filter(c => new Date(c.created_at) >= cutoff);
+      const rangeResult = getDateRange(filterDateRange);
+      if (rangeResult) {
+        const rs = new Date(rangeResult.start); rs.setHours(0,0,0,0);
+        const re = new Date(rangeResult.end); re.setHours(23,59,59,999);
+        result = result.filter(c => { const d = new Date(getClientFilterDate(c)); return d >= rs && d <= re; });
+      } else {
+        const cutoff = getDateCutoff(filterDateRange);
+        if (cutoff) {
+          if (filterDateRange === "today" || filterDateRange === "yesterday") {
+            const eod = new Date(cutoff); eod.setHours(23,59,59,999);
+            result = result.filter(c => { const d = new Date(getClientFilterDate(c)); return d >= cutoff && d <= eod; });
+          } else {
+            result = result.filter(c => new Date(getClientFilterDate(c)) >= cutoff);
+          }
         }
       }
     }
     // Custom date range
     if (filterDateRange === "custom" && customDateFrom) {
       const from = new Date(customDateFrom); from.setHours(0,0,0,0);
-      result = result.filter(c => new Date(c.created_at) >= from);
+      result = result.filter(c => new Date(getClientFilterDate(c)) >= from);
       if (customDateTo) {
         const to = new Date(customDateTo); to.setHours(23,59,59,999);
-        result = result.filter(c => new Date(c.created_at) <= to);
+        result = result.filter(c => new Date(getClientFilterDate(c)) <= to);
       }
     }
     // Month filter
     if (filterMonth !== "all") {
       const [year, month] = filterMonth.split("-").map(Number);
       result = result.filter(c => {
-        const d = new Date(c.created_at);
+        const d = new Date(getClientFilterDate(c));
         return d.getFullYear() === year && d.getMonth() === month;
       });
     }
@@ -693,9 +720,11 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
                     <SelectItem value="all">All Time</SelectItem>
                     <SelectItem value="today">Today</SelectItem>
                     <SelectItem value="yesterday">Yesterday</SelectItem>
+                    <SelectItem value="this_week">This Week</SelectItem>
                     <SelectItem value="7days">Last 7 Days</SelectItem>
                     <SelectItem value="30days">Last 30 Days</SelectItem>
                     <SelectItem value="90days">Last 90 Days</SelectItem>
+                    <SelectItem value="this_quarter">This Quarter</SelectItem>
                     <SelectItem value="custom">Custom Range</SelectItem>
                   </SelectContent>
                 </Select>
