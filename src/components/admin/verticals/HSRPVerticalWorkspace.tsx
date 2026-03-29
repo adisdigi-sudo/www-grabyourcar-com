@@ -2,11 +2,12 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, CheckCircle2, ShoppingCart, LayoutDashboard, Search, ClipboardCheck } from "lucide-react";
+import { Shield, CheckCircle2, ShoppingCart, LayoutDashboard, Search, ClipboardCheck, Send } from "lucide-react";
 import { HSRPWorkspace } from "../hsrp/HSRPWorkspace";
 import { HSRPAbandonedCarts } from "../hsrp/HSRPAbandonedCarts";
 import { HSRPOrderTracker } from "@/components/hsrp/HSRPOrderTracker";
 import { HSRPComplianceChecker } from "@/components/hsrp/HSRPComplianceChecker";
+import { OmniMessagingWorkspace } from "../shared/OmniMessagingWorkspace";
 
 export function HSRPVerticalWorkspace() {
   const [tab, setTab] = useState("pipeline");
@@ -43,6 +44,9 @@ export function HSRPVerticalWorkspace() {
           <TabsTrigger value="tools" className="gap-1.5">
             <ClipboardCheck className="h-4 w-4" /> Customer Tools
           </TabsTrigger>
+          <TabsTrigger value="messaging" className="gap-1.5">
+            <Send className="h-4 w-4" /> Messaging
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="pipeline">
           <HSRPWorkspace />
@@ -68,6 +72,9 @@ export function HSRPVerticalWorkspace() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+        <TabsContent value="messaging">
+          <OmniMessagingWorkspace context="HSRP" />
         </TabsContent>
       </Tabs>
     </div>

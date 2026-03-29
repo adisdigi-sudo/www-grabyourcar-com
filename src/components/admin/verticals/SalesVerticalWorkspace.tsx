@@ -2,17 +2,17 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Car, CheckCircle2, LayoutDashboard, Target, Handshake, BarChart3 } from "lucide-react";
+import { Car, CheckCircle2, LayoutDashboard, Target, Handshake, BarChart3, Send } from "lucide-react";
 import { SalesWorkspace } from "../sales/SalesWorkspace";
 import { SalesDealTracker } from "../sales/SalesDealTracker";
 import { SalesRealTimeDashboard } from "../sales/SalesRealTimeDashboard";
+import { OmniMessagingWorkspace } from "../shared/OmniMessagingWorkspace";
 
 export function SalesVerticalWorkspace() {
   const [activeTab, setActiveTab] = useState("pipeline");
 
   return (
     <div className="space-y-4">
-      {/* Header */}
       <Card className="border-blue-200 dark:border-blue-900">
         <CardContent className="pt-4 pb-3">
           <div className="flex items-center justify-between">
@@ -34,9 +34,8 @@ export function SalesVerticalWorkspace() {
         </CardContent>
       </Card>
 
-      {/* Workspace Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="w-full grid grid-cols-3">
+        <TabsList className="w-full grid grid-cols-4">
           <TabsTrigger value="pipeline" className="gap-1.5">
             <Target className="h-3.5 w-3.5" /> Pipeline
           </TabsTrigger>
@@ -45,6 +44,9 @@ export function SalesVerticalWorkspace() {
           </TabsTrigger>
           <TabsTrigger value="dashboard" className="gap-1.5">
             <BarChart3 className="h-3.5 w-3.5" /> Dashboard
+          </TabsTrigger>
+          <TabsTrigger value="messaging" className="gap-1.5">
+            <Send className="h-3.5 w-3.5" /> Messaging
           </TabsTrigger>
         </TabsList>
 
@@ -58,6 +60,10 @@ export function SalesVerticalWorkspace() {
 
         <TabsContent value="dashboard" className="mt-4">
           <SalesRealTimeDashboard />
+        </TabsContent>
+
+        <TabsContent value="messaging" className="mt-4">
+          <OmniMessagingWorkspace context="Car Sales" />
         </TabsContent>
       </Tabs>
     </div>

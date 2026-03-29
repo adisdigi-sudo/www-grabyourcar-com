@@ -2,12 +2,13 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Car, CheckCircle2, Users, Globe, FileText, ShieldCheck } from "lucide-react";
+import { Car, CheckCircle2, Users, Globe, FileText, ShieldCheck, Send } from "lucide-react";
 import { SelfDriveWorkspace } from "../rentals/SelfDriveWorkspace";
 import DriverBookingsManagement from "../DriverBookingsManagement";
 import APIPartnersManagement from "../APIPartnersManagement";
 import { AgreementManagement } from "../rentals/AgreementManagement";
 import { KYCVerificationPanel } from "../rentals/KYCVerificationPanel";
+import { OmniMessagingWorkspace } from "../shared/OmniMessagingWorkspace";
 
 export function RentalVerticalWorkspace() {
   const [activeTab, setActiveTab] = useState("rentals");
@@ -18,6 +19,7 @@ export function RentalVerticalWorkspace() {
     { id: "agreements", label: "Agreements", icon: FileText },
     { id: "kyc", label: "KYC Verification", icon: ShieldCheck },
     { id: "partners", label: "API Partners", icon: Globe },
+    { id: "messaging", label: "Messaging", icon: Send },
   ];
 
   const renderContent = () => {
@@ -27,6 +29,7 @@ export function RentalVerticalWorkspace() {
       case "agreements": return <AgreementManagement />;
       case "kyc": return <KYCVerificationPanel />;
       case "partners": return <APIPartnersManagement />;
+      case "messaging": return <OmniMessagingWorkspace context="Self-Drive Rentals" />;
       default: return <SelfDriveWorkspace />;
     }
   };
