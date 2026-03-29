@@ -263,10 +263,10 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
     }
     // Month filter
     if (filterMonth !== "all") {
-      const [year, month] = filterMonth.split("-").map(Number);
-      result = result.filter(c => {
-        const d = new Date(getClientFilterDate(c));
-        return d.getFullYear() === year && d.getMonth() === month;
+      result = result.filter((c) => {
+        const rawDate = getClientFilterDate(c);
+        if (!rawDate) return false;
+        return format(new Date(rawDate), "yyyy-MM") === filterMonth;
       });
     }
     return result;
