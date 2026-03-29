@@ -106,6 +106,16 @@ export function InsurancePolicyDocumentUploader({
     setAutoCreateError(null);
 
     try {
+      const { data: existingPolicies, error: existingPoliciesError } = await supabase
+        .from("insurance_policies")
+        .select("id")
+        .eq("client_id", defaultClientId)
+        .limit(1);
+
+      if (existingPoliciesError) throw existingPoliciesError;
+
+      const isRenewalPolicy = (existingPolicies?.length || 0) > 0;
+
       const fallbackBookingDate =
         clientSeed.booking_date ||
         clientSeed.policy_start_date ||
@@ -129,7 +139,7 @@ export function InsurancePolicyDocumentUploader({
           issued_date: fallbackBookingDate,
           booking_date: fallbackBookingDate,
           status: "active",
-          is_renewal: false,
+          is_renewal: isRenewalPolicy,
           source_label: "Auto Upload Recovery",
         } as any)
         .select("id, client_id, policy_number")
@@ -143,7 +153,7 @@ export function InsurancePolicyDocumentUploader({
           lead_status: "won",
           pipeline_stage: "policy_issued",
           booking_date: clientSeed.booking_date || fallbackBookingDate,
-          journey_last_event: "policy_issued",
+          journey_last_event: isRenewalPolicy ? "renewal_policy_issued" : "policy_issued",
           journey_last_event_at: new Date().toISOString(),
           renewal_reminder_set: true,
           renewal_reminder_date: expiryDate,

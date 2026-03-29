@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { normalizeStage, type Client } from "./InsuranceLeadPipeline";
 import type { PolicyRecord } from "./InsurancePolicyBook";
-import { getClientEffectiveDate, getPolicyEffectiveDate, dedupeInsuranceClients, dedupeInsurancePolicies } from "@/lib/insuranceIdentity";
+import { getClientEffectiveDate, getPolicyEffectiveDate, dedupeInsuranceClients } from "@/lib/insuranceIdentity";
 
 // Incentive slab config
 const INCENTIVE_SLABS = [
@@ -74,7 +74,15 @@ export function InsurancePerformance({ clients, policies, selectedMonth, onMonth
 
   const clientById = useMemo(() => new Map(dedupedClients.map((client) => [client.id, client])), [dedupedClients]);
 
-  const dedupedPolicies = useMemo(() => dedupeInsurancePolicies(policies), [policies]);
+  const performancePolicies = useMemo(() => {
+    const unique = new Map<string, PolicyRecord>();
+
+    policies.forEach((policy) => {
+      unique.set(policy.id, policy);
+    });
+
+    return Array.from(unique.values());
+  }, [policies]);
 
   const monthClients = useMemo(() => {
     return dedupedClients.filter((client) => {
@@ -93,13 +101,13 @@ export function InsurancePerformance({ clients, policies, selectedMonth, onMonth
   const isLost = (client: Client) => normalizeStage(client.pipeline_stage, client.lead_status, client) === "lost";
 
   const policiesThisMonth = useMemo(() => {
-    return dedupedPolicies.filter((policy) => {
+    return performancePolicies.filter((policy) => {
       const dateStr = getPolicyEffectiveDate(policy);
       if (!dateStr) return false;
       const d = new Date(dateStr);
       return d >= effectiveRange.start && d <= effectiveRange.end;
     });
-  }, [dedupedPolicies, effectiveRange]);
+  }, [performancePolicies, effectiveRange]);
 
   const wonClientIdsThisMonth = useMemo(
     () => new Set(policiesThisMonth.map((policy) => policy.client_id).filter(Boolean) as string[]),
@@ -238,7 +246,7 @@ export function InsurancePerformance({ clients, policies, selectedMonth, onMonth
         const cd = new Date(rawDate);
         return cd >= ms && cd <= me;
       }).length;
-      const monthPolicies = dedupedPolicies.filter((policy) => {
+      const monthPolicies = performancePolicies.filter((policy) => {
         const rawDate = getPolicyEffectiveDate(policy);
         if (!rawDate) return false;
         const pd = new Date(rawDate);
@@ -253,7 +261,7 @@ export function InsurancePerformance({ clients, policies, selectedMonth, onMonth
       });
     }
     return trend;
-  }, [dedupedClients, dedupedPolicies]);
+  }, [dedupedClients, performancePolicies]);
 
   const activeRangeLabel = useMemo(() => {
     if (filterMode === "preset" && activePreset) return activePreset;
