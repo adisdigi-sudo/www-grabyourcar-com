@@ -494,93 +494,78 @@ export function InsurancePerformance({ clients, policies, selectedMonth, onMonth
       )}
 
       {/* Won Policies Table — Day-wise grouped */}
-      {(() => {
-        // Group policies by date
-        const groupedByDate = useMemo(() => {
-          const groups: Record<string, typeof policiesThisMonth> = {};
-          policiesThisMonth.forEach((policy) => {
-            const dateStr = getPolicyEffectiveDate(policy);
-            const dayKey = dateStr ? format(new Date(dateStr), "yyyy-MM-dd") : "unknown";
-            if (!groups[dayKey]) groups[dayKey] = [];
-            groups[dayKey].push(policy);
-          });
-          return Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]));
-        }, [policiesThisMonth]);
-
-        let runningIndex = 0;
-
-        return (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600" /> Won Policies — {activeRangeLabel}
-                <Badge variant="secondary" className="ml-auto text-[10px]">{policiesThisMonth.length} total</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/30">
-                      <TableHead className="text-[10px] font-bold uppercase w-8">#</TableHead>
-                      <TableHead className="text-[10px] font-bold uppercase">Customer</TableHead>
-                      <TableHead className="text-[10px] font-bold uppercase">Vehicle</TableHead>
-                      <TableHead className="text-[10px] font-bold uppercase">Insurer</TableHead>
-                      <TableHead className="text-[10px] font-bold uppercase">Policy No</TableHead>
-                      <TableHead className="text-[10px] font-bold uppercase text-right">Premium</TableHead>
-                      <TableHead className="text-[10px] font-bold uppercase">Booking Date</TableHead>
-                      <TableHead className="text-[10px] font-bold uppercase">By</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {policiesThisMonth.length === 0 ? (
-                      <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">No won policies in this period</TableCell></TableRow>
-                    ) : groupedByDate.map(([dayKey, dayPolicies]) => {
-                      const dayLabel = dayKey !== "unknown" ? format(new Date(dayKey), "EEEE, dd MMM yyyy") : "Unknown Date";
-                      const dayPremium = dayPolicies.reduce((s, p) => s + (p.premium_amount || 0), 0);
-                      const rows = dayPolicies.map((policy) => {
-                        runningIndex++;
-                        const client = policy.client_id ? clientById.get(policy.client_id) : undefined;
-                        const bookingDate = getPolicyEffectiveDate(policy);
-                        return (
-                          <TableRow key={policy.id}>
-                            <TableCell className="text-xs text-muted-foreground">{runningIndex}</TableCell>
-                            <TableCell className="text-xs font-medium">{client?.customer_name || policy.insurance_clients?.customer_name || "—"}</TableCell>
-                            <TableCell className="text-xs">
-                              <span className="font-mono">{client?.vehicle_number || policy.insurance_clients?.vehicle_number || "—"}</span>
-                              <br />
-                              <span className="text-[10px] text-muted-foreground">{[client?.vehicle_make || policy.insurance_clients?.vehicle_make, client?.vehicle_model || policy.insurance_clients?.vehicle_model].filter(Boolean).join(" ")}</span>
-                            </TableCell>
-                            <TableCell className="text-xs">{policy.insurer || client?.current_insurer || "—"}</TableCell>
-                            <TableCell className="text-xs font-mono">{policy.policy_number || client?.current_policy_number || "—"}</TableCell>
-                            <TableCell className="text-xs text-right font-mono font-semibold">
-                              {policy.premium_amount ? `₹${policy.premium_amount.toLocaleString("en-IN")}` : "—"}
-                            </TableCell>
-                            <TableCell className="text-xs">{bookingDate ? format(new Date(bookingDate), "dd MMM yyyy") : "—"}</TableCell>
-                            <TableCell className="text-xs text-muted-foreground">{client?.picked_up_by || client?.booked_by || client?.assigned_executive || "—"}</TableCell>
-                          </TableRow>
-                        );
-                      });
-                      return [
-                        <TableRow key={`day-${dayKey}`} className="bg-muted/50 border-t-2">
-                          <TableCell colSpan={5} className="py-1.5">
-                            <span className="text-xs font-semibold text-foreground">{dayLabel}</span>
-                            <Badge variant="outline" className="ml-2 text-[10px]">{dayPolicies.length} {dayPolicies.length === 1 ? "policy" : "policies"}</Badge>
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-emerald-600" /> Won Policies — {activeRangeLabel}
+            <Badge variant="secondary" className="ml-auto text-[10px]">{policiesThisMonth.length} total</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/30">
+                  <TableHead className="text-[10px] font-bold uppercase w-8">#</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase">Customer</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase">Vehicle</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase">Insurer</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase">Policy No</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase text-right">Premium</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase">Booking Date</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase">By</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {policiesThisMonth.length === 0 ? (
+                  <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">No won policies in this period</TableCell></TableRow>
+                ) : (() => {
+                  let runningIndex = 0;
+                  return groupedByDate.map(([dayKey, dayPolicies]) => {
+                    const dayLabel = dayKey !== "unknown" ? format(new Date(dayKey), "EEEE, dd MMM yyyy") : "Unknown Date";
+                    const dayPremium = dayPolicies.reduce((s, p) => s + (p.premium_amount || 0), 0);
+                    const rows = dayPolicies.map((policy) => {
+                      runningIndex++;
+                      const client = policy.client_id ? clientById.get(policy.client_id) : undefined;
+                      const bookingDate = getPolicyEffectiveDate(policy);
+                      return (
+                        <TableRow key={policy.id}>
+                          <TableCell className="text-xs text-muted-foreground">{runningIndex}</TableCell>
+                          <TableCell className="text-xs font-medium">{client?.customer_name || policy.insurance_clients?.customer_name || "—"}</TableCell>
+                          <TableCell className="text-xs">
+                            <span className="font-mono">{client?.vehicle_number || policy.insurance_clients?.vehicle_number || "—"}</span>
+                            <br />
+                            <span className="text-[10px] text-muted-foreground">{[client?.vehicle_make || policy.insurance_clients?.vehicle_make, client?.vehicle_model || policy.insurance_clients?.vehicle_model].filter(Boolean).join(" ")}</span>
                           </TableCell>
-                          <TableCell colSpan={3} className="py-1.5 text-right">
-                            <span className="text-xs font-semibold text-emerald-600">₹{dayPremium.toLocaleString("en-IN")}</span>
+                          <TableCell className="text-xs">{policy.insurer || client?.current_insurer || "—"}</TableCell>
+                          <TableCell className="text-xs font-mono">{policy.policy_number || client?.current_policy_number || "—"}</TableCell>
+                          <TableCell className="text-xs text-right font-mono font-semibold">
+                            {policy.premium_amount ? `₹${policy.premium_amount.toLocaleString("en-IN")}` : "—"}
                           </TableCell>
-                        </TableRow>,
-                        ...rows,
-                      ];
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })()}
+                          <TableCell className="text-xs">{bookingDate ? format(new Date(bookingDate), "dd MMM yyyy") : "—"}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{client?.picked_up_by || client?.booked_by || client?.assigned_executive || "—"}</TableCell>
+                        </TableRow>
+                      );
+                    });
+                    return [
+                      <TableRow key={`day-${dayKey}`} className="bg-muted/50 border-t-2">
+                        <TableCell colSpan={5} className="py-1.5">
+                          <span className="text-xs font-semibold text-foreground">{dayLabel}</span>
+                          <Badge variant="outline" className="ml-2 text-[10px]">{dayPolicies.length} {dayPolicies.length === 1 ? "policy" : "policies"}</Badge>
+                        </TableCell>
+                        <TableCell colSpan={3} className="py-1.5 text-right">
+                          <span className="text-xs font-semibold text-emerald-600">₹{dayPremium.toLocaleString("en-IN")}</span>
+                        </TableCell>
+                      </TableRow>,
+                      ...rows,
+                    ];
+                  });
+                })()}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
