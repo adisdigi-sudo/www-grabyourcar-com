@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { LeadImportDialog } from "../shared/LeadImportDialog";
 import { StageNotificationBanner, buildInsuranceNotifications } from "../shared/StageNotificationBanner";
+import { AdminRenderBoundary } from "../shared/AdminRenderBoundary";
 import { BulkRenewalQuoteGenerator } from "./BulkRenewalQuoteGenerator";
 import { InsuranceLeadPipeline, normalizeStage, LEAD_SOURCES, type Client } from "./InsuranceLeadPipeline";
 import { InsurancePolicyBook, type PolicyRecord } from "./InsurancePolicyBook";
@@ -934,13 +935,41 @@ export function InsuranceWorkspace() {
         }}
       />
 
-      {activeView === "pipeline" && <InsuranceLeadPipeline clients={clients} isLoading={isLoading} />}
-      {activeView === "policy_book" && <InsurancePolicyBook policies={runningPolicies} />}
-      {activeView === "renewals" && <div><InsuranceComingRenewals policies={runningPolicies as PolicyRecord[]} /></div>}
-      {activeView === "overdue" && <div><InsuranceOverdueRenewals policies={overduePolicies as PolicyRecord[]} clients={dedupedClients} /></div>}
-      {activeView === "bulk_tools" && <BulkRenewalQuoteGenerator onClose={() => setActiveView("pipeline")} />}
-      {activeView === "renewal_campaign" && <InsuranceRenewalCampaign />}
-      {activeView === "performance" && <InsurancePerformance clients={dedupedClients} policies={performancePolicies as PolicyRecord[]} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} monthOptions={monthOptions} />}
+      {activeView === "pipeline" && (
+        <AdminRenderBoundary contextLabel="Insurance pipeline">
+          <InsuranceLeadPipeline clients={clients} isLoading={isLoading} />
+        </AdminRenderBoundary>
+      )}
+      {activeView === "policy_book" && (
+        <AdminRenderBoundary contextLabel="Insurance policy book">
+          <InsurancePolicyBook policies={runningPolicies} />
+        </AdminRenderBoundary>
+      )}
+      {activeView === "renewals" && (
+        <AdminRenderBoundary contextLabel="Insurance renewals">
+          <div><InsuranceComingRenewals policies={runningPolicies as PolicyRecord[]} /></div>
+        </AdminRenderBoundary>
+      )}
+      {activeView === "overdue" && (
+        <AdminRenderBoundary contextLabel="Insurance overdue renewals">
+          <div><InsuranceOverdueRenewals policies={overduePolicies as PolicyRecord[]} clients={dedupedClients} /></div>
+        </AdminRenderBoundary>
+      )}
+      {activeView === "bulk_tools" && (
+        <AdminRenderBoundary contextLabel="Insurance bulk tools">
+          <BulkRenewalQuoteGenerator onClose={() => setActiveView("pipeline")} />
+        </AdminRenderBoundary>
+      )}
+      {activeView === "renewal_campaign" && (
+        <AdminRenderBoundary contextLabel="Insurance renewal campaign">
+          <InsuranceRenewalCampaign />
+        </AdminRenderBoundary>
+      )}
+      {activeView === "performance" && (
+        <AdminRenderBoundary contextLabel="Insurance performance">
+          <InsurancePerformance clients={dedupedClients} policies={performancePolicies as PolicyRecord[]} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} monthOptions={monthOptions} />
+        </AdminRenderBoundary>
+      )}
 
       <Dialog open={showCalcDialog} onOpenChange={setShowCalcDialog}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">

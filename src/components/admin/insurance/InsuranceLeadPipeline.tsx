@@ -117,6 +117,23 @@ const STAGE_MAP: Record<string, string> = {
 export const normalizeStage = (stage: string | null, leadStatus?: string | null, client?: Pick<Client, "current_policy_number"> | null): string => {
   const normalizedStage = stage ? STAGE_MAP[stage] : undefined;
   const normalizedLeadStatus = leadStatus ? STAGE_MAP[leadStatus] : undefined;
+  const hasPolicyNumber = Boolean(client?.current_policy_number?.trim());
+
+  // Terminal loss should always win.
+  if (normalizedStage === "lost" || normalizedLeadStatus === "lost") {
+    return "lost";
+  }
+
+  // Explicit issued stage should always win.
+  if (normalizedStage === "policy_issued") return "policy_issued";
+
+  // If a client already has a policy number, treat them as issued even if a stale
+  // follow-up/active row still exists for the same customer or vehicle.
+  if (hasPolicyNumber) return "policy_issued";
+
+  // Explicit won/converted status is terminal and should beat active stale stages.
+  if (normalizedLeadStatus === "policy_issued") return "policy_issued";
+  if (normalizedLeadStatus === "won") return "won";
 
   // PRIORITY 1: Always respect explicit pipeline_stage if it's an active pipeline stage
   // This ensures manual moves (follow_up, quote_shared, new_lead, smart_calling) are never overridden
@@ -125,21 +142,13 @@ export const normalizeStage = (stage: string | null, leadStatus?: string | null,
     return normalizedStage;
   }
 
-  // PRIORITY 2: Terminal stages from pipeline_stage
-  if (normalizedStage === "policy_issued") return "policy_issued";
+  // PRIORITY 2: Remaining terminal stages from pipeline_stage
   if (normalizedStage === "won") return "won";
-  if (normalizedStage === "lost") return "lost";
 
   // PRIORITY 3: If no pipeline_stage match, use lead_status
   if (normalizedLeadStatus && activePipelineStages.includes(normalizedLeadStatus)) {
     return normalizedLeadStatus;
   }
-  if (normalizedLeadStatus === "policy_issued") return "policy_issued";
-  if (normalizedLeadStatus === "won") return "won";
-  if (normalizedLeadStatus === "lost") return "lost";
-
-  // PRIORITY 4: If client has a policy number and no explicit stage, infer policy_issued
-  if (client && client.current_policy_number && client.current_policy_number.trim()) return "policy_issued";
 
   return normalizedStage || normalizedLeadStatus || "new_lead";
 };

@@ -60,19 +60,24 @@ export const choosePreferredClient = (current: Client, candidate: Client) => {
   const candidateStage = (candidate.pipeline_stage || "").toLowerCase();
   const currentStatus = (current.lead_status || "").toLowerCase();
   const candidateStatus = (candidate.lead_status || "").toLowerCase();
+  const currentHasPolicyNumber = Boolean(normalizePolicyNumber(current.current_policy_number));
+  const candidateHasPolicyNumber = Boolean(normalizePolicyNumber(candidate.current_policy_number));
+
+  if (candidateHasPolicyNumber && !currentHasPolicyNumber) return candidate;
+  if (currentHasPolicyNumber && !candidateHasPolicyNumber) return current;
 
   const score = (item: Client, stage: string, status: string) => {
     const normalizedStage = getNormalizedLifecycleStage(stage, status);
     let total = 0;
 
+    if (stage === "policy_issued") total += 420;
+    if (["won", "converted"].includes(status)) total += 260;
     if (ACTIVE_PIPELINE_STAGES.has(normalizedStage)) total += 220;
     if (normalizedStage === "quote_shared") total += 40;
     if (normalizedStage === "follow_up") total += 30;
     if (normalizedStage === "smart_calling") total += 20;
-    if (stage === "policy_issued") total += 120;
-    if (["won", "converted"].includes(status)) total += 80;
     if (stage === "won") total += 70;
-    if (normalizePolicyNumber(item.current_policy_number)) total += 20;
+    if (normalizePolicyNumber(item.current_policy_number)) total += 320;
     if (item.policy_start_date || item.policy_expiry_date || item.booking_date) total += 10;
     if (normalizedStage === "lost") total -= 60;
     if (item.updated_at) total += new Date(item.updated_at).getTime() / 1e13;
