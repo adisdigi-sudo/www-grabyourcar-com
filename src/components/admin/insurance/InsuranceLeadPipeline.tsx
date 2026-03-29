@@ -129,10 +129,9 @@ const STAGE_MAP: Record<string, string> = {
   not_interested: "lost",
 };
 
-export const normalizeStage = (stage: string | null, leadStatus?: string | null, client?: Pick<Client, "current_policy_number"> | null): string => {
+export const normalizeStage = (stage: string | null, leadStatus?: string | null, _client?: Pick<Client, "current_policy_number"> | null): string => {
   const normalizedStage = stage ? STAGE_MAP[stage] : undefined;
   const normalizedLeadStatus = leadStatus ? STAGE_MAP[leadStatus] : undefined;
-  const hasPolicyNumber = Boolean(client?.current_policy_number?.trim());
 
   // Terminal loss should always win.
   if (normalizedStage === "lost" || normalizedLeadStatus === "lost") {
@@ -141,10 +140,6 @@ export const normalizeStage = (stage: string | null, leadStatus?: string | null,
 
   // Explicit issued stage should always win.
   if (normalizedStage === "policy_issued") return "policy_issued";
-
-  // If a client already has a policy number, treat them as issued even if a stale
-  // follow-up/active row still exists for the same customer or vehicle.
-  if (hasPolicyNumber) return "policy_issued";
 
   // Explicit won/converted status is terminal and should beat active stale stages.
   if (normalizedLeadStatus === "policy_issued") return "policy_issued";
