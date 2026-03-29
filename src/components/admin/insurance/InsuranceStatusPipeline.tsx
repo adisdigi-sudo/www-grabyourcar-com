@@ -27,6 +27,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import InsuranceQuoteModal from "./InsuranceQuoteModal";
 import { SharePdfDialog } from "./SharePdfDialog";
 import { generateInsuranceQuotePdf } from "@/lib/generateInsuranceQuotePdf";
+import { ClientQuoteHistory } from "./ClientQuoteHistory";
 
 const PIPELINE_STAGES = [
   { value: "new", label: "New Lead", icon: UserPlus, color: "bg-blue-500", lightBg: "bg-blue-50 dark:bg-blue-950/40", border: "border-blue-200 dark:border-blue-800", textColor: "text-blue-700 dark:text-blue-300", emoji: "🆕" },
@@ -92,6 +93,7 @@ export function InsuranceStatusPipeline() {
   const [renewalPreviewMsg, setRenewalPreviewMsg] = useState("");
   const [sendingRenewal, setSendingRenewal] = useState(false);
   const [showBulkPanel, setShowBulkPanel] = useState(false);
+  const [showQuoteModal, setShowQuoteModal] = useState(false);
 
   useEffect(() => { fetchClients(); }, []);
 
@@ -827,6 +829,9 @@ export function InsuranceStatusPipeline() {
                   <TabsTrigger value="quote" className="flex-1 gap-1.5 text-xs">
                     <FileText className="h-3.5 w-3.5" /> Prepare Quote
                   </TabsTrigger>
+                  <TabsTrigger value="quote_history" className="flex-1 gap-1.5 text-xs">
+                    <Clock className="h-3.5 w-3.5" /> Quote History
+                  </TabsTrigger>
                   <TabsTrigger value="policies" className="flex-1 gap-1.5 text-xs">
                     <ShieldCheck className="h-3.5 w-3.5" /> Policies
                     {clientPolicies.length > 0 && <Badge variant="secondary" className="h-4 text-[10px] px-1">{clientPolicies.length}</Badge>}
@@ -908,79 +913,31 @@ export function InsuranceStatusPipeline() {
                   </Card>
                 </TabsContent>
 
-                {/* Quote Tab */}
+                {/* Quote Tab — Opens the full calculator modal */}
                 <TabsContent value="quote" className="mt-3">
                   <div className="text-center space-y-4">
                     <div className="bg-emerald-50 dark:bg-emerald-950/30 rounded-xl border border-emerald-200 dark:border-emerald-800 p-4">
                       <FileText className="h-8 w-8 text-emerald-600 mx-auto mb-2" />
                       <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">Prepare Insurance Quote</p>
-                      <p className="text-xs text-muted-foreground mt-1">Generate a branded PDF quote for {selectedClient.customer_name}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Generate a branded PDF quote with full premium calculator for {selectedClient.customer_name}</p>
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button
-                        className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white h-11"
-                        onClick={() => {
-                          const quoteData = {
-                            customerName: selectedClient.customer_name || "Customer",
-                            phone: selectedClient.phone,
-                            email: selectedClient.email || undefined,
-                            city: undefined,
-                            vehicleMake: selectedClient.vehicle_make || "N/A",
-                            vehicleModel: selectedClient.vehicle_model || "N/A",
-                            vehicleNumber: selectedClient.vehicle_number || "N/A",
-                            vehicleYear: new Date().getFullYear(),
-                            fuelType: "Petrol",
-                            insuranceCompany: selectedClient.current_insurer || "Best Available",
-                            policyType: "Comprehensive",
-                            idv: 500000,
-                            basicOD: 8000,
-                            odDiscount: 1500,
-                            ncbDiscount: 2000,
-                            thirdParty: 6521,
-                            securePremium: 500,
-                            addonPremium: 3500,
-                            addons: ["Zero Depreciation", "Engine Protection", "Roadside Assistance (RSA)"],
-                          };
-                          generateInsuranceQuotePdf(quoteData);
-                          toast.success("📄 Quote PDF downloaded!");
-                        }}
-                      >
-                        <Download className="h-4 w-4" /> Download PDF
-                      </Button>
-                      <Button
-                        className="gap-2 bg-green-600 hover:bg-green-700 text-white h-11"
-                        onClick={async () => {
-                          const phone = (selectedClient.phone || "").replace(/\D/g, "");
-                          const fullPhone = phone.startsWith("91") ? phone : `91${phone}`;
-                          generateInsuranceQuotePdf({
-                            customerName: selectedClient.customer_name || "Customer",
-                            phone: selectedClient.phone,
-                            vehicleMake: selectedClient.vehicle_make || "N/A",
-                            vehicleModel: selectedClient.vehicle_model || "N/A",
-                            vehicleNumber: selectedClient.vehicle_number || "N/A",
-                            vehicleYear: new Date().getFullYear(),
-                            fuelType: "Petrol",
-                            insuranceCompany: selectedClient.current_insurer || "Best Available",
-                            policyType: "Comprehensive",
-                            idv: 500000,
-                            basicOD: 8000,
-                            odDiscount: 1500,
-                            ncbDiscount: 2000,
-                            thirdParty: 6521,
-                            securePremium: 500,
-                            addonPremium: 3500,
-                            addons: ["Zero Depreciation", "Engine Protection", "Roadside Assistance (RSA)"],
-                          });
-                          const msgText = `Hi ${selectedClient.customer_name}! Here is your insurance quote. Please find the PDF attached.\n\n— Grabyourcar Insurance\n📞 +91 98559 24442`;
-                          const { sendWhatsApp: sendWA } = await import("@/lib/sendWhatsApp");
-                          await sendWA({ phone: selectedClient.phone, message: msgText, name: selectedClient.customer_name, logEvent: "quote_share" });
-                        }}
-                      >
-                        <MessageSquare className="h-4 w-4" /> WhatsApp
-                      </Button>
-                    </div>
-                    <p className="text-[10px] text-muted-foreground">For detailed quote customization, use the Quote Hub from the sidebar</p>
+                    <Button
+                      className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white h-12"
+                      onClick={() => setShowQuoteModal(true)}
+                    >
+                      <FileText className="h-5 w-5" /> Open Quote Calculator
+                    </Button>
+                    <p className="text-[10px] text-muted-foreground">Generates branded PDF with actual premium breakup • Auto-saves to Quote History</p>
                   </div>
+                </TabsContent>
+
+                {/* Quote History Tab */}
+                <TabsContent value="quote_history" className="mt-3">
+                  <ClientQuoteHistory
+                    clientId={selectedClient.id}
+                    clientPhone={selectedClient.phone}
+                    vehicleNumber={selectedClient.vehicle_number || undefined}
+                  />
                 </TabsContent>
 
                 {/* Policies Tab */}
@@ -1177,6 +1134,34 @@ export function InsuranceStatusPipeline() {
           )}
         </DialogContent>
       </Dialog>
+      {/* Quote Calculator Modal */}
+      {selectedClient && showQuoteModal && (
+        <InsuranceQuoteModal
+          open={showQuoteModal}
+          onOpenChange={setShowQuoteModal}
+          client={{
+            id: selectedClient.id,
+            customer_name: selectedClient.customer_name || "Customer",
+            phone: selectedClient.phone,
+            email: selectedClient.email || undefined,
+            vehicle_number: selectedClient.vehicle_number || undefined,
+            vehicle_make: selectedClient.vehicle_make || undefined,
+            vehicle_model: selectedClient.vehicle_model || undefined,
+            vehicle_year: undefined,
+            current_insurer: selectedClient.current_insurer || undefined,
+            current_policy_type: undefined,
+            ncb_percentage: undefined,
+            previous_claim: undefined,
+            city: undefined,
+            current_premium: selectedClient.current_premium || undefined,
+            policy_expiry_date: undefined,
+          }}
+          onQuoteSent={() => {
+            toast.success("📋 Quote saved to history!");
+            fetchClients();
+          }}
+        />
+      )}
     </div>
   );
 }
