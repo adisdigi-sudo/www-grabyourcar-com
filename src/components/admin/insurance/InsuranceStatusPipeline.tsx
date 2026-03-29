@@ -27,6 +27,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import InsuranceQuoteModal from "./InsuranceQuoteModal";
 import { SharePdfDialog } from "./SharePdfDialog";
 import { generateInsuranceQuotePdf } from "@/lib/generateInsuranceQuotePdf";
+import { ClientQuoteHistory } from "./ClientQuoteHistory";
 
 const PIPELINE_STAGES = [
   { value: "new", label: "New Lead", icon: UserPlus, color: "bg-blue-500", lightBg: "bg-blue-50 dark:bg-blue-950/40", border: "border-blue-200 dark:border-blue-800", textColor: "text-blue-700 dark:text-blue-300", emoji: "🆕" },
