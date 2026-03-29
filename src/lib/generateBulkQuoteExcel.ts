@@ -100,15 +100,11 @@ export async function generateBulkQuoteExcel(prefilledLeads?: PrefilledLead[]) {
   // Add formulas for calculated columns (rows 2 to dataRows+1)
   for (let r = 2; r <= dataRows + 1; r++) {
     // T (col 20): IDV Auto-Calculator
-    // Logic: Vehicle Age = Current Year - Vehicle Year (H)
-    //   Age 0 (new/same year): 5% depreciation → Ex-Showroom × 0.95
-    //   Age 1: 15% depreciation → Ex-Showroom × 0.85
-    //   Age 2: 25% → × 0.75
-    //   Age 3: 35% → × 0.65
-    //   Age 4: 45% → × 0.55
-    //   Age 5+: 50% + 5% per extra year (capped at 90%)
-    // Formula: =IF(L{r}="","",ROUND(L{r}*MAX(0.1, IF(age=0,0.95, IF(age=1,0.85, 1-0.05-age*0.10))), 0))
-    const idvFormula = `IF(OR(L${r}="",H${r}=""),"",ROUND(L${r}*MAX(0.1,IF(${currentYear}-H${r}=0,0.95,IF(${currentYear}-H${r}=1,0.85,IF(${currentYear}-H${r}=2,0.75,IF(${currentYear}-H${r}=3,0.65,IF(${currentYear}-H${r}=4,0.55,MAX(0.1,1-0.05-(${currentYear}-H${r})*0.10))))))),0))`;
+    // Depreciation: Year 0 (new car) = 5%, then +10% every year
+    // Year 0: 5%, Year 1: 15%, Year 2: 25%, Year 3: 35%...
+    // Cap: minimum IDV = 10% of ex-showroom (max 90% depreciation)
+    // Formula: IDV = Ex-Showroom × MAX(0.10, 1 - (0.05 + age × 0.10))
+    const idvFormula = `IF(OR(L${r}="",H${r}=""),"",ROUND(L${r}*MAX(0.1,1-(0.05+(${currentYear}-H${r})*0.1)),0))`;
     ws.getCell(r, 20).value = { formula: idvFormula } as any;
 
     // U (col 21): NCB Discount = Basic_OD(M) * NCB%(O)
@@ -214,16 +210,20 @@ export async function generateBulkQuoteExcel(prefilledLeads?: PrefilledLead[]) {
     "  ┌────────────────┬──────────────┬───────────────────────┐",
     "  │ Vehicle Age    │ Depreciation │ IDV Formula           │",
     "  ├────────────────┼──────────────┼───────────────────────┤",
-    "  │ 0 (New/Same Yr)│ 5%           │ Ex-Showroom × 0.95   │",
+    "  │ 0 (New Car)    │ 5%           │ Ex-Showroom × 0.95   │",
     "  │ 1 Year         │ 15%          │ Ex-Showroom × 0.85   │",
     "  │ 2 Years        │ 25%          │ Ex-Showroom × 0.75   │",
     "  │ 3 Years        │ 35%          │ Ex-Showroom × 0.65   │",
     "  │ 4 Years        │ 45%          │ Ex-Showroom × 0.55   │",
-    "  │ 5+ Years       │ 50%+5%/yr    │ Min 10% of Ex-Showroom│",
+    "  │ 5 Years        │ 55%          │ Ex-Showroom × 0.45   │",
+    "  │ 6 Years        │ 65%          │ Ex-Showroom × 0.35   │",
+    "  │ 7 Years        │ 75%          │ Ex-Showroom × 0.25   │",
+    "  │ 8+ Years       │ Max 90%      │ Min 10% of Ex-Showroom│",
     "  └────────────────┴──────────────┴───────────────────────┘",
-    "  First year: 5% flat depreciation (new car insurance)",
-    "  Every subsequent year: 10% additional depreciation",
-    "  Minimum IDV: 10% of Ex-Showroom (capped)",
+    "  Formula: Depreciation = 5% + (Vehicle Age × 10%)",
+    "  First year (new car): flat 5% depreciation",
+    "  Every subsequent year: +10% additional depreciation",
+    "  Minimum IDV: 10% of Ex-Showroom Price (capped at 90%)",
     "",
     "PREMIUM FORMULAS:",
     "  NCB Discount = Basic OD × NCB%",

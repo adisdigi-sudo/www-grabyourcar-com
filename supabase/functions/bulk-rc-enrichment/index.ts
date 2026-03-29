@@ -39,14 +39,19 @@ function calculatePremium(enrichedData: any) {
     estimatedCC = 1500;
   }
 
-  // IDV estimation based on vehicle age (depreciation schedule)
-  let basePrice = 800000; // default ex-showroom estimate
-  if (estimatedCC > 1500) basePrice = 1500000;
-  else if (estimatedCC > 1000) basePrice = 1000000;
-  else basePrice = 600000;
+  // IDV estimation based on ex-showroom price and vehicle age
+  // Use ex_showroom_price if available, otherwise estimate from CC
+  let basePrice = enrichedData.ex_showroom_price || 800000;
+  if (!enrichedData.ex_showroom_price) {
+    if (estimatedCC > 1500) basePrice = 1500000;
+    else if (estimatedCC > 1000) basePrice = 1000000;
+    else basePrice = 600000;
+  }
 
-  const depreciationRates = [0, 0.05, 0.10, 0.15, 0.25, 0.35, 0.40, 0.45, 0.50];
-  const depRate = depreciationRates[Math.min(vehicleAge, depreciationRates.length - 1)] || 0.50;
+  // Depreciation: Year 0 (new) = 5%, then +10% every subsequent year
+  // Year 0: 5%, Year 1: 15%, Year 2: 25%, Year 3: 35%, Year 4: 45%...
+  // Minimum IDV = 10% of ex-showroom (cap at 90% depreciation)
+  const depRate = Math.min(0.90, 0.05 + vehicleAge * 0.10);
   const idv = Math.round(basePrice * (1 - depRate));
 
   // OD calculation (Zone B rates)
