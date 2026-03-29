@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { format, startOfMonth, endOfMonth, subMonths, subDays, startOfYear, parse } from "date-fns";
+import { format, startOfMonth, endOfMonth, subMonths, subDays, startOfYear, startOfDay, endOfDay, startOfWeek, endOfWeek } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -52,16 +52,20 @@ export function InsurancePerformance({ clients, policies, selectedMonth, onMonth
   const [dateTo, setDateTo] = useState<Date | undefined>();
   const [activePreset, setActivePreset] = useState<string | null>(null);
 
+  const getWonClientDate = (client: Client) => (
+    client.booking_date || client.policy_start_date || client.updated_at || client.created_at
+  );
+
   const monthStart = useMemo(() => startOfMonth(new Date(selectedMonth + "-01")), [selectedMonth]);
   const monthEnd = useMemo(() => endOfMonth(monthStart), [monthStart]);
 
   // Compute effective date range based on filter mode
   const effectiveRange = useMemo(() => {
     if (filterMode === "range" && dateFrom && dateTo) {
-      return { start: dateFrom, end: dateTo };
+      return { start: startOfDay(dateFrom), end: endOfDay(dateTo) };
     }
     if (filterMode === "preset" && dateFrom && dateTo) {
-      return { start: dateFrom, end: dateTo };
+      return { start: startOfDay(dateFrom), end: endOfDay(dateTo) };
     }
     return { start: monthStart, end: monthEnd };
   }, [filterMode, dateFrom, dateTo, monthStart, monthEnd]);
@@ -102,18 +106,58 @@ export function InsurancePerformance({ clients, policies, selectedMonth, onMonth
     [policiesThisMonth]
   );
 
-  const wonThisMonth = useMemo(() => {
-    const matchedClients = dedupedClients.filter((client) => wonClientIdsThisMonth.has(client.id));
-    const wonByDate = dedupedClients.filter((client) => {
-      if (wonClientIdsThisMonth.has(client.id)) return false;
-      if (!isWon(client)) return false;
-      const dateStr = getClientEffectiveDate(client);
-      if (!dateStr) return false;
-      const d = new Date(dateStr);
-      return d >= effectiveRange.start && d <= effectiveRange.end;
+  const wonRows = useMemo(() => {
+    const policyRows = policiesThisMonth.map((policy) => {
+      const client = policy.client_id ? clientById.get(policy.client_id) : undefined;
+      const effectiveDate = getPolicyEffectiveDate(policy);
+
+      return {
+        id: policy.id,
+        clientId: policy.client_id,
+        source: "policy" as const,
+        effectiveDate,
+        customerName: client?.customer_name || policy.insurance_clients?.customer_name || "—",
+        vehicleNumber: client?.vehicle_number || policy.insurance_clients?.vehicle_number || "—",
+        vehicleLabel: [
+          client?.vehicle_make || policy.insurance_clients?.vehicle_make,
+          client?.vehicle_model || policy.insurance_clients?.vehicle_model,
+        ].filter(Boolean).join(" "),
+        insurer: policy.insurer || client?.current_insurer || "—",
+        policyNumber: policy.policy_number || client?.current_policy_number || "—",
+        premiumAmount: policy.premium_amount || 0,
+        assignedTo: client?.picked_up_by || client?.booked_by || client?.assigned_executive || "—",
+      };
     });
-    return [...matchedClients, ...wonByDate];
-  }, [dedupedClients, wonClientIdsThisMonth, effectiveRange]);
+
+    const supplementalClientRows = dedupedClients
+      .filter((client) => {
+        if (wonClientIdsThisMonth.has(client.id)) return false;
+        if (!isWon(client)) return false;
+        const dateStr = getWonClientDate(client);
+        if (!dateStr) return false;
+        const d = new Date(dateStr);
+        return d >= effectiveRange.start && d <= effectiveRange.end;
+      })
+      .map((client) => ({
+        id: `client-${client.id}`,
+        clientId: client.id,
+        source: "client" as const,
+        effectiveDate: getWonClientDate(client),
+        customerName: client.customer_name || "—",
+        vehicleNumber: client.vehicle_number || "—",
+        vehicleLabel: [client.vehicle_make, client.vehicle_model].filter(Boolean).join(" "),
+        insurer: client.current_insurer || client.quote_insurer || "—",
+        policyNumber: client.current_policy_number || "Pending sync",
+        premiumAmount: client.current_premium || client.quote_amount || 0,
+        assignedTo: client.picked_up_by || client.booked_by || client.assigned_executive || "—",
+      }));
+
+    return [...policyRows, ...supplementalClientRows].sort((a, b) => {
+      const aTime = a.effectiveDate ? new Date(a.effectiveDate).getTime() : 0;
+      const bTime = b.effectiveDate ? new Date(b.effectiveDate).getTime() : 0;
+      return bTime - aTime;
+    });
+  }, [policiesThisMonth, clientById, dedupedClients, wonClientIdsThisMonth, effectiveRange]);
 
   const lostThisMonth = useMemo(() => {
     return dedupedClients.filter((client) => {
@@ -124,11 +168,11 @@ export function InsurancePerformance({ clients, policies, selectedMonth, onMonth
   }, [dedupedClients, effectiveRange]);
 
   const totalLeadsMonth = monthClients.length;
-  const wonCount = policiesThisMonth.length;
+  const wonCount = wonRows.length;
   const lostCount = lostThisMonth.length;
-  const convRate = totalLeadsMonth > 0 ? ((wonThisMonth.length / totalLeadsMonth) * 100).toFixed(1) : "0";
+  const convRate = totalLeadsMonth > 0 ? ((wonRows.length / totalLeadsMonth) * 100).toFixed(1) : "0";
 
-  const totalPremium = policiesThisMonth.reduce((sum, policy) => sum + (policy.premium_amount || 0), 0);
+  const totalPremium = wonRows.reduce((sum, row) => sum + (row.premiumAmount || 0), 0);
 
   const incentiveRate = getIncentiveRate(wonCount);
   const totalIncentive = getIncentiveAmount(wonCount);
@@ -172,15 +216,15 @@ export function InsurancePerformance({ clients, policies, selectedMonth, onMonth
   }, [policiesThisMonth, clientById]);
 
   const groupedByDate = useMemo(() => {
-    const groups: Record<string, typeof policiesThisMonth> = {};
-    policiesThisMonth.forEach((policy) => {
-      const dateStr = getPolicyEffectiveDate(policy);
+    const groups: Record<string, typeof wonRows> = {};
+    wonRows.forEach((row) => {
+      const dateStr = row.effectiveDate;
       const dayKey = dateStr ? format(new Date(dateStr), "yyyy-MM-dd") : "unknown";
       if (!groups[dayKey]) groups[dayKey] = [];
-      groups[dayKey].push(policy);
+      groups[dayKey].push(row);
     });
     return Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]));
-  }, [policiesThisMonth]);
+  }, [wonRows]);
 
   const monthTrend = useMemo(() => {
     const trend = [];
@@ -220,8 +264,8 @@ export function InsurancePerformance({ clients, policies, selectedMonth, onMonth
   const handlePreset = (label: string, from: Date, to: Date) => {
     setFilterMode("preset");
     setActivePreset(label);
-    setDateFrom(from);
-    setDateTo(to);
+    setDateFrom(startOfDay(from));
+    setDateTo(endOfDay(to));
   };
 
   const handleMonthSelect = (month: string) => {
@@ -244,6 +288,7 @@ export function InsurancePerformance({ clients, policies, selectedMonth, onMonth
           <div className="flex gap-1 flex-wrap">
             {[
               { label: "Today", fn: () => { const t = new Date(); t.setHours(0,0,0,0); const e = new Date(); e.setHours(23,59,59,999); handlePreset("Today", t, e); } },
+              { label: "This Week", fn: () => handlePreset("This Week", startOfWeek(new Date(), { weekStartsOn: 1 }), endOfWeek(new Date(), { weekStartsOn: 1 })) },
               { label: "7 Days", fn: () => handlePreset("7 Days", subDays(new Date(), 7), new Date()) },
               { label: "30 Days", fn: () => handlePreset("30 Days", subDays(new Date(), 30), new Date()) },
               { label: "90 Days", fn: () => handlePreset("90 Days", subDays(new Date(), 90), new Date()) },
@@ -498,7 +543,7 @@ export function InsurancePerformance({ clients, policies, selectedMonth, onMonth
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 text-emerald-600" /> Won Policies — {activeRangeLabel}
-            <Badge variant="secondary" className="ml-auto text-[10px]">{policiesThisMonth.length} total</Badge>
+            <Badge variant="secondary" className="ml-auto text-[10px]">{wonRows.length} total</Badge>
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
@@ -517,33 +562,31 @@ export function InsurancePerformance({ clients, policies, selectedMonth, onMonth
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {policiesThisMonth.length === 0 ? (
+                {wonRows.length === 0 ? (
                   <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">No won policies in this period</TableCell></TableRow>
                 ) : (() => {
                   let runningIndex = 0;
-                  return groupedByDate.map(([dayKey, dayPolicies]) => {
+                  return groupedByDate.flatMap(([dayKey, dayPolicies]) => {
                     const dayLabel = dayKey !== "unknown" ? format(new Date(dayKey), "EEEE, dd MMM yyyy") : "Unknown Date";
-                    const dayPremium = dayPolicies.reduce((s, p) => s + (p.premium_amount || 0), 0);
-                    const rows = dayPolicies.map((policy) => {
+                    const dayPremium = dayPolicies.reduce((s, p) => s + (p.premiumAmount || 0), 0);
+                    const rows = dayPolicies.map((row) => {
                       runningIndex++;
-                      const client = policy.client_id ? clientById.get(policy.client_id) : undefined;
-                      const bookingDate = getPolicyEffectiveDate(policy);
                       return (
-                        <TableRow key={policy.id}>
+                        <TableRow key={row.id}>
                           <TableCell className="text-xs text-muted-foreground">{runningIndex}</TableCell>
-                          <TableCell className="text-xs font-medium">{client?.customer_name || policy.insurance_clients?.customer_name || "—"}</TableCell>
+                          <TableCell className="text-xs font-medium">{row.customerName}</TableCell>
                           <TableCell className="text-xs">
-                            <span className="font-mono">{client?.vehicle_number || policy.insurance_clients?.vehicle_number || "—"}</span>
+                            <span className="font-mono">{row.vehicleNumber}</span>
                             <br />
-                            <span className="text-[10px] text-muted-foreground">{[client?.vehicle_make || policy.insurance_clients?.vehicle_make, client?.vehicle_model || policy.insurance_clients?.vehicle_model].filter(Boolean).join(" ")}</span>
+                            <span className="text-[10px] text-muted-foreground">{row.vehicleLabel || "—"}</span>
                           </TableCell>
-                          <TableCell className="text-xs">{policy.insurer || client?.current_insurer || "—"}</TableCell>
-                          <TableCell className="text-xs font-mono">{policy.policy_number || client?.current_policy_number || "—"}</TableCell>
+                          <TableCell className="text-xs">{row.insurer}</TableCell>
+                          <TableCell className="text-xs font-mono">{row.policyNumber}</TableCell>
                           <TableCell className="text-xs text-right font-mono font-semibold">
-                            {policy.premium_amount ? `₹${policy.premium_amount.toLocaleString("en-IN")}` : "—"}
+                            {row.premiumAmount ? `₹${row.premiumAmount.toLocaleString("en-IN")}` : "—"}
                           </TableCell>
-                          <TableCell className="text-xs">{bookingDate ? format(new Date(bookingDate), "dd MMM yyyy") : "—"}</TableCell>
-                          <TableCell className="text-xs text-muted-foreground">{client?.picked_up_by || client?.booked_by || client?.assigned_executive || "—"}</TableCell>
+                          <TableCell className="text-xs">{row.effectiveDate ? format(new Date(row.effectiveDate), "dd MMM yyyy") : "—"}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{row.assignedTo}</TableCell>
                         </TableRow>
                       );
                     });
