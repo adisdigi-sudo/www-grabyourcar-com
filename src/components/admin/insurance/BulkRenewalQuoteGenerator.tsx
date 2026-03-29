@@ -68,7 +68,7 @@ const emptyRow = (): InlineRow => ({
 });
 
 // ── CSV Import ──
-function CSVImportButton({ onImport }: { onImport: (quotes: BulkQuoteInsert[]) => void }) {
+function CSVImportButton({ onImport }: { onImport: (quotes: BulkQuoteInsert[]) => void | Promise<void> }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
 
