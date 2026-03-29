@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { format, startOfMonth, endOfMonth, subMonths, subDays, startOfYear, startOfDay, endOfDay, startOfWeek, endOfWeek } from "date-fns";
+import { format, startOfMonth, endOfMonth, subMonths, subDays, startOfYear, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfQuarter, endOfQuarter } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -300,6 +300,7 @@ export function InsurancePerformance({ clients, policies, selectedMonth, onMonth
               { label: "7 Days", fn: () => handlePreset("7 Days", subDays(new Date(), 7), new Date()) },
               { label: "30 Days", fn: () => handlePreset("30 Days", subDays(new Date(), 30), new Date()) },
               { label: "90 Days", fn: () => handlePreset("90 Days", subDays(new Date(), 90), new Date()) },
+              { label: "This Quarter", fn: () => handlePreset("This Quarter", startOfQuarter(new Date()), endOfQuarter(new Date())) },
               { label: "This Year", fn: () => handlePreset("This Year", startOfYear(new Date()), new Date()) },
               { label: "All Time", fn: () => {
                 const earliest = monthOptions.length > 0 ? new Date(monthOptions[monthOptions.length - 1].value + "-01") : subMonths(new Date(), 12);
