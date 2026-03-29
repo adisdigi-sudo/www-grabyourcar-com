@@ -55,6 +55,48 @@ export const getClientIdentityKey = (client: Pick<Client, "id" | "phone" | "vehi
   return `id:${client.id}`;
 };
 
+/** Merge operational fields from the non-preferred record into the preferred one */
+const mergeClientFields = (preferred: Client, other: Client): Client => {
+  const merged = { ...preferred };
+
+  // Preserve follow-up data if missing on the preferred record
+  if (!merged.follow_up_date && other.follow_up_date) {
+    merged.follow_up_date = other.follow_up_date;
+    merged.follow_up_time = other.follow_up_time || merged.follow_up_time;
+  }
+
+  // Preserve call data
+  if (!merged.call_status && other.call_status) merged.call_status = other.call_status;
+  if (!merged.call_remarks && other.call_remarks) merged.call_remarks = other.call_remarks;
+
+  // Preserve notes
+  if (!merged.notes && other.notes) merged.notes = other.notes;
+
+  // Preserve quote data
+  if (!merged.quote_amount && other.quote_amount) merged.quote_amount = other.quote_amount;
+  if (!merged.quote_insurer && other.quote_insurer) merged.quote_insurer = other.quote_insurer;
+
+  // Preserve contact/assignment data
+  if (!merged.assigned_executive && other.assigned_executive) merged.assigned_executive = other.assigned_executive;
+  if (!merged.contact_attempts && other.contact_attempts) merged.contact_attempts = other.contact_attempts;
+  if (!merged.email && other.email) merged.email = other.email;
+  if (!merged.city && other.city) merged.city = other.city;
+
+  // Preserve vehicle data
+  if (!merged.vehicle_make && other.vehicle_make) merged.vehicle_make = other.vehicle_make;
+  if (!merged.vehicle_model && other.vehicle_model) merged.vehicle_model = other.vehicle_model;
+  if (!merged.vehicle_year && other.vehicle_year) merged.vehicle_year = other.vehicle_year;
+
+  // Preserve policy dates
+  if (!merged.policy_expiry_date && other.policy_expiry_date) merged.policy_expiry_date = other.policy_expiry_date;
+  if (!merged.policy_start_date && other.policy_start_date) merged.policy_start_date = other.policy_start_date;
+  if (!merged.current_insurer && other.current_insurer) merged.current_insurer = other.current_insurer;
+  if (!merged.current_policy_type && other.current_policy_type) merged.current_policy_type = other.current_policy_type;
+  if (!merged.current_premium && other.current_premium) merged.current_premium = other.current_premium;
+
+  return merged;
+};
+
 export const choosePreferredClient = (current: Client, candidate: Client) => {
   const currentStage = (current.pipeline_stage || "").toLowerCase();
   const candidateStage = (candidate.pipeline_stage || "").toLowerCase();
@@ -63,8 +105,8 @@ export const choosePreferredClient = (current: Client, candidate: Client) => {
   const currentHasPolicyNumber = Boolean(normalizePolicyNumber(current.current_policy_number));
   const candidateHasPolicyNumber = Boolean(normalizePolicyNumber(candidate.current_policy_number));
 
-  if (candidateHasPolicyNumber && !currentHasPolicyNumber) return candidate;
-  if (currentHasPolicyNumber && !candidateHasPolicyNumber) return current;
+  if (candidateHasPolicyNumber && !currentHasPolicyNumber) return mergeClientFields(candidate, current);
+  if (currentHasPolicyNumber && !candidateHasPolicyNumber) return mergeClientFields(current, candidate);
 
   const score = (item: Client, stage: string, status: string) => {
     const normalizedStage = getNormalizedLifecycleStage(stage, status);
@@ -84,9 +126,11 @@ export const choosePreferredClient = (current: Client, candidate: Client) => {
     return total;
   };
 
-  return score(candidate, candidateStage, candidateStatus) > score(current, currentStage, currentStatus)
-    ? candidate
-    : current;
+  const preferred = score(candidate, candidateStage, candidateStatus) > score(current, currentStage, currentStatus)
+    ? { winner: candidate, loser: current }
+    : { winner: current, loser: candidate };
+
+  return mergeClientFields(preferred.winner, preferred.loser);
 };
 
 export const dedupeInsuranceClients = (clients: Client[]) => {
