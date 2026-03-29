@@ -403,7 +403,7 @@ function WonPolicyDialog({
         } as any,
       });
 
-      toast.success("Policy issued and synced to Policy Book");
+      toast.success("Policy issued! Now upload the policy document.", { duration: 5000 });
       onSuccess();
       onOpenChange(false);
     } catch (e: any) {
