@@ -272,6 +272,7 @@ function InsuranceVerticalWorkspace() {
     { id: "advisors", label: "Advisors", icon: Briefcase },
     { id: "automation", label: "Automation", icon: Zap },
     { id: "templates", label: "Templates", icon: MessageSquare },
+    { id: "messaging", label: "Messaging", icon: Send },
     { id: "extractor", label: "AI Extractor", icon: Sparkles },
     { id: "crosssell", label: "Cross-Sell", icon: Package },
     { id: "analytics", label: "Analytics", icon: TrendingUp },
