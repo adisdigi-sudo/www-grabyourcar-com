@@ -155,14 +155,14 @@ function CSVImportButton({ onImport }: { onImport: (quotes: BulkQuoteInsert[]) =
             batch_label: row.batch_label ? String(row.batch_label) : null,
           };
         });
-        onImport(quotes);
+        await onImport(quotes);
         toast.success(`📊 Imported ${quotes.length} quotes from Excel!`);
       } else {
         // CSV
         const text = await file.text();
         const quotes = parseCSVText(text);
         if (!quotes.length) { toast.error("No valid rows found"); setImporting(false); return; }
-        onImport(quotes);
+        await onImport(quotes);
         toast.success(`📄 Imported ${quotes.length} quotes from CSV!`);
       }
     } catch (err) {
