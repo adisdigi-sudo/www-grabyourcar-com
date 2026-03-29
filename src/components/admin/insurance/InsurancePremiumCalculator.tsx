@@ -965,7 +965,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
               </div>
 
               <Button size="sm" variant="ghost" className="w-full text-xs" onClick={() => {
-                setIdv(""); setCc(""); setDiscount("0"); setNcb(0); setClaimTaken(false); setExpiredOver90Days(false);
+                setIdv(""); setCc(""); setDiscount("0"); setNcb(0); setClaimTaken(false); setExpiredOver90Days(false); setExShowroomPrice("");
                 setAddons(DEFAULT_ADDONS); setCustomerName(""); setCustomerPhone("");
                 setVehicleMake(""); setVehicleModel(""); setVehicleNumber("");
                 setInsuranceCompany(""); setCustomInsurer(""); setFuelType("Petrol");
