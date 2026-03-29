@@ -22,7 +22,7 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
-import { format, differenceInDays } from "date-fns";
+import { format, differenceInDays, startOfWeek, endOfWeek, startOfQuarter, endOfQuarter } from "date-fns";
 import { InsurancePolicyDocumentUploader } from "./InsurancePolicyDocumentUploader";
 
 // ── 9-Stage Pipeline (STRICT) ──
@@ -210,6 +210,13 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
     return null;
   };
 
+  const getDateRange = (range: string): { start: Date; end: Date } | null => {
+    const now = new Date();
+    if (range === "this_week") return { start: startOfWeek(now, { weekStartsOn: 1 }), end: endOfWeek(now, { weekStartsOn: 1 }) };
+    if (range === "this_quarter") return { start: startOfQuarter(now), end: endOfQuarter(now) };
+    return null;
+  };
+
   // Filter
   const filtered = useMemo(() => {
     let result = selectedStage === "all" ? clients : clients.filter(c => (c.pipeline_stage || "new_lead") === selectedStage);
@@ -228,13 +235,20 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
     if (filterExecutive !== "all") result = result.filter(c => c.assigned_executive === filterExecutive);
     // Date range preset filter
     if (filterDateRange !== "all" && filterDateRange !== "custom") {
-      const cutoff = getDateCutoff(filterDateRange);
-      if (cutoff) {
-        if (filterDateRange === "today" || filterDateRange === "yesterday") {
-          const endOfDay = new Date(cutoff); endOfDay.setHours(23,59,59,999);
-          result = result.filter(c => { const d = new Date(getClientFilterDate(c)); return d >= cutoff && d <= endOfDay; });
-        } else {
-          result = result.filter(c => new Date(getClientFilterDate(c)) >= cutoff);
+      const rangeResult = getDateRange(filterDateRange);
+      if (rangeResult) {
+        const rs = new Date(rangeResult.start); rs.setHours(0,0,0,0);
+        const re = new Date(rangeResult.end); re.setHours(23,59,59,999);
+        result = result.filter(c => { const d = new Date(getClientFilterDate(c)); return d >= rs && d <= re; });
+      } else {
+        const cutoff = getDateCutoff(filterDateRange);
+        if (cutoff) {
+          if (filterDateRange === "today" || filterDateRange === "yesterday") {
+            const eod = new Date(cutoff); eod.setHours(23,59,59,999);
+            result = result.filter(c => { const d = new Date(getClientFilterDate(c)); return d >= cutoff && d <= eod; });
+          } else {
+            result = result.filter(c => new Date(getClientFilterDate(c)) >= cutoff);
+          }
         }
       }
     }
@@ -706,9 +720,11 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
                     <SelectItem value="all">All Time</SelectItem>
                     <SelectItem value="today">Today</SelectItem>
                     <SelectItem value="yesterday">Yesterday</SelectItem>
+                    <SelectItem value="this_week">This Week</SelectItem>
                     <SelectItem value="7days">Last 7 Days</SelectItem>
                     <SelectItem value="30days">Last 30 Days</SelectItem>
                     <SelectItem value="90days">Last 90 Days</SelectItem>
+                    <SelectItem value="this_quarter">This Quarter</SelectItem>
                     <SelectItem value="custom">Custom Range</SelectItem>
                   </SelectContent>
                 </Select>
