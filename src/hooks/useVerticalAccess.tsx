@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode, useCallback, useEffect } from "react";
+import { createContext, useContext, useState, ReactNode, useCallback, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
@@ -120,7 +120,7 @@ export const VerticalProvider = ({ children }: { children: ReactNode }) => {
   });
 
   // Check if user is super_admin/admin (they get all verticals)
-  const { data: userRoles = [] } = useQuery({
+  const { data: userRoles = [], isLoading: rolesLoading } = useQuery({
     queryKey: ['userRoles-vertical', user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
@@ -151,9 +151,15 @@ export const VerticalProvider = ({ children }: { children: ReactNode }) => {
   const isAdminUser = userRoles.includes('super_admin') || userRoles.includes('admin');
 
   // Super admins see all verticals, others see only assigned ones
-  const availableVerticals = isAdminUser
-    ? allVerticals
-    : allVerticals.filter(v => userAccess.includes(v.id));
+  const availableVerticals = useMemo(() => {
+    if (rolesLoading) {
+      return [] as BusinessVertical[];
+    }
+
+    return isAdminUser
+      ? allVerticals
+      : allVerticals.filter(v => userAccess.includes(v.id));
+  }, [allVerticals, isAdminUser, rolesLoading, userAccess]);
 
   useEffect(() => {
     if (!user?.id) {
@@ -162,7 +168,7 @@ export const VerticalProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    if (verticalsLoading || accessLoading) return;
+    if (verticalsLoading || accessLoading || rolesLoading) return;
 
     if (activeVertical && availableVerticals.some(v => v.id === activeVertical.id)) {
       return;
@@ -186,7 +192,7 @@ export const VerticalProvider = ({ children }: { children: ReactNode }) => {
     if (activeVertical && !availableVerticals.some(v => v.id === activeVertical.id)) {
       setActiveVertical(null);
     }
-  }, [user?.id, verticalsLoading, accessLoading, availableVerticals, activeVertical, setActiveVertical]);
+  }, [user?.id, verticalsLoading, accessLoading, rolesLoading, availableVerticals, activeVertical, setActiveVertical]);
 
   // Check if user is manager in currently active vertical
   const isManagerInVertical = isAdminUser || (
@@ -200,7 +206,7 @@ export const VerticalProvider = ({ children }: { children: ReactNode }) => {
       activeVertical,
       setActiveVertical,
       availableVerticals,
-      isLoading: verticalsLoading || accessLoading || memberLoading,
+      isLoading: verticalsLoading || accessLoading || memberLoading || rolesLoading,
       teamMember,
       isManagerInVertical,
     }}>
