@@ -58,6 +58,10 @@ function calculatePremium(enrichedData: any) {
   const odRate = estimatedCC > 1500 ? 0.03343 : 0.03191;
   const basicOD = Math.round(idv * odRate);
 
+  // OD discount (market competitive - 10%)
+  const odDiscount = Math.round(basicOD * 0.10);
+  const odAfterDiscount = basicOD - odDiscount;
+
   // NCB - auto by vehicle age (year-wise slab)
   // Age 0: 0%, Age 1: 20%, Age 2: 25%, Age 3: 35%, Age 4: 45%, Age 5+: 50%
   let ncbPercent = 0;
@@ -68,7 +72,6 @@ function calculatePremium(enrichedData: any) {
   else if (vehicleAge === 1) ncbPercent = 20;
 
   // NCB applied on OD AFTER OD discount
-  const odAfterDiscount = basicOD - odDiscount;
   const ncbDiscount = Math.round(odAfterDiscount * ncbPercent / 100);
 
   // TP rates 2026
@@ -76,10 +79,7 @@ function calculatePremium(enrichedData: any) {
   if (estimatedCC < 1000) tp = 2094;
   else if (estimatedCC > 1500) tp = 7897;
 
-  // OD discount (market competitive - 10%)
-  const odDiscount = Math.round(basicOD * 0.10);
-
-  const netOD = basicOD - odDiscount - ncbDiscount;
+  const netOD = odAfterDiscount - ncbDiscount;
   const subtotal = netOD + tp;
   const gst = Math.round(subtotal * 0.18);
   const securePremium = subtotal + gst;
