@@ -118,7 +118,7 @@ export function SharePdfDialog({
           .eq("id", cd.id)
           .single();
 
-        const protectedStages = ["follow_up", "negotiation", "payment_pending", "won", "policy_issued", "lost", "converted", "closed"];
+        const protectedStages = ["follow_up", "negotiation", "payment_pending", "won", "policy_issued", "lost", "converted", "closed", "quote_shared"];
         const currentStage = (current?.pipeline_stage || "").toLowerCase();
         const currentStatus = (current?.lead_status || "").toLowerCase();
 
@@ -127,6 +127,7 @@ export function SharePdfDialog({
             .from("insurance_clients")
             .update({
               pipeline_stage: "quote_shared",
+              lead_status: "quote_shared",
               journey_last_event: "quote_shared",
               journey_last_event_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
