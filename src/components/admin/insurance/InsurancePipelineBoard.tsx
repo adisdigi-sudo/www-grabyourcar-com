@@ -352,6 +352,8 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
           if (clientError) throw clientError;
           if (!client) throw new Error("Client not found for policy issuance");
 
+          let isRenewalPolicy = false;
+
           // If same vehicle_number exists, mark old active policies as "renewed"
           if (client.vehicle_number) {
             const normalizedVehicle = client.vehicle_number.trim().toUpperCase();
@@ -367,6 +369,15 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
               .map(c => c.id);
 
             if (sameClientIds.length > 0) {
+              const { data: existingVehiclePolicies, error: existingVehiclePoliciesErr } = await supabase
+                .from("insurance_policies")
+                .select("id")
+                .in("client_id", sameClientIds)
+                .limit(1);
+
+              if (existingVehiclePoliciesErr) throw existingVehiclePoliciesErr;
+              isRenewalPolicy = (existingVehiclePolicies?.length || 0) > 0;
+
               const { error: renewErr } = await supabase
                 .from("insurance_policies")
                 .update({ status: "renewed", renewal_status: "renewed" })
@@ -374,6 +385,17 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
                 .eq("status", "active");
               if (renewErr) throw renewErr;
             }
+          }
+
+          if (!isRenewalPolicy) {
+            const { data: existingClientPolicies, error: existingClientPoliciesErr } = await supabase
+              .from("insurance_policies")
+              .select("id")
+              .eq("client_id", clientId)
+              .limit(1);
+
+            if (existingClientPoliciesErr) throw existingClientPoliciesErr;
+            isRenewalPolicy = (existingClientPolicies?.length || 0) > 0;
           }
 
           // Calculate dates
@@ -402,7 +424,7 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
                 start_date: startDate,
                 expiry_date: expiryDate,
                 status: "active",
-                is_renewal: false,
+                is_renewal: isRenewalPolicy,
                 issued_date: today.toISOString().split("T")[0],
               });
               if (createErr) throw createErr;
@@ -417,7 +439,7 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
               start_date: startDate,
               expiry_date: expiryDate,
               status: "active",
-              is_renewal: false,
+              is_renewal: isRenewalPolicy,
               issued_date: today.toISOString().split("T")[0],
             });
             if (createErr) throw createErr;

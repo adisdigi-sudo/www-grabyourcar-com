@@ -176,6 +176,22 @@ export function InsuranceWorkspace() {
     return dedupeInsurancePolicies([...fallbackPolicies, ...allPolicies]);
   }, [allPolicies, dedupedClients]);
 
+  const performancePolicies = useMemo(() => {
+    const unique = new Map<string, PolicyRecord>();
+
+    allPolicies.forEach((policy) => {
+      unique.set(policy.id, policy);
+    });
+
+    policyBookPolicies
+      .filter((policy) => String(policy.id).startsWith("fallback-"))
+      .forEach((policy) => {
+        unique.set(policy.id, policy);
+      });
+
+    return Array.from(unique.values());
+  }, [allPolicies, policyBookPolicies]);
+
   const monthOptions = useMemo(() => {
     // Find earliest date from data
     let earliest = new Date();
@@ -924,7 +940,7 @@ export function InsuranceWorkspace() {
       {activeView === "overdue" && <div><InsuranceOverdueRenewals policies={overduePolicies as PolicyRecord[]} clients={dedupedClients} /></div>}
       {activeView === "bulk_tools" && <BulkRenewalQuoteGenerator onClose={() => setActiveView("pipeline")} />}
       {activeView === "renewal_campaign" && <InsuranceRenewalCampaign />}
-      {activeView === "performance" && <InsurancePerformance clients={dedupedClients} policies={policyBookPolicies as PolicyRecord[]} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} monthOptions={monthOptions} />}
+      {activeView === "performance" && <InsurancePerformance clients={dedupedClients} policies={performancePolicies as PolicyRecord[]} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} monthOptions={monthOptions} />}
 
       <Dialog open={showCalcDialog} onOpenChange={setShowCalcDialog}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
