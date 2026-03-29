@@ -118,11 +118,11 @@ export function SharePdfDialog({
           .eq("id", cd.id)
           .single();
 
-        const skipStages = ["policy_issued", "won", "converted"];
+        const protectedStages = ["follow_up", "negotiation", "payment_pending", "won", "policy_issued", "lost", "converted", "closed"];
         const currentStage = (current?.pipeline_stage || "").toLowerCase();
         const currentStatus = (current?.lead_status || "").toLowerCase();
 
-        if (!skipStages.includes(currentStage) && !skipStages.includes(currentStatus)) {
+        if (!protectedStages.includes(currentStage) && !protectedStages.includes(currentStatus)) {
           await supabase
             .from("insurance_clients")
             .update({
