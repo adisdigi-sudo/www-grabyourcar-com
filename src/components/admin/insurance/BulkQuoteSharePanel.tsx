@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { generateInsuranceQuotePdf } from "@/lib/generateInsuranceQuotePdf";
+import { generateBulkQuoteExcel } from "@/lib/generateBulkQuoteExcel";
 import { generateRenewalReminderPdf } from "@/lib/generateRenewalReminderPdf";
 import {
   Users, Download, RefreshCw, MessageCircle, Zap, Loader2,
@@ -301,14 +302,27 @@ export function BulkQuoteSharePanel({ leads, source, onDone }: BulkQuoteSharePan
 
         <CardContent className="p-5 space-y-4">
           {/* Pre-filled sample downloads */}
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-2">
+            <Button
+              variant="outline"
+              className="h-auto py-3 gap-2 flex-col border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+              onClick={async () => {
+                const target = selectedLeads.length > 0 ? selectedLeads : leads;
+                await generateBulkQuoteExcel(target);
+                toast.success(`📊 Excel template with ${target.length} records & auto-calc formulas downloaded!`);
+              }}
+            >
+              <FileSpreadsheet className="h-4 w-4" />
+              <span className="text-xs font-bold">⬇️ Excel Template ⚡</span>
+              <span className="text-[10px] text-muted-foreground">Auto-calc formulas • {selectedIds.size > 0 ? selectedIds.size : leads.length} records</span>
+            </Button>
             <Button
               variant="outline"
               className="h-auto py-3 gap-2 flex-col border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/40"
               onClick={downloadPrefilledQuoteCSV}
             >
               <FileSpreadsheet className="h-4 w-4" />
-              <span className="text-xs font-bold">⬇️ Quote Sample CSV</span>
+              <span className="text-xs font-bold">⬇️ Quote CSV</span>
               <span className="text-[10px] text-muted-foreground">Pre-filled with {selectedIds.size > 0 ? selectedIds.size : leads.length} records</span>
             </Button>
             <Button
@@ -317,7 +331,7 @@ export function BulkQuoteSharePanel({ leads, source, onDone }: BulkQuoteSharePan
               onClick={downloadPrefilledRenewalCSV}
             >
               <FileSpreadsheet className="h-4 w-4" />
-              <span className="text-xs font-bold">⬇️ Renewal Sample CSV</span>
+              <span className="text-xs font-bold">⬇️ Renewal CSV</span>
               <span className="text-[10px] text-muted-foreground">Pre-filled with {selectedIds.size > 0 ? selectedIds.size : leads.length} records</span>
             </Button>
           </div>
