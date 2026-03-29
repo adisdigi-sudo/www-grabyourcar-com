@@ -1152,7 +1152,16 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
 
                           setSelectedClient(data as Client);
                           queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
+                          queryClient.invalidateQueries({ queryKey: ["ins-policies-book"] });
                           toast.success("Lead updated");
+
+                          // If moved to Won/Policy Issued, prompt to upload policy document
+                          if (normalizedStage === "won" || normalizedStage === "policy_issued") {
+                            setTimeout(() => {
+                              setShowUploadPolicy(true);
+                              toast.info("📄 Please upload the policy document now", { duration: 5000 });
+                            }, 500);
+                          }
                         } catch (e: any) {
                           toast.error(e.message || "Failed to save");
                         } finally {
