@@ -1,111 +1,65 @@
 
 
-## Plan: Fix Insurance Pipeline Stage Exclusivity, Overdue Return Flow, and Add Bulk Overdue Actions
+# Bulk Quote Excel Template with Auto-Calculation Formulas
 
-### Problems Identified
+## Problem
+Current bulk quote system only offers plain CSV templates where users must manually calculate all premium values (NCB discount, Net OD, Total Premium, GST). No auto-calculation support exists.
 
-1. **Leads marked as "lost" or other stages still show in "New Lead" / "All Leads"**: The pipeline deduplication logic uses `updated_at` timestamps but doesn't strictly respect the current `pipeline_stage` value. It can show stale records.
+## Solution
+Build an Excel (.xlsx) template download with built-in formulas that auto-calculate NCB discount, Net OD, Net Premium, GST, and Total Premium. Users fill in client details + base values, and the Excel does the math. Then upload it back to generate and send quotes in bulk.
 
-2. **Overdue → Pipeline move doesn't work**: When moving from overdue back to pipeline, the lead's `policy_expiry_date` remains expired. The pipeline filter (line 544-551) explicitly excludes any lead with an expired `policy_expiry_date`, so the lead disappears from both views.
+## What Gets Built
 
-3. **Activity log errors (400)**: Overdue fallback records use fake IDs like `overdue-fallback-{uuid}` as `policy_id`. The `insurance_activity_log.policy_id` column has a foreign key to `insurance_policies`, so these fail with "invalid input syntax for type uuid".
+### 1. Excel Template Generator (new utility: `src/lib/generateBulkQuoteExcel.ts`)
+- Creates an `.xlsx` file using the `exceljs` library (lightweight, no security issues like `xlsx/SheetJS`)
+- **Columns**: Customer Name, Phone, Email, City, Vehicle Make, Vehicle Model, Vehicle Number, Vehicle Year, Fuel Type, Insurance Company, Policy Type, IDV, Basic OD, OD Discount %, NCB %, Third Party, Secure Premium, Addon Premium, Addons
+- **Formula columns** (auto-calculated):
+  - `NCB Discount` = `Basic OD × NCB%`
+  - `OD Discount Amount` = `Basic OD × OD Discount%`  
+  - `Net OD` = `MAX(0, Basic OD - OD Discount - NCB Discount)`
+  - `Net Premium` = `Net OD + Third Party + Secure Premium + Addon Premium`
+  - `GST (18%)` = `Net Premium × 0.18`
+  - `Total Premium` = `Net Premium + GST`
+- Pre-filled sample rows with formulas
+- Styled headers, column widths, data validation dropdowns for Fuel Type and Policy Type
 
-4. **No bulk actions in Overdue view**: Users cannot select multiple overdue items and act on them at once.
+### 2. Excel Upload Parser (update `BulkRenewalQuoteGenerator.tsx`)
+- Accept `.xlsx` files alongside `.csv`
+- Parse using a lightweight approach (read as CSV export or use `exceljs` in browser)
+- Map parsed rows to existing `BulkQuoteInsert` format
+- Auto-detect calculated vs raw columns
 
----
+### 3. Enhanced Sample Download Button
+- Replace "Sample CSV" with "Download Excel Template" in `BulkRenewalQuoteGenerator`
+- Keep CSV option as fallback
+- Pre-fill with selected leads' data when available (from `BulkQuoteSharePanel`)
 
-### Implementation Plan
+### 4. Bulk Send Flow (already exists, minor enhancement)
+- After upload, quotes appear in the table with calculated totals
+- Select all → Generate PDFs → Send via WhatsApp API (existing flow)
+- Add "Upload & Auto-Send" one-click option
 
-#### 1. Fix Pipeline Filtering — Strict Stage-Only Display
+## Technical Details
 
-**File: `InsuranceLeadPipeline.tsx`** (pipelineClients useMemo, ~line 524-581)
-
-- Remove the `isExpiredLead` filter that excludes leads based on `policy_expiry_date`. Instead, rely **solely** on the lead's `pipeline_stage` / `lead_status` to decide where it shows.
-- Each lead shows only in the stage matching its current `normalizeStage()` result. "All Leads" shows every non-won/policy_issued lead exactly once.
-- Lost leads only appear when viewing "Lost" stage or "All".
-- Deduplication remains by vehicle key, keeping the most recently updated record.
-
-```
-// Remove lines 544-551 (isExpiredLead check)
-// A lead's visibility is determined ONLY by its pipeline_stage
-```
-
-#### 2. Fix Overdue → Pipeline Move
-
-**File: `InsuranceOverdueRenewals.tsx`** (handleMove function, ~line 144-192)
-
-- When moving to pipeline: also set the associated policy status to `"lapsed"` so it no longer appears in overdue.
-- Look up the real policy ID for this client (from the policies prop) instead of using the potentially-fake overdue-fallback ID.
-- Clear overdue fields and set `pipeline_stage: "new_lead"`.
-
-```typescript
-// In handleMove, "pipeline" branch:
-// 1. Find real policy for this client
-const realPolicy = policies.find(p => p.client_id === targetPolicy.client_id && p.id === targetPolicy.id);
-const realPolicyId = realPolicy && !realPolicy.id.startsWith("overdue-fallback") ? realPolicy.id : null;
-
-// 2. If real policy exists, mark it lapsed
-if (realPolicyId) {
-  await supabase.from("insurance_policies").update({ status: "lapsed" }).eq("id", realPolicyId);
-}
-
-// 3. Update client
-await supabase.from("insurance_clients").update({
-  pipeline_stage: "new_lead",
-  lead_status: "new",
-  overdue_reason: null, overdue_custom_reason: null, overdue_marked_at: null,
-  retarget_status: "none", retargeting_enabled: false,
-}).eq("id", targetPolicy.client_id);
-
-// 4. Log activity with real policy_id (or null)
-await supabase.from("insurance_activity_log").insert({
-  client_id: targetPolicy.client_id,
-  policy_id: realPolicyId, // null instead of fake UUID
-  ...
-});
+### Excel Generation Approach
+Since we can't use `xlsx` (SheetJS) due to security policy, we'll use `exceljs` which is safe:
+```bash
+npm install exceljs
 ```
 
-#### 3. Fix All Activity Log Inserts — No Fake UUIDs
+### Formula Example (Row 2)
+```
+NCB_Discount (T2) = =M2*O2     (Basic OD × NCB%)
+OD_Discount_Amt (U2) = =M2*N2  (Basic OD × OD Discount%)
+Net_OD (V2) = =MAX(0, M2-U2-T2)
+Net_Premium (W2) = =V2+P2+Q2+R2
+GST (X2) = =ROUND(W2*0.18, 0)
+Total (Y2) = =W2+X2
+```
 
-**File: `InsuranceOverdueRenewals.tsx`**
-
-- In `handleMarkReason` and `handleMove`: check if `targetPolicy.id` starts with `"overdue-fallback"`. If so, pass `null` for `policy_id`.
-
-#### 4. Add Bulk Selection and Actions to Overdue View
-
-**File: `InsuranceOverdueRenewals.tsx`**
-
-Add:
-- A `Set<string>` state for selected policy IDs
-- A checkbox column in the table header (select all) and each row
-- A bulk action bar that appears when items are selected, with buttons:
-  - **Move to Pipeline** (bulk): sets all selected clients to `new_lead`, marks their policies as `lapsed`
-  - **Move to Retarget** (bulk): sets all selected clients to `lost` with `retarget_status: "scheduled"`
-  - **Remove from Overdue** (bulk): marks policies as `lapsed` without moving to pipeline
-  - **Mark Reason** (bulk): opens the reason dialog and applies the selected reason to all checked items
-- After each bulk action, invalidate queries and clear selection.
-
-#### 5. Fix Overdue List Population
-
-**File: `InsuranceWorkspace.tsx`** (overduePolicies useMemo, ~line 242-312)
-
-- In the fallback overdue generation, do NOT exclude leads that are in active pipeline stages. The overdue view should show any expired policy that hasn't been explicitly resolved (status not in renewed/cancelled/lapsed) and client not scheduled for retarget.
-- But DO exclude leads whose pipeline_stage is "lost" (they've been explicitly marked).
-
----
-
-### Technical Details
-
-| Change | File | Key Lines |
-|--------|------|-----------|
-| Remove expired-date pipeline filter | InsuranceLeadPipeline.tsx | 544-551 |
-| Fix overdue→pipeline by lapsing policy | InsuranceOverdueRenewals.tsx | 144-192 |
-| Fix fake UUID in activity_log | InsuranceOverdueRenewals.tsx | 124-131, 176-182 |
-| Add bulk checkbox + actions | InsuranceOverdueRenewals.tsx | New state + UI |
-| Fix overdue fallback generation | InsuranceWorkspace.tsx | 261-275 |
-
-### Files Modified
-- `src/components/admin/insurance/InsuranceLeadPipeline.tsx`
-- `src/components/admin/insurance/InsuranceOverdueRenewals.tsx`
-- `src/components/admin/insurance/InsuranceWorkspace.tsx`
+### Files to Create/Edit
+1. **Create** `src/lib/generateBulkQuoteExcel.ts` — Excel template generator with formulas
+2. **Edit** `src/components/admin/insurance/BulkRenewalQuoteGenerator.tsx` — Add Excel download + upload support
+3. **Edit** `src/components/admin/insurance/BulkQuoteSharePanel.tsx` — Add Excel pre-filled download for selected leads
+4. **Install** `exceljs` package
 
