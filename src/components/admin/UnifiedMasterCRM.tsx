@@ -307,6 +307,7 @@ function InsuranceVerticalWorkspace() {
       case "advisors": return <InsuranceAdvisorsManager />;
       case "automation": return <InsuranceAutomationPanel />;
       case "templates": return <InsuranceTemplatesManager />;
+      case "messaging": return <OmniMessagingWorkspace context="Car Insurance" showSettings />;
       case "extractor": return <InsuranceSmartExtractor />;
       case "crosssell": return <InsuranceCrossSellEngine />;
       case "analytics": return <InsuranceAnalyticsDashboard />;
