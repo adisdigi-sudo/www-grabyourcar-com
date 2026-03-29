@@ -24,6 +24,7 @@ import {
   endOfYear,
   format,
   formatDistanceToNow,
+  isValid,
   startOfDay,
   startOfMonth,
   startOfQuarter,
@@ -207,7 +208,8 @@ export function formatSource(source: string | null, createdAt: string): string {
   const label = normalizeLeadSourceLabel(source);
   if (label === "Unknown") return label;
   if (label === "Rollover") {
-    const date = format(new Date(createdAt), "dd MMM yyyy");
+    const date = formatDateValue(createdAt, "dd MMM yyyy", null);
+    if (!date) return label;
     return `Rollover • ${date}`;
   }
   return label;
@@ -218,9 +220,33 @@ const isLegacyClientId = (id: string) => id.startsWith("legacy-");
 const getSourceColor = (src: string | null) => SOURCE_COLORS[normalizeLeadSourceLabel(src)] || "bg-muted text-muted-foreground border-border";
 const ACTIVE_PIPELINE_VALUES = new Set(["new_lead", "smart_calling", "quote_shared", "follow_up"]);
 
+const parseDateValue = (value: string | null | undefined) => {
+  if (!value) return null;
+  const date = new Date(value);
+  return isValid(date) ? date : null;
+};
+
+const getSafeTimestamp = (...values: Array<string | null | undefined>) => {
+  for (const value of values) {
+    const date = parseDateValue(value);
+    if (date) return date.getTime();
+  }
+  return 0;
+};
+
+const formatDateValue = (value: string | null | undefined, pattern: string, fallback: string | null = "—") => {
+  const date = parseDateValue(value);
+  return date ? format(date, pattern) : fallback;
+};
+
+const formatRelativeDateValue = (value: string | null | undefined, fallback = "—") => {
+  const date = parseDateValue(value);
+  return date ? formatDistanceToNow(date, { addSuffix: true }) : fallback;
+};
+
 const getPipelineClientScore = (client: Client) => {
   const normalizedStage = normalizeStage(client.pipeline_stage, client.lead_status, client);
-  let score = new Date(client.updated_at || client.created_at).getTime() / 1e13;
+  let score = getSafeTimestamp(client.updated_at, client.created_at) / 1e13;
 
   if (ACTIVE_PIPELINE_VALUES.has(normalizedStage)) score += 200;
   if (normalizedStage === "quote_shared") score += 40;
@@ -263,7 +289,7 @@ const JourneyBreadcrumb = forwardRef<HTMLDivElement, { clientId: string }>(({ cl
             <span className="text-[9px] text-muted-foreground">
               {label}
               <span className="text-[8px] ml-0.5 opacity-60">
-                ({format(new Date(ev.created_at), "dd MMM")})
+                ({formatDateValue(ev.created_at, "dd MMM")})
               </span>
             </span>
           </span>
@@ -303,11 +329,9 @@ function WonPolicyDialog({
   useEffect(() => {
     if (!open || !client) return;
 
-    const startBase = client.policy_start_date
-      ? new Date(client.policy_start_date)
-      : client.booking_date
-        ? new Date(client.booking_date)
-        : new Date();
+    const startBase = parseDateValue(client.policy_start_date)
+      || parseDateValue(client.booking_date)
+      || new Date();
 
     setPolicyNumber(client.current_policy_number || "");
     setInsurer(client.current_insurer || client.quote_insurer || "");
@@ -587,8 +611,8 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
 
       // STRICT RULE: Always prefer the most recently updated record
       // This ensures that when a user moves a lead to a new stage, the latest update wins
-      const existingTime = new Date(existing.updated_at || existing.created_at).getTime();
-      const candidateTime = new Date(client.updated_at || client.created_at).getTime();
+      const existingTime = getSafeTimestamp(existing.updated_at, existing.created_at);
+      const candidateTime = getSafeTimestamp(client.updated_at, client.created_at);
 
       if (candidateTime > existingTime) {
         uniqueLeads.set(dedupeKey, client);
@@ -612,8 +636,8 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
         continue;
       }
 
-      const existingTime = new Date(existing.updated_at || existing.created_at).getTime();
-      const candidateTime = new Date(client.updated_at || client.created_at).getTime();
+      const existingTime = getSafeTimestamp(existing.updated_at, existing.created_at);
+      const candidateTime = getSafeTimestamp(client.updated_at, client.created_at);
 
       if (candidateTime > existingTime) {
         uniqueWonLeads.set(dedupeKey, client);
@@ -695,7 +719,8 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
             const effectiveDate = getWonEffectiveDate(client);
             if (!effectiveDate) return false;
 
-            const clientDate = new Date(effectiveDate);
+            const clientDate = parseDateValue(effectiveDate);
+            if (!clientDate) return false;
             return clientDate >= bounds.start && clientDate <= bounds.end;
           });
         }
@@ -709,7 +734,8 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
           const effectiveDate = getWonEffectiveDate(client);
           if (!effectiveDate) return false;
 
-          const clientDate = new Date(effectiveDate);
+          const clientDate = parseDateValue(effectiveDate);
+          if (!clientDate) return false;
           if (customFrom && clientDate < customFrom) return false;
           if (customTo && clientDate > customTo) return false;
           return true;
@@ -718,8 +744,8 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
     }
 
     return [...result].sort((a, b) => {
-      const aTime = new Date(a.updated_at || a.created_at).getTime();
-      const bTime = new Date(b.updated_at || b.created_at).getTime();
+      const aTime = getSafeTimestamp(a.updated_at, a.created_at);
+      const bTime = getSafeTimestamp(b.updated_at, b.created_at);
       return bTime - aTime;
     });
   }, [pipelineClients, wonClients, selectedStage, search, wonDatePreset, wonDateFrom, wonDateTo, getWonDateBounds, getWonEffectiveDate]);
@@ -1026,7 +1052,9 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                   const normStage = normalizeStage(client.pipeline_stage, client.lead_status, client);
                   const stage = ALL_STAGES.find(s => s.value === normStage) || PIPELINE_STAGES[0];
                   const phone = displayPhone(client.phone);
-                  const daysToExpiry = client.policy_expiry_date ? differenceInDays(new Date(client.policy_expiry_date), new Date()) : null;
+                  const expiryDate = parseDateValue(client.policy_expiry_date);
+                  const followUpDateValue = parseDateValue(client.follow_up_date);
+                  const daysToExpiry = expiryDate ? differenceInDays(expiryDate, new Date()) : null;
 
                   return (
                     <TableRow key={client.id} draggable onDragStart={() => handleDragStart(client)} onDragEnd={handleDragEnd}
@@ -1088,7 +1116,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                             </Badge>
                             {client.picked_up_at && (
                               <span className="text-[8px] text-muted-foreground">
-                                {formatDistanceToNow(new Date(client.picked_up_at), { addSuffix: true })}
+                                {formatRelativeDateValue(client.picked_up_at)}
                               </span>
                             )}
                           </div>
@@ -1127,7 +1155,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                       <TableCell>
                         <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                           <Clock className="h-3 w-3" />
-                          {formatDistanceToNow(new Date(client.created_at), { addSuffix: true })}
+                          {formatRelativeDateValue(client.created_at)}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -1138,14 +1166,14 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                             )}>
                               {daysToExpiry !== null ? (daysToExpiry < 0 ? `Exp ${Math.abs(daysToExpiry)}d` : `${daysToExpiry}d`) : "—"}
                             </span>
-                            <p className="text-[9px] text-muted-foreground">{format(new Date(client.policy_expiry_date), "dd MMM yy")}</p>
+                            <p className="text-[9px] text-muted-foreground">{formatDateValue(client.policy_expiry_date, "dd MMM yy")}</p>
                           </div>
                         ) : <span className="text-muted-foreground">—</span>}
                       </TableCell>
                       <TableCell className="text-[10px]">
-                        {client.follow_up_date ? (
-                          <span className={cn("font-medium", differenceInDays(new Date(client.follow_up_date), new Date()) < 0 ? "text-red-600" : "text-orange-600")}>
-                            {format(new Date(client.follow_up_date), "dd MMM")}
+                        {followUpDateValue ? (
+                          <span className={cn("font-medium", differenceInDays(followUpDateValue, new Date()) < 0 ? "text-red-600" : "text-orange-600")}>
+                            {format(followUpDateValue, "dd MMM")}
                             {client.follow_up_time ? ` ${client.follow_up_time}` : ""}
                           </span>
                         ) : "—"}
