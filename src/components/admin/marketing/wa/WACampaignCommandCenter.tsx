@@ -104,8 +104,8 @@ function CampaignBuilder({ onCampaignCreated }: { onCampaignCreated: () => void 
     queryFn: async () => {
       const { data } = await supabase
         .from("whatsapp_templates")
-        .select("id, name, content, status")
-        .eq("status", "approved")
+        .select("id, name, content")
+        .eq("is_active", true)
         .order("name");
       return data || [];
     },
