@@ -92,6 +92,10 @@ export function buildInsuranceNotifications(clients: any[]): NotificationItem[] 
     // Skip resolved clients entirely — no notifications for them
     if (RESOLVED_STAGES.includes(stage) || RESOLVED_STATUSES.includes(status)) return;
 
+    // Skip clients moved out of overdue (moved to pipeline, removed, or retargeted)
+    if (["removed", "moved_to_pipeline"].includes(c.overdue_reason || "")) return;
+    if (c.retarget_status === "scheduled") return;
+
     // Renewal coming
     if (c.policy_expiry_date) {
       const days = differenceInDays(new Date(c.policy_expiry_date), now);
