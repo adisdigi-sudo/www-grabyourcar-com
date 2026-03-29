@@ -128,7 +128,7 @@ function CampaignBuilder({ onCampaignCreated }: { onCampaignCreated: () => void 
     setForm((prev) => ({
       ...prev,
       template_id: templateId,
-      message_content: tpl?.body_text || prev.message_content,
+      message_content: tpl?.content || prev.message_content,
     }));
   };
 
