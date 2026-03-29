@@ -198,6 +198,23 @@ async function sendMessage(
   return { success: false, error: "All delivery attempts failed" };
 }
 
+function shouldRetry(errorMsg: string) {
+  const normalized = errorMsg.toLowerCase();
+
+  if (
+    normalized.includes("invalid api key") ||
+    normalized.includes("error validating access token") ||
+    normalized.includes("session is invalid") ||
+    normalized.includes("template name does not exist") ||
+    normalized.includes("image url can't be null") ||
+    normalized.includes("missing configuration")
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -232,10 +249,14 @@ serve(async (req) => {
     const optOutSet = new Set((optOuts || []).map((o: { phone: string }) => o.phone));
 
     // Fetch queued messages
+    const dueIso = new Date().toISOString();
+
     let query = supabase
       .from("wa_message_queue")
       .select("*")
       .in("status", ["queued"])
+      .or(`scheduled_at.is.null,scheduled_at.lte.${dueIso}`)
+      .or(`next_retry_at.is.null,next_retry_at.lte.${dueIso}`)
       .order("priority", { ascending: true })
       .order("created_at", { ascending: true })
       .limit(batchSize);
@@ -340,7 +361,9 @@ serve(async (req) => {
 async function handleFailure(supabase: ReturnType<typeof createClient>, msg: { id: string; attempts?: number; max_attempts?: number }, errorMsg: string) {
   const nextAttempt = (msg.attempts || 0) + 1;
   const maxAttempts = msg.max_attempts || 3;
-  if (nextAttempt < maxAttempts) {
+  const retryable = shouldRetry(errorMsg);
+
+  if (retryable && nextAttempt < maxAttempts) {
     const delayMs = Math.pow(3, nextAttempt) * 60000;
     await supabase.from("wa_message_queue").update({
       status: "queued", attempts: nextAttempt,
@@ -351,7 +374,7 @@ async function handleFailure(supabase: ReturnType<typeof createClient>, msg: { i
     await supabase.from("wa_message_queue").update({
       status: "failed", attempts: nextAttempt,
       failed_at: new Date().toISOString(),
-      error_message: `Max retries exceeded. Last: ${errorMsg}`,
+      error_message: retryable ? `Max retries exceeded. Last: ${errorMsg}` : errorMsg,
       updated_at: new Date().toISOString(),
     }).eq("id", msg.id);
   }

@@ -158,14 +158,18 @@ serve(async (req) => {
 
     // 6. Trigger queue processor
     const processorUrl = `${SUPABASE_URL}/functions/v1/wa-queue-processor`;
-    fetch(processorUrl, {
+    const processorResponse = await fetch(processorUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
       },
       body: JSON.stringify({ campaignId, batchSize: campaign.batch_size || 50 }),
-    }).catch(err => console.error("Failed to trigger processor:", err));
+    });
+
+    if (!processorResponse.ok) {
+      console.error("Failed to trigger processor:", await processorResponse.text());
+    }
 
     return new Response(JSON.stringify({
       success: true,
