@@ -101,10 +101,10 @@ export const getClientEffectiveDate = (client: Pick<Client, "policy_start_date" 
 );
 
 export const getPolicyEffectiveDate = (policy: Pick<PolicyRecord, "start_date" | "booking_date" | "issued_date" | "created_at" | "insurance_clients">) => (
-  policy.start_date ||
   policy.booking_date ||
   policy.issued_date ||
   policy.insurance_clients?.booking_date ||
+  policy.start_date ||
   policy.created_at
 );
 
