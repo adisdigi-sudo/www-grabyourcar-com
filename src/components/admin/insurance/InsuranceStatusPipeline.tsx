@@ -93,6 +93,7 @@ export function InsuranceStatusPipeline() {
   const [renewalPreviewMsg, setRenewalPreviewMsg] = useState("");
   const [sendingRenewal, setSendingRenewal] = useState(false);
   const [showBulkPanel, setShowBulkPanel] = useState(false);
+  const [showQuoteModal, setShowQuoteModal] = useState(false);
 
   useEffect(() => { fetchClients(); }, []);
 
