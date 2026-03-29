@@ -470,8 +470,8 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs font-semibold text-muted-foreground">OD Discount (%)</Label>
-                <Input type="number" min={0} max={100} value={odDiscountPct} onChange={e => setOdDiscountPct(e.target.value)} className="h-8 text-xs mt-1" placeholder="0" disabled={ncbLocked} />
-                <p className="text-[9px] text-muted-foreground mt-0.5">{ncbLocked ? "OD discount edit disabled due to claim/NCB ineligibility." : "Deal-specific discount on OD"}</p>
+                <Input type="number" min={0} max={100} value={odDiscountPct} onChange={e => setOdDiscountPct(e.target.value)} className="h-8 text-xs mt-1" placeholder="0" />
+                <p className="text-[9px] text-muted-foreground mt-0.5">Deal-specific discount on OD</p>
               </div>
               <div>
                 <Label className="text-xs font-semibold text-muted-foreground">Secure Premium (₹)</Label>

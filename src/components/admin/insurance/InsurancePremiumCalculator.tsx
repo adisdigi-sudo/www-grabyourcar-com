@@ -745,7 +745,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
 
             <div>
               <Label className="text-xs">OD Discount (%)</Label>
-              <Input type="number" placeholder="0" min={0} max={100} value={discount} onChange={e => setDiscount(e.target.value)} className="h-9 text-sm mt-1" disabled={ncbLocked} />
+              <Input type="number" placeholder="0" min={0} max={100} value={discount} onChange={e => setDiscount(e.target.value)} className="h-9 text-sm mt-1" />
             </div>
 
             <div>
