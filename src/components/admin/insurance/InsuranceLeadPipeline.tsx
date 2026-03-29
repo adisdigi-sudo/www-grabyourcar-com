@@ -1,4 +1,4 @@
-import { forwardRef, useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,6 +15,16 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { getClientIdentityKey, normalizePolicyNumber } from "@/lib/insuranceIdentity";
+import {
+  CALL_STATUSES,
+  getInsuranceStageDefinition,
+  INSURANCE_ALL_STAGES,
+  INSURANCE_VISIBLE_PIPELINE_STAGES,
+  LEAD_SOURCES,
+  LOST_REASONS,
+  normalizeInsuranceStage,
+  type InsuranceStage,
+} from "@/lib/insuranceStages";
 import {
   differenceInDays,
   endOfDay,
@@ -44,7 +54,6 @@ import InsuranceQuoteModal from "./InsuranceQuoteModal";
 import { InsurancePolicyDocumentUploader } from "./InsurancePolicyDocumentUploader";
 import { useQuery } from "@tanstack/react-query";
 
-// ── Types ──
 export type Client = {
   id: string;
   customer_name: string;
@@ -96,77 +105,41 @@ export type Client = {
   created_at: string;
 };
 
-export const PIPELINE_STAGES = [
-  { value: "new_lead", label: "New Lead", icon: UserPlus, color: "from-blue-500 to-blue-600", bg: "bg-blue-50 dark:bg-blue-950/30", border: "border-blue-200 dark:border-blue-800", text: "text-blue-700 dark:text-blue-300", dot: "bg-blue-500" },
-  { value: "smart_calling", label: "Calling", icon: PhoneCall, color: "from-amber-500 to-amber-600", bg: "bg-amber-50 dark:bg-amber-950/30", border: "border-amber-200 dark:border-amber-800", text: "text-amber-700 dark:text-amber-300", dot: "bg-amber-500" },
-  { value: "quote_shared", label: "Quote Shared", icon: Send, color: "from-cyan-500 to-cyan-600", bg: "bg-cyan-50 dark:bg-cyan-950/30", border: "border-cyan-200 dark:border-cyan-800", text: "text-cyan-700 dark:text-cyan-300", dot: "bg-cyan-500" },
-  { value: "follow_up", label: "Follow-Up", icon: Clock, color: "from-orange-500 to-orange-600", bg: "bg-orange-50 dark:bg-orange-950/30", border: "border-orange-200 dark:border-orange-800", text: "text-orange-700 dark:text-orange-300", dot: "bg-orange-500" },
-  { value: "won", label: "Won", icon: CheckCircle2, color: "from-emerald-500 to-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-950/30", border: "border-emerald-200 dark:border-emerald-800", text: "text-emerald-700 dark:text-emerald-300", dot: "bg-emerald-500" },
-  { value: "lost", label: "Lost", icon: XCircle, color: "from-slate-400 to-slate-500", bg: "bg-slate-50 dark:bg-slate-900/30", border: "border-slate-200 dark:border-slate-700", text: "text-slate-500 dark:text-slate-400", dot: "bg-slate-400" },
-];
-
-// Hidden stage - won leads that have policy issued go to Policy Book, not shown in pipeline
-const POLICY_ISSUED_STAGE = { value: "policy_issued", label: "Policy Issued", icon: Shield, color: "from-emerald-600 to-emerald-800", bg: "bg-emerald-50 dark:bg-emerald-950/30", border: "border-emerald-200 dark:border-emerald-800", text: "text-emerald-700 dark:text-emerald-300", dot: "bg-emerald-600" };
-
-// All stages including hidden ones for lookups
-const ALL_STAGES = [...PIPELINE_STAGES, POLICY_ISSUED_STAGE];
-
-const STAGE_MAP: Record<string, string> = {
-  new_lead: "new_lead",
-  new: "new_lead",
-  contact_attempted: "smart_calling",
-  requirement_collected: "smart_calling",
-  smart_calling: "smart_calling",
-  contacted: "smart_calling",
-  in_process: "smart_calling",
-  quote_shared: "quote_shared",
-  follow_up: "follow_up",
-  interested: "follow_up",
-  hot_prospect: "follow_up",
-  won: "won",
-  converted: "won",
-  policy_issued: "policy_issued",
-  lost: "lost",
-  not_interested: "lost",
+type StagePresentation = {
+  icon: typeof UserPlus;
+  color: string;
+  bg: string;
+  border: string;
+  text: string;
+  dot: string;
 };
 
-export const normalizeStage = (stage: string | null, leadStatus?: string | null, _client?: Pick<Client, "current_policy_number"> | null): string => {
-  const normalizedStage = stage ? STAGE_MAP[stage] : undefined;
-  const normalizedLeadStatus = leadStatus ? STAGE_MAP[leadStatus] : undefined;
-
-  // Terminal loss should always win.
-  if (normalizedStage === "lost" || normalizedLeadStatus === "lost") {
-    return "lost";
-  }
-
-  // Explicit issued stage should always win.
-  if (normalizedStage === "policy_issued") return "policy_issued";
-
-  // Explicit won/converted status is terminal and should beat active stale stages.
-  if (normalizedLeadStatus === "policy_issued") return "policy_issued";
-  if (normalizedLeadStatus === "won") return "won";
-
-  // PRIORITY 1: Always respect explicit pipeline_stage if it's an active pipeline stage
-  // This ensures manual moves (follow_up, quote_shared, new_lead, smart_calling) are never overridden
-  const activePipelineStages = ["new_lead", "smart_calling", "quote_shared", "follow_up"];
-  if (normalizedStage && activePipelineStages.includes(normalizedStage)) {
-    return normalizedStage;
-  }
-
-  // PRIORITY 2: Remaining terminal stages from pipeline_stage
-  if (normalizedStage === "won") return "won";
-
-  // PRIORITY 3: If no pipeline_stage match, use lead_status
-  if (normalizedLeadStatus && activePipelineStages.includes(normalizedLeadStatus)) {
-    return normalizedLeadStatus;
-  }
-
-  return normalizedStage || normalizedLeadStatus || "new_lead";
+const STAGE_PRESENTATION: Record<InsuranceStage, StagePresentation> = {
+  new_lead: { icon: UserPlus, color: "from-blue-500 to-blue-600", bg: "bg-blue-50 dark:bg-blue-950/30", border: "border-blue-200 dark:border-blue-800", text: "text-blue-700 dark:text-blue-300", dot: "bg-blue-500" },
+  smart_calling: { icon: PhoneCall, color: "from-amber-500 to-amber-600", bg: "bg-amber-50 dark:bg-amber-950/30", border: "border-amber-200 dark:border-amber-800", text: "text-amber-700 dark:text-amber-300", dot: "bg-amber-500" },
+  quote_shared: { icon: Send, color: "from-cyan-500 to-cyan-600", bg: "bg-cyan-50 dark:bg-cyan-950/30", border: "border-cyan-200 dark:border-cyan-800", text: "text-cyan-700 dark:text-cyan-300", dot: "bg-cyan-500" },
+  follow_up: { icon: Clock, color: "from-orange-500 to-orange-600", bg: "bg-orange-50 dark:bg-orange-950/30", border: "border-orange-200 dark:border-orange-800", text: "text-orange-700 dark:text-orange-300", dot: "bg-orange-500" },
+  won: { icon: CheckCircle2, color: "from-emerald-500 to-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-950/30", border: "border-emerald-200 dark:border-emerald-800", text: "text-emerald-700 dark:text-emerald-300", dot: "bg-emerald-500" },
+  policy_issued: { icon: Shield, color: "from-emerald-600 to-emerald-800", bg: "bg-emerald-50 dark:bg-emerald-950/30", border: "border-emerald-200 dark:border-emerald-800", text: "text-emerald-700 dark:text-emerald-300", dot: "bg-emerald-600" },
+  lost: { icon: XCircle, color: "from-slate-400 to-slate-500", bg: "bg-slate-50 dark:bg-slate-900/30", border: "border-slate-200 dark:border-slate-700", text: "text-slate-500 dark:text-slate-400", dot: "bg-slate-400" },
 };
 
-const CALL_STATUSES = ["Interested", "Not Interested", "Call Back", "No Answer", "Wrong Number"];
-const LOST_REASONS = ["Too expensive", "Existing agent", "No response", "Not renewing", "Competitor offer", "Other"];
-export const LEAD_SOURCES = ["Meta Lead", "Google Lead", "Referral", "Walk-in Lead", "WhatsApp Lead", "Website Lead", "Manual", "Rollover"];
+const buildStageViewModel = (value: InsuranceStage) => ({
+  value,
+  label: getInsuranceStageDefinition(value).label,
+  ...STAGE_PRESENTATION[value],
+});
+
+export const PIPELINE_STAGES = INSURANCE_VISIBLE_PIPELINE_STAGES.map(buildStageViewModel);
+const ALL_STAGES = INSURANCE_ALL_STAGES.map(buildStageViewModel);
+
+export const normalizeStage = (
+  stage: string | null,
+  leadStatus?: string | null,
+  _client?: Pick<Client, "current_policy_number"> | null,
+) => normalizeInsuranceStage(stage, leadStatus);
+
+export { LEAD_SOURCES };
 
 const normalizeLeadSourceLabel = (source: string | null): string => {
   if (!source) return "Unknown";
@@ -218,7 +191,7 @@ export function formatSource(source: string | null, createdAt: string): string {
 const displayPhone = (phone: string | null) => (!phone || phone.startsWith("IB_")) ? null : phone;
 const isLegacyClientId = (id: string) => id.startsWith("legacy-");
 const getSourceColor = (src: string | null) => SOURCE_COLORS[normalizeLeadSourceLabel(src)] || "bg-muted text-muted-foreground border-border";
-const ACTIVE_PIPELINE_VALUES = new Set(["new_lead", "smart_calling", "quote_shared", "follow_up"]);
+const ACTIVE_PIPELINE_VALUES = new Set<InsuranceStage>(["new_lead", "smart_calling", "quote_shared", "follow_up"]);
 
 const parseDateValue = (value: string | null | undefined) => {
   if (!value) return null;
@@ -261,7 +234,7 @@ const getPipelineClientScore = (client: Client) => {
 };
 
 // ── Journey Breadcrumb Component ──
-const JourneyBreadcrumb = forwardRef<HTMLDivElement, { clientId: string }>(({ clientId }, ref) => {
+const JourneyBreadcrumb = ({ clientId }: { clientId: string }) => {
   const { data: events = [] } = useQuery({
     queryKey: ["ins-journey", clientId],
     queryFn: async () => {
@@ -280,7 +253,7 @@ const JourneyBreadcrumb = forwardRef<HTMLDivElement, { clientId: string }>(({ cl
   if (events.length === 0) return null;
 
   return (
-    <div ref={ref} className="flex items-center gap-1 flex-wrap">
+    <div className="flex items-center gap-1 flex-wrap">
       {events.map((ev, i) => {
         const label = (ev.title || "").replace("Pipeline → ", "");
         return (
@@ -297,9 +270,7 @@ const JourneyBreadcrumb = forwardRef<HTMLDivElement, { clientId: string }>(({ cl
       })}
     </div>
   );
-});
-
-JourneyBreadcrumb.displayName = "JourneyBreadcrumb";
+};
 
 // ── Won Policy Dialog ──
 function WonPolicyDialog({ 
@@ -1087,9 +1058,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                                     const SIcon = s.icon;
                                     return (
                                       <SelectItem key={s.value} value={s.value} className="text-xs">
-                                        <span className="flex items-center gap-1.5">
-                                          <SIcon className="h-3 w-3" /> {s.label}
-                                        </span>
+                                        {s.label}
                                       </SelectItem>
                                     );
                                   })}

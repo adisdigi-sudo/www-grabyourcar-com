@@ -8,11 +8,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { SmartDatePicker } from "@/components/ui/smart-date-picker";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { normalizeInsuranceStage as normalizeStage } from "@/lib/insuranceStages";
 import {
   TrendingUp, Target, Award, IndianRupee, Users, BarChart3,
   CheckCircle2, XCircle, Shield, Calendar, CalendarIcon, Filter
 } from "lucide-react";
-import { normalizeStage, type Client } from "./InsuranceLeadPipeline";
+import type { Client } from "./InsuranceLeadPipeline";
 import type { PolicyRecord } from "./InsurancePolicyBook";
 import { getClientEffectiveDate, getPolicyEffectiveDate, dedupeInsuranceClients } from "@/lib/insuranceIdentity";
 
