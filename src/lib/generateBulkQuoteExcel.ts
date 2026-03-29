@@ -100,17 +100,25 @@ export async function generateBulkQuoteExcel(prefilledLeads?: PrefilledLead[]) {
   // Add formulas for calculated columns (rows 2 to dataRows+1)
   for (let r = 2; r <= dataRows + 1; r++) {
     // T (col 20): IDV Auto-Calculator
-    // Depreciation: Year 0 (new car) = 5%, then +10% every year
-    // Year 0: 5%, Year 1: 15%, Year 2: 25%, Year 3: 35%...
-    // Cap: minimum IDV = 10% of ex-showroom (max 90% depreciation)
-    // Formula: IDV = Ex-Showroom × MAX(0.10, 1 - (0.05 + age × 0.10))
     const idvFormula = `IF(OR(L${r}="",H${r}=""),"",ROUND(L${r}*MAX(0.1,1-(0.05+(${currentYear}-H${r})*0.1)),0))`;
     ws.getCell(r, 20).value = { formula: idvFormula } as any;
 
-    // U (col 21): NCB Discount = Basic_OD(M) * NCB%(O)
-    ws.getCell(r, 21).value = { formula: `IF(M${r}="","",M${r}*O${r})` } as any;
+    // NCB% Auto-calculation from Vehicle Year (Column O if empty):
+    // Age 0→0%, Age 1→20%, Age 2→25%, Age 3→35%, Age 4→45%, Age 5+→50%
+    // Only auto-fill if NCB% (O) is empty and Vehicle Year (H) is filled
+    // We add an auto-NCB formula in a helper approach:
+    // The NCB% column (O) stays as user input, but we compute effective NCB in formula
+
+    // Auto NCB% based on vehicle age (used if O column is empty)
+    // IFS-style: IF age<=0→0, age=1→0.20, age=2→0.25, age=3→0.35, age=4→0.45, else→0.50
+    const autoNcbFormula = `IF(H${r}="",0,IF((${currentYear}-H${r})<=0,0,IF((${currentYear}-H${r})=1,0.2,IF((${currentYear}-H${r})=2,0.25,IF((${currentYear}-H${r})=3,0.35,IF((${currentYear}-H${r})=4,0.45,0.5))))))`;
+    // Effective NCB%: use user-entered O if filled, otherwise auto-calculate
+    const effectiveNcb = `IF(O${r}<>"",O${r},${autoNcbFormula})`;
+
     // V (col 22): OD Discount Amt = Basic_OD(M) * OD_Discount%(N)
     ws.getCell(r, 22).value = { formula: `IF(M${r}="","",M${r}*N${r})` } as any;
+    // U (col 21): NCB Discount = (Basic_OD - OD_Discount_Amt) * NCB%  → applied AFTER OD discount
+    ws.getCell(r, 21).value = { formula: `IF(M${r}="","",MAX(0,(M${r}-V${r}))*(${effectiveNcb}))` } as any;
     // W (col 23): Net OD = MAX(0, Basic_OD - OD_Disc_Amt - NCB_Disc)
     ws.getCell(r, 23).value = { formula: `IF(M${r}="","",MAX(0,M${r}-V${r}-U${r}))` } as any;
     // X (col 24): Net Premium = Net_OD + TP + Secure + Addon
