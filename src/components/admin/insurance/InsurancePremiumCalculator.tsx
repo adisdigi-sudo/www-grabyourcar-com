@@ -38,15 +38,25 @@ function getTPPremium(cc: number): number {
   return 7897;
 }
 
-// ── NCB slabs ──
+// ── NCB slabs (year-wise) ──
 const NCB_OPTIONS = [
   { label: "0% — New Car / 1st Year", value: 0 },
-  { label: "20% — 2nd Year", value: 20 },
-  { label: "25% — 3rd Year", value: 25 },
-  { label: "35% — 4th Year", value: 35 },
-  { label: "45% — 5th Year", value: 45 },
-  { label: "50% — 6th Year+", value: 50 },
+  { label: "20% — 2nd Year (1 yr old)", value: 20 },
+  { label: "25% — 3rd Year (2 yrs old)", value: 25 },
+  { label: "35% — 4th Year (3 yrs old)", value: 35 },
+  { label: "45% — 5th Year (4 yrs old)", value: 45 },
+  { label: "50% — 6th Year+ (5+ yrs old)", value: 50 },
 ];
+
+// Auto-determine NCB% from vehicle age
+function getAutoNcb(vehicleAge: number): number {
+  if (vehicleAge <= 0) return 0;
+  if (vehicleAge === 1) return 20;
+  if (vehicleAge === 2) return 25;
+  if (vehicleAge === 3) return 35;
+  if (vehicleAge === 4) return 45;
+  return 50; // 5+ years
+}
 
 const GST_RATE = 18;
 
@@ -817,7 +827,23 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
             </div>
 
             <div>
-              <Label className="text-xs">No Claim Bonus (NCB)</Label>
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">No Claim Bonus (NCB)</Label>
+                {!ncbLocked && vehicleYear && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-5 text-[10px] px-1.5 text-primary hover:bg-primary/10"
+                    onClick={() => {
+                      const age = new Date().getFullYear() - (parseInt(vehicleYear) || new Date().getFullYear());
+                      setNcb(getAutoNcb(age));
+                    }}
+                  >
+                    Auto ({(() => { const age = new Date().getFullYear() - (parseInt(vehicleYear) || new Date().getFullYear()); return `${getAutoNcb(age)}%`; })()})
+                  </Button>
+                )}
+              </div>
               <Select value={String(ncbLocked ? 0 : ncb)} onValueChange={v => setNcb(Number(v))} disabled={ncbLocked}>
                 <SelectTrigger className="h-9 text-sm mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -829,7 +855,8 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
               <div className="flex items-start gap-1.5 mt-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
                 <Info className="h-3 w-3 text-amber-600 mt-0.5 shrink-0" />
                 <p className="text-[10px] text-amber-700 dark:text-amber-400 leading-relaxed">
-                  NCB is only eligible if no claim was made during the previous policy year. If claim is taken or insurance expired over 90 days, NCB becomes 0 and editing is disabled.
+                  NCB is auto-suggested by vehicle year. Year 0: 0%, Year 1: 20%, Year 2: 25%, Year 3: 35%, Year 4: 45%, Year 5+: 50%. 
+                  NCB discount is applied on OD after OD discount. If claim taken or expired &gt;90 days, NCB = 0%.
                 </p>
               </div>
             </div>
