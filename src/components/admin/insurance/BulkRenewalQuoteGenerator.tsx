@@ -369,7 +369,7 @@ export function BulkRenewalQuoteGenerator({ onClose }: { onClose: () => void }) 
     setBulkAction(true);
     for (const q of selected) {
       try {
-        generateInsuranceQuotePdf(toQuoteData(q));
+        generateInsuranceQuotePdf(toQuoteData(q), { skipDownload: true });
         await updateQuote.mutateAsync({ id: q.id, pdf_generated: true, pdf_generated_at: new Date().toISOString() } as any);
       } catch (e) { console.error(e); }
       await new Promise(r => setTimeout(r, 400));
