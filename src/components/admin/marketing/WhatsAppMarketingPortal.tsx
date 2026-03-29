@@ -4,7 +4,7 @@ import {
   Rocket, Send, MessageSquare, Target, Zap, BarChart3, 
   Users, Shield, Settings, ClipboardList, Brain, Eye, Activity
 } from "lucide-react";
-import { WACampaignDashboard } from "./wa/WACampaignDashboard";
+import { WACampaignCommandCenter } from "./wa/WACampaignCommandCenter";
 import { WAConversationInbox } from "./wa/WAConversationInbox";
 import { WAAutomationRules } from "./wa/WAAutomationRules";
 import { WAAnalyticsDashboard } from "./wa/WAAnalyticsDashboard";
