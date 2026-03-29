@@ -11,7 +11,7 @@ import {
   Phone, FileText, RefreshCw, Loader2, UserCheck, ShieldCheck, ListChecks,
   DollarSign, TrendingUp, FolderOpen, Briefcase, FileSpreadsheet, Zap,
   MessageSquare, GitBranch, Settings, Search, Globe, Package, HelpCircle,
-  ArrowRight, CheckCircle2, Clock, BarChart3, Calendar, Wrench
+  ArrowRight, CheckCircle2, Clock, BarChart3, Calendar, Wrench, Send
 } from "lucide-react";
 
 // Insurance sub-components
