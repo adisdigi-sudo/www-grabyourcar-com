@@ -74,6 +74,7 @@ interface Props {
 export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
   const queryClient = useQueryClient();
   const [idv, setIdv] = useState<string>("");
+  const [exShowroomPrice, setExShowroomPrice] = useState<string>("");
   const [cc, setCc] = useState<string>("");
   const [city, setCity] = useState<string>("Delhi NCR");
   const [ncb, setNcb] = useState<number>(0);
