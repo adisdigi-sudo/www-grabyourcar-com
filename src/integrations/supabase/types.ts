@@ -2728,6 +2728,36 @@ export type Database = {
         }
         Relationships: []
       }
+      channel_providers: {
+        Row: {
+          channel: string
+          config_json: Json | null
+          created_at: string
+          id: string
+          is_active: boolean
+          provider_name: string
+          updated_at: string
+        }
+        Insert: {
+          channel: string
+          config_json?: Json | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          provider_name: string
+          updated_at?: string
+        }
+        Update: {
+          channel?: string
+          config_json?: Json | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          provider_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       chart_of_accounts: {
         Row: {
           account_code: string
@@ -14438,6 +14468,7 @@ export type Database = {
       wa_message_logs: {
         Row: {
           campaign_id: string | null
+          channel: string
           created_at: string
           customer_name: string | null
           delivered_at: string | null
@@ -14462,6 +14493,7 @@ export type Database = {
         }
         Insert: {
           campaign_id?: string | null
+          channel?: string
           created_at?: string
           customer_name?: string | null
           delivered_at?: string | null
@@ -14486,6 +14518,7 @@ export type Database = {
         }
         Update: {
           campaign_id?: string | null
+          channel?: string
           created_at?: string
           customer_name?: string | null
           delivered_at?: string | null
