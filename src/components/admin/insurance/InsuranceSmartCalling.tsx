@@ -706,7 +706,7 @@ export function InsuranceSmartCalling() {
                           basicOD: 8000, odDiscount: 1500, ncbDiscount: Math.round((client.ncb_percentage || 0) * 80),
                           thirdParty: 6521, securePremium: 500, addonPremium: 3500,
                           addons: ["Zero Depreciation", "Engine Protection", "Roadside Assistance (RSA)"],
-                        });
+                        }, { skipDownload: true });
                         count++;
                         await new Promise(r => setTimeout(r, 300));
                       } catch (e) { console.error(`Failed PDF for ${client.customer_name}:`, e); }
