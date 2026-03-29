@@ -2,12 +2,13 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, CheckCircle2, Calculator, LayoutDashboard, Layers3 } from "lucide-react";
+import { Building2, CheckCircle2, Calculator, LayoutDashboard, Layers3, Send } from "lucide-react";
 import {
   CorporatePricingTiers,
   FleetRequirementBuilder,
   LeaseVsBuyCalculator,
 } from "@/components/corporate";
+import { OmniMessagingWorkspace } from "../shared/OmniMessagingWorkspace";
 
 export function FleetVerticalWorkspace() {
   const [tab, setTab] = useState("planner");
@@ -44,6 +45,9 @@ export function FleetVerticalWorkspace() {
           <TabsTrigger value="tiers" className="gap-1.5">
             <Layers3 className="h-4 w-4" /> Pricing Tiers
           </TabsTrigger>
+          <TabsTrigger value="messaging" className="gap-1.5">
+            <Send className="h-4 w-4" /> Messaging
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="planner">
@@ -58,6 +62,10 @@ export function FleetVerticalWorkspace() {
           <div className="rounded-xl border border-border bg-card">
             <CorporatePricingTiers />
           </div>
+        </TabsContent>
+
+        <TabsContent value="messaging">
+          <OmniMessagingWorkspace context="Fleet Business" />
         </TabsContent>
       </Tabs>
     </div>
