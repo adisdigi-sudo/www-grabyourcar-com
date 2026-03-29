@@ -123,10 +123,14 @@ export const VerticalProvider = ({ children }: { children: ReactNode }) => {
         .select('*')
         .eq('user_id', user.id)
         .maybeSingle();
-      if (error) throw error;
+      if (error) {
+        console.warn("[VerticalProvider] Failed to fetch team member", error);
+        return null;
+      }
       return data as TeamMember | null;
     },
     enabled: !!user?.id,
+    retry: 1,
   });
 
   // Check if user is super_admin/admin (they get all verticals)
