@@ -576,6 +576,31 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
     return Array.from(uniqueLeads.values());
   }, [clients]);
 
+  const wonClients = useMemo(() => {
+    const uniqueWonLeads = new Map<string, Client>();
+
+    for (const client of clients) {
+      const stage = normalizeStage(client.pipeline_stage, client.lead_status, client);
+      if (stage !== "won" && stage !== "policy_issued") continue;
+
+      const dedupeKey = getClientIdentityKey(client);
+      const existing = uniqueWonLeads.get(dedupeKey);
+      if (!existing) {
+        uniqueWonLeads.set(dedupeKey, client);
+        continue;
+      }
+
+      const existingTime = new Date(existing.updated_at || existing.created_at).getTime();
+      const candidateTime = new Date(client.updated_at || client.created_at).getTime();
+
+      if (candidateTime > existingTime) {
+        uniqueWonLeads.set(dedupeKey, client);
+      }
+    }
+
+    return Array.from(uniqueWonLeads.values());
+  }, [clients]);
+
   // Counts
   const stageCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -585,8 +610,9 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
       if (stage === "lost" && c.retarget_status === "scheduled") return;
       if (counts[stage] !== undefined) counts[stage]++;
     });
+    counts.won = wonClients.length;
     return counts;
-  }, [pipelineClients]);
+  }, [pipelineClients, wonClients]);
 
   // Filter
   const filtered = useMemo(() => {
@@ -594,6 +620,8 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
       ? pipelineClients
       : selectedStage === "retarget"
         ? pipelineClients.filter(c => c.retarget_status === "scheduled")
+        : selectedStage === "won"
+          ? wonClients
         : selectedStage === "lost"
           ? pipelineClients.filter(c => normalizeStage(c.pipeline_stage, c.lead_status, c) === "lost" && c.retarget_status !== "scheduled")
           : pipelineClients.filter(c => normalizeStage(c.pipeline_stage, c.lead_status, c) === selectedStage);
@@ -615,7 +643,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
       const bTime = new Date(b.updated_at || b.created_at).getTime();
       return bTime - aTime;
     });
-  }, [pipelineClients, selectedStage, search]);
+  }, [pipelineClients, wonClients, selectedStage, search]);
 
   const retargetCount = useMemo(() => pipelineClients.filter(c => c.retarget_status === "scheduled").length, [pipelineClients]);
 
