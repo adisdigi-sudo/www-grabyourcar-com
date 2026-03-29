@@ -1,122 +1,100 @@
 
 
-# Unified Omni-Channel Messaging Hub — CTO Architecture Plan
+## WhatsApp Campaign Command Center — Unified Side-by-Side Redesign
 
-## Vision
-Build a **single centralized messaging backbone** where connecting one provider (WhatsApp API, Email via Resend, RCS) automatically enables it across every CRM vertical. Every workspace gets a consistent side-by-side **Campaign Builder + Chat/Reply** panel.
+### What We're Building
 
-## Current State
-- `sendWhatsApp.ts` is the client-side unified sender (API + manual fallback)
-- `messaging-service` edge function exists as provider abstraction (currently Finbite-only)
-- `whatsapp-send` handles direct Meta API sends
-- WhatsApp chat exists in Marketing portal only (`WAConversationInbox`)
-- Bulk send scattered across components with different implementations
-- Email: `send-bulk-email` exists but not wired into verticals
-- RCS: Nothing exists yet
+A complete redesign of the WhatsApp Campaigns tab into a **single-page command center** with three integrated panels:
 
-## Architecture
+1. **Left Panel — Template Designer + Campaign Builder** (side-by-side)
+2. **Center — Customer Chat View** with delivery statuses (sent/delivered/read/replied)
+3. **Top — Overview Dashboard** with all key metrics
+
+Plus: media attachment support (PDF, images, video up to 30s) and a "Shoot Marketing Now" instant-send button.
+
+### Architecture
 
 ```text
-┌─────────────────────────────────────────────────────┐
-│              FRONTEND (Every Vertical)              │
-│  ┌──────────────┐  ┌──────────────┐                 │
-│  │ OmniSendPanel│  │OmniChatPanel │  (Reusable)     │
-│  │ - Bulk WA    │  │ - WA threads │                 │
-│  │ - Bulk Email │  │ - Email view │                 │
-│  │ - Bulk RCS   │  │ - RCS view   │                 │
-│  │ - Campaign   │  │ - Reply box  │                 │
-│  └──────┬───────┘  └──────┬───────┘                 │
-│         │                 │                         │
-│    useOmniSend()     useOmniChat()   (Shared hooks) │
-└─────────┼─────────────────┼─────────────────────────┘
-          │                 │
-          ▼                 ▼
-┌─────────────────────────────────────────────────────┐
-│         EDGE FUNCTION: omni-channel-send            │
-│  Single entry point for ALL channels                │
-│  ┌─────────┐ ┌─────────┐ ┌─────────┐               │
-│  │WhatsApp │ │ Email   │ │  RCS    │  Adapters      │
-│  │(Meta)   │ │(Resend) │ │(Stub)  │                │
-│  └─────────┘ └─────────┘ └─────────┘               │
-│  - Provider config from `channel_providers` table   │
-│  - Logs ALL sends to `omni_message_logs`            │
-│  - Health check per channel                         │
-└─────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│  OVERVIEW BAR: Campaigns | Sent | Delivered | Read | Reply  │
+├──────────────────────┬──────────────────────────────────────┤
+│  CAMPAIGN BUILDER    │  CUSTOMER CHAT + STATUS VIEW         │
+│                      │                                      │
+│  ┌────────────────┐  │  ┌──────────┐ ┌───────────────────┐  │
+│  │ Template Design │  │  │ Contact  │ │ Chat Thread       │  │
+│  │ - Pick template │  │  │ List     │ │ - Messages        │  │
+│  │ - Edit message  │  │  │ - Search │ │ - Status ticks    │  │
+│  │ - Attach media  │  │  │ - Filter │ │ - Delivered/Read  │  │
+│  │   PDF/IMG/Video │  │  │          │ │ - Reply input     │  │
+│  ├────────────────┤  │  └──────────┘ └───────────────────┘  │
+│  │ Campaign Setup  │  │                                      │
+│  │ - Name/Segment  │  │  ┌──────────────────────────────┐   │
+│  │ - Schedule      │  │  │ Message Delivery Overview     │   │
+│  │ - Batch size    │  │  │ Sent | Delivered | Read |     │   │
+│  │ [Shoot Now! 🚀] │  │  │ Failed | Replied per msg     │   │
+│  └────────────────┘  │  └──────────────────────────────┘   │
+└──────────────────────┴──────────────────────────────────────┘
 ```
 
-## What Gets Built
+### Implementation Plan
 
-### 1. Database: `channel_providers` table (new)
-Stores which providers are active + their config:
-```
-id | channel (whatsapp|email|rcs) | provider_name | is_active | config_json | created_at
-```
-When WhatsApp API is connected, one row exists → all verticals see "WhatsApp API" as active. Same for Email/RCS later.
+#### Step 1: Create `WACampaignCommandCenter.tsx`
+New unified component replacing the separate Campaigns tab content. Contains:
+- **Overview Stats Bar** (top) — Total campaigns, sent, delivered, read, replied, failed counts
+- **Left column (40%)** — Template designer + campaign builder in a single scrollable panel
+- **Right column (60%)** — Chat view with delivery status + message log overview
 
-### 2. Edge Function: `omni-channel-send` (new)
-Single backend entry point replacing scattered direct calls:
-- Actions: `send_text`, `send_bulk`, `send_template`, `health_check`
-- Channels: `whatsapp` (routes to existing Meta API), `email` (routes to Resend), `rcs` (stub, returns "not_configured")
-- Reads `channel_providers` to know which providers are active
-- Logs everything to `wa_message_logs` (existing, add `channel` column)
+#### Step 2: Template Designer Section (Left Panel, Top)
+- Template selector dropdown (existing templates from `whatsapp_templates`)
+- Inline message editor with live preview (WhatsApp bubble style)
+- **Media Attachment Section**:
+  - Buttons: "Attach PDF", "Attach Image", "Attach Video (30s)"
+  - File upload to `broadcast-media` storage bucket
+  - Preview thumbnails for attached media
+  - Store `media_url` and `media_type` in campaign record
+- Variable insertion buttons ({name}, {phone}, {car_model}, etc.)
 
-### 3. Client utility: `src/lib/omniSend.ts` (new)
-Replaces direct `sendWhatsApp` calls with channel-aware sender:
-```ts
-omniSend({ channel: "whatsapp", phone, message, ... })
-omniSendBulk({ channel: "whatsapp", recipients: [...] })
-```
-Internally calls `omni-channel-send` edge function. Falls back gracefully per channel.
+#### Step 3: Campaign Builder Section (Left Panel, Bottom)
+- Campaign name, description
+- Segment selector (from `wa_contact_segments`)
+- Schedule picker or **"Shoot Marketing Now!"** button (green, prominent)
+- Batch size selector
+- "Shoot Now" triggers immediate launch via `wa-campaign-launcher`
 
-### 4. Reusable UI: `OmniSendPanel` component (new)
-Drop-in panel for ANY vertical workspace:
-- Channel selector tabs (WhatsApp / Email / RCS) — disabled channels greyed out
-- Bulk send mode: paste phones or select from current view's data
-- Campaign builder: name, message template, schedule
-- Progress tracker with sent/failed counts
-- Props: `recipients: Array<{phone, email, name}>`, `context: string` (vertical name)
+#### Step 4: Customer Chat + Status View (Right Panel)
+- **Contact List** (left sub-panel): Searchable list from `whatsapp_conversations` + `wa_message_logs`
+- **Chat Thread** (right sub-panel): WhatsApp-style bubbles with delivery ticks:
+  - Single grey tick = Sent
+  - Double grey tick = Delivered
+  - Double blue tick = Read
+  - Reply indicator
+- **Message Delivery Overview** (bottom): Per-campaign breakdown showing sent/delivered/read/replied/failed counts with progress bars
 
-### 5. Reusable UI: `OmniChatPanel` component (new)
-Drop-in side panel for conversation view:
-- Shows threads from `whatsapp_conversations` + `omni_conversations`
-- Reply box that sends via `omni-channel-send`
-- Channel badge per conversation
-- Props: `phone?: string`, `email?: string` (filters to specific contact)
+#### Step 5: Update `wa-campaign-launcher` Edge Function
+- Accept `media_url` and `media_type` fields
+- When sending via Meta API, use image/document/video message types based on `media_type`
+- Log media type in `wa_message_logs`
 
-### 6. Integration into every vertical workspace
-Add `OmniSendPanel` and `OmniChatPanel` as side-by-side tabs in:
-- **Insurance** (`InsuranceWorkspace.tsx`) — new "Messaging" nav item
-- **Sales** (UnifiedMasterCRM sales view)
-- **HSRP**, **Rentals**, **Accessories**, **Dealer Network**
-- Each passes its filtered leads/clients as `recipients`
+#### Step 6: Update `wa_campaigns` Table
+- Add columns: `media_url` (text, nullable), `media_type` (text, nullable — values: 'image', 'video', 'document', null for text-only)
 
-### 7. Provider Settings Page (new)
-`src/components/admin/settings/ChannelProvidersSettings.tsx`
-- Shows all 3 channels with status (Connected / Not Configured)
-- WhatsApp: shows current Meta API status (reuses existing health check)
-- Email: shows Resend status
-- RCS: shows "Coming Soon — Add API key when ready"
-- One place to manage all provider connections
+#### Step 7: Wire into WhatsAppMarketingPortal
+- Replace `<WACampaignDashboard />` with `<WACampaignCommandCenter />` in the campaigns tab
+- Keep other tabs (Inbox, Templates, Analytics, etc.) unchanged
 
-## Migration from Current State
-- `sendWhatsApp.ts` stays as-is (backward compat) but `omniSend` wraps it
-- All existing bulk send buttons get a small upgrade: add Email/RCS tabs (disabled for now)
-- No breaking changes — existing WhatsApp flows continue working
+### Files to Create/Edit
+| File | Action |
+|------|--------|
+| `src/components/admin/marketing/wa/WACampaignCommandCenter.tsx` | **Create** — Main unified component |
+| `src/components/admin/marketing/WhatsAppMarketingPortal.tsx` | **Edit** — Import and use new component |
+| `supabase/functions/wa-campaign-launcher/index.ts` | **Edit** — Add media support |
+| `supabase/functions/wa-queue-processor/index.ts` | **Edit** — Send media messages via Meta API |
+| DB Migration | **Add** `media_url` and `media_type` columns to `wa_campaigns` |
 
-## Files to Create
-1. `src/lib/omniSend.ts` — unified client sender
-2. `src/components/admin/shared/OmniSendPanel.tsx` — bulk send panel
-3. `src/components/admin/shared/OmniChatPanel.tsx` — chat/reply panel
-4. `src/components/admin/settings/ChannelProvidersSettings.tsx` — provider config UI
-5. `supabase/functions/omni-channel-send/index.ts` — unified backend
-
-## Files to Edit
-1. `src/components/admin/insurance/InsuranceWorkspace.tsx` — add Messaging tab
-2. `src/components/admin/UnifiedMasterCRM.tsx` — add Messaging to each vertical
-3. Migration: add `channel_providers` table + add `channel` column to `wa_message_logs`
-
-## Reminder Notes (for later integration)
-- **Email Bulk**: Configure Resend domain verification for `grabyourcar.com`, then flip `is_active` in `channel_providers`
-- **WhatsApp API**: Already connected via Meta Cloud API — works immediately
-- **RCS**: Choose provider (Google RBM / Gupshup / Sinch), add API key as secret, update adapter in `omni-channel-send`
+### Technical Details
+- Media uploads use existing `broadcast-media` public bucket
+- Meta API supports image/document/video message types (already implemented in `whatsapp-send/index.ts`)
+- Delivery status ticks follow WhatsApp convention: `sent` (single tick), `delivered` (double tick), `read` (blue double tick)
+- Real-time updates via Supabase channel subscriptions on `whatsapp_conversations` and `wa_message_logs`
+- "Shoot Now" button calls `wa-campaign-launcher` with `action: "launch"` immediately (no schedule)
 
