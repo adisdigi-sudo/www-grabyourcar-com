@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { dedupeInsuranceClients, dedupeInsurancePolicies, getClientEffectiveDate, getPolicyEffectiveDate, normalizePhoneNumber, normalizePolicyNumber, normalizeVehicleRegistration } from "@/lib/insuranceIdentity";
+import { LEAD_SOURCES, normalizeInsuranceStage as normalizeStage } from "@/lib/insuranceStages";
 import { differenceInDays, format, startOfMonth, endOfMonth, parse } from "date-fns";
 import { fetchAllPages } from "@/lib/fetchAllPages";
 import {
@@ -20,7 +21,7 @@ import { LeadImportDialog } from "../shared/LeadImportDialog";
 import { StageNotificationBanner, buildInsuranceNotifications } from "../shared/StageNotificationBanner";
 import { AdminRenderBoundary } from "../shared/AdminRenderBoundary";
 import { BulkRenewalQuoteGenerator } from "./BulkRenewalQuoteGenerator";
-import { InsuranceLeadPipeline, normalizeStage, LEAD_SOURCES, type Client } from "./InsuranceLeadPipeline";
+import { InsuranceLeadPipeline, type Client } from "./InsuranceLeadPipeline";
 import { InsurancePolicyBook, type PolicyRecord } from "./InsurancePolicyBook";
 import { InsuranceComingRenewals } from "./InsuranceComingRenewals";
 import { InsuranceOverdueRenewals } from "./InsuranceOverdueRenewals";

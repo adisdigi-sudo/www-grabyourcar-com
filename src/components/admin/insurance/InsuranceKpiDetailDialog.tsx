@@ -1,9 +1,10 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { normalizeInsuranceStage as sharedNormalizeStage } from "@/lib/insuranceStages";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { normalizeStage as sharedNormalizeStage, type Client } from "./InsuranceLeadPipeline";
+import type { Client } from "./InsuranceLeadPipeline";
 import type { PolicyRecord } from "./InsurancePolicyBook";
 
 type KpiType = "total_leads" | "in_pipeline" | "won" | "active_policies" | "conversion" | null;

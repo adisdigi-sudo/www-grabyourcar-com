@@ -14,13 +14,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { normalizeInsuranceStage as normalizeStage } from "@/lib/insuranceStages";
 import { format, differenceInDays } from "date-fns";
 import {
   AlertTriangle, Search, PhoneCall, MessageSquare, ArrowUpDown,
   XCircle, Target, ArrowRight, CalendarClock, Clock, CheckSquare, Trash2
 } from "lucide-react";
 import type { PolicyRecord } from "./InsurancePolicyBook";
-import { normalizeStage, type Client } from "./InsuranceLeadPipeline";
+import type { Client } from "./InsuranceLeadPipeline";
 
 const OVERDUE_REASONS = [
   { value: "not_interested", label: "Not Interested", icon: "🚫" },
