@@ -187,6 +187,16 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
   const activeFilterCount = [filterPriority, filterSource, filterCity, filterExecutive, filterDateRange, filterMonth].filter(f => f !== "all").length + (customDateFrom ? 1 : 0);
 
   // Get date cutoff based on filter
+  // Get the effective date for a client based on their stage
+  const getClientFilterDate = (c: Client) => {
+    const stage = c.pipeline_stage || "new_lead";
+    // For Won/Policy Issued clients, use booking or policy date
+    if (stage === "policy_issued") {
+      return (c as any).booking_date || (c as any).policy_start_date || c.created_at;
+    }
+    return c.created_at;
+  };
+
   const getDateCutoff = (range: string): Date | null => {
     const now = new Date();
     if (range === "today") { const d = new Date(now); d.setHours(0,0,0,0); return d; }
@@ -219,26 +229,26 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
       if (cutoff) {
         if (filterDateRange === "today" || filterDateRange === "yesterday") {
           const endOfDay = new Date(cutoff); endOfDay.setHours(23,59,59,999);
-          result = result.filter(c => { const d = new Date(c.created_at); return d >= cutoff && d <= endOfDay; });
+          result = result.filter(c => { const d = new Date(getClientFilterDate(c)); return d >= cutoff && d <= endOfDay; });
         } else {
-          result = result.filter(c => new Date(c.created_at) >= cutoff);
+          result = result.filter(c => new Date(getClientFilterDate(c)) >= cutoff);
         }
       }
     }
     // Custom date range
     if (filterDateRange === "custom" && customDateFrom) {
       const from = new Date(customDateFrom); from.setHours(0,0,0,0);
-      result = result.filter(c => new Date(c.created_at) >= from);
+      result = result.filter(c => new Date(getClientFilterDate(c)) >= from);
       if (customDateTo) {
         const to = new Date(customDateTo); to.setHours(23,59,59,999);
-        result = result.filter(c => new Date(c.created_at) <= to);
+        result = result.filter(c => new Date(getClientFilterDate(c)) <= to);
       }
     }
     // Month filter
     if (filterMonth !== "all") {
       const [year, month] = filterMonth.split("-").map(Number);
       result = result.filter(c => {
-        const d = new Date(c.created_at);
+        const d = new Date(getClientFilterDate(c));
         return d.getFullYear() === year && d.getMonth() === month;
       });
     }
