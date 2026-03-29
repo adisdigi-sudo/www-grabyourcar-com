@@ -87,6 +87,9 @@ interface Client {
   current_policy_number: string | null;
   notes: string | null;
   created_at: string;
+  booking_date: string | null;
+  policy_start_date: string | null;
+  updated_at: string | null;
 }
 
 // Normalize stage based on lead_status and current_policy_number
@@ -151,7 +154,7 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
     queryFn: async () => {
       const { data, error } = await supabase
         .from("insurance_clients")
-        .select("id, customer_name, phone, email, city, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_insurer, policy_expiry_date, current_policy_type, ncb_percentage, previous_claim, lead_source, lead_status, assigned_executive, priority, pipeline_stage, contact_attempts, quote_amount, quote_insurer, lost_reason, follow_up_date, current_premium, current_policy_number, notes, created_at")
+        .select("id, customer_name, phone, email, city, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_insurer, policy_expiry_date, current_policy_type, ncb_percentage, previous_claim, lead_source, lead_status, assigned_executive, priority, pipeline_stage, contact_attempts, quote_amount, quote_insurer, lost_reason, follow_up_date, current_premium, current_policy_number, notes, created_at, booking_date, policy_start_date, updated_at")
         .eq("is_legacy", false)
         .order("created_at", { ascending: false })
         .limit(1000);
@@ -192,7 +195,7 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
     const stage = c.pipeline_stage || "new_lead";
     // For Won/Policy Issued clients, use booking or policy date
     if (stage === "policy_issued") {
-      return (c as any).booking_date || (c as any).policy_start_date || c.created_at;
+      return c.booking_date || c.policy_start_date || c.updated_at || c.created_at;
     }
     return c.created_at;
   };
