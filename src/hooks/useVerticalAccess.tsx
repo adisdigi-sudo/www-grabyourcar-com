@@ -80,10 +80,15 @@ export const VerticalProvider = ({ children }: { children: ReactNode }) => {
         .select('*')
         .eq('is_active', true)
         .order('sort_order');
-      if (error) throw error;
+      if (error) {
+        console.warn("[VerticalProvider] Failed to fetch verticals", error);
+        return [];
+      }
       return data as BusinessVertical[];
     },
     enabled: !!user?.id,
+    retry: 2,
+    staleTime: 1000 * 60,
   });
 
   // Fetch user's vertical access with access_level
@@ -95,10 +100,15 @@ export const VerticalProvider = ({ children }: { children: ReactNode }) => {
         .from('user_vertical_access')
         .select('vertical_id, access_level')
         .eq('user_id', user.id);
-      if (error) throw error;
+      if (error) {
+        console.warn("[VerticalProvider] Failed to fetch user access", error);
+        return [];
+      }
       return data as Array<{ vertical_id: string; access_level: string | null }>;
     },
     enabled: !!user?.id,
+    retry: 2,
+    staleTime: 1000 * 60,
   });
 
   const userAccess = userAccessData.map(d => d.vertical_id);
