@@ -9,8 +9,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { SmartDatePicker } from "@/components/ui/smart-date-picker";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -18,9 +16,8 @@ import { format, differenceInDays } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   CalendarClock, Search, PhoneCall, MessageSquare, CheckCircle2, XCircle,
-  Send, ArrowUpDown, CalendarIcon, User, RefreshCw
+  Send, ArrowUpDown, RefreshCw
 } from "lucide-react";
-import { InsurancePolicyDocumentUploader } from "./InsurancePolicyDocumentUploader";
 import type { PolicyRecord } from "./InsurancePolicyBook";
 
 const LOST_REASONS = ["Too expensive", "Existing agent", "No response", "Not renewing", "Competitor offer", "Other"];
@@ -43,7 +40,7 @@ export function InsuranceComingRenewals({ policies }: InsuranceComingRenewalsPro
   const [wonPolicyNumber, setWonPolicyNumber] = useState("");
   const [wonInsurer, setWonInsurer] = useState("");
   const [wonPremium, setWonPremium] = useState("");
-  const [wonExpiryDate, setWonExpiryDate] = useState<Date | undefined>();
+  const [wonExpiryDate, setWonExpiryDate] = useState<string>("");
   const [wonSaving, setWonSaving] = useState(false);
 
   // Lost dialog
@@ -114,7 +111,7 @@ export function InsuranceComingRenewals({ policies }: InsuranceComingRenewalsPro
         insurer: wonInsurer.trim(),
         premium_amount: wonPremium ? parseFloat(wonPremium) : targetPolicy.premium_amount,
         start_date: format(newStart, "yyyy-MM-dd"),
-        expiry_date: format(wonExpiryDate, "yyyy-MM-dd"),
+        expiry_date: wonExpiryDate,
         status: "active",
         is_renewal: true,
         previous_policy_id: targetPolicy.id,
@@ -131,10 +128,10 @@ export function InsuranceComingRenewals({ policies }: InsuranceComingRenewalsPro
         current_policy_number: wonPolicyNumber.trim().toUpperCase(),
         current_insurer: wonInsurer.trim(),
         current_premium: wonPremium ? parseFloat(wonPremium) : targetPolicy.premium_amount,
-        policy_expiry_date: format(wonExpiryDate, "yyyy-MM-dd"),
+        policy_expiry_date: wonExpiryDate,
         policy_start_date: format(newStart, "yyyy-MM-dd"),
         renewal_reminder_set: true,
-        renewal_reminder_date: format(wonExpiryDate, "yyyy-MM-dd"),
+        renewal_reminder_date: wonExpiryDate,
         retarget_status: "none",
         retargeting_enabled: false,
       }).eq("id", targetPolicy.client_id);
@@ -327,7 +324,7 @@ export function InsuranceComingRenewals({ policies }: InsuranceComingRenewalsPro
                               setWonPolicyNumber("");
                               setWonInsurer(policy.insurer || "");
                               setWonPremium(policy.premium_amount?.toString() || "");
-                              setWonExpiryDate(undefined);
+                              setWonExpiryDate("");
                               setShowWonDialog(true);
                             }}>
                             <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" /> Won
@@ -372,7 +369,13 @@ export function InsuranceComingRenewals({ policies }: InsuranceComingRenewalsPro
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">New Expiry Date *</Label>
-                <SmartDatePicker date={wonExpiryDate} onSelect={setWonExpiryDate} placeholder="Pick new expiry date" yearRange={[new Date().getFullYear(), new Date().getFullYear() + 3]} />
+                <Input
+                  type="date"
+                  value={wonExpiryDate}
+                  min={format(new Date(), "yyyy-MM-dd")}
+                  onChange={(e) => setWonExpiryDate(e.target.value)}
+                  className="h-9 text-sm"
+                />
               </div>
             </div>
           )}
