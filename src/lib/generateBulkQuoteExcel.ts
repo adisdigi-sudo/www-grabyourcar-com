@@ -76,8 +76,8 @@ export async function generateBulkQuoteExcel(prefilledLeads?: PrefilledLead[]) {
   // Add data validation for fuel type (col I=9) and policy type (col K=11)
   const dataRows = Math.max(prefilledLeads?.length || 0, 50);
   for (let r = 2; r <= dataRows + 1; r++) {
-    ws.getCell(r, 9).dataValidation = { type: "list", formulae: [FUEL_OPTIONS], showDropDown: true };
-    ws.getCell(r, 11).dataValidation = { type: "list", formulae: [POLICY_OPTIONS], showDropDown: true };
+    ws.getCell(r, 9).dataValidation = { type: "list", formulae: [FUEL_OPTIONS] };
+    ws.getCell(r, 11).dataValidation = { type: "list", formulae: [POLICY_OPTIONS] };
   }
 
   // Add formulas for calculated columns (rows 2 to dataRows+1)
