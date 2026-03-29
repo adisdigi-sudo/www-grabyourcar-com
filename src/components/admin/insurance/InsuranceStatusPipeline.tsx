@@ -829,6 +829,9 @@ export function InsuranceStatusPipeline() {
                   <TabsTrigger value="quote" className="flex-1 gap-1.5 text-xs">
                     <FileText className="h-3.5 w-3.5" /> Prepare Quote
                   </TabsTrigger>
+                  <TabsTrigger value="quote_history" className="flex-1 gap-1.5 text-xs">
+                    <Clock className="h-3.5 w-3.5" /> Quote History
+                  </TabsTrigger>
                   <TabsTrigger value="policies" className="flex-1 gap-1.5 text-xs">
                     <ShieldCheck className="h-3.5 w-3.5" /> Policies
                     {clientPolicies.length > 0 && <Badge variant="secondary" className="h-4 text-[10px] px-1">{clientPolicies.length}</Badge>}
