@@ -263,13 +263,13 @@ const AdminPanelLoader = ({ className }: { className?: string }) => (
 
 const AdminLayout = () => {
   const navigate = useNavigate();
-  const { user, isLoading, roles } = useAdminAuth();
+  const { user, initialized, isLoading, roles } = useAdminAuth();
   const { activeVertical, setActiveVertical, isLoading: verticalAccessLoading, availableVerticals } = useVerticalAccess();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
 
-  useSessionTimeout(!isLoading && !verticalAccessLoading && !!user);
+  useSessionTimeout(initialized && !isLoading && !verticalAccessLoading && !!user);
 
   const isSuperAdmin = roles.some((r: any) => r.role === "super_admin" || r.role === "admin");
   useEmployeeTracker({
@@ -310,11 +310,13 @@ const AdminLayout = () => {
   const isResolvingWorkspace =
     !!user && !isLoading && !verticalAccessLoading && !activeVertical && availableVerticals.length === 1;
 
-  if (!isLoading && !user) {
+  const isBootstrappingAdmin = !initialized || isLoading || verticalAccessLoading || isResolvingWorkspace;
+
+  if (initialized && !isLoading && !user) {
     return <Navigate to="/crm-auth" replace />;
   }
 
-  if (isLoading || verticalAccessLoading || isResolvingWorkspace) {
+  if (isBootstrappingAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
