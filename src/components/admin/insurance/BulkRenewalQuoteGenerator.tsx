@@ -70,56 +70,110 @@ const emptyRow = (): InlineRow => ({
 // ── CSV Import ──
 function CSVImportButton({ onImport }: { onImport: (quotes: BulkQuoteInsert[]) => void }) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
 
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const parseCSVText = (text: string): BulkQuoteInsert[] => {
+    const lines = text.trim().split("\n");
+    if (lines.length < 2) { toast.error("CSV must have header + data rows"); return []; }
+    const headers = lines[0].split(",").map(h => h.trim().toLowerCase().replace(/\s+/g, "_"));
+    const quotes: BulkQuoteInsert[] = [];
+    for (let i = 1; i < lines.length; i++) {
+      if (!lines[i].trim()) continue;
+      const vals = lines[i].split(",").map(v => v.trim());
+      const row: Record<string, string> = {};
+      headers.forEach((h, idx) => { row[h] = vals[idx] || ""; });
+      if (!row.customer_name) continue;
+      quotes.push({
+        customer_name: row.customer_name,
+        phone: row.phone || "",
+        email: row.email || null,
+        city: row.city || null,
+        vehicle_make: row.vehicle_make || "N/A",
+        vehicle_model: row.vehicle_model || "N/A",
+        vehicle_number: row.vehicle_number || "",
+        vehicle_year: Number(row.vehicle_year) || new Date().getFullYear(),
+        fuel_type: row.fuel_type || "Petrol",
+        insurance_company: row.insurance_company || "N/A",
+        policy_type: row.policy_type || "Comprehensive",
+        idv: Number(row.idv) || 0,
+        basic_od: Number(row.basic_od) || 0,
+        od_discount: Number(row.od_discount) || 0,
+        ncb_discount: Number(row.ncb_discount) || 0,
+        third_party: Number(row.third_party) || 0,
+        secure_premium: Number(row.secure_premium) || 0,
+        addon_premium: Number(row.addon_premium) || 0,
+        addons: row.addons ? row.addons.split("|").map(a => a.trim()).filter(Boolean) : [],
+        status: "pending",
+        notes: null,
+        batch_label: row.batch_label || null,
+      });
+    }
+    return quotes;
+  };
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const text = ev.target?.result as string;
-      const lines = text.trim().split("\n");
-      if (lines.length < 2) { toast.error("CSV must have header + data rows"); return; }
-      const headers = lines[0].split(",").map(h => h.trim().toLowerCase().replace(/\s+/g, "_"));
-      const quotes: BulkQuoteInsert[] = [];
-      for (let i = 1; i < lines.length; i++) {
-        if (!lines[i].trim()) continue;
-        const vals = lines[i].split(",").map(v => v.trim());
-        const row: Record<string, string> = {};
-        headers.forEach((h, idx) => { row[h] = vals[idx] || ""; });
-        if (!row.customer_name) continue;
-        quotes.push({
-          customer_name: row.customer_name,
-          phone: row.phone || "",
-          email: row.email || null,
-          city: row.city || null,
-          vehicle_make: row.vehicle_make || "N/A",
-          vehicle_model: row.vehicle_model || "N/A",
-          vehicle_number: row.vehicle_number || "",
-          vehicle_year: Number(row.vehicle_year) || new Date().getFullYear(),
-          fuel_type: row.fuel_type || "Petrol",
-          insurance_company: row.insurance_company || "N/A",
-          policy_type: row.policy_type || "Comprehensive",
-          idv: Number(row.idv) || 0,
-          basic_od: Number(row.basic_od) || 0,
-          od_discount: Number(row.od_discount) || 0,
-          ncb_discount: Number(row.ncb_discount) || 0,
-          third_party: Number(row.third_party) || 0,
-          secure_premium: Number(row.secure_premium) || 0,
-          addon_premium: Number(row.addon_premium) || 0,
-          addons: row.addons ? row.addons.split("|").map(a => a.trim()).filter(Boolean) : [],
-          status: "pending",
-          notes: null,
-          batch_label: row.batch_label || null,
+    setImporting(true);
+
+    try {
+      if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
+        // Parse Excel
+        const rows = await parseQuoteExcel(file);
+        if (!rows.length) { toast.error("No valid rows in Excel"); setImporting(false); return; }
+        const quotes: BulkQuoteInsert[] = rows.map(row => {
+          // Handle NCB/OD that may be decimals (percentages) or formula results
+          const ncbPct = Number(row.ncb_ || row.ncb_percent || row.ncb_discount || 0);
+          const odPct = Number(row.od_discount_ || row.od_discount_percent || row.od_discount || 0);
+          const basicOd = Number(row.basic_od || 0);
+          // If NCB looks like a percentage decimal (0.25), convert to absolute
+          const ncbDiscount = ncbPct < 1 ? Math.round(basicOd * ncbPct) : Number(ncbPct);
+          const odDiscount = odPct < 1 ? Math.round(basicOd * odPct) : Number(odPct);
+          
+          return {
+            customer_name: String(row.customer_name || ""),
+            phone: String(row.phone || ""),
+            email: row.email ? String(row.email) : null,
+            city: row.city ? String(row.city) : null,
+            vehicle_make: String(row.vehicle_make || "N/A"),
+            vehicle_model: String(row.vehicle_model || "N/A"),
+            vehicle_number: String(row.vehicle_number || ""),
+            vehicle_year: Number(row.vehicle_year) || new Date().getFullYear(),
+            fuel_type: String(row.fuel_type || "Petrol"),
+            insurance_company: String(row.insurance_company || "N/A"),
+            policy_type: String(row.policy_type || "Comprehensive"),
+            idv: Number(row.idv) || 0,
+            basic_od: basicOd,
+            od_discount: odDiscount,
+            ncb_discount: ncbDiscount,
+            third_party: Number(row.third_party) || 0,
+            secure_premium: Number(row.secure_premium) || 0,
+            addon_premium: Number(row.addon_premium) || 0,
+            addons: row.addons ? String(row.addons).split("|").map((a: string) => a.trim()).filter(Boolean) : [],
+            status: "pending",
+            notes: null,
+            batch_label: row.batch_label ? String(row.batch_label) : null,
+          };
         });
+        onImport(quotes);
+        toast.success(`📊 Imported ${quotes.length} quotes from Excel!`);
+      } else {
+        // CSV
+        const text = await file.text();
+        const quotes = parseCSVText(text);
+        if (!quotes.length) { toast.error("No valid rows found"); setImporting(false); return; }
+        onImport(quotes);
+        toast.success(`📄 Imported ${quotes.length} quotes from CSV!`);
       }
-      if (quotes.length === 0) { toast.error("No valid rows found"); return; }
-      onImport(quotes);
-    };
-    reader.readAsText(file);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to parse file");
+    }
+    setImporting(false);
     e.target.value = "";
   };
 
-  const downloadTemplate = () => {
+  const downloadCSVTemplate = () => {
     const csv = `customer_name,phone,email,city,vehicle_make,vehicle_model,vehicle_number,vehicle_year,fuel_type,insurance_company,policy_type,idv,basic_od,od_discount,ncb_discount,third_party,secure_premium,addon_premium,addons,batch_label
 Rajesh Kumar,9876543210,rajesh@email.com,Delhi,Maruti,Swift,DL01AB1234,2022,Petrol,ICICI Lombard,Comprehensive,550000,12000,2000,3000,3500,800,1200,Zero Depreciation|Roadside Assistance,March 2026`;
     const blob = new Blob([csv], { type: "text/csv" });
@@ -129,15 +183,29 @@ Rajesh Kumar,9876543210,rajesh@email.com,Delhi,Maruti,Swift,DL01AB1234,2022,Petr
     URL.revokeObjectURL(url);
   };
 
+  const downloadExcelTemplate = async () => {
+    try {
+      await generateBulkQuoteExcel();
+      toast.success("📊 Excel template with auto-calc formulas downloaded!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to generate Excel template");
+    }
+  };
+
   return (
-    <div className="flex gap-1.5">
-      <Button size="sm" variant="outline" onClick={downloadTemplate} className="gap-1.5 text-xs">
-        <Download className="h-3.5 w-3.5" /> Sample CSV
+    <div className="flex gap-1.5 flex-wrap">
+      <Button size="sm" variant="outline" onClick={downloadExcelTemplate} className="gap-1.5 text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-950/40">
+        <FileSpreadsheet className="h-3.5 w-3.5" /> Excel Template ⚡
       </Button>
-      <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()} className="gap-1.5 text-xs">
-        <Upload className="h-3.5 w-3.5" /> Import CSV
+      <Button size="sm" variant="outline" onClick={downloadCSVTemplate} className="gap-1.5 text-xs">
+        <Download className="h-3.5 w-3.5" /> CSV Template
       </Button>
-      <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleFile} />
+      <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()} disabled={importing} className="gap-1.5 text-xs">
+        {importing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+        Import CSV/Excel
+      </Button>
+      <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleFile} />
     </div>
   );
 }
