@@ -15,7 +15,22 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { getClientIdentityKey, normalizePolicyNumber } from "@/lib/insuranceIdentity";
-import { format, differenceInDays, formatDistanceToNow } from "date-fns";
+import {
+  differenceInDays,
+  endOfDay,
+  endOfMonth,
+  endOfQuarter,
+  endOfWeek,
+  endOfYear,
+  format,
+  formatDistanceToNow,
+  startOfDay,
+  startOfMonth,
+  startOfQuarter,
+  startOfWeek,
+  startOfYear,
+  subMonths,
+} from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   UserPlus, Phone, FileText, Clock, CheckCircle2, XCircle, Search,
@@ -483,6 +498,9 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
   const queryClient = useQueryClient();
   const [selectedStage, setSelectedStage] = useState<string>("all");
   const [search, setSearch] = useState("");
+  const [wonDatePreset, setWonDatePreset] = useState<string>("all");
+  const [wonDateFrom, setWonDateFrom] = useState<Date | undefined>();
+  const [wonDateTo, setWonDateTo] = useState<Date | undefined>();
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [draggingClient, setDraggingClient] = useState<Client | null>(null);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
@@ -610,6 +628,31 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
     return Array.from(uniqueWonLeads.values());
   }, [clients]);
 
+  const getWonEffectiveDate = useCallback((client: Client) => {
+    return client.booking_date || client.policy_start_date || client.updated_at || client.created_at;
+  }, []);
+
+  const getWonDateBounds = useCallback((preset: string) => {
+    const now = new Date();
+
+    switch (preset) {
+      case "day":
+        return { start: startOfDay(now), end: endOfDay(now) };
+      case "week":
+        return { start: startOfWeek(now, { weekStartsOn: 1 }), end: endOfWeek(now, { weekStartsOn: 1 }) };
+      case "month":
+        return { start: startOfMonth(now), end: endOfMonth(now) };
+      case "quarter":
+        return { start: startOfQuarter(now), end: endOfQuarter(now) };
+      case "six_months":
+        return { start: startOfDay(subMonths(now, 6)), end: endOfDay(now) };
+      case "year":
+        return { start: startOfYear(now), end: endOfYear(now) };
+      default:
+        return null;
+    }
+  }, []);
+
   // Counts
   const stageCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -647,12 +690,44 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
         c.city?.toLowerCase().includes(s)
       );
     }
+
+    if (selectedStage === "won") {
+      if (wonDatePreset !== "all" && wonDatePreset !== "custom") {
+        const bounds = getWonDateBounds(wonDatePreset);
+
+        if (bounds) {
+          result = result.filter((client) => {
+            const effectiveDate = getWonEffectiveDate(client);
+            if (!effectiveDate) return false;
+
+            const clientDate = new Date(effectiveDate);
+            return clientDate >= bounds.start && clientDate <= bounds.end;
+          });
+        }
+      }
+
+      if (wonDatePreset === "custom" && (wonDateFrom || wonDateTo)) {
+        const customFrom = wonDateFrom ? startOfDay(wonDateFrom) : null;
+        const customTo = wonDateTo ? endOfDay(wonDateTo) : null;
+
+        result = result.filter((client) => {
+          const effectiveDate = getWonEffectiveDate(client);
+          if (!effectiveDate) return false;
+
+          const clientDate = new Date(effectiveDate);
+          if (customFrom && clientDate < customFrom) return false;
+          if (customTo && clientDate > customTo) return false;
+          return true;
+        });
+      }
+    }
+
     return [...result].sort((a, b) => {
       const aTime = new Date(a.updated_at || a.created_at).getTime();
       const bTime = new Date(b.updated_at || b.created_at).getTime();
       return bTime - aTime;
     });
-  }, [pipelineClients, wonClients, selectedStage, search]);
+  }, [pipelineClients, wonClients, selectedStage, search, wonDatePreset, wonDateFrom, wonDateTo, getWonDateBounds, getWonEffectiveDate]);
 
   const retargetCount = useMemo(() => pipelineClients.filter(c => c.retarget_status === "scheduled").length, [pipelineClients]);
 
@@ -850,6 +925,78 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input placeholder="Search name, phone, vehicle, city, policy no..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 h-9" />
       </div>
+
+      {selectedStage === "won" && (
+        <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3 sm:flex-row sm:flex-wrap sm:items-end">
+          <div className="space-y-1">
+            <Label className="text-[11px] text-muted-foreground">Won date filter</Label>
+            <Select
+              value={wonDatePreset}
+              onValueChange={(value) => {
+                setWonDatePreset(value);
+                if (value !== "custom") {
+                  setWonDateFrom(undefined);
+                  setWonDateTo(undefined);
+                }
+              }}
+            >
+              <SelectTrigger className="h-9 w-[180px] text-xs">
+                <SelectValue placeholder="Select period" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All time</SelectItem>
+                <SelectItem value="day">Day wise</SelectItem>
+                <SelectItem value="week">Week wise</SelectItem>
+                <SelectItem value="month">Month wise</SelectItem>
+                <SelectItem value="quarter">Quarter wise</SelectItem>
+                <SelectItem value="six_months">6 months</SelectItem>
+                <SelectItem value="year">Year wise</SelectItem>
+                <SelectItem value="custom">Custom date</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {wonDatePreset === "custom" && (
+            <>
+              <div className="space-y-1">
+                <Label className="text-[11px] text-muted-foreground">From</Label>
+                <SmartDatePicker
+                  date={wonDateFrom}
+                  onSelect={setWonDateFrom}
+                  placeholder="Start date"
+                  className="w-[170px]"
+                  yearRange={[new Date().getFullYear() - 3, new Date().getFullYear() + 1]}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-[11px] text-muted-foreground">To</Label>
+                <SmartDatePicker
+                  date={wonDateTo}
+                  onSelect={setWonDateTo}
+                  placeholder="End date"
+                  className="w-[170px]"
+                  yearRange={[new Date().getFullYear() - 3, new Date().getFullYear() + 1]}
+                />
+              </div>
+
+              {(wonDateFrom || wonDateTo) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9 text-xs"
+                  onClick={() => {
+                    setWonDateFrom(undefined);
+                    setWonDateTo(undefined);
+                  }}
+                >
+                  Clear dates
+                </Button>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       {/* Lead Table */}
       <Card>

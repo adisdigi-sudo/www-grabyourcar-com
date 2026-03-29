@@ -12,7 +12,7 @@ interface UserRole {
 }
 
 export const useAdminAuth = () => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, initialized } = useAuth();
 
   const { data: roles, isLoading: rolesLoading } = useQuery({
     queryKey: ['userRoles', user?.id],
@@ -88,6 +88,7 @@ export const useAdminAuth = () => {
 
   return {
     user,
+    initialized,
     roles: roles || [],
     isLoading: authLoading || rolesLoading,
     hasRole,
