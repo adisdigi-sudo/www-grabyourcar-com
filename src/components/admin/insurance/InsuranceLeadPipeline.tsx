@@ -403,7 +403,7 @@ function WonPolicyDialog({
         } as any,
       });
 
-      toast.success("Policy issued and synced to Policy Book");
+      toast.success("Policy issued! Now upload the policy document.", { duration: 5000 });
       onSuccess();
       onOpenChange(false);
     } catch (e: any) {
@@ -1152,7 +1152,16 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
 
                           setSelectedClient(data as Client);
                           queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
+                          queryClient.invalidateQueries({ queryKey: ["ins-policies-book"] });
                           toast.success("Lead updated");
+
+                          // If moved to Won/Policy Issued, prompt to upload policy document
+                          if (normalizedStage === "won" || normalizedStage === "policy_issued") {
+                            setTimeout(() => {
+                              setShowUploadPolicy(true);
+                              toast.info("📄 Please upload the policy document now", { duration: 5000 });
+                            }, 500);
+                          }
                         } catch (e: any) {
                           toast.error(e.message || "Failed to save");
                         } finally {
@@ -1201,8 +1210,11 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
           setShowWonDialog(false);
           setPendingMoveClient(null);
           if (targetClient) {
-            setSelectedClient(targetClient);
-            setShowUploadPolicy(true);
+            // Use a short delay to let the WonDialog fully close before opening upload prompt
+            setTimeout(() => {
+              setSelectedClient(targetClient);
+              setShowUploadPolicy(true);
+            }, 400);
           } else {
             setSelectedClient(null);
           }
