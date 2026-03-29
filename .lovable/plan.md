@@ -1,65 +1,122 @@
 
 
-# Bulk Quote Excel Template with Auto-Calculation Formulas
+# Unified Omni-Channel Messaging Hub — CTO Architecture Plan
 
-## Problem
-Current bulk quote system only offers plain CSV templates where users must manually calculate all premium values (NCB discount, Net OD, Total Premium, GST). No auto-calculation support exists.
+## Vision
+Build a **single centralized messaging backbone** where connecting one provider (WhatsApp API, Email via Resend, RCS) automatically enables it across every CRM vertical. Every workspace gets a consistent side-by-side **Campaign Builder + Chat/Reply** panel.
 
-## Solution
-Build an Excel (.xlsx) template download with built-in formulas that auto-calculate NCB discount, Net OD, Net Premium, GST, and Total Premium. Users fill in client details + base values, and the Excel does the math. Then upload it back to generate and send quotes in bulk.
+## Current State
+- `sendWhatsApp.ts` is the client-side unified sender (API + manual fallback)
+- `messaging-service` edge function exists as provider abstraction (currently Finbite-only)
+- `whatsapp-send` handles direct Meta API sends
+- WhatsApp chat exists in Marketing portal only (`WAConversationInbox`)
+- Bulk send scattered across components with different implementations
+- Email: `send-bulk-email` exists but not wired into verticals
+- RCS: Nothing exists yet
+
+## Architecture
+
+```text
+┌─────────────────────────────────────────────────────┐
+│              FRONTEND (Every Vertical)              │
+│  ┌──────────────┐  ┌──────────────┐                 │
+│  │ OmniSendPanel│  │OmniChatPanel │  (Reusable)     │
+│  │ - Bulk WA    │  │ - WA threads │                 │
+│  │ - Bulk Email │  │ - Email view │                 │
+│  │ - Bulk RCS   │  │ - RCS view   │                 │
+│  │ - Campaign   │  │ - Reply box  │                 │
+│  └──────┬───────┘  └──────┬───────┘                 │
+│         │                 │                         │
+│    useOmniSend()     useOmniChat()   (Shared hooks) │
+└─────────┼─────────────────┼─────────────────────────┘
+          │                 │
+          ▼                 ▼
+┌─────────────────────────────────────────────────────┐
+│         EDGE FUNCTION: omni-channel-send            │
+│  Single entry point for ALL channels                │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐               │
+│  │WhatsApp │ │ Email   │ │  RCS    │  Adapters      │
+│  │(Meta)   │ │(Resend) │ │(Stub)  │                │
+│  └─────────┘ └─────────┘ └─────────┘               │
+│  - Provider config from `channel_providers` table   │
+│  - Logs ALL sends to `omni_message_logs`            │
+│  - Health check per channel                         │
+└─────────────────────────────────────────────────────┘
+```
 
 ## What Gets Built
 
-### 1. Excel Template Generator (new utility: `src/lib/generateBulkQuoteExcel.ts`)
-- Creates an `.xlsx` file using the `exceljs` library (lightweight, no security issues like `xlsx/SheetJS`)
-- **Columns**: Customer Name, Phone, Email, City, Vehicle Make, Vehicle Model, Vehicle Number, Vehicle Year, Fuel Type, Insurance Company, Policy Type, IDV, Basic OD, OD Discount %, NCB %, Third Party, Secure Premium, Addon Premium, Addons
-- **Formula columns** (auto-calculated):
-  - `NCB Discount` = `Basic OD × NCB%`
-  - `OD Discount Amount` = `Basic OD × OD Discount%`  
-  - `Net OD` = `MAX(0, Basic OD - OD Discount - NCB Discount)`
-  - `Net Premium` = `Net OD + Third Party + Secure Premium + Addon Premium`
-  - `GST (18%)` = `Net Premium × 0.18`
-  - `Total Premium` = `Net Premium + GST`
-- Pre-filled sample rows with formulas
-- Styled headers, column widths, data validation dropdowns for Fuel Type and Policy Type
-
-### 2. Excel Upload Parser (update `BulkRenewalQuoteGenerator.tsx`)
-- Accept `.xlsx` files alongside `.csv`
-- Parse using a lightweight approach (read as CSV export or use `exceljs` in browser)
-- Map parsed rows to existing `BulkQuoteInsert` format
-- Auto-detect calculated vs raw columns
-
-### 3. Enhanced Sample Download Button
-- Replace "Sample CSV" with "Download Excel Template" in `BulkRenewalQuoteGenerator`
-- Keep CSV option as fallback
-- Pre-fill with selected leads' data when available (from `BulkQuoteSharePanel`)
-
-### 4. Bulk Send Flow (already exists, minor enhancement)
-- After upload, quotes appear in the table with calculated totals
-- Select all → Generate PDFs → Send via WhatsApp API (existing flow)
-- Add "Upload & Auto-Send" one-click option
-
-## Technical Details
-
-### Excel Generation Approach
-Since we can't use `xlsx` (SheetJS) due to security policy, we'll use `exceljs` which is safe:
-```bash
-npm install exceljs
+### 1. Database: `channel_providers` table (new)
+Stores which providers are active + their config:
 ```
-
-### Formula Example (Row 2)
+id | channel (whatsapp|email|rcs) | provider_name | is_active | config_json | created_at
 ```
-NCB_Discount (T2) = =M2*O2     (Basic OD × NCB%)
-OD_Discount_Amt (U2) = =M2*N2  (Basic OD × OD Discount%)
-Net_OD (V2) = =MAX(0, M2-U2-T2)
-Net_Premium (W2) = =V2+P2+Q2+R2
-GST (X2) = =ROUND(W2*0.18, 0)
-Total (Y2) = =W2+X2
-```
+When WhatsApp API is connected, one row exists → all verticals see "WhatsApp API" as active. Same for Email/RCS later.
 
-### Files to Create/Edit
-1. **Create** `src/lib/generateBulkQuoteExcel.ts` — Excel template generator with formulas
-2. **Edit** `src/components/admin/insurance/BulkRenewalQuoteGenerator.tsx` — Add Excel download + upload support
-3. **Edit** `src/components/admin/insurance/BulkQuoteSharePanel.tsx` — Add Excel pre-filled download for selected leads
-4. **Install** `exceljs` package
+### 2. Edge Function: `omni-channel-send` (new)
+Single backend entry point replacing scattered direct calls:
+- Actions: `send_text`, `send_bulk`, `send_template`, `health_check`
+- Channels: `whatsapp` (routes to existing Meta API), `email` (routes to Resend), `rcs` (stub, returns "not_configured")
+- Reads `channel_providers` to know which providers are active
+- Logs everything to `wa_message_logs` (existing, add `channel` column)
+
+### 3. Client utility: `src/lib/omniSend.ts` (new)
+Replaces direct `sendWhatsApp` calls with channel-aware sender:
+```ts
+omniSend({ channel: "whatsapp", phone, message, ... })
+omniSendBulk({ channel: "whatsapp", recipients: [...] })
+```
+Internally calls `omni-channel-send` edge function. Falls back gracefully per channel.
+
+### 4. Reusable UI: `OmniSendPanel` component (new)
+Drop-in panel for ANY vertical workspace:
+- Channel selector tabs (WhatsApp / Email / RCS) — disabled channels greyed out
+- Bulk send mode: paste phones or select from current view's data
+- Campaign builder: name, message template, schedule
+- Progress tracker with sent/failed counts
+- Props: `recipients: Array<{phone, email, name}>`, `context: string` (vertical name)
+
+### 5. Reusable UI: `OmniChatPanel` component (new)
+Drop-in side panel for conversation view:
+- Shows threads from `whatsapp_conversations` + `omni_conversations`
+- Reply box that sends via `omni-channel-send`
+- Channel badge per conversation
+- Props: `phone?: string`, `email?: string` (filters to specific contact)
+
+### 6. Integration into every vertical workspace
+Add `OmniSendPanel` and `OmniChatPanel` as side-by-side tabs in:
+- **Insurance** (`InsuranceWorkspace.tsx`) — new "Messaging" nav item
+- **Sales** (UnifiedMasterCRM sales view)
+- **HSRP**, **Rentals**, **Accessories**, **Dealer Network**
+- Each passes its filtered leads/clients as `recipients`
+
+### 7. Provider Settings Page (new)
+`src/components/admin/settings/ChannelProvidersSettings.tsx`
+- Shows all 3 channels with status (Connected / Not Configured)
+- WhatsApp: shows current Meta API status (reuses existing health check)
+- Email: shows Resend status
+- RCS: shows "Coming Soon — Add API key when ready"
+- One place to manage all provider connections
+
+## Migration from Current State
+- `sendWhatsApp.ts` stays as-is (backward compat) but `omniSend` wraps it
+- All existing bulk send buttons get a small upgrade: add Email/RCS tabs (disabled for now)
+- No breaking changes — existing WhatsApp flows continue working
+
+## Files to Create
+1. `src/lib/omniSend.ts` — unified client sender
+2. `src/components/admin/shared/OmniSendPanel.tsx` — bulk send panel
+3. `src/components/admin/shared/OmniChatPanel.tsx` — chat/reply panel
+4. `src/components/admin/settings/ChannelProvidersSettings.tsx` — provider config UI
+5. `supabase/functions/omni-channel-send/index.ts` — unified backend
+
+## Files to Edit
+1. `src/components/admin/insurance/InsuranceWorkspace.tsx` — add Messaging tab
+2. `src/components/admin/UnifiedMasterCRM.tsx` — add Messaging to each vertical
+3. Migration: add `channel_providers` table + add `channel` column to `wa_message_logs`
+
+## Reminder Notes (for later integration)
+- **Email Bulk**: Configure Resend domain verification for `grabyourcar.com`, then flip `is_active` in `channel_providers`
+- **WhatsApp API**: Already connected via Meta Cloud API — works immediately
+- **RCS**: Choose provider (Google RBM / Gupshup / Sinch), add API key as secret, update adapter in `omni-channel-send`
 
