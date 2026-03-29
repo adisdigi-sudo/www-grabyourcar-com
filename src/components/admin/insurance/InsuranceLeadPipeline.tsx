@@ -1201,8 +1201,11 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
           setShowWonDialog(false);
           setPendingMoveClient(null);
           if (targetClient) {
-            setSelectedClient(targetClient);
-            setShowUploadPolicy(true);
+            // Use a short delay to let the WonDialog fully close before opening upload prompt
+            setTimeout(() => {
+              setSelectedClient(targetClient);
+              setShowUploadPolicy(true);
+            }, 400);
           } else {
             setSelectedClient(null);
           }
