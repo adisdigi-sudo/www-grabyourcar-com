@@ -261,6 +261,8 @@ const AdminPanelLoader = ({ className }: { className?: string }) => (
   </div>
 );
 
+const ADMIN_BOOT_TIMEOUT_MS = 12000;
+
 const AdminLayout = () => {
   const navigate = useNavigate();
   const { user, initialized, isLoading, roles } = useAdminAuth();
@@ -268,6 +270,7 @@ const AdminLayout = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
+  const [bootTimedOut, setBootTimedOut] = useState(false);
 
   useSessionTimeout(initialized && !isLoading && !verticalAccessLoading && !!user);
 
@@ -307,12 +310,34 @@ const AdminLayout = () => {
     }
   }, [user, isLoading, verticalAccessLoading, activeVertical, availableVerticals, setActiveVertical]);
 
+  // Boot timeout: if CRM stays stuck loading for too long, force-unblock
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setBootTimedOut(true);
+      console.warn("[AdminLayout] Boot timeout reached – force-unblocking CRM");
+    }, ADMIN_BOOT_TIMEOUT_MS);
+
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  // Reset boot timeout flag once loading finishes naturally
+  useEffect(() => {
+    if (initialized && !isLoading && !verticalAccessLoading) {
+      setBootTimedOut(false);
+    }
+  }, [initialized, isLoading, verticalAccessLoading]);
+
   const isResolvingWorkspace =
     !!user && !isLoading && !verticalAccessLoading && !activeVertical && availableVerticals.length === 1;
 
-  const isBootstrappingAdmin = !initialized || isLoading || verticalAccessLoading || isResolvingWorkspace;
+  const isBootstrappingAdmin = !bootTimedOut && (!initialized || isLoading || verticalAccessLoading || isResolvingWorkspace);
 
   if (initialized && !isLoading && !user) {
+    return <Navigate to="/crm-auth" replace />;
+  }
+
+  // If boot timed out and we still don't have a user, redirect to login
+  if (bootTimedOut && !user) {
     return <Navigate to="/crm-auth" replace />;
   }
 
