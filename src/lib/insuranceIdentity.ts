@@ -97,14 +97,14 @@ export const dedupeInsuranceClients = (clients: Client[]) => {
 };
 
 export const getClientEffectiveDate = (client: Pick<Client, "policy_start_date" | "booking_date" | "created_at">) => (
-  client.policy_start_date || client.booking_date || client.created_at
+  client.booking_date || client.policy_start_date || client.created_at
 );
 
 export const getPolicyEffectiveDate = (policy: Pick<PolicyRecord, "start_date" | "booking_date" | "issued_date" | "created_at" | "insurance_clients">) => (
-  policy.start_date ||
   policy.booking_date ||
   policy.issued_date ||
   policy.insurance_clients?.booking_date ||
+  policy.start_date ||
   policy.created_at
 );
 
