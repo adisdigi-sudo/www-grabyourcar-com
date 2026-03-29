@@ -80,10 +80,15 @@ export const VerticalProvider = ({ children }: { children: ReactNode }) => {
         .select('*')
         .eq('is_active', true)
         .order('sort_order');
-      if (error) throw error;
+      if (error) {
+        console.warn("[VerticalProvider] Failed to fetch verticals", error);
+        return [];
+      }
       return data as BusinessVertical[];
     },
     enabled: !!user?.id,
+    retry: 2,
+    staleTime: 1000 * 60,
   });
 
   // Fetch user's vertical access with access_level
@@ -95,10 +100,15 @@ export const VerticalProvider = ({ children }: { children: ReactNode }) => {
         .from('user_vertical_access')
         .select('vertical_id, access_level')
         .eq('user_id', user.id);
-      if (error) throw error;
+      if (error) {
+        console.warn("[VerticalProvider] Failed to fetch user access", error);
+        return [];
+      }
       return data as Array<{ vertical_id: string; access_level: string | null }>;
     },
     enabled: !!user?.id,
+    retry: 2,
+    staleTime: 1000 * 60,
   });
 
   const userAccess = userAccessData.map(d => d.vertical_id);
@@ -113,10 +123,14 @@ export const VerticalProvider = ({ children }: { children: ReactNode }) => {
         .select('*')
         .eq('user_id', user.id)
         .maybeSingle();
-      if (error) throw error;
+      if (error) {
+        console.warn("[VerticalProvider] Failed to fetch team member", error);
+        return null;
+      }
       return data as TeamMember | null;
     },
     enabled: !!user?.id,
+    retry: 1,
   });
 
   // Check if user is super_admin/admin (they get all verticals)
@@ -125,27 +139,34 @@ export const VerticalProvider = ({ children }: { children: ReactNode }) => {
     queryFn: async () => {
       if (!user?.id) return [];
 
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id);
+      try {
+        const { data, error } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id);
 
-      if (error) throw error;
-      if ((data?.length ?? 0) > 0) return data.map(d => d.role);
+        if (error) throw error;
+        if ((data?.length ?? 0) > 0) return data.map(d => d.role);
 
-      // Fallback to CRM role for legacy/admin accounts
-      const { data: crmUser } = await supabase
-        .from('crm_users')
-        .select('role')
-        .eq('auth_user_id', user.id)
-        .maybeSingle();
+        // Fallback to CRM role for legacy/admin accounts
+        const { data: crmUser } = await supabase
+          .from('crm_users')
+          .select('role')
+          .eq('auth_user_id', user.id)
+          .maybeSingle();
 
-      if (crmUser?.role === 'admin') return ['admin'];
-      if (crmUser?.role === 'manager') return ['operations'];
-      if (crmUser?.role === 'executive') return ['sales'];
-      return [];
+        if (crmUser?.role === 'admin') return ['admin'];
+        if (crmUser?.role === 'manager') return ['operations'];
+        if (crmUser?.role === 'executive') return ['sales'];
+        return [];
+      } catch (err) {
+        console.warn("[VerticalProvider] Failed to fetch user roles", err);
+        return [];
+      }
     },
     enabled: !!user?.id,
+    retry: 2,
+    staleTime: 1000 * 60,
   });
 
   const isAdminUser = userRoles.includes('super_admin') || userRoles.includes('admin');
