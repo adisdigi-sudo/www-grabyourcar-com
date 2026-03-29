@@ -240,17 +240,18 @@ export async function persistInsuranceQuoteHistory(input: PersistQuoteHistoryInp
       ncb_percentage: input.ncbPercentage ?? null,
       previous_claim: input.previousClaim ?? null,
       notes: input.notes ?? null,
-      journey_last_event: "quote_shared",
-      journey_last_event_at: nowIso,
       updated_at: nowIso,
     };
 
     // Only promote to quote_shared if the lead is in an earlier stage
     const currentStage = (current?.pipeline_stage || "").toLowerCase();
     const currentStatus = (current?.lead_status || "").toLowerCase();
-    const protectedStages = ["follow_up", "negotiation", "payment_pending", "won", "policy_issued", "lost", "converted", "closed"];
-    if (!protectedStages.includes(currentStage)) {
+    const protectedStages = ["follow_up", "negotiation", "payment_pending", "won", "policy_issued", "lost", "converted", "closed", "quote_shared"];
+    const stageChanged = !protectedStages.includes(currentStage);
+    if (stageChanged) {
       updates.pipeline_stage = "quote_shared";
+      updates.journey_last_event = "quote_shared";
+      updates.journey_last_event_at = nowIso;
     }
     if (!protectedStages.includes(currentStatus)) {
       updates.lead_status = "quote_shared";
@@ -265,12 +266,15 @@ export async function persistInsuranceQuoteHistory(input: PersistQuoteHistoryInp
       throw new Error(`Client quote update failed: ${clientUpdateError.message}`);
     }
 
-    await createQuoteStageLog({
-      clientId: resolvedClientId,
-      quoteRef,
-      shareMethod: input.shareMethod,
-      totalPremium: input.totalPremium ?? input.quoteAmount ?? null,
-    });
+    // Only log stage change if it actually changed
+    if (stageChanged) {
+      await createQuoteStageLog({
+        clientId: resolvedClientId,
+        quoteRef,
+        shareMethod: input.shareMethod,
+        totalPremium: input.totalPremium ?? input.quoteAmount ?? null,
+      });
+    }
   }
 
   return { pdfStoragePath, quoteRef, clientId: resolvedClientId };

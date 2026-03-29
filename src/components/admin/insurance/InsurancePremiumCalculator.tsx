@@ -205,6 +205,8 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
       },
       addons: addons.filter((addon) => addon.enabled).map((addon) => addon.name),
       notes: `Zone: ${zone} | Fuel: ${fuelType} | Policy: ${policyType} | OD Discount: ${discountPct}% | NCB: ${ncbLocked ? 0 : ncb}% | Claim Taken: ${claimTaken ? "Yes" : "No"} | Expired > 90 Days: ${expiredOver90Days ? "Yes" : "No"}`,
+      quoteAmount: Math.round(calc.total),
+      quoteInsurer: resolvedInsurer || "Calculator Quote",
       ncbPercentage: ncbLocked ? 0 : ncb,
       previousClaim: ncbLocked,
     };
