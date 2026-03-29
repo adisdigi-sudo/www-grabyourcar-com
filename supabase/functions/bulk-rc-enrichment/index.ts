@@ -58,9 +58,18 @@ function calculatePremium(enrichedData: any) {
   const odRate = estimatedCC > 1500 ? 0.03343 : 0.03191;
   const basicOD = Math.round(idv * odRate);
 
-  // NCB - assume 20% for renewal prospects (conservative)
-  const ncbPercent = vehicleAge >= 2 ? 25 : vehicleAge >= 1 ? 20 : 0;
-  const ncbDiscount = Math.round(basicOD * ncbPercent / 100);
+  // NCB - auto by vehicle age (year-wise slab)
+  // Age 0: 0%, Age 1: 20%, Age 2: 25%, Age 3: 35%, Age 4: 45%, Age 5+: 50%
+  let ncbPercent = 0;
+  if (vehicleAge >= 5) ncbPercent = 50;
+  else if (vehicleAge === 4) ncbPercent = 45;
+  else if (vehicleAge === 3) ncbPercent = 35;
+  else if (vehicleAge === 2) ncbPercent = 25;
+  else if (vehicleAge === 1) ncbPercent = 20;
+
+  // NCB applied on OD AFTER OD discount
+  const odAfterDiscount = basicOD - odDiscount;
+  const ncbDiscount = Math.round(odAfterDiscount * ncbPercent / 100);
 
   // TP rates 2026
   let tp = 3416; // 1000-1500cc
