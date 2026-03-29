@@ -517,7 +517,7 @@ export function BulkRenewalQuoteGenerator({ onClose }: { onClose: () => void }) 
                     addonPremium: row.addon_premium,
                     addons: row.addons || [],
                   };
-                  const { doc, fileName } = generateInsuranceQuotePdf(quoteData);
+                  const { doc, fileName } = generateInsuranceQuotePdf(quoteData, { skipDownload: true });
                   // Upload PDF to storage
                   const pdfBlob = doc.output("blob");
                   const storagePath = `bulk/${row.id}/${fileName}`;
