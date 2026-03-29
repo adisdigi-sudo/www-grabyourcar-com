@@ -1134,6 +1134,34 @@ export function InsuranceStatusPipeline() {
           )}
         </DialogContent>
       </Dialog>
+      {/* Quote Calculator Modal */}
+      {selectedClient && showQuoteModal && (
+        <InsuranceQuoteModal
+          open={showQuoteModal}
+          onOpenChange={setShowQuoteModal}
+          client={{
+            id: selectedClient.id,
+            customer_name: selectedClient.customer_name || "Customer",
+            phone: selectedClient.phone,
+            email: selectedClient.email || undefined,
+            vehicle_number: selectedClient.vehicle_number || undefined,
+            vehicle_make: selectedClient.vehicle_make || undefined,
+            vehicle_model: selectedClient.vehicle_model || undefined,
+            vehicle_year: undefined,
+            current_insurer: selectedClient.current_insurer || undefined,
+            current_policy_type: undefined,
+            ncb_percentage: undefined,
+            previous_claim: undefined,
+            city: undefined,
+            current_premium: selectedClient.current_premium || undefined,
+            policy_expiry_date: undefined,
+          }}
+          onQuoteSent={() => {
+            toast.success("📋 Quote saved to history!");
+            fetchClients();
+          }}
+        />
+      )}
     </div>
   );
 }
