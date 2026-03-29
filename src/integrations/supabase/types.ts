@@ -14271,10 +14271,13 @@ export type Database = {
           batch_delay_ms: number | null
           batch_size: number | null
           campaign_type: string
+          channel: string
           completed_at: string | null
           created_at: string | null
           created_by: string | null
           description: string | null
+          email_provider: string | null
+          email_subject: string | null
           estimated_recipients: number | null
           id: string
           media_type: string | null
@@ -14304,10 +14307,13 @@ export type Database = {
           batch_delay_ms?: number | null
           batch_size?: number | null
           campaign_type?: string
+          channel?: string
           completed_at?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
+          email_provider?: string | null
+          email_subject?: string | null
           estimated_recipients?: number | null
           id?: string
           media_type?: string | null
@@ -14337,10 +14343,13 @@ export type Database = {
           batch_delay_ms?: number | null
           batch_size?: number | null
           campaign_type?: string
+          channel?: string
           completed_at?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
+          email_provider?: string | null
+          email_subject?: string | null
           estimated_recipients?: number | null
           id?: string
           media_type?: string | null

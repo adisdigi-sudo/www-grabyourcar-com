@@ -25,13 +25,13 @@ export function WhatsAppMarketingPortal() {
     <div className="space-y-6">
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
-          <div className="p-2 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-xl">
-            <MessageSquare className="h-6 w-6 text-green-600" />
+          <div className="p-2 bg-gradient-to-br from-green-500/20 via-blue-500/20 to-purple-500/20 rounded-xl">
+            <Send className="h-6 w-6 text-primary" />
           </div>
-          WhatsApp Marketing Portal
+          Omni-Channel Marketing Hub
         </h1>
         <p className="text-muted-foreground">
-          Enterprise-grade WhatsApp campaigns, AI automation, and customer engagement
+          WhatsApp, Email & RCS — campaigns, AI automation, and customer engagement
         </p>
       </div>
 
