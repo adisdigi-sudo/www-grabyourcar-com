@@ -9,8 +9,9 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
   FileText, Download, CheckCircle2, Loader2, Plus, Trash2, Upload,
-  Send, MessageCircle, Filter, Clock, CheckSquare, Mail, Search, X
+  Send, MessageCircle, Filter, Clock, CheckSquare, Mail, Search, X, FileSpreadsheet
 } from "lucide-react";
+import { generateBulkQuoteExcel, parseQuoteExcel } from "@/lib/generateBulkQuoteExcel";
 import { generateInsuranceQuotePdf, InsuranceQuoteData } from "@/lib/generateInsuranceQuotePdf";
 import {
   useBulkRenewalQuotes,
