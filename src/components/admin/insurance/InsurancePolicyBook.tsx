@@ -3,15 +3,17 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { SmartDatePicker } from "@/components/ui/smart-date-picker";
 import { cn } from "@/lib/utils";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, subMonths } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, BookOpen, User, Download, Eye, CalendarIcon, Send, Upload } from "lucide-react";
+import { Search, BookOpen, User, Download, Eye, CalendarIcon, Send, Upload, Pencil } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { InsurancePolicyDocumentUploader } from "./InsurancePolicyDocumentUploader";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -129,7 +131,75 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [uploadPolicyId, setUploadPolicyId] = useState<string | null>(null);
   const [uploadClientId, setUploadClientId] = useState<string | null>(null);
+  const [editPolicy, setEditPolicy] = useState<PolicyRecord | null>(null);
+  const [editForm, setEditForm] = useState<Record<string, any>>({});
+  const [saving, setSaving] = useState(false);
   const queryClient = useQueryClient();
+
+  const openEditDialog = (policy: PolicyRecord) => {
+    setEditPolicy(policy);
+    setEditForm({
+      phone: policy.insurance_clients?.phone || "",
+      customer_name: policy.insurance_clients?.customer_name || "",
+      insurer: policy.insurer || "",
+      policy_number: policy.policy_number || "",
+      premium_amount: policy.premium_amount || "",
+      policy_type: policy.policy_type || "comprehensive",
+      start_date: policy.start_date || "",
+      expiry_date: policy.expiry_date || "",
+      booking_date: policy.booking_date || "",
+      vehicle_number: policy.insurance_clients?.vehicle_number || "",
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editPolicy) return;
+    setSaving(true);
+    try {
+      // Update insurance_policies
+      const { error: policyErr } = await supabase
+        .from("insurance_policies")
+        .update({
+          insurer: editForm.insurer || null,
+          policy_number: editForm.policy_number || null,
+          premium_amount: editForm.premium_amount ? Number(editForm.premium_amount) : null,
+          policy_type: editForm.policy_type || null,
+          start_date: editForm.start_date || null,
+          expiry_date: editForm.expiry_date || null,
+          booking_date: editForm.booking_date || null,
+        })
+        .eq("id", editPolicy.id);
+      if (policyErr) throw policyErr;
+
+      // Update insurance_clients if client_id exists
+      if (editPolicy.client_id) {
+        const { error: clientErr } = await supabase
+          .from("insurance_clients")
+          .update({
+            phone: editForm.phone || null,
+            customer_name: editForm.customer_name || null,
+            vehicle_number: editForm.vehicle_number || null,
+            current_insurer: editForm.insurer || null,
+            current_premium: editForm.premium_amount ? Number(editForm.premium_amount) : null,
+            current_policy_number: editForm.policy_number || null,
+            policy_start_date: editForm.start_date || null,
+            policy_expiry_date: editForm.expiry_date || null,
+            booking_date: editForm.booking_date || null,
+          })
+          .eq("id", editPolicy.client_id);
+        if (clientErr) throw clientErr;
+      }
+
+      toast.success("Policy details updated");
+      setEditPolicy(null);
+      queryClient.invalidateQueries({ queryKey: ["ins-policies-book"] });
+      queryClient.invalidateQueries({ queryKey: ["ins-clients"] });
+    } catch (err: any) {
+      toast.error("Update failed: " + (err.message || "Unknown error"));
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const partners = useMemo(() => {
     const set = new Set(policies.map(p => p.insurer).filter(Boolean));
@@ -366,8 +436,8 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
                   <TableHead className="text-[10px] font-bold uppercase">Booking</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase">Issued</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase">Expiry</TableHead>
-                  <TableHead className="text-[10px] font-bold uppercase">Source</TableHead>
-                  <TableHead className="text-[10px] font-bold uppercase">Doc</TableHead>
+                      <TableHead className="text-[10px] font-bold uppercase">Source</TableHead>
+                      <TableHead className="text-[10px] font-bold uppercase">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -411,26 +481,31 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
                       <TableCell className="text-xs">{policy.expiry_date ? format(new Date(policy.expiry_date), "dd MMM yyyy") : "—"}</TableCell>
                       <TableCell>{sourceLabel(policy)}</TableCell>
                       <TableCell>
-                        {policy.policy_document_url ? (
-                          <div className="flex items-center gap-0.5">
-                            <Button variant="ghost" size="icon" className="h-6 w-6" title="View" onClick={() => window.open(policy.policy_document_url!, "_blank")}>
-                              <Eye className="h-3 w-3 text-primary" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-6 w-6" title="Download" onClick={() => {
-                              const anchor = document.createElement("a");
-                              anchor.href = policy.policy_document_url!;
-                              anchor.download = `${policy.policy_number || "policy"}.pdf`;
-                              anchor.target = "_blank";
-                              anchor.click();
-                            }}>
-                              <Download className="h-3 w-3 text-muted-foreground" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <Button variant="ghost" size="icon" className="h-6 w-6" title="Upload Document" onClick={() => { setUploadPolicyId(policy.id); setUploadClientId(policy.client_id); }}>
-                            <Upload className="h-3 w-3 text-amber-500" />
+                        <div className="flex items-center gap-0.5">
+                          <Button variant="ghost" size="icon" className="h-6 w-6" title="Edit Details" onClick={() => openEditDialog(policy)}>
+                            <Pencil className="h-3 w-3 text-primary" />
                           </Button>
-                        )}
+                          {policy.policy_document_url ? (
+                            <>
+                              <Button variant="ghost" size="icon" className="h-6 w-6" title="View" onClick={() => window.open(policy.policy_document_url!, "_blank")}>
+                                <Eye className="h-3 w-3 text-primary" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-6 w-6" title="Download" onClick={() => {
+                                const anchor = document.createElement("a");
+                                anchor.href = policy.policy_document_url!;
+                                anchor.download = `${policy.policy_number || "policy"}.pdf`;
+                                anchor.target = "_blank";
+                                anchor.click();
+                              }}>
+                                <Download className="h-3 w-3 text-muted-foreground" />
+                              </Button>
+                            </>
+                          ) : (
+                            <Button variant="ghost" size="icon" className="h-6 w-6" title="Upload Document" onClick={() => { setUploadPolicyId(policy.id); setUploadClientId(policy.client_id); }}>
+                              <Upload className="h-3 w-3 text-amber-500" />
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -457,6 +532,76 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
               }}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Policy Dialog */}
+      <Dialog open={!!editPolicy} onOpenChange={(open) => { if (!open) setEditPolicy(null); }}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-sm">Edit Policy Details</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Customer Name</Label>
+                <Input value={editForm.customer_name || ""} onChange={e => setEditForm(p => ({ ...p, customer_name: e.target.value }))} className="h-9 text-sm" />
+              </div>
+              <div>
+                <Label className="text-xs">Phone Number</Label>
+                <Input value={editForm.phone || ""} onChange={e => setEditForm(p => ({ ...p, phone: e.target.value }))} className="h-9 text-sm" placeholder="9876543210" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Vehicle Number</Label>
+                <Input value={editForm.vehicle_number || ""} onChange={e => setEditForm(p => ({ ...p, vehicle_number: e.target.value }))} className="h-9 text-sm" />
+              </div>
+              <div>
+                <Label className="text-xs">Policy Number</Label>
+                <Input value={editForm.policy_number || ""} onChange={e => setEditForm(p => ({ ...p, policy_number: e.target.value }))} className="h-9 text-sm" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Insurer</Label>
+                <Input value={editForm.insurer || ""} onChange={e => setEditForm(p => ({ ...p, insurer: e.target.value }))} className="h-9 text-sm" />
+              </div>
+              <div>
+                <Label className="text-xs">Premium (₹)</Label>
+                <Input type="number" value={editForm.premium_amount || ""} onChange={e => setEditForm(p => ({ ...p, premium_amount: e.target.value }))} className="h-9 text-sm" />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Policy Type</Label>
+              <Select value={editForm.policy_type || "comprehensive"} onValueChange={v => setEditForm(p => ({ ...p, policy_type: v }))}>
+                <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="comprehensive">Comprehensive</SelectItem>
+                  <SelectItem value="third_party">Third Party</SelectItem>
+                  <SelectItem value="standalone_od">Standalone OD</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <Label className="text-xs">Booking Date</Label>
+                <Input type="date" value={editForm.booking_date || ""} onChange={e => setEditForm(p => ({ ...p, booking_date: e.target.value }))} className="h-9 text-sm" />
+              </div>
+              <div>
+                <Label className="text-xs">Start Date</Label>
+                <Input type="date" value={editForm.start_date || ""} onChange={e => setEditForm(p => ({ ...p, start_date: e.target.value }))} className="h-9 text-sm" />
+              </div>
+              <div>
+                <Label className="text-xs">Expiry Date</Label>
+                <Input type="date" value={editForm.expiry_date || ""} onChange={e => setEditForm(p => ({ ...p, expiry_date: e.target.value }))} className="h-9 text-sm" />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setEditPolicy(null)}>Cancel</Button>
+            <Button size="sm" onClick={handleSaveEdit} disabled={saving}>{saving ? "Saving..." : "Save Changes"}</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
