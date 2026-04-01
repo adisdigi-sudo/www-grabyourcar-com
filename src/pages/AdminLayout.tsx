@@ -219,10 +219,7 @@ const AutoPilotDashboard = lazy(() => import("@/components/admin/AutoPilotDashbo
 const LeadRoutingManager = lazy(() =>
   import("@/components/admin/LeadRoutingManager").then((module) => ({ default: module.LeadRoutingManager })),
 );
-// Accounts — Zoho Books-style unified workspace
 const ZohoAccountsWorkspace = lazy(() => import("@/components/admin/finance/ZohoAccountsWorkspace").then(m => ({ default: m.ZohoAccountsWorkspace })));
-
-// HR — Zoho People-style unified workspace
 const ZohoHRWorkspace = lazy(() => import("@/components/admin/hr/ZohoHRWorkspace").then(m => ({ default: m.ZohoHRWorkspace })));
 const CarDatabaseWorkspace = lazy(() =>
   import("@/components/admin/car-database/CarDatabaseWorkspace").then((module) => ({ default: module.CarDatabaseWorkspace })),
@@ -262,12 +259,25 @@ const AdminPanelLoader = ({ className }: { className?: string }) => (
 );
 
 const ADMIN_BOOT_TIMEOUT_MS = 12000;
+const ADMIN_ACTIVE_TAB_STORAGE_KEY = "gyc_admin_active_tab";
+
+const getInitialAdminTab = () => {
+  if (typeof window === "undefined") {
+    return "dashboard";
+  }
+
+  try {
+    return window.localStorage.getItem(ADMIN_ACTIVE_TAB_STORAGE_KEY) || "dashboard";
+  } catch {
+    return "dashboard";
+  }
+};
 
 const AdminLayout = () => {
   const navigate = useNavigate();
   const { user, initialized, isLoading, roles } = useAdminAuth();
   const { activeVertical, setActiveVertical, isLoading: verticalAccessLoading, availableVerticals } = useVerticalAccess();
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [activeTab, setActiveTab] = useState(getInitialAdminTab);
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
   const [bootTimedOut, setBootTimedOut] = useState(false);
@@ -283,6 +293,14 @@ const AdminLayout = () => {
     verticalName: activeVertical?.name,
     isSuperAdmin,
   });
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(ADMIN_ACTIVE_TAB_STORAGE_KEY, activeTab);
+    } catch {
+      // ignore blocked storage
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -310,7 +328,6 @@ const AdminLayout = () => {
     }
   }, [user, isLoading, verticalAccessLoading, activeVertical, availableVerticals, setActiveVertical]);
 
-  // Boot timeout: if CRM stays stuck loading for too long, force-unblock
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setBootTimedOut(true);
@@ -320,7 +337,6 @@ const AdminLayout = () => {
     return () => window.clearTimeout(timer);
   }, []);
 
-  // Reset boot timeout flag once loading finishes naturally
   useEffect(() => {
     if (initialized && !isLoading && !verticalAccessLoading) {
       setBootTimedOut(false);
@@ -336,7 +352,6 @@ const AdminLayout = () => {
     return <Navigate to="/crm-auth" replace />;
   }
 
-  // If boot timed out and we still don't have a user, redirect to login
   if (bootTimedOut && !user) {
     return <Navigate to="/crm-auth" replace />;
   }
@@ -592,7 +607,6 @@ const AdminLayout = () => {
         return <DealerManagement initialTab="inventory" />;
       case "dealer-broadcast":
         return <DealerManagement initialTab="broadcast" />;
-      // ── Accounts (Zoho Books style) ──
       case "accounts-dashboard":
       case "accounts-invoices":
       case "accounts-expenses":
@@ -603,7 +617,6 @@ const AdminLayout = () => {
       case "accounts-reports":
       case "accounts-documents":
         return <ZohoAccountsWorkspace />;
-      // ── HR (Zoho People-style unified workspace) ──
       case "hr-core":
       case "hr-recruitment":
       case "hr-workforce":
