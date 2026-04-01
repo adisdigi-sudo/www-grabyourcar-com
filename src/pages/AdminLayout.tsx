@@ -258,7 +258,7 @@ const AdminPanelLoader = ({ className }: { className?: string }) => (
   </div>
 );
 
-const ADMIN_BOOT_TIMEOUT_MS = 12000;
+const ADMIN_BOOT_TIMEOUT_MS = 12_000;
 const ADMIN_ACTIVE_TAB_STORAGE_KEY = "gyc_admin_active_tab";
 
 const getInitialAdminTab = () => {
