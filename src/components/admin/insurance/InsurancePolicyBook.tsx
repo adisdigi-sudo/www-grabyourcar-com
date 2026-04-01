@@ -534,6 +534,76 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Edit Policy Dialog */}
+      <Dialog open={!!editPolicy} onOpenChange={(open) => { if (!open) setEditPolicy(null); }}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-sm">Edit Policy Details</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Customer Name</Label>
+                <Input value={editForm.customer_name || ""} onChange={e => setEditForm(p => ({ ...p, customer_name: e.target.value }))} className="h-9 text-sm" />
+              </div>
+              <div>
+                <Label className="text-xs">Phone Number</Label>
+                <Input value={editForm.phone || ""} onChange={e => setEditForm(p => ({ ...p, phone: e.target.value }))} className="h-9 text-sm" placeholder="9876543210" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Vehicle Number</Label>
+                <Input value={editForm.vehicle_number || ""} onChange={e => setEditForm(p => ({ ...p, vehicle_number: e.target.value }))} className="h-9 text-sm" />
+              </div>
+              <div>
+                <Label className="text-xs">Policy Number</Label>
+                <Input value={editForm.policy_number || ""} onChange={e => setEditForm(p => ({ ...p, policy_number: e.target.value }))} className="h-9 text-sm" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Insurer</Label>
+                <Input value={editForm.insurer || ""} onChange={e => setEditForm(p => ({ ...p, insurer: e.target.value }))} className="h-9 text-sm" />
+              </div>
+              <div>
+                <Label className="text-xs">Premium (₹)</Label>
+                <Input type="number" value={editForm.premium_amount || ""} onChange={e => setEditForm(p => ({ ...p, premium_amount: e.target.value }))} className="h-9 text-sm" />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Policy Type</Label>
+              <Select value={editForm.policy_type || "comprehensive"} onValueChange={v => setEditForm(p => ({ ...p, policy_type: v }))}>
+                <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="comprehensive">Comprehensive</SelectItem>
+                  <SelectItem value="third_party">Third Party</SelectItem>
+                  <SelectItem value="standalone_od">Standalone OD</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <Label className="text-xs">Booking Date</Label>
+                <Input type="date" value={editForm.booking_date || ""} onChange={e => setEditForm(p => ({ ...p, booking_date: e.target.value }))} className="h-9 text-sm" />
+              </div>
+              <div>
+                <Label className="text-xs">Start Date</Label>
+                <Input type="date" value={editForm.start_date || ""} onChange={e => setEditForm(p => ({ ...p, start_date: e.target.value }))} className="h-9 text-sm" />
+              </div>
+              <div>
+                <Label className="text-xs">Expiry Date</Label>
+                <Input type="date" value={editForm.expiry_date || ""} onChange={e => setEditForm(p => ({ ...p, expiry_date: e.target.value }))} className="h-9 text-sm" />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setEditPolicy(null)}>Cancel</Button>
+            <Button size="sm" onClick={handleSaveEdit} disabled={saving}>{saving ? "Saving..." : "Save Changes"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
