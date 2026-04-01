@@ -723,12 +723,6 @@ const AdminLayout = () => {
 
 export default AdminLayout;
 
-const AdminSidebar = lazy(() =>
-  import("@/components/admin/AdminSidebar").then((module) => ({ default: module.AdminSidebar })),
-);
-const AdminDashboard = lazy(() =>
-  import("@/components/admin/AdminDashboard").then((module) => ({ default: module.AdminDashboard })),
-);
 const LeadManagement = lazy(() =>
   import("@/components/admin/LeadManagement").then((module) => ({ default: module.LeadManagement })),
 );
