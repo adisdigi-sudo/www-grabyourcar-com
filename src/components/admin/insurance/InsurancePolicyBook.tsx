@@ -481,26 +481,31 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
                       <TableCell className="text-xs">{policy.expiry_date ? format(new Date(policy.expiry_date), "dd MMM yyyy") : "—"}</TableCell>
                       <TableCell>{sourceLabel(policy)}</TableCell>
                       <TableCell>
-                        {policy.policy_document_url ? (
-                          <div className="flex items-center gap-0.5">
-                            <Button variant="ghost" size="icon" className="h-6 w-6" title="View" onClick={() => window.open(policy.policy_document_url!, "_blank")}>
-                              <Eye className="h-3 w-3 text-primary" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-6 w-6" title="Download" onClick={() => {
-                              const anchor = document.createElement("a");
-                              anchor.href = policy.policy_document_url!;
-                              anchor.download = `${policy.policy_number || "policy"}.pdf`;
-                              anchor.target = "_blank";
-                              anchor.click();
-                            }}>
-                              <Download className="h-3 w-3 text-muted-foreground" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <Button variant="ghost" size="icon" className="h-6 w-6" title="Upload Document" onClick={() => { setUploadPolicyId(policy.id); setUploadClientId(policy.client_id); }}>
-                            <Upload className="h-3 w-3 text-amber-500" />
+                        <div className="flex items-center gap-0.5">
+                          <Button variant="ghost" size="icon" className="h-6 w-6" title="Edit Details" onClick={() => openEditDialog(policy)}>
+                            <Pencil className="h-3 w-3 text-primary" />
                           </Button>
-                        )}
+                          {policy.policy_document_url ? (
+                            <>
+                              <Button variant="ghost" size="icon" className="h-6 w-6" title="View" onClick={() => window.open(policy.policy_document_url!, "_blank")}>
+                                <Eye className="h-3 w-3 text-primary" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-6 w-6" title="Download" onClick={() => {
+                                const anchor = document.createElement("a");
+                                anchor.href = policy.policy_document_url!;
+                                anchor.download = `${policy.policy_number || "policy"}.pdf`;
+                                anchor.target = "_blank";
+                                anchor.click();
+                              }}>
+                                <Download className="h-3 w-3 text-muted-foreground" />
+                              </Button>
+                            </>
+                          ) : (
+                            <Button variant="ghost" size="icon" className="h-6 w-6" title="Upload Document" onClick={() => { setUploadPolicyId(policy.id); setUploadClientId(policy.client_id); }}>
+                              <Upload className="h-3 w-3 text-amber-500" />
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
