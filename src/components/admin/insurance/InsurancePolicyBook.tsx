@@ -131,7 +131,75 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [uploadPolicyId, setUploadPolicyId] = useState<string | null>(null);
   const [uploadClientId, setUploadClientId] = useState<string | null>(null);
+  const [editPolicy, setEditPolicy] = useState<PolicyRecord | null>(null);
+  const [editForm, setEditForm] = useState<Record<string, any>>({});
+  const [saving, setSaving] = useState(false);
   const queryClient = useQueryClient();
+
+  const openEditDialog = (policy: PolicyRecord) => {
+    setEditPolicy(policy);
+    setEditForm({
+      phone: policy.insurance_clients?.phone || "",
+      customer_name: policy.insurance_clients?.customer_name || "",
+      insurer: policy.insurer || "",
+      policy_number: policy.policy_number || "",
+      premium_amount: policy.premium_amount || "",
+      policy_type: policy.policy_type || "comprehensive",
+      start_date: policy.start_date || "",
+      expiry_date: policy.expiry_date || "",
+      booking_date: policy.booking_date || "",
+      vehicle_number: policy.insurance_clients?.vehicle_number || "",
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editPolicy) return;
+    setSaving(true);
+    try {
+      // Update insurance_policies
+      const { error: policyErr } = await supabase
+        .from("insurance_policies")
+        .update({
+          insurer: editForm.insurer || null,
+          policy_number: editForm.policy_number || null,
+          premium_amount: editForm.premium_amount ? Number(editForm.premium_amount) : null,
+          policy_type: editForm.policy_type || null,
+          start_date: editForm.start_date || null,
+          expiry_date: editForm.expiry_date || null,
+          booking_date: editForm.booking_date || null,
+        })
+        .eq("id", editPolicy.id);
+      if (policyErr) throw policyErr;
+
+      // Update insurance_clients if client_id exists
+      if (editPolicy.client_id) {
+        const { error: clientErr } = await supabase
+          .from("insurance_clients")
+          .update({
+            phone: editForm.phone || null,
+            customer_name: editForm.customer_name || null,
+            vehicle_number: editForm.vehicle_number || null,
+            current_insurer: editForm.insurer || null,
+            current_premium: editForm.premium_amount ? Number(editForm.premium_amount) : null,
+            current_policy_number: editForm.policy_number || null,
+            policy_start_date: editForm.start_date || null,
+            policy_expiry_date: editForm.expiry_date || null,
+            booking_date: editForm.booking_date || null,
+          })
+          .eq("id", editPolicy.client_id);
+        if (clientErr) throw clientErr;
+      }
+
+      toast.success("Policy details updated");
+      setEditPolicy(null);
+      queryClient.invalidateQueries({ queryKey: ["ins-policies-book"] });
+      queryClient.invalidateQueries({ queryKey: ["ins-clients"] });
+    } catch (err: any) {
+      toast.error("Update failed: " + (err.message || "Unknown error"));
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const partners = useMemo(() => {
     const set = new Set(policies.map(p => p.insurer).filter(Boolean));
