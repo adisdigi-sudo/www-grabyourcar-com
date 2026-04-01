@@ -1,6 +1,7 @@
 import { Component, ReactNode } from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { isDynamicImportError, recoverFromChunkLoadError } from "@/lib/chunkLoadRecovery";
 
 interface AdminRenderBoundaryProps {
   children: ReactNode;
@@ -22,6 +23,22 @@ export class AdminRenderBoundary extends Component<AdminRenderBoundaryProps, Adm
   }
 
   componentDidCatch(error: Error, errorInfo: unknown) {
+    if (isDynamicImportError(error)) {
+      const recovered = recoverFromChunkLoadError("crm_chunk_load_recovery");
+
+      console.warn("[AdminRenderBoundary] Dynamic import error detected", {
+        contextLabel: this.props.contextLabel,
+        error,
+        errorInfo,
+        href: window.location.href,
+        recovered,
+      });
+
+      if (recovered) {
+        return;
+      }
+    }
+
     console.error("[AdminRenderBoundary] Section failed", {
       contextLabel: this.props.contextLabel,
       error,
