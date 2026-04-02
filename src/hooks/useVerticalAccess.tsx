@@ -63,9 +63,10 @@ const setStoredActiveVerticalId = (verticalId: string | null) => {
 };
 
 export const VerticalProvider = ({ children }: { children: ReactNode }) => {
-  const { user } = useAuth();
+  const { user, loading: authLoading, initialized: authInitialized } = useAuth();
   const [activeVertical, setActiveVerticalState] = useState<BusinessVertical | null>(null);
   const [hasResolvedActiveVertical, setHasResolvedActiveVertical] = useState(false);
+  const isAuthReady = authInitialized && !authLoading;
 
   const setActiveVertical = useCallback((vertical: BusinessVertical | null) => {
     setActiveVerticalState(vertical);
@@ -87,7 +88,7 @@ export const VerticalProvider = ({ children }: { children: ReactNode }) => {
       }
       return data as BusinessVertical[];
     },
-    enabled: !!user?.id,
+    enabled: isAuthReady && !!user?.id,
     retry: 2,
     staleTime: 1000 * 60,
   });
@@ -107,7 +108,7 @@ export const VerticalProvider = ({ children }: { children: ReactNode }) => {
       }
       return data as Array<{ vertical_id: string; access_level: string | null }>;
     },
-    enabled: !!user?.id,
+    enabled: isAuthReady && !!user?.id,
     retry: 2,
     staleTime: 1000 * 60,
   });
@@ -130,7 +131,7 @@ export const VerticalProvider = ({ children }: { children: ReactNode }) => {
       }
       return data as TeamMember | null;
     },
-    enabled: !!user?.id,
+    enabled: isAuthReady && !!user?.id,
     retry: 1,
   });
 
@@ -165,7 +166,7 @@ export const VerticalProvider = ({ children }: { children: ReactNode }) => {
         return [];
       }
     },
-    enabled: !!user?.id,
+    enabled: isAuthReady && !!user?.id,
     retry: 2,
     staleTime: 1000 * 60,
   });
@@ -184,10 +185,18 @@ export const VerticalProvider = ({ children }: { children: ReactNode }) => {
   }, [allVerticals, isAdminUser, rolesLoading, userAccess]);
 
   useEffect(() => {
+    if (!isAuthReady) {
+      return;
+    }
+
     setHasResolvedActiveVertical(false);
-  }, [user?.id]);
+  }, [isAuthReady, user?.id]);
 
   useEffect(() => {
+    if (!isAuthReady) {
+      return;
+    }
+
     if (!user?.id) {
       setActiveVerticalState(null);
       setStoredActiveVerticalId(null);
@@ -226,7 +235,7 @@ export const VerticalProvider = ({ children }: { children: ReactNode }) => {
     }
 
     setHasResolvedActiveVertical(true);
-  }, [user?.id, verticalsLoading, accessLoading, rolesLoading, availableVerticals, activeVertical, setActiveVertical]);
+  }, [isAuthReady, user?.id, verticalsLoading, accessLoading, rolesLoading, availableVerticals, activeVertical, setActiveVertical]);
 
   // Check if user is manager in currently active vertical
   const isManagerInVertical = isAdminUser || (
@@ -240,7 +249,7 @@ export const VerticalProvider = ({ children }: { children: ReactNode }) => {
       activeVertical,
       setActiveVertical,
       availableVerticals,
-      isLoading: verticalsLoading || accessLoading || memberLoading || rolesLoading || !hasResolvedActiveVertical,
+      isLoading: !isAuthReady || verticalsLoading || accessLoading || memberLoading || rolesLoading || !hasResolvedActiveVertical,
       teamMember,
       isManagerInVertical,
     }}>
