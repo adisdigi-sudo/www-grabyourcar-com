@@ -9,6 +9,10 @@ import { logAdminActivity } from "@/lib/adminActivityLogger";
 import { Button } from "@/components/ui/button";
 import { AdminRenderBoundary } from "@/components/admin/shared/AdminRenderBoundary";
 import { Shield } from "lucide-react";
+import { NotificationCenter } from "@/components/admin/NotificationCenter";
+import { InsuranceManagement } from "@/components/admin/InsuranceManagement";
+import { CRMAssistant } from "@/components/admin/CRMAssistant";
+import { AICofounderBanner } from "@/components/admin/AICofounderBanner";
 
 const AdminSidebar = lazy(() =>
   import("@/components/admin/AdminSidebar").then((module) => ({ default: module.AdminSidebar })),
@@ -57,9 +61,6 @@ const WhatsAppManagement = lazy(() =>
 );
 const BlogManagement = lazy(() =>
   import("@/components/admin/BlogManagement").then((module) => ({ default: module.BlogManagement })),
-);
-const NotificationCenter = lazy(() =>
-  import("@/components/admin/NotificationCenter").then((module) => ({ default: module.NotificationCenter })),
 );
 const SEOBuilder = lazy(() =>
   import("@/components/admin/SEOBuilder").then((module) => ({ default: module.SEOBuilder })),
@@ -136,9 +137,6 @@ const LegacyLeadsManager = lazy(() =>
 );
 const MyHRDashboard = lazy(() =>
   import("@/components/admin/shared/MyHRDashboard").then((module) => ({ default: module.MyHRDashboard })),
-);
-const InsuranceManagement = lazy(() =>
-  import("@/components/admin/InsuranceManagement").then((module) => ({ default: module.InsuranceManagement })),
 );
 const InsuranceImportExport = lazy(() =>
   import("@/components/admin/insurance/InsuranceImportExport").then((module) => ({ default: module.InsuranceImportExport })),
@@ -239,14 +237,8 @@ const HRKPIManagement = lazy(() =>
 const HRTemplates = lazy(() =>
   import("@/components/admin/hr/HRTemplates").then((module) => ({ default: module.HRTemplates })),
 );
-const CRMAssistant = lazy(() =>
-  import("@/components/admin/CRMAssistant").then((module) => ({ default: module.CRMAssistant })),
-);
 const EncouragementPopup = lazy(() =>
   import("@/components/admin/EncouragementPopup").then((module) => ({ default: module.EncouragementPopup })),
-);
-const AICofounderBanner = lazy(() =>
-  import("@/components/admin/AICofounderBanner").then((module) => ({ default: module.AICofounderBanner })),
 );
 const PersonalizedWelcomeBanner = lazy(() =>
   import("@/components/admin/PersonalizedWelcomeBanner").then((module) => ({ default: module.PersonalizedWelcomeBanner })),
