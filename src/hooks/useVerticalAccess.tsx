@@ -65,6 +65,7 @@ const setStoredActiveVerticalId = (verticalId: string | null) => {
 export const VerticalProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   const [activeVertical, setActiveVerticalState] = useState<BusinessVertical | null>(null);
+  const [hasResolvedActiveVertical, setHasResolvedActiveVertical] = useState(false);
 
   const setActiveVertical = useCallback((vertical: BusinessVertical | null) => {
     setActiveVerticalState(vertical);
@@ -183,15 +184,23 @@ export const VerticalProvider = ({ children }: { children: ReactNode }) => {
   }, [allVerticals, isAdminUser, rolesLoading, userAccess]);
 
   useEffect(() => {
+    setHasResolvedActiveVertical(false);
+  }, [user?.id]);
+
+  useEffect(() => {
     if (!user?.id) {
       setActiveVerticalState(null);
       setStoredActiveVerticalId(null);
+      setHasResolvedActiveVertical(true);
       return;
     }
 
-    if (verticalsLoading || accessLoading || rolesLoading) return;
+    if (verticalsLoading || accessLoading || rolesLoading) {
+      return;
+    }
 
     if (activeVertical && availableVerticals.some(v => v.id === activeVertical.id)) {
+      setHasResolvedActiveVertical(true);
       return;
     }
 
@@ -202,17 +211,21 @@ export const VerticalProvider = ({ children }: { children: ReactNode }) => {
 
     if (storedVertical) {
       setActiveVerticalState(storedVertical);
+      setHasResolvedActiveVertical(true);
       return;
     }
 
     if (availableVerticals.length === 1) {
       setActiveVertical(availableVerticals[0]);
+      setHasResolvedActiveVertical(true);
       return;
     }
 
     if (activeVertical && !availableVerticals.some(v => v.id === activeVertical.id)) {
       setActiveVertical(null);
     }
+
+    setHasResolvedActiveVertical(true);
   }, [user?.id, verticalsLoading, accessLoading, rolesLoading, availableVerticals, activeVertical, setActiveVertical]);
 
   // Check if user is manager in currently active vertical
@@ -227,7 +240,7 @@ export const VerticalProvider = ({ children }: { children: ReactNode }) => {
       activeVertical,
       setActiveVertical,
       availableVerticals,
-      isLoading: verticalsLoading || accessLoading || memberLoading || rolesLoading,
+      isLoading: verticalsLoading || accessLoading || memberLoading || rolesLoading || !hasResolvedActiveVertical,
       teamMember,
       isManagerInVertical,
     }}>
