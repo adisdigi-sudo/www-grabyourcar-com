@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
@@ -13,6 +14,7 @@ interface UserRole {
 
 export const useAdminAuth = () => {
   const { user, loading: authLoading, initialized } = useAuth();
+  const shouldLoadRoles = initialized && !!user?.id;
 
   const { data: roles, isLoading: rolesLoading } = useQuery({
     queryKey: ['userRoles', user?.id],
@@ -60,13 +62,16 @@ export const useAdminAuth = () => {
         return [];
       }
     },
-    enabled: !!user?.id,
+    enabled: shouldLoadRoles,
     retry: 2,
     staleTime: 1000 * 60,
   });
 
+  const isReady = initialized && !authLoading && (!user || !rolesLoading);
+  const safeRoles = useMemo(() => roles || [], [roles]);
+
   const hasRole = (role: AppRole): boolean => {
-    return roles?.some(r => r.role === role) ?? false;
+    return safeRoles.some(r => r.role === role);
   };
 
   const isAdmin = (): boolean => {
@@ -96,8 +101,9 @@ export const useAdminAuth = () => {
   return {
     user,
     initialized,
-    roles: roles || [],
-    isLoading: authLoading || rolesLoading,
+    roles: safeRoles,
+    isLoading: !isReady,
+    isReady,
     hasRole,
     isAdmin,
     isSuperAdmin,

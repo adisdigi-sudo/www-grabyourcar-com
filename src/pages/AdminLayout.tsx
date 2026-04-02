@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { useVerticalAccess } from "@/hooks/useVerticalAccess";
@@ -251,8 +251,29 @@ const AdminPanelLoader = ({ className }: { className?: string }) => (
   </div>
 );
 
-const ADMIN_BOOT_TIMEOUT_MS = 12_000;
 const ADMIN_ACTIVE_TAB_STORAGE_KEY = "gyc_admin_active_tab";
+const VALID_ADMIN_TABS = new Set([
+  "dashboard", "sales-crm", "loan-crm", "unified-crm", "unified-intelligence", "journey-automation", "revenue-intelligence",
+  "lead-scoring", "client-management", "lead-import", "data-export", "leads-all", "leads-hot", "leads-whatsapp",
+  "cars-workspace", "cars-list", "cars-variants", "cars-specs", "cars-pricing", "cars-compare", "cars-colors", "cars-images",
+  "cars-image-sync", "cars-migration", "cars-brands", "cars-ai-entry", "cars-bulk-import", "cars-quick-import", "cars-city-pricing",
+  "cars-attributes", "cars-ai", "cars-url-scraper", "website-homepage", "website-content", "website-banners", "website-offers",
+  "website-branding", "website-testimonials", "website-faqs", "website-seo", "socialproof-reviews", "socialproof-stories",
+  "services-hsrp", "services-rentals", "services-driver-bookings", "services-api-partners", "services-insurance",
+  "services-insurance-import", "services-loans-pipeline", "services-loans-disbursement", "services-loans-after-sales",
+  "services-loans-bulk", "services-emi-calculator", "services-emi-pdf", "services-discounts", "services-quote-generator",
+  "services-pricing", "services-partners", "ecommerce-accessories", "ecommerce-orders", "ecommerce-crosssell", "d2c-rto",
+  "d2c-returns", "d2c-checkout", "d2c-inbox", "content-blog", "content-news", "content-launches", "content-ai",
+  "content-intelligence", "marketing-command", "holi-share", "marketing-email", "marketing-bulk", "integrations-api",
+  "open-api-portal", "integrations-whatsapp", "marketing-templates", "marketing-automation", "integrations-shipping",
+  "integrations-payments", "integrations-ad-tracking", "profile-business", "profile-logo", "profile-users", "profile-contact",
+  "profile-otp", "roles", "team-management", "settings", "calling-system", "manager-dashboard", "team-engagement",
+  "error-prevention", "workflow-engine", "automation-center", "auto-pilot", "lead-routing", "dealer-inquiry", "dealer-companies",
+  "dealer-reps", "dealer-inventory", "dealer-broadcast", "accounts-dashboard", "accounts-invoices", "accounts-expenses",
+  "accounts-bills", "accounts-banking", "accounts-chart", "accounts-journal", "accounts-reports", "accounts-documents",
+  "hr-core", "hr-recruitment", "hr-workforce", "hr-attendance", "hr-payroll", "hr-expense", "hr-performance", "hr-engagement",
+  "hr-assets", "hr-helpdesk", "ai-cofounder", "legacy-leads", "my-hr"
+]);
 
 const getInitialAdminTab = () => {
   if (typeof window === "undefined") {
@@ -266,18 +287,26 @@ const getInitialAdminTab = () => {
   }
 };
 
+const normalizeAdminTab = (tab: string | null | undefined) =>
+  tab && VALID_ADMIN_TABS.has(tab) ? tab : "dashboard";
+
 const AdminLayout = () => {
   const navigate = useNavigate();
   const { user, initialized, isLoading, roles } = useAdminAuth();
   const { activeVertical, setActiveVertical, isLoading: verticalAccessLoading, availableVerticals } = useVerticalAccess();
-  const [activeTab, setActiveTab] = useState(getInitialAdminTab);
+  const [activeTab, setActiveTab] = useState(() => normalizeAdminTab(getInitialAdminTab()));
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
-  const [bootTimedOut, setBootTimedOut] = useState(false);
 
   useSessionTimeout(initialized && !isLoading && !verticalAccessLoading && !!user);
 
   const isSuperAdmin = roles.some((r: any) => r.role === "super_admin" || r.role === "admin");
+  const hasAdminAccess = roles.length > 0;
+  const isAuthResolved = initialized && !isLoading;
+  const hasWorkspaceOptions = availableVerticals.length > 0;
+  const shouldResolveWorkspace = !!user && isAuthResolved && !verticalAccessLoading;
+
+  const effectiveActiveTab = useMemo(() => normalizeAdminTab(activeTab), [activeTab]);
   useEmployeeTracker({
     enabled: !isLoading && !verticalAccessLoading && !!user,
     userId: user?.id,
@@ -288,12 +317,17 @@ const AdminLayout = () => {
   });
 
   useEffect(() => {
+    if (effectiveActiveTab !== activeTab) {
+      setActiveTab(effectiveActiveTab);
+      return;
+    }
+
     try {
-      window.localStorage.setItem(ADMIN_ACTIVE_TAB_STORAGE_KEY, activeTab);
+      window.localStorage.setItem(ADMIN_ACTIVE_TAB_STORAGE_KEY, effectiveActiveTab);
     } catch {
       // ignore blocked storage
     }
-  }, [activeTab]);
+  }, [activeTab, effectiveActiveTab]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -322,21 +356,6 @@ const AdminLayout = () => {
   }, [user, isLoading, verticalAccessLoading, activeVertical, availableVerticals, setActiveVertical]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setBootTimedOut(true);
-      console.warn("[AdminLayout] Boot timeout reached – force-unblocking CRM");
-    }, ADMIN_BOOT_TIMEOUT_MS);
-
-    return () => window.clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    if (initialized && !isLoading && !verticalAccessLoading) {
-      setBootTimedOut(false);
-    }
-  }, [initialized, isLoading, verticalAccessLoading]);
-
-  useEffect(() => {
     if (initialized && !isLoading && !verticalAccessLoading && user && activeVertical) {
       resetChunkLoadRecovery("crm_chunk_load_recovery");
     }
@@ -345,13 +364,9 @@ const AdminLayout = () => {
   const isResolvingWorkspace =
     !!user && !isLoading && !verticalAccessLoading && !activeVertical && availableVerticals.length === 1;
 
-  const isBootstrappingAdmin = !bootTimedOut && (!initialized || isLoading || verticalAccessLoading || isResolvingWorkspace);
+  const isBootstrappingAdmin = !initialized || isLoading || verticalAccessLoading || isResolvingWorkspace;
 
-  if (initialized && !isLoading && !user) {
-    return <Navigate to="/crm-auth" replace />;
-  }
-
-  if (bootTimedOut && !user) {
+  if (isAuthResolved && !user) {
     return <Navigate to="/crm-auth" replace />;
   }
 
@@ -363,15 +378,13 @@ const AdminLayout = () => {
     );
   }
 
-  if (user && !activeVertical && availableVerticals.length > 1) {
+  if (shouldResolveWorkspace && !activeVertical && availableVerticals.length > 1) {
     return <Navigate to="/workspace" replace />;
   }
 
-  if (user && !activeVertical && availableVerticals.length === 0) {
+  if (shouldResolveWorkspace && !activeVertical && !hasWorkspaceOptions) {
     return <Navigate to="/workspace" replace />;
   }
-
-  const hasAdminAccess = roles.length > 0;
 
   if (!hasAdminAccess) {
     return (
@@ -385,7 +398,7 @@ const AdminLayout = () => {
   }
 
   const renderContent = () => {
-    switch (activeTab) {
+    switch (effectiveActiveTab) {
       case "dashboard": {
         const slug = activeVertical?.slug;
         if (slug === "insurance") return <InsuranceDashboard onNavigate={setActiveTab} />;
@@ -642,7 +655,7 @@ const AdminLayout = () => {
     <div className="min-h-screen bg-muted/30">
       <Suspense fallback={<AdminPanelLoader className="min-h-screen" />}>
         <AdminRenderBoundary contextLabel="CRM sidebar">
-          <AdminSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+           <AdminSidebar activeTab={effectiveActiveTab} setActiveTab={setActiveTab} />
         </AdminRenderBoundary>
       </Suspense>
 
@@ -680,12 +693,12 @@ const AdminLayout = () => {
                     "hsrp-crm",
                     "calling-system",
                     "manager-dashboard",
-                  ].includes(activeTab)
+                    ].includes(effectiveActiveTab)
                 ? "max-w-full"
                 : "max-w-7xl",
           )}
         >
-          {activeTab === "dashboard" && (
+          {effectiveActiveTab === "dashboard" && (
             <Suspense fallback={null}>
               <AdminRenderBoundary fallback={null} contextLabel="Welcome banner">
                 <PersonalizedWelcomeBanner userRole={roles?.[0]?.role} userName={user?.email?.split('@')[0]} userVertical={activeVertical?.name} />
@@ -694,11 +707,11 @@ const AdminLayout = () => {
           )}
           <Suspense fallback={null}>
             <AdminRenderBoundary fallback={null} contextLabel="AI Co-Founder banner">
-              <AICofounderBanner activeTab={activeTab} userRole={roles?.[0]?.role} userName={user?.email?.split('@')[0]} userVertical={activeVertical?.name} />
+              <AICofounderBanner activeTab={effectiveActiveTab} userRole={roles?.[0]?.role} userName={user?.email?.split('@')[0]} userVertical={activeVertical?.name} />
             </AdminRenderBoundary>
           </Suspense>
           <AdminRenderBoundary
-            key={`${activeVertical?.id ?? "no-vertical"}:${activeTab}`}
+            key={`${activeVertical?.id ?? "no-vertical"}:${effectiveActiveTab}`}
             contextLabel="CRM workspace"
           >
             <Suspense fallback={<AdminPanelLoader />}>
