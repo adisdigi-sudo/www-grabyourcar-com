@@ -6,6 +6,7 @@ import { useSessionTimeout } from "@/hooks/useSessionTimeout";
 import { useEmployeeTracker } from "@/hooks/useEmployeeTracker";
 import { cn } from "@/lib/utils";
 import { logAdminActivity } from "@/lib/adminActivityLogger";
+import { resetChunkLoadRecovery } from "@/lib/chunkLoadRecovery";
 import { Button } from "@/components/ui/button";
 import { AdminRenderBoundary } from "@/components/admin/shared/AdminRenderBoundary";
 import { Shield } from "lucide-react";
@@ -334,6 +335,12 @@ const AdminLayout = () => {
       setBootTimedOut(false);
     }
   }, [initialized, isLoading, verticalAccessLoading]);
+
+  useEffect(() => {
+    if (initialized && !isLoading && !verticalAccessLoading && user && activeVertical) {
+      resetChunkLoadRecovery("crm_chunk_load_recovery");
+    }
+  }, [initialized, isLoading, verticalAccessLoading, user, activeVertical]);
 
   const isResolvingWorkspace =
     !!user && !isLoading && !verticalAccessLoading && !activeVertical && availableVerticals.length === 1;
