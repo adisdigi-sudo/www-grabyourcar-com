@@ -422,7 +422,7 @@ function WonPolicyDialog({
         incentive_eligible: true,
         retarget_status: "none",
         retargeting_enabled: false,
-        journey_last_event: previousPolicy ? "renewal_policy_issued" : "policy_issued",
+        journey_last_event: isRenewal ? "renewal_policy_issued" : "policy_issued",
         journey_last_event_at: new Date().toISOString(),
       } as any).eq("id", client.id);
 
