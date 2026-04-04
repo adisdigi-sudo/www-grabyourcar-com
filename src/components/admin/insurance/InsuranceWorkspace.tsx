@@ -179,19 +179,27 @@ export function InsuranceWorkspace() {
   }, [allPolicies, dedupedClients]);
 
   const performancePolicies = useMemo(() => {
-    const unique = new Map<string, PolicyRecord>();
+    const all: PolicyRecord[] = [
+      ...allPolicies,
+      ...policyBookPolicies.filter((p) => String(p.id).startsWith("fallback-")),
+    ];
 
-    allPolicies.forEach((policy) => {
-      unique.set(policy.id, policy);
+    // Deduplicate by client_id — keep best policy per client to prevent double-counting
+    const bestByClient = new Map<string, PolicyRecord>();
+    const noClient: PolicyRecord[] = [];
+
+    all.forEach((policy) => {
+      if (!policy.client_id) { noClient.push(policy); return; }
+      const existing = bestByClient.get(policy.client_id);
+      if (!existing
+        || (policy.policy_number && !existing.policy_number)
+        || ((policy.updated_at || '') > (existing.updated_at || ''))
+      ) {
+        bestByClient.set(policy.client_id, policy);
+      }
     });
 
-    policyBookPolicies
-      .filter((policy) => String(policy.id).startsWith("fallback-"))
-      .forEach((policy) => {
-        unique.set(policy.id, policy);
-      });
-
-    return Array.from(unique.values());
+    return [...bestByClient.values(), ...noClient];
   }, [allPolicies, policyBookPolicies]);
 
   const monthOptions = useMemo(() => {

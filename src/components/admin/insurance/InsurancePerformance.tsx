@@ -76,13 +76,22 @@ export function InsurancePerformance({ clients, policies, selectedMonth, onMonth
   const clientById = useMemo(() => new Map(dedupedClients.map((client) => [client.id, client])), [dedupedClients]);
 
   const performancePolicies = useMemo(() => {
-    const unique = new Map<string, PolicyRecord>();
+    // Deduplicate by client_id — keep best policy per client to prevent double-counting
+    const bestByClient = new Map<string, PolicyRecord>();
+    const noClient: PolicyRecord[] = [];
 
     policies.forEach((policy) => {
-      unique.set(policy.id, policy);
+      if (!policy.client_id) { noClient.push(policy); return; }
+      const existing = bestByClient.get(policy.client_id);
+      if (!existing
+        || (policy.policy_number && !existing.policy_number)
+        || ((policy.updated_at || '') > (existing.updated_at || ''))
+      ) {
+        bestByClient.set(policy.client_id, policy);
+      }
     });
 
-    return Array.from(unique.values());
+    return [...bestByClient.values(), ...noClient];
   }, [policies]);
 
   const monthClients = useMemo(() => {
