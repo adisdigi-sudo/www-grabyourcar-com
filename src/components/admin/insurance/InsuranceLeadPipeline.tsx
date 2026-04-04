@@ -404,9 +404,7 @@ function WonPolicyDialog({
         policy_type: client.current_policy_type || "comprehensive",
       } as any;
 
-      const { error: savePolicyError } = matchedActivePolicy
-        ? await supabase.from("insurance_policies").update(policyPayload).eq("id", matchedActivePolicy.id)
-        : await supabase.from("insurance_policies").insert(policyPayload);
+      const { error: savePolicyError } = await supabase.from("insurance_policies").insert(policyPayload);
 
       if (savePolicyError) throw savePolicyError;
 
