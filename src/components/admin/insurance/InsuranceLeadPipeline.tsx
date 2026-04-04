@@ -304,7 +304,8 @@ function WonPolicyDialog({
       || parseDateValue(client.booking_date)
       || new Date();
 
-    setPolicyNumber(client.current_policy_number || "");
+    // Don't pre-fill old policy number — user must enter the NEW policy number
+    setPolicyNumber("");
     setInsurer(client.current_insurer || client.quote_insurer || "");
     setPremium(client.current_premium ? String(client.current_premium) : client.quote_amount ? String(client.quote_amount) : "");
     setStartDate(startBase);
