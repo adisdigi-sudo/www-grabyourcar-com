@@ -66,7 +66,7 @@ export function InsurancePolicyDocumentUploader({
       if (defaultPolicyId) {
         query = query.eq("id", defaultPolicyId);
       } else if (defaultClientId) {
-        query = query.eq("client_id", defaultClientId);
+        query = query.eq("client_id", defaultClientId).eq("status", "active");
       }
 
       const { data, error } = await query;
