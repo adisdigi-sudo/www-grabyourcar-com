@@ -304,7 +304,8 @@ function WonPolicyDialog({
       || parseDateValue(client.booking_date)
       || new Date();
 
-    setPolicyNumber(client.current_policy_number || "");
+    // Don't pre-fill old policy number — user must enter the NEW policy number
+    setPolicyNumber("");
     setInsurer(client.current_insurer || client.quote_insurer || "");
     setPremium(client.current_premium ? String(client.current_premium) : client.quote_amount ? String(client.quote_amount) : "");
     setStartDate(startBase);
@@ -336,6 +337,34 @@ function WonPolicyDialog({
         return;
       }
 
+      // Check by vehicle registration number across ALL clients for renewal detection
+      let hasExistingVehiclePolicy = false;
+      const vehicleNumber = client.vehicle_number?.trim();
+      if (vehicleNumber) {
+        const normalizedVehicle = vehicleNumber.replace(/\s+/g, '').toUpperCase();
+        // Find any active policies for this vehicle across all clients
+        const { data: vehiclePolicies } = await supabase
+          .from("insurance_policies")
+          .select("id, client_id, insurance_clients!inner(vehicle_number)")
+          .eq("status", "active")
+          .neq("client_id", client.id);
+
+        const matchingVehiclePolicies = (vehiclePolicies || []).filter((p: any) => {
+          const vn = p.insurance_clients?.vehicle_number?.replace(/\s+/g, '').toUpperCase();
+          return vn === normalizedVehicle;
+        });
+
+        if (matchingVehiclePolicies.length > 0) {
+          hasExistingVehiclePolicy = true;
+          // Mark other clients' active policies for this vehicle as renewed
+          await supabase
+            .from("insurance_policies")
+            .update({ status: "renewed", renewal_status: "renewed" })
+            .in("id", matchingVehiclePolicies.map((p: any) => p.id));
+        }
+      }
+
+      // Also check current client's active policies
       const { data: activePolicies, error: activePoliciesError } = await supabase
         .from("insurance_policies")
         .select("id, renewal_count, policy_number")
@@ -345,19 +374,19 @@ function WonPolicyDialog({
 
       if (activePoliciesError) throw activePoliciesError;
 
-      const matchedActivePolicy = activePolicies?.find((policy) => !policy.policy_number || policy.policy_number === nextPolicyNumber) || null;
-      const policiesToRenew = (activePolicies || []).filter((policy) => policy.id !== matchedActivePolicy?.id);
-      const previousPolicy = policiesToRenew[0] || null;
+      const hasOwnActivePolicies = (activePolicies || []).length > 0;
+      const isRenewal = hasExistingVehiclePolicy || hasOwnActivePolicies;
+      const previousPolicy = activePolicies?.[0] || null;
 
-      if (policiesToRenew.length > 0) {
-        const { error: renewError } = await supabase
+      // Mark all current client's active policies as renewed
+      if (activePolicies && activePolicies.length > 0) {
+        await supabase
           .from("insurance_policies")
           .update({ status: "renewed", renewal_status: "renewed" })
-          .in("id", policiesToRenew.map((policy) => policy.id));
-
-        if (renewError) throw renewError;
+          .in("id", activePolicies.map((p) => p.id));
       }
 
+      // Always INSERT a new policy (never update old one with new data)
       const policyPayload = {
         client_id: client.id,
         policy_number: nextPolicyNumber,
@@ -367,17 +396,15 @@ function WonPolicyDialog({
         expiry_date: nextExpiryDate,
         booking_date: nextBookingDate,
         status: "active",
-        is_renewal: Boolean(previousPolicy),
+        is_renewal: isRenewal,
         previous_policy_id: previousPolicy?.id || null,
         issued_date: nextBookingDate,
-        source_label: previousPolicy ? "Won (Renewal)" : "Won (New)",
+        source_label: isRenewal ? "Won (Renewal)" : "Won (New)",
         renewal_count: previousPolicy ? (previousPolicy.renewal_count || 0) + 1 : 0,
         policy_type: client.current_policy_type || "comprehensive",
       } as any;
 
-      const { error: savePolicyError } = matchedActivePolicy
-        ? await supabase.from("insurance_policies").update(policyPayload).eq("id", matchedActivePolicy.id)
-        : await supabase.from("insurance_policies").insert(policyPayload);
+      const { error: savePolicyError } = await supabase.from("insurance_policies").insert(policyPayload);
 
       if (savePolicyError) throw savePolicyError;
 
@@ -395,7 +422,7 @@ function WonPolicyDialog({
         incentive_eligible: true,
         retarget_status: "none",
         retargeting_enabled: false,
-        journey_last_event: previousPolicy ? "renewal_policy_issued" : "policy_issued",
+        journey_last_event: isRenewal ? "renewal_policy_issued" : "policy_issued",
         journey_last_event_at: new Date().toISOString(),
       } as any).eq("id", client.id);
 
