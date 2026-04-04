@@ -3,15 +3,14 @@ import { format, startOfMonth, endOfMonth, subMonths, subDays, startOfYear, star
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { SmartDatePicker } from "@/components/ui/smart-date-picker";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { normalizeInsuranceStage as normalizeStage } from "@/lib/insuranceStages";
 import {
   TrendingUp, Target, Award, IndianRupee, Users, BarChart3,
-  CheckCircle2, XCircle, Shield, Calendar, CalendarIcon, Filter
+  CheckCircle2, XCircle, Shield, Calendar, Filter
 } from "lucide-react";
 import type { Client } from "./InsuranceLeadPipeline";
 import type { PolicyRecord } from "./InsurancePolicyBook";
@@ -294,6 +293,31 @@ export function InsurancePerformance({ clients, policies, selectedMonth, onMonth
     onMonthChange(month);
   };
 
+  const formatInputDate = (value: Date | undefined) => (value ? format(value, "yyyy-MM-dd") : "");
+
+  const handleRangeInputChange = (field: "from" | "to", value: string) => {
+    const nextDate = value ? new Date(`${value}T00:00:00`) : undefined;
+
+    if (field === "from") {
+      setDateFrom(nextDate);
+      if (nextDate && dateTo) {
+        setFilterMode("range");
+        setActivePreset(null);
+      } else if (!nextDate && !dateTo) {
+        setFilterMode("month");
+      }
+      return;
+    }
+
+    setDateTo(nextDate);
+    if (dateFrom && nextDate) {
+      setFilterMode("range");
+      setActivePreset(null);
+    } else if (!dateFrom && !nextDate) {
+      setFilterMode("month");
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Universal Date Filter */}
@@ -344,31 +368,42 @@ export function InsurancePerformance({ clients, policies, selectedMonth, onMonth
             </SelectContent>
           </Select>
 
-          {/* Custom Range Picker */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 text-[10px] gap-1">
-                <CalendarIcon className="h-3.5 w-3.5" />
-                {filterMode === "range" && dateFrom && dateTo ? `${format(dateFrom, "dd MMM")} - ${format(dateTo, "dd MMM")}` : "Custom"}
+          {/* Safe native range picker for admin stability */}
+          <div className="flex items-end gap-2 rounded-lg border border-border bg-muted/30 px-2 py-1.5">
+            <div className="space-y-1">
+              <p className="text-[10px] text-muted-foreground">From</p>
+              <Input
+                type="date"
+                value={formatInputDate(dateFrom)}
+                onChange={(event) => handleRangeInputChange("from", event.target.value)}
+                className="h-8 w-[140px] text-xs"
+              />
+            </div>
+            <div className="space-y-1">
+              <p className="text-[10px] text-muted-foreground">To</p>
+              <Input
+                type="date"
+                value={formatInputDate(dateTo)}
+                onChange={(event) => handleRangeInputChange("to", event.target.value)}
+                className="h-8 w-[140px] text-xs"
+              />
+            </div>
+            {(dateFrom || dateTo) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 self-end text-[10px]"
+                onClick={() => {
+                  setDateFrom(undefined);
+                  setDateTo(undefined);
+                  setFilterMode("month");
+                  setActivePreset(null);
+                }}
+              >
+                Clear
               </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-3 space-y-2" align="end">
-              <p className="text-xs font-medium">Custom Date Range</p>
-              <div className="flex gap-3">
-                <div className="space-y-1">
-                  <p className="text-[10px] text-muted-foreground">From</p>
-                  <SmartDatePicker date={dateFrom} onSelect={(d) => { setDateFrom(d); if (d && dateTo) { setFilterMode("range"); setActivePreset(null); } }} placeholder="Start" yearRange={[new Date().getFullYear() - 3, new Date().getFullYear()]} />
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] text-muted-foreground">To</p>
-                  <SmartDatePicker date={dateTo} onSelect={(d) => { setDateTo(d); if (dateFrom && d) { setFilterMode("range"); setActivePreset(null); } }} placeholder="End" yearRange={[new Date().getFullYear() - 3, new Date().getFullYear()]} />
-                </div>
-              </div>
-              {(dateFrom || dateTo) && (
-                <Button variant="ghost" size="sm" className="text-xs" onClick={() => { setDateFrom(undefined); setDateTo(undefined); setFilterMode("month"); setActivePreset(null); }}>Clear</Button>
-              )}
-            </PopoverContent>
-          </Popover>
+            )}
+          </div>
         </div>
       </div>
 
