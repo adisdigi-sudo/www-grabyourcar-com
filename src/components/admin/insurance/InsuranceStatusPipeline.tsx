@@ -654,6 +654,15 @@ export function InsuranceStatusPipeline() {
                         {client.current_premium && (
                           <Badge variant="secondary" className="text-[10px] h-5">₹{client.current_premium.toLocaleString("en-IN")}</Badge>
                         )}
+                        {(() => {
+                          const phoneKey = (client.phone || "").replace(/\D/g, "").slice(-10);
+                          const qCount = quoteCounts[phoneKey];
+                          return qCount ? (
+                            <Badge variant="outline" className="text-[10px] h-5 border-emerald-300 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30">
+                              {qCount} {qCount === 1 ? "quote" : "quotes"}
+                            </Badge>
+                          ) : null;
+                        })()}
                         {/* Prepare Quote Button */}
                         <Button
                           size="sm"
