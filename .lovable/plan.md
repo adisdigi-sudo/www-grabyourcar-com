@@ -1,37 +1,32 @@
 
 
-# Add Expiry Date Display & Vehicle Inspection Warning to Quote Calculator
+# Fix Critical Issues: Remove Redundant Toggle & Improve Modal UX
 
-## What's Already Working
-The calculator already locks NCB to 0% when policy is expired >90 days and shows a disclaimer. No changes needed to that logic.
+## Changes
 
-## What Will Be Added
+### 1. Remove redundant "Insurance Expired Over 90 Days?" manual toggle
+**File:** `src/components/admin/insurance/InsurancePremiumCalculator.tsx`
 
-### 1. Policy Expiry Status Banner (new section after header, before Row 1)
-A prominent banner showing:
-- The actual policy expiry date (formatted)
-- Days since expiry or days until expiry
-- Color-coded: green (active), amber (expiring soon / expired <90 days), red (expired >90 days)
-- When expired >90 days: bold red warning stating **"Vehicle Inspection Required as per IRDAI Guidelines"**
+The standalone calculator has both a Policy Expiry Date input (which auto-detects >90 days) AND a separate manual Yes/No toggle for the same thing. This creates conflicting states. 
 
-### 2. Enhanced NCB Disclaimer
-Update the existing disclaimer block (lines 447-467) to include:
-- Explicit IRDAI guideline reference for the 90-day rule
-- Vehicle physical inspection requirement note when expired >90 days
-- Text like: *"As per IRDAI guidelines, if previous policy has lapsed for more than 90 days, NCB benefit is forfeited and a physical vehicle inspection is mandatory before issuing a new policy."*
+- Remove the manual toggle block (lines 886-897)
+- Keep the Policy Expiry Date auto-detection as the single source of truth
+- Update the disclaimer text to guide users: "Enter the Policy Expiry Date above to auto-detect"
 
-### 3. Inspection Warning in Quote Output
-When the policy is expired >90 days, add a note in the generated quote/WhatsApp/copy text:
-- "⚠ Vehicle inspection required (policy lapsed >90 days)"
+### 2. Sticky Save button in Lead Detail modal
+**File:** `src/components/admin/insurance/InsuranceLeadPipeline.tsx`
 
-## Technical Details
+The Save button and action buttons at the bottom can scroll out of view on smaller screens. Make them sticky:
 
-### File: `src/components/admin/insurance/InsuranceQuoteModal.tsx`
+- Wrap the edit form fields in a scrollable div
+- Make the Save button and action bar sticky at the bottom with a background + shadow so they're always visible
 
-- Add a new banner section between `DialogHeader` (line 329) and the first grid row (line 334)
-- Shows expiry date, days count, and inspection warning when applicable
-- Update the disclaimer text at lines 461-464 to mention IRDAI inspection requirement
-- Update `notes` field in `buildQuoteData` (line 233) and WhatsApp message (line 267) to include inspection note when applicable
+### 3. Add Notes/Remarks field to standalone calculator
+**File:** `src/components/admin/insurance/InsurancePremiumCalculator.tsx`
 
-No database changes needed.
+Currently the standalone calculator has no notes field. Add one so operators can add remarks (e.g., "inspection done", "customer wants comprehensive only") that flow into the quote output.
+
+## Summary of files to edit
+- `src/components/admin/insurance/InsurancePremiumCalculator.tsx` — remove redundant toggle, add notes field
+- `src/components/admin/insurance/InsuranceLeadPipeline.tsx` — sticky footer in lead detail modal
 
