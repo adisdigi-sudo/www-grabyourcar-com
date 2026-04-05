@@ -13,8 +13,9 @@ import { INSURANCE_COMPANIES } from "@/lib/insuranceCompanies";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Calculator, Car, Shield, Percent, IndianRupee, Zap,
-  ChevronDown, ChevronUp, Info, Copy, Send, FileText
+  ChevronDown, ChevronUp, Info, Copy, Send, FileText, CalendarClock, AlertTriangle
 } from "lucide-react";
+import { format } from "date-fns";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 
@@ -105,6 +106,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
   const [policyType, setPolicyType] = useState("Comprehensive");
   const [securePremium, setSecurePremium] = useState<string>("0");
   const [claimTaken, setClaimTaken] = useState(false);
+  const [policyExpiryDate, setPolicyExpiryDate] = useState<string>("");
   const [expiredOver90Days, setExpiredOver90Days] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -115,6 +117,14 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
   const idvNum = parseFloat(idv) || 0;
   const discountPct = parseFloat(discount) || 0;
   const ncbLocked = claimTaken || expiredOver90Days;
+
+  // Calculate expiry days from date input
+  const expiryDays = useMemo(() => {
+    if (!policyExpiryDate) return null;
+    const date = new Date(policyExpiryDate);
+    if (Number.isNaN(date.getTime())) return null;
+    return Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
+  }, [policyExpiryDate]);
 
   const securePremiumNum = parseFloat(securePremium) || 0;
 
