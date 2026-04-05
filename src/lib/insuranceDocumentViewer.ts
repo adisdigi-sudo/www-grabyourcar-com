@@ -99,8 +99,20 @@ const revokeObjectUrlLater = (objectUrl: string) => {
   window.setTimeout(() => URL.revokeObjectURL(objectUrl), OBJECT_URL_TTL);
 };
 
-const openBlobInNewTab = (blob: Blob, pendingTab: Window | null, fileName: string) => {
-  const objectUrl = URL.createObjectURL(blob);
+const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  }
+
+  return btoa(binary);
+};
+
+const openBlobInNewTab = async (blob: Blob, pendingTab: Window | null, fileName: string) => {
+  const mimeType = blob.type || "application/pdf";
+  const fileData = arrayBufferToBase64(await blob.arrayBuffer());
 
   if (pendingTab && !pendingTab.closed) {
     try {
@@ -112,11 +124,30 @@ const openBlobInNewTab = (blob: Blob, pendingTab: Window | null, fileName: strin
             <div class="viewer-bar">
               <div class="viewer-title">${escapeHtml(fileName)}</div>
             </div>
-            <iframe class="viewer-frame" src="${objectUrl}#toolbar=1&navpanes=0"></iframe>
+            <iframe id="insurance-pdf-viewer" class="viewer-frame"></iframe>
           </div>
+          <script>
+            (function () {
+              const mimeType = ${JSON.stringify(mimeType)};
+              const base64 = ${JSON.stringify(fileData)};
+              const bytes = Uint8Array.from(atob(base64), function (char) {
+                return char.charCodeAt(0);
+              });
+              const pdfBlob = new Blob([bytes], { type: mimeType });
+              const pdfUrl = URL.createObjectURL(pdfBlob);
+              const frame = document.getElementById('insurance-pdf-viewer');
+
+              if (frame) {
+                frame.src = pdfUrl + '#toolbar=1&navpanes=0';
+              }
+
+              window.addEventListener('beforeunload', function () {
+                URL.revokeObjectURL(pdfUrl);
+              });
+            })();
+          </script>
         `
       );
-      revokeObjectUrlLater(objectUrl);
       return;
     } catch {
       try {
@@ -127,6 +158,7 @@ const openBlobInNewTab = (blob: Blob, pendingTab: Window | null, fileName: strin
     }
   }
 
+  const objectUrl = URL.createObjectURL(blob);
   openUrlInNewTab(objectUrl);
   revokeObjectUrlLater(objectUrl);
 };
@@ -185,7 +217,7 @@ export async function openInsuranceStorageFile(options: {
 
   try {
     const { blob, fileName } = await resolveFileBlob({ bucket, path, url });
-    openBlobInNewTab(blob, pendingTab, fileName);
+    await openBlobInNewTab(blob, pendingTab, fileName);
   } catch (error) {
     if (pendingTab && !pendingTab.closed) {
       try {
