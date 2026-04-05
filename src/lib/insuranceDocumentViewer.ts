@@ -2,6 +2,14 @@ import { supabase } from "@/integrations/supabase/client";
 
 const OBJECT_URL_TTL = 60_000;
 
+const escapeHtml = (value: string) =>
+  value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+
 const isStorageUrl = (url: string) => {
   try {
     const parsed = new URL(url);
@@ -33,40 +41,81 @@ const openUrlInNewTab = (url: string) => {
 
 const openPendingTab = () => {
   try {
-    return window.open("", "_blank", "noopener,noreferrer");
+    return window.open("", "_blank");
   } catch {
     return null;
   }
 };
 
-const setPendingTabMessage = (tab: Window | null, message: string) => {
-  if (!tab) return;
+const writeTabDocument = (tab: Window | null, title: string, body: string) => {
+  if (!tab || tab.closed) return;
 
   try {
-    tab.document.title = message;
-    tab.document.body.innerHTML = `
-      <div style="margin:0;min-height:100vh;display:grid;place-items:center;background:#0f172a;color:#e2e8f0;font-family:system-ui,sans-serif;">
-        <div style="text-align:center;padding:24px;">
-          <div style="font-size:16px;font-weight:600;margin-bottom:8px;">${message}</div>
-          <div style="font-size:13px;opacity:.72;">Preparing your document preview…</div>
+    tab.document.open();
+    tab.document.write(`<!doctype html>
+      <html lang="en">
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <title>${escapeHtml(title)}</title>
+          <style>
+            :root { color-scheme: light; }
+            * { box-sizing: border-box; }
+            html, body { margin: 0; height: 100%; background: #0f172a; color: #e2e8f0; font-family: system-ui, sans-serif; }
+            .viewer-shell { min-height: 100%; display: flex; flex-direction: column; }
+            .viewer-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; background: #020617; border-bottom: 1px solid rgba(148, 163, 184, 0.2); }
+            .viewer-title { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .viewer-frame { flex: 1; width: 100%; border: 0; background: white; }
+            .viewer-state { min-height: 100%; display: grid; place-items: center; padding: 24px; text-align: center; }
+            .viewer-copy { max-width: 420px; }
+            .viewer-copy strong { display: block; font-size: 16px; margin-bottom: 8px; }
+            .viewer-copy span { font-size: 13px; opacity: 0.78; }
+          </style>
+        </head>
+        <body>${body}</body>
+      </html>`);
+    tab.document.close();
+  } catch {
+    // Ignore document write failures
+  }
+};
+
+const setPendingTabMessage = (tab: Window | null, message: string) => {
+  writeTabDocument(
+    tab,
+    message,
+    `
+      <div class="viewer-state">
+        <div class="viewer-copy">
+          <strong>${escapeHtml(message)}</strong>
+          <span>Preparing your document preview…</span>
         </div>
       </div>
-    `;
-  } catch {
-    // Ignore cross-window write failures
-  }
+    `
+  );
 };
 
 const revokeObjectUrlLater = (objectUrl: string) => {
   window.setTimeout(() => URL.revokeObjectURL(objectUrl), OBJECT_URL_TTL);
 };
 
-const openBlobInNewTab = (blob: Blob, pendingTab: Window | null) => {
+const openBlobInNewTab = (blob: Blob, pendingTab: Window | null, fileName: string) => {
   const objectUrl = URL.createObjectURL(blob);
 
   if (pendingTab && !pendingTab.closed) {
     try {
-      pendingTab.location.href = objectUrl;
+      writeTabDocument(
+        pendingTab,
+        fileName,
+        `
+          <div class="viewer-shell">
+            <div class="viewer-bar">
+              <div class="viewer-title">${escapeHtml(fileName)}</div>
+            </div>
+            <iframe class="viewer-frame" src="${objectUrl}#toolbar=1&navpanes=0"></iframe>
+          </div>
+        `
+      );
       revokeObjectUrlLater(objectUrl);
       return;
     } catch {
@@ -115,21 +164,6 @@ const resolveFileBlob = async (options: {
   throw new Error("No file available");
 };
 
-const resolveStorageUrl = async (bucket: "quote-pdfs" | "policy-documents", path: string) => {
-  const { data: signedData, error } = await supabase.storage.from(bucket).createSignedUrl(path, 60 * 15);
-
-  if (!error && signedData?.signedUrl) {
-    return signedData.signedUrl;
-  }
-
-  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-  if (data?.publicUrl) {
-    return data.publicUrl;
-  }
-
-  throw error ?? new Error("Failed to resolve file URL");
-};
-
 export async function openInsuranceStorageFile(options: {
   bucket?: "quote-pdfs" | "policy-documents";
   path?: string | null;
@@ -150,8 +184,8 @@ export async function openInsuranceStorageFile(options: {
   setPendingTabMessage(pendingTab, "Opening document");
 
   try {
-    const { blob } = await resolveFileBlob({ bucket, path, url });
-    openBlobInNewTab(blob, pendingTab);
+    const { blob, fileName } = await resolveFileBlob({ bucket, path, url });
+    openBlobInNewTab(blob, pendingTab, fileName);
   } catch (error) {
     if (pendingTab && !pendingTab.closed) {
       try {
