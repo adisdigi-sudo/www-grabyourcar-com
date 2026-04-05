@@ -207,7 +207,7 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
   const saveQuoteHistory = async (doc: ReturnType<typeof generateInsuranceQuotePdf>["doc"], fileName: string, shareMethod: string) => {
     if (!calc) return;
 
-    await persistInsuranceQuoteHistory({
+    const result = await persistInsuranceQuoteHistory({
       doc,
       fileName,
       shareMethod,
@@ -242,6 +242,17 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
       ncbPercentage: ncbLocked ? 0 : ncb,
       previousClaim: ncbLocked,
     });
+
+    // Show confirmation banner
+    setLastSavedQuote({
+      ref: result.quoteRef,
+      total: Math.round(calc.total),
+      insurer: insuranceCompany,
+      method: shareMethod,
+    });
+
+    // Auto-refresh quote history
+    queryClient.invalidateQueries({ queryKey: ["client-quote-history"] });
   };
 
   const handleDownload = async () => {
