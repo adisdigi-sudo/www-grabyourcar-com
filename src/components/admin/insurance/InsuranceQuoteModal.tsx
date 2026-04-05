@@ -111,6 +111,9 @@ const getDaysSinceDate = (value?: string | null) => {
 };
 
 export default function InsuranceQuoteModal({ open, onOpenChange, client, policy, onQuoteSent }: Props) {
+  const queryClient = useQueryClient();
+  // Saved quote confirmation state
+  const [lastSavedQuote, setLastSavedQuote] = useState<{ ref: string; total: number; insurer: string; method: string } | null>(null);
   // Insurer
   const [showCustomInsurer, setShowCustomInsurer] = useState(false);
   const [customInsurerInput, setCustomInsurerInput] = useState("");
