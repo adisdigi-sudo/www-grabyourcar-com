@@ -19,12 +19,12 @@ import { RouteProviderGate } from "@/components/app/RouteProviderGate";
 
 // Only the homepage is statically imported for fastest first paint
 import Index from "./pages/Index";
+import AdminLayout from "./pages/AdminLayout";
+import AdminAuth from "./pages/AdminAuth";
+import AdminResetPassword from "./pages/AdminResetPassword";
+import WorkspaceSelector from "./pages/WorkspaceSelector";
 
-// All other pages are lazy-loaded to keep the initial bundle small
-const AdminLayout = lazy(() => import("./pages/AdminLayout"));
-const AdminAuth = lazy(() => import("./pages/AdminAuth"));
-const AdminResetPassword = lazy(() => import("./pages/AdminResetPassword"));
-const WorkspaceSelector = lazy(() => import("./pages/WorkspaceSelector"));
+// Public-facing pages stay lazy-loaded to keep the main site bundle small
 const Cars = lazy(() => import("./pages/Cars"));
 const CarImages = lazy(() => import("./pages/CarImages"));
 const FeaturesSpecs = lazy(() => import("./pages/FeaturesSpecs"));
