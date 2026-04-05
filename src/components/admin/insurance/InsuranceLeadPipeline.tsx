@@ -46,8 +46,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import {
   UserPlus, Phone, FileText, Clock, CheckCircle2, XCircle, Search,
   PhoneCall, User, Shield, Send, MessageSquare, CalendarIcon, Bell, Plus,
-  ChevronRight, Upload, RefreshCw, Target
+  ChevronRight, Upload, RefreshCw, Target, Filter, X
 } from "lucide-react";
+import { addDays, subDays as subDaysFn, isBefore, isAfter } from "date-fns";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { LeadForwardDialog, ForwardedBadge } from "../shared/LeadForwardDialog";
 import InsuranceQuoteModal from "./InsuranceQuoteModal";
@@ -515,6 +516,13 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
   const queryClient = useQueryClient();
   const [selectedStage, setSelectedStage] = useState<string>("all");
   const [search, setSearch] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [sourceFilter, setSourceFilter] = useState("all");
+  const [priorityFilter, setPriorityFilter] = useState("all");
+  const [expiryPreset, setExpiryPreset] = useState("all");
+  const [expiryFrom, setExpiryFrom] = useState<Date | undefined>();
+  const [expiryTo, setExpiryTo] = useState<Date | undefined>();
+  const [executiveFilter, setExecutiveFilter] = useState("all");
   const [wonDatePreset, setWonDatePreset] = useState<string>("all");
   const [wonDateFrom, setWonDateFrom] = useState<Date | undefined>();
   const [wonDateTo, setWonDateTo] = useState<Date | undefined>();
@@ -684,6 +692,51 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
   }, [pipelineClients, wonClients]);
 
   // Filter
+  const uniqueExecutives = useMemo(() => {
+    const execs = new Set<string>();
+    clients.forEach(c => { if (c.assigned_executive) execs.add(c.assigned_executive); });
+    return Array.from(execs).sort();
+  }, [clients]);
+
+  const applyExpiryFilter = useCallback((expiryDateStr: string | null | undefined, preset: string, from?: Date, to?: Date) => {
+    if (preset === "all") return true;
+    const expiry = parseDateValue(expiryDateStr);
+    if (!expiry) return preset === "no_expiry";
+    if (preset === "no_expiry") return false;
+    const now = new Date();
+    switch (preset) {
+      case "expired": return isBefore(expiry, startOfDay(now));
+      case "this_week": return expiry >= startOfDay(now) && expiry <= endOfDay(addDays(now, 7));
+      case "this_month": return expiry >= startOfDay(now) && expiry <= endOfMonth(now);
+      case "next_30": return expiry >= startOfDay(now) && expiry <= endOfDay(addDays(now, 30));
+      case "next_90": return expiry >= startOfDay(now) && expiry <= endOfDay(addDays(now, 90));
+      case "custom": {
+        if (from && isBefore(expiry, startOfDay(from))) return false;
+        if (to && isAfter(expiry, endOfDay(to))) return false;
+        return true;
+      }
+      default: return true;
+    }
+  }, []);
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (sourceFilter !== "all") count++;
+    if (priorityFilter !== "all") count++;
+    if (expiryPreset !== "all") count++;
+    if (executiveFilter !== "all") count++;
+    return count;
+  }, [sourceFilter, priorityFilter, expiryPreset, executiveFilter]);
+
+  const clearAllFilters = useCallback(() => {
+    setSourceFilter("all");
+    setPriorityFilter("all");
+    setExpiryPreset("all");
+    setExpiryFrom(undefined);
+    setExpiryTo(undefined);
+    setExecutiveFilter("all");
+  }, []);
+
   const filtered = useMemo(() => {
     let result = selectedStage === "all"
       ? pipelineClients
@@ -706,6 +759,20 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
         c.current_insurer?.toLowerCase().includes(s) ||
         c.city?.toLowerCase().includes(s)
       );
+    }
+
+    // Advanced filters
+    if (sourceFilter !== "all") {
+      result = result.filter(c => normalizeLeadSourceLabel(c.lead_source) === sourceFilter);
+    }
+    if (priorityFilter !== "all") {
+      result = result.filter(c => (c.priority || "").toLowerCase() === priorityFilter);
+    }
+    if (expiryPreset !== "all") {
+      result = result.filter(c => applyExpiryFilter(c.policy_expiry_date, expiryPreset, expiryFrom, expiryTo));
+    }
+    if (executiveFilter !== "all") {
+      result = result.filter(c => c.assigned_executive === executiveFilter);
     }
 
     if (selectedStage === "won") {
@@ -746,7 +813,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
       const bTime = getSafeTimestamp(b.updated_at, b.created_at);
       return bTime - aTime;
     });
-  }, [pipelineClients, wonClients, selectedStage, search, wonDatePreset, wonDateFrom, wonDateTo, getWonDateBounds, getWonEffectiveDate]);
+  }, [pipelineClients, wonClients, selectedStage, search, sourceFilter, priorityFilter, expiryPreset, expiryFrom, expiryTo, executiveFilter, wonDatePreset, wonDateFrom, wonDateTo, getWonDateBounds, getWonEffectiveDate, applyExpiryFilter]);
 
   const retargetCount = useMemo(() => pipelineClients.filter(c => c.retarget_status === "scheduled").length, [pipelineClients]);
 
@@ -939,11 +1006,119 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
         );
       })()}
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Search name, phone, vehicle, city, policy no..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 h-9" />
+      {/* Search + Filter Toggle */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Search name, phone, vehicle, city, policy no..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 h-9" />
+        </div>
+        <Button
+          variant={showFilters ? "default" : "outline"}
+          size="sm"
+          className="h-9 gap-1.5 shrink-0"
+          onClick={() => setShowFilters(!showFilters)}
+        >
+          <Filter className="h-3.5 w-3.5" />
+          Filters
+          {activeFilterCount > 0 && (
+            <Badge variant="secondary" className="text-[10px] h-4 px-1.5 ml-0.5">{activeFilterCount}</Badge>
+          )}
+        </Button>
+        {activeFilterCount > 0 && (
+          <Button variant="ghost" size="sm" className="h-9 text-xs gap-1 text-destructive" onClick={clearAllFilters}>
+            <X className="h-3.5 w-3.5" /> Clear all
+          </Button>
+        )}
       </div>
+
+      {/* Advanced Filters Bar */}
+      {showFilters && (
+        <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3 sm:flex-row sm:flex-wrap sm:items-end">
+          {/* Lead Source */}
+          <div className="space-y-1">
+            <Label className="text-[11px] text-muted-foreground">Lead Source</Label>
+            <Select value={sourceFilter} onValueChange={setSourceFilter}>
+              <SelectTrigger className="h-9 w-[160px] text-xs">
+                <SelectValue placeholder="All sources" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Sources</SelectItem>
+                {LEAD_SOURCES.map(src => (
+                  <SelectItem key={src} value={src}>{src}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Priority */}
+          <div className="space-y-1">
+            <Label className="text-[11px] text-muted-foreground">Priority</Label>
+            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+              <SelectTrigger className="h-9 w-[140px] text-xs">
+                <SelectValue placeholder="All priorities" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Priorities</SelectItem>
+                <SelectItem value="hot">🔥 Hot</SelectItem>
+                <SelectItem value="high">High</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="low">Low</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Expiry Date */}
+          <div className="space-y-1">
+            <Label className="text-[11px] text-muted-foreground">Expiry Date</Label>
+            <Select value={expiryPreset} onValueChange={(v) => { setExpiryPreset(v); if (v !== "custom") { setExpiryFrom(undefined); setExpiryTo(undefined); } }}>
+              <SelectTrigger className="h-9 w-[160px] text-xs">
+                <SelectValue placeholder="All expiry" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="expired">Expired</SelectItem>
+                <SelectItem value="this_week">This Week</SelectItem>
+                <SelectItem value="this_month">This Month</SelectItem>
+                <SelectItem value="next_30">Next 30 Days</SelectItem>
+                <SelectItem value="next_90">Next 90 Days</SelectItem>
+                <SelectItem value="no_expiry">No Expiry Set</SelectItem>
+                <SelectItem value="custom">Custom Range</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {expiryPreset === "custom" && (
+            <>
+              <div className="space-y-1">
+                <Label className="text-[11px] text-muted-foreground">Expiry From</Label>
+                <Input type="date" value={expiryFrom ? format(expiryFrom, "yyyy-MM-dd") : ""} onChange={e => setExpiryFrom(e.target.value ? new Date(e.target.value) : undefined)} className="h-9 w-[150px] text-xs" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[11px] text-muted-foreground">Expiry To</Label>
+                <Input type="date" value={expiryTo ? format(expiryTo, "yyyy-MM-dd") : ""} onChange={e => setExpiryTo(e.target.value ? new Date(e.target.value) : undefined)} className="h-9 w-[150px] text-xs" />
+              </div>
+            </>
+          )}
+
+          {/* Assigned Executive */}
+          {uniqueExecutives.length > 0 && (
+            <div className="space-y-1">
+              <Label className="text-[11px] text-muted-foreground">Executive</Label>
+              <Select value={executiveFilter} onValueChange={setExecutiveFilter}>
+                <SelectTrigger className="h-9 w-[160px] text-xs">
+                  <SelectValue placeholder="All executives" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Executives</SelectItem>
+                  {uniqueExecutives.map(exec => (
+                    <SelectItem key={exec} value={exec}>{exec}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
+      )}
 
       {selectedStage === "won" && (
         <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3 sm:flex-row sm:flex-wrap sm:items-end">
