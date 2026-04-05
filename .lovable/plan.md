@@ -1,43 +1,69 @@
 
 
-## Problem
+## Fix: Unblock PDF Viewing, Quote History, and Policy Book Access
 
-Two workflow gaps prevent the pipeline from reflecting follow-up status correctly:
+### Problem Analysis
 
-1. **Edit form ignores follow-up date for stage**: When you edit a lead and set a follow-up date, the stage stays wherever it was (e.g., `quote_shared`). The save logic does not auto-promote the stage to `follow_up` when a follow-up date is set.
+Three issues identified:
 
-2. **Quote sharing doesn't respect existing follow-up**: When sharing a quote for a client already in `follow_up`, the persistence logic correctly protects it. But if you set a follow-up date AND share a quote in the same session, the quote share can overwrite the stage back to `quote_shared` depending on order of operations.
+1. **Quote History & Policy Book blocked for non-admin users**: The `quote_share_history` and `insurance_policies` tables have RLS policies that only allow access for admins or users with `insurance` vertical access (`user_vertical_access` table). The executive user (and potentially others) has NO entry in `user_vertical_access`, so all reads/writes are denied silently — showing empty data or errors.
 
-## Plan
+2. **View PDF button**: The storage bucket `quote-pdfs` is public and has a public SELECT policy, so PDFs themselves are accessible. However, since the `quote_share_history` table returns no rows (due to RLS), the "View PDF" button never appears because there are no quote records to display.
 
-### 1. Auto-promote to `follow_up` when follow-up date is set (Edit Save)
+3. **Auto-save last quote details**: The `InsuranceQuoteModal` already calls `persistInsuranceQuoteHistory()` which saves to `quote_share_history` and updates the client record. But due to RLS blocking INSERT for non-admin/non-vertical users, the save silently fails. Additionally, the `SharePdfDialog` has its own separate `autoSaveQuote` method that duplicates logic — this should be unified.
 
-**File**: `src/components/admin/insurance/InsuranceLeadPipeline.tsx` (~line 1566-1595)
+### Plan
 
-In the edit save handler, add logic after building `updates`:
-- If `follow_up_date` is being set (non-null) AND the current stage is in an earlier position (`new_lead`, `smart_calling`, `quote_shared`), automatically set `pipeline_stage` to `follow_up` and `lead_status` to `follow_up`
-- If `follow_up_date` is being cleared AND stage is `follow_up`, demote back to the previous meaningful stage
+#### Step 1: Fix RLS on `quote_share_history` — Add advisor/assigned access
 
-This ensures setting a follow-up date always moves the lead forward in the pipeline.
+Add RLS policies so that any authenticated user assigned to insurance clients can also read/write quote history. Specifically, add policies allowing access when the user is either:
+- An admin (already covered)
+- Has insurance vertical access (already covered)
+- Is the `assigned_advisor_id` on the related `insurance_clients` record (matching by phone/vehicle)
+- OR simplify: allow all authenticated CRM users (those in `crm_users` table) to read/write quote history
 
-### 2. Make quote persistence respect follow-up state
+**Migration SQL**: Create a new policy for SELECT and INSERT that allows any authenticated user in the `crm_users` table to access `quote_share_history`.
 
-**File**: `src/lib/insuranceQuotePersistence.ts` (~line 203-265)
+#### Step 2: Fix RLS on `insurance_policies` — Add advisor access
 
-When updating an existing client after sharing a quote:
-- After fetching the current client, also check if `follow_up_date` is set
-- If the current stage is `follow_up` (already protected), keep it
-- Additionally: if the client has a `follow_up_date` set in the database, never demote to `quote_shared` -- fetch `follow_up_date` alongside `pipeline_stage, lead_status` in the select query, and add it to the protection check
+Add a SELECT and UPDATE policy so users who are the `assigned_advisor_id` on the related `insurance_clients` record can view and manage policies for their assigned clients.
 
-### 3. Add stage-aware activity logging
+**Migration SQL**: Add policies for SELECT/UPDATE allowing access when `client_id` matches a client where `assigned_advisor_id = auth.uid()`.
 
-**File**: `src/components/admin/insurance/InsuranceLeadPipeline.tsx`
+#### Step 3: Unify SharePdfDialog auto-save with persistInsuranceQuoteHistory
 
-When the edit save auto-promotes to `follow_up`, log an activity entry to `insurance_activity_log` with title "Pipeline → Follow-Up" so the timeline reflects the change.
+The `SharePdfDialog` component has its own inline `autoSaveQuote` function that duplicates the logic in `insuranceQuotePersistence.ts`. Refactor `SharePdfDialog` to use `persistInsuranceQuoteHistory()` instead, ensuring all quote shares go through the same save path with full client details, pipeline updates, and activity logging.
 
-## Technical Details
+#### Step 4: Ensure last generated PDF details are saved correctly
 
-- The stage hierarchy (for auto-promotion) is: `new_lead` → `smart_calling` → `quote_shared` → `follow_up` → `won` → `policy_issued`
-- Only promote forward (never demote from `follow_up` to `quote_shared` when sharing a quote)
-- The `protectedStages` array in `insuranceQuotePersistence.ts` already includes `follow_up` -- the fix is to also fetch and check `follow_up_date` from the DB to catch edge cases where stage was manually changed but follow-up date still exists
+The `InsuranceQuoteModal` already saves correctly via `persistInsuranceQuoteHistory`. No changes needed here — fixing RLS (Steps 1-2) will unblock the save operations.
+
+### Files Changed
+
+- **New migration**: RLS policy updates for `quote_share_history` and `insurance_policies`
+- **`src/components/admin/insurance/SharePdfDialog.tsx`**: Replace inline `autoSaveQuote` with call to `persistInsuranceQuoteHistory`
+
+### Technical Details
+
+**New RLS policies (migration)**:
+```sql
+-- Allow any CRM user to read quote history
+CREATE POLICY "CRM users can view quote share history"
+ON public.quote_share_history FOR SELECT TO authenticated
+USING (EXISTS (SELECT 1 FROM public.crm_users WHERE auth_user_id = auth.uid()));
+
+-- Allow any CRM user to insert quote history
+CREATE POLICY "CRM users can insert quote share history"  
+ON public.quote_share_history FOR INSERT TO authenticated
+WITH CHECK (EXISTS (SELECT 1 FROM public.crm_users WHERE auth_user_id = auth.uid()));
+
+-- Allow assigned advisors to view their clients' policies
+CREATE POLICY "Advisors can view assigned client policies"
+ON public.insurance_policies FOR SELECT TO authenticated
+USING (EXISTS (
+  SELECT 1 FROM public.insurance_clients ic 
+  WHERE ic.id = insurance_policies.client_id 
+  AND ic.assigned_advisor_id = auth.uid()
+));
+```
 
