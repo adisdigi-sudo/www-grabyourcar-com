@@ -1635,6 +1635,24 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                         queryClient.invalidateQueries({ queryKey: ["ins-policies-book"] });
                         toast.success("Lead updated");
 
+                        // Log activity when auto-promoted to follow_up
+                        if (followUpDateSet && earlyStages.includes(normalizedStage)) {
+                          supabase.from("insurance_activity_log").insert({
+                            client_id: selectedClient.id,
+                            activity_type: "stage_change",
+                            title: "Pipeline → Follow-Up",
+                            description: `Auto-promoted to Follow-Up • Follow-up set for ${editFields.follow_up_date}${editFields.follow_up_time ? ` at ${editFields.follow_up_time}` : ""}`,
+                            metadata: {
+                              previous_stage: normalizedStage,
+                              new_stage: "follow_up",
+                              follow_up_date: editFields.follow_up_date,
+                              follow_up_time: editFields.follow_up_time || null,
+                            },
+                          }).then(({ error: logErr }) => {
+                            if (logErr) console.warn("Follow-up activity log failed:", logErr.message);
+                          });
+                        }
+
                         if (newStage === "won" || newStage === "policy_issued") {
                           setTimeout(() => {
                             setShowUploadPolicy(true);
