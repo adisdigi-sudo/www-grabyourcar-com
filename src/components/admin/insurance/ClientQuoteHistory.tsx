@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { FileText, Download, ExternalLink, IndianRupee, Clock, MessageCircle, Mail, Copy, Shield } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { openInsuranceStorageFile } from "@/lib/insuranceDocumentViewer";
+import { downloadInsuranceStorageFile, openInsuranceStorageFile } from "@/lib/insuranceDocumentViewer";
 
 interface Props {
   clientId: string;
@@ -65,6 +65,19 @@ export function ClientQuoteHistory({ clientId, clientPhone, vehicleNumber }: Pro
     }
   };
 
+  const downloadPdf = async (path: string, quoteRef?: string | null) => {
+    try {
+      await downloadInsuranceStorageFile({
+        bucket: "quote-pdfs",
+        path,
+        fileName: `${quoteRef || "insurance-quote"}.pdf`,
+      });
+    } catch (error) {
+      console.error("Could not download quote PDF", error);
+      toast.error("Could not download PDF");
+    }
+  };
+
   if (isLoading) {
     return <p className="text-xs text-muted-foreground text-center py-4">Loading quote history...</p>;
   }
@@ -115,9 +128,9 @@ export function ClientQuoteHistory({ clientId, clientPhone, vehicleNumber }: Pro
                   <p className="text-[9px] text-muted-foreground">IDV</p>
                   <p className="text-[10px] font-semibold">{fmt(q.idv)}</p>
                 </div>
-                <div className="bg-emerald-50 dark:bg-emerald-950/30 rounded-lg p-2 text-center">
+                <div className="rounded-lg border border-border bg-accent/30 p-2 text-center">
                   <p className="text-[9px] text-muted-foreground">Total Premium</p>
-                  <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400">{fmt(q.total_premium)}</p>
+                  <p className="text-xs font-bold text-foreground">{fmt(q.total_premium)}</p>
                 </div>
               </div>
 
@@ -161,9 +174,14 @@ export function ClientQuoteHistory({ clientId, clientPhone, vehicleNumber }: Pro
               {/* Actions */}
               <div className="flex gap-1.5">
                 {q.pdf_storage_path && (
-                  <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1 px-2" onClick={() => openPdf(q.pdf_storage_path)}>
-                    <ExternalLink className="h-2.5 w-2.5" /> View PDF
-                  </Button>
+                  <>
+                    <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1 px-2" onClick={() => openPdf(q.pdf_storage_path)}>
+                      <ExternalLink className="h-2.5 w-2.5" /> View PDF
+                    </Button>
+                    <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1 px-2" onClick={() => downloadPdf(q.pdf_storage_path, q.quote_ref)}>
+                      <Download className="h-2.5 w-2.5" /> Download
+                    </Button>
+                  </>
                 )}
                 {q.policy_type && (
                   <Badge variant="secondary" className="text-[9px] capitalize">{q.policy_type}</Badge>
