@@ -312,6 +312,7 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
       `✅ Total Premium: ${fmt(calc.total)}`,
       ``,
       `Coverage: ${addons.filter(a => a.enabled).map(a => a.name).join(", ")}`,
+      claimLockedByExpiry ? `⚠ Vehicle inspection required (policy lapsed >90 days) — IRDAI` : null,
       `— Grabyourcar Insurance Desk | +91 98559 24442`,
     ].filter(Boolean).join("\n");
     navigator.clipboard.writeText(lines);
