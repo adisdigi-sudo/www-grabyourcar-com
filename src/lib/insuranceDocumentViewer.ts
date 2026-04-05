@@ -19,11 +19,38 @@ const guessFileNameFromUrl = (url: string, fallback: string) => {
   }
 };
 
-const openBlobInNewTab = (blob: Blob) => {
-  const blobUrl = URL.createObjectURL(blob);
-  const newWindow = window.open(blobUrl, "_blank", "noopener,noreferrer");
-  window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
-  return newWindow;
+const openUrlInNewTab = (url: string) => {
+  const previewWindow = window.open("", "_blank", "noopener,noreferrer");
+
+  if (previewWindow) {
+    previewWindow.location.href = url;
+    return previewWindow;
+  }
+
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.target = "_blank";
+  anchor.rel = "noopener noreferrer";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+
+  return null;
+};
+
+const resolveStorageUrl = async (bucket: "quote-pdfs" | "policy-documents", path: string) => {
+  const { data: signedData, error } = await supabase.storage.from(bucket).createSignedUrl(path, 60 * 15);
+
+  if (!error && signedData?.signedUrl) {
+    return signedData.signedUrl;
+  }
+
+  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+  if (data?.publicUrl) {
+    return data.publicUrl;
+  }
+
+  throw error ?? new Error("Failed to resolve file URL");
 };
 
 export async function openInsuranceStorageFile(options: {
@@ -34,25 +61,13 @@ export async function openInsuranceStorageFile(options: {
   const { bucket, path, url } = options;
 
   if (bucket && path) {
-    const { data, error } = await supabase.storage.from(bucket).download(path);
-    if (error) throw error;
-    openBlobInNewTab(data);
+    const resolvedUrl = await resolveStorageUrl(bucket, path);
+    openUrlInNewTab(resolvedUrl);
     return;
   }
 
   if (url) {
-    if (!isStorageUrl(url)) {
-      window.open(url, "_blank", "noopener,noreferrer");
-      return;
-    }
-
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Failed to open file (${response.status})`);
-    }
-
-    const blob = await response.blob();
-    openBlobInNewTab(blob);
+    openUrlInNewTab(url);
   }
 }
 
