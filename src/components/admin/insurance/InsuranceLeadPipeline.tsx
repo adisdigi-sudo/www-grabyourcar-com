@@ -1558,6 +1558,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                             selectedClient.created_at?.split("T")[0] ||
                             new Date().toISOString().split("T")[0];
 
+                          const newStage = editFields.pipeline_stage || normalizedStage;
                           const updates: Record<string, any> = {
                             customer_name: editFields.customer_name?.trim() || null,
                             phone: editFields.phone || selectedClient.phone,
@@ -1571,7 +1572,23 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                             current_policy_number: editFields.current_policy_number?.trim() || null,
                             current_premium: editFields.current_premium ? Number(editFields.current_premium) : null,
                             notes: editFields.notes?.trim() || null,
+                            policy_expiry_date: editFields.policy_expiry_date || null,
+                            follow_up_date: editFields.follow_up_date || null,
+                            follow_up_time: editFields.follow_up_time || null,
+                            pipeline_stage: newStage,
+                            priority: editFields.priority || "medium",
+                            lead_source: editFields.lead_source || null,
+                            assigned_executive: editFields.assigned_executive?.trim() || null,
                           };
+
+                          // Sync lead_status with stage
+                          if (newStage === "lost") {
+                            updates.lead_status = "lost";
+                          } else if (newStage === "won" || newStage === "policy_issued") {
+                            updates.lead_status = "won";
+                          } else {
+                            updates.lead_status = newStage;
+                          }
 
                           if (normalizedStage === "won" || normalizedStage === "policy_issued") {
                             updates.lead_status = "won";
