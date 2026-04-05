@@ -124,26 +124,18 @@ const openBlobInNewTab = async (blob: Blob, pendingTab: Window | null, fileName:
             <div class="viewer-bar">
               <div class="viewer-title">${escapeHtml(fileName)}</div>
             </div>
-            <iframe id="insurance-pdf-viewer" class="viewer-frame"></iframe>
+            <embed id="insurance-pdf-viewer" class="viewer-frame" type="${escapeHtml(mimeType)}" />
           </div>
           <script>
             (function () {
               const mimeType = ${JSON.stringify(mimeType)};
               const base64 = ${JSON.stringify(fileData)};
-              const bytes = Uint8Array.from(atob(base64), function (char) {
-                return char.charCodeAt(0);
-              });
-              const pdfBlob = new Blob([bytes], { type: mimeType });
-              const pdfUrl = URL.createObjectURL(pdfBlob);
+              const pdfDataUrl = 'data:' + mimeType + ';base64,' + base64;
               const frame = document.getElementById('insurance-pdf-viewer');
 
               if (frame) {
-                frame.src = pdfUrl + '#toolbar=1&navpanes=0';
+                frame.src = pdfDataUrl + '#toolbar=1&navpanes=0';
               }
-
-              window.addEventListener('beforeunload', function () {
-                URL.revokeObjectURL(pdfUrl);
-              });
             })();
           </script>
         `
