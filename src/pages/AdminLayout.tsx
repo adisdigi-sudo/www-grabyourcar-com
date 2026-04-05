@@ -514,6 +514,8 @@ const AdminLayout = () => {
         return <InsuranceManagement />;
       case "services-insurance-import":
         return <InsuranceImportExport />;
+      case "services-messaging-channels":
+        return <ChannelProvidersSettings />;
       case "services-loans-pipeline":
         return <LoanCRMDashboard initialView="pipeline" />;
       case "services-loans-disbursement":
