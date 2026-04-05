@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { FileText, Download, ExternalLink, IndianRupee, Clock, MessageCircle, Mail, Copy, Shield } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { openInsuranceStorageFile } from "@/lib/insuranceDocumentViewer";
+import { downloadInsuranceStorageFile, openInsuranceStorageFile } from "@/lib/insuranceDocumentViewer";
 
 interface Props {
   clientId: string;
@@ -62,6 +62,19 @@ export function ClientQuoteHistory({ clientId, clientPhone, vehicleNumber }: Pro
     } catch (error) {
       console.error("Could not open quote PDF", error);
       toast.error("Could not open PDF");
+    }
+  };
+
+  const downloadPdf = async (path: string, quoteRef?: string | null) => {
+    try {
+      await downloadInsuranceStorageFile({
+        bucket: "quote-pdfs",
+        path,
+        fileName: `${quoteRef || "insurance-quote"}.pdf`,
+      });
+    } catch (error) {
+      console.error("Could not download quote PDF", error);
+      toast.error("Could not download PDF");
     }
   };
 
@@ -161,9 +174,14 @@ export function ClientQuoteHistory({ clientId, clientPhone, vehicleNumber }: Pro
               {/* Actions */}
               <div className="flex gap-1.5">
                 {q.pdf_storage_path && (
-                  <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1 px-2" onClick={() => openPdf(q.pdf_storage_path)}>
-                    <ExternalLink className="h-2.5 w-2.5" /> View PDF
-                  </Button>
+                  <>
+                    <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1 px-2" onClick={() => openPdf(q.pdf_storage_path)}>
+                      <ExternalLink className="h-2.5 w-2.5" /> View PDF
+                    </Button>
+                    <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1 px-2" onClick={() => downloadPdf(q.pdf_storage_path, q.quote_ref)}>
+                      <Download className="h-2.5 w-2.5" /> Download
+                    </Button>
+                  </>
                 )}
                 {q.policy_type && (
                   <Badge variant="secondary" className="text-[9px] capitalize">{q.policy_type}</Badge>
