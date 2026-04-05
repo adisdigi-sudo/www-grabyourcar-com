@@ -1076,7 +1076,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
                 setAddons(DEFAULT_ADDONS); setCustomerName(""); setCustomerPhone("");
                 setVehicleMake(""); setVehicleModel(""); setVehicleNumber("");
                 setInsuranceCompany(""); setCustomInsurer(""); setFuelType("Petrol");
-                setPolicyType("Comprehensive"); setSecurePremium("0");
+                setPolicyType("Comprehensive"); setSecurePremium("0"); setCustomRemarks("");
                 toast.info("Calculator reset");
               }}>
                 Reset Calculator
