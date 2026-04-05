@@ -1590,7 +1590,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                             updates.lead_status = newStage;
                           }
 
-                          if (normalizedStage === "won" || normalizedStage === "policy_issued") {
+                          if (newStage === "won" || newStage === "policy_issued") {
                             updates.lead_status = "won";
                             updates.pipeline_stage = "policy_issued";
                             updates.booking_date = selectedClient.booking_date || fallbackBookingDate;
