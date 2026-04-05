@@ -14,8 +14,9 @@ import { persistInsuranceQuoteHistory } from "@/lib/insuranceQuotePersistence";
 import {
   Download, MessageCircle, Mail, Copy, Shield, IndianRupee,
   Plus, Check, X, Car, Percent, Zap, Info, Calculator,
-  ChevronDown, ChevronUp
+  ChevronDown, ChevronUp, AlertTriangle, CalendarClock
 } from "lucide-react";
+import { format } from "date-fns";
 import { generateInsuranceQuotePdf, InsuranceQuoteData } from "@/lib/generateInsuranceQuotePdf";
 import { INSURANCE_COMPANIES, getShortName } from "@/lib/insuranceCompanies";
 import { motion, AnimatePresence } from "framer-motion";
