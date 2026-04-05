@@ -46,8 +46,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import {
   UserPlus, Phone, FileText, Clock, CheckCircle2, XCircle, Search,
   PhoneCall, User, Shield, Send, MessageSquare, CalendarIcon, Bell, Plus,
-  ChevronRight, Upload, RefreshCw, Target
+  ChevronRight, Upload, RefreshCw, Target, Filter, X
 } from "lucide-react";
+import { addDays, subDays as subDaysFn, isBefore, isAfter } from "date-fns";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { LeadForwardDialog, ForwardedBadge } from "../shared/LeadForwardDialog";
 import InsuranceQuoteModal from "./InsuranceQuoteModal";
