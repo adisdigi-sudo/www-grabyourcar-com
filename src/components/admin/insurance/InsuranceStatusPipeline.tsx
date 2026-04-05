@@ -96,7 +96,7 @@ export function InsuranceStatusPipeline() {
   const [showBulkPanel, setShowBulkPanel] = useState(false);
   const [showQuoteModal, setShowQuoteModal] = useState(false);
 
-  useEffect(() => { fetchClients(); }, []);
+  useEffect(() => { fetchClients(); fetchQuoteCounts(); }, []);
 
   const fetchClients = async () => {
     const { data } = await supabase
@@ -108,6 +108,19 @@ export function InsuranceStatusPipeline() {
       ...client,
       lead_status: client.lead_status || "new",
     }))) as Client[]);
+  };
+
+  const fetchQuoteCounts = async () => {
+    const { data } = await supabase
+      .from("quote_share_history" as any)
+      .select("customer_phone");
+    if (!data) return;
+    const counts: Record<string, number> = {};
+    (data as any[]).forEach((row: any) => {
+      const phone = (row.customer_phone || "").replace(/\D/g, "").slice(-10);
+      if (phone) counts[phone] = (counts[phone] || 0) + 1;
+    });
+    setQuoteCounts(counts);
   };
 
   const stageCounts = useMemo(() =>
