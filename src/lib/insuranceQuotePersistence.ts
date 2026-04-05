@@ -72,24 +72,30 @@ const createQuoteStageLog = async ({
   }
 };
 
-const uploadQuotePdf = async (doc: jsPDF, fileName: string) => {
-  const pdfBlob = doc.output("blob");
-  const storagePath = `quotes/${new Date().toISOString().slice(0, 10)}/${fileName}`;
+const uploadQuotePdf = async (doc: jsPDF, fileName: string): Promise<string | null> => {
+  try {
+    const pdfBlob = doc.output("blob");
+    const storagePath = `quotes/${new Date().toISOString().slice(0, 10)}/${fileName}`;
 
-  const { error } = await supabase.storage.from("quote-pdfs").upload(storagePath, pdfBlob, {
-    contentType: "application/pdf",
-    upsert: true,
-  });
+    const { error } = await supabase.storage.from("quote-pdfs").upload(storagePath, pdfBlob, {
+      contentType: "application/pdf",
+      upsert: true,
+    });
 
-  if (error) {
-    throw new Error(`PDF upload failed: ${error.message}`);
+    if (error) {
+      console.warn("PDF upload failed (non-blocking):", error.message);
+      return null;
+    }
+
+    return storagePath;
+  } catch (err) {
+    console.warn("PDF upload exception (non-blocking):", err);
+    return null;
   }
-
-  return storagePath;
 };
 
 export async function persistInsuranceQuoteHistory(input: PersistQuoteHistoryInput) {
-  const pdfStoragePath = await uploadQuotePdf(input.doc, input.fileName);
+  const pdfStoragePath = await uploadQuotePdf(input.doc, input.fileName); // non-blocking — null on failure
   const quoteRef = `QS-${Date.now().toString(36).toUpperCase()}`;
 
   const { error: historyError } = await supabase.from("quote_share_history").insert({

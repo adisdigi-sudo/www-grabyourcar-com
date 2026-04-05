@@ -70,6 +70,7 @@ interface Client {
 
 export function InsuranceStatusPipeline() {
   const [clients, setClients] = useState<Client[]>([]);
+  const [quoteCounts, setQuoteCounts] = useState<Record<string, number>>({});
   const [selectedStage, setSelectedStage] = useState("all");
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [search, setSearch] = useState("");
@@ -95,7 +96,7 @@ export function InsuranceStatusPipeline() {
   const [showBulkPanel, setShowBulkPanel] = useState(false);
   const [showQuoteModal, setShowQuoteModal] = useState(false);
 
-  useEffect(() => { fetchClients(); }, []);
+  useEffect(() => { fetchClients(); fetchQuoteCounts(); }, []);
 
   const fetchClients = async () => {
     const { data } = await supabase
@@ -107,6 +108,19 @@ export function InsuranceStatusPipeline() {
       ...client,
       lead_status: client.lead_status || "new",
     }))) as Client[]);
+  };
+
+  const fetchQuoteCounts = async () => {
+    const { data } = await supabase
+      .from("quote_share_history" as any)
+      .select("customer_phone");
+    if (!data) return;
+    const counts: Record<string, number> = {};
+    (data as any[]).forEach((row: any) => {
+      const phone = (row.customer_phone || "").replace(/\D/g, "").slice(-10);
+      if (phone) counts[phone] = (counts[phone] || 0) + 1;
+    });
+    setQuoteCounts(counts);
   };
 
   const stageCounts = useMemo(() =>
@@ -640,6 +654,15 @@ export function InsuranceStatusPipeline() {
                         {client.current_premium && (
                           <Badge variant="secondary" className="text-[10px] h-5">₹{client.current_premium.toLocaleString("en-IN")}</Badge>
                         )}
+                        {(() => {
+                          const phoneKey = (client.phone || "").replace(/\D/g, "").slice(-10);
+                          const qCount = quoteCounts[phoneKey];
+                          return qCount ? (
+                            <Badge variant="outline" className="text-[10px] h-5 border-emerald-300 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30">
+                              {qCount} {qCount === 1 ? "quote" : "quotes"}
+                            </Badge>
+                          ) : null;
+                        })()}
                         {/* Prepare Quote Button */}
                         <Button
                           size="sm"
