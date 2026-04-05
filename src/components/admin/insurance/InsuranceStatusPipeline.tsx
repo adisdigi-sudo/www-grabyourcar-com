@@ -88,7 +88,7 @@ export function InsuranceStatusPipeline() {
     premium_amount: "", start_date: "", expiry_date: "", status: "active",
   });
   const [savingPolicy, setSavingPolicy] = useState(false);
-  const [dialogTab, setDialogTab] = useState("journey");
+  const [dialogTab, setDialogTab] = useState("details");
   const [bulkSending, setBulkSending] = useState(false);
   const [renewalPreviewClient, setRenewalPreviewClient] = useState<Client | null>(null);
   const [renewalPreviewMsg, setRenewalPreviewMsg] = useState("");
