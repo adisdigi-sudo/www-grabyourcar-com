@@ -15,6 +15,10 @@ import { InsuranceManagement } from "@/components/admin/InsuranceManagement";
 import { CRMAssistant } from "@/components/admin/CRMAssistant";
 import { AICofounderBanner } from "@/components/admin/AICofounderBanner";
 
+const ChannelProvidersSettings = lazy(() =>
+  import("@/components/admin/settings/ChannelProvidersSettings").then((module) => ({ default: module.ChannelProvidersSettings })),
+);
+
 const AdminSidebar = lazy(() =>
   import("@/components/admin/AdminSidebar").then((module) => ({ default: module.AdminSidebar })),
 );
