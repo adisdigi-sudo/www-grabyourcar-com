@@ -74,7 +74,7 @@ export function HSRPVerticalWorkspace() {
           </Card>
         </TabsContent>
         <TabsContent value="messaging">
-          <OmniMessagingWorkspace context="HSRP" />
+          <OmniMessagingWorkspace context="HSRP" showSettings />
         </TabsContent>
       </Tabs>
     </div>

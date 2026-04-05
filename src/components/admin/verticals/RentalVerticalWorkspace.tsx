@@ -29,7 +29,7 @@ export function RentalVerticalWorkspace() {
       case "agreements": return <AgreementManagement />;
       case "kyc": return <KYCVerificationPanel />;
       case "partners": return <APIPartnersManagement />;
-      case "messaging": return <OmniMessagingWorkspace context="Self-Drive Rentals" />;
+      case "messaging": return <OmniMessagingWorkspace context="Self-Drive Rentals" showSettings />;
       default: return <SelfDriveWorkspace />;
     }
   };

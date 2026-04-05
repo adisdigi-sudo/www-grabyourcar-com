@@ -65,7 +65,7 @@ export function FleetVerticalWorkspace() {
         </TabsContent>
 
         <TabsContent value="messaging">
-          <OmniMessagingWorkspace context="Fleet Business" />
+          <OmniMessagingWorkspace context="Fleet Business" showSettings />
         </TabsContent>
       </Tabs>
     </div>
