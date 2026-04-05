@@ -107,8 +107,8 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
   const [securePremium, setSecurePremium] = useState<string>("0");
   const [claimTaken, setClaimTaken] = useState(false);
   const [policyExpiryDate, setPolicyExpiryDate] = useState<string>("");
-  const [expiredOver90Days, setExpiredOver90Days] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [customRemarks, setCustomRemarks] = useState<string>("");
 
   const resolvedInsurer = insuranceCompany === "__custom" ? customInsurer : insuranceCompany;
 
@@ -116,6 +116,13 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
   const ccNum = parseInt(cc) || 0;
   const idvNum = parseFloat(idv) || 0;
   const discountPct = parseFloat(discount) || 0;
+  // Auto-detect expired >90 days from policy expiry date
+  const expiredOver90Days = useMemo(() => {
+    if (!policyExpiryDate) return false;
+    const days = Math.floor((Date.now() - new Date(policyExpiryDate).getTime()) / (1000 * 60 * 60 * 24));
+    return days > 90;
+  }, [policyExpiryDate]);
+
   const ncbLocked = claimTaken || expiredOver90Days;
 
   // Calculate expiry days from date input
@@ -193,6 +200,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
       `GST (18%): ${fmt(calc.gst)}`,
       `✅ Total Premium: ${fmt(calc.total)}`,
       expiredOver90Days ? `\n⚠ Vehicle inspection required (policy lapsed >90 days) — IRDAI` : null,
+      customRemarks?.trim() ? `\n📝 Remarks: ${customRemarks.trim()}` : null,
     ].filter(Boolean).join("\n");
     return lines;
   };
@@ -226,7 +234,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
         total: Math.round(calc.total),
       },
       addons: addons.filter((addon) => addon.enabled).map((addon) => addon.name),
-      notes: `Zone: ${zone} | Fuel: ${fuelType} | Policy: ${policyType} | OD Discount: ${discountPct}% | NCB: ${ncbLocked ? 0 : ncb}% | Claim Taken: ${claimTaken ? "Yes" : "No"} | Expired > 90 Days: ${expiredOver90Days ? "Yes" : "No"}${expiredOver90Days ? " | ⚠ Vehicle inspection required (policy lapsed >90 days) — IRDAI" : ""}`,
+      notes: `Zone: ${zone} | Fuel: ${fuelType} | Policy: ${policyType} | OD Discount: ${discountPct}% | NCB: ${ncbLocked ? 0 : ncb}% | Claim Taken: ${claimTaken ? "Yes" : "No"} | Expired > 90 Days: ${expiredOver90Days ? "Yes" : "No"}${expiredOver90Days ? " | ⚠ Vehicle inspection required (policy lapsed >90 days) — IRDAI" : ""}${customRemarks?.trim() ? ` | Remarks: ${customRemarks.trim()}` : ""}`,
       quoteAmount: Math.round(calc.total),
       quoteInsurer: resolvedInsurer || "Calculator Quote",
       ncbPercentage: ncbLocked ? 0 : ncb,
