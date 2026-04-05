@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { MessageCircle, Mail, Download, Send, Loader2, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import jsPDF from "jspdf";
+import { persistInsuranceQuoteHistory } from "@/lib/insuranceQuotePersistence";
 
 interface ClientDetails {
   id?: string;
@@ -64,77 +65,30 @@ export function SharePdfDialog({
     onOpenChange(v);
   };
 
-  /** Upload PDF to storage and save to quote_share_history + update pipeline */
+  /** Upload PDF to storage and save to quote_share_history + update pipeline via central persistence */
   const autoSaveQuote = async (doc: jsPDF, fileName: string, shareMethod: string) => {
     try {
       const cd = clientDetails;
       const name = cd?.customer_name || customerName || "Customer";
 
-      // 1. Upload PDF to storage
-      let pdfPath: string | null = null;
-      try {
-        const pdfBlob = doc.output("blob");
-        const storagePath = `quotes/${new Date().toISOString().slice(0, 10)}/${fileName}`;
-        const { error } = await supabase.storage.from("quote-pdfs").upload(storagePath, pdfBlob, {
-          contentType: "application/pdf",
-          upsert: true,
-        });
-        if (!error) pdfPath = storagePath;
-        else console.warn("Quote PDF upload failed:", error.message);
-      } catch (uploadErr) {
-        console.warn("Quote PDF upload exception:", uploadErr);
-      }
-
-      // 2. Save to quote_share_history
-      const quoteRef = `QS-${Date.now().toString(36).toUpperCase()}`;
-      const { error: insertError } = await supabase.from("quote_share_history" as any).insert({
-        customer_name: name,
-        customer_phone: cd?.phone || phone || null,
-        customer_email: cd?.email || email || null,
-        vehicle_number: cd?.vehicle_number || null,
-        vehicle_make: cd?.vehicle_make || null,
-        vehicle_model: cd?.vehicle_model || null,
-        vehicle_year: cd?.vehicle_year ? String(cd.vehicle_year) : null,
-        insurance_company: cd?.current_insurer || "Best Available",
-        policy_type: cd?.current_policy_type || "Comprehensive",
-        total_premium: cd?.quote_amount || null,
-        share_method: shareMethod,
-        pdf_storage_path: pdfPath,
-        quote_ref: quoteRef,
+      await persistInsuranceQuoteHistory({
+        doc,
+        fileName,
+        shareMethod,
+        customerName: name,
+        customerPhone: cd?.phone || phone || null,
+        customerEmail: cd?.email || email || null,
+        vehicleNumber: cd?.vehicle_number || null,
+        vehicleMake: cd?.vehicle_make || null,
+        vehicleModel: cd?.vehicle_model || null,
+        vehicleYear: cd?.vehicle_year || null,
+        insuranceCompany: cd?.current_insurer || "Best Available",
+        policyType: cd?.current_policy_type || "Comprehensive",
+        totalPremium: cd?.quote_amount || null,
+        clientId: cd?.id,
+        quoteAmount: cd?.quote_amount || null,
         notes: `Auto-saved via ${title} share`,
-      } as any);
-
-      if (insertError) {
-        console.error("Quote save to history failed:", insertError);
-        toast.error("Quote generated but failed to save to history: " + insertError.message);
-        return;
-      }
-
-      // 3. Move client pipeline to quote_shared (only if not already won/policy_issued)
-      if (cd?.id) {
-        const { data: current } = await supabase
-          .from("insurance_clients")
-          .select("pipeline_stage, lead_status")
-          .eq("id", cd.id)
-          .single();
-
-        const protectedStages = ["follow_up", "negotiation", "payment_pending", "won", "policy_issued", "lost", "converted", "closed", "quote_shared"];
-        const currentStage = (current?.pipeline_stage || "").toLowerCase();
-        const currentStatus = (current?.lead_status || "").toLowerCase();
-
-        if (!protectedStages.includes(currentStage) && !protectedStages.includes(currentStatus)) {
-          await supabase
-            .from("insurance_clients")
-            .update({
-              pipeline_stage: "quote_shared",
-              lead_status: "quote_shared",
-              journey_last_event: "quote_shared",
-              journey_last_event_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            } as any)
-            .eq("id", cd.id);
-        }
-      }
+      });
     } catch (err) {
       console.error("Auto-save quote error:", err);
       toast.error("Quote save failed — check console for details");
