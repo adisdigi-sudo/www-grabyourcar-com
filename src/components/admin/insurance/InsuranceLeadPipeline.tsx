@@ -692,6 +692,51 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
   }, [pipelineClients, wonClients]);
 
   // Filter
+  const uniqueExecutives = useMemo(() => {
+    const execs = new Set<string>();
+    clients.forEach(c => { if (c.assigned_executive) execs.add(c.assigned_executive); });
+    return Array.from(execs).sort();
+  }, [clients]);
+
+  const applyExpiryFilter = useCallback((expiryDateStr: string | null | undefined, preset: string, from?: Date, to?: Date) => {
+    if (preset === "all") return true;
+    const expiry = parseDateValue(expiryDateStr);
+    if (!expiry) return preset === "no_expiry";
+    if (preset === "no_expiry") return false;
+    const now = new Date();
+    switch (preset) {
+      case "expired": return isBefore(expiry, startOfDay(now));
+      case "this_week": return expiry >= startOfDay(now) && expiry <= endOfDay(addDays(now, 7));
+      case "this_month": return expiry >= startOfDay(now) && expiry <= endOfMonth(now);
+      case "next_30": return expiry >= startOfDay(now) && expiry <= endOfDay(addDays(now, 30));
+      case "next_90": return expiry >= startOfDay(now) && expiry <= endOfDay(addDays(now, 90));
+      case "custom": {
+        if (from && isBefore(expiry, startOfDay(from))) return false;
+        if (to && isAfter(expiry, endOfDay(to))) return false;
+        return true;
+      }
+      default: return true;
+    }
+  }, []);
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (sourceFilter !== "all") count++;
+    if (priorityFilter !== "all") count++;
+    if (expiryPreset !== "all") count++;
+    if (executiveFilter !== "all") count++;
+    return count;
+  }, [sourceFilter, priorityFilter, expiryPreset, executiveFilter]);
+
+  const clearAllFilters = useCallback(() => {
+    setSourceFilter("all");
+    setPriorityFilter("all");
+    setExpiryPreset("all");
+    setExpiryFrom(undefined);
+    setExpiryTo(undefined);
+    setExecutiveFilter("all");
+  }, []);
+
   const filtered = useMemo(() => {
     let result = selectedStage === "all"
       ? pipelineClients
@@ -714,6 +759,20 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
         c.current_insurer?.toLowerCase().includes(s) ||
         c.city?.toLowerCase().includes(s)
       );
+    }
+
+    // Advanced filters
+    if (sourceFilter !== "all") {
+      result = result.filter(c => normalizeLeadSourceLabel(c.lead_source) === sourceFilter);
+    }
+    if (priorityFilter !== "all") {
+      result = result.filter(c => (c.priority || "").toLowerCase() === priorityFilter);
+    }
+    if (expiryPreset !== "all") {
+      result = result.filter(c => applyExpiryFilter(c.policy_expiry_date, expiryPreset, expiryFrom, expiryTo));
+    }
+    if (executiveFilter !== "all") {
+      result = result.filter(c => c.assigned_executive === executiveFilter);
     }
 
     if (selectedStage === "won") {
@@ -754,7 +813,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
       const bTime = getSafeTimestamp(b.updated_at, b.created_at);
       return bTime - aTime;
     });
-  }, [pipelineClients, wonClients, selectedStage, search, wonDatePreset, wonDateFrom, wonDateTo, getWonDateBounds, getWonEffectiveDate]);
+  }, [pipelineClients, wonClients, selectedStage, search, sourceFilter, priorityFilter, expiryPreset, expiryFrom, expiryTo, executiveFilter, wonDatePreset, wonDateFrom, wonDateTo, getWonDateBounds, getWonEffectiveDate, applyExpiryFilter]);
 
   const retargetCount = useMemo(() => pipelineClients.filter(c => c.retarget_status === "scheduled").length, [pipelineClients]);
 
