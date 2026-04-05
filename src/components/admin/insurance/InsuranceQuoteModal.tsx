@@ -231,7 +231,7 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
         total: Math.round(calc.total),
       },
       addons: addons.filter(a => a.enabled).map(a => a.name),
-      notes: `Claim Taken: ${ncbLocked ? "Yes" : "No"} | NCB: ${ncbLocked ? 0 : ncb}% | OD Discount: ${discountPct}%${claimLockedByExpiry ? ` | Expired ${expiryDays} days ago` : ""}`,
+      notes: `Claim Taken: ${ncbLocked ? "Yes" : "No"} | NCB: ${ncbLocked ? 0 : ncb}% | OD Discount: ${discountPct}%${claimLockedByExpiry ? ` | Expired ${expiryDays} days ago | ⚠ Vehicle inspection required (policy lapsed >90 days) — IRDAI` : ""}`,
       clientId: client.id,
       quoteAmount: Math.round(calc.total),
       quoteInsurer: insuranceCompany,
@@ -265,7 +265,8 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
       toast.error(error.message || "Failed to save quote");
       return;
     }
-    const msg = `Hi ${client.customer_name || ""}! 🚗\n\nHere's your *Motor Insurance Quotation* from Grabyourcar:\n\n🏢 Insurer: ${insuranceCompany}\n🚘 Vehicle: ${client.vehicle_make || ""} ${client.vehicle_model || ""}\n📋 Reg: ${client.vehicle_number || "N/A"}\n💰 IDV: ${fmt(idvNum)}\n\n📊 *Premium Breakup:*\nNet OD: ${fmt(calc.netOD)}\nThird Party: ${fmt(calc.tp)}\nAdd-ons: ${fmt(calc.addonTotal)}\nGST (18%): ${fmt(calc.gst)}\n*Total: ${fmt(calc.total)}*\n\n✅ Coverage: ${addons.filter(a => a.enabled).map(a => a.name).join(", ")}\n\nPlease find the detailed PDF quote attached.\n\n— Grabyourcar Insurance Desk\n📞 +91 98559 24442`;
+    const inspectionNote = claimLockedByExpiry ? "\n\n⚠ *Vehicle Inspection Required*: Policy lapsed >90 days. Physical inspection mandatory as per IRDAI guidelines." : "";
+    const msg = `Hi ${client.customer_name || ""}! 🚗\n\nHere's your *Motor Insurance Quotation* from Grabyourcar:\n\n🏢 Insurer: ${insuranceCompany}\n🚘 Vehicle: ${client.vehicle_make || ""} ${client.vehicle_model || ""}\n📋 Reg: ${client.vehicle_number || "N/A"}\n💰 IDV: ${fmt(idvNum)}\n\n📊 *Premium Breakup:*\nNet OD: ${fmt(calc.netOD)}\nThird Party: ${fmt(calc.tp)}\nAdd-ons: ${fmt(calc.addonTotal)}\nGST (18%): ${fmt(calc.gst)}\n*Total: ${fmt(calc.total)}*\n\n✅ Coverage: ${addons.filter(a => a.enabled).map(a => a.name).join(", ")}${inspectionNote}\n\nPlease find the detailed PDF quote attached.\n\n— Grabyourcar Insurance Desk\n📞 +91 98559 24442`;
     const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
     await sendWhatsApp({ phone: client.phone || "", message: msg, name: client.customer_name, logEvent: "insurance_quote" });
     toast.success("📲 Quote saved & WhatsApp opened!");
@@ -331,6 +332,54 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
 
         <ScrollArea className="max-h-[calc(92vh-80px)]">
           <div className="px-6 py-4 space-y-4">
+
+            {/* Policy Expiry Status Banner */}
+            {client.policy_expiry_date && (
+              <div className={cn(
+                "flex items-start gap-2 p-3 rounded-lg border text-xs",
+                claimLockedByExpiry
+                  ? "bg-red-50 dark:bg-red-950/30 border-red-300 dark:border-red-700"
+                  : (expiryDays !== null && expiryDays > 0)
+                    ? "bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-700"
+                    : "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-700"
+              )}>
+                <CalendarClock className={cn(
+                  "h-4 w-4 mt-0.5 shrink-0",
+                  claimLockedByExpiry ? "text-red-600" : (expiryDays !== null && expiryDays > 0) ? "text-amber-600" : "text-emerald-600"
+                )} />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-bold text-foreground">
+                      Policy Expiry: {format(new Date(client.policy_expiry_date), "dd MMM yyyy")}
+                    </span>
+                    <Badge className={cn(
+                      "text-[10px] border-0",
+                      claimLockedByExpiry
+                        ? "bg-red-500 text-white"
+                        : (expiryDays !== null && expiryDays > 0)
+                          ? "bg-amber-500 text-white"
+                          : "bg-emerald-500 text-white"
+                    )}>
+                      {expiryDays === null
+                        ? "Unknown"
+                        : expiryDays > 0
+                          ? `Expired ${expiryDays} days ago`
+                          : expiryDays === 0
+                            ? "Expires today"
+                            : `Expires in ${Math.abs(expiryDays)} days`}
+                    </Badge>
+                  </div>
+                  {claimLockedByExpiry && (
+                    <div className="flex items-center gap-1.5 mt-1.5">
+                      <AlertTriangle className="h-3.5 w-3.5 text-red-600 shrink-0" />
+                      <p className="text-[11px] font-bold text-red-700 dark:text-red-400">
+                        ⚠ VEHICLE INSPECTION MANDATORY — Policy lapsed &gt;90 days. NCB benefit forfeited as per IRDAI guidelines. Physical vehicle inspection is required before issuing a new policy.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
             {/* Row 1: Insurer + Fuel + Policy */}
             <div className="grid grid-cols-3 gap-3">
               <div>
@@ -460,9 +509,11 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
                     : "NCB Eligibility Declaration Required"}
                 </p>
                  <p className={cn("text-[9px] mt-0.5", ncbLocked ? "text-red-600 dark:text-red-300" : "text-amber-600 dark:text-amber-300")}>
-                  NCB is only applicable if no claim was made during the previous policy period (up to 5 years).
-                   {claimLockedByExpiry ? " Policies expired more than 90 days are also not eligible for NCB." : ""}
-                  Providing false information about claim/NCB status will void the NCB discount and the insurer reserves the right to reject claims.
+                  {claimLockedByExpiry
+                    ? "As per IRDAI guidelines, if previous policy has lapsed for more than 90 days, NCB benefit is forfeited and a physical vehicle inspection is mandatory before issuing a new policy."
+                    : "NCB is only applicable if no claim was made during the previous policy period (up to 5 years)."}
+                  {" "}Providing false information about claim/NCB status will void the NCB discount and the insurer reserves the right to reject claims.
+                 </p>
                 </p>
               </div>
             </div>
