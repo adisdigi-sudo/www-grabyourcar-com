@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { FileText, Download, ExternalLink, IndianRupee, Clock, MessageCircle, Mail, Copy, Shield } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { openInsuranceStorageFile } from "@/lib/insuranceDocumentViewer";
 
 interface Props {
   clientId: string;
@@ -28,7 +29,6 @@ export function ClientQuoteHistory({ clientId, clientPhone, vehicleNumber }: Pro
   const { data: quotes, isLoading } = useQuery({
     queryKey: ["client-quote-history", clientId],
     queryFn: async () => {
-      // Match by client phone or vehicle number
       const conditions: string[] = [];
       const cleanPhone = (clientPhone || "").replace(/\D/g, "").slice(-10);
       const cleanVehicle = (vehicleNumber || "").replace(/\s+/g, "").toUpperCase();
@@ -39,7 +39,6 @@ export function ClientQuoteHistory({ clientId, clientPhone, vehicleNumber }: Pro
         .order("created_at", { ascending: false })
         .limit(20);
 
-      // Build OR filter
       if (cleanPhone && cleanVehicle) {
         query = query.or(`customer_phone.ilike.%${cleanPhone},vehicle_number.ilike.%${cleanVehicle}`);
       } else if (cleanPhone) {
@@ -58,10 +57,10 @@ export function ClientQuoteHistory({ clientId, clientPhone, vehicleNumber }: Pro
   });
 
   const openPdf = async (path: string) => {
-    const { data } = supabase.storage.from("quote-pdfs").getPublicUrl(path);
-    if (data?.publicUrl) {
-      window.open(data.publicUrl, "_blank");
-    } else {
+    try {
+      await openInsuranceStorageFile({ bucket: "quote-pdfs", path });
+    } catch (error) {
+      console.error("Could not open quote PDF", error);
       toast.error("Could not open PDF");
     }
   };
