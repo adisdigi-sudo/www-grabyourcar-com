@@ -727,7 +727,7 @@ export function InsuranceStatusPipeline() {
       </AnimatePresence>
 
       {/* ── Client Detail + Pipeline Dialog ── */}
-      <Dialog open={!!selectedClient} onOpenChange={() => { setSelectedClient(null); setShowAddPolicy(false); setDialogTab("journey"); }}>
+      <Dialog open={!!selectedClient} onOpenChange={() => { setSelectedClient(null); setShowAddPolicy(false); setDialogTab("details"); }}>
         <DialogContent className="max-w-2xl max-h-[92vh] flex flex-col overflow-hidden">
           <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-2">
