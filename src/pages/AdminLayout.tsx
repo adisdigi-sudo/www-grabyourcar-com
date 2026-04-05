@@ -15,6 +15,10 @@ import { InsuranceManagement } from "@/components/admin/InsuranceManagement";
 import { CRMAssistant } from "@/components/admin/CRMAssistant";
 import { AICofounderBanner } from "@/components/admin/AICofounderBanner";
 
+const ChannelProvidersSettings = lazy(() =>
+  import("@/components/admin/settings/ChannelProvidersSettings").then((module) => ({ default: module.ChannelProvidersSettings })),
+);
+
 const AdminSidebar = lazy(() =>
   import("@/components/admin/AdminSidebar").then((module) => ({ default: module.AdminSidebar })),
 );
@@ -260,7 +264,7 @@ const VALID_ADMIN_TABS = new Set([
   "cars-attributes", "cars-ai", "cars-url-scraper", "website-homepage", "website-content", "website-banners", "website-offers",
   "website-branding", "website-testimonials", "website-faqs", "website-seo", "socialproof-reviews", "socialproof-stories",
   "services-hsrp", "services-rentals", "services-driver-bookings", "services-api-partners", "services-insurance",
-  "services-insurance-import", "services-loans-pipeline", "services-loans-disbursement", "services-loans-after-sales",
+  "services-insurance-import", "services-messaging-channels", "services-loans-pipeline", "services-loans-disbursement", "services-loans-after-sales",
   "services-loans-bulk", "services-emi-calculator", "services-emi-pdf", "services-discounts", "services-quote-generator",
   "services-pricing", "services-partners", "ecommerce-accessories", "ecommerce-orders", "ecommerce-crosssell", "d2c-rto",
   "d2c-returns", "d2c-checkout", "d2c-inbox", "content-blog", "content-news", "content-launches", "content-ai",
@@ -514,6 +518,8 @@ const AdminLayout = () => {
         return <InsuranceManagement />;
       case "services-insurance-import":
         return <InsuranceImportExport />;
+      case "services-messaging-channels":
+        return <ChannelProvidersSettings />;
       case "services-loans-pipeline":
         return <LoanCRMDashboard initialView="pipeline" />;
       case "services-loans-disbursement":
