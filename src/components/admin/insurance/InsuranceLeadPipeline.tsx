@@ -1393,7 +1393,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
 
       {/* ── CLIENT DETAIL DIALOG ── */}
       <Dialog open={!!selectedClient && !showLostDialog && !showCallingDialog && !showFollowUpDialog && !showQuoteModal && !showUploadPolicy && !showWonDialog} onOpenChange={(o) => { if (!o) setSelectedClient(null); }}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
           {selectedClient && (() => {
             const normStage = normalizeStage(selectedClient.pipeline_stage, selectedClient.lead_status);
             const stage = ALL_STAGES.find(s => s.value === normStage) || PIPELINE_STAGES[0];
