@@ -843,11 +843,8 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
                   if (e.target.value) {
                     const days = Math.floor((Date.now() - new Date(e.target.value).getTime()) / (1000 * 60 * 60 * 24));
                     if (days > 90) {
-                      setExpiredOver90Days(true);
                       setClaimTaken(true);
                       setNcb(0);
-                    } else {
-                      setExpiredOver90Days(false);
                     }
                   }
                 }}
@@ -892,16 +889,14 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
             </div>
 
             <div>
-              <Label className="text-xs">Insurance Expired Over 90 Days?</Label>
-              <div className="flex items-center gap-2 mt-1">
-                <Button type="button" variant={expiredOver90Days ? "outline" : "default"} size="sm" className="h-8 text-xs" onClick={() => setExpiredOver90Days(false)}>
-                  No
-                </Button>
-                <Button type="button" variant={expiredOver90Days ? "default" : "outline"} size="sm" className="h-8 text-xs" onClick={() => { setExpiredOver90Days(true); setClaimTaken(true); setNcb(0); }}>
-                  Yes
-                </Button>
-              </div>
-              {!policyExpiryDate && <p className="text-[9px] text-muted-foreground mt-1">Or enter Policy Expiry Date above to auto-detect</p>}
+              <Label className="text-xs">Remarks / Notes</Label>
+              <Textarea
+                value={customRemarks}
+                onChange={e => setCustomRemarks(e.target.value)}
+                placeholder="E.g. inspection done, customer wants comprehensive only..."
+                className="min-h-[60px] text-xs mt-1"
+              />
+              <p className="text-[9px] text-muted-foreground mt-1">Added to quote output, WhatsApp & PDF</p>
             </div>
 
             <div>
@@ -1075,7 +1070,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
               </div>
 
               <Button size="sm" variant="ghost" className="w-full text-xs" onClick={() => {
-                setIdv(""); setCc(""); setDiscount("0"); setNcb(0); setClaimTaken(false); setExpiredOver90Days(false); setExShowroomPrice("");
+                setIdv(""); setCc(""); setDiscount("0"); setNcb(0); setClaimTaken(false); setExShowroomPrice("");
                 setPolicyExpiryDate("");
                 setAddons(DEFAULT_ADDONS); setCustomerName(""); setCustomerPhone("");
                 setVehicleMake(""); setVehicleModel(""); setVehicleNumber("");
