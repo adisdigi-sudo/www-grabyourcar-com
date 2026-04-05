@@ -2,6 +2,7 @@ import { forwardRef, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -107,8 +108,8 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
   const [securePremium, setSecurePremium] = useState<string>("0");
   const [claimTaken, setClaimTaken] = useState(false);
   const [policyExpiryDate, setPolicyExpiryDate] = useState<string>("");
-  const [expiredOver90Days, setExpiredOver90Days] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [customRemarks, setCustomRemarks] = useState<string>("");
 
   const resolvedInsurer = insuranceCompany === "__custom" ? customInsurer : insuranceCompany;
 
@@ -116,6 +117,13 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
   const ccNum = parseInt(cc) || 0;
   const idvNum = parseFloat(idv) || 0;
   const discountPct = parseFloat(discount) || 0;
+  // Auto-detect expired >90 days from policy expiry date
+  const expiredOver90Days = useMemo(() => {
+    if (!policyExpiryDate) return false;
+    const days = Math.floor((Date.now() - new Date(policyExpiryDate).getTime()) / (1000 * 60 * 60 * 24));
+    return days > 90;
+  }, [policyExpiryDate]);
+
   const ncbLocked = claimTaken || expiredOver90Days;
 
   // Calculate expiry days from date input
@@ -193,6 +201,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
       `GST (18%): ${fmt(calc.gst)}`,
       `✅ Total Premium: ${fmt(calc.total)}`,
       expiredOver90Days ? `\n⚠ Vehicle inspection required (policy lapsed >90 days) — IRDAI` : null,
+      customRemarks?.trim() ? `\n📝 Remarks: ${customRemarks.trim()}` : null,
     ].filter(Boolean).join("\n");
     return lines;
   };
@@ -226,7 +235,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
         total: Math.round(calc.total),
       },
       addons: addons.filter((addon) => addon.enabled).map((addon) => addon.name),
-      notes: `Zone: ${zone} | Fuel: ${fuelType} | Policy: ${policyType} | OD Discount: ${discountPct}% | NCB: ${ncbLocked ? 0 : ncb}% | Claim Taken: ${claimTaken ? "Yes" : "No"} | Expired > 90 Days: ${expiredOver90Days ? "Yes" : "No"}${expiredOver90Days ? " | ⚠ Vehicle inspection required (policy lapsed >90 days) — IRDAI" : ""}`,
+      notes: `Zone: ${zone} | Fuel: ${fuelType} | Policy: ${policyType} | OD Discount: ${discountPct}% | NCB: ${ncbLocked ? 0 : ncb}% | Claim Taken: ${claimTaken ? "Yes" : "No"} | Expired > 90 Days: ${expiredOver90Days ? "Yes" : "No"}${expiredOver90Days ? " | ⚠ Vehicle inspection required (policy lapsed >90 days) — IRDAI" : ""}${customRemarks?.trim() ? ` | Remarks: ${customRemarks.trim()}` : ""}`,
       quoteAmount: Math.round(calc.total),
       quoteInsurer: resolvedInsurer || "Calculator Quote",
       ncbPercentage: ncbLocked ? 0 : ncb,
@@ -835,11 +844,8 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
                   if (e.target.value) {
                     const days = Math.floor((Date.now() - new Date(e.target.value).getTime()) / (1000 * 60 * 60 * 24));
                     if (days > 90) {
-                      setExpiredOver90Days(true);
                       setClaimTaken(true);
                       setNcb(0);
-                    } else {
-                      setExpiredOver90Days(false);
                     }
                   }
                 }}
@@ -884,16 +890,14 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
             </div>
 
             <div>
-              <Label className="text-xs">Insurance Expired Over 90 Days?</Label>
-              <div className="flex items-center gap-2 mt-1">
-                <Button type="button" variant={expiredOver90Days ? "outline" : "default"} size="sm" className="h-8 text-xs" onClick={() => setExpiredOver90Days(false)}>
-                  No
-                </Button>
-                <Button type="button" variant={expiredOver90Days ? "default" : "outline"} size="sm" className="h-8 text-xs" onClick={() => { setExpiredOver90Days(true); setClaimTaken(true); setNcb(0); }}>
-                  Yes
-                </Button>
-              </div>
-              {!policyExpiryDate && <p className="text-[9px] text-muted-foreground mt-1">Or enter Policy Expiry Date above to auto-detect</p>}
+              <Label className="text-xs">Remarks / Notes</Label>
+              <Textarea
+                value={customRemarks}
+                onChange={e => setCustomRemarks(e.target.value)}
+                placeholder="E.g. inspection done, customer wants comprehensive only..."
+                className="min-h-[60px] text-xs mt-1"
+              />
+              <p className="text-[9px] text-muted-foreground mt-1">Added to quote output, WhatsApp & PDF</p>
             </div>
 
             <div>
@@ -1067,12 +1071,12 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
               </div>
 
               <Button size="sm" variant="ghost" className="w-full text-xs" onClick={() => {
-                setIdv(""); setCc(""); setDiscount("0"); setNcb(0); setClaimTaken(false); setExpiredOver90Days(false); setExShowroomPrice("");
+                setIdv(""); setCc(""); setDiscount("0"); setNcb(0); setClaimTaken(false); setExShowroomPrice("");
                 setPolicyExpiryDate("");
                 setAddons(DEFAULT_ADDONS); setCustomerName(""); setCustomerPhone("");
                 setVehicleMake(""); setVehicleModel(""); setVehicleNumber("");
                 setInsuranceCompany(""); setCustomInsurer(""); setFuelType("Petrol");
-                setPolicyType("Comprehensive"); setSecurePremium("0");
+                setPolicyType("Comprehensive"); setSecurePremium("0"); setCustomRemarks("");
                 toast.info("Calculator reset");
               }}>
                 Reset Calculator
