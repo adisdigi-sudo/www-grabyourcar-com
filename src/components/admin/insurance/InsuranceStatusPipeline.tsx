@@ -88,7 +88,7 @@ export function InsuranceStatusPipeline() {
     premium_amount: "", start_date: "", expiry_date: "", status: "active",
   });
   const [savingPolicy, setSavingPolicy] = useState(false);
-  const [dialogTab, setDialogTab] = useState("journey");
+  const [dialogTab, setDialogTab] = useState("details");
   const [bulkSending, setBulkSending] = useState(false);
   const [renewalPreviewClient, setRenewalPreviewClient] = useState<Client | null>(null);
   const [renewalPreviewMsg, setRenewalPreviewMsg] = useState("");
@@ -727,9 +727,9 @@ export function InsuranceStatusPipeline() {
       </AnimatePresence>
 
       {/* ── Client Detail + Pipeline Dialog ── */}
-      <Dialog open={!!selectedClient} onOpenChange={() => { setSelectedClient(null); setShowAddPolicy(false); setDialogTab("journey"); }}>
-        <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto">
-          <DialogHeader>
+      <Dialog open={!!selectedClient} onOpenChange={() => { setSelectedClient(null); setShowAddPolicy(false); setDialogTab("details"); }}>
+        <DialogContent className="max-w-2xl max-h-[92vh] flex flex-col overflow-hidden">
+          <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <div className={`h-8 w-8 rounded-lg ${PIPELINE_STAGES.find(s => s.value === selectedClient?.lead_status)?.color || "bg-primary"} flex items-center justify-center`}>
                 <User className="h-4 w-4 text-white" />
@@ -743,123 +743,128 @@ export function InsuranceStatusPipeline() {
             </DialogTitle>
           </DialogHeader>
           {selectedClient && (
-            <div className="space-y-4">
-              {/* Contact Info */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Mobile</Label>
-                  <Input value={editPhone} onChange={e => setEditPhone(e.target.value.replace(/\D/g, "").slice(0, 10))} placeholder="Enter mobile" className="h-8 text-sm" />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Email</Label>
-                  <Input value={editEmail} onChange={e => setEditEmail(e.target.value)} placeholder="Enter email" className="h-8 text-sm" />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Vehicle Number</Label>
-                  <Input value={editVehicleNumber} onChange={e => setEditVehicleNumber(e.target.value.toUpperCase())} placeholder="e.g. DL01AB1234" className="h-8 text-sm font-mono uppercase" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Source</p>
-                  <p className="text-sm font-medium">{selectedClient.lead_source || "—"}</p>
-                </div>
-              </div>
+            <Tabs value={dialogTab} onValueChange={(v) => { setDialogTab(v); if (v === "policies") fetchClientPolicies(selectedClient.id); }} className="flex flex-col min-h-0 flex-1">
+              <TabsList className="w-full bg-muted/50 shrink-0">
+                <TabsTrigger value="details" className="flex-1 gap-1.5 text-xs">
+                  <User className="h-3.5 w-3.5" /> Details
+                </TabsTrigger>
+                <TabsTrigger value="journey" className="flex-1 gap-1.5 text-xs">
+                  <GitBranch className="h-3.5 w-3.5" /> Journey
+                </TabsTrigger>
+                <TabsTrigger value="quote" className="flex-1 gap-1.5 text-xs">
+                  <FileText className="h-3.5 w-3.5" /> Quote
+                </TabsTrigger>
+                <TabsTrigger value="quote_history" className="flex-1 gap-1.5 text-xs">
+                  <Clock className="h-3.5 w-3.5" /> History
+                </TabsTrigger>
+                <TabsTrigger value="policies" className="flex-1 gap-1.5 text-xs">
+                  <ShieldCheck className="h-3.5 w-3.5" /> Policies
+                  {clientPolicies.length > 0 && <Badge variant="secondary" className="h-4 text-[10px] px-1">{clientPolicies.length}</Badge>}
+                </TabsTrigger>
+                <TabsTrigger value="notes" className="flex-1 gap-1.5 text-xs">
+                  <FileText className="h-3.5 w-3.5" /> Notes
+                </TabsTrigger>
+              </TabsList>
 
-              {/* Save Contact Button */}
-              <Button
-                size="sm"
-                className="w-full gap-2"
-                disabled={savingContact}
-                onClick={async () => {
-                  setSavingContact(true);
-                  try {
-                    const normalizedPhone = editPhone.replace(/\D/g, "");
-                    const normalizedVehicleNumber = editVehicleNumber.replace(/[^A-Z0-9]/gi, "").toUpperCase();
-                    const updates: Record<string, any> = {};
-                    if (normalizedPhone !== (displayPhone(selectedClient.phone) || "")) updates.phone = normalizedPhone;
-                    if (editEmail !== (selectedClient.email || "")) updates.email = editEmail || null;
-                    if (normalizedVehicleNumber !== (selectedClient.vehicle_number || "")) updates.vehicle_number = normalizedVehicleNumber || null;
-                    if (Object.keys(updates).length === 0) { toast.info("No changes to save"); setSavingContact(false); return; }
-                    const { data, error } = await supabase
-                      .from("insurance_clients")
-                      .update(updates)
-                      .eq("id", selectedClient.id)
-                      .select("id, customer_name, phone, email, vehicle_model, vehicle_number, vehicle_make, current_insurer, lead_status, current_premium, lead_source, created_at")
-                      .maybeSingle();
-                    if (error) throw error;
-                    toast.success("✅ Details updated!");
-                    fetchClients();
-                    const refreshedClient = (data ? { ...data, lead_status: data.lead_status || "new" } : { ...selectedClient, ...updates }) as Client;
-                    setSelectedClient(refreshedClient);
-                    setEditPhone(refreshedClient.phone || "");
-                    setEditEmail(refreshedClient.email || "");
-                    setEditVehicleNumber(refreshedClient.vehicle_number || "");
-                  } catch (e: any) {
-                    toast.error(e.message || "Failed to save");
-                  } finally {
-                    setSavingContact(false);
-                  }
-                }}
-              >
-                {savingContact ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                {savingContact ? "Saving..." : "Save Changes"}
-              </Button>
+              <div className="overflow-y-auto flex-1 min-h-0 mt-3">
+                {/* Details Tab - Contact Info + Communication */}
+                <TabsContent value="details" className="mt-0 space-y-4">
+                  {/* Contact Info */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Mobile</Label>
+                      <Input value={editPhone} onChange={e => setEditPhone(e.target.value.replace(/\D/g, "").slice(0, 10))} placeholder="Enter mobile" className="h-8 text-sm" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Email</Label>
+                      <Input value={editEmail} onChange={e => setEditEmail(e.target.value)} placeholder="Enter email" className="h-8 text-sm" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Vehicle Number</Label>
+                      <Input value={editVehicleNumber} onChange={e => setEditVehicleNumber(e.target.value.toUpperCase())} placeholder="e.g. DL01AB1234" className="h-8 text-sm font-mono uppercase" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Source</p>
+                      <p className="text-sm font-medium">{selectedClient.lead_source || "—"}</p>
+                    </div>
+                  </div>
 
-              {/* Communication Hub + WhatsApp Doc Request */}
-              <div className="flex flex-wrap gap-2 py-2 border-y">
-                {editPhone && (
-                  <>
-                    <a href={`tel:${editPhone}`}>
-                      <Button size="sm" className="gap-1.5 bg-green-600 hover:bg-green-700 text-white">
-                        <PhoneCall className="h-3.5 w-3.5" /> Call
-                      </Button>
-                    </a>
-                    <a href={`https://wa.me/91${editPhone}`} target="_blank" rel="noopener noreferrer">
-                      <Button size="sm" variant="outline" className="gap-1.5">
-                        <MessageSquare className="h-3.5 w-3.5 text-green-600" /> WhatsApp
-                      </Button>
-                    </a>
-                  </>
-                )}
-                {editEmail && (
-                  <a href={`mailto:${editEmail}`}>
-                    <Button size="sm" variant="outline" className="gap-1.5">
-                      <Mail className="h-3.5 w-3.5" /> Email
+                  {/* Save Contact Button */}
+                  <Button
+                    size="sm"
+                    className="w-full gap-2"
+                    disabled={savingContact}
+                    onClick={async () => {
+                      setSavingContact(true);
+                      try {
+                        const normalizedPhone = editPhone.replace(/\D/g, "");
+                        const normalizedVehicleNumber = editVehicleNumber.replace(/[^A-Z0-9]/gi, "").toUpperCase();
+                        const updates: Record<string, any> = {};
+                        if (normalizedPhone !== (displayPhone(selectedClient.phone) || "")) updates.phone = normalizedPhone;
+                        if (editEmail !== (selectedClient.email || "")) updates.email = editEmail || null;
+                        if (normalizedVehicleNumber !== (selectedClient.vehicle_number || "")) updates.vehicle_number = normalizedVehicleNumber || null;
+                        if (Object.keys(updates).length === 0) { toast.info("No changes to save"); setSavingContact(false); return; }
+                        const { data, error } = await supabase
+                          .from("insurance_clients")
+                          .update(updates)
+                          .eq("id", selectedClient.id)
+                          .select("id, customer_name, phone, email, vehicle_model, vehicle_number, vehicle_make, current_insurer, lead_status, current_premium, lead_source, created_at")
+                          .maybeSingle();
+                        if (error) throw error;
+                        toast.success("✅ Details updated!");
+                        fetchClients();
+                        const refreshedClient = (data ? { ...data, lead_status: data.lead_status || "new" } : { ...selectedClient, ...updates }) as Client;
+                        setSelectedClient(refreshedClient);
+                        setEditPhone(refreshedClient.phone || "");
+                        setEditEmail(refreshedClient.email || "");
+                        setEditVehicleNumber(refreshedClient.vehicle_number || "");
+                      } catch (e: any) {
+                        toast.error(e.message || "Failed to save");
+                      } finally {
+                        setSavingContact(false);
+                      }
+                    }}
+                  >
+                    {savingContact ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    {savingContact ? "Saving..." : "Save Changes"}
+                  </Button>
+
+                  {/* Communication Hub */}
+                  <div className="flex flex-wrap gap-2 py-2 border-y">
+                    {editPhone && (
+                      <>
+                        <a href={`tel:${editPhone}`}>
+                          <Button size="sm" className="gap-1.5 bg-green-600 hover:bg-green-700 text-white">
+                            <PhoneCall className="h-3.5 w-3.5" /> Call
+                          </Button>
+                        </a>
+                        <a href={`https://wa.me/91${editPhone}`} target="_blank" rel="noopener noreferrer">
+                          <Button size="sm" variant="outline" className="gap-1.5">
+                            <MessageSquare className="h-3.5 w-3.5 text-green-600" /> WhatsApp
+                          </Button>
+                        </a>
+                      </>
+                    )}
+                    {editEmail && (
+                      <a href={`mailto:${editEmail}`}>
+                        <Button size="sm" variant="outline" className="gap-1.5">
+                          <Mail className="h-3.5 w-3.5" /> Email
+                        </Button>
+                      </a>
+                    )}
+                    <Button size="sm" variant="outline" className="gap-1.5" onClick={() => shareClientDetails(selectedClient)}>
+                      <Share2 className="h-3.5 w-3.5" /> Share
                     </Button>
-                  </a>
-                )}
-                <Button size="sm" variant="outline" className="gap-1.5" onClick={() => shareClientDetails(selectedClient)}>
-                  <Share2 className="h-3.5 w-3.5" /> Share
-                </Button>
-                <div className="ml-auto flex gap-1.5">
-                  <Button size="sm" variant="outline" className="gap-1.5 border-green-300 text-green-700 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-950" onClick={() => requestPolicyViaWhatsApp(selectedClient)}>
-                    <Upload className="h-3.5 w-3.5" /> Policy Share
-                  </Button>
-                  <Button size="sm" className="gap-1.5 bg-amber-600 hover:bg-amber-700 text-white" onClick={() => sendRenewalReminderWhatsApp(selectedClient)}>
-                    <Clock className="h-3.5 w-3.5" /> Renewal Reminder
-                  </Button>
-                </div>
-              </div>
-
-              {/* Tabs: Journey / Quote / Policies / Notes */}
-              <Tabs value={dialogTab} onValueChange={(v) => { setDialogTab(v); if (v === "policies") fetchClientPolicies(selectedClient.id); }}>
-                <TabsList className="w-full bg-muted/50">
-                  <TabsTrigger value="journey" className="flex-1 gap-1.5 text-xs">
-                    <GitBranch className="h-3.5 w-3.5" /> Journey
-                  </TabsTrigger>
-                  <TabsTrigger value="quote" className="flex-1 gap-1.5 text-xs">
-                    <FileText className="h-3.5 w-3.5" /> Prepare Quote
-                  </TabsTrigger>
-                  <TabsTrigger value="quote_history" className="flex-1 gap-1.5 text-xs">
-                    <Clock className="h-3.5 w-3.5" /> Quote History
-                  </TabsTrigger>
-                  <TabsTrigger value="policies" className="flex-1 gap-1.5 text-xs">
-                    <ShieldCheck className="h-3.5 w-3.5" /> Policies
-                    {clientPolicies.length > 0 && <Badge variant="secondary" className="h-4 text-[10px] px-1">{clientPolicies.length}</Badge>}
-                  </TabsTrigger>
-                  <TabsTrigger value="notes" className="flex-1 gap-1.5 text-xs">
-                    <FileText className="h-3.5 w-3.5" /> Notes
-                  </TabsTrigger>
-                </TabsList>
+                    <div className="ml-auto flex gap-1.5">
+                      <Button size="sm" variant="outline" className="gap-1.5 border-green-300 text-green-700 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-950" onClick={() => requestPolicyViaWhatsApp(selectedClient)}>
+                        <Upload className="h-3.5 w-3.5" /> Policy Share
+                      </Button>
+                      <Button size="sm" className="gap-1.5 bg-amber-600 hover:bg-amber-700 text-white" onClick={() => sendRenewalReminderWhatsApp(selectedClient)}>
+                        <Clock className="h-3.5 w-3.5" /> Renewal Reminder
+                      </Button>
+                    </div>
+                  </div>
+                </TabsContent>
 
                 {/* Journey Tab */}
                 <TabsContent value="journey" className="mt-3 space-y-4">
@@ -1079,8 +1084,8 @@ export function InsuranceStatusPipeline() {
                     </div>
                   </div>
                 </TabsContent>
-              </Tabs>
-            </div>
+              </div>
+            </Tabs>
           )}
         </DialogContent>
       </Dialog>
