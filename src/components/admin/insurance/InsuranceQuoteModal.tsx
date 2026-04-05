@@ -514,7 +514,6 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
                     : "NCB is only applicable if no claim was made during the previous policy period (up to 5 years)."}
                   {" "}Providing false information about claim/NCB status will void the NCB discount and the insurer reserves the right to reject claims.
                  </p>
-                </p>
               </div>
             </div>
 
