@@ -349,7 +349,40 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
         <ScrollArea className="max-h-[calc(92vh-80px)]">
           <div className="px-6 py-4 space-y-4">
 
-            {/* Policy Expiry Status Banner */}
+            {/* ✅ Quote Saved Confirmation Banner */}
+            <AnimatePresence>
+              {lastSavedQuote && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="flex items-start gap-3 p-3 rounded-lg border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/30"
+                >
+                  <Check className="h-5 w-5 text-emerald-600 mt-0.5 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-emerald-800 dark:text-emerald-300">✅ Quote Saved Successfully!</p>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-xs text-emerald-700 dark:text-emerald-400">
+                      <span>Ref: <span className="font-mono font-bold">{lastSavedQuote.ref}</span></span>
+                      <span>Premium: <span className="font-bold">{fmt(lastSavedQuote.total)}</span></span>
+                      <span>Insurer: {lastSavedQuote.insurer}</span>
+                      <span>Via: {lastSavedQuote.method}</span>
+                    </div>
+                    <p className="text-[10px] text-emerald-600 dark:text-emerald-500 mt-1">
+                      Saved to Quote History • Client pipeline updated • PDF stored
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 w-6 p-0 text-emerald-600 hover:text-emerald-800"
+                    onClick={() => setLastSavedQuote(null)}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {client.policy_expiry_date && (
               <div className={cn(
                 "flex items-start gap-2 p-3 rounded-lg border text-xs",
