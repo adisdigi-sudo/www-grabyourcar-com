@@ -192,6 +192,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
       `Subtotal: ${fmt(calc.subtotal)}`,
       `GST (18%): ${fmt(calc.gst)}`,
       `✅ Total Premium: ${fmt(calc.total)}`,
+      expiredOver90Days ? `\n⚠ Vehicle inspection required (policy lapsed >90 days) — IRDAI` : null,
     ].filter(Boolean).join("\n");
     return lines;
   };
@@ -225,7 +226,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
         total: Math.round(calc.total),
       },
       addons: addons.filter((addon) => addon.enabled).map((addon) => addon.name),
-      notes: `Zone: ${zone} | Fuel: ${fuelType} | Policy: ${policyType} | OD Discount: ${discountPct}% | NCB: ${ncbLocked ? 0 : ncb}% | Claim Taken: ${claimTaken ? "Yes" : "No"} | Expired > 90 Days: ${expiredOver90Days ? "Yes" : "No"}`,
+      notes: `Zone: ${zone} | Fuel: ${fuelType} | Policy: ${policyType} | OD Discount: ${discountPct}% | NCB: ${ncbLocked ? 0 : ncb}% | Claim Taken: ${claimTaken ? "Yes" : "No"} | Expired > 90 Days: ${expiredOver90Days ? "Yes" : "No"}${expiredOver90Days ? " | ⚠ Vehicle inspection required (policy lapsed >90 days) — IRDAI" : ""}`,
       quoteAmount: Math.round(calc.total),
       quoteInsurer: resolvedInsurer || "Calculator Quote",
       ncbPercentage: ncbLocked ? 0 : ncb,
@@ -825,6 +826,64 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
             </div>
 
             <div>
+              <Label className="text-xs">Policy Expiry Date</Label>
+              <Input
+                type="date"
+                value={policyExpiryDate}
+                onChange={e => {
+                  setPolicyExpiryDate(e.target.value);
+                  if (e.target.value) {
+                    const days = Math.floor((Date.now() - new Date(e.target.value).getTime()) / (1000 * 60 * 60 * 24));
+                    if (days > 90) {
+                      setExpiredOver90Days(true);
+                      setClaimTaken(true);
+                      setNcb(0);
+                    } else {
+                      setExpiredOver90Days(false);
+                    }
+                  }
+                }}
+                className="h-9 text-sm mt-1"
+              />
+              {policyExpiryDate && expiryDays !== null && (
+                <div className={cn(
+                  "flex items-start gap-2 p-2.5 rounded-lg border mt-2 text-xs",
+                  expiredOver90Days
+                    ? "bg-red-50 dark:bg-red-950/30 border-red-300 dark:border-red-700"
+                    : expiryDays > 0
+                      ? "bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-700"
+                      : "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-700"
+                )}>
+                  <CalendarClock className={cn(
+                    "h-4 w-4 mt-0.5 shrink-0",
+                    expiredOver90Days ? "text-red-600" : expiryDays > 0 ? "text-amber-600" : "text-emerald-600"
+                  )} />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-foreground">
+                        {format(new Date(policyExpiryDate), "dd MMM yyyy")}
+                      </span>
+                      <Badge className={cn(
+                        "text-[10px] border-0",
+                        expiredOver90Days ? "bg-red-500 text-white" : expiryDays > 0 ? "bg-amber-500 text-white" : "bg-emerald-500 text-white"
+                      )}>
+                        {expiryDays > 0 ? `Expired ${expiryDays} days ago` : expiryDays === 0 ? "Expires today" : `Expires in ${Math.abs(expiryDays)} days`}
+                      </Badge>
+                    </div>
+                    {expiredOver90Days && (
+                      <div className="flex items-center gap-1.5 mt-1.5">
+                        <AlertTriangle className="h-3.5 w-3.5 text-red-600 shrink-0" />
+                        <p className="text-[11px] font-bold text-red-700 dark:text-red-400">
+                          ⚠ VEHICLE INSPECTION MANDATORY — Policy lapsed &gt;90 days. NCB benefit forfeited as per IRDAI guidelines.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div>
               <Label className="text-xs">Insurance Expired Over 90 Days?</Label>
               <div className="flex items-center gap-2 mt-1">
                 <Button type="button" variant={expiredOver90Days ? "outline" : "default"} size="sm" className="h-8 text-xs" onClick={() => setExpiredOver90Days(false)}>
@@ -834,6 +893,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
                   Yes
                 </Button>
               </div>
+              {!policyExpiryDate && <p className="text-[9px] text-muted-foreground mt-1">Or enter Policy Expiry Date above to auto-detect</p>}
             </div>
 
             <div>
@@ -862,11 +922,16 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
                   ))}
                 </SelectContent>
               </Select>
-              <div className="flex items-start gap-1.5 mt-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                <Info className="h-3 w-3 text-amber-600 mt-0.5 shrink-0" />
-                <p className="text-[10px] text-amber-700 dark:text-amber-400 leading-relaxed">
-                  NCB is auto-suggested by vehicle year. Year 0: 0%, Year 1: 20%, Year 2: 25%, Year 3: 35%, Year 4: 45%, Year 5+: 50%. 
-                  NCB discount is applied on OD after OD discount. If claim taken or expired &gt;90 days, NCB = 0%.
+              <div className={cn(
+                "flex items-start gap-1.5 mt-2 p-2 rounded-lg border",
+                ncbLocked ? "bg-red-500/10 border-red-500/30" : "bg-amber-500/10 border-amber-500/20"
+              )}>
+                <Info className={cn("h-3 w-3 mt-0.5 shrink-0", ncbLocked ? "text-red-600" : "text-amber-600")} />
+                <p className={cn("text-[10px] leading-relaxed", ncbLocked ? "text-red-700 dark:text-red-400" : "text-amber-700 dark:text-amber-400")}>
+                  {expiredOver90Days
+                    ? "As per IRDAI guidelines, if previous policy has lapsed for more than 90 days, NCB benefit is forfeited and a physical vehicle inspection is mandatory before issuing a new policy."
+                    : "NCB is auto-suggested by vehicle year. Year 0: 0%, Year 1: 20%, Year 2: 25%, Year 3: 35%, Year 4: 45%, Year 5+: 50%. NCB discount is applied on OD after OD discount. If claim taken or expired >90 days, NCB = 0%."}
+                  {" "}Providing false information will void the NCB discount.
                 </p>
               </div>
             </div>
@@ -1003,6 +1068,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
 
               <Button size="sm" variant="ghost" className="w-full text-xs" onClick={() => {
                 setIdv(""); setCc(""); setDiscount("0"); setNcb(0); setClaimTaken(false); setExpiredOver90Days(false); setExShowroomPrice("");
+                setPolicyExpiryDate("");
                 setAddons(DEFAULT_ADDONS); setCustomerName(""); setCustomerPhone("");
                 setVehicleMake(""); setVehicleModel(""); setVehicleNumber("");
                 setInsuranceCompany(""); setCustomInsurer(""); setFuelType("Petrol");
