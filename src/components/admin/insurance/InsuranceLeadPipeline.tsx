@@ -1613,7 +1613,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                           toast.success("Lead updated");
 
                           // If moved to Won/Policy Issued, prompt to upload policy document
-                          if (normalizedStage === "won" || normalizedStage === "policy_issued") {
+                          if (newStage === "won" || newStage === "policy_issued") {
                             setTimeout(() => {
                               setShowUploadPolicy(true);
                               toast.info("📄 Please upload the policy document now", { duration: 5000 });
