@@ -39,16 +39,17 @@ const InsuranceDocumentViewer = () => {
 
   const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const shouldAutoDownload = searchParams.get("download") === "1";
+  const bucketParam = searchParams.get("bucket");
 
   const fileRequest = useMemo(
     () =>
       resolveInsuranceFileRequest({
-        bucket: isValidBucket(searchParams.get("bucket")) ? searchParams.get("bucket") : undefined,
+        bucket: isValidBucket(bucketParam) ? bucketParam : undefined,
         path: searchParams.get("path"),
         url: searchParams.get("url"),
         fileName: searchParams.get("name") || undefined,
       }),
-    [searchParams],
+    [bucketParam, searchParams],
   );
 
   useEffect(() => {

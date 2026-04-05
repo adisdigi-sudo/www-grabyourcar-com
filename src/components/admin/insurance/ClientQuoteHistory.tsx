@@ -128,9 +128,9 @@ export function ClientQuoteHistory({ clientId, clientPhone, vehicleNumber }: Pro
                   <p className="text-[9px] text-muted-foreground">IDV</p>
                   <p className="text-[10px] font-semibold">{fmt(q.idv)}</p>
                 </div>
-                <div className="bg-emerald-50 dark:bg-emerald-950/30 rounded-lg p-2 text-center">
+                <div className="rounded-lg border border-border bg-accent/30 p-2 text-center">
                   <p className="text-[9px] text-muted-foreground">Total Premium</p>
-                  <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400">{fmt(q.total_premium)}</p>
+                  <p className="text-xs font-bold text-foreground">{fmt(q.total_premium)}</p>
                 </div>
               </div>
 
