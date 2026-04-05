@@ -728,8 +728,8 @@ export function InsuranceStatusPipeline() {
 
       {/* ── Client Detail + Pipeline Dialog ── */}
       <Dialog open={!!selectedClient} onOpenChange={() => { setSelectedClient(null); setShowAddPolicy(false); setDialogTab("journey"); }}>
-        <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[92vh] flex flex-col overflow-hidden">
+          <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <div className={`h-8 w-8 rounded-lg ${PIPELINE_STAGES.find(s => s.value === selectedClient?.lead_status)?.color || "bg-primary"} flex items-center justify-center`}>
                 <User className="h-4 w-4 text-white" />
