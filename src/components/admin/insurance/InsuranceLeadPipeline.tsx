@@ -1006,11 +1006,119 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
         );
       })()}
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Search name, phone, vehicle, city, policy no..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 h-9" />
+      {/* Search + Filter Toggle */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Search name, phone, vehicle, city, policy no..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 h-9" />
+        </div>
+        <Button
+          variant={showFilters ? "default" : "outline"}
+          size="sm"
+          className="h-9 gap-1.5 shrink-0"
+          onClick={() => setShowFilters(!showFilters)}
+        >
+          <Filter className="h-3.5 w-3.5" />
+          Filters
+          {activeFilterCount > 0 && (
+            <Badge variant="secondary" className="text-[10px] h-4 px-1.5 ml-0.5">{activeFilterCount}</Badge>
+          )}
+        </Button>
+        {activeFilterCount > 0 && (
+          <Button variant="ghost" size="sm" className="h-9 text-xs gap-1 text-destructive" onClick={clearAllFilters}>
+            <X className="h-3.5 w-3.5" /> Clear all
+          </Button>
+        )}
       </div>
+
+      {/* Advanced Filters Bar */}
+      {showFilters && (
+        <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3 sm:flex-row sm:flex-wrap sm:items-end">
+          {/* Lead Source */}
+          <div className="space-y-1">
+            <Label className="text-[11px] text-muted-foreground">Lead Source</Label>
+            <Select value={sourceFilter} onValueChange={setSourceFilter}>
+              <SelectTrigger className="h-9 w-[160px] text-xs">
+                <SelectValue placeholder="All sources" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Sources</SelectItem>
+                {LEAD_SOURCES.map(src => (
+                  <SelectItem key={src} value={src}>{src}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Priority */}
+          <div className="space-y-1">
+            <Label className="text-[11px] text-muted-foreground">Priority</Label>
+            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+              <SelectTrigger className="h-9 w-[140px] text-xs">
+                <SelectValue placeholder="All priorities" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Priorities</SelectItem>
+                <SelectItem value="hot">🔥 Hot</SelectItem>
+                <SelectItem value="high">High</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="low">Low</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Expiry Date */}
+          <div className="space-y-1">
+            <Label className="text-[11px] text-muted-foreground">Expiry Date</Label>
+            <Select value={expiryPreset} onValueChange={(v) => { setExpiryPreset(v); if (v !== "custom") { setExpiryFrom(undefined); setExpiryTo(undefined); } }}>
+              <SelectTrigger className="h-9 w-[160px] text-xs">
+                <SelectValue placeholder="All expiry" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="expired">Expired</SelectItem>
+                <SelectItem value="this_week">This Week</SelectItem>
+                <SelectItem value="this_month">This Month</SelectItem>
+                <SelectItem value="next_30">Next 30 Days</SelectItem>
+                <SelectItem value="next_90">Next 90 Days</SelectItem>
+                <SelectItem value="no_expiry">No Expiry Set</SelectItem>
+                <SelectItem value="custom">Custom Range</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {expiryPreset === "custom" && (
+            <>
+              <div className="space-y-1">
+                <Label className="text-[11px] text-muted-foreground">Expiry From</Label>
+                <Input type="date" value={expiryFrom ? format(expiryFrom, "yyyy-MM-dd") : ""} onChange={e => setExpiryFrom(e.target.value ? new Date(e.target.value) : undefined)} className="h-9 w-[150px] text-xs" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[11px] text-muted-foreground">Expiry To</Label>
+                <Input type="date" value={expiryTo ? format(expiryTo, "yyyy-MM-dd") : ""} onChange={e => setExpiryTo(e.target.value ? new Date(e.target.value) : undefined)} className="h-9 w-[150px] text-xs" />
+              </div>
+            </>
+          )}
+
+          {/* Assigned Executive */}
+          {uniqueExecutives.length > 0 && (
+            <div className="space-y-1">
+              <Label className="text-[11px] text-muted-foreground">Executive</Label>
+              <Select value={executiveFilter} onValueChange={setExecutiveFilter}>
+                <SelectTrigger className="h-9 w-[160px] text-xs">
+                  <SelectValue placeholder="All executives" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Executives</SelectItem>
+                  {uniqueExecutives.map(exec => (
+                    <SelectItem key={exec} value={exec}>{exec}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
+      )}
 
       {selectedStage === "won" && (
         <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3 sm:flex-row sm:flex-wrap sm:items-end">
