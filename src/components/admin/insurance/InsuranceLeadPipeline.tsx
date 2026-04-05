@@ -1563,7 +1563,20 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                           selectedClient.created_at?.split("T")[0] ||
                           new Date().toISOString().split("T")[0];
 
-                        const newStage = editFields.pipeline_stage || normalizedStage;
+                        let newStage = editFields.pipeline_stage || normalizedStage;
+                        const followUpDateSet = !!editFields.follow_up_date;
+                        const followUpDateCleared = !editFields.follow_up_date && selectedClient.follow_up_date;
+
+                        // Auto-promote to follow_up when follow-up date is set
+                        const earlyStages = ["new_lead", "smart_calling", "quote_shared"];
+                        if (followUpDateSet && earlyStages.includes(newStage)) {
+                          newStage = "follow_up";
+                        }
+                        // Demote from follow_up when follow-up date is cleared (only if user didn't explicitly pick a stage)
+                        if (followUpDateCleared && newStage === "follow_up" && !editFields.pipeline_stage) {
+                          newStage = "quote_shared";
+                        }
+
                         const updates: Record<string, any> = {
                           customer_name: editFields.customer_name?.trim() || null,
                           phone: editFields.phone || selectedClient.phone,
@@ -1594,6 +1607,12 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                           updates.lead_status = newStage;
                         }
 
+                        // Set journey tracking for follow-up auto-promotion
+                        if (followUpDateSet && earlyStages.includes(normalizedStage)) {
+                          updates.journey_last_event = "follow_up";
+                          updates.journey_last_event_at = new Date().toISOString();
+                        }
+
                         if (newStage === "won" || newStage === "policy_issued") {
                           updates.lead_status = "won";
                           updates.pipeline_stage = "policy_issued";
@@ -1615,6 +1634,24 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                         queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
                         queryClient.invalidateQueries({ queryKey: ["ins-policies-book"] });
                         toast.success("Lead updated");
+
+                        // Log activity when auto-promoted to follow_up
+                        if (followUpDateSet && earlyStages.includes(normalizedStage)) {
+                          supabase.from("insurance_activity_log").insert({
+                            client_id: selectedClient.id,
+                            activity_type: "stage_change",
+                            title: "Pipeline → Follow-Up",
+                            description: `Auto-promoted to Follow-Up • Follow-up set for ${editFields.follow_up_date}${editFields.follow_up_time ? ` at ${editFields.follow_up_time}` : ""}`,
+                            metadata: {
+                              previous_stage: normalizedStage,
+                              new_stage: "follow_up",
+                              follow_up_date: editFields.follow_up_date,
+                              follow_up_time: editFields.follow_up_time || null,
+                            },
+                          }).then(({ error: logErr }) => {
+                            if (logErr) console.warn("Follow-up activity log failed:", logErr.message);
+                          });
+                        }
 
                         if (newStage === "won" || newStage === "policy_issued") {
                           setTimeout(() => {

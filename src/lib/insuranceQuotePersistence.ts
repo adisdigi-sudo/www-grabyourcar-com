@@ -203,7 +203,7 @@ export async function persistInsuranceQuoteHistory(input: PersistQuoteHistoryInp
   if (resolvedClientId) {
     const { data: current, error: currentError } = await supabase
       .from("insurance_clients")
-      .select("pipeline_stage, lead_status")
+      .select("pipeline_stage, lead_status, follow_up_date")
       .eq("id", resolvedClientId)
       .maybeSingle();
 
@@ -252,14 +252,16 @@ export async function persistInsuranceQuoteHistory(input: PersistQuoteHistoryInp
     // Only promote to quote_shared if the lead is in an earlier stage
     const currentStage = (current?.pipeline_stage || "").toLowerCase();
     const currentStatus = (current?.lead_status || "").toLowerCase();
+    const hasFollowUpDate = !!(current as any)?.follow_up_date;
     const protectedStages = ["follow_up", "negotiation", "payment_pending", "won", "policy_issued", "lost", "converted", "closed", "quote_shared"];
-    const stageChanged = !protectedStages.includes(currentStage);
+    // Also protect if the client has an active follow-up date, even if stage was manually changed
+    const stageChanged = !protectedStages.includes(currentStage) && !hasFollowUpDate;
     if (stageChanged) {
       updates.pipeline_stage = "quote_shared";
       updates.journey_last_event = "quote_shared";
       updates.journey_last_event_at = nowIso;
     }
-    if (!protectedStages.includes(currentStatus)) {
+    if (!protectedStages.includes(currentStatus) && !hasFollowUpDate) {
       updates.lead_status = "quote_shared";
     }
 
