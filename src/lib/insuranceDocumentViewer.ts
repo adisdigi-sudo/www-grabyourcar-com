@@ -1,22 +1,13 @@
 import { supabase } from "@/integrations/supabase/client";
 
-const OBJECT_URL_TTL = 60_000;
-
-const escapeHtml = (value: string) =>
-  value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-
-const isStorageUrl = (url: string) => {
-  try {
-    const parsed = new URL(url);
-    return parsed.pathname.includes("/storage/v1/object/public/") || parsed.pathname.includes("/storage/v1/object/sign/");
-  } catch {
-    return false;
-  }
+const openUrlInNewTab = (url: string) => {
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.target = "_blank";
+  anchor.rel = "noopener noreferrer";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
 };
 
 const guessFileNameFromUrl = (url: string, fallback: string) => {
@@ -29,130 +20,14 @@ const guessFileNameFromUrl = (url: string, fallback: string) => {
   }
 };
 
-const openUrlInNewTab = (url: string) => {
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.target = "_blank";
-  anchor.rel = "noopener noreferrer";
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-};
-
-const openPendingTab = () => {
-  try {
-    return window.open("", "_blank");
-  } catch {
-    return null;
-  }
-};
-
-const writeTabDocument = (tab: Window | null, title: string, body: string) => {
-  if (!tab || tab.closed) return;
-
-  try {
-    tab.document.open();
-    tab.document.write(`<!doctype html>
-      <html lang="en">
-        <head>
-          <meta charset="utf-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1" />
-          <title>${escapeHtml(title)}</title>
-          <style>
-            :root { color-scheme: light; }
-            * { box-sizing: border-box; }
-            html, body { margin: 0; height: 100%; background: #0f172a; color: #e2e8f0; font-family: system-ui, sans-serif; }
-            .viewer-shell { min-height: 100%; display: flex; flex-direction: column; }
-            .viewer-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; background: #020617; border-bottom: 1px solid rgba(148, 163, 184, 0.2); }
-            .viewer-title { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-            .viewer-frame { flex: 1; width: 100%; border: 0; background: white; }
-            .viewer-state { min-height: 100%; display: grid; place-items: center; padding: 24px; text-align: center; }
-            .viewer-copy { max-width: 420px; }
-            .viewer-copy strong { display: block; font-size: 16px; margin-bottom: 8px; }
-            .viewer-copy span { font-size: 13px; opacity: 0.78; }
-          </style>
-        </head>
-        <body>${body}</body>
-      </html>`);
-    tab.document.close();
-  } catch {
-    // Ignore document write failures
-  }
-};
-
-const setPendingTabMessage = (tab: Window | null, message: string) => {
-  writeTabDocument(
-    tab,
-    message,
-    `
-      <div class="viewer-state">
-        <div class="viewer-copy">
-          <strong>${escapeHtml(message)}</strong>
-          <span>Preparing your document preview…</span>
-        </div>
-      </div>
-    `
-  );
+const withPdfViewerParams = (url: string, fileReference?: string | null) => {
+  const reference = (fileReference || url).toLowerCase();
+  if (!reference.endsWith(".pdf") || url.includes("#")) return url;
+  return `${url}#toolbar=1&navpanes=0`;
 };
 
 const revokeObjectUrlLater = (objectUrl: string) => {
-  window.setTimeout(() => URL.revokeObjectURL(objectUrl), OBJECT_URL_TTL);
-};
-
-const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
-  const bytes = new Uint8Array(buffer);
-  let binary = "";
-
-  for (let i = 0; i < bytes.length; i += 0x8000) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-  }
-
-  return btoa(binary);
-};
-
-const openBlobInNewTab = async (blob: Blob, pendingTab: Window | null, fileName: string) => {
-  const mimeType = blob.type || "application/pdf";
-  const fileData = arrayBufferToBase64(await blob.arrayBuffer());
-
-  if (pendingTab && !pendingTab.closed) {
-    try {
-      writeTabDocument(
-        pendingTab,
-        fileName,
-        `
-          <div class="viewer-shell">
-            <div class="viewer-bar">
-              <div class="viewer-title">${escapeHtml(fileName)}</div>
-            </div>
-            <embed id="insurance-pdf-viewer" class="viewer-frame" type="${escapeHtml(mimeType)}" />
-          </div>
-          <script>
-            (function () {
-              const mimeType = ${JSON.stringify(mimeType)};
-              const base64 = ${JSON.stringify(fileData)};
-              const pdfDataUrl = 'data:' + mimeType + ';base64,' + base64;
-              const frame = document.getElementById('insurance-pdf-viewer');
-
-              if (frame) {
-                frame.src = pdfDataUrl + '#toolbar=1&navpanes=0';
-              }
-            })();
-          </script>
-        `
-      );
-      return;
-    } catch {
-      try {
-        pendingTab.close();
-      } catch {
-        // no-op
-      }
-    }
-  }
-
-  const objectUrl = URL.createObjectURL(blob);
-  openUrlInNewTab(objectUrl);
-  revokeObjectUrlLater(objectUrl);
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
 };
 
 const resolveFileBlob = async (options: {
@@ -188,39 +63,32 @@ const resolveFileBlob = async (options: {
   throw new Error("No file available");
 };
 
+const resolveOpenUrl = (options: {
+  bucket?: "quote-pdfs" | "policy-documents";
+  path?: string | null;
+  url?: string | null;
+}) => {
+  const { bucket, path, url } = options;
+
+  if (bucket && path) {
+    const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+    if (!data.publicUrl) throw new Error("Could not resolve file URL");
+    return withPdfViewerParams(data.publicUrl, path);
+  }
+
+  if (url) {
+    return withPdfViewerParams(url, url);
+  }
+
+  throw new Error("No file available");
+};
+
 export async function openInsuranceStorageFile(options: {
   bucket?: "quote-pdfs" | "policy-documents";
   path?: string | null;
   url?: string | null;
 }) {
-  const { bucket, path, url } = options;
-
-  const shouldUseBlobPreview = Boolean(
-    (bucket && path) || (url && isStorageUrl(url))
-  );
-
-  if (!shouldUseBlobPreview && url) {
-    openUrlInNewTab(url);
-    return;
-  }
-
-  const pendingTab = openPendingTab();
-  setPendingTabMessage(pendingTab, "Opening document");
-
-  try {
-    const { blob, fileName } = await resolveFileBlob({ bucket, path, url });
-    await openBlobInNewTab(blob, pendingTab, fileName);
-  } catch (error) {
-    if (pendingTab && !pendingTab.closed) {
-      try {
-        pendingTab.close();
-      } catch {
-        // no-op
-      }
-    }
-
-    throw error;
-  }
+  openUrlInNewTab(resolveOpenUrl(options));
 }
 
 export async function downloadInsuranceStorageFile(options: {
