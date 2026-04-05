@@ -9,6 +9,7 @@ import { logAdminActivity } from "@/lib/adminActivityLogger";
 import { resetChunkLoadRecovery } from "@/lib/chunkLoadRecovery";
 import { Button } from "@/components/ui/button";
 import { AdminRenderBoundary } from "@/components/admin/shared/AdminRenderBoundary";
+import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { Shield } from "lucide-react";
 import { NotificationCenter } from "@/components/admin/NotificationCenter";
 import { InsuranceManagement } from "@/components/admin/InsuranceManagement";
@@ -19,9 +20,6 @@ const ChannelProvidersSettings = lazy(() =>
   import("@/components/admin/settings/ChannelProvidersSettings").then((module) => ({ default: module.ChannelProvidersSettings })),
 );
 
-const AdminSidebar = lazy(() =>
-  import("@/components/admin/AdminSidebar").then((module) => ({ default: module.AdminSidebar })),
-);
 const AdminDashboard = lazy(() =>
   import("@/components/admin/AdminDashboard").then((module) => ({ default: module.AdminDashboard })),
 );
