@@ -573,6 +573,13 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
       current_policy_number: selectedClient.current_policy_number || "",
       current_premium: selectedClient.current_premium ? String(selectedClient.current_premium) : "",
       notes: selectedClient.notes || "",
+      policy_expiry_date: selectedClient.policy_expiry_date || "",
+      follow_up_date: selectedClient.follow_up_date || "",
+      follow_up_time: selectedClient.follow_up_time || "",
+      pipeline_stage: normalizeStage(selectedClient.pipeline_stage, selectedClient.lead_status, selectedClient),
+      priority: selectedClient.priority || "medium",
+      lead_source: selectedClient.lead_source || "",
+      assigned_executive: selectedClient.assigned_executive || "",
     });
   }, [selectedClient]);
 
@@ -1472,6 +1479,61 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                         <Input type="number" value={editFields.current_premium || ""} onChange={e => setEditFields(f => ({ ...f, current_premium: e.target.value.replace(/[^\d.]/g, "") }))} className="h-8 text-sm" />
                       </div>
                     </div>
+
+                    {/* Stage, Priority, Expiry, Follow-Up, Source, Executive */}
+                    <p className="text-xs font-semibold text-muted-foreground uppercase pt-2">Pipeline & Scheduling</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Pipeline Stage</Label>
+                        <Select value={editFields.pipeline_stage || "new_lead"} onValueChange={v => setEditFields(f => ({ ...f, pipeline_stage: v }))}>
+                          <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {ALL_STAGES.map(s => (
+                              <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Priority</Label>
+                        <Select value={editFields.priority || "medium"} onValueChange={v => setEditFields(f => ({ ...f, priority: v }))}>
+                          <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="hot">🔥 Hot</SelectItem>
+                            <SelectItem value="high">High</SelectItem>
+                            <SelectItem value="medium">Medium</SelectItem>
+                            <SelectItem value="low">Low</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Policy Expiry Date</Label>
+                        <Input type="date" value={editFields.policy_expiry_date || ""} onChange={e => setEditFields(f => ({ ...f, policy_expiry_date: e.target.value }))} className="h-8 text-sm" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Follow-Up Date</Label>
+                        <Input type="date" value={editFields.follow_up_date || ""} onChange={e => setEditFields(f => ({ ...f, follow_up_date: e.target.value }))} className="h-8 text-sm" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Follow-Up Time</Label>
+                        <Input type="time" value={editFields.follow_up_time || ""} onChange={e => setEditFields(f => ({ ...f, follow_up_time: e.target.value }))} className="h-8 text-sm" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Lead Source</Label>
+                        <Select value={editFields.lead_source || ""} onValueChange={v => setEditFields(f => ({ ...f, lead_source: v }))}>
+                          <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Select" /></SelectTrigger>
+                          <SelectContent>
+                            {LEAD_SOURCES.map(src => (
+                              <SelectItem key={src} value={src}>{src}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1 col-span-2">
+                        <Label className="text-[11px] text-muted-foreground">Assigned Executive</Label>
+                        <Input value={editFields.assigned_executive || ""} onChange={e => setEditFields(f => ({ ...f, assigned_executive: e.target.value }))} placeholder="Executive name" className="h-8 text-sm" />
+                      </div>
+                    </div>
                     <div className="space-y-1">
                       <Label className="text-[11px] text-muted-foreground">Notes</Label>
                       <Textarea value={editFields.notes || ""} onChange={e => setEditFields(f => ({ ...f, notes: e.target.value }))} className="min-h-20 text-sm" />
@@ -1496,6 +1558,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                             selectedClient.created_at?.split("T")[0] ||
                             new Date().toISOString().split("T")[0];
 
+                          const newStage = editFields.pipeline_stage || normalizedStage;
                           const updates: Record<string, any> = {
                             customer_name: editFields.customer_name?.trim() || null,
                             phone: editFields.phone || selectedClient.phone,
@@ -1509,9 +1572,25 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                             current_policy_number: editFields.current_policy_number?.trim() || null,
                             current_premium: editFields.current_premium ? Number(editFields.current_premium) : null,
                             notes: editFields.notes?.trim() || null,
+                            policy_expiry_date: editFields.policy_expiry_date || null,
+                            follow_up_date: editFields.follow_up_date || null,
+                            follow_up_time: editFields.follow_up_time || null,
+                            pipeline_stage: newStage,
+                            priority: editFields.priority || "medium",
+                            lead_source: editFields.lead_source || null,
+                            assigned_executive: editFields.assigned_executive?.trim() || null,
                           };
 
-                          if (normalizedStage === "won" || normalizedStage === "policy_issued") {
+                          // Sync lead_status with stage
+                          if (newStage === "lost") {
+                            updates.lead_status = "lost";
+                          } else if (newStage === "won" || newStage === "policy_issued") {
+                            updates.lead_status = "won";
+                          } else {
+                            updates.lead_status = newStage;
+                          }
+
+                          if (newStage === "won" || newStage === "policy_issued") {
                             updates.lead_status = "won";
                             updates.pipeline_stage = "policy_issued";
                             updates.booking_date = selectedClient.booking_date || fallbackBookingDate;
@@ -1534,7 +1613,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                           toast.success("Lead updated");
 
                           // If moved to Won/Policy Issued, prompt to upload policy document
-                          if (normalizedStage === "won" || normalizedStage === "policy_issued") {
+                          if (newStage === "won" || newStage === "policy_issued") {
                             setTimeout(() => {
                               setShowUploadPolicy(true);
                               toast.info("📄 Please upload the policy document now", { duration: 5000 });
