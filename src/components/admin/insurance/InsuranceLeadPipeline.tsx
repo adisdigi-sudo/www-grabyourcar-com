@@ -1533,6 +1533,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                         <Label className="text-[11px] text-muted-foreground">Assigned Executive</Label>
                         <Input value={editFields.assigned_executive || ""} onChange={e => setEditFields(f => ({ ...f, assigned_executive: e.target.value }))} placeholder="Executive name" className="h-8 text-sm" />
                       </div>
+                    </div>
                     <div className="space-y-1">
                       <Label className="text-[11px] text-muted-foreground">Notes</Label>
                       <Textarea value={editFields.notes || ""} onChange={e => setEditFields(f => ({ ...f, notes: e.target.value }))} className="min-h-20 text-sm" />
