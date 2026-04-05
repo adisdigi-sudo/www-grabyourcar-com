@@ -20,13 +20,6 @@ const guessFileNameFromUrl = (url: string, fallback: string) => {
 };
 
 const openUrlInNewTab = (url: string) => {
-  const previewWindow = window.open("", "_blank", "noopener,noreferrer");
-
-  if (previewWindow) {
-    previewWindow.location.href = url;
-    return previewWindow;
-  }
-
   const anchor = document.createElement("a");
   anchor.href = url;
   anchor.target = "_blank";
@@ -34,8 +27,6 @@ const openUrlInNewTab = (url: string) => {
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
-
-  return null;
 };
 
 const resolveStorageUrl = async (bucket: "quote-pdfs" | "policy-documents", path: string) => {
