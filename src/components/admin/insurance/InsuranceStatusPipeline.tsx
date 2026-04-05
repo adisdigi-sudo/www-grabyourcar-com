@@ -70,6 +70,7 @@ interface Client {
 
 export function InsuranceStatusPipeline() {
   const [clients, setClients] = useState<Client[]>([]);
+  const [quoteCounts, setQuoteCounts] = useState<Record<string, number>>({});
   const [selectedStage, setSelectedStage] = useState("all");
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [search, setSearch] = useState("");
