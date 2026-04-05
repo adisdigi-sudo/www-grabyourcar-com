@@ -516,6 +516,13 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
   const queryClient = useQueryClient();
   const [selectedStage, setSelectedStage] = useState<string>("all");
   const [search, setSearch] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [sourceFilter, setSourceFilter] = useState("all");
+  const [priorityFilter, setPriorityFilter] = useState("all");
+  const [expiryPreset, setExpiryPreset] = useState("all");
+  const [expiryFrom, setExpiryFrom] = useState<Date | undefined>();
+  const [expiryTo, setExpiryTo] = useState<Date | undefined>();
+  const [executiveFilter, setExecutiveFilter] = useState("all");
   const [wonDatePreset, setWonDatePreset] = useState<string>("all");
   const [wonDateFrom, setWonDateFrom] = useState<Date | undefined>();
   const [wonDateTo, setWonDateTo] = useState<Date | undefined>();
