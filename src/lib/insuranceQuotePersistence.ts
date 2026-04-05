@@ -203,7 +203,7 @@ export async function persistInsuranceQuoteHistory(input: PersistQuoteHistoryInp
   if (resolvedClientId) {
     const { data: current, error: currentError } = await supabase
       .from("insurance_clients")
-      .select("pipeline_stage, lead_status")
+      .select("pipeline_stage, lead_status, follow_up_date")
       .eq("id", resolvedClientId)
       .maybeSingle();
 
