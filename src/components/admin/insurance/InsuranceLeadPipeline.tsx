@@ -1684,6 +1684,24 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                     <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowUploadPolicy(true)}><Upload className="h-3.5 w-3.5" /> Upload Policy</Button>
                     <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setPendingMoveClient(selectedClient); setShowWonDialog(true); }}><CheckCircle2 className="h-3.5 w-3.5" /> Create / Fix Policy</Button>
                   </div>
+
+                  {/* Quote History */}
+                  <div className="border-t pt-3">
+                    <Tabs defaultValue="quote_history">
+                      <TabsList className="w-full bg-muted/50">
+                        <TabsTrigger value="quote_history" className="flex-1 gap-1.5 text-xs">
+                          <Clock className="h-3.5 w-3.5" /> Quote History
+                        </TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="quote_history" className="mt-2">
+                        <ClientQuoteHistory
+                          clientId={selectedClient.id}
+                          clientPhone={selectedClient.phone}
+                          vehicleNumber={selectedClient.vehicle_number || undefined}
+                        />
+                      </TabsContent>
+                    </Tabs>
+                  </div>
                 </div>
               </>
             );
