@@ -573,6 +573,13 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
       current_policy_number: selectedClient.current_policy_number || "",
       current_premium: selectedClient.current_premium ? String(selectedClient.current_premium) : "",
       notes: selectedClient.notes || "",
+      policy_expiry_date: selectedClient.policy_expiry_date || "",
+      follow_up_date: selectedClient.follow_up_date || "",
+      follow_up_time: selectedClient.follow_up_time || "",
+      pipeline_stage: normalizeStage(selectedClient.pipeline_stage, selectedClient.lead_status, selectedClient),
+      priority: selectedClient.priority || "medium",
+      lead_source: selectedClient.lead_source || "",
+      assigned_executive: selectedClient.assigned_executive || "",
     });
   }, [selectedClient]);
 
