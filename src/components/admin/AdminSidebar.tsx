@@ -400,7 +400,7 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
           if (item.id === "finance-hub" || item.id === "hr-hub") return null;
           if (item.id === "services" && item.children) {
             const allowedInsuranceChildren = item.children.filter(
-              child => child.id === "services-insurance" || child.id === "services-insurance-import"
+              child => child.id === "services-insurance" || child.id === "services-insurance-import" || child.id === "services-messaging-channels"
             );
             return allowedInsuranceChildren.length > 0
               ? { ...item, children: allowedInsuranceChildren }
