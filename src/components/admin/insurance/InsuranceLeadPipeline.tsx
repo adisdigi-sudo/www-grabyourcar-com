@@ -1479,6 +1479,60 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                         <Input type="number" value={editFields.current_premium || ""} onChange={e => setEditFields(f => ({ ...f, current_premium: e.target.value.replace(/[^\d.]/g, "") }))} className="h-8 text-sm" />
                       </div>
                     </div>
+
+                    {/* Stage, Priority, Expiry, Follow-Up, Source, Executive */}
+                    <p className="text-xs font-semibold text-muted-foreground uppercase pt-2">Pipeline & Scheduling</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Pipeline Stage</Label>
+                        <Select value={editFields.pipeline_stage || "new_lead"} onValueChange={v => setEditFields(f => ({ ...f, pipeline_stage: v }))}>
+                          <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {ALL_STAGES.map(s => (
+                              <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Priority</Label>
+                        <Select value={editFields.priority || "medium"} onValueChange={v => setEditFields(f => ({ ...f, priority: v }))}>
+                          <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="hot">🔥 Hot</SelectItem>
+                            <SelectItem value="high">High</SelectItem>
+                            <SelectItem value="medium">Medium</SelectItem>
+                            <SelectItem value="low">Low</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Policy Expiry Date</Label>
+                        <Input type="date" value={editFields.policy_expiry_date || ""} onChange={e => setEditFields(f => ({ ...f, policy_expiry_date: e.target.value }))} className="h-8 text-sm" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Follow-Up Date</Label>
+                        <Input type="date" value={editFields.follow_up_date || ""} onChange={e => setEditFields(f => ({ ...f, follow_up_date: e.target.value }))} className="h-8 text-sm" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Follow-Up Time</Label>
+                        <Input type="time" value={editFields.follow_up_time || ""} onChange={e => setEditFields(f => ({ ...f, follow_up_time: e.target.value }))} className="h-8 text-sm" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Lead Source</Label>
+                        <Select value={editFields.lead_source || ""} onValueChange={v => setEditFields(f => ({ ...f, lead_source: v }))}>
+                          <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Select" /></SelectTrigger>
+                          <SelectContent>
+                            {LEAD_SOURCES.map(src => (
+                              <SelectItem key={src} value={src}>{src}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1 col-span-2">
+                        <Label className="text-[11px] text-muted-foreground">Assigned Executive</Label>
+                        <Input value={editFields.assigned_executive || ""} onChange={e => setEditFields(f => ({ ...f, assigned_executive: e.target.value }))} placeholder="Executive name" className="h-8 text-sm" />
+                      </div>
                     <div className="space-y-1">
                       <Label className="text-[11px] text-muted-foreground">Notes</Label>
                       <Textarea value={editFields.notes || ""} onChange={e => setEditFields(f => ({ ...f, notes: e.target.value }))} className="min-h-20 text-sm" />
