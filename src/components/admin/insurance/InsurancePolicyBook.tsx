@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { InsurancePolicyDocumentUploader } from "./InsurancePolicyDocumentUploader";
 import { useQueryClient } from "@tanstack/react-query";
+import { downloadInsuranceStorageFile, openInsuranceStorageFile } from "@/lib/insuranceDocumentViewer";
 
 export type PolicyRecord = {
   id: string;
@@ -487,16 +488,39 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
                           </Button>
                           {policy.policy_document_url ? (
                             <>
-                              <Button variant="ghost" size="icon" className="h-6 w-6" title="View" onClick={() => window.open(policy.policy_document_url!, "_blank")}>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                title="View"
+                                onClick={async () => {
+                                  try {
+                                    await openInsuranceStorageFile({ url: policy.policy_document_url });
+                                  } catch (error) {
+                                    console.error("Failed to open policy document", error);
+                                    toast.error("Could not open policy document");
+                                  }
+                                }}
+                              >
                                 <Eye className="h-3 w-3 text-primary" />
                               </Button>
-                              <Button variant="ghost" size="icon" className="h-6 w-6" title="Download" onClick={() => {
-                                const anchor = document.createElement("a");
-                                anchor.href = policy.policy_document_url!;
-                                anchor.download = `${policy.policy_number || "policy"}.pdf`;
-                                anchor.target = "_blank";
-                                anchor.click();
-                              }}>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                title="Download"
+                                onClick={async () => {
+                                  try {
+                                    await downloadInsuranceStorageFile({
+                                      url: policy.policy_document_url,
+                                      fileName: `${policy.policy_number || "policy"}.pdf`,
+                                    });
+                                  } catch (error) {
+                                    console.error("Failed to download policy document", error);
+                                    toast.error("Could not download policy document");
+                                  }
+                                }}
+                              >
                                 <Download className="h-3 w-3 text-muted-foreground" />
                               </Button>
                             </>

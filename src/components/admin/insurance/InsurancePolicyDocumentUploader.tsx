@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Eye, FileText, Loader2, Upload, X } from "lucide-react";
+import { openInsuranceStorageFile } from "@/lib/insuranceDocumentViewer";
 
 type PolicyOption = {
   id: string;
@@ -324,7 +325,14 @@ export function InsurancePolicyDocumentUploader({
               type="button"
               variant="outline"
               className="w-full h-8 text-xs gap-1"
-              onClick={() => window.open(selectedPolicy.policy_document_url!, "_blank")}
+              onClick={async () => {
+                try {
+                  await openInsuranceStorageFile({ url: selectedPolicy.policy_document_url });
+                } catch (error) {
+                  console.error("Failed to open current policy document", error);
+                  toast.error("Could not open current uploaded document");
+                }
+              }}
             >
               <Eye className="h-3.5 w-3.5" /> View current uploaded document
             </Button>

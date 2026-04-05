@@ -29,6 +29,7 @@ import { InsurancePolicyDocumentUploader } from "./InsurancePolicyDocumentUpload
 import { BulkQuoteSharePanel, BulkLeadItem } from "./BulkQuoteSharePanel";
 import { FileSpreadsheet } from "lucide-react";
 import InsuranceQuoteModal from "./InsuranceQuoteModal";
+import { openInsuranceStorageFile } from "@/lib/insuranceDocumentViewer";
 
 type ViewFilter = "all" | "7" | "15" | "30" | "60" | "expired";
 type StatusFilter = "all" | "won" | "lost" | "running" | "new" | "grabyourcar";
@@ -904,9 +905,14 @@ export function InsuranceCRMDashboard() {
                               variant="ghost"
                               size="sm"
                               className="h-7 gap-1.5 text-[10px] text-primary hover:text-primary hover:bg-primary/5 px-2"
-                              onClick={() => {
+                              onClick={async () => {
                                 if (r.policy_document_url) {
-                                  window.open(r.policy_document_url, "_blank");
+                                  try {
+                                    await openInsuranceStorageFile({ url: r.policy_document_url });
+                                  } catch (error) {
+                                    console.error("Failed to open policy document", error);
+                                    toast.error("Could not open policy document");
+                                  }
                                 } else {
                                   setUploadTargetPolicyId(r.id);
                                   setShowUploadPolicy(true);
