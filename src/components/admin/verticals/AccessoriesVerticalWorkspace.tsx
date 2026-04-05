@@ -52,7 +52,7 @@ export function AccessoriesVerticalWorkspace() {
       <div>
         {activeTab === "products" && <AccessoriesManagement />}
         {activeTab === "crosssell" && <CrossSellManagement />}
-        {activeTab === "messaging" && <OmniMessagingWorkspace context="Accessories" />}
+        {activeTab === "messaging" && <OmniMessagingWorkspace context="Accessories" showSettings />}
       </div>
     </div>
   );

@@ -21,7 +21,7 @@ export function LoansVerticalWorkspace() {
         <LoanWorkspace initialView="pipeline" />
       </TabsContent>
       <TabsContent value="messaging">
-        <OmniMessagingWorkspace context="Car Loans" />
+        <OmniMessagingWorkspace context="Car Loans" showSettings />
       </TabsContent>
     </Tabs>
   );

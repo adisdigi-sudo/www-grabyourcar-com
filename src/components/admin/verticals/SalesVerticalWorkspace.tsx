@@ -63,7 +63,7 @@ export function SalesVerticalWorkspace() {
         </TabsContent>
 
         <TabsContent value="messaging" className="mt-4">
-          <OmniMessagingWorkspace context="Car Sales" />
+          <OmniMessagingWorkspace context="Car Sales" showSettings />
         </TabsContent>
       </Tabs>
     </div>
