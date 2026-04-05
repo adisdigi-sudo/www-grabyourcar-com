@@ -1541,7 +1541,6 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                       <Textarea value={editFields.notes || ""} onChange={e => setEditFields(f => ({ ...f, notes: e.target.value }))} className="min-h-20 text-sm" />
                     </div>
                   </div>
-                </div>
 
                   {/* Action Buttons */}
                   <div className="border-t pt-3 space-y-3">
@@ -1578,7 +1577,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                       </TabsContent>
                     </Tabs>
                   </div>
-                  </div>
+                </div>
 
                 {/* Sticky Footer - Save Only */}
                 <div className="sticky bottom-0 bg-background border-t pt-3 pb-1 -mx-6 px-6 shadow-[0_-4px_12px_-4px_hsl(var(--foreground)/0.08)]">
