@@ -1084,8 +1084,8 @@ export function InsuranceStatusPipeline() {
                     </div>
                   </div>
                 </TabsContent>
-              </Tabs>
-            </div>
+              </div>
+            </Tabs>
           )}
         </DialogContent>
       </Dialog>
