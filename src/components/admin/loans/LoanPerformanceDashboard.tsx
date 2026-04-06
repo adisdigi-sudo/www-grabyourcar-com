@@ -1,19 +1,17 @@
 import { useMemo } from "react";
+import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
-  ChartContainer, ChartTooltip, ChartTooltipContent,
-} from "@/components/ui/chart";
-import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, PieChart, Pie, Cell,
-  ResponsiveContainer, LineChart, Line, Tooltip, Legend,
+  ResponsiveContainer, Tooltip, Legend,
 } from "recharts";
 import {
-  IndianRupee, TrendingUp, Users, CheckCircle2, XCircle,
-  ArrowRight, Phone, Car,
+  IndianRupee, TrendingUp, Users, CheckCircle2,
 } from "lucide-react";
-import { STAGE_LABELS, LOAN_STAGES, type LoanStage, normalizeStage } from "./LoanStageConfig";
+import { STAGE_LABELS, LOAN_STAGES, type LoanStage } from "./LoanStageConfig";
+import { ExecutiveLeaderboard } from "../shared/ExecutiveLeaderboard";
 
 interface LoanPerformanceDashboardProps {
   applications: any[];
@@ -117,6 +115,21 @@ export function LoanPerformanceDashboard({ applications, dateFilter }: LoanPerfo
       .map(([name, d]) => ({ name, ...d, convRate: d.total > 0 ? ((d.disbursed / d.total) * 100).toFixed(1) : "0" }))
       .sort((a, b) => b.value - a.value);
   }, [applications]);
+
+  // ── Executive stats for leaderboard ──
+  const executiveStats = useMemo(() =>
+    teamPerf.map(t => ({
+      name: t.name,
+      totalLeads: t.total,
+      wonDeals: t.disbursed,
+      lostDeals: t.lost,
+      revenue: t.value,
+      conversionRate: t.total > 0 ? (t.disbursed / t.total) * 100 : 0,
+    })),
+    [teamPerf]
+  );
+
+  const currentMonth = useMemo(() => format(new Date(), "yyyy-MM"), []);
 
   // ── Won Cases ──
   const wonCases = useMemo(() =>
@@ -297,7 +310,13 @@ export function LoanPerformanceDashboard({ applications, dateFilter }: LoanPerfo
         </CardContent>
       </Card>
 
-      {/* Won Cases List */}
+      {/* Executive Leaderboard with Targets */}
+      <ExecutiveLeaderboard
+        verticalName="Loans"
+        monthYear={currentMonth}
+        executiveStats={executiveStats}
+      />
+
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
