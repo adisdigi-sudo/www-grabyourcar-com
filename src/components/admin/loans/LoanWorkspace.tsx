@@ -4,7 +4,9 @@ import { LoanQuoteHistory } from "./LoanQuoteHistory";
 import { Upload } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoanPerformanceDashboard } from "./LoanPerformanceDashboard";
-import { startOfDay, startOfWeek, startOfMonth, isAfter } from "date-fns";
+import { startOfDay, startOfWeek, startOfMonth, subDays, isAfter, isWithinInterval } from "date-fns";
+import type { DateRange } from "react-day-picker";
+import { DateFilterBar, type DateFilterValue } from "../shared/DateFilterBar";
 import { supabase } from "@/integrations/supabase/client";
 import { useRealtimeTable } from "@/hooks/useRealtimeSync";
 import { useAuth } from "@/hooks/useAuth";
@@ -54,7 +56,7 @@ const isUuid = (value: string) =>
 
 // ─── Main Workspace ───
 type LoanWorkspaceView = "pipeline" | "disbursement" | "after_sales" | "bulk_tools" | "emi_calculator" | "performance";
-type DateFilter = "today" | "7days" | "30days" | "this_month" | "all";
+type DateFilter = DateFilterValue;
 type StageFilter = "all" | "in_pipeline" | "disbursed" | "lost";
 interface LoanWorkspaceProps {
   initialView?: LoanWorkspaceView;
@@ -71,6 +73,7 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
   const [draggingApp, setDraggingApp] = useState<any>(null);
   const [stageFilter, setStageFilter] = useState<StageFilter>("all");
   const [dateFilter, setDateFilter] = useState<DateFilter>("all");
+  const [customRange, setCustomRange] = useState<DateRange | undefined>(undefined);
   const [showWonDialog, setShowWonDialog] = useState(false);
   const [newApp, setNewApp] = useState({
     customer_name: '', phone: '', email: '', loan_amount: '', car_model: '',
@@ -170,17 +173,22 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
   // ── Date-filtered applications ──
   const dateFilteredApps = useMemo(() => {
     if (dateFilter === "all") return applications;
+    if (dateFilter === "custom" && customRange?.from && customRange?.to) {
+      return applications.filter((a: any) =>
+        isWithinInterval(new Date(a.created_at), { start: customRange.from!, end: new Date(customRange.to!.getTime() + 86400000 - 1) })
+      );
+    }
     const now = new Date();
     let cutoff: Date;
     switch (dateFilter) {
       case "today": cutoff = startOfDay(now); break;
-      case "7days": cutoff = new Date(now.getTime() - 7 * 86400000); break;
-      case "30days": cutoff = new Date(now.getTime() - 30 * 86400000); break;
+      case "7days": cutoff = subDays(now, 7); break;
+      case "30days": cutoff = subDays(now, 30); break;
       case "this_month": cutoff = startOfMonth(now); break;
       default: return applications;
     }
     return applications.filter((a: any) => isAfter(new Date(a.created_at), cutoff));
-  }, [applications, dateFilter]);
+  }, [applications, dateFilter, customRange]);
 
   // ── Stage-filtered applications (for pipeline view) ──
   const filteredApps = useMemo(() => {
@@ -367,37 +375,15 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
           </div>
 
           {/* Date Filter Bar */}
-          <div className="flex items-center gap-2 mt-4 flex-wrap">
-            <Filter className="h-3.5 w-3.5 text-white/60" />
-            {([
-              { key: "today", label: "Today" },
-              { key: "7days", label: "7 Days" },
-              { key: "30days", label: "30 Days" },
-              { key: "this_month", label: "This Month" },
-              { key: "all", label: "All Time" },
-            ] as { key: DateFilter; label: string }[]).map(df => (
-              <button
-                key={df.key}
-                onClick={() => setDateFilter(df.key)}
-                className={cn(
-                  "text-[11px] px-3 py-1 rounded-full font-medium transition-all",
-                  dateFilter === df.key
-                    ? "bg-white text-teal-800 shadow-sm"
-                    : "bg-white/10 text-white/80 hover:bg-white/20"
-                )}
-              >
-                {df.label}
-              </button>
-            ))}
-            {(stageFilter !== "all" || dateFilter !== "all") && (
-              <button
-                onClick={() => { setStageFilter("all"); setDateFilter("all"); }}
-                className="ml-auto text-[11px] flex items-center gap-1 text-white/70 hover:text-white bg-white/10 rounded-full px-2 py-1"
-              >
-                <X className="h-3 w-3" /> Clear Filters
-              </button>
-            )}
-          </div>
+          <DateFilterBar
+            dateFilter={dateFilter}
+            onDateFilterChange={setDateFilter}
+            customRange={customRange}
+            onCustomRangeChange={setCustomRange}
+            variant="dark"
+            showClear={stageFilter !== "all" || dateFilter !== "all"}
+            onClear={() => { setStageFilter("all"); setDateFilter("all"); setCustomRange(undefined); }}
+          />
         </div>
       </div>
 

@@ -3,15 +3,16 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Car, CheckCircle2, Target, Handshake, BarChart3, Send, TrendingUp, Calendar } from "lucide-react";
+import { Car, CheckCircle2, Target, Handshake, BarChart3, Send, TrendingUp } from "lucide-react";
 import { SalesWorkspace } from "../sales/SalesWorkspace";
 import { SalesDealTracker } from "../sales/SalesDealTracker";
 import { SalesRealTimeDashboard } from "../sales/SalesRealTimeDashboard";
 import { SalesPerformanceDashboard } from "../sales/SalesPerformanceDashboard";
 import { OmniMessagingWorkspace } from "../shared/OmniMessagingWorkspace";
-import { startOfDay, subDays, startOfMonth } from "date-fns";
+import { DateFilterBar, type DateFilterValue } from "../shared/DateFilterBar";
+import { startOfDay, subDays, startOfMonth, isWithinInterval } from "date-fns";
+import type { DateRange } from "react-day-picker";
 
 const STAGE_MAP: Record<string, string> = {
   new_lead: "new_lead", new: "new_lead",
@@ -30,17 +31,10 @@ const normalizeStage = (s: string | null, outcome?: string | null): string => {
   return STAGE_MAP[s || "new_lead"] || "new_lead";
 };
 
-const DATE_FILTERS = [
-  { value: "all", label: "All Time" },
-  { value: "today", label: "Today" },
-  { value: "7days", label: "7D" },
-  { value: "30days", label: "30D" },
-  { value: "this_month", label: "This Month" },
-];
-
 export function SalesVerticalWorkspace() {
   const [activeTab, setActiveTab] = useState("pipeline");
-  const [dateFilter, setDateFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState<DateFilterValue>("all");
+  const [customRange, setCustomRange] = useState<DateRange | undefined>(undefined);
 
   const { data: allLeads = [] } = useQuery({
     queryKey: ["sales-pipeline-perf"],
@@ -60,6 +54,11 @@ export function SalesVerticalWorkspace() {
 
   const filteredLeads = useMemo(() => {
     if (dateFilter === "all") return allLeads;
+    if (dateFilter === "custom" && customRange?.from && customRange?.to) {
+      return allLeads.filter((l: any) =>
+        isWithinInterval(new Date(l.created_at), { start: customRange.from!, end: new Date(customRange.to!.getTime() + 86400000 - 1) })
+      );
+    }
     const now = new Date();
     let cutoff: Date;
     switch (dateFilter) {
@@ -70,7 +69,7 @@ export function SalesVerticalWorkspace() {
       default: return allLeads;
     }
     return allLeads.filter((l: any) => new Date(l.created_at) >= cutoff);
-  }, [allLeads, dateFilter]);
+  }, [allLeads, dateFilter, customRange]);
 
   return (
     <div className="space-y-4">
@@ -127,17 +126,12 @@ export function SalesVerticalWorkspace() {
         </TabsContent>
 
         <TabsContent value="performance" className="mt-4 space-y-3">
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-            <div className="flex gap-1">
-              {DATE_FILTERS.map(f => (
-                <Button key={f.value} size="sm" variant={dateFilter === f.value ? "default" : "outline"}
-                  className="h-7 text-xs px-2.5" onClick={() => setDateFilter(f.value)}>
-                  {f.label}
-                </Button>
-              ))}
-            </div>
-          </div>
+          <DateFilterBar
+            dateFilter={dateFilter}
+            onDateFilterChange={setDateFilter}
+            customRange={customRange}
+            onCustomRangeChange={setCustomRange}
+          />
           <SalesPerformanceDashboard leads={filteredLeads} dateFilter={dateFilter} />
         </TabsContent>
 
