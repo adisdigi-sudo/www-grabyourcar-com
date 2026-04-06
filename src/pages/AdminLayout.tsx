@@ -7,6 +7,7 @@ import { useEmployeeTracker } from "@/hooks/useEmployeeTracker";
 import { cn } from "@/lib/utils";
 import { logAdminActivity } from "@/lib/adminActivityLogger";
 import { resetChunkLoadRecovery } from "@/lib/chunkLoadRecovery";
+import { withPreviewParams } from "@/lib/previewRouting";
 import { Button } from "@/components/ui/button";
 import { AdminRenderBoundary } from "@/components/admin/shared/AdminRenderBoundary";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
@@ -491,7 +492,7 @@ const AdminLayout = () => {
   const isBootstrappingAdmin = !initialized || isLoading || verticalAccessLoading || isResolvingWorkspace;
 
   if (isAuthResolved && !user) {
-    return <Navigate to="/crm-auth" replace />;
+    return <Navigate to={withPreviewParams("/crm-auth")} replace />;
   }
 
   if (isBootstrappingAdmin) {
@@ -503,11 +504,11 @@ const AdminLayout = () => {
   }
 
   if (shouldResolveWorkspace && !activeVertical && availableVerticals.length > 1) {
-    return <Navigate to="/workspace" replace />;
+    return <Navigate to={withPreviewParams("/workspace")} replace />;
   }
 
   if (shouldResolveWorkspace && !activeVertical && !hasWorkspaceOptions) {
-    return <Navigate to="/workspace" replace />;
+    return <Navigate to={withPreviewParams("/workspace")} replace />;
   }
 
   if (!hasAdminAccess) {

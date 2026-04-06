@@ -9,6 +9,7 @@ import { AdminSubdomainRouter } from "@/components/AdminSubdomainRouter";
 import { isAdminSubdomain } from "@/hooks/useAdminSubdomain";
 import { usePageViewTracking } from "@/hooks/usePageViewTracking";
 import { resetChunkLoadRecovery } from "@/lib/chunkLoadRecovery";
+import { withPreviewParams } from "@/lib/previewRouting";
 import { RouteProviderGate } from "@/components/app/RouteProviderGate";
 
 // Only the homepage is statically imported for fastest first paint
@@ -192,9 +193,9 @@ const AppRouterShell = () => {
             <Route path="/crm" element={<AdminLayout />} />
             <Route path="/crm-auth" element={<AdminAuth />} />
             <Route path="/crm-reset-password" element={<AdminResetPassword />} />
-            <Route path="/admin" element={<Navigate to="/crm" replace />} />
-            <Route path="/admin-auth" element={<Navigate to="/crm-auth" replace />} />
-            <Route path="/admin-reset-password" element={<Navigate to="/crm-reset-password" replace />} />
+            <Route path="/admin" element={<Navigate to={withPreviewParams("/crm")} replace />} />
+            <Route path="/admin-auth" element={<Navigate to={withPreviewParams("/crm-auth")} replace />} />
+            <Route path="/admin-reset-password" element={<Navigate to={withPreviewParams("/crm-reset-password")} replace />} />
             <Route path="/workspace" element={<WorkspaceSelector />} />
             <Route path="/self-drive" element={<SelfDriveRentals />} />
             <Route path="/hsrp" element={<HSRP />} />

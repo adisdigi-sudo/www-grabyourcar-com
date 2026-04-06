@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
 import { z } from "zod";
 import logoImage from "@/assets/logo-grabyourcar-main.png";
+import { withPreviewParams } from "@/lib/previewRouting";
 
 const passwordSchema = z.string()
   .min(8, "Password must be at least 8 characters")
@@ -88,7 +89,7 @@ const AdminResetPassword = () => {
       // Sign out and redirect to login
       setTimeout(async () => {
         await supabase.auth.signOut();
-        navigate("/crm-auth");
+        navigate(withPreviewParams("/crm-auth"));
       }, 2000);
 
     } catch (error) {
@@ -205,7 +206,7 @@ const AdminResetPassword = () => {
                   <p className="text-muted-foreground text-sm mb-6">
                     This password reset link is invalid or has expired. Please request a new one.
                   </p>
-                  <Button onClick={() => navigate("/crm-auth")} className="w-full">
+                  <Button onClick={() => navigate(withPreviewParams("/crm-auth"))} className="w-full">
                     Back to Login
                   </Button>
                 </CardContent>
