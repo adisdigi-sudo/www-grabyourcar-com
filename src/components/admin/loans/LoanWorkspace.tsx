@@ -152,6 +152,9 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
     return defaults.map((b, i) => ({ ...b, id: `default_${i}`, is_active: true, sort_order: i }));
   }, [dbBankPartners]);
 
+  const isUuid = (value: string) =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+
   const applications = useMemo(() =>
     rawApplications.map((a: any) => ({ ...a, stage: normalizeStage(a.stage) })),
     [rawApplications]
