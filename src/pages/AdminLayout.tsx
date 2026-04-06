@@ -292,6 +292,125 @@ const getInitialAdminTab = () => {
 const normalizeAdminTab = (tab: string | null | undefined) =>
   tab && VALID_ADMIN_TABS.has(tab) ? tab : "dashboard";
 
+const DEFAULT_ADMIN_TAB = "dashboard";
+
+const UNIVERSAL_ADMIN_TABS = new Set([
+  DEFAULT_ADMIN_TAB,
+  "ai-cofounder",
+  "my-hr",
+  "calling-system",
+  "lead-scoring",
+  "client-management",
+  "lead-import",
+  "data-export",
+  "leads-all",
+  "leads-hot",
+  "leads-whatsapp",
+  "legacy-leads",
+]);
+
+const isTabAllowedForVertical = (tab: string, verticalSlug?: string) => {
+  if (!verticalSlug) {
+    return tab === DEFAULT_ADMIN_TAB;
+  }
+
+  if (UNIVERSAL_ADMIN_TABS.has(tab)) {
+    return true;
+  }
+
+  switch (verticalSlug) {
+    case "insurance":
+      return ["services-insurance", "services-insurance-import", "services-messaging-channels"].includes(tab);
+    case "loans":
+      return [
+        "loan-crm",
+        "services-loans-pipeline",
+        "services-loans-disbursement",
+        "services-loans-after-sales",
+        "services-loans-bulk",
+        "services-emi-calculator",
+        "services-emi-pdf",
+        "services-messaging-channels",
+      ].includes(tab);
+    case "sales":
+      return ["sales-crm", "services-discounts", "services-quote-generator", "services-messaging-channels"].includes(tab);
+    case "rental":
+      return ["rental-crm", "services-rentals", "services-driver-bookings", "services-api-partners", "services-messaging-channels"].includes(tab);
+    case "hsrp":
+      return ["hsrp-crm", "services-hsrp", "services-messaging-channels"].includes(tab);
+    case "accessories":
+      return [
+        "ecommerce-accessories",
+        "ecommerce-orders",
+        "ecommerce-crosssell",
+        "d2c-rto",
+        "d2c-returns",
+        "d2c-checkout",
+        "d2c-inbox",
+        "services-messaging-channels",
+      ].includes(tab);
+    case "marketing":
+      return [
+        "manager-dashboard",
+        "team-engagement",
+        "error-prevention",
+        "workflow-engine",
+        "automation-center",
+        "auto-pilot",
+        "lead-routing",
+        "unified-crm",
+        "unified-intelligence",
+        "journey-automation",
+        "revenue-intelligence",
+        "website-homepage",
+        "website-content",
+        "website-banners",
+        "website-offers",
+        "website-branding",
+        "website-testimonials",
+        "website-faqs",
+        "website-seo",
+        "socialproof-reviews",
+        "socialproof-stories",
+        "content-blog",
+        "content-news",
+        "content-launches",
+        "content-ai",
+        "content-intelligence",
+        "marketing-command",
+        "holi-share",
+        "marketing-email",
+        "marketing-bulk",
+        "integrations-api",
+        "open-api-portal",
+        "integrations-whatsapp",
+        "marketing-templates",
+        "marketing-automation",
+        "integrations-shipping",
+        "integrations-payments",
+        "integrations-ad-tracking",
+        "profile-business",
+        "profile-logo",
+        "profile-users",
+        "profile-contact",
+        "profile-otp",
+        "roles",
+        "team-management",
+        "settings",
+      ].includes(tab);
+    case "accounts":
+      return tab.startsWith("accounts-");
+    case "hr":
+      return tab.startsWith("hr-");
+    case "car-database":
+      return tab.startsWith("cars-");
+    case "dealer-network":
+      return tab.startsWith("dealer-");
+    default:
+      return tab === DEFAULT_ADMIN_TAB;
+  }
+};
+
 const AdminLayout = () => {
   const navigate = useNavigate();
   const { user, initialized, isLoading, roles } = useAdminAuth();
@@ -309,6 +428,9 @@ const AdminLayout = () => {
   const shouldResolveWorkspace = !!user && isAuthResolved && !verticalAccessLoading;
 
   const effectiveActiveTab = useMemo(() => normalizeAdminTab(activeTab), [activeTab]);
+  const resolvedActiveTab = useMemo(() => {
+    return isTabAllowedForVertical(effectiveActiveTab, activeVertical?.slug) ? effectiveActiveTab : DEFAULT_ADMIN_TAB;
+  }, [effectiveActiveTab, activeVertical?.slug]);
   useEmployeeTracker({
     enabled: !isLoading && !verticalAccessLoading && !!user,
     userId: user?.id,
@@ -319,17 +441,17 @@ const AdminLayout = () => {
   });
 
   useEffect(() => {
-    if (effectiveActiveTab !== activeTab) {
-      setActiveTab(effectiveActiveTab);
+    if (resolvedActiveTab !== activeTab) {
+      setActiveTab(resolvedActiveTab);
       return;
     }
 
     try {
-      window.localStorage.setItem(ADMIN_ACTIVE_TAB_STORAGE_KEY, effectiveActiveTab);
+      window.localStorage.setItem(ADMIN_ACTIVE_TAB_STORAGE_KEY, resolvedActiveTab);
     } catch {
       // ignore blocked storage
     }
-  }, [activeTab, effectiveActiveTab]);
+  }, [activeTab, resolvedActiveTab]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -400,7 +522,7 @@ const AdminLayout = () => {
   }
 
   const renderContent = () => {
-    switch (effectiveActiveTab) {
+    switch (resolvedActiveTab) {
       case "dashboard": {
         const slug = activeVertical?.slug;
         if (slug === "insurance") return <InsuranceDashboard onNavigate={setActiveTab} />;
@@ -659,7 +781,7 @@ const AdminLayout = () => {
     <div className="min-h-screen bg-muted/30">
       <Suspense fallback={<AdminPanelLoader className="min-h-screen" />}>
         <AdminRenderBoundary contextLabel="CRM sidebar">
-           <AdminSidebar activeTab={effectiveActiveTab} setActiveTab={setActiveTab} />
+            <AdminSidebar activeTab={resolvedActiveTab} setActiveTab={setActiveTab} />
         </AdminRenderBoundary>
       </Suspense>
 
@@ -697,12 +819,12 @@ const AdminLayout = () => {
                     "hsrp-crm",
                     "calling-system",
                     "manager-dashboard",
-                    ].includes(effectiveActiveTab)
+                    ].includes(resolvedActiveTab)
                 ? "max-w-full"
                 : "max-w-7xl",
           )}
         >
-          {effectiveActiveTab === "dashboard" && (
+          {resolvedActiveTab === "dashboard" && (
             <Suspense fallback={null}>
               <AdminRenderBoundary fallback={null} contextLabel="Welcome banner">
                 <PersonalizedWelcomeBanner userRole={roles?.[0]?.role} userName={user?.email?.split('@')[0]} userVertical={activeVertical?.name} />
@@ -711,11 +833,11 @@ const AdminLayout = () => {
           )}
           <Suspense fallback={null}>
             <AdminRenderBoundary fallback={null} contextLabel="AI Co-Founder banner">
-              <AICofounderBanner activeTab={effectiveActiveTab} userRole={roles?.[0]?.role} userName={user?.email?.split('@')[0]} userVertical={activeVertical?.name} />
+              <AICofounderBanner activeTab={resolvedActiveTab} userRole={roles?.[0]?.role} userName={user?.email?.split('@')[0]} userVertical={activeVertical?.name} />
             </AdminRenderBoundary>
           </Suspense>
           <AdminRenderBoundary
-            key={`${activeVertical?.id ?? "no-vertical"}:${effectiveActiveTab}`}
+            key={`${activeVertical?.id ?? "no-vertical"}:${resolvedActiveTab}`}
             contextLabel="CRM workspace"
           >
             <Suspense fallback={<AdminPanelLoader />}>
