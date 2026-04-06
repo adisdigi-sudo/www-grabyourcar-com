@@ -63,12 +63,14 @@ interface LoanWorkspaceProps {
 export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [activeView, setActiveView] = useState<LoanWorkspaceView>(initialView);
+   const [activeView, setActiveView] = useState<LoanWorkspaceView>(initialView);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [selectedApp, setSelectedApp] = useState<any>(null);
   const [showStageModal, setShowStageModal] = useState(false);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
   const [draggingApp, setDraggingApp] = useState<any>(null);
+  const [stageFilter, setStageFilter] = useState<StageFilter>("all");
+  const [dateFilter, setDateFilter] = useState<DateFilter>("all");
   const [newApp, setNewApp] = useState({
     customer_name: '', phone: '', email: '', loan_amount: '', car_model: '',
     down_payment: '', employment_type: '', monthly_income: '', city: '',
