@@ -168,6 +168,7 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
         interestRate, tenure, emi: emiDetails.emi,
         totalPayment: emiDetails.totalPayment, totalInterest: emiDetails.totalInterest,
         carName, variantName, onRoadPrice, selectedColor, selectedCity,
+        customerName: custName, customerPhone: custPhone,
       };
 
       if (pendingShareMethod === "download") {
@@ -206,6 +207,7 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
         }));
         const doc = generateComparisonPdf({
           carName: carName || "Car Loan", variantName, loanAmount, downPayment, principal, tenure, banks,
+          customerName: custName, customerPhone: custPhone,
         }, true) as import("jspdf").default | undefined;
         if (doc) {
           await persistLoanQuoteHistory({
