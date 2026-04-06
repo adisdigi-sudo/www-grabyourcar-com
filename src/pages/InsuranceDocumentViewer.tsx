@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { AlertTriangle, Download, FileText, Loader2 } from "lucide-react";
-
-import { PdfCanvasPreview } from "@/components/documents/PdfCanvasPreview";
+import { AlertTriangle, Download, ExternalLink, FileText, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   fetchInsuranceStorageFile,
@@ -127,6 +125,7 @@ const InsuranceDocumentViewer = () => {
 
   const isPdf = state.mimeType.includes("pdf") || state.fileName.toLowerCase().endsWith(".pdf");
   const isImage = state.mimeType.startsWith("image/");
+  const pdfPreviewUrl = state.objectUrl ? `${state.objectUrl}#toolbar=1&navpanes=0&view=FitH` : null;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -168,11 +167,34 @@ const InsuranceDocumentViewer = () => {
         {state.status === "ready" && state.objectUrl && (
           <>
             {isPdf && (
-              <PdfCanvasPreview
-                fileUrl={state.objectUrl}
-                fileName={state.fileName}
-                onOpenInNewTab={() => window.open(state.objectUrl, "_blank", "noopener,noreferrer")}
-              />
+              <section className="overflow-hidden rounded-xl border border-border bg-card">
+                <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+                  <div>
+                    <p className="text-sm font-semibold">PDF preview</p>
+                    <p className="text-xs text-muted-foreground">Rendered inside the app to avoid blocked external tabs and white-screen crashes.</p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => window.open(state.objectUrl, "_blank", "noopener,noreferrer")}
+                  >
+                    <ExternalLink className="h-4 w-4" /> Open in new tab
+                  </Button>
+                </div>
+
+                <div className="h-[78vh] w-full bg-muted/20">
+                  <iframe
+                    src={pdfPreviewUrl || state.objectUrl}
+                    title={state.fileName}
+                    className="h-full w-full bg-background"
+                  />
+                </div>
+
+                <div className="border-t border-border px-4 py-3 text-xs text-muted-foreground">
+                  If your browser blocks inline PDF plugins, use <span className="font-medium text-foreground">Open in new tab</span> or <span className="font-medium text-foreground">Download</span>.
+                </div>
+              </section>
             )}
 
             {isImage && (
