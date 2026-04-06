@@ -25,7 +25,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import InsuranceQuoteModal from "./InsuranceQuoteModal";
-import { SharePdfDialog } from "./SharePdfDialog";
+import { OmniShareDialog } from "@/components/admin/shared/OmniShareDialog";
 import { generateInsuranceQuotePdf } from "@/lib/generateInsuranceQuotePdf";
 import { ClientQuoteHistory } from "./ClientQuoteHistory";
 
