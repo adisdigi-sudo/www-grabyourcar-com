@@ -20,6 +20,7 @@ import {
 import { format } from "date-fns";
 import { STAGE_LABELS, STAGE_COLORS, ALLOWED_TRANSITIONS, LOST_REASONS, REQUIRED_DOCUMENTS, type LoanStage } from "./LoanStageConfig";
 import { generateEMIPdf, generateEMIWhatsAppMessage, type EMIData } from "@/lib/generateEMIPdf";
+import { persistLoanQuoteHistory } from "@/lib/loanQuotePersistence";
 import { triggerWhatsApp } from "@/lib/whatsappTrigger";
 
 type Step = 'call_status' | 'stage_update' | 'emi_share' | 'follow_up';
@@ -130,6 +131,8 @@ export const LoanCallDispositionModal = ({ open, onOpenChange, application }: Pr
     totalInterest: ((Number(application.emi_amount) || 0) * (Number(application.tenure_months) || 60)) - (Number(disbursementAmount) || Number(application.loan_amount) || 0),
     carName: application.car_model || 'Car Loan',
     variantName: application.car_variant || undefined,
+    customerName: application.customer_name || undefined,
+    customerPhone: application.phone || undefined,
   });
 
   // Submit mutation
@@ -556,8 +559,31 @@ export const LoanCallDispositionModal = ({ open, onOpenChange, application }: Pr
                     <Button
                       variant="outline"
                       className="flex-1 gap-2 border-emerald-500/30 text-emerald-700 hover:bg-emerald-500/10"
-                      onClick={() => {
-                        generateEMIPdf(getEMIData());
+                      onClick={async () => {
+                        const emiData = getEMIData();
+                        const doc = await generateEMIPdf(emiData, undefined, true);
+                        if (doc) {
+                          await persistLoanQuoteHistory({
+                            doc,
+                            fileName: `EMI_${(application.customer_name || 'customer').replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.pdf`,
+                            shareMethod: "crm_download",
+                            customerName: application.customer_name || "Customer",
+                            customerPhone: application.phone || null,
+                            customerEmail: application.email || null,
+                            carModel: application.car_model || null,
+                            carVariant: application.car_variant || null,
+                            loanAmount: Number(disbursementAmount) || Number(application.loan_amount) || null,
+                            downPayment: Number(application.down_payment) || null,
+                            interestRate: Number(application.interest_rate) || 8.5,
+                            tenureMonths: Number(application.tenure_months) || 60,
+                            emiAmount: Number(application.emi_amount) || null,
+                            totalPayment: emiData.totalPayment,
+                            totalInterest: emiData.totalInterest,
+                            loanApplicationId: application.id,
+                            source: "backend",
+                          });
+                          doc.save(`EMI_Estimate_${(application.customer_name || 'customer').replace(/\s+/g, "_")}.pdf`);
+                        }
                         toast.success("EMI PDF downloaded!");
                       }}
                     >
