@@ -233,6 +233,33 @@ export function InsurancePerformance({ clients, policies, selectedMonth, onMonth
     return Object.entries(map).sort((a, b) => b[1].count - a[1].count);
   }, [policiesThisMonth, clientById]);
 
+  // ── Executive stats for leaderboard ──
+  const insuranceExecStats = useMemo(() => {
+    const map: Record<string, { total: number; won: number; lost: number; revenue: number }> = {};
+    dedupedClients.forEach(c => {
+      const exec = (c as any).picked_up_by || (c as any).assigned_executive || (c as any).booked_by || "Unassigned";
+      if (!map[exec]) map[exec] = { total: 0, won: 0, lost: 0, revenue: 0 };
+      map[exec].total++;
+      if ((c as any).lead_status === "won" || (c as any).pipeline_stage === "policy_issued") {
+        map[exec].won++;
+        map[exec].revenue += (c as any).current_premium || (c as any).quote_amount || 0;
+      }
+      if ((c as any).lead_status === "lost" || (c as any).pipeline_stage === "lost") {
+        map[exec].lost++;
+      }
+    });
+    return Object.entries(map)
+      .map(([name, d]) => ({
+        name,
+        totalLeads: d.total,
+        wonDeals: d.won,
+        lostDeals: d.lost,
+        revenue: d.revenue,
+        conversionRate: d.total > 0 ? (d.won / d.total) * 100 : 0,
+      }))
+      .sort((a, b) => b.revenue - a.revenue);
+  }, [dedupedClients]);
+
   const groupedByDate = useMemo(() => {
     const groups: Record<string, typeof wonRows> = {};
     wonRows.forEach((row) => {
