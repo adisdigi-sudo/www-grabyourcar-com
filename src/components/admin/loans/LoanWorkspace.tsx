@@ -925,10 +925,25 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
                 <div className="p-2 rounded bg-background border"><p className="text-muted-foreground">Car</p><p className="font-medium">{application.car_model || '—'}</p></div>
                 <div className="p-2 rounded bg-background border"><p className="text-muted-foreground">Sanction Amount</p><p className="font-medium">{application.sanction_amount ? `₹${(application.sanction_amount / 100000).toFixed(1)}L` : '-'}</p></div>
               </div>
+              <div>
+                <Label className="flex items-center gap-1.5">
+                  <Upload className="h-3.5 w-3.5" /> Disbursement Proof * <span className="text-[9px] text-muted-foreground">(PDF, JPG, PNG)</span>
+                </Label>
+                {application.disbursement_letter_url ? (
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge variant="outline" className="text-[10px] bg-green-50 text-green-700 border-green-200">✅ Already uploaded</Badge>
+                    <Button variant="link" size="sm" className="text-[10px] h-5 p-0" onClick={() => window.open(application.disbursement_letter_url, '_blank')}>View</Button>
+                  </div>
+                ) : null}
+                <Input type="file" accept=".pdf,.jpg,.jpeg,.png" className="mt-1" onChange={e => setDisbursementFile(e.target.files?.[0] || null)} />
+                {!disbursementFile && !application.disbursement_letter_url && (
+                  <p className="text-[10px] text-red-500 mt-1">⚠ Upload disbursement proof to proceed</p>
+                )}
+              </div>
               <div><Label>Remarks</Label><Textarea value={remarks} onChange={e => setRemarks(e.target.value)} rows={2} /></div>
               {currentStage !== 'disbursed' && (
-                <Button onClick={handleDisbursedSave} disabled={updateMutation.isPending} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white">
-                  {updateMutation.isPending ? "Saving..." : "Complete Disbursement & Enable Incentive"}
+                <Button onClick={handleDisbursedSave} disabled={updateMutation.isPending || uploadingFile || (!disbursementFile && !application.disbursement_letter_url)} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white">
+                  {uploadingFile ? "Uploading..." : updateMutation.isPending ? "Saving..." : "Complete Disbursement & Enable Incentive"}
                 </Button>
               )}
             </div>
