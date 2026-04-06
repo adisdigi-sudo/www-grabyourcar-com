@@ -676,12 +676,19 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
   };
 
   const handleOfferSave = () => {
-    const isCustom = selectedBank === '__custom__';
+    const selectedPartner = bankPartners.find((b: any) => b.id === selectedBank);
+    const hasRealPartnerId = Boolean(selectedBank && isUuid(selectedBank));
+    const isCustom = selectedBank === '__custom__' || Boolean(selectedPartner && !hasRealPartnerId);
+
     if (!selectedBank) { toast.error("Select a bank partner"); return; }
-    if (isCustom && !customBankName.trim()) { toast.error("Enter custom bank/NBFC name"); return; }
-    const bankName = isCustom ? customBankName.trim() : (bankPartners.find((b: any) => b.id === selectedBank)?.name || '');
+    if (isCustom && !((selectedPartner?.name || customBankName).trim())) { toast.error("Enter custom bank/NBFC name"); return; }
+
+    const bankName = isCustom
+      ? (selectedPartner?.name || customBankName).trim()
+      : (selectedPartner?.name || '');
+
     updateMutation.mutate({
-      bank_partner_id: isCustom ? null : selectedBank,
+      bank_partner_id: hasRealPartnerId ? selectedBank : null,
       lender_name: bankName,
       interest_rate: interestRate ? Number(interestRate) : null,
       tenure_months: tenureMonths ? Number(tenureMonths) : null,
