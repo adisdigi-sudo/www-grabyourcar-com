@@ -71,6 +71,7 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
   const [draggingApp, setDraggingApp] = useState<any>(null);
   const [stageFilter, setStageFilter] = useState<StageFilter>("all");
   const [dateFilter, setDateFilter] = useState<DateFilter>("all");
+  const [showWonDialog, setShowWonDialog] = useState(false);
   const [newApp, setNewApp] = useState({
     customer_name: '', phone: '', email: '', loan_amount: '', car_model: '',
     down_payment: '', employment_type: '', monthly_income: '', city: '',
@@ -208,6 +209,10 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
   };
 
   const handleKpiClick = (filter: StageFilter) => {
+    if (filter === "disbursed") {
+      setShowWonDialog(true);
+      return;
+    }
     setStageFilter(prev => prev === filter ? "all" : filter);
     if (activeView !== "pipeline") setActiveView("pipeline");
   };
@@ -599,6 +604,67 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
           application={selectedApp} bankPartners={bankPartners}
         />
       )}
+
+      {/* Won / Disbursed Cases Dialog */}
+      <Dialog open={showWonDialog} onOpenChange={setShowWonDialog}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+              Won / Disbursed Cases ({dateFilteredApps.filter((a: any) => a.stage === 'disbursed').length})
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+            {dateFilteredApps.filter((a: any) => a.stage === 'disbursed').length === 0 && (
+              <div className="text-center py-12 text-sm text-muted-foreground">No disbursed cases found for this period</div>
+            )}
+            {dateFilteredApps
+              .filter((a: any) => a.stage === 'disbursed')
+              .sort((a: any, b: any) => new Date(b.stage_updated_at || b.created_at).getTime() - new Date(a.stage_updated_at || a.created_at).getTime())
+              .map((app: any) => {
+                const amt = Number(app.disbursement_amount) || Number(app.loan_amount) || 0;
+                return (
+                  <div key={app.id} className="border rounded-lg p-4 hover:bg-muted/30 transition-colors">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-semibold text-sm">{app.customer_name || "Unknown"}</span>
+                          {app.priority === 'hot' && <Badge className="text-[9px] h-4 bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400">🔥 Hot</Badge>}
+                        </div>
+                        <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs text-muted-foreground mt-2">
+                          <div className="flex items-center gap-1.5"><Phone className="h-3 w-3" /> {app.phone || "—"}</div>
+                          <div className="flex items-center gap-1.5"><Car className="h-3 w-3" /> {app.car_model || app.car_variant || "—"}</div>
+                          <div className="flex items-center gap-1.5"><Building2 className="h-3 w-3" /> {app.bank_name || app.selected_bank || "—"}</div>
+                          <div className="flex items-center gap-1.5"><IndianRupee className="h-3 w-3" /> {formatAmount(amt)}</div>
+                          <div className="flex items-center gap-1.5"><FileText className="h-3 w-3" /> {app.loan_type ? app.loan_type.replace(/_/g, ' ') : "—"}</div>
+                          <div className="flex items-center gap-1.5"><Clock className="h-3 w-3" /> {app.disbursement_date || app.stage_updated_at ? new Date(app.disbursement_date || app.stage_updated_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "2-digit" }) : "—"}</div>
+                        </div>
+                        {app.remarks && <p className="text-[11px] text-muted-foreground mt-2 line-clamp-1">{app.remarks}</p>}
+                      </div>
+                      <div className="flex flex-col gap-1.5 shrink-0">
+                        <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 text-xs font-bold">
+                          {formatAmount(amt)}
+                        </Badge>
+                        <div className="flex gap-1">
+                          {app.phone && (
+                            <>
+                              <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => window.open(`tel:${app.phone}`)}>
+                                <PhoneCall className="h-3 w-3" />
+                              </Button>
+                              <Button size="icon" variant="outline" className="h-7 w-7 text-emerald-600 border-emerald-200 hover:bg-emerald-50" onClick={() => handleWhatsApp(app.phone, app.customer_name || 'Customer')}>
+                                <MessageCircle className="h-3 w-3" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
