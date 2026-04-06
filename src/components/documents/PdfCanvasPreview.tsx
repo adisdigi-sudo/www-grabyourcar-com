@@ -98,6 +98,7 @@ export const PdfCanvasPreview = ({ fileUrl, fileName, onOpenInNewTab }: PdfCanva
           canvasContainer.appendChild(pageWrapper);
 
           const renderTask = page.render({
+            canvas,
             canvasContext: context,
             viewport,
             transform: pixelRatio === 1 ? undefined : [pixelRatio, 0, 0, pixelRatio, 0, 0],
