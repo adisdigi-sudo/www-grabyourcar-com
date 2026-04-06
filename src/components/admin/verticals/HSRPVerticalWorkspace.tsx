@@ -14,6 +14,8 @@ import { OmniMessagingWorkspace } from "../shared/OmniMessagingWorkspace";
 import { DateFilterBar, type DateFilterValue } from "../shared/DateFilterBar";
 import { startOfDay, subDays, startOfMonth, isWithinInterval } from "date-fns";
 import type { DateRange } from "react-day-picker";
+
+const ORDER_MAP: Record<string, string> = {
   pending: "new_booking", new_booking: "new_booking",
   verification: "verification", verifying: "verification", contacted: "verification",
   payment: "payment", payment_pending: "payment",
@@ -23,17 +25,10 @@ import type { DateRange } from "react-day-picker";
 };
 const normalizeStage = (s: string | null) => ORDER_MAP[s || "pending"] || "new_booking";
 
-const DATE_FILTERS = [
-  { value: "all", label: "All Time" },
-  { value: "today", label: "Today" },
-  { value: "7days", label: "7D" },
-  { value: "30days", label: "30D" },
-  { value: "this_month", label: "This Month" },
-];
-
 export function HSRPVerticalWorkspace() {
   const [tab, setTab] = useState("pipeline");
-  const [dateFilter, setDateFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState<DateFilterValue>("all");
+  const [customRange, setCustomRange] = useState<DateRange | undefined>(undefined);
 
   const { data: allBookings = [] } = useQuery({
     queryKey: ["hsrp-pipeline-perf"],
@@ -52,6 +47,11 @@ export function HSRPVerticalWorkspace() {
 
   const filteredBookings = useMemo(() => {
     if (dateFilter === "all") return allBookings;
+    if (dateFilter === "custom" && customRange?.from && customRange?.to) {
+      return allBookings.filter((b: any) =>
+        isWithinInterval(new Date(b.created_at), { start: customRange.from!, end: new Date(customRange.to!.getTime() + 86400000 - 1) })
+      );
+    }
     const now = new Date();
     let cutoff: Date;
     switch (dateFilter) {
@@ -62,7 +62,7 @@ export function HSRPVerticalWorkspace() {
       default: return allBookings;
     }
     return allBookings.filter((b: any) => new Date(b.created_at) >= cutoff);
-  }, [allBookings, dateFilter]);
+  }, [allBookings, dateFilter, customRange]);
 
   return (
     <div className="space-y-4">
@@ -110,17 +110,12 @@ export function HSRPVerticalWorkspace() {
           <HSRPAbandonedCarts />
         </TabsContent>
         <TabsContent value="performance" className="mt-4 space-y-3">
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-            <div className="flex gap-1">
-              {DATE_FILTERS.map(f => (
-                <Button key={f.value} size="sm" variant={dateFilter === f.value ? "default" : "outline"}
-                  className="h-7 text-xs px-2.5" onClick={() => setDateFilter(f.value)}>
-                  {f.label}
-                </Button>
-              ))}
-            </div>
-          </div>
+          <DateFilterBar
+            dateFilter={dateFilter}
+            onDateFilterChange={setDateFilter}
+            customRange={customRange}
+            onCustomRangeChange={setCustomRange}
+          />
           <HSRPPerformanceDashboard bookings={filteredBookings} dateFilter={dateFilter} />
         </TabsContent>
         <TabsContent value="tools" className="space-y-4">
