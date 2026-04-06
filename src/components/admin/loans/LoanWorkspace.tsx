@@ -827,7 +827,10 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
               <div className="grid grid-cols-3 gap-3">
                 <div><Label>Interest %</Label><Input type="number" step="0.1" value={interestRate} onChange={e => setInterestRate(e.target.value)} /></div>
                 <div><Label>Tenure (months)</Label><Input type="number" value={tenureMonths} onChange={e => setTenureMonths(e.target.value)} /></div>
-                <div><Label>EMI Amount</Label><Input type="number" value={emiAmount} onChange={e => setEmiAmount(e.target.value)} /></div>
+                <div>
+                  <Label>EMI Amount <span className="text-[9px] text-muted-foreground">(auto-calculated)</span></Label>
+                  <Input type="number" value={emiAmount} readOnly className="bg-muted/50 font-semibold" />
+                </div>
               </div>
               <div><Label>Remarks</Label><Textarea value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="Offer details..." rows={2} /></div>
               <Button onClick={handleOfferSave} disabled={updateMutation.isPending} className="w-full bg-violet-600 hover:bg-violet-700 text-white">
