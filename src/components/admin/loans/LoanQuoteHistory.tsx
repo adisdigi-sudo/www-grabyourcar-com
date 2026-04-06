@@ -40,7 +40,13 @@ export const LoanQuoteHistory = ({ applicationId, phone }: LoanQuoteHistoryProps
     if (!storagePath) return;
     const { data } = supabase.storage.from("loan-documents").getPublicUrl(storagePath);
     if (data?.publicUrl) {
-      window.open(data.publicUrl, "_blank");
+      // Open in new tab with PDF viewer params
+      const url = data.publicUrl.toLowerCase().endsWith(".pdf")
+        ? `${data.publicUrl}#toolbar=1&navpanes=0&view=FitH`
+        : data.publicUrl;
+      window.open(url, "_blank", "noopener,noreferrer");
+    } else {
+      toast.error("Could not generate PDF URL");
     }
   };
 
