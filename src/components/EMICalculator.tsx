@@ -248,6 +248,7 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
   }, [bankEMIs]);
 
   return (
+    <>
     <section className="py-12 bg-gradient-to-br from-muted/50 via-background to-muted/30">
       <div className="container mx-auto px-4">
         <div className="max-w-6xl mx-auto">
