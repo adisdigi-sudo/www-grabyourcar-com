@@ -13,7 +13,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import jsPDF from "jspdf";
-import jsPDF from "jspdf";
 import {
   Phone, MessageSquare, UserPlus, PhoneCall, Tag, FileText,
   BarChart3, Handshake, CheckCircle2, XCircle, Star, Clock,
