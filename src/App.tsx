@@ -22,6 +22,7 @@ import Index from "./pages/Index";
 import AdminLayout from "./pages/AdminLayout";
 import AdminAuth from "./pages/AdminAuth";
 import AdminResetPassword from "./pages/AdminResetPassword";
+import InsuranceDocumentViewer from "./pages/InsuranceDocumentViewer";
 import WorkspaceSelector from "./pages/WorkspaceSelector";
 
 // Public-facing pages stay lazy-loaded to keep the main site bundle small
@@ -57,7 +58,6 @@ const ThankYou = lazy(() => import("./pages/ThankYou"));
 const NoWaitingCars = lazy(() => import("./pages/NoWaitingCars"));
 const BestCarDeals = lazy(() => import("./pages/BestCarDeals"));
 const AgreementSignPage = lazy(() => import("./pages/AgreementSignPage"));
-const InsuranceDocumentViewer = lazy(() => import("./pages/InsuranceDocumentViewer"));
 const TrackOrder = lazy(() => import("./pages/TrackOrder"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
