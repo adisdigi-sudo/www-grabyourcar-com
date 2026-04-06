@@ -1,49 +1,53 @@
 
 
-# Add Executive Leaderboard to All Verticals
+# Add Omni-Channel Share Dialog for Offers & EMI Across All Verticals
+
+## Overview
+Create a reusable **OmniShareDialog** component that supports sharing PDFs, offers, and EMI details via **WhatsApp, Email, RCS, and PDF download** — then integrate it across Loans, Sales, Insurance, and HSRP verticals.
 
 ## Current State
-- **Insurance**: Already has `ExecutiveLeaderboard` in `InsurancePerformance.tsx` ✓
-- **Loans**: Already has `ExecutiveLeaderboard` in `LoanPerformanceDashboard.tsx` ✓
-- **Car Sales**: No Performance tab, no leaderboard — has `assigned_to` field in `sales_pipeline`
-- **HSRP**: No Performance tab, no leaderboard — no `assigned_to` field (will need a migration)
-- **Accessories, Self-Drive**: No clear executive assignment fields
+- **Insurance** has a `SharePdfDialog` but it's tightly coupled to insurance persistence (`persistInsuranceQuoteHistory`)
+- **Loans** `LoanBulkOfferPanel` has basic WhatsApp + PDF download but no unified share dialog, no Email, no RCS
+- **Sales & HSRP** have no share/offer functionality at all
 
 ## Plan
 
-### 1. Add `assigned_to` column to `hsrp_bookings`
-- Database migration to add `assigned_to TEXT` to `hsrp_bookings` so HSRP bookings can be tracked per executive
+### 1. Create `OmniShareDialog` — Shared Reusable Component
+**New file**: `src/components/admin/shared/OmniShareDialog.tsx`
 
-### 2. Create `SalesPerformanceDashboard.tsx` (New File)
-- Revenue KPIs: Total Won Value, Won Count, Lost Count, Conversion Rate
-- Executive stats computed from `sales_pipeline` using `assigned_to` field (won/lost/total/revenue from deal value or booking data)
-- Render `ExecutiveLeaderboard` with `verticalName="Car Sales"`
-- Won cases table
+A generic share dialog with 5 tabs:
+- **WhatsApp** (manual wa.me link with PDF download)
+- **WhatsApp API** (automated via `omni-channel-send` edge function)
+- **Email** (via `omniSend` with email channel)
+- **RCS** (via `omniSend` with RCS channel)
+- **Download PDF** (direct save)
 
-### 3. Update `SalesWorkspace.tsx`
-- Add tab navigation (Pipeline | Performance) similar to LoanWorkspace
-- Add date filter bar (Today, 7D, 30D, This Month, All)
-- Wire Performance tab to `SalesPerformanceDashboard`
+Props: `generatePdf`, `title`, `defaultPhone`, `defaultEmail`, `customerName`, `shareMessage`, `onShared`, `vertical` (for logging)
 
-### 4. Create `HSRPPerformanceDashboard.tsx` (New File)
-- Revenue KPIs: Total Revenue, Completed Count, Conversion Rate
-- Executive stats from `hsrp_bookings` using `assigned_to` (completed = "completed" stage, revenue = `payment_amount`)
-- Render `ExecutiveLeaderboard` with `verticalName="HSRP"`
+Uses existing `omniSend` utility for Email & RCS channels, and `sendWhatsApp` for WhatsApp.
 
-### 5. Update `HSRPWorkspace.tsx`
-- Add tab navigation (Pipeline | Performance)
-- Add date filter bar
-- Wire Performance tab to `HSRPPerformanceDashboard`
+### 2. Integrate into Loan CRM
+- Update **`LoanBulkOfferPanel.tsx`**: Replace individual WhatsApp/Email buttons per row with an "Share" button that opens `OmniShareDialog`, passing `generateLoanOfferPDF` as the PDF generator
+- Add a share action button in the **loan lead detail** area for single-lead offer sharing
 
-### Summary
+### 3. Integrate into Sales CRM
+- Update **`SalesLeadDetailModal.tsx`**: Add a "Share Offer" button that generates a basic sales offer PDF and opens `OmniShareDialog`
+- Create a simple **`SalesOfferPDF.ts`** utility that generates a car deal offer PDF (customer name, car model, deal value, special terms)
+
+### 4. Integrate into Insurance (upgrade existing)
+- Update existing `SharePdfDialog` usages to use the new `OmniShareDialog` which adds RCS support (currently missing)
+
+### 5. Integrate into HSRP
+- Add share capability to HSRP booking confirmations via `OmniShareDialog`
+
+## Summary
 
 | File | Action |
 |------|--------|
-| DB Migration | Add `assigned_to` to `hsrp_bookings` |
-| `SalesPerformanceDashboard.tsx` | New — KPIs + ExecutiveLeaderboard for Car Sales |
-| `SalesWorkspace.tsx` | Add Performance tab + date filters |
-| `HSRPPerformanceDashboard.tsx` | New — KPIs + ExecutiveLeaderboard for HSRP |
-| `HSRPWorkspace.tsx` | Add Performance tab + date filters |
-
-Insurance and Loans already have the leaderboard integrated — no changes needed there.
+| `src/components/admin/shared/OmniShareDialog.tsx` | New — 5-tab share dialog (WA, WA API, Email, RCS, Download) |
+| `src/components/admin/sales/SalesOfferPDF.ts` | New — Sales deal offer PDF generator |
+| `src/components/admin/loans/LoanBulkOfferPanel.tsx` | Wire OmniShareDialog per lead row |
+| `src/components/admin/sales/SalesLeadDetailModal.tsx` | Add Share Offer button with OmniShareDialog |
+| `src/components/admin/insurance/InsuranceQuoteHub.tsx` | Swap to OmniShareDialog (adds RCS) |
+| `src/components/admin/insurance/InsuranceSmartCalling.tsx` | Swap to OmniShareDialog (adds RCS) |
 
