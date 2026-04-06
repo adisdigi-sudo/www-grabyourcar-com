@@ -691,6 +691,13 @@ export function InsurancePerformance({ clients, policies, selectedMonth, onMonth
           </div>
         </CardContent>
       </Card>
+
+      {/* Executive Leaderboard with Targets */}
+      <ExecutiveLeaderboard
+        verticalName="Insurance"
+        monthYear={selectedMonth}
+        executiveStats={insuranceExecStats}
+      />
     </div>
   );
 }
