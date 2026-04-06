@@ -153,7 +153,7 @@ const formatIndianNumber = (num: number): string => {
 
 const formatCurrency = (amount: number) => `Rs. ${formatIndianNumber(amount)}`;
 
-export const generateEMIPdf = async (data: EMIData, config?: Partial<EMIPDFConfig>) => {
+export const generateEMIPdf = async (data: EMIData, config?: Partial<EMIPDFConfig>, returnDoc?: boolean): Promise<jsPDF | void> => {
   const COMPANY = { ...DEFAULT_COMPANY, ...config };
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth(); // 210
@@ -181,7 +181,11 @@ export const generateEMIPdf = async (data: EMIData, config?: Partial<EMIPDFConfi
     generateCarQuotePdf(doc, data, COMPANY, C, pageWidth, pageHeight, margin, contentWidth);
   }
 
-  // ============ SAVE ============
+  // ============ RETURN or SAVE ============
+  if (returnDoc) {
+    return doc;
+  }
+
   const carSuffix = data.carName ? `_${data.carName.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "")}` : "";
   const emiSuffix = data.emi > 0 ? `_Rs${Math.round(data.loanPrincipal / 100000)}L_${data.tenure}m` : "";
   const fileName = isStandaloneEMI
