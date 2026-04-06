@@ -602,6 +602,33 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
   const [disbAmount, setDisbAmount] = useState(application?.disbursement_amount?.toString() || '');
   const [disbDate, setDisbDate] = useState(application?.disbursement_date || '');
   const [disbBank, setDisbBank] = useState(application?.lender_name || '');
+  const [sanctionFile, setSanctionFile] = useState<File | null>(null);
+  const [disbursementFile, setDisbursementFile] = useState<File | null>(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
+
+  // ── Auto-calculate EMI when loan_amount + interest_rate + tenure change ──
+  useEffect(() => {
+    const P = Number(application?.loan_amount || 0);
+    const annualRate = Number(interestRate);
+    const months = Number(tenureMonths);
+    if (P > 0 && annualRate > 0 && months > 0) {
+      const r = annualRate / 12 / 100;
+      const emi = (P * r * Math.pow(1 + r, months)) / (Math.pow(1 + r, months) - 1);
+      setEmiAmount(Math.round(emi).toString());
+    }
+  }, [interestRate, tenureMonths, application?.loan_amount]);
+
+  // ── File upload helper ──
+  const uploadDocument = async (file: File, folder: string): Promise<string> => {
+    const ext = file.name.split('.').pop()?.toLowerCase() || 'pdf';
+    const allowed = ['pdf', 'jpg', 'jpeg', 'png'];
+    if (!allowed.includes(ext)) throw new Error('Only PDF, JPG, PNG files are allowed');
+    const filePath = `${folder}/${application.id}_${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from('loan-documents').upload(filePath, file);
+    if (error) throw error;
+    const { data: urlData } = supabase.storage.from('loan-documents').getPublicUrl(filePath);
+    return urlData.publicUrl;
+  };
 
   const currentStage = application?.stage || 'new_lead';
   const loanTypeInfo = LOAN_TYPES.find(t => t.value === application?.loan_type);
