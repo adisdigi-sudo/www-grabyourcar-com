@@ -685,26 +685,55 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
     });
   };
 
-  const handleLoanAppSave = () => {
+  const handleLoanAppSave = async () => {
     if (!loanStatus) { toast.error("Select loan status"); return; }
     if (loanStatus === 'rejected' && !rejectionReason.trim()) { toast.error("Rejection reason required"); return; }
     if (loanStatus === 'approved' && !sanctionAmount) { toast.error("Sanction amount required"); return; }
+    if (loanStatus === 'approved' && !sanctionFile && !application.sanction_letter_url) { toast.error("Upload sanction/approval letter"); return; }
+
     const updates: any = {
       stage: loanStatus === 'approved' ? 'loan_application' : 'lost',
       remarks: remarks || (loanStatus === 'approved' ? `Approved: ₹${sanctionAmount}` : `Rejected: ${rejectionReason}`),
     };
-    if (loanStatus === 'approved') { updates.sanction_amount = Number(sanctionAmount); updates.sanction_date = new Date().toISOString(); }
-    else { updates.rejection_reason = rejectionReason; updates.lost_reason = 'Loan not approved'; updates.lost_remarks = rejectionReason; }
+
+    if (loanStatus === 'approved') {
+      updates.sanction_amount = Number(sanctionAmount);
+      updates.sanction_date = new Date().toISOString();
+      if (sanctionFile) {
+        try {
+          setUploadingFile(true);
+          const url = await uploadDocument(sanctionFile, 'sanction-letters');
+          updates.sanction_letter_url = url;
+        } catch (err: any) { toast.error(`Upload failed: ${err.message}`); return; }
+        finally { setUploadingFile(false); }
+      }
+    } else {
+      updates.rejection_reason = rejectionReason;
+      updates.lost_reason = 'Loan not approved';
+      updates.lost_remarks = rejectionReason;
+    }
     updateMutation.mutate(updates);
   };
 
-  const handleDisbursedSave = () => {
+  const handleDisbursedSave = async () => {
     if (!disbAmount || !disbDate || !disbBank) { toast.error("All disbursement details required"); return; }
-    updateMutation.mutate({
+    if (!disbursementFile && !application.disbursement_letter_url) { toast.error("Upload disbursement proof document"); return; }
+
+    const updates: any = {
       stage: 'disbursed', disbursement_amount: Number(disbAmount), disbursement_date: disbDate,
       lender_name: disbBank, incentive_eligible: true, converted_at: new Date().toISOString(),
       remarks: `Disbursed: ₹${disbAmount} via ${disbBank}`,
-    });
+    };
+
+    if (disbursementFile) {
+      try {
+        setUploadingFile(true);
+        const url = await uploadDocument(disbursementFile, 'disbursement-proofs');
+        updates.disbursement_letter_url = url;
+      } catch (err: any) { toast.error(`Upload failed: ${err.message}`); return; }
+      finally { setUploadingFile(false); }
+    }
+    updateMutation.mutate(updates);
   };
 
   const handleLostSave = () => {
