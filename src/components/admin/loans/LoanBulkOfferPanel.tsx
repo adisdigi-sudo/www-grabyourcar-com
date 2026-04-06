@@ -121,9 +121,42 @@ export const LoanBulkOfferPanel = ({ applications, bankPartners }: LoanBulkOffer
     setSending(false);
   };
 
-  // ── Email Bulk (via wa.me fallback for now) ──
+  // ── Email Bulk ──
   const handleEmailBulk = async () => {
-    toast.info("Email integration — coming soon. Use WhatsApp or download PDFs for now.");
+    const apps = eligibleApps.filter(a => selected.has(a.id));
+    if (!apps.length) { toast.error("Select leads first"); return; }
+    setSending(true);
+    const recipients = apps.map(app => {
+      const emi = calcEMI(Number(app.loan_amount), rate, tenure);
+      return {
+        email: app.email || undefined,
+        phone: app.phone,
+        name: app.customer_name,
+        message: `Hi ${app.customer_name}, your Car Loan EMI: Rs. ${Math.round(emi).toLocaleString("en-IN")}/month for Rs. ${(Number(app.loan_amount) / 100000).toFixed(1)}L via ${selectedBank?.name || "Partner Bank"} at ${rate}%. Call +91-98559-24442`,
+        subject: `Car Loan Offer - ${app.customer_name} | Grabyourcar`,
+      };
+    });
+    const result = await omniSendBulk("email", recipients, { vertical: "loans" });
+    toast.success(`📧 Email bulk: ${result.sent} sent, ${result.failed} failed`);
+    setSending(false);
+  };
+
+  // ── RCS Bulk ──
+  const handleRcsBulk = async () => {
+    const apps = eligibleApps.filter(a => selected.has(a.id));
+    if (!apps.length) { toast.error("Select leads first"); return; }
+    setSending(true);
+    const recipients = apps.map(app => {
+      const emi = calcEMI(Number(app.loan_amount), rate, tenure);
+      return {
+        phone: app.phone,
+        name: app.customer_name,
+        message: `Hi ${app.customer_name}, your Car Loan EMI: Rs. ${Math.round(emi).toLocaleString("en-IN")}/month for Rs. ${(Number(app.loan_amount) / 100000).toFixed(1)}L via ${selectedBank?.name || "Partner Bank"} at ${rate}%. Call +91-98559-24442`,
+      };
+    });
+    const result = await omniSendBulk("rcs", recipients, { vertical: "loans" });
+    toast.success(`📲 RCS bulk: ${result.sent} sent, ${result.failed} failed`);
+    setSending(false);
   };
 
   return (
