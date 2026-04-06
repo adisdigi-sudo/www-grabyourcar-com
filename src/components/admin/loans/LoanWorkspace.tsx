@@ -3,6 +3,8 @@ import EMICalculator from "@/components/EMICalculator";
 import { LoanQuoteHistory } from "./LoanQuoteHistory";
 import { Upload } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { LoanPerformanceDashboard } from "./LoanPerformanceDashboard";
+import { startOfDay, startOfWeek, startOfMonth, isAfter } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useRealtimeTable } from "@/hooks/useRealtimeSync";
 import { useAuth } from "@/hooks/useAuth";
@@ -20,7 +22,7 @@ import {
   Banknote, Plus, Phone, Car, GripVertical, IndianRupee,
   PhoneCall, MessageCircle, CheckCircle2, XCircle, Building2,
   FileText, AlertTriangle, Clock, TrendingUp, Users, FileSpreadsheet,
-  BookOpen, HeartHandshake, Wrench
+  BookOpen, HeartHandshake, Wrench, BarChart3, Filter, X
 } from "lucide-react";
 import { LeadImportDialog } from "../shared/LeadImportDialog";
 import { StageNotificationBanner, buildLoanNotifications } from "../shared/StageNotificationBanner";
@@ -51,8 +53,9 @@ const isUuid = (value: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
 // ─── Main Workspace ───
-type LoanWorkspaceView = "pipeline" | "disbursement" | "after_sales" | "bulk_tools" | "emi_calculator";
-
+type LoanWorkspaceView = "pipeline" | "disbursement" | "after_sales" | "bulk_tools" | "emi_calculator" | "performance";
+type DateFilter = "today" | "7days" | "30days" | "this_month" | "all";
+type StageFilter = "all" | "in_pipeline" | "disbursed" | "lost";
 interface LoanWorkspaceProps {
   initialView?: LoanWorkspaceView;
 }
@@ -60,12 +63,14 @@ interface LoanWorkspaceProps {
 export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [activeView, setActiveView] = useState<LoanWorkspaceView>(initialView);
+   const [activeView, setActiveView] = useState<LoanWorkspaceView>(initialView);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [selectedApp, setSelectedApp] = useState<any>(null);
   const [showStageModal, setShowStageModal] = useState(false);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
   const [draggingApp, setDraggingApp] = useState<any>(null);
+  const [stageFilter, setStageFilter] = useState<StageFilter>("all");
+  const [dateFilter, setDateFilter] = useState<DateFilter>("all");
   const [newApp, setNewApp] = useState({
     customer_name: '', phone: '', email: '', loan_amount: '', car_model: '',
     down_payment: '', employment_type: '', monthly_income: '', city: '',
@@ -161,20 +166,50 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
     [rawApplications]
   );
 
-  const totalApps = applications.length;
-  const inPipeline = applications.filter((a: any) => !['disbursed', 'lost'].includes(a.stage)).length;
-  const disbursed = applications.filter((a: any) => a.stage === 'disbursed').length;
-  const lost = applications.filter((a: any) => a.stage === 'lost').length;
-  const totalValue = applications
+  // ── Date-filtered applications ──
+  const dateFilteredApps = useMemo(() => {
+    if (dateFilter === "all") return applications;
+    const now = new Date();
+    let cutoff: Date;
+    switch (dateFilter) {
+      case "today": cutoff = startOfDay(now); break;
+      case "7days": cutoff = new Date(now.getTime() - 7 * 86400000); break;
+      case "30days": cutoff = new Date(now.getTime() - 30 * 86400000); break;
+      case "this_month": cutoff = startOfMonth(now); break;
+      default: return applications;
+    }
+    return applications.filter((a: any) => isAfter(new Date(a.created_at), cutoff));
+  }, [applications, dateFilter]);
+
+  // ── Stage-filtered applications (for pipeline view) ──
+  const filteredApps = useMemo(() => {
+    if (stageFilter === "all") return dateFilteredApps;
+    if (stageFilter === "in_pipeline") return dateFilteredApps.filter((a: any) => !["disbursed", "lost"].includes(a.stage));
+    if (stageFilter === "disbursed") return dateFilteredApps.filter((a: any) => a.stage === "disbursed");
+    if (stageFilter === "lost") return dateFilteredApps.filter((a: any) => a.stage === "lost");
+    return dateFilteredApps;
+  }, [dateFilteredApps, stageFilter]);
+
+  // KPIs always show from dateFilteredApps (not stage-filtered)
+  const totalApps = dateFilteredApps.length;
+  const inPipeline = dateFilteredApps.filter((a: any) => !['disbursed', 'lost'].includes(a.stage)).length;
+  const disbursed = dateFilteredApps.filter((a: any) => a.stage === 'disbursed').length;
+  const lost = dateFilteredApps.filter((a: any) => a.stage === 'lost').length;
+  const totalValue = dateFilteredApps
     .filter((a: any) => a.stage === 'disbursed')
     .reduce((s: number, a: any) => s + (Number(a.disbursement_amount) || Number(a.loan_amount) || 0), 0);
 
-  const loanNotifications = useMemo(() => buildLoanNotifications(applications), [applications]);
+  const loanNotifications = useMemo(() => buildLoanNotifications(dateFilteredApps), [dateFilteredApps]);
 
   const formatAmount = (amt: number | null) => {
     if (!amt) return '-';
     if (amt >= 100000) return `₹${(amt / 100000).toFixed(1)}L`;
     return `₹${(amt / 1000).toFixed(0)}K`;
+  };
+
+  const handleKpiClick = (filter: StageFilter) => {
+    setStageFilter(prev => prev === filter ? "all" : filter);
+    if (activeView !== "pipeline") setActiveView("pipeline");
   };
 
   // Create lead
@@ -296,24 +331,93 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
               </Button>
             </div>
           </div>
+
+          {/* Clickable KPI Cards */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {[
-              { label: "Total Leads", value: totalApps, icon: Users, bgc: "bg-blue-500/20" },
-              { label: "In Pipeline", value: inPipeline, icon: TrendingUp, bgc: "bg-orange-400/20" },
-              { label: "Disbursed", value: disbursed, icon: CheckCircle2, bgc: "bg-emerald-400/20" },
-              { label: "Lost", value: lost, icon: XCircle, bgc: "bg-red-400/20" },
-              { label: "Total Value", value: formatAmount(totalValue), icon: IndianRupee, bgc: "bg-cyan-400/20" },
-            ].map(kpi => (
-              <div key={kpi.label} className={`${kpi.bgc} backdrop-blur-sm rounded-xl px-4 py-3 border border-white/10`}>
-                <div className="flex items-center gap-2 mb-1">
-                  <kpi.icon className="h-4 w-4 text-white/70" />
-                  <span className="text-[10px] uppercase tracking-wider text-white/70">{kpi.label}</span>
+              { label: "Total Leads", value: totalApps, icon: Users, bgc: "bg-blue-500/20", filter: "all" as StageFilter },
+              { label: "In Pipeline", value: inPipeline, icon: TrendingUp, bgc: "bg-orange-400/20", filter: "in_pipeline" as StageFilter },
+              { label: "Disbursed", value: disbursed, icon: CheckCircle2, bgc: "bg-emerald-400/20", filter: "disbursed" as StageFilter },
+              { label: "Lost", value: lost, icon: XCircle, bgc: "bg-red-400/20", filter: "lost" as StageFilter },
+              { label: "Total Value", value: formatAmount(totalValue), icon: IndianRupee, bgc: "bg-cyan-400/20", filter: "disbursed" as StageFilter },
+            ].map(kpi => {
+              const isActive = stageFilter === kpi.filter && kpi.filter !== "all";
+              return (
+                <div
+                  key={kpi.label}
+                  onClick={() => handleKpiClick(kpi.filter)}
+                  className={cn(
+                    `${kpi.bgc} backdrop-blur-sm rounded-xl px-4 py-3 border cursor-pointer transition-all hover:scale-[1.03] active:scale-[0.98]`,
+                    isActive ? "ring-2 ring-white border-white/60 shadow-lg" : "border-white/10"
+                  )}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <kpi.icon className="h-4 w-4 text-white/70" />
+                    <span className="text-[10px] uppercase tracking-wider text-white/70">{kpi.label}</span>
+                  </div>
+                  <p className="text-2xl font-bold tracking-tight">{kpi.value}</p>
                 </div>
-                <p className="text-2xl font-bold tracking-tight">{kpi.value}</p>
-              </div>
+              );
+            })}
+          </div>
+
+          {/* Date Filter Bar */}
+          <div className="flex items-center gap-2 mt-4 flex-wrap">
+            <Filter className="h-3.5 w-3.5 text-white/60" />
+            {([
+              { key: "today", label: "Today" },
+              { key: "7days", label: "7 Days" },
+              { key: "30days", label: "30 Days" },
+              { key: "this_month", label: "This Month" },
+              { key: "all", label: "All Time" },
+            ] as { key: DateFilter; label: string }[]).map(df => (
+              <button
+                key={df.key}
+                onClick={() => setDateFilter(df.key)}
+                className={cn(
+                  "text-[11px] px-3 py-1 rounded-full font-medium transition-all",
+                  dateFilter === df.key
+                    ? "bg-white text-teal-800 shadow-sm"
+                    : "bg-white/10 text-white/80 hover:bg-white/20"
+                )}
+              >
+                {df.label}
+              </button>
             ))}
+            {(stageFilter !== "all" || dateFilter !== "all") && (
+              <button
+                onClick={() => { setStageFilter("all"); setDateFilter("all"); }}
+                className="ml-auto text-[11px] flex items-center gap-1 text-white/70 hover:text-white bg-white/10 rounded-full px-2 py-1"
+              >
+                <X className="h-3 w-3" /> Clear Filters
+              </button>
+            )}
           </div>
         </div>
+      </div>
+
+      {/* Workspace Navigation */}
+      <div className="flex items-center gap-1 overflow-x-auto pb-1">
+        {([
+          { key: "pipeline", label: "Pipeline", icon: Banknote },
+          { key: "disbursement", label: "Disbursement", icon: CheckCircle2 },
+          { key: "after_sales", label: "After Sales", icon: HeartHandshake },
+          { key: "performance", label: "Performance", icon: BarChart3 },
+          { key: "emi_calculator", label: "EMI Calc", icon: IndianRupee },
+        ] as { key: LoanWorkspaceView; label: string; icon: any }[]).map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveView(tab.key)}
+            className={cn(
+              "flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap",
+              activeView === tab.key
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
+          >
+            <tab.icon className="h-3.5 w-3.5" /> {tab.label}
+          </button>
+        ))}
       </div>
 
       {loanNotifications.length > 0 && <StageNotificationBanner items={loanNotifications} />}
@@ -410,7 +514,7 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
             <ScrollArea className="w-full">
               <div className="flex min-w-max">
                 {pipelineStages.map((stage, colIdx) => {
-                  const stageApps = applications.filter((a: any) => a.stage === stage);
+                  const stageApps = filteredApps.filter((a: any) => a.stage === stage);
                   const stageValue = stageApps.reduce((s: number, a: any) => s + (Number(a.loan_amount) || 0), 0);
                   const isDragOver = dragOverStage === stage;
                   const showDropIndicator = draggingApp && isDragOver;
@@ -459,7 +563,7 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
                     </div>
                   </div>
                   <div className={`flex-1 px-1.5 pb-2 min-h-[120px] transition-all ${dragOverStage === 'lost' && draggingApp ? 'bg-red-500/5' : ''}`}>
-                    {applications.filter((a: any) => a.stage === 'lost').slice(0, 5).map((app: any, i: number) => (
+                    {filteredApps.filter((a: any) => a.stage === 'lost').map((app: any, i: number) => (
                       <div key={app.id} className={i > 0 ? 'border-t border-border/30 pt-2 mt-2' : ''}>
                         <LoanCard app={app} stage="lost"
                           onDragStart={handleDragStart} onDragEnd={handleDragEnd}
@@ -475,8 +579,9 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
           </div>
         )}
 
-        {activeView === "disbursement" && <LoanDisbursementBook applications={applications} />}
-        {activeView === "after_sales" && <LoanAfterSales applications={applications} />}
+        {activeView === "disbursement" && <LoanDisbursementBook applications={dateFilteredApps} />}
+        {activeView === "after_sales" && <LoanAfterSales applications={dateFilteredApps} />}
+        {activeView === "performance" && <LoanPerformanceDashboard applications={dateFilteredApps} dateFilter={dateFilter} />}
         {activeView === "bulk_tools" && (
           <div className="text-center py-12">
             <Wrench className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
