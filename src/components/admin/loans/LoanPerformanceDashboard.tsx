@@ -116,6 +116,21 @@ export function LoanPerformanceDashboard({ applications, dateFilter }: LoanPerfo
       .sort((a, b) => b.value - a.value);
   }, [applications]);
 
+  // ── Executive stats for leaderboard ──
+  const executiveStats = useMemo(() =>
+    teamPerf.map(t => ({
+      name: t.name,
+      totalLeads: t.total,
+      wonDeals: t.disbursed,
+      lostDeals: t.lost,
+      revenue: t.value,
+      conversionRate: t.total > 0 ? (t.disbursed / t.total) * 100 : 0,
+    })),
+    [teamPerf]
+  );
+
+  const currentMonth = useMemo(() => format(new Date(), "yyyy-MM"), []);
+
   // ── Won Cases ──
   const wonCases = useMemo(() =>
     disbursedApps
