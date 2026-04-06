@@ -3,6 +3,8 @@ import EMICalculator from "@/components/EMICalculator";
 import { LoanQuoteHistory } from "./LoanQuoteHistory";
 import { Upload } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { LoanPerformanceDashboard } from "./LoanPerformanceDashboard";
+import { startOfDay, startOfWeek, startOfMonth, isAfter } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useRealtimeTable } from "@/hooks/useRealtimeSync";
 import { useAuth } from "@/hooks/useAuth";
