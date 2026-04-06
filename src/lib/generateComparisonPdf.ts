@@ -18,6 +18,8 @@ interface ComparisonPDFData {
   principal: number;
   tenure: number;
   banks: BankComparison[];
+  customerName?: string;
+  customerPhone?: string;
 }
 
 const fmt = (n: number) => {
@@ -83,6 +85,25 @@ export const generateComparisonPdf = (data: ComparisonPDFData, returnDoc?: boole
     doc.setTextColor(...orange);
     doc.text(data.carName + (data.variantName ? ` - ${data.variantName}` : ""), margin, y);
     y += 8;
+  }
+
+  // ---- Customer Details ----
+  if (data.customerName || data.customerPhone) {
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(margin, y, usable, 16, 3, 3, "F");
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(margin, y, usable, 16, 3, 3, "S");
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...gray);
+    doc.text("PREPARED FOR", margin + 6, y + 5);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...navy);
+    let custLine = data.customerName || "";
+    if (data.customerPhone) custLine += (custLine ? "  |  " : "") + data.customerPhone;
+    doc.text(custLine, margin + 6, y + 12);
+    y += 20;
   }
 
   // ---- Loan Summary Box ----
