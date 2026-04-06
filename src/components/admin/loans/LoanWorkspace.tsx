@@ -22,7 +22,7 @@ import {
   Banknote, Plus, Phone, Car, GripVertical, IndianRupee,
   PhoneCall, MessageCircle, CheckCircle2, XCircle, Building2,
   FileText, AlertTriangle, Clock, TrendingUp, Users, FileSpreadsheet,
-  BookOpen, HeartHandshake, Wrench
+  BookOpen, HeartHandshake, Wrench, BarChart3, Filter, X
 } from "lucide-react";
 import { LeadImportDialog } from "../shared/LeadImportDialog";
 import { StageNotificationBanner, buildLoanNotifications } from "../shared/StageNotificationBanner";
