@@ -7162,6 +7162,7 @@ export type Database = {
       hsrp_bookings: {
         Row: {
           address: string | null
+          assigned_to: string | null
           call_attempts: number | null
           call_remarks: string | null
           call_status: string | null
@@ -7209,6 +7210,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          assigned_to?: string | null
           call_attempts?: number | null
           call_remarks?: string | null
           call_status?: string | null
@@ -7256,6 +7258,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          assigned_to?: string | null
           call_attempts?: number | null
           call_remarks?: string | null
           call_status?: string | null

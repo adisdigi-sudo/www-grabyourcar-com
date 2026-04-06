@@ -1,16 +1,69 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, CheckCircle2, ShoppingCart, LayoutDashboard, Search, ClipboardCheck, Send } from "lucide-react";
+import { Shield, CheckCircle2, ShoppingCart, LayoutDashboard, Search, ClipboardCheck, Send, TrendingUp, Calendar } from "lucide-react";
 import { HSRPWorkspace } from "../hsrp/HSRPWorkspace";
 import { HSRPAbandonedCarts } from "../hsrp/HSRPAbandonedCarts";
 import { HSRPOrderTracker } from "@/components/hsrp/HSRPOrderTracker";
 import { HSRPComplianceChecker } from "@/components/hsrp/HSRPComplianceChecker";
+import { HSRPPerformanceDashboard } from "../hsrp/HSRPPerformanceDashboard";
 import { OmniMessagingWorkspace } from "../shared/OmniMessagingWorkspace";
+import { startOfDay, subDays, startOfMonth } from "date-fns";
+
+const ORDER_MAP: Record<string, string> = {
+  pending: "new_booking", new_booking: "new_booking",
+  verification: "verification", verifying: "verification", contacted: "verification",
+  payment: "payment", payment_pending: "payment",
+  scheduled: "scheduled", confirmed: "scheduled",
+  installation: "installation", in_progress: "installation", fitting: "installation",
+  completed: "completed", delivered: "completed", done: "completed",
+};
+const normalizeStage = (s: string | null) => ORDER_MAP[s || "pending"] || "new_booking";
+
+const DATE_FILTERS = [
+  { value: "all", label: "All Time" },
+  { value: "today", label: "Today" },
+  { value: "7days", label: "7D" },
+  { value: "30days", label: "30D" },
+  { value: "this_month", label: "This Month" },
+];
 
 export function HSRPVerticalWorkspace() {
   const [tab, setTab] = useState("pipeline");
+  const [dateFilter, setDateFilter] = useState("all");
+
+  const { data: allBookings = [] } = useQuery({
+    queryKey: ["hsrp-pipeline-perf"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("hsrp_bookings")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data || []).map((b: any) => ({
+        ...b,
+        pipeline_stage: b.pipeline_stage || normalizeStage(b.order_status),
+      }));
+    },
+  });
+
+  const filteredBookings = useMemo(() => {
+    if (dateFilter === "all") return allBookings;
+    const now = new Date();
+    let cutoff: Date;
+    switch (dateFilter) {
+      case "today": cutoff = startOfDay(now); break;
+      case "7days": cutoff = subDays(now, 7); break;
+      case "30days": cutoff = subDays(now, 30); break;
+      case "this_month": cutoff = startOfMonth(now); break;
+      default: return allBookings;
+    }
+    return allBookings.filter((b: any) => new Date(b.created_at) >= cutoff);
+  }, [allBookings, dateFilter]);
 
   return (
     <div className="space-y-4">
@@ -34,15 +87,18 @@ export function HSRPVerticalWorkspace() {
       </Card>
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
+        <TabsList className="w-full grid grid-cols-5">
           <TabsTrigger value="pipeline" className="gap-1.5">
             <LayoutDashboard className="h-4 w-4" /> Pipeline
           </TabsTrigger>
           <TabsTrigger value="abandoned" className="gap-1.5">
-            <ShoppingCart className="h-4 w-4" /> Abandoned Carts
+            <ShoppingCart className="h-4 w-4" /> Abandoned
+          </TabsTrigger>
+          <TabsTrigger value="performance" className="gap-1.5">
+            <TrendingUp className="h-4 w-4" /> Performance
           </TabsTrigger>
           <TabsTrigger value="tools" className="gap-1.5">
-            <ClipboardCheck className="h-4 w-4" /> Customer Tools
+            <ClipboardCheck className="h-4 w-4" /> Tools
           </TabsTrigger>
           <TabsTrigger value="messaging" className="gap-1.5">
             <Send className="h-4 w-4" /> Messaging
@@ -53,6 +109,20 @@ export function HSRPVerticalWorkspace() {
         </TabsContent>
         <TabsContent value="abandoned">
           <HSRPAbandonedCarts />
+        </TabsContent>
+        <TabsContent value="performance" className="mt-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <div className="flex gap-1">
+              {DATE_FILTERS.map(f => (
+                <Button key={f.value} size="sm" variant={dateFilter === f.value ? "default" : "outline"}
+                  className="h-7 text-xs px-2.5" onClick={() => setDateFilter(f.value)}>
+                  {f.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+          <HSRPPerformanceDashboard bookings={filteredBookings} dateFilter={dateFilter} />
         </TabsContent>
         <TabsContent value="tools" className="space-y-4">
           <Card>
