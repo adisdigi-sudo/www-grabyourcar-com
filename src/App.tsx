@@ -75,6 +75,7 @@ const ADMIN_ROUTE_PREFIXES = [
   "/crm",
   "/crm-auth",
   "/crm-reset-password",
+  "/document-viewer",
   "/workspace",
   "/admin",
   "/admin-auth",

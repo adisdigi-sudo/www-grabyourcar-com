@@ -10,6 +10,7 @@ export type InsuranceStorageFileOptions = {
 };
 
 const VIEWER_ROUTE = "/document-viewer";
+const PREVIEW_QUERY_PARAM_PREFIX = "__lovable";
 
 const openUrlInNewTab = (url: string) => {
   const openedWindow = window.open(url, "_blank", "noopener,noreferrer");
@@ -99,12 +100,24 @@ const revokeObjectUrlLater = (objectUrl: string) => {
   window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
 };
 
+const appendPreviewQueryParams = (targetUrl: URL) => {
+  const currentUrl = new URL(window.location.href);
+
+  currentUrl.searchParams.forEach((value, key) => {
+    if (key.startsWith(PREVIEW_QUERY_PARAM_PREFIX) && !targetUrl.searchParams.has(key)) {
+      targetUrl.searchParams.set(key, value);
+    }
+  });
+};
+
 export const buildInsuranceDocumentViewerUrl = (
   options: InsuranceStorageFileOptions,
   mode: "view" | "download" = "view",
 ) => {
   const resolved = resolveInsuranceFileRequest(options);
   const viewerUrl = new URL(VIEWER_ROUTE, window.location.origin);
+
+  appendPreviewQueryParams(viewerUrl);
 
   if (resolved.bucket && resolved.path) {
     viewerUrl.searchParams.set("bucket", resolved.bucket);
