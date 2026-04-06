@@ -28,7 +28,7 @@ const fmt = (n: number) => {
 
 const fmtFull = (n: number) => `Rs. ${n.toLocaleString("en-IN")}`;
 
-export const generateComparisonPdf = (data: ComparisonPDFData) => {
+export const generateComparisonPdf = (data: ComparisonPDFData, returnDoc?: boolean): jsPDF | void => {
   const doc = new jsPDF("p", "mm", "a4");
   const w = 210;
   const margin = 15;
@@ -248,7 +248,10 @@ export const generateComparisonPdf = (data: ComparisonPDFData) => {
   doc.setFont("helvetica", "normal");
   doc.text("MS 228, 2nd Floor, DT Mega Mall, Sector 28, Gurugram, Haryana - 122001", w / 2, footerY + 10, { align: "center" });
 
-  // Save
+  // Save or return
+  if (returnDoc) {
+    return doc;
+  }
   const fileName = `GrabYourCar_EMI_Comparison_${format(new Date(), "ddMMyyyy_HHmm")}.pdf`;
   doc.save(fileName);
 };
