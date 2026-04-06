@@ -166,20 +166,50 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
     [rawApplications]
   );
 
-  const totalApps = applications.length;
-  const inPipeline = applications.filter((a: any) => !['disbursed', 'lost'].includes(a.stage)).length;
-  const disbursed = applications.filter((a: any) => a.stage === 'disbursed').length;
-  const lost = applications.filter((a: any) => a.stage === 'lost').length;
-  const totalValue = applications
+  // ── Date-filtered applications ──
+  const dateFilteredApps = useMemo(() => {
+    if (dateFilter === "all") return applications;
+    const now = new Date();
+    let cutoff: Date;
+    switch (dateFilter) {
+      case "today": cutoff = startOfDay(now); break;
+      case "7days": cutoff = new Date(now.getTime() - 7 * 86400000); break;
+      case "30days": cutoff = new Date(now.getTime() - 30 * 86400000); break;
+      case "this_month": cutoff = startOfMonth(now); break;
+      default: return applications;
+    }
+    return applications.filter((a: any) => isAfter(new Date(a.created_at), cutoff));
+  }, [applications, dateFilter]);
+
+  // ── Stage-filtered applications (for pipeline view) ──
+  const filteredApps = useMemo(() => {
+    if (stageFilter === "all") return dateFilteredApps;
+    if (stageFilter === "in_pipeline") return dateFilteredApps.filter((a: any) => !["disbursed", "lost"].includes(a.stage));
+    if (stageFilter === "disbursed") return dateFilteredApps.filter((a: any) => a.stage === "disbursed");
+    if (stageFilter === "lost") return dateFilteredApps.filter((a: any) => a.stage === "lost");
+    return dateFilteredApps;
+  }, [dateFilteredApps, stageFilter]);
+
+  // KPIs always show from dateFilteredApps (not stage-filtered)
+  const totalApps = dateFilteredApps.length;
+  const inPipeline = dateFilteredApps.filter((a: any) => !['disbursed', 'lost'].includes(a.stage)).length;
+  const disbursed = dateFilteredApps.filter((a: any) => a.stage === 'disbursed').length;
+  const lost = dateFilteredApps.filter((a: any) => a.stage === 'lost').length;
+  const totalValue = dateFilteredApps
     .filter((a: any) => a.stage === 'disbursed')
     .reduce((s: number, a: any) => s + (Number(a.disbursement_amount) || Number(a.loan_amount) || 0), 0);
 
-  const loanNotifications = useMemo(() => buildLoanNotifications(applications), [applications]);
+  const loanNotifications = useMemo(() => buildLoanNotifications(dateFilteredApps), [dateFilteredApps]);
 
   const formatAmount = (amt: number | null) => {
     if (!amt) return '-';
     if (amt >= 100000) return `₹${(amt / 100000).toFixed(1)}L`;
     return `₹${(amt / 1000).toFixed(0)}K`;
+  };
+
+  const handleKpiClick = (filter: StageFilter) => {
+    setStageFilter(prev => prev === filter ? "all" : filter);
+    if (activeView !== "pipeline") setActiveView("pipeline");
   };
 
   // Create lead
