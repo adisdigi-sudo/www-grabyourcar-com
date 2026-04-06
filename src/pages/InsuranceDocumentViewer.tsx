@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { AlertTriangle, Download, ExternalLink, FileText, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PdfCanvasPreview } from "@/components/documents/PdfCanvasPreview";
 import {
   fetchInsuranceStorageFile,
   type InsuranceStorageBucket,
@@ -125,8 +126,6 @@ const InsuranceDocumentViewer = () => {
 
   const isPdf = state.mimeType.includes("pdf") || state.fileName.toLowerCase().endsWith(".pdf");
   const isImage = state.mimeType.startsWith("image/");
-  const pdfPreviewUrl = state.objectUrl ? `${state.objectUrl}#toolbar=1&navpanes=0&view=FitH` : null;
-
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
@@ -183,16 +182,14 @@ const InsuranceDocumentViewer = () => {
                   </Button>
                 </div>
 
-                <div className="h-[78vh] w-full bg-muted/20">
-                  <iframe
-                    src={pdfPreviewUrl || state.objectUrl}
-                    title={state.fileName}
-                    className="h-full w-full bg-background"
-                  />
-                </div>
+                <PdfCanvasPreview
+                  fileUrl={state.objectUrl}
+                  fileName={state.fileName}
+                  onOpenInNewTab={() => window.open(state.objectUrl!, "_blank", "noopener,noreferrer")}
+                />
 
                 <div className="border-t border-border px-4 py-3 text-xs text-muted-foreground">
-                  If your browser blocks inline PDF plugins, use <span className="font-medium text-foreground">Open in new tab</span> or <span className="font-medium text-foreground">Download</span>.
+                  This preview uses in-app canvas rendering to avoid browser PDF plugin blocking. You can still use <span className="font-medium text-foreground">Open in new tab</span> or <span className="font-medium text-foreground">Download</span>.
                 </div>
               </section>
             )}

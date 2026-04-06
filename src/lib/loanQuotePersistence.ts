@@ -52,6 +52,15 @@ export async function persistLoanQuoteHistory(input: PersistLoanQuoteInput) {
   const pdfStoragePath = await uploadLoanQuotePdf(input.doc, input.fileName);
   const quoteRef = `LQ-${Date.now().toString(36).toUpperCase()}`;
   const cleanPhone = normalizePhoneDigits(input.customerPhone);
+  let matchedApplication: {
+    id: string;
+    customer_name: string | null;
+    phone: string | null;
+    email: string | null;
+    car_model: string | null;
+    car_variant: string | null;
+    stage?: string | null;
+  } | null = null;
 
   // 1. Try to find existing loan application by phone
   let resolvedAppId = input.loanApplicationId || null;
@@ -60,15 +69,24 @@ export async function persistLoanQuoteHistory(input: PersistLoanQuoteInput) {
     const phoneSuffix = cleanPhone.slice(-10);
     const { data: matchedApp } = await supabase
       .from("loan_applications")
-      .select("id, stage")
+      .select("id, stage, customer_name, phone, email, car_model, car_variant")
       .or(`phone.ilike.%${phoneSuffix}`)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 
     if (matchedApp) {
+      matchedApplication = matchedApp;
       resolvedAppId = matchedApp.id;
     }
+  } else if (resolvedAppId) {
+    const { data: existingApp } = await supabase
+      .from("loan_applications")
+      .select("id, stage, customer_name, phone, email, car_model, car_variant")
+      .eq("id", resolvedAppId)
+      .maybeSingle();
+
+    matchedApplication = existingApp || null;
   }
 
   // 2. If no existing application, create a new one as "new_lead"
@@ -114,8 +132,22 @@ export async function persistLoanQuoteHistory(input: PersistLoanQuoteInput) {
       console.warn("Loan application auto-create failed:", createError.message);
     } else if (newApp) {
       resolvedAppId = newApp.id;
+      matchedApplication = {
+        id: newApp.id,
+        customer_name: input.customerName,
+        phone: cleanPhone,
+        email: input.customerEmail ?? null,
+        car_model: input.carModel ?? null,
+        car_variant: input.carVariant ?? null,
+      };
     }
   }
+
+  const resolvedCustomerName = input.customerName || matchedApplication?.customer_name || "Customer";
+  const resolvedCustomerPhone = cleanPhone || normalizePhoneDigits(matchedApplication?.phone) || null;
+  const resolvedCustomerEmail = input.customerEmail ?? matchedApplication?.email ?? null;
+  const resolvedCarModel = input.carModel ?? matchedApplication?.car_model ?? null;
+  const resolvedCarVariant = input.carVariant ?? matchedApplication?.car_variant ?? null;
 
   // 3. If existing app found, update offer_details with latest quote
   if (resolvedAppId && input.loanApplicationId !== resolvedAppId) {
@@ -140,8 +172,8 @@ export async function persistLoanQuoteHistory(input: PersistLoanQuoteInput) {
       .from("loan_applications")
       .update({
         offer_details: offerUpdate as any,
-        car_model: input.carModel ?? undefined,
-        car_variant: input.carVariant ?? undefined,
+        car_model: resolvedCarModel ?? undefined,
+        car_variant: resolvedCarVariant ?? undefined,
         loan_amount: input.loanAmount ?? undefined,
         down_payment: input.downPayment ?? undefined,
         interest_rate: input.interestRate ?? undefined,
@@ -153,11 +185,11 @@ export async function persistLoanQuoteHistory(input: PersistLoanQuoteInput) {
 
   // 4. Save to loan_quote_share_history
   const { error: historyError } = await supabase.from("loan_quote_share_history" as any).insert({
-    customer_name: input.customerName,
-    customer_phone: cleanPhone || null,
-    customer_email: input.customerEmail ?? null,
-    car_model: input.carModel ?? null,
-    car_variant: input.carVariant ?? null,
+    customer_name: resolvedCustomerName,
+    customer_phone: resolvedCustomerPhone,
+    customer_email: resolvedCustomerEmail,
+    car_model: resolvedCarModel,
+    car_variant: resolvedCarVariant,
     loan_amount: input.loanAmount ?? null,
     down_payment: input.downPayment ?? null,
     interest_rate: input.interestRate ?? null,
