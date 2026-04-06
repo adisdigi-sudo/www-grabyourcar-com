@@ -3,17 +3,16 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Car, CheckCircle2, Target, Handshake, BarChart3, Send, TrendingUp, Calendar } from "lucide-react";
+import { Car, CheckCircle2, Target, Handshake, BarChart3, Send, TrendingUp } from "lucide-react";
 import { SalesWorkspace } from "../sales/SalesWorkspace";
 import { SalesDealTracker } from "../sales/SalesDealTracker";
 import { SalesRealTimeDashboard } from "../sales/SalesRealTimeDashboard";
 import { SalesPerformanceDashboard } from "../sales/SalesPerformanceDashboard";
 import { OmniMessagingWorkspace } from "../shared/OmniMessagingWorkspace";
-import { startOfDay, subDays, startOfMonth } from "date-fns";
-
-const STAGE_MAP: Record<string, string> = {
+import { DateFilterBar, type DateFilterValue } from "../shared/DateFilterBar";
+import { startOfDay, subDays, startOfMonth, isWithinInterval } from "date-fns";
+import type { DateRange } from "react-day-picker";
   new_lead: "new_lead", new: "new_lead",
   contacted: "contacted", smart_calling: "contacted",
   requirement_understood: "requirement_understood", interested: "requirement_understood", qualified: "requirement_understood",

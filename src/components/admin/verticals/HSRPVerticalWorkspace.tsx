@@ -3,18 +3,17 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, CheckCircle2, ShoppingCart, LayoutDashboard, Search, ClipboardCheck, Send, TrendingUp, Calendar } from "lucide-react";
+import { Shield, CheckCircle2, ShoppingCart, LayoutDashboard, Search, ClipboardCheck, Send, TrendingUp } from "lucide-react";
 import { HSRPWorkspace } from "../hsrp/HSRPWorkspace";
 import { HSRPAbandonedCarts } from "../hsrp/HSRPAbandonedCarts";
 import { HSRPOrderTracker } from "@/components/hsrp/HSRPOrderTracker";
 import { HSRPComplianceChecker } from "@/components/hsrp/HSRPComplianceChecker";
 import { HSRPPerformanceDashboard } from "../hsrp/HSRPPerformanceDashboard";
 import { OmniMessagingWorkspace } from "../shared/OmniMessagingWorkspace";
-import { startOfDay, subDays, startOfMonth } from "date-fns";
-
-const ORDER_MAP: Record<string, string> = {
+import { DateFilterBar, type DateFilterValue } from "../shared/DateFilterBar";
+import { startOfDay, subDays, startOfMonth, isWithinInterval } from "date-fns";
+import type { DateRange } from "react-day-picker";
   pending: "new_booking", new_booking: "new_booking",
   verification: "verification", verifying: "verification", contacted: "verification",
   payment: "payment", payment_pending: "payment",
