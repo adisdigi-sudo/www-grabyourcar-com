@@ -9,7 +9,7 @@ interface AdminSubdomainRouterProps {
 
 /**
  * Wrapper component that enforces admin-only routes on admin subdomain.
- * On admin.grabyourcar.com, only /admin, /admin-auth, and /admin-reset-password are accessible.
+ * On admin.grabyourcar.com, only admin-safe routes are accessible.
  * All other routes redirect to /admin-auth (if not logged in) or /admin (if logged in).
  */
 export const AdminSubdomainRouter = ({ children }: AdminSubdomainRouterProps) => {
@@ -34,7 +34,7 @@ export const AdminSubdomainRouter = ({ children }: AdminSubdomainRouterProps) =>
   }
 
   // Define allowed paths on admin subdomain
-  const allowedPaths = ["/crm", "/crm-auth", "/crm-reset-password", "/workspace", "/admin", "/admin-auth", "/admin-reset-password"];
+  const allowedPaths = ["/crm", "/crm-auth", "/crm-reset-password", "/document-viewer", "/workspace", "/admin", "/admin-auth", "/admin-reset-password"];
   const isAllowedPath = allowedPaths.some(
     (path) => location.pathname === path || location.pathname.startsWith(path + "/")
   );
