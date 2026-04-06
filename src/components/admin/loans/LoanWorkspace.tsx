@@ -514,7 +514,7 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
             <ScrollArea className="w-full">
               <div className="flex min-w-max">
                 {pipelineStages.map((stage, colIdx) => {
-                  const stageApps = applications.filter((a: any) => a.stage === stage);
+                  const stageApps = filteredApps.filter((a: any) => a.stage === stage);
                   const stageValue = stageApps.reduce((s: number, a: any) => s + (Number(a.loan_amount) || 0), 0);
                   const isDragOver = dragOverStage === stage;
                   const showDropIndicator = draggingApp && isDragOver;
