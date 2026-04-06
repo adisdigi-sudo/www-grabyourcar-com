@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { appendPreviewQueryParams } from "@/lib/previewRouting";
 
-export type InsuranceStorageBucket = "quote-pdfs" | "policy-documents";
+export type InsuranceStorageBucket = "quote-pdfs" | "policy-documents" | "loan-documents";
 
 export type InsuranceStorageFileOptions = {
   bucket?: InsuranceStorageBucket;
@@ -55,7 +55,7 @@ const withPdfViewerParams = (url: string, fileReference?: string | null) => {
 };
 
 const normalizeBucket = (value?: string | null): InsuranceStorageBucket | undefined => {
-  if (value === "quote-pdfs" || value === "policy-documents") return value;
+  if (value === "quote-pdfs" || value === "policy-documents" || value === "loan-documents") return value;
   return undefined;
 };
 

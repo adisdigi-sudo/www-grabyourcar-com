@@ -204,6 +204,23 @@ function generateStandaloneEMIPdf(
   C: ColorPalette, pageWidth: number, pageHeight: number, margin: number, contentWidth: number
 ) {
   let y = 0;
+  const footerY = pageHeight - 12;
+  const maxContentY = footerY - 8;
+
+  const addContinuationPage = (title: string) => {
+    doc.addPage();
+    doc.setFillColor(...C.primary);
+    doc.rect(0, 0, pageWidth, 14, "F");
+    doc.setFontSize(10);
+    doc.setTextColor(...C.white);
+    doc.setFont("helvetica", "bold");
+    doc.text(title, margin, 9);
+    y = 22;
+  };
+
+  const ensureSpace = (neededSpace: number, title = "Car Loan EMI Plan") => {
+    if (y + neededSpace > maxContentY) addContinuationPage(title);
+  };
 
   // ── HEADER ──
   const headerH = 44;
@@ -226,6 +243,7 @@ function generateStandaloneEMIPdf(
 
   // ── CUSTOMER DETAILS ──
   if (data.customerName || data.customerPhone) {
+    ensureSpace(24);
     const custBoxH = 18;
     doc.setFillColor(248, 250, 252);
     doc.roundedRect(margin, y, contentWidth, custBoxH, 3, 3, "F");
@@ -246,6 +264,7 @@ function generateStandaloneEMIPdf(
 
   // ── CAR MODEL ──
   if (data.carName) {
+    ensureSpace(12);
     doc.setFontSize(12);
     doc.setTextColor(...C.primary);
     doc.setFont("helvetica", "bold");
@@ -258,6 +277,7 @@ function generateStandaloneEMIPdf(
   const heroH = 56;
   const heroX = margin + 16;
   const heroW = contentWidth - 32;
+  ensureSpace(heroH + 18);
 
   // Rounded border box
   doc.setDrawColor(...C.primary);
@@ -289,6 +309,7 @@ function generateStandaloneEMIPdf(
   ];
 
   const rowH = 14;
+  ensureSpace(rows.length * rowH + 26, "Loan Summary");
   rows.forEach((row, i) => {
     const rowY = y + i * rowH;
 
@@ -317,6 +338,7 @@ function generateStandaloneEMIPdf(
   y += rows.length * rowH + 18;
 
   // ── DOCUMENTS REQUIRED ──
+  ensureSpace(126, "Documents Required");
   doc.setFontSize(14);
   doc.setTextColor(30, 30, 30);
   doc.setFont("helvetica", "bold");
@@ -397,6 +419,7 @@ function generateStandaloneEMIPdf(
   y += docBoxH + 16;
 
   // ── DISCLAIMER ──
+  ensureSpace(24, "Important Information");
   doc.setDrawColor(200, 205, 210);
   doc.setLineWidth(0.3);
   doc.line(margin, y, pageWidth - margin, y);

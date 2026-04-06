@@ -41,7 +41,8 @@ export const LoanQuoteHistory = ({ applicationId, phone }: LoanQuoteHistoryProps
   const handleViewPdf = (storagePath: string) => {
     if (!storagePath) return;
     void openInsuranceStorageFile({
-      url: supabase.storage.from("loan-documents").getPublicUrl(storagePath).data.publicUrl,
+      bucket: "loan-documents",
+      path: storagePath,
       fileName: storagePath.split("/").pop() || "loan-quote.pdf",
     }).catch(() => {
       toast.error("Could not open PDF");

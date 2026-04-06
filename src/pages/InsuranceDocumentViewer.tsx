@@ -17,7 +17,7 @@ type ViewerState = {
 };
 
 const isValidBucket = (value?: string | null): value is InsuranceStorageBucket => {
-  return value === "quote-pdfs" || value === "policy-documents";
+  return value === "quote-pdfs" || value === "policy-documents" || value === "loan-documents";
 };
 
 const InsuranceDocumentViewer = () => {
@@ -132,7 +132,7 @@ const InsuranceDocumentViewer = () => {
       <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 md:px-6">
           <div className="min-w-0">
-            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Insurance Document Viewer</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Document Viewer</p>
             <h1 className="truncate text-sm font-semibold md:text-base">{state.fileName}</h1>
           </div>
           <div className="flex items-center gap-2">
