@@ -375,37 +375,15 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
           </div>
 
           {/* Date Filter Bar */}
-          <div className="flex items-center gap-2 mt-4 flex-wrap">
-            <Filter className="h-3.5 w-3.5 text-white/60" />
-            {([
-              { key: "today", label: "Today" },
-              { key: "7days", label: "7 Days" },
-              { key: "30days", label: "30 Days" },
-              { key: "this_month", label: "This Month" },
-              { key: "all", label: "All Time" },
-            ] as { key: DateFilter; label: string }[]).map(df => (
-              <button
-                key={df.key}
-                onClick={() => setDateFilter(df.key)}
-                className={cn(
-                  "text-[11px] px-3 py-1 rounded-full font-medium transition-all",
-                  dateFilter === df.key
-                    ? "bg-white text-teal-800 shadow-sm"
-                    : "bg-white/10 text-white/80 hover:bg-white/20"
-                )}
-              >
-                {df.label}
-              </button>
-            ))}
-            {(stageFilter !== "all" || dateFilter !== "all") && (
-              <button
-                onClick={() => { setStageFilter("all"); setDateFilter("all"); }}
-                className="ml-auto text-[11px] flex items-center gap-1 text-white/70 hover:text-white bg-white/10 rounded-full px-2 py-1"
-              >
-                <X className="h-3 w-3" /> Clear Filters
-              </button>
-            )}
-          </div>
+          <DateFilterBar
+            dateFilter={dateFilter}
+            onDateFilterChange={setDateFilter}
+            customRange={customRange}
+            onCustomRangeChange={setCustomRange}
+            variant="dark"
+            showClear={stageFilter !== "all" || dateFilter !== "all"}
+            onClear={() => { setStageFilter("all"); setDateFilter("all"); setCustomRange(undefined); }}
+          />
         </div>
       </div>
 
