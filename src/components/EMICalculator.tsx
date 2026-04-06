@@ -6,9 +6,11 @@ import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calculator, IndianRupee, Percent, Calendar, FileText, MessageCircle, TrendingDown, Building2, Download, Share2, Plus, X } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Calculator, IndianRupee, Percent, Calendar, FileText, MessageCircle, TrendingDown, Building2, Download, Share2, Plus, X, User, Phone } from "lucide-react";
 import { generateEMIPdf, generateEMIWhatsAppMessage, EMIData, OnRoadPriceBreakup } from "@/lib/generateEMIPdf";
 import { generateComparisonPdf } from "@/lib/generateComparisonPdf";
+import { persistLoanQuoteHistory } from "@/lib/loanQuotePersistence";
 import { toast } from "sonner";
 
 interface EMICalculatorProps {
@@ -70,6 +72,14 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
     { id: "3", bankName: "ICICI Bank", interestRate: 9.0, processingFee: 2500 },
   ]);
   const [showComparison, setShowComparison] = useState(false);
+
+  // Customer capture for lead creation
+  const [showCustomerDialog, setShowCustomerDialog] = useState(false);
+  const [pendingShareMethod, setPendingShareMethod] = useState<"download" | "whatsapp" | "comparison">("download");
+  const [custName, setCustName] = useState("");
+  const [custPhone, setCustPhone] = useState("");
+  const [custEmail, setCustEmail] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   const calcEMI = (principal: number, rate: number, months: number) => {
     if (principal <= 0 || months <= 0) return { emi: 0, totalPayment: 0, totalInterest: 0 };
@@ -140,7 +150,18 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
     setBankColumns(prev => [...prev, { id: Date.now().toString(), bankName: nextBank, interestRate: 9.0, processingFee: 0 }]);
   };
 
-  const handleDownloadPdf = () => {
+  const openCustomerCapture = (method: "download" | "whatsapp" | "comparison") => {
+    setPendingShareMethod(method);
+    setShowCustomerDialog(true);
+  };
+
+  const handleConfirmShare = async () => {
+    if (!custName.trim() || !custPhone.trim() || custPhone.replace(/\D/g, "").length < 10) {
+      toast.error("Please enter your name and valid phone number");
+      return;
+    }
+
+    setIsSaving(true);
     try {
       const data: EMIData = {
         loanAmount, downPayment, loanPrincipal: principal,
@@ -148,42 +169,66 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
         totalPayment: emiDetails.totalPayment, totalInterest: emiDetails.totalInterest,
         carName, variantName, onRoadPrice, selectedColor, selectedCity,
       };
-      generateEMIPdf(data);
-      toast.success("EMI estimate PDF downloaded!");
-    } catch { toast.error("Failed to generate PDF"); }
-  };
 
-  const handleDownloadComparisonPdf = () => {
-    try {
-      generateComparisonPdf({
-        carName: carName || "Car Loan",
-        variantName,
-        loanAmount,
-        downPayment,
-        principal,
-        tenure,
-        banks: bankEMIs.map(b => ({
-          bankName: b.bankName,
-          interestRate: b.interestRate,
-          processingFee: b.processingFee,
-          emi: b.emi,
-          totalPayment: b.totalPayment,
-          totalInterest: b.totalInterest,
-        })),
-      });
-      toast.success("Comparison PDF downloaded!");
-    } catch { toast.error("Failed to generate comparison PDF"); }
-  };
+      if (pendingShareMethod === "download") {
+        const doc = await generateEMIPdf(data, undefined, true);
+        if (doc) {
+          await persistLoanQuoteHistory({
+            doc, fileName: `EMI_${custName.replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.pdf`,
+            shareMethod: "download", customerName: custName, customerPhone: custPhone, customerEmail: custEmail || null,
+            carModel: carName || null, carVariant: variantName || null,
+            loanAmount: principal, downPayment, interestRate, tenureMonths: tenure,
+            emiAmount: emiDetails.emi, totalPayment: emiDetails.totalPayment, totalInterest: emiDetails.totalInterest,
+            source: "website",
+          });
+          doc.save(`EMI_Estimate_${custName.replace(/\s+/g, "_")}.pdf`);
+          toast.success("EMI PDF downloaded & quote saved!");
+        }
+      } else if (pendingShareMethod === "whatsapp") {
+        const doc = await generateEMIPdf(data, undefined, true);
+        if (doc) {
+          await persistLoanQuoteHistory({
+            doc, fileName: `EMI_${custName.replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.pdf`,
+            shareMethod: "whatsapp", customerName: custName, customerPhone: custPhone, customerEmail: custEmail || null,
+            carModel: carName || null, carVariant: variantName || null,
+            loanAmount: principal, downPayment, interestRate, tenureMonths: tenure,
+            emiAmount: emiDetails.emi, totalPayment: emiDetails.totalPayment, totalInterest: emiDetails.totalInterest,
+            source: "website",
+          });
+        }
+        const message = generateEMIWhatsAppMessage(data);
+        window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank");
+        toast.success("Quote saved & WhatsApp opened!");
+      } else if (pendingShareMethod === "comparison") {
+        const banks = bankEMIs.map(b => ({
+          bankName: b.bankName, interestRate: b.interestRate, processingFee: b.processingFee,
+          emi: b.emi, totalPayment: b.totalPayment, totalInterest: b.totalInterest,
+        }));
+        const doc = generateComparisonPdf({
+          carName: carName || "Car Loan", variantName, loanAmount, downPayment, principal, tenure, banks,
+        }, true) as import("jspdf").default | undefined;
+        if (doc) {
+          await persistLoanQuoteHistory({
+            doc, fileName: `EMI_Comparison_${custName.replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.pdf`,
+            shareMethod: "comparison_pdf", customerName: custName, customerPhone: custPhone, customerEmail: custEmail || null,
+            carModel: carName || null, carVariant: variantName || null,
+            loanAmount: principal, downPayment, interestRate, tenureMonths: tenure,
+            emiAmount: emiDetails.emi, totalPayment: emiDetails.totalPayment, totalInterest: emiDetails.totalInterest,
+            bankComparison: banks, source: "website",
+          });
+          doc.save(`EMI_Comparison_${custName.replace(/\s+/g, "_")}.pdf`);
+          toast.success("Comparison PDF downloaded & quote saved!");
+        }
+      }
 
-  const handleShareWhatsApp = () => {
-    const data: EMIData = {
-      loanAmount, downPayment, loanPrincipal: principal,
-      interestRate, tenure, emi: emiDetails.emi,
-      totalPayment: emiDetails.totalPayment, totalInterest: emiDetails.totalInterest,
-      carName, variantName, onRoadPrice, selectedColor, selectedCity,
-    };
-    const message = generateEMIWhatsAppMessage(data);
-    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank");
+      setShowCustomerDialog(false);
+      setCustName(""); setCustPhone(""); setCustEmail("");
+    } catch (err: any) {
+      console.error("Quote share error:", err);
+      toast.error("Quote saved but there was an issue. PDF still downloaded.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const quickEmiTable = useMemo(() => {
@@ -203,6 +248,7 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
   }, [bankEMIs]);
 
   return (
+    <>
     <section className="py-12 bg-gradient-to-br from-muted/50 via-background to-muted/30">
       <div className="container mx-auto px-4">
         <div className="max-w-6xl mx-auto">
@@ -377,7 +423,7 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
                   {/* CTA Buttons */}
                   <div className="mt-auto space-y-3">
                     <div className="grid grid-cols-2 gap-2">
-                      <Button onClick={handleDownloadPdf} className="h-11 font-semibold bg-gradient-to-r from-primary to-primary/90">
+                      <Button onClick={() => openCustomerCapture("download")} className="h-11 font-semibold bg-gradient-to-r from-primary to-primary/90">
                         <Download className="w-4 h-4 mr-2" /> Download PDF
                       </Button>
                       <Button variant="outline" onClick={() => setShowComparison(!showComparison)} className="h-11 font-semibold">
@@ -385,7 +431,7 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
                       </Button>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
-                      <Button variant="outline" onClick={handleShareWhatsApp} className="h-11 font-semibold">
+                      <Button variant="outline" onClick={() => openCustomerCapture("whatsapp")} className="h-11 font-semibold">
                         <Share2 className="w-4 h-4 mr-2" /> Share
                       </Button>
                       <a href={`https://wa.me/919855924442?text=Hi%20Grabyourcar!%20I%20need%20a%20car%20loan%20of%20${formatCurrency(principal)}%20for%20${tenure}%20months.`} target="_blank" rel="noopener noreferrer">
@@ -433,7 +479,7 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
                         <Plus className="w-4 h-4 mr-1" /> Add Bank
                       </Button>
                     )}
-                    <Button onClick={handleDownloadComparisonPdf} size="sm" className="bg-gradient-to-r from-primary to-primary/80">
+                    <Button onClick={() => openCustomerCapture("comparison")} size="sm" className="bg-gradient-to-r from-primary to-primary/80">
                       <Download className="w-4 h-4 mr-1" /> Download Comparison PDF
                     </Button>
                   </div>
@@ -540,6 +586,61 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
         </div>
       </div>
     </section>
+
+    {/* Customer Details Capture Dialog */}
+    <Dialog open={showCustomerDialog} onOpenChange={setShowCustomerDialog}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <User className="w-5 h-5" />
+            Get Your Personalized EMI Quote
+          </DialogTitle>
+          <DialogDescription>
+            Enter your details to receive the EMI estimate. Our team will also reach out with the best loan offers.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div>
+            <Label className="text-sm font-medium">Full Name *</Label>
+            <Input
+              placeholder="e.g. Rahul Sharma"
+              value={custName}
+              onChange={e => setCustName(e.target.value)}
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <Label className="text-sm font-medium">Phone Number *</Label>
+            <Input
+              placeholder="e.g. 9876543210"
+              value={custPhone}
+              onChange={e => setCustPhone(e.target.value.replace(/[^0-9+]/g, "").slice(0, 12))}
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <Label className="text-sm font-medium">Email (optional)</Label>
+            <Input
+              placeholder="e.g. rahul@email.com"
+              value={custEmail}
+              onChange={e => setCustEmail(e.target.value)}
+              className="mt-1"
+            />
+          </div>
+          <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground">
+            <p>📋 EMI: <span className="font-bold text-foreground">Rs. {emiDetails.emi.toLocaleString("en-IN")}/mo</span> for {tenure} months</p>
+            <p>💰 Loan: <span className="font-bold text-foreground">{formatCurrency(principal)}</span> @ {interestRate}% p.a.</p>
+          </div>
+        </div>
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={() => setShowCustomerDialog(false)}>Cancel</Button>
+          <Button onClick={handleConfirmShare} disabled={isSaving} className="gap-2">
+            {isSaving ? "Saving..." : pendingShareMethod === "whatsapp" ? "Share via WhatsApp" : "Download PDF"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 };
 
