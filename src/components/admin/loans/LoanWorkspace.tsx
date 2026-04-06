@@ -1,5 +1,6 @@
-import React, { useState, useCallback, useEffect, useMemo } from "react";
+import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import EMICalculator from "@/components/EMICalculator";
+import { Upload } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useRealtimeTable } from "@/hooks/useRealtimeSync";
@@ -601,6 +602,33 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
   const [disbAmount, setDisbAmount] = useState(application?.disbursement_amount?.toString() || '');
   const [disbDate, setDisbDate] = useState(application?.disbursement_date || '');
   const [disbBank, setDisbBank] = useState(application?.lender_name || '');
+  const [sanctionFile, setSanctionFile] = useState<File | null>(null);
+  const [disbursementFile, setDisbursementFile] = useState<File | null>(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
+
+  // ── Auto-calculate EMI when loan_amount + interest_rate + tenure change ──
+  useEffect(() => {
+    const P = Number(application?.loan_amount || 0);
+    const annualRate = Number(interestRate);
+    const months = Number(tenureMonths);
+    if (P > 0 && annualRate > 0 && months > 0) {
+      const r = annualRate / 12 / 100;
+      const emi = (P * r * Math.pow(1 + r, months)) / (Math.pow(1 + r, months) - 1);
+      setEmiAmount(Math.round(emi).toString());
+    }
+  }, [interestRate, tenureMonths, application?.loan_amount]);
+
+  // ── File upload helper ──
+  const uploadDocument = async (file: File, folder: string): Promise<string> => {
+    const ext = file.name.split('.').pop()?.toLowerCase() || 'pdf';
+    const allowed = ['pdf', 'jpg', 'jpeg', 'png'];
+    if (!allowed.includes(ext)) throw new Error('Only PDF, JPG, PNG files are allowed');
+    const filePath = `${folder}/${application.id}_${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from('loan-documents').upload(filePath, file);
+    if (error) throw error;
+    const { data: urlData } = supabase.storage.from('loan-documents').getPublicUrl(filePath);
+    return urlData.publicUrl;
+  };
 
   const currentStage = application?.stage || 'new_lead';
   const loanTypeInfo = LOAN_TYPES.find(t => t.value === application?.loan_type);
@@ -657,26 +685,55 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
     });
   };
 
-  const handleLoanAppSave = () => {
+  const handleLoanAppSave = async () => {
     if (!loanStatus) { toast.error("Select loan status"); return; }
     if (loanStatus === 'rejected' && !rejectionReason.trim()) { toast.error("Rejection reason required"); return; }
     if (loanStatus === 'approved' && !sanctionAmount) { toast.error("Sanction amount required"); return; }
+    if (loanStatus === 'approved' && !sanctionFile && !application.sanction_letter_url) { toast.error("Upload sanction/approval letter"); return; }
+
     const updates: any = {
       stage: loanStatus === 'approved' ? 'loan_application' : 'lost',
       remarks: remarks || (loanStatus === 'approved' ? `Approved: ₹${sanctionAmount}` : `Rejected: ${rejectionReason}`),
     };
-    if (loanStatus === 'approved') { updates.sanction_amount = Number(sanctionAmount); updates.sanction_date = new Date().toISOString(); }
-    else { updates.rejection_reason = rejectionReason; updates.lost_reason = 'Loan not approved'; updates.lost_remarks = rejectionReason; }
+
+    if (loanStatus === 'approved') {
+      updates.sanction_amount = Number(sanctionAmount);
+      updates.sanction_date = new Date().toISOString();
+      if (sanctionFile) {
+        try {
+          setUploadingFile(true);
+          const url = await uploadDocument(sanctionFile, 'sanction-letters');
+          updates.sanction_letter_url = url;
+        } catch (err: any) { toast.error(`Upload failed: ${err.message}`); return; }
+        finally { setUploadingFile(false); }
+      }
+    } else {
+      updates.rejection_reason = rejectionReason;
+      updates.lost_reason = 'Loan not approved';
+      updates.lost_remarks = rejectionReason;
+    }
     updateMutation.mutate(updates);
   };
 
-  const handleDisbursedSave = () => {
+  const handleDisbursedSave = async () => {
     if (!disbAmount || !disbDate || !disbBank) { toast.error("All disbursement details required"); return; }
-    updateMutation.mutate({
+    if (!disbursementFile && !application.disbursement_letter_url) { toast.error("Upload disbursement proof document"); return; }
+
+    const updates: any = {
       stage: 'disbursed', disbursement_amount: Number(disbAmount), disbursement_date: disbDate,
       lender_name: disbBank, incentive_eligible: true, converted_at: new Date().toISOString(),
       remarks: `Disbursed: ₹${disbAmount} via ${disbBank}`,
-    });
+    };
+
+    if (disbursementFile) {
+      try {
+        setUploadingFile(true);
+        const url = await uploadDocument(disbursementFile, 'disbursement-proofs');
+        updates.disbursement_letter_url = url;
+      } catch (err: any) { toast.error(`Upload failed: ${err.message}`); return; }
+      finally { setUploadingFile(false); }
+    }
+    updateMutation.mutate(updates);
   };
 
   const handleLostSave = () => {
@@ -799,7 +856,10 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
               <div className="grid grid-cols-3 gap-3">
                 <div><Label>Interest %</Label><Input type="number" step="0.1" value={interestRate} onChange={e => setInterestRate(e.target.value)} /></div>
                 <div><Label>Tenure (months)</Label><Input type="number" value={tenureMonths} onChange={e => setTenureMonths(e.target.value)} /></div>
-                <div><Label>EMI Amount</Label><Input type="number" value={emiAmount} onChange={e => setEmiAmount(e.target.value)} /></div>
+                <div>
+                  <Label>EMI Amount <span className="text-[9px] text-muted-foreground">(auto-calculated)</span></Label>
+                  <Input type="number" value={emiAmount} readOnly className="bg-muted/50 font-semibold" />
+                </div>
               </div>
               <div><Label>Remarks</Label><Textarea value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="Offer details..." rows={2} /></div>
               <Button onClick={handleOfferSave} disabled={updateMutation.isPending} className="w-full bg-violet-600 hover:bg-violet-700 text-white">
@@ -823,11 +883,28 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
                 </Select>
               </div>
               {loanStatus === 'approved' && <div><Label>Sanction Amount *</Label><Input type="number" value={sanctionAmount} onChange={e => setSanctionAmount(e.target.value)} placeholder="e.g. 750000" /></div>}
+              {loanStatus === 'approved' && (
+                <div>
+                  <Label className="flex items-center gap-1.5">
+                    <Upload className="h-3.5 w-3.5" /> Sanction / Approval Letter * <span className="text-[9px] text-muted-foreground">(PDF, JPG, PNG)</span>
+                  </Label>
+                  {application.sanction_letter_url ? (
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant="outline" className="text-[10px] bg-green-50 text-green-700 border-green-200">✅ Already uploaded</Badge>
+                      <Button variant="link" size="sm" className="text-[10px] h-5 p-0" onClick={() => window.open(application.sanction_letter_url, '_blank')}>View</Button>
+                    </div>
+                  ) : null}
+                  <Input type="file" accept=".pdf,.jpg,.jpeg,.png" className="mt-1" onChange={e => setSanctionFile(e.target.files?.[0] || null)} />
+                  {!sanctionFile && !application.sanction_letter_url && (
+                    <p className="text-[10px] text-red-500 mt-1">⚠ Upload sanction/approval letter to proceed</p>
+                  )}
+                </div>
+              )}
               {loanStatus === 'rejected' && <div><Label>Rejection Reason *</Label><Textarea value={rejectionReason} onChange={e => setRejectionReason(e.target.value)} placeholder="Why was loan rejected?" rows={2} /></div>}
               <div><Label>Remarks</Label><Textarea value={remarks} onChange={e => setRemarks(e.target.value)} rows={2} /></div>
-              <Button onClick={handleLoanAppSave} disabled={!loanStatus || updateMutation.isPending}
+              <Button onClick={handleLoanAppSave} disabled={!loanStatus || updateMutation.isPending || uploadingFile || (loanStatus === 'approved' && !sanctionFile && !application.sanction_letter_url)}
                 className={`w-full ${loanStatus === 'rejected' ? 'bg-red-600 hover:bg-red-700' : 'bg-indigo-600 hover:bg-indigo-700'} text-white`}>
-                {updateMutation.isPending ? "Saving..." : loanStatus === 'rejected' ? 'Mark as Rejected (Lost)' : 'Save Approval'}
+                {uploadingFile ? "Uploading..." : updateMutation.isPending ? "Saving..." : loanStatus === 'rejected' ? 'Mark as Rejected (Lost)' : 'Save Approval'}
               </Button>
             </div>
           )}
@@ -848,10 +925,25 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
                 <div className="p-2 rounded bg-background border"><p className="text-muted-foreground">Car</p><p className="font-medium">{application.car_model || '—'}</p></div>
                 <div className="p-2 rounded bg-background border"><p className="text-muted-foreground">Sanction Amount</p><p className="font-medium">{application.sanction_amount ? `₹${(application.sanction_amount / 100000).toFixed(1)}L` : '-'}</p></div>
               </div>
+              <div>
+                <Label className="flex items-center gap-1.5">
+                  <Upload className="h-3.5 w-3.5" /> Disbursement Proof * <span className="text-[9px] text-muted-foreground">(PDF, JPG, PNG)</span>
+                </Label>
+                {application.disbursement_letter_url ? (
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge variant="outline" className="text-[10px] bg-green-50 text-green-700 border-green-200">✅ Already uploaded</Badge>
+                    <Button variant="link" size="sm" className="text-[10px] h-5 p-0" onClick={() => window.open(application.disbursement_letter_url, '_blank')}>View</Button>
+                  </div>
+                ) : null}
+                <Input type="file" accept=".pdf,.jpg,.jpeg,.png" className="mt-1" onChange={e => setDisbursementFile(e.target.files?.[0] || null)} />
+                {!disbursementFile && !application.disbursement_letter_url && (
+                  <p className="text-[10px] text-red-500 mt-1">⚠ Upload disbursement proof to proceed</p>
+                )}
+              </div>
               <div><Label>Remarks</Label><Textarea value={remarks} onChange={e => setRemarks(e.target.value)} rows={2} /></div>
               {currentStage !== 'disbursed' && (
-                <Button onClick={handleDisbursedSave} disabled={updateMutation.isPending} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white">
-                  {updateMutation.isPending ? "Saving..." : "Complete Disbursement & Enable Incentive"}
+                <Button onClick={handleDisbursedSave} disabled={updateMutation.isPending || uploadingFile || (!disbursementFile && !application.disbursement_letter_url)} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white">
+                  {uploadingFile ? "Uploading..." : updateMutation.isPending ? "Saving..." : "Complete Disbursement & Enable Incentive"}
                 </Button>
               )}
             </div>

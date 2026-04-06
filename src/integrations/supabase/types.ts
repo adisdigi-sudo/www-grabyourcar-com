@@ -10486,6 +10486,7 @@ export type Database = {
           remarks: string | null
           sanction_amount: number | null
           sanction_date: string | null
+          sanction_letter_url: string | null
           source: string | null
           stage: string
           stage_updated_at: string | null
@@ -10538,6 +10539,7 @@ export type Database = {
           remarks?: string | null
           sanction_amount?: number | null
           sanction_date?: string | null
+          sanction_letter_url?: string | null
           source?: string | null
           stage?: string
           stage_updated_at?: string | null
@@ -10590,6 +10592,7 @@ export type Database = {
           remarks?: string | null
           sanction_amount?: number | null
           sanction_date?: string | null
+          sanction_letter_url?: string | null
           source?: string | null
           stage?: string
           stage_updated_at?: string | null
