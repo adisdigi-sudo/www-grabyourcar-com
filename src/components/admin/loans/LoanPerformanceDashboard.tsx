@@ -310,7 +310,13 @@ export function LoanPerformanceDashboard({ applications, dateFilter }: LoanPerfo
         </CardContent>
       </Card>
 
-      {/* Won Cases List */}
+      {/* Executive Leaderboard with Targets */}
+      <ExecutiveLeaderboard
+        verticalName="Loans"
+        monthYear={currentMonth}
+        executiveStats={executiveStats}
+      />
+
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
