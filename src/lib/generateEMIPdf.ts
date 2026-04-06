@@ -510,7 +510,27 @@ function generateCarQuotePdf(
 
   y = headerH + 8;
 
-  // VEHICLE INFO
+  // CUSTOMER INFO BOX
+  if (data.customerName || data.customerPhone) {
+    const custBoxH = 18;
+    checkPageBreak(custBoxH + 4);
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(margin, y, contentWidth, custBoxH, 3, 3, "F");
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(margin, y, contentWidth, custBoxH, 3, 3, "S");
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(71, 85, 105);
+    doc.text("PREPARED FOR", margin + 6, y + 5);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(30, 30, 30);
+    let custInfo = data.customerName || "";
+    if (data.customerPhone) custInfo += (custInfo ? "  |  " : "") + data.customerPhone;
+    doc.text(custInfo, margin + 6, y + 13);
+    y += custBoxH + 4;
+  }
+
   if (data.carName) {
     const cleanName = data.carName.replace(/(\w+)\s+\1/gi, '$1');
     const cardH = 30;
