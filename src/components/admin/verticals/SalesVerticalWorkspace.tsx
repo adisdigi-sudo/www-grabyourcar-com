@@ -148,7 +148,6 @@ export function SalesVerticalWorkspace() {
     </div>
   );
 }
-
         <TabsContent value="messaging" className="mt-4">
           <OmniMessagingWorkspace context="Car Sales" showSettings />
         </TabsContent>
