@@ -73,6 +73,14 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
   ]);
   const [showComparison, setShowComparison] = useState(false);
 
+  // Customer capture for lead creation
+  const [showCustomerDialog, setShowCustomerDialog] = useState(false);
+  const [pendingShareMethod, setPendingShareMethod] = useState<"download" | "whatsapp" | "comparison">("download");
+  const [custName, setCustName] = useState("");
+  const [custPhone, setCustPhone] = useState("");
+  const [custEmail, setCustEmail] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
   const calcEMI = (principal: number, rate: number, months: number) => {
     if (principal <= 0 || months <= 0) return { emi: 0, totalPayment: 0, totalInterest: 0 };
     const r = rate / 12 / 100;
