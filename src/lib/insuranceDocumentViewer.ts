@@ -38,6 +38,16 @@ const guessFileNameFromUrl = (url: string, fallback: string) => {
   }
 };
 
+const sanitizeFileName = (value: string | null | undefined, fallback: string) => {
+  const normalized = (value || fallback)
+    .replace(/[\\/:*?"<>|]+/g, "-")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^\.+/, "");
+
+  return normalized || fallback;
+};
+
 const withPdfViewerParams = (url: string, fileReference?: string | null) => {
   const reference = (fileReference || url).toLowerCase();
   if (!reference.endsWith(".pdf") || url.includes("#")) return url;
@@ -80,9 +90,12 @@ export const resolveInsuranceFileRequest = (options: InsuranceStorageFileOptions
   const path = options.path || inferredTarget?.path || null;
   const url = bucket && path ? null : options.url || null;
   const fileName =
-    options.fileName ||
-    (path ? path.split("/").pop() : undefined) ||
-    (url ? guessFileNameFromUrl(url, "document.pdf") : "document.pdf");
+    sanitizeFileName(
+      options.fileName ||
+        (path ? path.split("/").pop() : undefined) ||
+        (url ? guessFileNameFromUrl(url, "document.pdf") : "document.pdf"),
+      "document.pdf",
+    );
 
   return {
     bucket,

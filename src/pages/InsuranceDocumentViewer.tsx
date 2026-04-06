@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { AlertTriangle, Download, FileText, Loader2 } from "lucide-react";
 
+import { PdfCanvasPreview } from "@/components/documents/PdfCanvasPreview";
 import { Button } from "@/components/ui/button";
 import {
   fetchInsuranceStorageFile,
@@ -19,11 +20,6 @@ type ViewerState = {
 
 const isValidBucket = (value?: string | null): value is InsuranceStorageBucket => {
   return value === "quote-pdfs" || value === "policy-documents";
-};
-
-const withPdfToolbar = (url: string, fileName: string, mimeType: string) => {
-  const pdfLike = mimeType.includes("pdf") || fileName.toLowerCase().endsWith(".pdf");
-  return pdfLike ? `${url}#toolbar=1&navpanes=0` : url;
 };
 
 const InsuranceDocumentViewer = () => {
@@ -172,25 +168,11 @@ const InsuranceDocumentViewer = () => {
         {state.status === "ready" && state.objectUrl && (
           <>
             {isPdf && (
-              <div className="overflow-hidden rounded-xl border border-border bg-card">
-                <object
-                  data={withPdfToolbar(state.objectUrl, state.fileName, state.mimeType)}
-                  type={state.mimeType || "application/pdf"}
-                  aria-label={state.fileName}
-                  className="h-[78vh] w-full"
-                >
-                  <div className="flex h-[78vh] flex-col items-center justify-center gap-3 px-6 text-center">
-                    <FileText className="h-6 w-6 text-primary" />
-                    <div className="space-y-1">
-                      <p className="text-sm font-semibold">Inline PDF preview isn’t available in this browser</p>
-                      <p className="text-xs text-muted-foreground">Use download above to save the file, or open it in a new tab.</p>
-                    </div>
-                    <Button variant="outline" size="sm" onClick={() => window.open(state.objectUrl, "_blank", "noopener,noreferrer")}>
-                      Open in new tab
-                    </Button>
-                  </div>
-                </object>
-              </div>
+              <PdfCanvasPreview
+                fileUrl={state.objectUrl}
+                fileName={state.fileName}
+                onOpenInNewTab={() => window.open(state.objectUrl, "_blank", "noopener,noreferrer")}
+              />
             )}
 
             {isImage && (

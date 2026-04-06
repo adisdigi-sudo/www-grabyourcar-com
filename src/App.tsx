@@ -75,7 +75,6 @@ const ADMIN_ROUTE_PREFIXES = [
   "/crm",
   "/crm-auth",
   "/crm-reset-password",
-  "/document-viewer",
   "/workspace",
   "/admin",
   "/admin-auth",
@@ -84,6 +83,11 @@ const ADMIN_ROUTE_PREFIXES = [
 
 const isAdminRoutePath = (pathname: string) =>
   ADMIN_ROUTE_PREFIXES.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+
+const DOCUMENT_VIEWER_ROUTE_PREFIX = "/document-viewer";
+
+const isDocumentViewerPath = (pathname: string) =>
+  pathname === DOCUMENT_VIEWER_ROUTE_PREFIX || pathname.startsWith(`${DOCUMENT_VIEWER_ROUTE_PREFIX}/`);
 
 const LegacyRouteHandler = () => {
   const location = useLocation();
@@ -103,7 +107,8 @@ const LegacyRouteHandler = () => {
 
 const PageViewTracker = () => {
   const location = useLocation();
-  const isAdminExperience = isAdminSubdomain() || isAdminRoutePath(location.pathname);
+  const isAdminExperience =
+    !isDocumentViewerPath(location.pathname) && (isAdminSubdomain() || isAdminRoutePath(location.pathname));
 
   usePageViewTracking(!isAdminExperience);
 
@@ -132,7 +137,9 @@ const PageViewTracker = () => {
 
 const AppRouterShell = () => {
   const location = useLocation();
-  const isAdminExperience = isAdminSubdomain() || isAdminRoutePath(location.pathname);
+  const isAdminExperience =
+    !isDocumentViewerPath(location.pathname) && (isAdminSubdomain() || isAdminRoutePath(location.pathname));
+  const isChromelessExperience = isAdminExperience || isDocumentViewerPath(location.pathname);
 
   return (
     <RouteProviderGate isAdminExperience={isAdminExperience}>
@@ -143,7 +150,7 @@ const AppRouterShell = () => {
           </div>
         }
       >
-        <RouteAwareStructuredData />
+        <RouteAwareStructuredData isChromelessExperience={isChromelessExperience} />
         <PageViewTracker />
         <AdminSubdomainRouter>
           <Routes>
@@ -193,28 +200,23 @@ const AppRouterShell = () => {
             <Route path="/track-order" element={<TrackOrder />} />
             <Route path="*" element={<LegacyRouteHandler />} />
           </Routes>
-          <RouteAwareChrome />
+          <RouteAwareChrome isChromelessExperience={isChromelessExperience} />
         </AdminSubdomainRouter>
       </Suspense>
     </RouteProviderGate>
   );
 };
 
-const RouteAwareStructuredData = () => {
-  const location = useLocation();
-
-  if (isAdminSubdomain() || isAdminRoutePath(location.pathname)) {
+const RouteAwareStructuredData = ({ isChromelessExperience }: { isChromelessExperience: boolean }) => {
+  if (isChromelessExperience) {
     return null;
   }
 
   return <SiteStructuredData />;
 };
 
-const RouteAwareChrome = () => {
-  const location = useLocation();
-  const isAdminExperience = isAdminSubdomain() || isAdminRoutePath(location.pathname);
-
-  if (isAdminExperience) {
+const RouteAwareChrome = ({ isChromelessExperience }: { isChromelessExperience: boolean }) => {
+  if (isChromelessExperience) {
     return null;
   }
 
