@@ -5,16 +5,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
-import { FloatingCompareBar } from "@/components/FloatingCompareBar";
-import { WhatsAppFloatingButton } from "@/components/WhatsAppCTA";
 import { AdminSubdomainRouter } from "@/components/AdminSubdomainRouter";
 import { isAdminSubdomain } from "@/hooks/useAdminSubdomain";
 import { usePageViewTracking } from "@/hooks/usePageViewTracking";
-import { initDynamicTracking } from "@/lib/adTracking";
-import { FloatingCallButton } from "@/components/FloatingCallButton";
-import { CookieConsentBanner } from "@/components/CookieConsentBanner";
 import { resetChunkLoadRecovery } from "@/lib/chunkLoadRecovery";
-import { SiteStructuredData } from "@/components/seo/SiteStructuredData";
 import { RouteProviderGate } from "@/components/app/RouteProviderGate";
 
 // Only the homepage is statically imported for fastest first paint
@@ -26,6 +20,21 @@ const AdminAuth = lazy(() => import("./pages/AdminAuth"));
 const AdminResetPassword = lazy(() => import("./pages/AdminResetPassword"));
 const InsuranceDocumentViewer = lazy(() => import("./pages/InsuranceDocumentViewer"));
 const WorkspaceSelector = lazy(() => import("./pages/WorkspaceSelector"));
+const FloatingCompareBar = lazy(() =>
+  import("./components/FloatingCompareBar").then((module) => ({ default: module.FloatingCompareBar })),
+);
+const WhatsAppFloatingButton = lazy(() =>
+  import("./components/WhatsAppCTA").then((module) => ({ default: module.WhatsAppFloatingButton })),
+);
+const FloatingCallButton = lazy(() =>
+  import("./components/FloatingCallButton").then((module) => ({ default: module.FloatingCallButton })),
+);
+const CookieConsentBanner = lazy(() =>
+  import("./components/CookieConsentBanner").then((module) => ({ default: module.CookieConsentBanner })),
+);
+const SiteStructuredData = lazy(() =>
+  import("./components/seo/SiteStructuredData").then((module) => ({ default: module.SiteStructuredData })),
+);
 
 // Public-facing pages stay lazy-loaded to keep the main site bundle small
 const Cars = lazy(() => import("./pages/Cars"));
@@ -129,9 +138,11 @@ const PageViewTracker = () => {
       return;
     }
 
-    initDynamicTracking().catch((error) => {
-      console.warn("[AdTracking] Startup tracking init failed", error);
-    });
+    import("./lib/adTracking")
+      .then(({ initDynamicTracking }) => initDynamicTracking())
+      .catch((error) => {
+        console.warn("[AdTracking] Startup tracking init failed", error);
+      });
   }, [isAdminExperience]);
 
   return null;
@@ -214,7 +225,11 @@ const RouteAwareStructuredData = ({ isChromelessExperience }: { isChromelessExpe
     return null;
   }
 
-  return <SiteStructuredData />;
+  return (
+    <Suspense fallback={null}>
+      <SiteStructuredData />
+    </Suspense>
+  );
 };
 
 const RouteAwareChrome = ({ isChromelessExperience }: { isChromelessExperience: boolean }) => {
@@ -223,12 +238,14 @@ const RouteAwareChrome = ({ isChromelessExperience }: { isChromelessExperience: 
   }
 
   return (
-    <>
-      <FloatingCompareBar />
-      <WhatsAppFloatingButton />
-      <FloatingCallButton />
-      <CookieConsentBanner />
-    </>
+    <Suspense fallback={null}>
+      <>
+        <FloatingCompareBar />
+        <WhatsAppFloatingButton />
+        <FloatingCallButton />
+        <CookieConsentBanner />
+      </>
+    </Suspense>
   );
 };
 
