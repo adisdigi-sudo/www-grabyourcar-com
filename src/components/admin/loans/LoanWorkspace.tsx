@@ -563,7 +563,7 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
                     </div>
                   </div>
                   <div className={`flex-1 px-1.5 pb-2 min-h-[120px] transition-all ${dragOverStage === 'lost' && draggingApp ? 'bg-red-500/5' : ''}`}>
-                    {applications.filter((a: any) => a.stage === 'lost').slice(0, 5).map((app: any, i: number) => (
+                    {filteredApps.filter((a: any) => a.stage === 'lost').map((app: any, i: number) => (
                       <div key={app.id} className={i > 0 ? 'border-t border-border/30 pt-2 mt-2' : ''}>
                         <LoanCard app={app} stage="lost"
                           onDragStart={handleDragStart} onDragEnd={handleDragEnd}
@@ -579,8 +579,9 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
           </div>
         )}
 
-        {activeView === "disbursement" && <LoanDisbursementBook applications={applications} />}
-        {activeView === "after_sales" && <LoanAfterSales applications={applications} />}
+        {activeView === "disbursement" && <LoanDisbursementBook applications={dateFilteredApps} />}
+        {activeView === "after_sales" && <LoanAfterSales applications={dateFilteredApps} />}
+        {activeView === "performance" && <LoanPerformanceDashboard applications={dateFilteredApps} dateFilter={dateFilter} />}
         {activeView === "bulk_tools" && (
           <div className="text-center py-12">
             <Wrench className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
