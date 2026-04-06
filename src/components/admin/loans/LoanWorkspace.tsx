@@ -173,17 +173,22 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
   // ── Date-filtered applications ──
   const dateFilteredApps = useMemo(() => {
     if (dateFilter === "all") return applications;
+    if (dateFilter === "custom" && customRange?.from && customRange?.to) {
+      return applications.filter((a: any) =>
+        isWithinInterval(new Date(a.created_at), { start: customRange.from!, end: new Date(customRange.to!.getTime() + 86400000 - 1) })
+      );
+    }
     const now = new Date();
     let cutoff: Date;
     switch (dateFilter) {
       case "today": cutoff = startOfDay(now); break;
-      case "7days": cutoff = new Date(now.getTime() - 7 * 86400000); break;
-      case "30days": cutoff = new Date(now.getTime() - 30 * 86400000); break;
+      case "7days": cutoff = subDays(now, 7); break;
+      case "30days": cutoff = subDays(now, 30); break;
       case "this_month": cutoff = startOfMonth(now); break;
       default: return applications;
     }
     return applications.filter((a: any) => isAfter(new Date(a.created_at), cutoff));
-  }, [applications, dateFilter]);
+  }, [applications, dateFilter, customRange]);
 
   // ── Stage-filtered applications (for pipeline view) ──
   const filteredApps = useMemo(() => {
