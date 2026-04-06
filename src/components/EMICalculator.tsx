@@ -422,7 +422,7 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
                   {/* CTA Buttons */}
                   <div className="mt-auto space-y-3">
                     <div className="grid grid-cols-2 gap-2">
-                      <Button onClick={handleDownloadPdf} className="h-11 font-semibold bg-gradient-to-r from-primary to-primary/90">
+                      <Button onClick={() => openCustomerCapture("download")} className="h-11 font-semibold bg-gradient-to-r from-primary to-primary/90">
                         <Download className="w-4 h-4 mr-2" /> Download PDF
                       </Button>
                       <Button variant="outline" onClick={() => setShowComparison(!showComparison)} className="h-11 font-semibold">
@@ -430,7 +430,7 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
                       </Button>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
-                      <Button variant="outline" onClick={handleShareWhatsApp} className="h-11 font-semibold">
+                      <Button variant="outline" onClick={() => openCustomerCapture("whatsapp")} className="h-11 font-semibold">
                         <Share2 className="w-4 h-4 mr-2" /> Share
                       </Button>
                       <a href={`https://wa.me/919855924442?text=Hi%20Grabyourcar!%20I%20need%20a%20car%20loan%20of%20${formatCurrency(principal)}%20for%20${tenure}%20months.`} target="_blank" rel="noopener noreferrer">
@@ -478,7 +478,7 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
                         <Plus className="w-4 h-4 mr-1" /> Add Bank
                       </Button>
                     )}
-                    <Button onClick={handleDownloadComparisonPdf} size="sm" className="bg-gradient-to-r from-primary to-primary/80">
+                    <Button onClick={() => openCustomerCapture("comparison")} size="sm" className="bg-gradient-to-r from-primary to-primary/80">
                       <Download className="w-4 h-4 mr-1" /> Download Comparison PDF
                     </Button>
                   </div>
