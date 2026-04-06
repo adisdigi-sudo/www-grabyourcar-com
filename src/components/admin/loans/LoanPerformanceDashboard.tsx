@@ -1,19 +1,17 @@
 import { useMemo } from "react";
+import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
-  ChartContainer, ChartTooltip, ChartTooltipContent,
-} from "@/components/ui/chart";
-import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, PieChart, Pie, Cell,
-  ResponsiveContainer, LineChart, Line, Tooltip, Legend,
+  ResponsiveContainer, Tooltip, Legend,
 } from "recharts";
 import {
-  IndianRupee, TrendingUp, Users, CheckCircle2, XCircle,
-  ArrowRight, Phone, Car,
+  IndianRupee, TrendingUp, Users, CheckCircle2,
 } from "lucide-react";
-import { STAGE_LABELS, LOAN_STAGES, type LoanStage, normalizeStage } from "./LoanStageConfig";
+import { STAGE_LABELS, LOAN_STAGES, type LoanStage } from "./LoanStageConfig";
+import { ExecutiveLeaderboard } from "../shared/ExecutiveLeaderboard";
 
 interface LoanPerformanceDashboardProps {
   applications: any[];
