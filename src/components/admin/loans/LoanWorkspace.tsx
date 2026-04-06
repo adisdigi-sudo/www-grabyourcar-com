@@ -71,6 +71,7 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
   const [draggingApp, setDraggingApp] = useState<any>(null);
   const [stageFilter, setStageFilter] = useState<StageFilter>("all");
   const [dateFilter, setDateFilter] = useState<DateFilter>("all");
+  const [showWonDialog, setShowWonDialog] = useState(false);
   const [newApp, setNewApp] = useState({
     customer_name: '', phone: '', email: '', loan_amount: '', car_model: '',
     down_payment: '', employment_type: '', monthly_income: '', city: '',
