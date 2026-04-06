@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import EMICalculator from "@/components/EMICalculator";
+import { LoanQuoteHistory } from "./LoanQuoteHistory";
 import { Upload } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -814,6 +815,14 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
               <div className="bg-muted/30 rounded p-2 text-xs whitespace-pre-wrap max-h-24 overflow-y-auto">{application.remarks}</div>
             </div>
           )}
+
+          {/* Quote History */}
+          <div className="rounded-lg border border-border/50 p-3">
+            <p className="text-[10px] text-muted-foreground mb-2 font-medium uppercase tracking-wider flex items-center gap-1.5">
+              <FileText className="h-3 w-3" /> Shared Quotes / Offers
+            </p>
+            <LoanQuoteHistory applicationId={application.id} phone={application.phone} />
+          </div>
 
           {/* SMART CALLING — only for new_lead & smart_calling */}
           {(currentStage === 'new_lead' || currentStage === 'smart_calling') && (
