@@ -6,9 +6,11 @@ import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calculator, IndianRupee, Percent, Calendar, FileText, MessageCircle, TrendingDown, Building2, Download, Share2, Plus, X } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Calculator, IndianRupee, Percent, Calendar, FileText, MessageCircle, TrendingDown, Building2, Download, Share2, Plus, X, User, Phone } from "lucide-react";
 import { generateEMIPdf, generateEMIWhatsAppMessage, EMIData, OnRoadPriceBreakup } from "@/lib/generateEMIPdf";
 import { generateComparisonPdf } from "@/lib/generateComparisonPdf";
+import { persistLoanQuoteHistory } from "@/lib/loanQuotePersistence";
 import { toast } from "sonner";
 
 interface EMICalculatorProps {
