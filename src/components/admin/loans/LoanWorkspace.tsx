@@ -911,13 +911,89 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
             </div>
           )}
 
-          {/* DISBURSED — only for disbursed stage or when explicitly targeting it */}
-          {(currentStage === 'disbursed' || application._targetStage === 'disbursed') && (
+          {/* DISBURSED — Read-only summary when already disbursed */}
+          {currentStage === 'disbursed' && !application._targetStage && (
             <div className="space-y-3 p-4 rounded-lg border border-emerald-500/20 bg-emerald-500/5">
-              <div className="flex items-center gap-2 text-emerald-700 text-sm font-medium"><CheckCircle2 className="h-4 w-4" /> Disbursement Details</div>
-              {currentStage === 'disbursed' && application.incentive_eligible && (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-emerald-700 text-sm font-medium"><CheckCircle2 className="h-4 w-4" /> Disbursement Complete</div>
+                <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px]">🔒 Locked</Badge>
+              </div>
+              {application.incentive_eligible && (
                 <Badge className="bg-green-500/10 text-green-600 border-green-500/20">✅ Incentive Eligible</Badge>
               )}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+                <div className="p-2.5 rounded-lg bg-background border">
+                  <p className="text-[10px] text-muted-foreground mb-0.5">Disbursed Amount</p>
+                  <p className="font-bold text-emerald-600 text-sm">{application.disbursement_amount ? `₹${Number(application.disbursement_amount).toLocaleString('en-IN')}` : '—'}</p>
+                </div>
+                <div className="p-2.5 rounded-lg bg-background border">
+                  <p className="text-[10px] text-muted-foreground mb-0.5">Disbursement Date</p>
+                  <p className="font-semibold">{application.disbursement_date ? new Date(application.disbursement_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</p>
+                </div>
+                <div className="p-2.5 rounded-lg bg-background border">
+                  <p className="text-[10px] text-muted-foreground mb-0.5">Bank / Lender</p>
+                  <p className="font-semibold flex items-center gap-1"><Building2 className="h-3 w-3 text-muted-foreground" />{application.lender_name || '—'}</p>
+                </div>
+                <div className="p-2.5 rounded-lg bg-background border">
+                  <p className="text-[10px] text-muted-foreground mb-0.5">EMI</p>
+                  <p className="font-bold text-primary">{application.emi_amount ? `₹${Math.round(application.emi_amount).toLocaleString('en-IN')}` : '—'}</p>
+                </div>
+                <div className="p-2.5 rounded-lg bg-background border">
+                  <p className="text-[10px] text-muted-foreground mb-0.5">Interest Rate</p>
+                  <p className="font-semibold">{application.interest_rate ? `${application.interest_rate}%` : '—'}</p>
+                </div>
+                <div className="p-2.5 rounded-lg bg-background border">
+                  <p className="text-[10px] text-muted-foreground mb-0.5">Tenure</p>
+                  <p className="font-semibold">{application.tenure_months ? `${application.tenure_months} months` : '—'}</p>
+                </div>
+                <div className="p-2.5 rounded-lg bg-background border">
+                  <p className="text-[10px] text-muted-foreground mb-0.5">Car</p>
+                  <p className="font-semibold">{application.car_model || '—'}</p>
+                </div>
+                <div className="p-2.5 rounded-lg bg-background border">
+                  <p className="text-[10px] text-muted-foreground mb-0.5">Sanction Amount</p>
+                  <p className="font-semibold">{application.sanction_amount ? `₹${Number(application.sanction_amount).toLocaleString('en-IN')}` : '—'}</p>
+                </div>
+                <div className="p-2.5 rounded-lg bg-background border">
+                  <p className="text-[10px] text-muted-foreground mb-0.5">Loan Amount</p>
+                  <p className="font-semibold">{application.loan_amount ? `₹${Number(application.loan_amount).toLocaleString('en-IN')}` : '—'}</p>
+                </div>
+              </div>
+
+              {/* Documents */}
+              <div className="space-y-2">
+                <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Documents</p>
+                <div className="flex flex-wrap gap-2">
+                  {application.sanction_letter_url && (
+                    <Button variant="outline" size="sm" className="text-[10px] h-7 gap-1.5" onClick={() => window.open(application.sanction_letter_url, '_blank')}>
+                      <FileText className="h-3 w-3 text-indigo-500" /> Sanction Letter
+                    </Button>
+                  )}
+                  {application.disbursement_letter_url && (
+                    <Button variant="outline" size="sm" className="text-[10px] h-7 gap-1.5" onClick={() => window.open(application.disbursement_letter_url, '_blank')}>
+                      <FileText className="h-3 w-3 text-emerald-500" /> Disbursement Proof
+                    </Button>
+                  )}
+                  {!application.sanction_letter_url && !application.disbursement_letter_url && (
+                    <p className="text-[10px] text-muted-foreground">No documents uploaded</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Remarks */}
+              {application.remarks && (
+                <div className="rounded-lg border p-2.5 bg-background">
+                  <p className="text-[10px] text-muted-foreground mb-1">Remarks</p>
+                  <p className="text-xs whitespace-pre-wrap">{application.remarks}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* DISBURSED — Entry form when moving TO disbursed */}
+          {currentStage !== 'disbursed' && application._targetStage === 'disbursed' && (
+            <div className="space-y-3 p-4 rounded-lg border border-emerald-500/20 bg-emerald-500/5">
+              <div className="flex items-center gap-2 text-emerald-700 text-sm font-medium"><CheckCircle2 className="h-4 w-4" /> Disbursement Details</div>
               <div className="grid grid-cols-2 gap-3">
                 <div><Label>Disbursement Amount *</Label><Input type="number" value={disbAmount} onChange={e => setDisbAmount(e.target.value)} /></div>
                 <div><Label>Disbursement Date *</Label><Input type="date" value={disbDate} onChange={e => setDisbDate(e.target.value)} /></div>
@@ -943,11 +1019,9 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
                 )}
               </div>
               <div><Label>Remarks</Label><Textarea value={remarks} onChange={e => setRemarks(e.target.value)} rows={2} /></div>
-              {currentStage !== 'disbursed' && (
-                <Button onClick={handleDisbursedSave} disabled={updateMutation.isPending || uploadingFile || (!disbursementFile && !application.disbursement_letter_url)} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white">
-                  {uploadingFile ? "Uploading..." : updateMutation.isPending ? "Saving..." : "Complete Disbursement & Enable Incentive"}
-                </Button>
-              )}
+              <Button onClick={handleDisbursedSave} disabled={updateMutation.isPending || uploadingFile || (!disbursementFile && !application.disbursement_letter_url)} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white">
+                {uploadingFile ? "Uploading..." : updateMutation.isPending ? "Saving..." : "Complete Disbursement & Enable Incentive"}
+              </Button>
             </div>
           )}
 
