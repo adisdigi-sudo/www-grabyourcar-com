@@ -4,7 +4,9 @@ import { LoanQuoteHistory } from "./LoanQuoteHistory";
 import { Upload } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoanPerformanceDashboard } from "./LoanPerformanceDashboard";
-import { startOfDay, startOfWeek, startOfMonth, isAfter } from "date-fns";
+import { startOfDay, startOfWeek, startOfMonth, subDays, isAfter, isWithinInterval } from "date-fns";
+import type { DateRange } from "react-day-picker";
+import { DateFilterBar, type DateFilterValue } from "../shared/DateFilterBar";
 import { supabase } from "@/integrations/supabase/client";
 import { useRealtimeTable } from "@/hooks/useRealtimeSync";
 import { useAuth } from "@/hooks/useAuth";
@@ -54,7 +56,7 @@ const isUuid = (value: string) =>
 
 // ─── Main Workspace ───
 type LoanWorkspaceView = "pipeline" | "disbursement" | "after_sales" | "bulk_tools" | "emi_calculator" | "performance";
-type DateFilter = "today" | "7days" | "30days" | "this_month" | "all";
+type DateFilter = DateFilterValue;
 type StageFilter = "all" | "in_pipeline" | "disbursed" | "lost";
 interface LoanWorkspaceProps {
   initialView?: LoanWorkspaceView;
@@ -71,6 +73,7 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
   const [draggingApp, setDraggingApp] = useState<any>(null);
   const [stageFilter, setStageFilter] = useState<StageFilter>("all");
   const [dateFilter, setDateFilter] = useState<DateFilter>("all");
+  const [customRange, setCustomRange] = useState<DateRange | undefined>(undefined);
   const [showWonDialog, setShowWonDialog] = useState(false);
   const [newApp, setNewApp] = useState({
     customer_name: '', phone: '', email: '', loan_amount: '', car_model: '',
