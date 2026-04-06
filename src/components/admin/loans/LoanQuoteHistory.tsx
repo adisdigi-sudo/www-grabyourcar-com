@@ -1,6 +1,7 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { openInsuranceStorageFile } from "@/lib/insuranceDocumentViewer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,16 +40,12 @@ export const LoanQuoteHistory = ({ applicationId, phone }: LoanQuoteHistoryProps
 
   const handleViewPdf = (storagePath: string) => {
     if (!storagePath) return;
-    const { data } = supabase.storage.from("loan-documents").getPublicUrl(storagePath);
-    if (data?.publicUrl) {
-      // Open in new tab with PDF viewer params
-      const url = data.publicUrl.toLowerCase().endsWith(".pdf")
-        ? `${data.publicUrl}#toolbar=1&navpanes=0&view=FitH`
-        : data.publicUrl;
-      window.open(url, "_blank", "noopener,noreferrer");
-    } else {
-      toast.error("Could not generate PDF URL");
-    }
+    void openInsuranceStorageFile({
+      url: supabase.storage.from("loan-documents").getPublicUrl(storagePath).data.publicUrl,
+      fileName: storagePath.split("/").pop() || "loan-quote.pdf",
+    }).catch(() => {
+      toast.error("Could not open PDF");
+    });
   };
 
   const formatCurrency = (amt: number) => {
