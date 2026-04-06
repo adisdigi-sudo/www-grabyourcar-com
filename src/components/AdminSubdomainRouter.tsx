@@ -1,6 +1,7 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { isAdminSubdomain } from "@/hooks/useAdminSubdomain";
+import { withPreviewParams } from "@/lib/previewRouting";
 import { Loader2 } from "lucide-react";
 
 interface AdminSubdomainRouterProps {
@@ -46,8 +47,8 @@ export const AdminSubdomainRouter = ({ children }: AdminSubdomainRouterProps) =>
 
   // If not on an allowed path, redirect based on auth status
   if (user) {
-    return <Navigate to="/crm" replace />;
+    return <Navigate to={withPreviewParams("/crm")} replace />;
   } else {
-    return <Navigate to="/crm-auth" replace />;
+    return <Navigate to={withPreviewParams("/crm-auth")} replace />;
   }
 };

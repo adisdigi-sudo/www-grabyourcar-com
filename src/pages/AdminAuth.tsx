@@ -15,6 +15,7 @@ import AdminForgotPassword from "@/components/admin/AdminForgotPassword";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { VerticalPasswordDialog, getVerifiedVerticals, markVerticalVerified } from "@/components/admin/VerticalPasswordDialog";
+import { withPreviewParams } from "@/lib/previewRouting";
 
 type LoginStep =
   | "choose-type"
@@ -47,7 +48,7 @@ const AdminAuth = () => {
   // Redirect if already logged in (but not during vertical selection)
   useEffect(() => {
     if (user && !loading && step !== "select-vertical") {
-      navigate("/workspace");
+      navigate(withPreviewParams("/workspace"));
     }
   }, [user, loading, navigate, step]);
 
@@ -160,7 +161,7 @@ const AdminAuth = () => {
     if (userVerticals.length === 1) {
       setActiveVertical(userVerticals[0]);
       toast.success(`Welcome to ${userVerticals[0].name}!`);
-      navigate("/crm");
+      navigate(withPreviewParams("/crm"));
       setIsSubmitting(false);
       return;
     }
@@ -197,14 +198,14 @@ const AdminAuth = () => {
 
     setActiveVertical(vertical);
     toast.success(`Welcome to ${vertical.name}!`);
-    navigate("/crm");
+    navigate(withPreviewParams("/crm"));
   };
 
   const handlePasswordSuccess = (vertical: BusinessVertical) => {
     setPasswordTarget(null);
     setActiveVertical(vertical);
     toast.success(`Welcome to ${vertical.name}!`);
-    navigate("/crm");
+    navigate(withPreviewParams("/crm"));
   };
 
   // ── Super Admin: Send OTP ──
@@ -288,7 +289,7 @@ const AdminAuth = () => {
       }
 
       toast.success("Welcome, Super Admin!");
-      navigate("/workspace");
+      navigate(withPreviewParams("/workspace"));
     } catch (err: any) {
       toast.error(err.message || "Verification failed");
     } finally {

@@ -13,6 +13,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { VerticalPasswordDialog, getVerifiedVerticals } from "@/components/admin/VerticalPasswordDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { withPreviewParams } from "@/lib/previewRouting";
 
 const iconMap: Record<string, React.ElementType> = {
   Shield,
@@ -58,7 +59,7 @@ const WorkspaceSelector = () => {
 
   useEffect(() => {
     if (authInitialized && !authLoading && !user) {
-      navigate("/crm-auth");
+      navigate(withPreviewParams("/crm-auth"));
     }
   }, [user, authLoading, authInitialized, navigate]);
 
@@ -70,7 +71,7 @@ const WorkspaceSelector = () => {
       const alreadyVerified = getVerifiedVerticals().includes(v.id);
       if (!hasPassword || alreadyVerified || isAdmin()) {
         setActiveVertical(v);
-        navigate("/crm");
+        navigate(withPreviewParams("/crm"));
       }
     }
   }, [authLoading, verticalLoading, user, sortedVerticals, setActiveVertical, navigate, verticalPasswords]);
@@ -85,18 +86,18 @@ const WorkspaceSelector = () => {
     }
     
     setActiveVertical(vertical);
-    navigate("/crm");
+    navigate(withPreviewParams("/crm"));
   };
 
   const handlePasswordSuccess = (vertical: BusinessVertical) => {
     setPasswordTarget(null);
     setActiveVertical(vertical);
-    navigate("/crm");
+    navigate(withPreviewParams("/crm"));
   };
 
   const handleLogout = async () => {
     await signOut();
-    navigate("/crm-auth");
+    navigate(withPreviewParams("/crm-auth"));
   };
 
   if (!authInitialized || authLoading || verticalLoading) {
