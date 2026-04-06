@@ -19,6 +19,8 @@ import {
   Calendar, Trophy, Download, Share2, Upload, Image, Video, X, Car,
 } from "lucide-react";
 import { SalesCustomerTimeline } from "./SalesCustomerTimeline";
+import { OmniShareDialog } from "@/components/admin/shared/OmniShareDialog";
+import { generateSalesOfferPDF } from "./SalesOfferPDF";
 
 const CALL_STATUSES = ["Interested", "Not Interested", "Call Back", "No Answer", "Wrong Number", "Busy", "Follow Up"];
 const BUYING_INTENTS = ["Immediate (This Week)", "Within 15 Days", "Within 1 Month", "Exploring Options", "Not Sure"];
@@ -57,6 +59,7 @@ export function SalesLeadDetailModal({
   const [videoUrl, setVideoUrl] = useState(lead.video_url || "");
   const [dealValue, setDealValue] = useState(lead.deal_value || "");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showShareOffer, setShowShareOffer] = useState(false);
 
   const pendingStage = lead._targetStage;
   const currentStage = pendingStage || lead.pipeline_stage;
@@ -824,7 +827,37 @@ export function SalesLeadDetailModal({
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Share Offer button - fixed at bottom */}
+        <div className="border-t pt-3 mt-2">
+          <Button onClick={() => setShowShareOffer(true)} className="w-full gap-2" variant="outline">
+            <Share2 className="h-4 w-4" /> Share Car Offer (PDF / WhatsApp / Email / RCS)
+          </Button>
+        </div>
       </DialogContent>
+
+      <OmniShareDialog
+        open={showShareOffer}
+        onOpenChange={setShowShareOffer}
+        title="Car Deal Offer"
+        defaultPhone={lead.phone || ""}
+        defaultEmail={lead.email || ""}
+        customerName={lead.name || lead.customer_name || "Customer"}
+        vertical="car_sales"
+        shareMessage={`Hi ${lead.name || lead.customer_name || ""}! Here is your car offer for ${lead.car_model || lead.interested_model || "your dream car"}.\n\n${lead.deal_value ? `Deal Value: Rs. ${Number(lead.deal_value).toLocaleString("en-IN")}` : ""}\n\nFor queries, call +91 98559 24442\nwww.grabyourcar.com\n- Grabyourcar`}
+        generatePdf={() => generateSalesOfferPDF({
+          customerName: lead.name || lead.customer_name || "Customer",
+          phone: lead.phone || "",
+          carModel: lead.car_model || lead.interested_model || "N/A",
+          variant: lead.variant || undefined,
+          color: lead.color || undefined,
+          dealValue: lead.deal_value ? Number(lead.deal_value) : undefined,
+          exShowroomPrice: lead.ex_showroom_price ? Number(lead.ex_showroom_price) : undefined,
+          onRoadPrice: lead.on_road_price ? Number(lead.on_road_price) : undefined,
+          specialTerms: lead.special_terms || undefined,
+          dealership: lead.dealership || undefined,
+        })}
+      />
     </Dialog>
   );
 }

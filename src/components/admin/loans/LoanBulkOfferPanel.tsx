@@ -13,10 +13,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import {
   Send, Download, Mail, MessageCircle, Phone, Building2,
-  FileText, IndianRupee, Calculator, Share2, Loader2, CheckCircle2
+  FileText, IndianRupee, Calculator, Share2, Loader2, CheckCircle2, Radio
 } from "lucide-react";
 import { generateLoanOfferPDF, generateBankComparisonPDF } from "./LoanOfferPDF";
 import { sendWhatsApp } from "@/lib/sendWhatsApp";
+import { OmniShareDialog } from "@/components/admin/shared/OmniShareDialog";
+import { omniSend, omniSendBulk } from "@/lib/omniSend";
 
 interface LoanBulkOfferPanelProps {
   applications: any[];
@@ -32,6 +34,7 @@ export const LoanBulkOfferPanel = ({ applications, bankPartners }: LoanBulkOffer
   const [specialOffer, setSpecialOffer] = useState("");
   const [sending, setSending] = useState(false);
   const [mode, setMode] = useState<"single" | "bulk" | "compare">("bulk");
+  const [shareApp, setShareApp] = useState<any>(null);
 
   const eligibleApps = applications.filter((a: any) =>
     ["interested", "offer_shared", "smart_calling"].includes(a.stage) && a.loan_amount
@@ -118,9 +121,42 @@ export const LoanBulkOfferPanel = ({ applications, bankPartners }: LoanBulkOffer
     setSending(false);
   };
 
-  // ── Email Bulk (via wa.me fallback for now) ──
+  // ── Email Bulk ──
   const handleEmailBulk = async () => {
-    toast.info("Email integration — coming soon. Use WhatsApp or download PDFs for now.");
+    const apps = eligibleApps.filter(a => selected.has(a.id));
+    if (!apps.length) { toast.error("Select leads first"); return; }
+    setSending(true);
+    const recipients = apps.map(app => {
+      const emi = calcEMI(Number(app.loan_amount), rate, tenure);
+      return {
+        email: app.email || undefined,
+        phone: app.phone,
+        name: app.customer_name,
+        message: `Hi ${app.customer_name}, your Car Loan EMI: Rs. ${Math.round(emi).toLocaleString("en-IN")}/month for Rs. ${(Number(app.loan_amount) / 100000).toFixed(1)}L via ${selectedBank?.name || "Partner Bank"} at ${rate}%. Call +91-98559-24442`,
+        subject: `Car Loan Offer - ${app.customer_name} | Grabyourcar`,
+      };
+    });
+    const result = await omniSendBulk("email", recipients, { vertical: "loans" });
+    toast.success(`📧 Email bulk: ${result.sent} sent, ${result.failed} failed`);
+    setSending(false);
+  };
+
+  // ── RCS Bulk ──
+  const handleRcsBulk = async () => {
+    const apps = eligibleApps.filter(a => selected.has(a.id));
+    if (!apps.length) { toast.error("Select leads first"); return; }
+    setSending(true);
+    const recipients = apps.map(app => {
+      const emi = calcEMI(Number(app.loan_amount), rate, tenure);
+      return {
+        phone: app.phone,
+        name: app.customer_name,
+        message: `Hi ${app.customer_name}, your Car Loan EMI: Rs. ${Math.round(emi).toLocaleString("en-IN")}/month for Rs. ${(Number(app.loan_amount) / 100000).toFixed(1)}L via ${selectedBank?.name || "Partner Bank"} at ${rate}%. Call +91-98559-24442`,
+      };
+    });
+    const result = await omniSendBulk("rcs", recipients, { vertical: "loans" });
+    toast.success(`📲 RCS bulk: ${result.sent} sent, ${result.failed} failed`);
+    setSending(false);
   };
 
   return (
@@ -198,27 +234,13 @@ export const LoanBulkOfferPanel = ({ applications, bankPartners }: LoanBulkOffer
                         <p className="text-[10px] text-muted-foreground">Loan: Rs. {(Number(app.loan_amount) / 100000).toFixed(1)}L</p>
                       </div>
                       <div className="flex gap-1 shrink-0">
-                        <Button size="icon" variant="ghost" className="h-7 w-7" title="Single PDF"
-                          onClick={() => {
-                            const doc = generateLoanOfferPDF({
-                              customerName: app.customer_name, phone: app.phone, carModel: app.car_model,
-                              loanAmount: Number(app.loan_amount), interestRate: rate, tenureMonths: tenure,
-                              bankName: selectedBank?.name || "Partner Bank", specialOffer,
-                            });
-                            doc.save(`Loan_Offer_${app.customer_name.replace(/\s/g, '_')}.pdf`);
-                          }}>
-                          <Download className="h-3.5 w-3.5" />
+                        <Button size="icon" variant="ghost" className="h-7 w-7" title="Share Offer (All Channels)"
+                          onClick={() => setShareApp(app)}>
+                          <Share2 className="h-3.5 w-3.5 text-emerald-600" />
                         </Button>
                         <Button size="icon" variant="ghost" className="h-7 w-7" title="Bank Comparison"
                           onClick={() => handleComparisonPDF(app)}>
                           <Building2 className="h-3.5 w-3.5 text-violet-600" />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="h-7 w-7" title="WhatsApp"
-                          onClick={async () => {
-                            const msg = `Hi ${app.customer_name}, your Car Loan EMI: Rs. ${Math.round(emi).toLocaleString("en-IN")}/month for Rs. ${(Number(app.loan_amount) / 100000).toFixed(1)}L via ${selectedBank?.name || "Partner Bank"} at ${rate}%. Call +91-98559-24442`;
-                            await sendWhatsApp({ phone: app.phone, message: msg, name: app.customer_name, logEvent: "loan_offer_single" });
-                          }}>
-                          <MessageCircle className="h-3.5 w-3.5 text-green-600" />
                         </Button>
                       </div>
                     </div>
@@ -239,16 +261,44 @@ export const LoanBulkOfferPanel = ({ applications, bankPartners }: LoanBulkOffer
                 {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />}
                 WhatsApp Bulk ({selected.size})
               </Button>
-              <Button onClick={handleEmailBulk} disabled={!selected.size} variant="outline" className="gap-1.5 text-blue-600 border-blue-500/30">
-                <Mail className="h-4 w-4" /> Email Bulk
+              <Button onClick={handleEmailBulk} disabled={!selected.size || sending} variant="outline" className="gap-1.5 text-blue-600 border-blue-500/30">
+                {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                Email Bulk ({selected.size})
               </Button>
-              <Button variant="outline" className="gap-1.5 text-violet-600 border-violet-500/30" disabled>
-                <Phone className="h-4 w-4" /> RCS (Coming Soon)
+              <Button onClick={handleRcsBulk} disabled={!selected.size || sending} variant="outline" className="gap-1.5 text-purple-600 border-purple-500/30">
+                {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Radio className="h-4 w-4" />}
+                RCS Bulk ({selected.size})
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
+
+      {shareApp && (
+        <OmniShareDialog
+          open={!!shareApp}
+          onOpenChange={() => setShareApp(null)}
+          title="Loan Offer"
+          defaultPhone={shareApp.phone || ""}
+          defaultEmail={shareApp.email || ""}
+          customerName={shareApp.customer_name || "Customer"}
+          vertical="loans"
+          shareMessage={`Hi ${shareApp.customer_name}, your Car Loan EMI: Rs. ${Math.round(calcEMI(Number(shareApp.loan_amount), rate, tenure)).toLocaleString("en-IN")}/month for Rs. ${(Number(shareApp.loan_amount) / 100000).toFixed(1)}L via ${selectedBank?.name || "Partner Bank"} at ${rate}%. Call +91-98559-24442`}
+          generatePdf={() => {
+            const doc = generateLoanOfferPDF({
+              customerName: shareApp.customer_name,
+              phone: shareApp.phone,
+              carModel: shareApp.car_model,
+              loanAmount: Number(shareApp.loan_amount),
+              interestRate: rate,
+              tenureMonths: tenure,
+              bankName: selectedBank?.name || "Partner Bank",
+              specialOffer,
+            });
+            return { doc, fileName: `Loan_Offer_${shareApp.customer_name.replace(/\s/g, '_')}.pdf` };
+          }}
+        />
+      )}
     </>
   );
 };
