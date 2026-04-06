@@ -273,6 +273,32 @@ export const LoanBulkOfferPanel = ({ applications, bankPartners }: LoanBulkOffer
           </div>
         </DialogContent>
       </Dialog>
+
+      {shareApp && (
+        <OmniShareDialog
+          open={!!shareApp}
+          onOpenChange={() => setShareApp(null)}
+          title="Loan Offer"
+          defaultPhone={shareApp.phone || ""}
+          defaultEmail={shareApp.email || ""}
+          customerName={shareApp.customer_name || "Customer"}
+          vertical="loans"
+          shareMessage={`Hi ${shareApp.customer_name}, your Car Loan EMI: Rs. ${Math.round(calcEMI(Number(shareApp.loan_amount), rate, tenure)).toLocaleString("en-IN")}/month for Rs. ${(Number(shareApp.loan_amount) / 100000).toFixed(1)}L via ${selectedBank?.name || "Partner Bank"} at ${rate}%. Call +91-98559-24442`}
+          generatePdf={() => {
+            const doc = generateLoanOfferPDF({
+              customerName: shareApp.customer_name,
+              phone: shareApp.phone,
+              carModel: shareApp.car_model,
+              loanAmount: Number(shareApp.loan_amount),
+              interestRate: rate,
+              tenureMonths: tenure,
+              bankName: selectedBank?.name || "Partner Bank",
+              specialOffer,
+            });
+            return { doc, fileName: `Loan_Offer_${shareApp.customer_name.replace(/\s/g, '_')}.pdf` };
+          }}
+        />
+      )}
     </>
   );
 };
