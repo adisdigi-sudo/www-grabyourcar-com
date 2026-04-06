@@ -53,8 +53,9 @@ const isUuid = (value: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
 // ─── Main Workspace ───
-type LoanWorkspaceView = "pipeline" | "disbursement" | "after_sales" | "bulk_tools" | "emi_calculator";
-
+type LoanWorkspaceView = "pipeline" | "disbursement" | "after_sales" | "bulk_tools" | "emi_calculator" | "performance";
+type DateFilter = "today" | "7days" | "30days" | "this_month" | "all";
+type StageFilter = "all" | "in_pipeline" | "disbursed" | "lost";
 interface LoanWorkspaceProps {
   initialView?: LoanWorkspaceView;
 }
