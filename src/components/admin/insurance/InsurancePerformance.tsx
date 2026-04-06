@@ -15,6 +15,7 @@ import {
 import type { Client } from "./InsuranceLeadPipeline";
 import type { PolicyRecord } from "./InsurancePolicyBook";
 import { getClientEffectiveDate, getPolicyEffectiveDate, dedupeInsuranceClients } from "@/lib/insuranceIdentity";
+import { ExecutiveLeaderboard } from "../shared/ExecutiveLeaderboard";
 
 // Incentive slab config
 const INCENTIVE_SLABS = [
