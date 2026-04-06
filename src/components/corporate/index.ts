@@ -15,3 +15,7 @@ export { CorporateScrollProgress } from "./CorporateScrollProgress";
 export { FleetRequirementBuilder } from "./FleetRequirementBuilder";
 export { LeaseVsBuyCalculator } from "./LeaseVsBuyCalculator";
 export { CorporatePricingTiers } from "./CorporatePricingTiers";
+export { CorporateValueProposition } from "./CorporateValueProposition";
+export { CorporateFleetTools } from "./CorporateFleetTools";
+export { CorporateTrustSection } from "./CorporateTrustSection";
+export { CorporateFloatingCTA } from "./CorporateFloatingCTA";

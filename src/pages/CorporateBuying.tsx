@@ -3,23 +3,16 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import {
   CorporateHero,
-  CorporateLogoGrid,
-  CorporateStats,
-  CorporateWhyChoose,
-  CorporateIndustries,
-  CorporateCaseStudies,
-  CorporateComparison,
-  CorporateTestimonials,
-  CorporateBrochureDownload,
-  CorporateFAQ,
-  CorporateSocialProof,
-  CorporateCTA,
+  CorporateValueProposition,
   CorporateProcessTimeline,
-  CorporateScrollProgress,
-  FleetRequirementBuilder,
-  LeaseVsBuyCalculator,
-  CorporatePricingTiers,
+  CorporateFleetTools,
+  CorporateTrustSection,
+  CorporateComparison,
+  CorporateFAQ,
+  CorporateCTA,
+  CorporateFloatingCTA,
 } from "@/components/corporate";
+import { CorporateBrochureDownload } from "@/components/corporate/CorporateBrochureDownload";
 
 const CorporateBuying = () => {
   return (
@@ -30,68 +23,41 @@ const CorporateBuying = () => {
         description="Corporate fleet solutions for businesses. Get special pricing on bulk car orders, dedicated account management, and hassle-free procurement for your organization."
         path="/corporate"
       />
-      
+
       <div className="min-h-screen bg-background">
-      <Header />
-      <CorporateScrollProgress />
+        <Header />
 
-      {/* Hero Section */}
-      <CorporateHero />
+        {/* 1. Hero — Bold headline, dual CTAs, trust stats, inline logo strip */}
+        <CorporateHero />
 
-      {/* Logo Trust Section */}
-      <CorporateLogoGrid />
+        {/* 2. Value Proposition — Problem→Solution narrative */}
+        <CorporateValueProposition />
 
-      {/* Animated Stats */}
-      <CorporateStats />
+        {/* 3. How It Works — 4-step process timeline */}
+        <CorporateProcessTimeline />
 
-      {/* Industries We Serve */}
-      <CorporateIndustries />
+        {/* 4. Fleet Tools — Tabbed: Planner | Lease vs Buy | Pricing */}
+        <CorporateFleetTools />
 
-      {/* Process Timeline */}
-      <CorporateProcessTimeline />
+        {/* 5. Trust Section — Merged case studies + testimonials + metrics */}
+        <CorporateTrustSection />
 
-      {/* Pricing Tiers */}
-      <CorporatePricingTiers />
+        {/* 5b. Comparison Table */}
+        <CorporateComparison />
 
-      {/* Fleet Requirement Builder */}
-      <section className="py-16 md:py-20 bg-muted/30">
-        <div className="container mx-auto px-4 max-w-5xl">
-          <FleetRequirementBuilder />
+        {/* 6. FAQ + Brochure Download */}
+        <CorporateFAQ />
+        <CorporateBrochureDownload />
+
+        {/* 7. CTA + Form */}
+        <div id="corporate-cta">
+          <CorporateCTA />
         </div>
-      </section>
 
-      {/* Lease vs Buy Calculator */}
-      <section className="py-16 md:py-20">
-        <div className="container mx-auto px-4 max-w-5xl">
-          <LeaseVsBuyCalculator />
-        </div>
-      </section>
+        {/* 8. Sticky Floating CTA Bar */}
+        <CorporateFloatingCTA />
 
-      {/* Why Choose Us */}
-      <CorporateWhyChoose />
-
-      {/* Comparison Table */}
-      <CorporateComparison />
-
-      {/* Case Studies */}
-      <CorporateCaseStudies />
-
-      {/* Client Testimonials */}
-      <CorporateTestimonials />
-
-      {/* Brochure Download */}
-      <CorporateBrochureDownload />
-
-      {/* FAQ Section */}
-      <CorporateFAQ />
-
-      {/* Social Proof */}
-      <CorporateSocialProof />
-
-      {/* CTA with Form */}
-      <CorporateCTA />
-
-      <Footer />
+        <Footer />
       </div>
     </>
   );
