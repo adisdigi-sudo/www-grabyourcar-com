@@ -1,108 +1,63 @@
 
 
-## R&D: How Top Corporates Build B2B Fleet/Enterprise Pages
+# Loan CRM: Interactive KPI Filters + Performance Dashboard
 
-### What Leading Corporate Pages Do Differently
+## What We're Building
 
-Based on research across enterprise fleet pages (Konexial, HERE, top B2B landing pages), here are the key patterns:
-
-1. **Single-Focus Hero with One CTA** — Not three vague icons. A bold value proposition + one primary action (e.g., "Get Fleet Quote" or "Talk to Our Team"). Enterprise buyers want clarity, not decoration.
-
-2. **Social Proof Immediately After Hero** — Logo bar (simple, clean, no cards — just logos in a row) followed by a single powerful stat line ("500+ vehicles delivered across 50+ cities").
-
-3. **Problem → Solution Narrative** — Corporates don't browse; they evaluate. The page should frame a problem ("Fleet procurement is fragmented and slow") then present the solution, not just list features.
-
-4. **ROI/Value Calculators Higher Up** — The Lease vs Buy calculator and Fleet Builder are powerful conversion tools but are buried too deep. Enterprise buyers want to see numbers early.
-
-5. **Fewer Sections, More Depth** — Current page has 14+ sections. Best-in-class B2B pages have 6-8 focused sections max. Redundancy kills trust.
-
-6. **Sticky CTA / Floating Action** — A persistent "Get Corporate Quote" button that follows the user, not buried at the bottom.
-
-7. **Case Studies as Social Proof, Not Separate Section** — Integrate client success metrics inline rather than having separate case studies + testimonials + social proof + logo grid (4 separate trust sections is redundant).
+1. **Clickable KPI Cards** — Make the Disbursed, Lost, In Pipeline, and Total Leads cards clickable to filter the pipeline view to show only those leads
+2. **Date Filter Bar** — Add day/week/month/all-time period selector to filter all data by date range
+3. **Performance & Revenue Tab** — New "Performance" view in the workspace showing revenue tracking, conversion metrics, team performance, and stage-wise trends
 
 ---
 
-### Current Issues Identified
+## Technical Plan
 
-| Problem | Impact |
-|---------|--------|
-| 14+ sections — excessive for B2B | Decision fatigue, high bounce |
-| Hero has 3 generic icons, no clear CTA | No conversion path above fold |
-| Logo grid uses large animated cards with marquee | Feels consumer/flashy, not corporate |
-| Stats section repeats similar data as logo grid stats | Redundancy |
-| Industries section is thin (just pill chips) | Wasted space |
-| Fleet Builder + Calculator buried at positions 7-8 | Key tools invisible |
-| Case Studies + Testimonials + Social Proof = 3 overlapping trust sections | Consolidate |
-| Brochure Download is a tiny standalone section | Should be integrated |
-| Scroll progress widget adds clutter for a B2B page | Over-engineered |
-| No sticky/floating CTA | Missed conversions |
+### File: `src/components/admin/loans/LoanWorkspace.tsx`
 
----
+**A. Clickable KPI Cards with Stage Filtering**
+- Add state: `stageFilter: LoanStage | 'all' | 'in_pipeline' | 'disbursed' | 'lost'` (default `'all'`)
+- Add state: `dateFilter: 'today' | '7days' | '30days' | 'this_month' | 'all'` (default `'all'`)
+- Make each KPI card in the header clickable with `cursor-pointer`, `onClick` sets `stageFilter`, active card gets a highlighted ring/border
+- When a KPI card is clicked: auto-switch to pipeline view, filter displayed leads accordingly
+- Add a "clear filter" badge/button when a filter is active
+- Filter `applications` through both `stageFilter` and `dateFilter` before passing to the pipeline board and KPIs
 
-### Proposed Redesigned Flow (8 Sections)
+**B. Date Period Selector**
+- Add a compact button group below the KPI header: `Today | This Week | This Month | All Time`
+- Filter applications by `created_at` matching the selected period
+- Date filter applies globally across all views (pipeline, disbursement, performance)
 
-```text
-┌─────────────────────────────────────┐
-│  1. HERO (Redesigned)               │
-│  - Bold headline + subtext          │
-│  - Two CTAs: "Get Quote" + "Call"   │
-│  - Trusted by: inline logo strip    │
-│  - Key stat: "500+ vehicles, 50+    │
-│    cities, 100% satisfaction"       │
-├─────────────────────────────────────┤
-│  2. VALUE PROPOSITION               │
-│  - 3-column problem→solution grid   │
-│  - Why corporate procurement is     │
-│    broken + how we fix it           │
-│  - Merge current WhyChoose content  │
-├─────────────────────────────────────┤
-│  3. HOW IT WORKS (Timeline)         │
-│  - Keep current 4-step process      │
-│  - Cleaner, more minimal styling    │
-├─────────────────────────────────────┤
-│  4. FLEET TOOLS (Combined)          │
-│  - Tab interface: Fleet Builder |   │
-│    Lease vs Buy Calculator |        │
-│    Pricing Tiers                    │
-│  - Moves interactive tools UP       │
-├─────────────────────────────────────┤
-│  5. CASE STUDIES + TESTIMONIALS     │
-│  - Merged: client logo + quote +    │
-│    key metric in one card           │
-│  - Comparison table integrated      │
-├─────────────────────────────────────┤
-│  6. FAQ                             │
-│  - Keep accordion, add brochure     │
-│    download as inline CTA here      │
-├─────────────────────────────────────┤
-│  7. CTA + FORM (Final)              │
-│  - Full-width, dark bg              │
-│  - Form + WhatsApp + Phone          │
-├─────────────────────────────────────┤
-│  8. STICKY FLOATING CTA BAR         │
-│  - Appears after scrolling past     │
-│    hero: "Get Corporate Quote"      │
-└─────────────────────────────────────┘
-```
+**C. New "Performance" View**
+- Add `"performance"` to `LoanWorkspaceView` type
+- Add a tab/button for "Performance" in the workspace navigation
+- Create new component: `src/components/admin/loans/LoanPerformanceDashboard.tsx`
+
+### File: `src/components/admin/loans/LoanPerformanceDashboard.tsx` (New)
+
+**Performance dashboard showing:**
+
+1. **Revenue KPI Row** — Total Disbursed Value, Avg Loan Size, Conversion Rate, Active Pipeline Value
+2. **Conversion Funnel** — Bar chart: New Lead → Calling → Interested → Offer → Application → Disbursed (with counts + %)
+3. **Revenue Trend** — Line/bar chart showing disbursement value by day/week/month based on the selected period
+4. **Stage Distribution** — Pie chart of current lead distribution across stages
+5. **Source Performance** — Table: each lead source with total leads, conversion count, conversion %, total disbursed value
+6. **Team/Executive Performance** — If `assigned_to` field exists, show per-executive: leads handled, disbursed count, total value, conversion rate
+7. **Won Cases List** — Scrollable table of all disbursed leads with customer name, car model, bank, amount, date — sortable
+
+**Data source:** Same `loan_applications` query, filtered by `dateFilter`. Uses Recharts for charts.
+
+### Navigation Updates
+
+- Add "Performance" as a 6th workspace tab alongside Pipeline, Disbursement, After Sales, Bulk Tools, EMI Calculator
+- Use `BarChart3` or `TrendingUp` icon for the tab
 
 ---
 
-### Design Philosophy Changes
+## Summary of Changes
 
-- **Logo grid**: Replace animated marquee cards with a clean, minimal single-row logo strip (grayscale logos, no cards, no animation). This is what Salesforce, HubSpot, and Stripe do.
-- **Hero**: Dark, authoritative, single focus. Replace 3 generic icons with inline trust stats. Add two clear CTAs.
-- **Color**: Maintain dark slate hero/CTA sections, light sections in between for contrast rhythm (dark → light → light → light → dark).
-- **Typography**: Larger headings, tighter line heights, more whitespace between sections.
-- **Remove**: CorporateScrollProgress (over-engineered), CorporateSocialProof (redundant), CorporateIndustries (merge into hero or value prop as tags).
-
-### Implementation Plan
-
-1. **Redesign CorporateHero** — Add inline logo strip, trust stats as numbers, two CTA buttons, remove generic icon grid
-2. **Create CorporateValueProposition** — New component merging WhyChoose + Industries into a problem→solution narrative
-3. **Simplify CorporateLogoGrid** — Convert from animated marquee cards to minimal grayscale logo row
-4. **Create CorporateFleetTools** — Tabbed container combining Fleet Builder + Calculator + Pricing Tiers
-5. **Merge CorporateCaseStudies + Testimonials** — Single unified trust section with client stories + metrics
-6. **Add Floating CTA Bar** — Sticky bottom bar with "Get Corporate Quote" after scrolling past hero
-7. **Update page layout** — Reorder and remove redundant sections (ScrollProgress, SocialProof, standalone BrochureDownload)
-8. **Clean CorporateProcessTimeline** — Simplify styling, less decorative, more corporate-clean
+| File | Change |
+|------|--------|
+| `LoanWorkspace.tsx` | Add clickable KPIs, date filter bar, stage filter state, performance tab |
+| `LoanPerformanceDashboard.tsx` | New file — revenue charts, conversion funnel, source & team tables |
+| `LoanStageConfig.ts` | No changes needed |
 
