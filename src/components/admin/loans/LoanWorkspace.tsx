@@ -47,6 +47,9 @@ const SOURCE_COLORS: Record<string, string> = {
   'csv import': 'bg-slate-500/10 text-slate-600 border-slate-500/20',
 };
 
+const isUuid = (value: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+
 // ─── Main Workspace ───
 type LoanWorkspaceView = "pipeline" | "disbursement" | "after_sales" | "bulk_tools" | "emi_calculator";
 
@@ -151,6 +154,7 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
     ];
     return defaults.map((b, i) => ({ ...b, id: `default_${i}`, is_active: true, sort_order: i }));
   }, [dbBankPartners]);
+
 
   const applications = useMemo(() =>
     rawApplications.map((a: any) => ({ ...a, stage: normalizeStage(a.stage) })),
@@ -673,12 +677,19 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
   };
 
   const handleOfferSave = () => {
-    const isCustom = selectedBank === '__custom__';
+    const selectedPartner = bankPartners.find((b: any) => b.id === selectedBank);
+    const hasRealPartnerId = Boolean(selectedBank && isUuid(selectedBank));
+    const isCustom = selectedBank === '__custom__' || Boolean(selectedPartner && !hasRealPartnerId);
+
     if (!selectedBank) { toast.error("Select a bank partner"); return; }
-    if (isCustom && !customBankName.trim()) { toast.error("Enter custom bank/NBFC name"); return; }
-    const bankName = isCustom ? customBankName.trim() : (bankPartners.find((b: any) => b.id === selectedBank)?.name || '');
+    if (isCustom && !((selectedPartner?.name || customBankName).trim())) { toast.error("Enter custom bank/NBFC name"); return; }
+
+    const bankName = isCustom
+      ? (selectedPartner?.name || customBankName).trim()
+      : (selectedPartner?.name || '');
+
     updateMutation.mutate({
-      bank_partner_id: isCustom ? null : selectedBank,
+      bank_partner_id: hasRealPartnerId ? selectedBank : null,
       lender_name: bankName,
       interest_rate: interestRate ? Number(interestRate) : null,
       tenure_months: tenureMonths ? Number(tenureMonths) : null,
