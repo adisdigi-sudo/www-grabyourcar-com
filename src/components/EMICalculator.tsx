@@ -171,7 +171,7 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
       };
 
       if (pendingShareMethod === "download") {
-        const doc = generateEMIPdf(data, true); // get doc without auto-download
+        const doc = await generateEMIPdf(data, undefined, true);
         if (doc) {
           await persistLoanQuoteHistory({
             doc, fileName: `EMI_${custName.replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.pdf`,
@@ -185,7 +185,7 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
           toast.success("EMI PDF downloaded & quote saved!");
         }
       } else if (pendingShareMethod === "whatsapp") {
-        const doc = generateEMIPdf(data, true);
+        const doc = await generateEMIPdf(data, undefined, true);
         if (doc) {
           await persistLoanQuoteHistory({
             doc, fileName: `EMI_${custName.replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.pdf`,
@@ -206,7 +206,7 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
         }));
         const doc = generateComparisonPdf({
           carName: carName || "Car Loan", variantName, loanAmount, downPayment, principal, tenure, banks,
-        }, true);
+        }, true) as import("jspdf").default | undefined;
         if (doc) {
           await persistLoanQuoteHistory({
             doc, fileName: `EMI_Comparison_${custName.replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.pdf`,
