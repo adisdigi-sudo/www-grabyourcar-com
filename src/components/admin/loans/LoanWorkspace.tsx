@@ -854,11 +854,28 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
                 </Select>
               </div>
               {loanStatus === 'approved' && <div><Label>Sanction Amount *</Label><Input type="number" value={sanctionAmount} onChange={e => setSanctionAmount(e.target.value)} placeholder="e.g. 750000" /></div>}
+              {loanStatus === 'approved' && (
+                <div>
+                  <Label className="flex items-center gap-1.5">
+                    <Upload className="h-3.5 w-3.5" /> Sanction / Approval Letter * <span className="text-[9px] text-muted-foreground">(PDF, JPG, PNG)</span>
+                  </Label>
+                  {application.sanction_letter_url ? (
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant="outline" className="text-[10px] bg-green-50 text-green-700 border-green-200">✅ Already uploaded</Badge>
+                      <Button variant="link" size="sm" className="text-[10px] h-5 p-0" onClick={() => window.open(application.sanction_letter_url, '_blank')}>View</Button>
+                    </div>
+                  ) : null}
+                  <Input type="file" accept=".pdf,.jpg,.jpeg,.png" className="mt-1" onChange={e => setSanctionFile(e.target.files?.[0] || null)} />
+                  {!sanctionFile && !application.sanction_letter_url && (
+                    <p className="text-[10px] text-red-500 mt-1">⚠ Upload sanction/approval letter to proceed</p>
+                  )}
+                </div>
+              )}
               {loanStatus === 'rejected' && <div><Label>Rejection Reason *</Label><Textarea value={rejectionReason} onChange={e => setRejectionReason(e.target.value)} placeholder="Why was loan rejected?" rows={2} /></div>}
               <div><Label>Remarks</Label><Textarea value={remarks} onChange={e => setRemarks(e.target.value)} rows={2} /></div>
-              <Button onClick={handleLoanAppSave} disabled={!loanStatus || updateMutation.isPending}
+              <Button onClick={handleLoanAppSave} disabled={!loanStatus || updateMutation.isPending || uploadingFile || (loanStatus === 'approved' && !sanctionFile && !application.sanction_letter_url)}
                 className={`w-full ${loanStatus === 'rejected' ? 'bg-red-600 hover:bg-red-700' : 'bg-indigo-600 hover:bg-indigo-700'} text-white`}>
-                {updateMutation.isPending ? "Saving..." : loanStatus === 'rejected' ? 'Mark as Rejected (Lost)' : 'Save Approval'}
+                {uploadingFile ? "Uploading..." : updateMutation.isPending ? "Saving..." : loanStatus === 'rejected' ? 'Mark as Rejected (Lost)' : 'Save Approval'}
               </Button>
             </div>
           )}
