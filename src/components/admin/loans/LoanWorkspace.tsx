@@ -242,6 +242,8 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
     try {
       const data = JSON.parse(e.dataTransfer.getData('application/json'));
       if (data.stage === targetStage) return;
+      // 🔒 Disbursed leads are permanently locked
+      if (data.stage === 'disbursed') { toast.error("Disbursed leads cannot be moved"); return; }
       const app = applications.find((a: any) => a.id === data.id);
       if (!app) return;
       if (['lost', 'disbursed', 'loan_application'].includes(targetStage)) {
