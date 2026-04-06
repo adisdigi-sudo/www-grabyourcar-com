@@ -331,24 +331,93 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
               </Button>
             </div>
           </div>
+
+          {/* Clickable KPI Cards */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {[
-              { label: "Total Leads", value: totalApps, icon: Users, bgc: "bg-blue-500/20" },
-              { label: "In Pipeline", value: inPipeline, icon: TrendingUp, bgc: "bg-orange-400/20" },
-              { label: "Disbursed", value: disbursed, icon: CheckCircle2, bgc: "bg-emerald-400/20" },
-              { label: "Lost", value: lost, icon: XCircle, bgc: "bg-red-400/20" },
-              { label: "Total Value", value: formatAmount(totalValue), icon: IndianRupee, bgc: "bg-cyan-400/20" },
-            ].map(kpi => (
-              <div key={kpi.label} className={`${kpi.bgc} backdrop-blur-sm rounded-xl px-4 py-3 border border-white/10`}>
-                <div className="flex items-center gap-2 mb-1">
-                  <kpi.icon className="h-4 w-4 text-white/70" />
-                  <span className="text-[10px] uppercase tracking-wider text-white/70">{kpi.label}</span>
+              { label: "Total Leads", value: totalApps, icon: Users, bgc: "bg-blue-500/20", filter: "all" as StageFilter },
+              { label: "In Pipeline", value: inPipeline, icon: TrendingUp, bgc: "bg-orange-400/20", filter: "in_pipeline" as StageFilter },
+              { label: "Disbursed", value: disbursed, icon: CheckCircle2, bgc: "bg-emerald-400/20", filter: "disbursed" as StageFilter },
+              { label: "Lost", value: lost, icon: XCircle, bgc: "bg-red-400/20", filter: "lost" as StageFilter },
+              { label: "Total Value", value: formatAmount(totalValue), icon: IndianRupee, bgc: "bg-cyan-400/20", filter: "disbursed" as StageFilter },
+            ].map(kpi => {
+              const isActive = stageFilter === kpi.filter && kpi.filter !== "all";
+              return (
+                <div
+                  key={kpi.label}
+                  onClick={() => handleKpiClick(kpi.filter)}
+                  className={cn(
+                    `${kpi.bgc} backdrop-blur-sm rounded-xl px-4 py-3 border cursor-pointer transition-all hover:scale-[1.03] active:scale-[0.98]`,
+                    isActive ? "ring-2 ring-white border-white/60 shadow-lg" : "border-white/10"
+                  )}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <kpi.icon className="h-4 w-4 text-white/70" />
+                    <span className="text-[10px] uppercase tracking-wider text-white/70">{kpi.label}</span>
+                  </div>
+                  <p className="text-2xl font-bold tracking-tight">{kpi.value}</p>
                 </div>
-                <p className="text-2xl font-bold tracking-tight">{kpi.value}</p>
-              </div>
+              );
+            })}
+          </div>
+
+          {/* Date Filter Bar */}
+          <div className="flex items-center gap-2 mt-4 flex-wrap">
+            <Filter className="h-3.5 w-3.5 text-white/60" />
+            {([
+              { key: "today", label: "Today" },
+              { key: "7days", label: "7 Days" },
+              { key: "30days", label: "30 Days" },
+              { key: "this_month", label: "This Month" },
+              { key: "all", label: "All Time" },
+            ] as { key: DateFilter; label: string }[]).map(df => (
+              <button
+                key={df.key}
+                onClick={() => setDateFilter(df.key)}
+                className={cn(
+                  "text-[11px] px-3 py-1 rounded-full font-medium transition-all",
+                  dateFilter === df.key
+                    ? "bg-white text-teal-800 shadow-sm"
+                    : "bg-white/10 text-white/80 hover:bg-white/20"
+                )}
+              >
+                {df.label}
+              </button>
             ))}
+            {(stageFilter !== "all" || dateFilter !== "all") && (
+              <button
+                onClick={() => { setStageFilter("all"); setDateFilter("all"); }}
+                className="ml-auto text-[11px] flex items-center gap-1 text-white/70 hover:text-white bg-white/10 rounded-full px-2 py-1"
+              >
+                <X className="h-3 w-3" /> Clear Filters
+              </button>
+            )}
           </div>
         </div>
+      </div>
+
+      {/* Workspace Navigation */}
+      <div className="flex items-center gap-1 overflow-x-auto pb-1">
+        {([
+          { key: "pipeline", label: "Pipeline", icon: Banknote },
+          { key: "disbursement", label: "Disbursement", icon: CheckCircle2 },
+          { key: "after_sales", label: "After Sales", icon: HeartHandshake },
+          { key: "performance", label: "Performance", icon: BarChart3 },
+          { key: "emi_calculator", label: "EMI Calc", icon: IndianRupee },
+        ] as { key: LoanWorkspaceView; label: string; icon: any }[]).map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveView(tab.key)}
+            className={cn(
+              "flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap",
+              activeView === tab.key
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
+          >
+            <tab.icon className="h-3.5 w-3.5" /> {tab.label}
+          </button>
+        ))}
       </div>
 
       {loanNotifications.length > 0 && <StageNotificationBanner items={loanNotifications} />}
