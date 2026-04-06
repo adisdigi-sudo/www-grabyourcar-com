@@ -10871,6 +10871,92 @@ export type Database = {
         }
         Relationships: []
       }
+      loan_quote_share_history: {
+        Row: {
+          bank_comparison: Json | null
+          bank_name: string | null
+          car_model: string | null
+          car_variant: string | null
+          created_at: string
+          customer_email: string | null
+          customer_name: string
+          customer_phone: string | null
+          down_payment: number | null
+          emi_amount: number | null
+          expires_at: string | null
+          id: string
+          interest_rate: number | null
+          loan_amount: number | null
+          loan_application_id: string | null
+          notes: string | null
+          pdf_storage_path: string | null
+          quote_ref: string | null
+          share_method: string
+          source: string | null
+          tenure_months: number | null
+          total_interest: number | null
+          total_payment: number | null
+        }
+        Insert: {
+          bank_comparison?: Json | null
+          bank_name?: string | null
+          car_model?: string | null
+          car_variant?: string | null
+          created_at?: string
+          customer_email?: string | null
+          customer_name: string
+          customer_phone?: string | null
+          down_payment?: number | null
+          emi_amount?: number | null
+          expires_at?: string | null
+          id?: string
+          interest_rate?: number | null
+          loan_amount?: number | null
+          loan_application_id?: string | null
+          notes?: string | null
+          pdf_storage_path?: string | null
+          quote_ref?: string | null
+          share_method?: string
+          source?: string | null
+          tenure_months?: number | null
+          total_interest?: number | null
+          total_payment?: number | null
+        }
+        Update: {
+          bank_comparison?: Json | null
+          bank_name?: string | null
+          car_model?: string | null
+          car_variant?: string | null
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string
+          customer_phone?: string | null
+          down_payment?: number | null
+          emi_amount?: number | null
+          expires_at?: string | null
+          id?: string
+          interest_rate?: number | null
+          loan_amount?: number | null
+          loan_application_id?: string | null
+          notes?: string | null
+          pdf_storage_path?: string | null
+          quote_ref?: string | null
+          share_method?: string
+          source?: string | null
+          tenure_months?: number | null
+          total_interest?: number | null
+          total_payment?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loan_quote_share_history_loan_application_id_fkey"
+            columns: ["loan_application_id"]
+            isOneToOne: false
+            referencedRelation: "loan_applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       loan_stage_history: {
         Row: {
           application_id: string
