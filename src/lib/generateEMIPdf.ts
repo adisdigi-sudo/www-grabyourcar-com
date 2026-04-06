@@ -64,6 +64,8 @@ export interface EMIData {
   selectedColor?: string;
   selectedCity?: string;
   discount?: DiscountDetails;
+  customerName?: string;
+  customerPhone?: string;
 }
 
 const DEFAULT_COMPANY: EMIPDFConfig = {
@@ -220,7 +222,37 @@ function generateStandaloneEMIPdf(
   doc.setFontSize(9);
   doc.text(`GrabYourCar | ${COMPANY.website}`, pageWidth - margin, 26, { align: "right" });
 
-  y = headerH + 16;
+  y = headerH + 10;
+
+  // ── CUSTOMER DETAILS ──
+  if (data.customerName || data.customerPhone) {
+    const custBoxH = 18;
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(margin, y, contentWidth, custBoxH, 3, 3, "F");
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(margin, y, contentWidth, custBoxH, 3, 3, "S");
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(71, 85, 105);
+    doc.text("PREPARED FOR", margin + 6, y + 5);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(30, 30, 30);
+    let custText = data.customerName || "";
+    if (data.customerPhone) custText += (custText ? "  |  " : "") + data.customerPhone;
+    doc.text(custText, margin + 6, y + 13);
+    y += custBoxH + 6;
+  }
+
+  // ── CAR MODEL ──
+  if (data.carName) {
+    doc.setFontSize(12);
+    doc.setTextColor(...C.primary);
+    doc.setFont("helvetica", "bold");
+    const carLabel = data.carName + (data.variantName ? ` — ${data.variantName}` : "");
+    doc.text(carLabel, margin, y + 4);
+    y += 12;
+  }
 
   // ── EMI HERO BOX ──
   const heroH = 56;
