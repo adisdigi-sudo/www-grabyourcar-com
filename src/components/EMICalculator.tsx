@@ -150,7 +150,18 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
     setBankColumns(prev => [...prev, { id: Date.now().toString(), bankName: nextBank, interestRate: 9.0, processingFee: 0 }]);
   };
 
-  const handleDownloadPdf = () => {
+  const openCustomerCapture = (method: "download" | "whatsapp" | "comparison") => {
+    setPendingShareMethod(method);
+    setShowCustomerDialog(true);
+  };
+
+  const handleConfirmShare = async () => {
+    if (!custName.trim() || !custPhone.trim() || custPhone.replace(/\D/g, "").length < 10) {
+      toast.error("Please enter your name and valid phone number");
+      return;
+    }
+
+    setIsSaving(true);
     try {
       const data: EMIData = {
         loanAmount, downPayment, loanPrincipal: principal,
@@ -158,42 +169,66 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
         totalPayment: emiDetails.totalPayment, totalInterest: emiDetails.totalInterest,
         carName, variantName, onRoadPrice, selectedColor, selectedCity,
       };
-      generateEMIPdf(data);
-      toast.success("EMI estimate PDF downloaded!");
-    } catch { toast.error("Failed to generate PDF"); }
-  };
 
-  const handleDownloadComparisonPdf = () => {
-    try {
-      generateComparisonPdf({
-        carName: carName || "Car Loan",
-        variantName,
-        loanAmount,
-        downPayment,
-        principal,
-        tenure,
-        banks: bankEMIs.map(b => ({
-          bankName: b.bankName,
-          interestRate: b.interestRate,
-          processingFee: b.processingFee,
-          emi: b.emi,
-          totalPayment: b.totalPayment,
-          totalInterest: b.totalInterest,
-        })),
-      });
-      toast.success("Comparison PDF downloaded!");
-    } catch { toast.error("Failed to generate comparison PDF"); }
-  };
+      if (pendingShareMethod === "download") {
+        const doc = generateEMIPdf(data, true); // get doc without auto-download
+        if (doc) {
+          await persistLoanQuoteHistory({
+            doc, fileName: `EMI_${custName.replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.pdf`,
+            shareMethod: "download", customerName: custName, customerPhone: custPhone, customerEmail: custEmail || null,
+            carModel: carName || null, carVariant: variantName || null,
+            loanAmount: principal, downPayment, interestRate, tenureMonths: tenure,
+            emiAmount: emiDetails.emi, totalPayment: emiDetails.totalPayment, totalInterest: emiDetails.totalInterest,
+            source: "website",
+          });
+          doc.save(`EMI_Estimate_${custName.replace(/\s+/g, "_")}.pdf`);
+          toast.success("EMI PDF downloaded & quote saved!");
+        }
+      } else if (pendingShareMethod === "whatsapp") {
+        const doc = generateEMIPdf(data, true);
+        if (doc) {
+          await persistLoanQuoteHistory({
+            doc, fileName: `EMI_${custName.replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.pdf`,
+            shareMethod: "whatsapp", customerName: custName, customerPhone: custPhone, customerEmail: custEmail || null,
+            carModel: carName || null, carVariant: variantName || null,
+            loanAmount: principal, downPayment, interestRate, tenureMonths: tenure,
+            emiAmount: emiDetails.emi, totalPayment: emiDetails.totalPayment, totalInterest: emiDetails.totalInterest,
+            source: "website",
+          });
+        }
+        const message = generateEMIWhatsAppMessage(data);
+        window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank");
+        toast.success("Quote saved & WhatsApp opened!");
+      } else if (pendingShareMethod === "comparison") {
+        const banks = bankEMIs.map(b => ({
+          bankName: b.bankName, interestRate: b.interestRate, processingFee: b.processingFee,
+          emi: b.emi, totalPayment: b.totalPayment, totalInterest: b.totalInterest,
+        }));
+        const doc = generateComparisonPdf({
+          carName: carName || "Car Loan", variantName, loanAmount, downPayment, principal, tenure, banks,
+        }, true);
+        if (doc) {
+          await persistLoanQuoteHistory({
+            doc, fileName: `EMI_Comparison_${custName.replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.pdf`,
+            shareMethod: "comparison_pdf", customerName: custName, customerPhone: custPhone, customerEmail: custEmail || null,
+            carModel: carName || null, carVariant: variantName || null,
+            loanAmount: principal, downPayment, interestRate, tenureMonths: tenure,
+            emiAmount: emiDetails.emi, totalPayment: emiDetails.totalPayment, totalInterest: emiDetails.totalInterest,
+            bankComparison: banks, source: "website",
+          });
+          doc.save(`EMI_Comparison_${custName.replace(/\s+/g, "_")}.pdf`);
+          toast.success("Comparison PDF downloaded & quote saved!");
+        }
+      }
 
-  const handleShareWhatsApp = () => {
-    const data: EMIData = {
-      loanAmount, downPayment, loanPrincipal: principal,
-      interestRate, tenure, emi: emiDetails.emi,
-      totalPayment: emiDetails.totalPayment, totalInterest: emiDetails.totalInterest,
-      carName, variantName, onRoadPrice, selectedColor, selectedCity,
-    };
-    const message = generateEMIWhatsAppMessage(data);
-    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank");
+      setShowCustomerDialog(false);
+      setCustName(""); setCustPhone(""); setCustEmail("");
+    } catch (err: any) {
+      console.error("Quote share error:", err);
+      toast.error("Quote saved but there was an issue. PDF still downloaded.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const quickEmiTable = useMemo(() => {
