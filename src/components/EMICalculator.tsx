@@ -585,6 +585,61 @@ const EMICalculator = ({ onGetQuote, carName, variantName, onRoadPrice, selected
         </div>
       </div>
     </section>
+
+    {/* Customer Details Capture Dialog */}
+    <Dialog open={showCustomerDialog} onOpenChange={setShowCustomerDialog}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <User className="w-5 h-5" />
+            Get Your Personalized EMI Quote
+          </DialogTitle>
+          <DialogDescription>
+            Enter your details to receive the EMI estimate. Our team will also reach out with the best loan offers.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div>
+            <Label className="text-sm font-medium">Full Name *</Label>
+            <Input
+              placeholder="e.g. Rahul Sharma"
+              value={custName}
+              onChange={e => setCustName(e.target.value)}
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <Label className="text-sm font-medium">Phone Number *</Label>
+            <Input
+              placeholder="e.g. 9876543210"
+              value={custPhone}
+              onChange={e => setCustPhone(e.target.value.replace(/[^0-9+]/g, "").slice(0, 12))}
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <Label className="text-sm font-medium">Email (optional)</Label>
+            <Input
+              placeholder="e.g. rahul@email.com"
+              value={custEmail}
+              onChange={e => setCustEmail(e.target.value)}
+              className="mt-1"
+            />
+          </div>
+          <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground">
+            <p>📋 EMI: <span className="font-bold text-foreground">Rs. {emiDetails.emi.toLocaleString("en-IN")}/mo</span> for {tenure} months</p>
+            <p>💰 Loan: <span className="font-bold text-foreground">{formatCurrency(principal)}</span> @ {interestRate}% p.a.</p>
+          </div>
+        </div>
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={() => setShowCustomerDialog(false)}>Cancel</Button>
+          <Button onClick={handleConfirmShare} disabled={isSaving} className="gap-2">
+            {isSaving ? "Saving..." : pendingShareMethod === "whatsapp" ? "Share via WhatsApp" : "Download PDF"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 };
 
