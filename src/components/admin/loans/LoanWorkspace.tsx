@@ -209,6 +209,10 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
   };
 
   const handleKpiClick = (filter: StageFilter) => {
+    if (filter === "disbursed") {
+      setShowWonDialog(true);
+      return;
+    }
     setStageFilter(prev => prev === filter ? "all" : filter);
     if (activeView !== "pipeline") setActiveView("pipeline");
   };
