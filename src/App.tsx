@@ -12,15 +12,16 @@ import { resetChunkLoadRecovery } from "@/lib/chunkLoadRecovery";
 import { withPreviewParams } from "@/lib/previewRouting";
 import { RouteProviderGate } from "@/components/app/RouteProviderGate";
 import AdminAuth from "./pages/AdminAuth";
+import AdminLayout from "./pages/AdminLayout";
+import AdminResetPassword from "./pages/AdminResetPassword";
+import InsuranceDocumentViewer from "./pages/InsuranceDocumentViewer";
+import WorkspaceSelector from "./pages/WorkspaceSelector";
 
-// Only the homepage is statically imported for fastest first paint
+// Only the homepage plus critical admin entry shells are statically imported
+// so /admin, /crm, /workspace, and document viewing never depend on a stale route chunk.
 import Index from "./pages/Index";
 
-// Route-level pages stay lazy-loaded so admin-only code can't block public startup
-const AdminLayout = lazy(() => import("./pages/AdminLayout"));
-const AdminResetPassword = lazy(() => import("./pages/AdminResetPassword"));
-const InsuranceDocumentViewer = lazy(() => import("./pages/InsuranceDocumentViewer"));
-const WorkspaceSelector = lazy(() => import("./pages/WorkspaceSelector"));
+// Non-entry route pages stay lazy-loaded so the public site bundle stays lean
 const FloatingCompareBar = lazy(() =>
   import("./components/FloatingCompareBar").then((module) => ({ default: module.FloatingCompareBar })),
 );
