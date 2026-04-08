@@ -131,12 +131,14 @@ serve(async (req) => {
           company: sub.company || "",
         };
 
-        return {
+        const payload: Record<string, unknown> = {
           from: fromLine,
           to: [sub.email],
           subject: replaceVariables(subject, variables),
           html: replaceVariables(htmlContent, variables),
         };
+        if (reply_to) payload.reply_to = reply_to;
+        return payload;
       });
 
       try {
