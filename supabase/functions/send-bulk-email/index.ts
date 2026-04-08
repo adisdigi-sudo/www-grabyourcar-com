@@ -38,7 +38,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { campaign_id, from_name, from_email }: BulkEmailRequest = await req.json();
+    const { campaign_id, from_name, from_email, reply_to }: BulkEmailRequest = await req.json();
     if (!campaign_id) throw new Error("campaign_id is required");
 
     // Fetch campaign
