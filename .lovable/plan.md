@@ -1,53 +1,80 @@
 
 
-# Add Omni-Channel Share Dialog for Offers & EMI Across All Verticals
-
-## Overview
-Create a reusable **OmniShareDialog** component that supports sharing PDFs, offers, and EMI details via **WhatsApp, Email, RCS, and PDF download** — then integrate it across Loans, Sales, Insurance, and HSRP verticals.
+# Complete Mailchimp-Like Email Marketing Dashboard
 
 ## Current State
-- **Insurance** has a `SharePdfDialog` but it's tightly coupled to insurance persistence (`persistInsuranceQuoteHistory`)
-- **Loans** `LoanBulkOfferPanel` has basic WhatsApp + PDF download but no unified share dialog, no Email, no RCS
-- **Sales & HSRP** have no share/offer functionality at all
+- **Database ready**: Tables exist for `email_campaigns`, `email_subscribers`, `email_templates`, `email_sequences`, `email_sequence_steps`, `email_logs`
+- **Edge functions exist**: `send-bulk-email`, `ai-email-writer`
+- **UI exists**: `EmailMarketingManagement.tsx` (825 lines) with campaigns, subscribers, templates, AI generation, sender presets
+- **Missing**: Verified email domain (no domain configured yet), drag-and-drop builder, drip sequence UI, segmentation UI, real-time analytics dashboard
 
-## Plan
+## Step 0 — Email Domain Setup (Required First)
+You need to set up a sender domain so emails actually deliver from `@grabyourcar.com`. Click the button below to configure your domain — this adds DNS records that verify you own the domain.
 
-### 1. Create `OmniShareDialog` — Shared Reusable Component
-**New file**: `src/components/admin/shared/OmniShareDialog.tsx`
+## Step 1 — Drag-and-Drop Email Builder
+**New component**: `EmailBlockBuilder.tsx`
+- Visual block-based editor with draggable content blocks (Header, Hero Image, Text, CTA Button, Car Cards, Offers, Footer, Divider, Social Links)
+- Each block has inline editing — click to edit text, change colors, upload images
+- Live HTML preview panel (side-by-side with builder)
+- Save as template functionality
+- Uses existing `email_templates` table (`html_content` column)
+- Blocks stored as JSON in a new `blocks_json` column on `email_templates`
 
-A generic share dialog with 5 tabs:
-- **WhatsApp** (manual wa.me link with PDF download)
-- **WhatsApp API** (automated via `omni-channel-send` edge function)
-- **Email** (via `omniSend` with email channel)
-- **RCS** (via `omniSend` with RCS channel)
-- **Download PDF** (direct save)
+**DB migration**: Add `blocks_json JSONB` column to `email_templates`
 
-Props: `generatePdf`, `title`, `defaultPhone`, `defaultEmail`, `customerName`, `shareMessage`, `onShared`, `vertical` (for logging)
+## Step 2 — Subscriber Segmentation
+**New component**: `SubscriberSegmentation.tsx`
+- Filter subscribers by: tags, company, source, subscription date, engagement (opened/clicked)
+- Create named segments with saved filter rules (stored in `email_campaigns.segment_filter` JSONB)
+- Segment preview showing matching subscriber count
+- Quick segments: "All", "Corporate", "New (last 30 days)", "Engaged", "Inactive"
+- Tag management UI (add/remove tags on subscribers)
 
-Uses existing `omniSend` utility for Email & RCS channels, and `sendWhatsApp` for WhatsApp.
+Uses existing `email_subscribers` table with `tags`, `company`, `source` columns.
 
-### 2. Integrate into Loan CRM
-- Update **`LoanBulkOfferPanel.tsx`**: Replace individual WhatsApp/Email buttons per row with an "Share" button that opens `OmniShareDialog`, passing `generateLoanOfferPDF` as the PDF generator
-- Add a share action button in the **loan lead detail** area for single-lead offer sharing
+## Step 3 — Drip Sequence Builder
+**New component**: `DripSequenceBuilder.tsx`
+- Visual timeline/flow showing sequence steps
+- Create sequences with triggers: "New subscriber", "Tag added", "Manual"
+- Each step: select template, set delay (hours/days), add conditions
+- Start/pause/stop sequences
+- Track per-step delivery stats
 
-### 3. Integrate into Sales CRM
-- Update **`SalesLeadDetailModal.tsx`**: Add a "Share Offer" button that generates a basic sales offer PDF and opens `OmniShareDialog`
-- Create a simple **`SalesOfferPDF.ts`** utility that generates a car deal offer PDF (customer name, car model, deal value, special terms)
+Uses existing `email_sequences` and `email_sequence_steps` tables. New edge function `process-drip-sequences` triggered by pg_cron to check and send pending drip emails.
 
-### 4. Integrate into Insurance (upgrade existing)
-- Update existing `SharePdfDialog` usages to use the new `OmniShareDialog` which adds RCS support (currently missing)
+**DB migration**: Add `email_drip_enrollments` table to track which subscribers are in which sequences and their current step.
 
-### 5. Integrate into HSRP
-- Add share capability to HSRP booking confirmations via `OmniShareDialog`
+## Step 4 — Real-Time Campaign Analytics Dashboard
+**Enhanced component**: Rebuild `CampaignAnalytics.tsx`
+- Real-time stats from `email_logs`: sent, delivered, opened, clicked, bounced, failed
+- Per-campaign drill-down with recipient-level status
+- Time-series charts (sends over time, open rate trends)
+- Top-performing campaigns leaderboard
+- Subscriber growth chart
+- Enable realtime on `email_logs` for live updates
 
-## Summary
+## Step 5 — Unified Email Marketing Hub
+**Refactor** `EmailMarketingManagement.tsx` into a tabbed dashboard:
+- **Campaigns** — create, send, track bulk campaigns
+- **Templates** — drag-and-drop builder + AI writer
+- **Subscribers** — list management + segmentation
+- **Sequences** — drip automation builder
+- **Analytics** — real-time performance dashboard
 
-| File | Action |
-|------|--------|
-| `src/components/admin/shared/OmniShareDialog.tsx` | New — 5-tab share dialog (WA, WA API, Email, RCS, Download) |
-| `src/components/admin/sales/SalesOfferPDF.ts` | New — Sales deal offer PDF generator |
-| `src/components/admin/loans/LoanBulkOfferPanel.tsx` | Wire OmniShareDialog per lead row |
-| `src/components/admin/sales/SalesLeadDetailModal.tsx` | Add Share Offer button with OmniShareDialog |
-| `src/components/admin/insurance/InsuranceQuoteHub.tsx` | Swap to OmniShareDialog (adds RCS) |
-| `src/components/admin/insurance/InsuranceSmartCalling.tsx` | Swap to OmniShareDialog (adds RCS) |
+## Files to Create
+1. `src/components/admin/marketing/email/EmailBlockBuilder.tsx`
+2. `src/components/admin/marketing/email/SubscriberSegmentation.tsx`
+3. `src/components/admin/marketing/email/DripSequenceBuilder.tsx`
+4. `src/components/admin/marketing/email/EmailAnalyticsDashboard.tsx`
+5. `src/components/admin/marketing/email/EmailMarketingHub.tsx` (orchestrator)
+6. `supabase/functions/process-drip-sequences/index.ts`
+
+## Files to Edit
+1. `src/components/admin/EmailMarketingManagement.tsx` — replace with hub
+2. `src/components/admin/marketing/CampaignAnalytics.tsx` — enhance with email-specific metrics
+
+## Database Changes
+1. Add `blocks_json JSONB` to `email_templates`
+2. Create `email_drip_enrollments` table (subscriber_id, sequence_id, current_step, status, enrolled_at, next_send_at)
+3. Enable realtime on `email_logs`
 
