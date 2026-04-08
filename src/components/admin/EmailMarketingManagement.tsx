@@ -8,16 +8,17 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { 
-  Mail, Plus, Send, Users, FileText, BarChart3,
-  Search, Eye, Trash2, Copy, Pause,
+  Mail, Plus, Send, Users, FileText, 
+  Search, Trash2, Copy, 
   Building2, Download, Upload, Sparkles,
-  RefreshCw, CheckCircle, XCircle, Clock, TrendingUp, Loader2, Rocket
+  RefreshCw, CheckCircle, XCircle, Clock, Loader2, Rocket,
+  Wand2, Eye, AtSign, User, Zap, ListChecks
 } from "lucide-react";
 
 interface EmailCampaign {
@@ -32,6 +33,8 @@ interface EmailCampaign {
   failed_count: number;
   open_count: number;
   click_count: number;
+  from_name: string | null;
+  from_email: string | null;
   scheduled_at: string | null;
   started_at: string | null;
   completed_at: string | null;
@@ -59,6 +62,15 @@ interface EmailTemplate {
   is_active: boolean | null;
 }
 
+const SENDER_PRESETS = [
+  { name: "Anshdeep", email: "anshdeep@grabyourcar.com" },
+  { name: "GrabYourCar", email: "hello@grabyourcar.com" },
+  { name: "GrabYourCar Marketing", email: "marketing@grabyourcar.com" },
+  { name: "GrabYourCar Insurance", email: "insurance@grabyourcar.com" },
+  { name: "GrabYourCar Sales", email: "sales@grabyourcar.com" },
+  { name: "GrabYourCar Support", email: "support@grabyourcar.com" },
+];
+
 export const EmailMarketingManagement = () => {
   const [activeTab, setActiveTab] = useState("campaigns");
   const [campaigns, setCampaigns] = useState<EmailCampaign[]>([]);
@@ -71,10 +83,15 @@ export const EmailMarketingManagement = () => {
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [isAIGenerating, setIsAIGenerating] = useState(false);
+  const [isSubjectGenerating, setIsSubjectGenerating] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [subjectSuggestions, setSubjectSuggestions] = useState<string[]>([]);
 
   const [campaignForm, setCampaignForm] = useState({
     name: '', subject: '', content: '', template_id: '', scheduledAt: '',
+    from_name: 'Anshdeep', from_email: 'anshdeep@grabyourcar.com',
+    ai_prompt: '', ai_tone: 'professional', ai_audience: 'corporate',
   });
 
   const [contactForm, setContactForm] = useState({
@@ -83,7 +100,6 @@ export const EmailMarketingManagement = () => {
 
   useEffect(() => { fetchAll(); }, []);
 
-  // Realtime subscription for campaign status
   useEffect(() => {
     const channel = supabase
       .channel('campaign-updates')
@@ -127,6 +143,8 @@ export const EmailMarketingManagement = () => {
       subject: campaignForm.subject,
       html_content: campaignForm.content || null,
       template_id: campaignForm.template_id || null,
+      from_name: campaignForm.from_name || 'GrabYourCar',
+      from_email: campaignForm.from_email || 'noreply@grabyourcar.com',
       status: 'draft',
       total_recipients: subscribers.filter(s => s.subscribed !== false).length,
       scheduled_at: campaignForm.scheduledAt ? new Date(campaignForm.scheduledAt).toISOString() : null,
@@ -135,8 +153,17 @@ export const EmailMarketingManagement = () => {
     if (error) { toast.error(error.message); return; }
     toast.success('Campaign created!');
     setIsCreateCampaignOpen(false);
-    setCampaignForm({ name: '', subject: '', content: '', template_id: '', scheduledAt: '' });
+    resetCampaignForm();
     fetchAll();
+  };
+
+  const resetCampaignForm = () => {
+    setCampaignForm({
+      name: '', subject: '', content: '', template_id: '', scheduledAt: '',
+      from_name: 'Anshdeep', from_email: 'anshdeep@grabyourcar.com',
+      ai_prompt: '', ai_tone: 'professional', ai_audience: 'corporate',
+    });
+    setSubjectSuggestions([]);
   };
 
   const handleSendCampaign = async (campaignId: string) => {
@@ -149,18 +176,21 @@ export const EmailMarketingManagement = () => {
       return;
     }
 
-    if (!confirm(`Send "${campaign.name}" to ${subscriberCount} subscribers? This action cannot be undone.`)) return;
+    if (!confirm(`Send "${campaign.name}" from ${campaign.from_name || 'GrabYourCar'} <${campaign.from_email || 'noreply@grabyourcar.com'}> to ${subscriberCount} subscribers?`)) return;
 
     setIsSending(campaignId);
     toast.loading(`Sending to ${subscriberCount} subscribers...`, { id: 'bulk-send' });
 
     try {
       const { data, error } = await supabase.functions.invoke("send-bulk-email", {
-        body: { campaign_id: campaignId },
+        body: { 
+          campaign_id: campaignId,
+          from_name: campaign.from_name,
+          from_email: campaign.from_email,
+        },
       });
 
       if (error) throw error;
-
       toast.dismiss('bulk-send');
       toast.success(`✅ Campaign sent! ${data.sent} delivered, ${data.failed} failed`);
       fetchAll();
@@ -254,36 +284,79 @@ export const EmailMarketingManagement = () => {
     }
   };
 
+  // ── AI Email Writer ──
   const handleAIGenerateContent = async () => {
+    if (!campaignForm.ai_prompt) {
+      toast.error("Please describe what you want the email to be about");
+      return;
+    }
     setIsAIGenerating(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    const generatedContent = `<!DOCTYPE html>
-<html><body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 12px; color: white; text-align: center;">
-  <h1 style="margin: 0;">🚗 GrabYourCar</h1>
-  <p style="margin: 8px 0 0 0; opacity: 0.9;">Your Trusted Car Buying Partner</p>
-</div>
-<div style="padding: 24px 0;">
-  <p>Hi {customer_name},</p>
-  <p>We have exciting offers waiting for you!</p>
-  <ul>
-    <li>💰 Up to ₹50,000 off on select models</li>
-    <li>🏦 Zero processing fee on car loans</li>
-    <li>🛡️ Free 1-year extended warranty</li>
-    <li>🎁 Complimentary accessories package</li>
-  </ul>
-  <div style="text-align: center; margin: 24px 0;">
-    <a href="https://grabyourcar.com/cars" style="background: #667eea; color: white; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: bold;">Explore Offers →</a>
-  </div>
-  <p>📞 Call us: <strong>+91-XXXXXXXXXX</strong></p>
-</div>
-<div style="border-top: 1px solid #eee; padding-top: 16px; text-align: center; color: #999; font-size: 12px;">
-  <p>GrabYourCar | Your Car, Our Passion</p>
-</div>
-</body></html>`;
-    setCampaignForm(prev => ({ ...prev, content: generatedContent }));
-    setIsAIGenerating(false);
-    toast.success('AI content generated!');
+
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-email-writer", {
+        body: {
+          action: "generate_email",
+          prompt: campaignForm.ai_prompt,
+          tone: campaignForm.ai_tone,
+          audience: campaignForm.ai_audience,
+          brand_name: "GrabYourCar",
+          from_name: campaignForm.from_name,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.html_content) {
+        setCampaignForm(prev => ({ ...prev, content: data.html_content }));
+        toast.success('✨ AI email generated! Review and edit as needed.');
+      } else {
+        throw new Error(data?.error || "No content generated");
+      }
+    } catch (err: any) {
+      toast.error(`AI generation failed: ${err.message}`);
+    } finally {
+      setIsAIGenerating(false);
+    }
+  };
+
+  const handleAISubjectLines = async () => {
+    setIsSubjectGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-email-writer", {
+        body: {
+          action: "generate_subject",
+          prompt: campaignForm.ai_prompt || campaignForm.name || "Marketing email",
+          brand_name: "GrabYourCar",
+        },
+      });
+      if (error) throw error;
+      if (data?.subjects?.length) {
+        setSubjectSuggestions(data.subjects);
+        toast.success("Subject lines generated!");
+      }
+    } catch (err: any) {
+      toast.error(`Failed: ${err.message}`);
+    } finally {
+      setIsSubjectGenerating(false);
+    }
+  };
+
+  const handleAIImprove = async () => {
+    if (!campaignForm.content) { toast.error("No content to improve"); return; }
+    setIsAIGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-email-writer", {
+        body: { action: "improve_email", existing_content: campaignForm.content },
+      });
+      if (error) throw error;
+      if (data?.html_content) {
+        setCampaignForm(prev => ({ ...prev, content: data.html_content }));
+        toast.success("✨ Email improved!");
+      }
+    } catch (err: any) {
+      toast.error(`Failed: ${err.message}`);
+    } finally {
+      setIsAIGenerating(false);
+    }
   };
 
   const downloadSampleCSV = () => {
@@ -323,9 +396,9 @@ export const EmailMarketingManagement = () => {
         <div>
           <h2 className="text-2xl font-bold flex items-center gap-2">
             <Mail className="h-6 w-6 text-primary" />
-            Email Marketing
+            Email Marketing Hub
           </h2>
-          <p className="text-muted-foreground">Send bulk campaigns to unlimited subscribers via Resend</p>
+          <p className="text-muted-foreground">AI-powered bulk email campaigns from your own domain — your Mailchimp replacement</p>
         </div>
       </div>
 
@@ -349,8 +422,8 @@ export const EmailMarketingManagement = () => {
         {/* Campaigns Tab */}
         <TabsContent value="campaigns" className="space-y-4">
           <div className="flex justify-between items-center">
-            <p className="text-sm text-muted-foreground">Create campaigns and send to all subscribed contacts at once</p>
-            <Button onClick={() => setIsCreateCampaignOpen(true)}><Plus className="h-4 w-4 mr-2" />Create Campaign</Button>
+            <p className="text-sm text-muted-foreground">Create AI-powered campaigns and send from your own email addresses</p>
+            <Button onClick={() => { resetCampaignForm(); setIsCreateCampaignOpen(true); }}><Plus className="h-4 w-4 mr-2" />Create Campaign</Button>
           </div>
 
           <Card>
@@ -359,10 +432,10 @@ export const EmailMarketingManagement = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Campaign</TableHead>
+                    <TableHead>From</TableHead>
                     <TableHead>Subject</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Sent / Total</TableHead>
-                    <TableHead>Failed</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -372,7 +445,13 @@ export const EmailMarketingManagement = () => {
                   ) : campaigns.map((campaign) => (
                     <TableRow key={campaign.id}>
                       <TableCell className="font-medium">{campaign.name}</TableCell>
-                      <TableCell className="max-w-[200px] truncate">{campaign.subject}</TableCell>
+                      <TableCell>
+                        <div className="text-xs">
+                          <div className="font-medium">{campaign.from_name || 'GrabYourCar'}</div>
+                          <div className="text-muted-foreground">{campaign.from_email || 'noreply@grabyourcar.com'}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="max-w-[180px] truncate">{campaign.subject}</TableCell>
                       <TableCell>{getStatusBadge(campaign.status)}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -382,7 +461,6 @@ export const EmailMarketingManagement = () => {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell><span className={campaign.failed_count > 0 ? 'text-red-600 font-medium' : ''}>{campaign.failed_count}</span></TableCell>
                       <TableCell>
                         <div className="flex gap-1">
                           {campaign.status === 'draft' && (
@@ -510,46 +588,196 @@ export const EmailMarketingManagement = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Create Campaign Modal */}
+      {/* ═══ Create Campaign Modal — Full AI-Powered ═══ */}
       <Dialog open={isCreateCampaignOpen} onOpenChange={setIsCreateCampaignOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Create Email Campaign</DialogTitle>
-            <DialogDescription>Will be sent to {subscribers.filter(s => s.subscribed !== false).length} active subscribers</DialogDescription>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Create AI-Powered Campaign
+            </DialogTitle>
+            <DialogDescription>
+              Will be sent to {subscribers.filter(s => s.subscribed !== false).length} active subscribers
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+
+          <div className="space-y-5">
+            {/* Sender Selection */}
+            <Card className="border-primary/20 bg-primary/5">
+              <CardContent className="pt-4 space-y-3">
+                <Label className="text-sm font-semibold flex items-center gap-2">
+                  <AtSign className="h-4 w-4" /> Send From
+                </Label>
+                <div className="flex flex-wrap gap-2">
+                  {SENDER_PRESETS.map((preset) => (
+                    <Button
+                      key={preset.email}
+                      variant={campaignForm.from_email === preset.email ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCampaignForm(prev => ({ ...prev, from_name: preset.name, from_email: preset.email }))}
+                    >
+                      <User className="h-3 w-3 mr-1" />
+                      {preset.name}
+                    </Button>
+                  ))}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Sender Name</Label>
+                    <Input
+                      value={campaignForm.from_name}
+                      onChange={(e) => setCampaignForm(prev => ({ ...prev, from_name: e.target.value }))}
+                      placeholder="Your Name"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Sender Email</Label>
+                    <Input
+                      value={campaignForm.from_email}
+                      onChange={(e) => setCampaignForm(prev => ({ ...prev, from_email: e.target.value }))}
+                      placeholder="your@grabyourcar.com"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Campaign Name */}
             <div className="space-y-2">
               <Label>Campaign Name *</Label>
-              <Input placeholder="e.g., Diwali Special Offers" value={campaignForm.name} onChange={(e) => setCampaignForm(prev => ({ ...prev, name: e.target.value }))} />
+              <Input placeholder="e.g., Corporate Fleet Offer Q2 2026" value={campaignForm.name} onChange={(e) => setCampaignForm(prev => ({ ...prev, name: e.target.value }))} />
             </div>
+
+            {/* Subject Line + AI */}
             <div className="space-y-2">
-              <Label>Subject Line *</Label>
-              <Input placeholder="e.g., 🎉 Special Offers on New Cars!" value={campaignForm.subject} onChange={(e) => setCampaignForm(prev => ({ ...prev, subject: e.target.value }))} />
+              <div className="flex items-center justify-between">
+                <Label>Subject Line *</Label>
+                <Button variant="outline" size="sm" onClick={handleAISubjectLines} disabled={isSubjectGenerating}>
+                  {isSubjectGenerating ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Wand2 className="h-3 w-3 mr-1" />}
+                  AI Subject Lines
+                </Button>
+              </div>
+              <Input placeholder="e.g., 🎉 Special Fleet Pricing for Your Company!" value={campaignForm.subject} onChange={(e) => setCampaignForm(prev => ({ ...prev, subject: e.target.value }))} />
+              {subjectSuggestions.length > 0 && (
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">AI Suggestions — click to use:</Label>
+                  <div className="flex flex-col gap-1">
+                    {subjectSuggestions.map((s, i) => (
+                      <Button
+                        key={i} variant="ghost" size="sm"
+                        className="justify-start text-xs h-auto py-1.5 font-normal"
+                        onClick={() => { setCampaignForm(prev => ({ ...prev, subject: s })); setSubjectSuggestions([]); }}
+                      >
+                        <ListChecks className="h-3 w-3 mr-2 text-primary shrink-0" />
+                        <span className="truncate text-left">{s}</span>
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
+
+            {/* AI Email Writer */}
+            <Card className="border-dashed">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-yellow-500" />
+                  AI Email Writer
+                </CardTitle>
+                <CardDescription className="text-xs">Describe what you want and AI will write the complete email</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Textarea
+                  placeholder="e.g., Write a professional email offering fleet insurance packages to corporate companies with 50+ vehicles. Highlight our competitive pricing, 24/7 claims support, and dedicated account manager. Include a CTA to schedule a call."
+                  value={campaignForm.ai_prompt}
+                  onChange={(e) => setCampaignForm(prev => ({ ...prev, ai_prompt: e.target.value }))}
+                  rows={3}
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Tone</Label>
+                    <Select value={campaignForm.ai_tone} onValueChange={(v) => setCampaignForm(prev => ({ ...prev, ai_tone: v }))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="professional">Professional</SelectItem>
+                        <SelectItem value="friendly">Friendly</SelectItem>
+                        <SelectItem value="urgent">Urgent / FOMO</SelectItem>
+                        <SelectItem value="casual">Casual</SelectItem>
+                        <SelectItem value="luxury">Luxury / Premium</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Target Audience</Label>
+                    <Select value={campaignForm.ai_audience} onValueChange={(v) => setCampaignForm(prev => ({ ...prev, ai_audience: v }))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="corporate">Corporate / B2B</SelectItem>
+                        <SelectItem value="individual">Individual Buyers</SelectItem>
+                        <SelectItem value="fleet">Fleet Managers</SelectItem>
+                        <SelectItem value="renewal">Insurance Renewals</SelectItem>
+                        <SelectItem value="general">General</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={handleAIGenerateContent} disabled={isAIGenerating || !campaignForm.ai_prompt} className="flex-1">
+                    {isAIGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Zap className="h-4 w-4 mr-2" />}
+                    {isAIGenerating ? 'Generating...' : 'Generate Email'}
+                  </Button>
+                  {campaignForm.content && (
+                    <Button variant="outline" onClick={handleAIImprove} disabled={isAIGenerating}>
+                      <Wand2 className="h-4 w-4 mr-2" />Improve
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Email Content */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label>Email Content (HTML)</Label>
-                <Button variant="outline" size="sm" onClick={handleAIGenerateContent} disabled={isAIGenerating}>
-                  {isAIGenerating ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
-                  Generate with AI
-                </Button>
+                {campaignForm.content && (
+                  <Button variant="outline" size="sm" onClick={() => setIsPreviewOpen(true)}>
+                    <Eye className="h-3 w-3 mr-1" />Preview
+                  </Button>
+                )}
               </div>
               <Textarea
-                placeholder="Paste HTML content or generate with AI. Use {customer_name}, {email} for personalization"
+                placeholder="Paste HTML content or use the AI writer above. Variables: {customer_name}, {email}, {company}"
                 value={campaignForm.content}
                 onChange={(e) => setCampaignForm(prev => ({ ...prev, content: e.target.value }))}
-                rows={12}
+                rows={10}
                 className="font-mono text-xs"
               />
             </div>
+
             {campaignForm.template_id && (
               <Badge variant="outline" className="gap-1"><FileText className="h-3 w-3" />Using template</Badge>
             )}
           </div>
-          <DialogFooter>
+
+          <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setIsCreateCampaignOpen(false)}>Cancel</Button>
-            <Button onClick={handleCreateCampaign}><Send className="h-4 w-4 mr-2" />Create Campaign</Button>
+            <Button onClick={handleCreateCampaign}>
+              <Send className="h-4 w-4 mr-2" />Create Campaign
+            </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Preview Modal */}
+      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Eye className="h-4 w-4" />Email Preview</DialogTitle>
+            <DialogDescription>From: {campaignForm.from_name} &lt;{campaignForm.from_email}&gt;</DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="h-[60vh] border rounded-lg">
+            <div dangerouslySetInnerHTML={{ __html: campaignForm.content || '<p>No content</p>' }} />
+          </ScrollArea>
         </DialogContent>
       </Dialog>
 

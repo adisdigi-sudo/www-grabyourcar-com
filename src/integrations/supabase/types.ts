@@ -5156,6 +5156,8 @@ export type Database = {
           created_at: string
           created_by: string | null
           failed_count: number | null
+          from_email: string | null
+          from_name: string | null
           html_content: string | null
           id: string
           name: string
@@ -5176,6 +5178,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           failed_count?: number | null
+          from_email?: string | null
+          from_name?: string | null
           html_content?: string | null
           id?: string
           name: string
@@ -5196,6 +5200,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           failed_count?: number | null
+          from_email?: string | null
+          from_name?: string | null
           html_content?: string | null
           id?: string
           name?: string

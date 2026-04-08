@@ -10,6 +10,8 @@ const corsHeaders = {
 
 interface BulkEmailRequest {
   campaign_id: string;
+  from_name?: string;
+  from_email?: string;
 }
 
 const replaceVariables = (content: string, variables: Record<string, string>): string => {
@@ -35,7 +37,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { campaign_id }: BulkEmailRequest = await req.json();
+    const { campaign_id, from_name, from_email }: BulkEmailRequest = await req.json();
     if (!campaign_id) throw new Error("campaign_id is required");
 
     // Fetch campaign
@@ -45,6 +47,11 @@ serve(async (req) => {
       .eq("id", campaign_id)
       .single();
     if (campErr || !campaign) throw new Error("Campaign not found");
+
+    // Build sender - support custom from addresses like anshdeep@grabyourcar.com
+    const senderName = from_name || campaign.from_name || "GrabYourCar";
+    const senderEmail = from_email || campaign.from_email || "noreply@grabyourcar.com";
+    const fromLine = `${senderName} <${senderEmail}>`;
 
     // Get HTML content - from campaign directly or from template
     let htmlContent = campaign.html_content;
@@ -100,7 +107,7 @@ serve(async (req) => {
       total_recipients: subscribers.length,
     }).eq("id", campaign_id);
 
-    console.log(`Sending campaign "${campaign.name}" to ${subscribers.length} subscribers`);
+    console.log(`Sending campaign "${campaign.name}" from ${fromLine} to ${subscribers.length} subscribers`);
 
     let sentCount = 0;
     let failedCount = 0;
@@ -124,7 +131,7 @@ serve(async (req) => {
         };
 
         return {
-          from: "GrabYourCar <noreply@grabyourcar.com>",
+          from: fromLine,
           to: [sub.email],
           subject: replaceVariables(subject, variables),
           html: replaceVariables(htmlContent, variables),
@@ -132,11 +139,9 @@ serve(async (req) => {
       });
 
       try {
-        // Use Resend batch API for high throughput
         const batchResult = await resend.batch.send(emailPayloads);
         console.log(`Batch sent: ${emailPayloads.length} emails`, batchResult);
 
-        // Log each email
         const logEntries = batch.map((sub, idx) => {
           const batchData = batchResult.data as { data?: { id: string }[] } | null;
           const emailId = batchData?.data?.[idx]?.id;
@@ -153,13 +158,12 @@ serve(async (req) => {
             status: hasError ? "failed" : "sent",
             resend_id: emailId || null,
             sent_at: hasError ? null : new Date().toISOString(),
-            metadata: { campaign_name: campaign.name },
+            metadata: { campaign_name: campaign.name, from: fromLine },
           };
         });
 
         await supabase.from("email_logs").insert(logEntries);
 
-        // Update campaign progress
         await supabase.from("email_campaigns").update({
           sent_count: sentCount,
           failed_count: failedCount,
@@ -169,7 +173,6 @@ serve(async (req) => {
         console.error("Batch send error:", batchError);
         failedCount += batch.length;
 
-        // Log failures
         const failLogs = batch.map((sub) => ({
           campaign_id,
           recipient_email: sub.email,
@@ -177,12 +180,11 @@ serve(async (req) => {
           subject: replaceVariables(subject, { customer_name: sub.name || "Valued Customer", name: sub.name || "Valued Customer" }),
           status: "failed",
           error_message: batchError.message,
-          metadata: { campaign_name: campaign.name },
+          metadata: { campaign_name: campaign.name, from: fromLine },
         }));
         await supabase.from("email_logs").insert(failLogs);
       }
 
-      // Small delay between batches to avoid rate limiting
       if (batches.length > 1) {
         await new Promise((resolve) => setTimeout(resolve, 200));
       }
