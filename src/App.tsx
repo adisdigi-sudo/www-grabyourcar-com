@@ -11,13 +11,13 @@ import { usePageViewTracking } from "@/hooks/usePageViewTracking";
 import { resetChunkLoadRecovery } from "@/lib/chunkLoadRecovery";
 import { withPreviewParams } from "@/lib/previewRouting";
 import { RouteProviderGate } from "@/components/app/RouteProviderGate";
+import AdminAuth from "./pages/AdminAuth";
 
 // Only the homepage is statically imported for fastest first paint
 import Index from "./pages/Index";
 
 // Route-level pages stay lazy-loaded so admin-only code can't block public startup
 const AdminLayout = lazy(() => import("./pages/AdminLayout"));
-const AdminAuth = lazy(() => import("./pages/AdminAuth"));
 const AdminResetPassword = lazy(() => import("./pages/AdminResetPassword"));
 const InsuranceDocumentViewer = lazy(() => import("./pages/InsuranceDocumentViewer"));
 const WorkspaceSelector = lazy(() => import("./pages/WorkspaceSelector"));
