@@ -12,6 +12,7 @@ interface BulkEmailRequest {
   campaign_id: string;
   from_name?: string;
   from_email?: string;
+  reply_to?: string;
 }
 
 const replaceVariables = (content: string, variables: Record<string, string>): string => {
@@ -37,7 +38,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { campaign_id, from_name, from_email }: BulkEmailRequest = await req.json();
+    const { campaign_id, from_name, from_email, reply_to }: BulkEmailRequest = await req.json();
     if (!campaign_id) throw new Error("campaign_id is required");
 
     // Fetch campaign
@@ -130,12 +131,14 @@ serve(async (req) => {
           company: sub.company || "",
         };
 
-        return {
+        const payload: Record<string, unknown> = {
           from: fromLine,
           to: [sub.email],
           subject: replaceVariables(subject, variables),
           html: replaceVariables(htmlContent, variables),
         };
+        if (reply_to) payload.reply_to = reply_to;
+        return payload;
       });
 
       try {
