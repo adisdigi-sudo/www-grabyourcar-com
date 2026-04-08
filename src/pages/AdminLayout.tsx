@@ -76,7 +76,7 @@ const APIIntegrationPortal = lazy(() =>
   import("@/components/admin/APIIntegrationPortal").then((module) => ({ default: module.APIIntegrationPortal })),
 );
 const EmailMarketingManagement = lazy(() =>
-  import("@/components/admin/EmailMarketingManagement").then((module) => ({ default: module.EmailMarketingManagement })),
+  import("@/components/admin/marketing/email/EmailMarketingHub").then((module) => ({ default: module.EmailMarketingHub })),
 );
 const AIContentHub = lazy(() =>
   import("@/components/admin/AIContentHub").then((module) => ({ default: module.AIContentHub })),
