@@ -12,6 +12,7 @@ interface BulkEmailRequest {
   campaign_id: string;
   from_name?: string;
   from_email?: string;
+  reply_to?: string;
 }
 
 const replaceVariables = (content: string, variables: Record<string, string>): string => {
