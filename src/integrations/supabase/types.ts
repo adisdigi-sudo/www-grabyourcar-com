@@ -5226,6 +5226,63 @@ export type Database = {
           },
         ]
       }
+      email_drip_enrollments: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          current_step_index: number
+          enrolled_at: string
+          id: string
+          next_send_at: string | null
+          paused_at: string | null
+          sequence_id: string
+          status: string
+          subscriber_id: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          current_step_index?: number
+          enrolled_at?: string
+          id?: string
+          next_send_at?: string | null
+          paused_at?: string | null
+          sequence_id: string
+          status?: string
+          subscriber_id: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          current_step_index?: number
+          enrolled_at?: string
+          id?: string
+          next_send_at?: string | null
+          paused_at?: string | null
+          sequence_id?: string
+          status?: string
+          subscriber_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_drip_enrollments_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "email_sequences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_drip_enrollments_subscriber_id_fkey"
+            columns: ["subscriber_id"]
+            isOneToOne: false
+            referencedRelation: "email_subscribers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_lists: {
         Row: {
           created_at: string
@@ -5460,6 +5517,7 @@ export type Database = {
       }
       email_templates: {
         Row: {
+          blocks_json: Json | null
           category: string
           created_at: string
           html_content: string
@@ -5473,6 +5531,7 @@ export type Database = {
           variables: string[] | null
         }
         Insert: {
+          blocks_json?: Json | null
           category?: string
           created_at?: string
           html_content: string
@@ -5486,6 +5545,7 @@ export type Database = {
           variables?: string[] | null
         }
         Update: {
+          blocks_json?: Json | null
           category?: string
           created_at?: string
           html_content?: string
