@@ -3,6 +3,8 @@ const DYNAMIC_IMPORT_ERROR_PATTERNS = [
   "Importing a module script failed",
   "Failed to fetch module script",
   "error loading dynamically imported module",
+  "Failed to load url /node_modules/.vite/deps/",
+  "Failed to load url /@fs/",
 ];
 
 // Patterns that should NOT trigger recovery (API/fetch errors)
@@ -27,13 +29,22 @@ const getErrorMessage = (error: unknown): string => {
   return "";
 };
 
+const isViteOptimizedDepError = (message: string): boolean => {
+  const normalizedMessage = message.toLowerCase();
+
+  return (
+    (normalizedMessage.includes(".vite/deps") || normalizedMessage.includes("/@fs/")) &&
+    (normalizedMessage.includes("failed to load url") || normalizedMessage.includes("does the file exist"))
+  );
+};
+
 export const isDynamicImportError = (error: unknown): boolean => {
   const message = getErrorMessage(error).toLowerCase();
   // Must match a dynamic import pattern
   const isImportError = DYNAMIC_IMPORT_ERROR_PATTERNS.some((pattern) =>
     message.toLowerCase().includes(pattern.toLowerCase()),
   );
-  if (!isImportError) return false;
+  if (!isImportError && !isViteOptimizedDepError(message)) return false;
   // Must NOT match a false positive (API/Supabase error)
   const isFalsePositive = FALSE_POSITIVE_PATTERNS.some((pattern) =>
     message.toLowerCase().includes(pattern.toLowerCase()),

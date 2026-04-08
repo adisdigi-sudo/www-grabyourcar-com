@@ -11,6 +11,9 @@ import { Loader2, WifiOff } from "lucide-react";
 let hasTriggeredChunkRecovery = false;
 
 const DEV_SERVER_STATUS_EVENT = "lovable:dev-server-status";
+const DEV_SERVER_PENDING_RELOAD_KEY = "lovable_dev_server_pending_reload";
+const DEV_SERVER_LAST_RELOAD_KEY = "lovable_dev_server_last_reload";
+const DEV_SERVER_RELOAD_COOLDOWN_MS = 5000;
 
 const attemptChunkRecovery = (error: unknown, source: string) => {
   if (hasTriggeredChunkRecovery || !isDynamicImportError(error)) {
@@ -26,6 +29,36 @@ const attemptChunkRecovery = (error: unknown, source: string) => {
   return hasTriggeredChunkRecovery;
 };
 
+const markDevServerPendingReload = () => {
+  try {
+    sessionStorage.setItem(DEV_SERVER_PENDING_RELOAD_KEY, "1");
+  } catch {
+    // ignore storage failures
+  }
+};
+
+const reloadAfterDevServerRestart = () => {
+  try {
+    const hasPendingReload = sessionStorage.getItem(DEV_SERVER_PENDING_RELOAD_KEY) === "1";
+    if (!hasPendingReload) return;
+
+    const lastReloadAt = Number.parseInt(sessionStorage.getItem(DEV_SERVER_LAST_RELOAD_KEY) ?? "0", 10);
+    if (!Number.isNaN(lastReloadAt) && Date.now() - lastReloadAt < DEV_SERVER_RELOAD_COOLDOWN_MS) {
+      sessionStorage.removeItem(DEV_SERVER_PENDING_RELOAD_KEY);
+      return;
+    }
+
+    sessionStorage.removeItem(DEV_SERVER_PENDING_RELOAD_KEY);
+    sessionStorage.setItem(DEV_SERVER_LAST_RELOAD_KEY, String(Date.now()));
+
+    const nextUrl = new URL(window.location.href);
+    nextUrl.searchParams.set("__v", Date.now().toString());
+    window.location.replace(nextUrl.toString());
+  } catch {
+    window.location.reload();
+  }
+};
+
 if (typeof window !== "undefined") {
   window.addEventListener("error", (event) => {
     attemptChunkRecovery(event.error ?? event.message, "window.error");
@@ -38,6 +71,7 @@ if (typeof window !== "undefined") {
 
 if (import.meta.hot && typeof window !== "undefined") {
   import.meta.hot.on("vite:ws:disconnect", () => {
+    markDevServerPendingReload();
     window.dispatchEvent(
       new CustomEvent(DEV_SERVER_STATUS_EVENT, {
         detail: { status: "disconnected" as const },
@@ -51,9 +85,14 @@ if (import.meta.hot && typeof window !== "undefined") {
         detail: { status: "connected" as const },
       }),
     );
+
+    window.setTimeout(() => {
+      reloadAfterDevServerRestart();
+    }, 150);
   });
 
   import.meta.hot.on("vite:beforeFullReload", () => {
+    markDevServerPendingReload();
     window.dispatchEvent(
       new CustomEvent(DEV_SERVER_STATUS_EVENT, {
         detail: { status: "reloading" as const },
