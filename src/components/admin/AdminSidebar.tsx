@@ -197,6 +197,12 @@ const navItems: NavItem[] = [
   { id: "revenue-intelligence", label: "📊 Revenue Intelligence", icon: BarChart3, badge: "New",
     verticals: ["marketing"],
     allowedRoles: ["super_admin", "admin", "finance"] },
+  { id: "ad-spend-analytics", label: "📈 Ad Spend & CAC", icon: BarChart3, badge: "New",
+    verticals: ["marketing"],
+    allowedRoles: ["super_admin", "admin"] },
+  { id: "employee-performance", label: "🏆 Employee Performance", icon: BarChart3, badge: "New",
+    verticals: ["marketing"],
+    allowedRoles: ["super_admin", "admin", "manager"] },
 
   // ── Car Database — isolated vertical ──
   { 
