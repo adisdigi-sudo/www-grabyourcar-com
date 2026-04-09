@@ -20,6 +20,7 @@ import {
 import { format } from "date-fns";
 import { generateInsuranceQuotePdf, InsuranceQuoteData } from "@/lib/generateInsuranceQuotePdf";
 import { INSURANCE_COMPANIES, getShortName } from "@/lib/insuranceCompanies";
+import { InsuranceComparisonBuilder } from "./InsuranceComparisonBuilder";
 import { motion, AnimatePresence } from "framer-motion";
 
 // ── Zone logic ──
