@@ -101,7 +101,7 @@ interface Props {
   onQuoteSent?: () => void;
 }
 
-const fmt = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
+const fmt = (n: number) => `Rs. ${Math.round(n).toLocaleString("en-IN")}`;
 
 const getDaysSinceDate = (value?: string | null) => {
   if (!value) return null;
