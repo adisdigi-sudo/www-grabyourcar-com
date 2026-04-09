@@ -154,7 +154,17 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
       ? "Claim declared — NCB is locked to 0%."
       : null;
 
+  const isThirdPartyOnly = policyType === "third_party";
+
   const calc = useMemo(() => {
+    if (isThirdPartyOnly) {
+      if (!ccNum) return null;
+      const tp = getTPPremium(ccNum);
+      const subtotal = tp;
+      const gst = Math.round(subtotal * 0.18);
+      const total = subtotal + gst;
+      return { odRate: 0, basicOD: 0, odDiscount: 0, ncbDiscount: 0, netOD: 0, tp, addonTotal: 0, subtotal, gst, total };
+    }
     if (!idvNum || !ccNum) return null;
     const ccKey = ccNum > 1500 ? "above1500" : "upto1500";
     const odRate = OD_RATES[zone][ccKey];
@@ -169,7 +179,7 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
     const gst = Math.round(subtotal * 0.18);
     const total = subtotal + gst;
     return { odRate, basicOD, odDiscount, ncbDiscount, netOD, tp, addonTotal, subtotal, gst, total };
-  }, [idvNum, ccNum, zone, discountPct, ncb, addons, securePremiumNum, ncbLocked]);
+  }, [idvNum, ccNum, zone, discountPct, ncb, addons, securePremiumNum, ncbLocked, isThirdPartyOnly]);
 
   const toggleAddon = (id: string) => {
     setAddons(prev => prev.map(a => a.id === id ? { ...a, enabled: !a.enabled } : a));
