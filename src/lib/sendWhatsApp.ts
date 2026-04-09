@@ -91,6 +91,8 @@ export async function sendWhatsApp({
         to: fullPhone,
         message,
         messageType: "text",
+        name,
+        logEvent: logEvent || "manual_send",
       },
     });
 
@@ -98,20 +100,7 @@ export async function sendWhatsApp({
 
     if (data?.success) {
       if (!silent) toast.success(`✅ WhatsApp sent to ${name || fullPhone}`);
-
-      // Log to wa_message_logs (fire-and-forget)
-      supabase.from("wa_message_logs").insert({
-        phone: fullPhone,
-        customer_name: name || null,
-        message_type: "text",
-        message_content: message,
-        trigger_event: logEvent || "manual_send",
-        status: "sent",
-        provider: "meta",
-        provider_message_id: data.messageId || null,
-        sent_at: new Date().toISOString(),
-      }).then(() => {});
-
+      // Logging is now handled inside whatsapp-send
       return { success: true, messageId: data.messageId };
     }
 
