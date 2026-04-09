@@ -563,6 +563,8 @@ const AdminLayout = () => {
         return <AdSpendAnalytics />;
       case "employee-performance":
         return <EmployeePerformanceDashboard />;
+      case "ai-automation-hub":
+        return <AIAutomationHub />;
       case "lead-scoring":
         return <LeadScoringDashboard />;
       case "client-management":
