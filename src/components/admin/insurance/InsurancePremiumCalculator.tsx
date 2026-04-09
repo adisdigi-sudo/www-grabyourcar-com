@@ -839,7 +839,8 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
             )}
           </div>
 
-          {/* Discount & NCB Card */}
+          {/* Discount & NCB Card — hide for Third Party Only */}
+          {!isThirdPartyOnly && (
           <div className="rounded-xl border border-border bg-card p-4 space-y-3">
             <div className="flex items-center gap-2 mb-1">
               <Percent className="h-4 w-4 text-primary" />
