@@ -1007,13 +1007,14 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
             </AnimatePresence>
           </div>
           )}
+        </div>
 
         {/* ── RIGHT: Live Quote ── */}
         <div className="lg:col-span-3">
           {!calc ? (
             <div className="rounded-xl border border-dashed border-border bg-muted/30 p-12 flex flex-col items-center justify-center text-center h-full min-h-[300px]">
               <Calculator className="h-12 w-12 text-muted-foreground/40 mb-3" />
-              <p className="text-sm font-medium text-muted-foreground">Enter IDV & Engine CC</p>
+              <p className="text-sm font-medium text-muted-foreground">{isThirdPartyOnly ? "Enter Engine CC" : "Enter IDV & Engine CC"}</p>
               <p className="text-xs text-muted-foreground/60 mt-1">Premium will auto-calculate</p>
             </div>
           ) : (
