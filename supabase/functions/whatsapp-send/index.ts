@@ -11,22 +11,20 @@ const corsHeaders = {
  * WhatsApp Send — Provider-Agnostic Gateway
  *
  * Reads active WhatsApp provider from `channel_providers` table.
- * Supported providers: meta, finbite, waab
- * When WAAB credentials are added, just update channel_providers row.
+ * Supported providers: meta, waab
  *
  * Supports: text, template, image, document, video, audio
  */
 
 interface SendMessageRequest {
   to: string;
-  phone?: string; // alias for `to`
+  phone?: string;
   message?: string;
   messageType?: "text" | "template" | "image" | "document" | "video" | "audio";
   template_name?: string;
   template_variables?: Record<string, string>;
   mediaUrl?: string;
   action?: string;
-  // Logging context
   name?: string;
   logEvent?: string;
   lead_id?: string;
@@ -85,53 +83,13 @@ async function sendViaMeta(
   return { success: false, error: result.error?.message || JSON.stringify(result), provider: "meta" };
 }
 
-// ── Finbite v2 Provider ──
-async function sendViaFinbite(
-  apiKey: string,
-  phoneId: string,
-  to: string,
-  payload: { type: "text"; message: string } | { type: "template"; template_name: string; variables?: Record<string, string> }
-): Promise<SendResult> {
-  const BASE_URL = "https://app.finbite.in/api/v2/whatsapp-business/messages";
-
-  let body: Record<string, unknown>;
-  if (payload.type === "template") {
-    body = { to, phoneNoId: phoneId, type: "template", name: payload.template_name, language: "en_US" };
-  } else {
-    body = { to, phoneNoId: phoneId, type: "text", text: payload.message };
-  }
-
-  const response = await fetch(BASE_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-      "X-Phone-ID": phoneId,
-    },
-    body: JSON.stringify(body),
-  });
-
-  const contentType = response.headers.get("content-type") || "";
-  if (contentType.includes("application/json")) {
-    const result = await response.json();
-    if (response.ok && !result.error) {
-      return { success: true, messageId: result.messages?.[0]?.id || result.message_id || null, provider: "finbite" };
-    }
-    return { success: false, error: JSON.stringify(result), provider: "finbite" };
-  }
-
-  return { success: false, error: `Non-JSON response (${response.status})`, provider: "finbite" };
-}
-
-// ── WAAB Provider (ready for credentials) ──
+// ── WAAB Provider ──
 async function sendViaWaab(
   apiKey: string,
   baseUrl: string,
   to: string,
   payload: { type: "text"; message: string } | { type: "template"; template_name: string; variables?: Record<string, string> }
 ): Promise<SendResult> {
-  // WAAB API integration — will be completed when API docs/credentials are provided
-  // Placeholder structure based on common WhatsApp BSP patterns
   const endpoint = `${baseUrl}/api/v1/messages/send`;
 
   let body: Record<string, unknown>;
@@ -190,10 +148,9 @@ async function sendMessage(
     return { success: false, error: "Invalid phone number format" };
   }
 
-  // Build payload based on message type
   if (providerName === "meta") {
-    const token = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
-    const phoneNumberId = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
+    const token = providerConfig?.access_token || Deno.env.get("WHATSAPP_ACCESS_TOKEN");
+    const phoneNumberId = providerConfig?.phone_number_id || Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
     if (!token || !phoneNumberId) {
       return { success: false, error: "Meta API credentials not configured", provider: "meta" };
     }
@@ -219,24 +176,11 @@ async function sendMessage(
     return sendViaMeta(token, phoneNumberId, phone.full, payload);
   }
 
-  if (providerName === "finbite") {
-    const apiKey = Deno.env.get("FINBITE_API_KEY") || Deno.env.get("FINBITE_BEARER_TOKEN");
-    const waClient = Deno.env.get("FINBITE_WHATSAPP_CLIENT");
-    if (!apiKey || !waClient) {
-      return { success: false, error: "Finbite credentials not configured", provider: "finbite" };
-    }
-
-    if (messageType === "template" && templateName) {
-      return sendViaFinbite(apiKey, waClient, phone.full, { type: "template", template_name: templateName, variables: templateVars });
-    }
-    return sendViaFinbite(apiKey, waClient, phone.full, { type: "text", message: message || "" });
-  }
-
   if (providerName === "waab") {
-    const apiKey = Deno.env.get("WAAB_API_KEY");
-    const baseUrl = Deno.env.get("WAAB_BASE_URL") || providerConfig?.base_url || "";
+    const apiKey = providerConfig?.api_key || Deno.env.get("WAAB_API_KEY");
+    const baseUrl = providerConfig?.base_url || Deno.env.get("WAAB_BASE_URL") || "";
     if (!apiKey || !baseUrl) {
-      return { success: false, error: "WAAB credentials not configured. Add WAAB_API_KEY and WAAB_BASE_URL secrets.", provider: "waab" };
+      return { success: false, error: "WAAB credentials not configured. Add API Key and Base URL in Channel Providers.", provider: "waab" };
     }
 
     if (messageType === "template" && templateName) {
