@@ -202,7 +202,7 @@ const navItems: NavItem[] = [
     allowedRoles: ["super_admin", "admin"] },
   { id: "employee-performance", label: "🏆 Employee Performance", icon: BarChart3, badge: "New",
     verticals: ["marketing"],
-    allowedRoles: ["super_admin", "admin", "manager"] },
+    allowedRoles: ["super_admin", "admin"] },
 
   // ── Car Database — isolated vertical ──
   { 
