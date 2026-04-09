@@ -2728,6 +2728,51 @@ export type Database = {
         }
         Relationships: []
       }
+      cart_events: {
+        Row: {
+          abandoned_at: string | null
+          cart_data: Json | null
+          cart_value: number | null
+          created_at: string
+          email: string | null
+          id: string
+          recovered: boolean | null
+          recovered_at: string | null
+          recovery_email_sent: boolean | null
+          recovery_email_sent_at: string | null
+          session_id: string
+          updated_at: string
+        }
+        Insert: {
+          abandoned_at?: string | null
+          cart_data?: Json | null
+          cart_value?: number | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          recovered?: boolean | null
+          recovered_at?: string | null
+          recovery_email_sent?: boolean | null
+          recovery_email_sent_at?: string | null
+          session_id: string
+          updated_at?: string
+        }
+        Update: {
+          abandoned_at?: string | null
+          cart_data?: Json | null
+          cart_value?: number | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          recovered?: boolean | null
+          recovered_at?: string | null
+          recovery_email_sent?: boolean | null
+          recovery_email_sent_at?: string | null
+          session_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       channel_providers: {
         Row: {
           channel: string
@@ -5151,6 +5196,8 @@ export type Database = {
       }
       email_campaigns: {
         Row: {
+          batch_delay_seconds: number | null
+          batch_size: number | null
           click_count: number | null
           completed_at: string | null
           created_at: string
@@ -5162,8 +5209,11 @@ export type Database = {
           id: string
           name: string
           open_count: number | null
+          optimal_time_send: boolean | null
           scheduled_at: string | null
+          scheduled_batches: Json | null
           segment_filter: Json | null
+          send_in_timezone: boolean | null
           sent_count: number | null
           started_at: string | null
           status: string
@@ -5173,6 +5223,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          batch_delay_seconds?: number | null
+          batch_size?: number | null
           click_count?: number | null
           completed_at?: string | null
           created_at?: string
@@ -5184,8 +5236,11 @@ export type Database = {
           id?: string
           name: string
           open_count?: number | null
+          optimal_time_send?: boolean | null
           scheduled_at?: string | null
+          scheduled_batches?: Json | null
           segment_filter?: Json | null
+          send_in_timezone?: boolean | null
           sent_count?: number | null
           started_at?: string | null
           status?: string
@@ -5195,6 +5250,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          batch_delay_seconds?: number | null
+          batch_size?: number | null
           click_count?: number | null
           completed_at?: string | null
           created_at?: string
@@ -5206,8 +5263,11 @@ export type Database = {
           id?: string
           name?: string
           open_count?: number | null
+          optimal_time_send?: boolean | null
           scheduled_at?: string | null
+          scheduled_batches?: Json | null
           segment_filter?: Json | null
+          send_in_timezone?: boolean | null
           sent_count?: number | null
           started_at?: string | null
           status?: string
@@ -5383,6 +5443,76 @@ export type Database = {
           },
         ]
       }
+      email_poll_votes: {
+        Row: {
+          created_at: string
+          id: string
+          poll_id: string
+          selected_option: string
+          subscriber_email: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          poll_id: string
+          selected_option: string
+          subscriber_email: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          poll_id?: string
+          selected_option?: string
+          subscriber_email?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_poll_votes_poll_id_fkey"
+            columns: ["poll_id"]
+            isOneToOne: false
+            referencedRelation: "email_polls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_polls: {
+        Row: {
+          campaign_id: string | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          options: Json
+          question: string
+          total_votes: number | null
+        }
+        Insert: {
+          campaign_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          options?: Json
+          question: string
+          total_votes?: number | null
+        }
+        Update: {
+          campaign_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          options?: Json
+          question?: string
+          total_votes?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_polls_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "email_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_sequence_steps: {
         Row: {
           conditions: Json | null
@@ -5472,14 +5602,21 @@ export type Database = {
           company: string | null
           created_at: string
           email: string
+          engagement_score: number | null
           id: string
+          last_clicked_at: string | null
+          last_opened_at: string | null
           lead_id: string | null
           name: string | null
+          optimal_send_hour: number | null
           phone: string | null
           preferences: Json | null
           source: string | null
           subscribed: boolean | null
           tags: string[] | null
+          timezone: string | null
+          total_clicks: number | null
+          total_opens: number | null
           unsubscribed_at: string | null
           updated_at: string
         }
@@ -5487,14 +5624,21 @@ export type Database = {
           company?: string | null
           created_at?: string
           email: string
+          engagement_score?: number | null
           id?: string
+          last_clicked_at?: string | null
+          last_opened_at?: string | null
           lead_id?: string | null
           name?: string | null
+          optimal_send_hour?: number | null
           phone?: string | null
           preferences?: Json | null
           source?: string | null
           subscribed?: boolean | null
           tags?: string[] | null
+          timezone?: string | null
+          total_clicks?: number | null
+          total_opens?: number | null
           unsubscribed_at?: string | null
           updated_at?: string
         }
@@ -5502,14 +5646,21 @@ export type Database = {
           company?: string | null
           created_at?: string
           email?: string
+          engagement_score?: number | null
           id?: string
+          last_clicked_at?: string | null
+          last_opened_at?: string | null
           lead_id?: string | null
           name?: string | null
+          optimal_send_hour?: number | null
           phone?: string | null
           preferences?: Json | null
           source?: string | null
           subscribed?: boolean | null
           tags?: string[] | null
+          timezone?: string | null
+          total_clicks?: number | null
+          total_opens?: number | null
           unsubscribed_at?: string | null
           updated_at?: string
         }
@@ -12093,6 +12244,62 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "master_customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      popup_forms: {
+        Row: {
+          conversions: number | null
+          created_at: string
+          delay_seconds: number | null
+          form_type: string
+          html_content: string | null
+          id: string
+          impressions: number | null
+          is_active: boolean | null
+          list_id: string | null
+          name: string
+          target_url: string | null
+          trigger_type: string
+          updated_at: string
+        }
+        Insert: {
+          conversions?: number | null
+          created_at?: string
+          delay_seconds?: number | null
+          form_type?: string
+          html_content?: string | null
+          id?: string
+          impressions?: number | null
+          is_active?: boolean | null
+          list_id?: string | null
+          name: string
+          target_url?: string | null
+          trigger_type?: string
+          updated_at?: string
+        }
+        Update: {
+          conversions?: number | null
+          created_at?: string
+          delay_seconds?: number | null
+          form_type?: string
+          html_content?: string | null
+          id?: string
+          impressions?: number | null
+          is_active?: boolean | null
+          list_id?: string | null
+          name?: string
+          target_url?: string | null
+          trigger_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "popup_forms_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "email_lists"
             referencedColumns: ["id"]
           },
         ]
