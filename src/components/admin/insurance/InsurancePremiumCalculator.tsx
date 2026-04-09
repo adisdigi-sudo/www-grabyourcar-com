@@ -970,8 +970,10 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
               </div>
             </div>
           </div>
+          )}
 
-          {/* Add-ons Card */}
+          {/* Add-ons Card — hide for Third Party Only */}
+          {!isThirdPartyOnly && (
           <div className="rounded-xl border border-border bg-card p-4 space-y-3">
             <button onClick={() => setShowAddons(!showAddons)} className="flex items-center gap-2 w-full">
               <Zap className="h-4 w-4 text-primary" />
