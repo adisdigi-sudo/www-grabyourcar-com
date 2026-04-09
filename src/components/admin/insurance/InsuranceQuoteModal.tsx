@@ -487,12 +487,14 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
               </div>
             </div>
 
-            {/* Row 2: IDV, CC, City */}
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <Label className="text-xs font-semibold text-muted-foreground">IDV (₹)</Label>
-                <Input type="number" value={idv} onChange={e => setIdv(e.target.value)} className="h-8 text-xs mt-1" placeholder="500000" />
-              </div>
+            {/* Row 2: IDV, CC, City — hide IDV for Third Party Only */}
+            <div className={cn("grid gap-3", isThirdPartyOnly ? "grid-cols-2" : "grid-cols-3")}>
+              {!isThirdPartyOnly && (
+                <div>
+                  <Label className="text-xs font-semibold text-muted-foreground">IDV (Rs.)</Label>
+                  <Input type="number" value={idv} onChange={e => setIdv(e.target.value)} className="h-8 text-xs mt-1" placeholder="500000" />
+                </div>
+              )}
               <div>
                 <Label className="text-xs font-semibold text-muted-foreground">Engine CC</Label>
                 <Input type="number" value={cc} onChange={e => setCc(e.target.value)} className="h-8 text-xs mt-1" placeholder="1199" />
@@ -504,90 +506,107 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
               </div>
             </div>
 
-            {/* Row 3: Claim Taken + NCB */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs font-semibold text-muted-foreground">Claim Taken in Previous Year?</Label>
-                <div className="flex items-center gap-3 mt-1.5">
-                  <button
-                      onClick={() => { if (!claimLockedByExpiry) setClaimTaken(false); }}
-                      disabled={claimLockedByExpiry}
-                    className={cn(
-                      "px-3 py-1.5 rounded-md text-xs font-semibold border transition-all",
-                        !ncbLocked
-                        ? "bg-emerald-500 text-white border-emerald-500 shadow-sm"
-                        : "bg-muted text-muted-foreground border-border hover:bg-accent"
+            {/* Row 3: Claim Taken + NCB — hide for Third Party Only */}
+            {!isThirdPartyOnly && (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs font-semibold text-muted-foreground">Claim Taken in Previous Year?</Label>
+                    <div className="flex items-center gap-3 mt-1.5">
+                      <button
+                          onClick={() => { if (!claimLockedByExpiry) setClaimTaken(false); }}
+                          disabled={claimLockedByExpiry}
+                        className={cn(
+                          "px-3 py-1.5 rounded-md text-xs font-semibold border transition-all",
+                            !ncbLocked
+                            ? "bg-emerald-500 text-white border-emerald-500 shadow-sm"
+                            : "bg-muted text-muted-foreground border-border hover:bg-accent"
+                        )}
+                      >
+                        No Claim
+                      </button>
+                      <button
+                          onClick={() => { setClaimTaken(true); setNcb(0); }}
+                        className={cn(
+                          "px-3 py-1.5 rounded-md text-xs font-semibold border transition-all",
+                            ncbLocked
+                            ? "bg-red-500 text-white border-red-500 shadow-sm"
+                            : "bg-muted text-muted-foreground border-border hover:bg-accent"
+                        )}
+                      >
+                        Yes, Claim Taken
+                      </button>
+                    </div>
+                    {ncbLockReason && (
+                      <p className="text-[10px] text-red-500 font-medium mt-1">⚠ {ncbLockReason}</p>
                     )}
-                  >
-                    No Claim
-                  </button>
-                  <button
-                      onClick={() => { setClaimTaken(true); setNcb(0); }}
-                    className={cn(
-                      "px-3 py-1.5 rounded-md text-xs font-semibold border transition-all",
-                        ncbLocked
-                        ? "bg-red-500 text-white border-red-500 shadow-sm"
-                        : "bg-muted text-muted-foreground border-border hover:bg-accent"
-                    )}
-                  >
-                    Yes, Claim Taken
-                  </button>
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold text-muted-foreground">NCB</Label>
+                    <Select
+                      value={String(ncbLocked ? 0 : ncb)}
+                      onValueChange={v => { if (!ncbLocked) setNcb(Number(v)); }}
+                      disabled={ncbLocked}
+                    >
+                      <SelectTrigger className={cn("h-8 text-xs mt-1", ncbLocked && "opacity-50")}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>{NCB_OPTIONS.map(o => <SelectItem key={o.value} value={String(o.value)}>{o.label}</SelectItem>)}</SelectContent>
+                    </Select>
+                    {ncbLocked && <p className="text-[9px] text-red-400 mt-0.5">NCB locked to 0% and cannot be edited</p>}
+                  </div>
                 </div>
-                {ncbLockReason && (
-                  <p className="text-[10px] text-red-500 font-medium mt-1">⚠ {ncbLockReason}</p>
-                )}
-              </div>
-              <div>
-                <Label className="text-xs font-semibold text-muted-foreground">NCB</Label>
-                <Select
-                  value={String(ncbLocked ? 0 : ncb)}
-                  onValueChange={v => { if (!ncbLocked) setNcb(Number(v)); }}
-                  disabled={ncbLocked}
-                >
-                  <SelectTrigger className={cn("h-8 text-xs mt-1", ncbLocked && "opacity-50")}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>{NCB_OPTIONS.map(o => <SelectItem key={o.value} value={String(o.value)}>{o.label}</SelectItem>)}</SelectContent>
-                </Select>
-                {ncbLocked && <p className="text-[9px] text-red-400 mt-0.5">NCB locked to 0% and cannot be edited</p>}
-              </div>
-            </div>
 
-            {/* NCB Claim Disclaimer */}
-            <div className={cn(
-              "flex items-start gap-1.5 p-2.5 rounded-lg border",
-               ncbLocked
-                ? "bg-red-500/10 border-red-500/30"
-                : "bg-amber-500/10 border-amber-500/20"
-            )}>
-               <Info className={cn("h-3.5 w-3.5 mt-0.5 shrink-0", ncbLocked ? "text-red-600" : "text-amber-600")} />
-              <div>
-                 <p className={cn("text-[10px] font-bold", ncbLocked ? "text-red-700 dark:text-red-400" : "text-amber-700 dark:text-amber-400")}>
-                   {ncbLocked
-                    ? "CLAIM DECLARED — NCB Not Applicable"
-                    : "NCB Eligibility Declaration Required"}
-                </p>
-                 <p className={cn("text-[9px] mt-0.5", ncbLocked ? "text-red-600 dark:text-red-300" : "text-amber-600 dark:text-amber-300")}>
-                  {claimLockedByExpiry
-                    ? "As per IRDAI guidelines, if previous policy has lapsed for more than 90 days, NCB benefit is forfeited and a physical vehicle inspection is mandatory before issuing a new policy."
-                    : "NCB is only applicable if no claim was made during the previous policy period (up to 5 years)."}
-                  {" "}Providing false information about claim/NCB status will void the NCB discount and the insurer reserves the right to reject claims.
-                 </p>
-              </div>
-            </div>
+                {/* NCB Claim Disclaimer */}
+                <div className={cn(
+                  "flex items-start gap-1.5 p-2.5 rounded-lg border",
+                   ncbLocked
+                    ? "bg-red-500/10 border-red-500/30"
+                    : "bg-amber-500/10 border-amber-500/20"
+                )}>
+                   <Info className={cn("h-3.5 w-3.5 mt-0.5 shrink-0", ncbLocked ? "text-red-600" : "text-amber-600")} />
+                  <div>
+                     <p className={cn("text-[10px] font-bold", ncbLocked ? "text-red-700 dark:text-red-400" : "text-amber-700 dark:text-amber-400")}>
+                       {ncbLocked
+                        ? "CLAIM DECLARED — NCB Not Applicable"
+                        : "NCB Eligibility Declaration Required"}
+                    </p>
+                     <p className={cn("text-[9px] mt-0.5", ncbLocked ? "text-red-600 dark:text-red-300" : "text-amber-600 dark:text-amber-300")}>
+                      {claimLockedByExpiry
+                        ? "As per IRDAI guidelines, if previous policy has lapsed for more than 90 days, NCB benefit is forfeited and a physical vehicle inspection is mandatory before issuing a new policy."
+                        : "NCB is only applicable if no claim was made during the previous policy period (up to 5 years)."}
+                      {" "}Providing false information about claim/NCB status will void the NCB discount and the insurer reserves the right to reject claims.
+                     </p>
+                  </div>
+                </div>
 
-            {/* OD Discount + Secure Premium */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs font-semibold text-muted-foreground">OD Discount (%)</Label>
-                <Input type="number" min={0} max={100} value={odDiscountPct} onChange={e => setOdDiscountPct(e.target.value)} className="h-8 text-xs mt-1" placeholder="0" />
-                <p className="text-[9px] text-muted-foreground mt-0.5">Deal-specific discount on OD</p>
+                {/* OD Discount + Secure Premium */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs font-semibold text-muted-foreground">OD Discount (%)</Label>
+                    <Input type="number" min={0} max={100} value={odDiscountPct} onChange={e => setOdDiscountPct(e.target.value)} className="h-8 text-xs mt-1" placeholder="0" />
+                    <p className="text-[9px] text-muted-foreground mt-0.5">Deal-specific discount on OD</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold text-muted-foreground">Secure Premium (Rs.)</Label>
+                    <Input type="number" value={securePremium} onChange={e => setSecurePremium(e.target.value)} className="h-8 text-xs mt-1" placeholder="500" />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Third Party Only info banner */}
+            {isThirdPartyOnly && (
+              <div className="flex items-start gap-2 p-3 rounded-lg border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-950/30">
+                <Info className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-xs font-bold text-blue-800 dark:text-blue-300">Third Party Only Policy</p>
+                  <p className="text-[10px] text-blue-600 dark:text-blue-400 mt-0.5">
+                    IDV, NCB, OD discount, and add-on coverages are not applicable for Third Party policies. Premium is based on engine CC capacity as per IRDAI tariff.
+                  </p>
+                </div>
               </div>
-              <div>
-                <Label className="text-xs font-semibold text-muted-foreground">Secure Premium (₹)</Label>
-                <Input type="number" value={securePremium} onChange={e => setSecurePremium(e.target.value)} className="h-8 text-xs mt-1" placeholder="500" />
-              </div>
-            </div>
+            )}
 
             <Separator />
 
