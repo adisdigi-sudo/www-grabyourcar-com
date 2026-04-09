@@ -150,7 +150,7 @@ export const WhatsAppManagement = () => {
               <CheckCircle className="h-5 w-5 text-green-600" />
               <div>
                 <p className="font-medium">API Connected</p>
-                <p className="text-xs text-muted-foreground">Finbite Provider</p>
+                <p className="text-xs text-muted-foreground">Meta Cloud API</p>
               </div>
             </div>
             <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-950 rounded-lg">
