@@ -43,6 +43,7 @@ export const MarketingDashboard = ({ onNavigate }: MarketingDashboardProps) => {
   ];
 
   const workspaceModules = [
+    { id: "marketing-email", label: "Unified Marketing Hub", desc: "Email, WhatsApp & RCS campaigns", icon: Zap, color: "bg-primary/10 text-primary", badge: "⚡ New" },
     { id: "website-homepage", label: "Website CMS", desc: "Homepage, banners, content", icon: Globe, color: "bg-blue-500/10 text-blue-600", badge: "Core" },
     { id: "content-blog", label: "Blog & News", desc: "Articles, auto news, launches", icon: FileText, color: "bg-violet-500/10 text-violet-600" },
     { id: "marketing-command", label: "WhatsApp Portal", desc: "Campaigns, broadcasts, automation", icon: MessageSquare, color: "bg-emerald-500/10 text-emerald-600", badge: "🔥" },
