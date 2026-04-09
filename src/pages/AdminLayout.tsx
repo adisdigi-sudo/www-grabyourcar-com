@@ -157,6 +157,12 @@ const JourneyAutomationPanel = lazy(() =>
 const RevenueIntelligenceDashboard = lazy(() =>
   import("@/components/admin/RevenueIntelligenceDashboard").then((module) => ({ default: module.RevenueIntelligenceDashboard })),
 );
+const AdSpendAnalytics = lazy(() =>
+  import("@/components/admin/marketing/AdSpendAnalytics").then((module) => ({ default: module.AdSpendAnalytics })),
+);
+const EmployeePerformanceDashboard = lazy(() =>
+  import("@/components/admin/marketing/EmployeePerformanceDashboard").then((module) => ({ default: module.EmployeePerformanceDashboard })),
+);
 const LoanCRMDashboard = lazy(() =>
   import("@/components/admin/LoanCRMDashboard").then((module) => ({ default: module.LoanCRMDashboard })),
 );
@@ -550,6 +556,10 @@ const AdminLayout = () => {
         return <JourneyAutomationPanel />;
       case "revenue-intelligence":
         return <RevenueIntelligenceDashboard />;
+      case "ad-spend-analytics":
+        return <AdSpendAnalytics />;
+      case "employee-performance":
+        return <EmployeePerformanceDashboard />;
       case "lead-scoring":
         return <LeadScoringDashboard />;
       case "client-management":
