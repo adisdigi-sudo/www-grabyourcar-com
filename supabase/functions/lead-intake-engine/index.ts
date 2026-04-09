@@ -12,10 +12,10 @@ const corsHeaders = {
  * Flow: Webhook → Normalize → Classify Vertical → Dedup by Phone → Store → 
  *       Notify Executive (WhatsApp + Email) → Schedule 30-min Follow-up Check
  * 
- * Accepts POST from: Website forms, Quick Enquiry, WhatsApp, Manual entry
+ * Accepts POST from: Website forms, Quick Enquiry, WhatsApp, Manual entry,
+ *                     Meta Lead Ads, Google Ads, any ad platform webhook
  */
 
-// Order matters: more specific keywords first to avoid false matches (e.g. "car insurance" → Insurance, not Car Sales)
 const VERTICALS = [
   { keyword: "car insurance", tag: "Insurance" },
   { keyword: "motor insurance", tag: "Insurance" },
@@ -60,20 +60,10 @@ function inferLeadSourceType(source: string): string {
 
 function buildVerticalInput(body: Record<string, any>, source: string, message: string): string {
   return [
-    body.vertical,
-    body.serviceCategory,
-    body.service_category,
-    body.type,
-    body.body?.vertical,
-    body.body?.interest,
-    body.body?.serviceCategory,
-    body.body?.service_category,
-    body.body?.type,
-    source,
-    message,
-  ]
-    .filter(Boolean)
-    .join(" ");
+    body.vertical, body.serviceCategory, body.service_category, body.type,
+    body.body?.vertical, body.body?.interest, body.body?.serviceCategory,
+    body.body?.service_category, body.body?.type, source, message,
+  ].filter(Boolean).join(" ");
 }
 
 function cleanPhone(phone: string): string {
@@ -83,12 +73,7 @@ function cleanPhone(phone: string): string {
 function getPhoneCandidates(phone: string): string[] {
   const cleaned = cleanPhone(phone);
   if (!cleaned) return [];
-
-  return Array.from(new Set([
-    cleaned,
-    `91${cleaned}`,
-    `0${cleaned}`,
-  ]));
+  return Array.from(new Set([cleaned, `91${cleaned}`, `0${cleaned}`]));
 }
 
 function normalizeVehicleNumber(vehicleNumber?: string | null): string | null {
@@ -102,7 +87,6 @@ serve(async (req) => {
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
   const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-  const FINBITE_API_KEY = Deno.env.get("FINBITE_API_KEY");
   const FINBITE_BEARER_TOKEN = Deno.env.get("FINBITE_BEARER_TOKEN");
   const WHATSAPP_PHONE_NUMBER_ID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
 
@@ -125,10 +109,25 @@ serve(async (req) => {
     const requestedVertical = String(body.vertical || body.body?.vertical || "").toLowerCase();
     const verticalInput = buildVerticalInput(body, source, message) || "General Enquiry";
     const leadSourceType = body.lead_source_type || body.body?.lead_source_type || body.utm_source || inferLeadSourceType(source);
+
+    // Vehicle fields
     const vehicleNumber = body.vehicleNumber || body.vehicle_number || body.registrationNumber || body.registration_number || body.body?.vehicleNumber || body.body?.vehicle_number || body.body?.registrationNumber || body.body?.registration_number || "";
     const vehicleMake = body.vehicleMake || body.vehicle_make || body.body?.vehicleMake || body.body?.vehicle_make || body.carBrand || body.body?.carBrand || "";
     const vehicleModel = body.vehicleModel || body.vehicle_model || body.body?.vehicleModel || body.body?.vehicle_model || body.carInterest || body.body?.carInterest || "";
     const policyType = body.policyType || body.policy_type || body.body?.policyType || body.body?.policy_type || "";
+
+    // === UTM & Ad Attribution Fields ===
+    const utmSource = body.utm_source || body.body?.utm_source || null;
+    const utmMedium = body.utm_medium || body.body?.utm_medium || null;
+    const utmCampaign = body.utm_campaign || body.body?.utm_campaign || null;
+    const utmTerm = body.utm_term || body.body?.utm_term || null;
+    const utmContent = body.utm_content || body.body?.utm_content || null;
+    const adPlatform = body.ad_platform || body.body?.ad_platform || null;
+    const adCampaignId = body.ad_campaign_id || body.body?.ad_campaign_id || null;
+    const adSetId = body.ad_set_id || body.body?.ad_set_id || null;
+    const adId = body.ad_id || body.body?.ad_id || null;
+    const gclid = body.gclid || body.body?.gclid || null;
+    const fbclid = body.fbclid || body.body?.fbclid || null;
 
     if (!phone || phone.length < 10) {
       return new Response(JSON.stringify({ error: "Valid phone number required" }), {
@@ -142,7 +141,7 @@ serve(async (req) => {
         ? "Insurance"
         : classifyVertical(verticalInput);
 
-    // === STEP 3: Dedup by Phone ===
+    // === STEP 3: Dedup by Phone in automation_lead_tracking ===
     const phoneCandidates = getPhoneCandidates(phone);
 
     const { data: existing } = await supabase
@@ -155,7 +154,6 @@ serve(async (req) => {
     let isNewLead = true;
 
     if (existing && existing.length > 0) {
-      // Update existing lead — append vertical tag
       isNewLead = false;
       const record = existing[0];
       const existingTags: string[] = record.multi_vertical_tags || [];
@@ -179,13 +177,20 @@ serve(async (req) => {
         manager_alerted: false,
         follow_up_due: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
         last_updated: new Date().toISOString(),
+        // UTM fields
+        utm_source: utmSource || undefined,
+        utm_medium: utmMedium || undefined,
+        utm_campaign: utmCampaign || undefined,
+        ad_platform: adPlatform || undefined,
+        ad_campaign_id: adCampaignId || undefined,
+        gclid: gclid || undefined,
+        fbclid: fbclid || undefined,
       }).eq("id", record.id);
 
       leadId = record.id;
     } else {
-      // Insert new lead
       const newLeadId = `${new Date().toISOString()}-${phone}`;
-      const followUpDue = new Date(Date.now() + 30 * 60 * 1000).toISOString(); // 30 min
+      const followUpDue = new Date(Date.now() + 30 * 60 * 1000).toISOString();
 
       const { data: inserted, error: insertErr } = await supabase.from("automation_lead_tracking").insert({
         lead_id: newLeadId,
@@ -202,27 +207,29 @@ serve(async (req) => {
         contacted: false,
         follow_up_due: followUpDue,
         raw_data: body,
+        // UTM fields
+        utm_source: utmSource,
+        utm_medium: utmMedium,
+        utm_campaign: utmCampaign,
+        ad_platform: adPlatform,
+        ad_campaign_id: adCampaignId,
+        gclid: gclid,
+        fbclid: fbclid,
       }).select("id").single();
 
       if (insertErr) throw insertErr;
       leadId = inserted!.id;
     }
 
-    // === STEP 4: Also insert into vertical-specific tables ===
+    // === STEP 4: Route to vertical-specific tables ===
     let routingError: string | null = null;
     try {
       await routeToVerticalTable(supabase, verticalTag, {
-        name,
-        phone,
-        email,
-        city,
-        source,
-        message,
-        vehicleNumber,
-        vehicleMake,
-        vehicleModel,
-        policyType,
-        leadSourceType,
+        name, phone, email, city, source, message,
+        vehicleNumber, vehicleMake, vehicleModel, policyType, leadSourceType,
+        utmSource, utmMedium, utmCampaign, adPlatform,
+        adCampaignId, adSetId, adId, gclid, fbclid,
+        utmTerm, utmContent,
       });
     } catch (routeErr) {
       routingError = String(routeErr);
@@ -233,7 +240,7 @@ serve(async (req) => {
       throw new Error(`Vertical routing failed for ${verticalTag}: ${routingError}`);
     }
 
-    // === STEP 5: Notify Executive via WhatsApp (Finbite) ===
+    // === STEP 5: Notify Executive via WhatsApp ===
     const executivePhone = "+919855924442";
     const executiveEmail = "hello@grabyourcar.com";
 
@@ -242,65 +249,63 @@ serve(async (req) => {
         await fetch("https://app.finbite.in/api/v2/whatsapp-business/messages", {
           method: "POST",
           headers: {
-            "Authorization": `Bearer ${FINBITE_BEARER_TOKEN}`,
+            Authorization: `Bearer ${FINBITE_BEARER_TOKEN}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
             to: executivePhone,
             phoneNoId: WHATSAPP_PHONE_NUMBER_ID,
             type: "text",
-            text: `🚨 *New Lead Assigned*\n\n*Name:* ${name}\n*Phone:* ${phone}\n*Email:* ${email}\n*City:* ${city}\n*Vertical:* ${verticalTag}\n*Source:* ${source} (${leadSourceType})\n*Message:* ${message}\n\n⏰ Please contact within 30 minutes!`,
+            text: `🚨 *New Lead Assigned*\n\n*Name:* ${name}\n*Phone:* ${phone}\n*Email:* ${email}\n*City:* ${city}\n*Vertical:* ${verticalTag}\n*Source:* ${source} (${leadSourceType})${adPlatform ? `\n*Ad Platform:* ${adPlatform}` : ""}${utmCampaign ? `\n*Campaign:* ${utmCampaign}` : ""}\n*Message:* ${message}\n\n⏰ Please contact within 30 minutes!`,
           }),
         });
-        console.log("Executive WhatsApp sent");
       } catch (e) {
         console.error("WhatsApp notify failed:", e);
       }
     }
 
-    // === STEP 6: Notify Executive via Email (Resend) ===
+    // === STEP 6: Notify via Email ===
     if (RESEND_API_KEY) {
       try {
         await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
-            "Authorization": `Bearer ${RESEND_API_KEY}`,
+            Authorization: `Bearer ${RESEND_API_KEY}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
             from: "hello@grabyourcar.com",
             to: [executiveEmail],
-            subject: `New Lead Assigned - ${verticalTag}`,
-            html: `<h2>🚨 New Lead Assigned to You</h2>
+            subject: `New Lead - ${verticalTag}${adPlatform ? ` (${adPlatform})` : ""}`,
+            html: `<h2>🚨 New Lead Assigned</h2>
               <p><strong>Name:</strong> ${name}<br>
               <strong>Phone:</strong> ${phone}<br>
               <strong>Email:</strong> ${email}<br>
               <strong>City:</strong> ${city}<br>
               <strong>Vertical:</strong> ${verticalTag}<br>
               <strong>Source:</strong> ${source} (${leadSourceType})<br>
+              ${adPlatform ? `<strong>Ad Platform:</strong> ${adPlatform}<br>` : ""}
+              ${utmCampaign ? `<strong>Campaign:</strong> ${utmCampaign}<br>` : ""}
+              ${gclid ? `<strong>GCLID:</strong> ${gclid}<br>` : ""}
               <strong>Message:</strong> ${message}</p>
               <p style="color: red;">⏰ <strong>Please contact within 30 minutes!</strong></p>`,
           }),
         });
-        console.log("Executive email sent");
       } catch (e) {
         console.error("Email notify failed:", e);
       }
     }
 
-    // Mark as notified
     await supabase.from("automation_lead_tracking")
       .update({ executive_notified: true })
       .eq("id", leadId);
-
-    // === STEP 7: Schedule follow-up check (trigger the checker function after 30 min) ===
-    // The follow-up-checker runs on a cron and picks up leads with follow_up_due < now()
 
     return new Response(JSON.stringify({
       success: true,
       lead_id: leadId,
       is_new: isNewLead,
       vertical: verticalTag,
+      ad_platform: adPlatform || null,
       follow_up_due: isNewLead ? "30 minutes" : "existing lead updated",
     }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -314,25 +319,21 @@ serve(async (req) => {
 });
 
 /**
- * Route lead into the appropriate vertical-specific table.
- * Uses phone-based dedup for all verticals to prevent duplicates while
- * recycling returning leads to the top of the pipeline.
+ * Route lead into the appropriate vertical-specific table with UTM attribution.
  */
 async function routeToVerticalTable(
   supabase: any,
   vertical: string,
   data: {
-    name: string;
-    phone: string;
-    email: string;
-    city: string;
-    source: string;
-    message: string;
-    vehicleNumber?: string;
-    vehicleMake?: string;
-    vehicleModel?: string;
-    policyType?: string;
-    leadSourceType?: string;
+    name: string; phone: string; email: string; city: string;
+    source: string; message: string;
+    vehicleNumber?: string; vehicleMake?: string; vehicleModel?: string;
+    policyType?: string; leadSourceType?: string;
+    utmSource?: string | null; utmMedium?: string | null; utmCampaign?: string | null;
+    adPlatform?: string | null; adCampaignId?: string | null;
+    adSetId?: string | null; adId?: string | null;
+    gclid?: string | null; fbclid?: string | null;
+    utmTerm?: string | null; utmContent?: string | null;
   }
 ) {
   const cleanedPhone = cleanPhone(data.phone);
@@ -344,17 +345,32 @@ async function routeToVerticalTable(
   const safeMessage = data.message?.trim() || null;
   const now = new Date().toISOString();
 
+  // Common UTM fields for all tables
+  const utmFields: Record<string, unknown> = {};
+  if (data.utmSource) utmFields.utm_source = data.utmSource;
+  if (data.utmMedium) utmFields.utm_medium = data.utmMedium;
+  if (data.utmCampaign) utmFields.utm_campaign = data.utmCampaign;
+  if (data.adPlatform) utmFields.ad_platform = data.adPlatform;
+
   try {
     switch (vertical) {
       case "Car Sales": {
-        // Route to BOTH leads table AND sales_pipeline for CRM visibility
-        // 1) leads table (legacy central intake)
+        // 1) leads table
         const { data: existingLead } = await supabase
-          .from("leads")
-          .select("id")
-          .in("phone", phoneCandidates)
-          .order("created_at", { ascending: false })
-          .limit(1);
+          .from("leads").select("id").in("phone", phoneCandidates)
+          .order("created_at", { ascending: false }).limit(1);
+
+        const leadsUtm: Record<string, unknown> = {
+          ...utmFields,
+          ...(data.adCampaignId ? { ad_campaign_id: data.adCampaignId } : {}),
+          ...(data.adSetId ? { ad_set_id: data.adSetId } : {}),
+          ...(data.adId ? { ad_id: data.adId } : {}),
+          ...(data.gclid ? { gclid: data.gclid } : {}),
+          ...(data.fbclid ? { fbclid: data.fbclid } : {}),
+          ...(data.utmTerm ? { utm_term: data.utmTerm } : {}),
+          ...(data.utmContent ? { utm_content: data.utmContent } : {}),
+          ...(data.leadSourceType ? { lead_source_type: data.leadSourceType } : {}),
+        };
 
         if (existingLead?.length) {
           await supabase.from("leads").update({
@@ -368,6 +384,7 @@ async function routeToVerticalTable(
             car_brand: data.vehicleMake || undefined,
             car_model: data.vehicleModel || undefined,
             updated_at: now,
+            ...leadsUtm,
           }).eq("id", existingLead[0].id);
         } else {
           await supabase.from("leads").insert({
@@ -383,19 +400,16 @@ async function routeToVerticalTable(
             car_brand: data.vehicleMake || null,
             car_model: data.vehicleModel || null,
             service_category: "car_sales",
+            ...leadsUtm,
           });
         }
 
-        // 2) sales_pipeline for Sales CRM workspace
+        // 2) sales_pipeline
         const { data: existingSales } = await supabase
-          .from("sales_pipeline")
-          .select("id, pipeline_stage")
-          .in("phone", phoneCandidates)
-          .order("created_at", { ascending: false })
-          .limit(1);
+          .from("sales_pipeline").select("id, pipeline_stage")
+          .in("phone", phoneCandidates).order("created_at", { ascending: false }).limit(1);
 
         if (existingSales?.length) {
-          // Recycle to new_lead only if lost or old
           const recycleStages = ["lost", "after_sales"];
           const updates: Record<string, any> = {
             customer_name: data.name !== "Unknown" ? data.name : undefined,
@@ -407,6 +421,7 @@ async function routeToVerticalTable(
             car_model: data.vehicleModel || undefined,
             updated_at: now,
             last_activity_at: now,
+            ...utmFields,
           };
           if (recycleStages.includes(existingSales[0].pipeline_stage)) {
             updates.pipeline_stage = "new_lead";
@@ -427,6 +442,7 @@ async function routeToVerticalTable(
             pipeline_stage: "new_lead",
             car_brand: data.vehicleMake || null,
             car_model: data.vehicleModel || null,
+            ...utmFields,
           });
         }
         break;
@@ -450,7 +466,7 @@ async function routeToVerticalTable(
           return normalizeVehicleNumber(c.vehicle_number) === normalizedVehicleNumber;
         });
 
-        const insurancePayload = {
+        const insurancePayload: Record<string, unknown> = {
           customer_name: data.name,
           phone: cleanedPhone,
           email: data.email || null,
@@ -469,6 +485,7 @@ async function routeToVerticalTable(
           journey_last_event: "lead_received",
           journey_last_event_at: now,
           updated_at: now,
+          ...utmFields,
         };
 
         if (existingClient?.id) {
@@ -481,11 +498,8 @@ async function routeToVerticalTable(
 
       case "Loan": {
         const { data: existingLoan } = await supabase
-          .from("loan_applications")
-          .select("id, stage")
-          .in("phone", phoneCandidates)
-          .order("created_at", { ascending: false })
-          .limit(1);
+          .from("loan_applications").select("id, stage")
+          .in("phone", phoneCandidates).order("created_at", { ascending: false }).limit(1);
 
         if (existingLoan?.length) {
           const recycleStages = ["lost", "disbursed"];
@@ -497,6 +511,7 @@ async function routeToVerticalTable(
             lead_source_tag: data.leadSourceType || data.source || undefined,
             updated_at: now,
             last_activity_at: now,
+            ...utmFields,
           };
           if (recycleStages.includes(existingLoan[0].stage)) {
             updates.stage = "new_lead";
@@ -518,17 +533,15 @@ async function routeToVerticalTable(
             priority: "medium",
             car_model: data.vehicleModel || null,
             lead_source_tag: data.leadSourceType || data.source || "Website",
+            ...utmFields,
           });
           if (loanInsertErr) throw loanInsertErr;
         }
 
-        // Also keep car_loan_leads in sync for legacy/eligibility data
+        // car_loan_leads sync
         try {
           const { data: existingCLL } = await supabase
-            .from("car_loan_leads")
-            .select("id")
-            .in("phone", phoneCandidates)
-            .limit(1);
+            .from("car_loan_leads").select("id").in("phone", phoneCandidates).limit(1);
 
           if (existingCLL?.length) {
             await supabase.from("car_loan_leads").update({
@@ -562,13 +575,19 @@ async function routeToVerticalTable(
       case "Accessories":
       case "Corporate":
       default: {
-        // All other verticals go to the central leads table
         const { data: existingLead } = await supabase
-          .from("leads")
-          .select("id")
-          .in("phone", phoneCandidates)
-          .order("created_at", { ascending: false })
-          .limit(1);
+          .from("leads").select("id").in("phone", phoneCandidates)
+          .order("created_at", { ascending: false }).limit(1);
+
+        const leadsUtm: Record<string, unknown> = {
+          ...utmFields,
+          ...(data.adCampaignId ? { ad_campaign_id: data.adCampaignId } : {}),
+          ...(data.adSetId ? { ad_set_id: data.adSetId } : {}),
+          ...(data.adId ? { ad_id: data.adId } : {}),
+          ...(data.gclid ? { gclid: data.gclid } : {}),
+          ...(data.fbclid ? { fbclid: data.fbclid } : {}),
+          ...(data.leadSourceType ? { lead_source_type: data.leadSourceType } : {}),
+        };
 
         if (existingLead?.length) {
           await supabase.from("leads").update({
@@ -581,6 +600,7 @@ async function routeToVerticalTable(
             status: "new",
             service_category: vertical.toLowerCase().replace(/\s+/g, "_"),
             updated_at: now,
+            ...leadsUtm,
           }).eq("id", existingLead[0].id);
         } else {
           await supabase.from("leads").insert({
@@ -594,6 +614,7 @@ async function routeToVerticalTable(
             status: "new",
             priority: "medium",
             service_category: vertical.toLowerCase().replace(/\s+/g, "_"),
+            ...leadsUtm,
           });
         }
         break;
@@ -601,6 +622,6 @@ async function routeToVerticalTable(
     }
   } catch (e) {
     console.error(`Vertical routing FAILED for ${vertical}:`, JSON.stringify(e));
-    throw e; // Let caller handle
+    throw e;
   }
 }
