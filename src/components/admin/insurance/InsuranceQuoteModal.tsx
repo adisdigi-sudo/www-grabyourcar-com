@@ -683,7 +683,7 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
             ) : (
               <div className="rounded-xl border border-dashed border-border bg-muted/30 p-6 text-center">
                 <Calculator className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
-                <p className="text-xs text-muted-foreground">Enter IDV & Engine CC to auto-calculate premium</p>
+                <p className="text-xs text-muted-foreground">{isThirdPartyOnly ? "Enter Engine CC to auto-calculate premium" : "Enter IDV & Engine CC to auto-calculate premium"}</p>
               </div>
             )}
 
