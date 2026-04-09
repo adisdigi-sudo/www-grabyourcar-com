@@ -16,6 +16,7 @@ import {
   Calculator, Car, Shield, Percent, IndianRupee, Zap,
   ChevronDown, ChevronUp, Info, Copy, Send, FileText, CalendarClock, AlertTriangle
 } from "lucide-react";
+import { InsuranceComparisonBuilder } from "./InsuranceComparisonBuilder";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
@@ -1104,6 +1105,24 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
                   <FileText className="h-3.5 w-3.5" /> Save & PDF
                 </Button>
               </div>
+
+              {/* Multi-Insurer Comparison Builder */}
+              <InsuranceComparisonBuilder
+                customerName={customerName || undefined}
+                customerPhone={customerPhone || undefined}
+                vehicleMake={vehicleMake || undefined}
+                vehicleModel={vehicleModel || undefined}
+                vehicleNumber={vehicleNumber || undefined}
+                vehicleYear={vehicleYear || undefined}
+                fuelType={fuelType}
+                cc={ccNum}
+                city={city}
+                policyType={policyType}
+                idv={idvNum}
+                ncb={ncb}
+                ncbLocked={ncbLocked}
+                onQuoteSaved={onQuoteSaved}
+              />
 
               <Button size="sm" variant="ghost" className="w-full text-xs" onClick={() => {
                 setIdv(""); setCc(""); setDiscount("0"); setNcb(0); setClaimTaken(false); setExShowroomPrice("");

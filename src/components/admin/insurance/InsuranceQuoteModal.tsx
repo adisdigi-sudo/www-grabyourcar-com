@@ -20,6 +20,7 @@ import {
 import { format } from "date-fns";
 import { generateInsuranceQuotePdf, InsuranceQuoteData } from "@/lib/generateInsuranceQuotePdf";
 import { INSURANCE_COMPANIES, getShortName } from "@/lib/insuranceCompanies";
+import { InsuranceComparisonBuilder } from "./InsuranceComparisonBuilder";
 import { motion, AnimatePresence } from "framer-motion";
 
 // ── Zone logic ──
@@ -690,7 +691,7 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
             <Separator />
 
             {/* Action Buttons */}
-            <div className="grid grid-cols-2 gap-2 pb-2">
+            <div className="grid grid-cols-2 gap-2">
               <Button onClick={handleDownload} className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white h-10" disabled={!calc}>
                 <Download className="h-4 w-4" /> Download PDF
               </Button>
@@ -704,6 +705,27 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
                 <Copy className="h-4 w-4" /> Copy Quote
               </Button>
             </div>
+
+            <Separator />
+
+            {/* Multi-Insurer Comparison Builder */}
+            <InsuranceComparisonBuilder
+              customerName={client.customer_name || undefined}
+              customerPhone={client.phone}
+              vehicleMake={client.vehicle_make || undefined}
+              vehicleModel={client.vehicle_model || undefined}
+              vehicleNumber={client.vehicle_number || undefined}
+              vehicleYear={client.vehicle_year || undefined}
+              fuelType={fuelType}
+              cc={ccNum}
+              city={client.city || undefined}
+              policyType={policyType}
+              idv={idvNum}
+              ncb={ncb}
+              ncbLocked={ncbLocked}
+              clientId={client.id}
+              onQuoteSaved={onQuoteSent}
+            />
           </div>
         </ScrollArea>
       </DialogContent>
