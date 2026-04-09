@@ -452,7 +452,7 @@ export function InsuranceCRMDashboard() {
           message_type: "text",
           message_content: msg,
           trigger_event: "bulk_renewal_reminder",
-          provider: "finbite",
+          provider: "meta",
           status: "queued",
         });
         sent++;
