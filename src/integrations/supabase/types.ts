@@ -1236,6 +1236,170 @@ export type Database = {
         }
         Relationships: []
       }
+      auto_close_rules: {
+        Row: {
+          auto_notify: boolean | null
+          conditions: Json
+          created_at: string | null
+          description: string | null
+          from_stage: string
+          id: string
+          is_active: boolean | null
+          to_stage: string
+          updated_at: string | null
+          vertical: string
+        }
+        Insert: {
+          auto_notify?: boolean | null
+          conditions?: Json
+          created_at?: string | null
+          description?: string | null
+          from_stage: string
+          id?: string
+          is_active?: boolean | null
+          to_stage: string
+          updated_at?: string | null
+          vertical: string
+        }
+        Update: {
+          auto_notify?: boolean | null
+          conditions?: Json
+          created_at?: string | null
+          description?: string | null
+          from_stage?: string
+          id?: string
+          is_active?: boolean | null
+          to_stage?: string
+          updated_at?: string | null
+          vertical?: string
+        }
+        Relationships: []
+      }
+      auto_dialer_campaigns: {
+        Row: {
+          assigned_team_member: string | null
+          completed_at: string | null
+          completed_contacts: number | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          interested_contacts: number | null
+          name: string
+          no_answer_contacts: number | null
+          not_interested_contacts: number | null
+          pending_contacts: number | null
+          started_at: string | null
+          status: string | null
+          total_contacts: number | null
+          updated_at: string | null
+          vertical: string | null
+        }
+        Insert: {
+          assigned_team_member?: string | null
+          completed_at?: string | null
+          completed_contacts?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          interested_contacts?: number | null
+          name: string
+          no_answer_contacts?: number | null
+          not_interested_contacts?: number | null
+          pending_contacts?: number | null
+          started_at?: string | null
+          status?: string | null
+          total_contacts?: number | null
+          updated_at?: string | null
+          vertical?: string | null
+        }
+        Update: {
+          assigned_team_member?: string | null
+          completed_at?: string | null
+          completed_contacts?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          interested_contacts?: number | null
+          name?: string
+          no_answer_contacts?: number | null
+          not_interested_contacts?: number | null
+          pending_contacts?: number | null
+          started_at?: string | null
+          status?: string | null
+          total_contacts?: number | null
+          updated_at?: string | null
+          vertical?: string | null
+        }
+        Relationships: []
+      }
+      auto_dialer_contacts: {
+        Row: {
+          call_duration_seconds: number | null
+          call_status: string | null
+          called_at: string | null
+          campaign_id: string
+          city: string | null
+          created_at: string | null
+          disposition: string | null
+          email: string | null
+          extra_data: Json | null
+          follow_up_date: string | null
+          id: string
+          lead_id: string | null
+          name: string | null
+          notes: string | null
+          phone: string
+          updated_at: string | null
+        }
+        Insert: {
+          call_duration_seconds?: number | null
+          call_status?: string | null
+          called_at?: string | null
+          campaign_id: string
+          city?: string | null
+          created_at?: string | null
+          disposition?: string | null
+          email?: string | null
+          extra_data?: Json | null
+          follow_up_date?: string | null
+          id?: string
+          lead_id?: string | null
+          name?: string | null
+          notes?: string | null
+          phone: string
+          updated_at?: string | null
+        }
+        Update: {
+          call_duration_seconds?: number | null
+          call_status?: string | null
+          called_at?: string | null
+          campaign_id?: string
+          city?: string | null
+          created_at?: string | null
+          disposition?: string | null
+          email?: string | null
+          extra_data?: Json | null
+          follow_up_date?: string | null
+          id?: string
+          lead_id?: string | null
+          name?: string | null
+          notes?: string | null
+          phone?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auto_dialer_contacts_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "auto_dialer_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       auto_pilot_config: {
         Row: {
           agent_name: string
@@ -10918,6 +11082,8 @@ export type Database = {
           id: string
           is_legacy: boolean | null
           last_contacted_at: string | null
+          lead_score: number | null
+          lead_segment: string | null
           lead_source_type: string | null
           lead_type: string | null
           name: string
@@ -10961,6 +11127,8 @@ export type Database = {
           id?: string
           is_legacy?: boolean | null
           last_contacted_at?: string | null
+          lead_score?: number | null
+          lead_segment?: string | null
           lead_source_type?: string | null
           lead_type?: string | null
           name: string
@@ -11004,6 +11172,8 @@ export type Database = {
           id?: string
           is_legacy?: boolean | null
           last_contacted_at?: string | null
+          lead_score?: number | null
+          lead_segment?: string | null
           lead_source_type?: string | null
           lead_type?: string | null
           name?: string
@@ -15506,6 +15676,92 @@ export type Database = {
           name?: string
           rules?: Json | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      wa_drip_enrollments: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          current_step_index: number | null
+          enrolled_at: string | null
+          id: string
+          last_sent_at: string | null
+          lead_id: string
+          lead_name: string | null
+          next_send_at: string | null
+          phone: string
+          sequence_id: string
+          status: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          current_step_index?: number | null
+          enrolled_at?: string | null
+          id?: string
+          last_sent_at?: string | null
+          lead_id: string
+          lead_name?: string | null
+          next_send_at?: string | null
+          phone: string
+          sequence_id: string
+          status?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          current_step_index?: number | null
+          enrolled_at?: string | null
+          id?: string
+          last_sent_at?: string | null
+          lead_id?: string
+          lead_name?: string | null
+          next_send_at?: string | null
+          phone?: string
+          sequence_id?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_drip_enrollments_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "wa_drip_sequences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wa_drip_sequences: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          steps: Json
+          trigger_event: string
+          updated_at: string | null
+          vertical: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          steps?: Json
+          trigger_event?: string
+          updated_at?: string | null
+          vertical?: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          steps?: Json
+          trigger_event?: string
+          updated_at?: string | null
+          vertical?: string
         }
         Relationships: []
       }
