@@ -1006,7 +1006,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
               )}
             </AnimatePresence>
           </div>
-        </div>
+          )}
 
         {/* ── RIGHT: Live Quote ── */}
         <div className="lg:col-span-3">
