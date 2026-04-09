@@ -665,8 +665,8 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
                   </>
                 )}
                 <PremRow label={`Third Party (${ccNum < 1000 ? "<1000" : ccNum <= 1500 ? "1000-1500" : ">1500"}cc)`} value={fmt(calc.tp)} bold={isThirdPartyOnly} />
-                {securePremiumNum > 0 && <PremRow label="Secure Premium" value={fmt(securePremiumNum)} />}
-                {calc.addonTotal > 0 && <PremRow label={`Add-ons (${addons.filter(a => a.enabled).length})`} value={fmt(calc.addonTotal)} />}
+                {!isThirdPartyOnly && securePremiumNum > 0 && <PremRow label="Secure Premium" value={fmt(securePremiumNum)} />}
+                {!isThirdPartyOnly && calc.addonTotal > 0 && <PremRow label={`Add-ons (${addons.filter(a => a.enabled).length})`} value={fmt(calc.addonTotal)} />}
 
                 <div className="border-t border-border pt-1">
                   <PremRow label="Net Premium" value={fmt(calc.subtotal)} />
