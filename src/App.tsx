@@ -72,6 +72,7 @@ const NoWaitingCars = lazy(() => import("./pages/NoWaitingCars"));
 const BestCarDeals = lazy(() => import("./pages/BestCarDeals"));
 const AgreementSignPage = lazy(() => import("./pages/AgreementSignPage"));
 const TrackOrder = lazy(() => import("./pages/TrackOrder"));
+const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -213,6 +214,7 @@ const AppRouterShell = () => {
             <Route path="/agreement/:token" element={<AgreementSignPage />} />
             <Route path="/document-viewer" element={<InsuranceDocumentViewer />} />
             <Route path="/track-order" element={<TrackOrder />} />
+            <Route path="/unsubscribe" element={<Unsubscribe />} />
             <Route path="*" element={<LegacyRouteHandler />} />
           </Routes>
           <RouteAwareChrome isChromelessExperience={isChromelessExperience} />
