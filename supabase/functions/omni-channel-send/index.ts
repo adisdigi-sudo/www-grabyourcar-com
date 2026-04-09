@@ -7,6 +7,13 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+/**
+ * Omni-Channel Send — Routes messages to the right channel handler.
+ * WhatsApp → delegates to whatsapp-send (provider-agnostic)
+ * Email → direct Resend / Lovable Cloud
+ * RCS → stub (coming soon)
+ */
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -19,6 +26,19 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
+
+    // Health check
+    if (action === "health_check") {
+      const channels: Record<string, any> = {};
+      const { data: providers } = await supabase.from("channel_providers").select("*");
+      for (const p of providers || []) {
+        channels[p.channel] = { active: p.is_active, provider: p.provider_name };
+      }
+      return new Response(
+        JSON.stringify({ success: true, channels }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Check if channel is active
     const { data: provider } = await supabase
@@ -38,74 +58,26 @@ serve(async (req) => {
       );
     }
 
-    // Health check action
-    if (action === "health_check") {
-      const channels: Record<string, any> = {};
-      const { data: providers } = await supabase.from("channel_providers").select("*");
-      for (const p of providers || []) {
-        channels[p.channel] = { active: p.is_active, provider: p.provider_name };
-      }
-      return new Response(
-        JSON.stringify({ success: true, channels }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     let result: any = { success: false };
 
-    // ── WhatsApp adapter ──
+    // ── WhatsApp — delegate to whatsapp-send ──
     if (channel === "whatsapp") {
-      const accessToken = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
-      const phoneNumberId = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
+      const waResponse = await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${serviceRoleKey}`,
+        },
+        body: JSON.stringify({
+          to: phone,
+          message,
+          messageType: "text",
+          name,
+          logEvent: logEvent || "omni_send",
+        }),
+      });
 
-      if (!accessToken || !phoneNumberId) {
-        return new Response(
-          JSON.stringify({ success: false, error: "WhatsApp API credentials not configured" }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      const waResponse = await fetch(
-        `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            messaging_product: "whatsapp",
-            to: phone,
-            type: "text",
-            text: { body: message },
-          }),
-        }
-      );
-
-      const waData = await waResponse.json();
-
-      if (waResponse.ok && waData.messages?.[0]?.id) {
-        result = { success: true, messageId: waData.messages[0].id };
-
-        // Log to wa_message_logs
-        await supabase.from("wa_message_logs").insert({
-          phone,
-          customer_name: name || null,
-          message_type: "text",
-          message_content: message,
-          trigger_event: logEvent || "omni_send",
-          status: "sent",
-          provider: "meta",
-          channel: "whatsapp",
-          provider_message_id: waData.messages[0].id,
-          sent_at: new Date().toISOString(),
-        });
-      } else {
-        result = {
-          success: false,
-          error: waData.error?.message || "WhatsApp API send failed",
-        };
-      }
+      result = await waResponse.json();
     }
 
     // ── Email adapter (Resend) ──
@@ -143,7 +115,6 @@ serve(async (req) => {
       if (emailResponse.ok && emailData.id) {
         result = { success: true, messageId: emailData.id };
 
-        // Log
         await supabase.from("wa_message_logs").insert({
           phone: email || "email",
           customer_name: name || null,
@@ -157,10 +128,7 @@ serve(async (req) => {
           sent_at: new Date().toISOString(),
         });
       } else {
-        result = {
-          success: false,
-          error: emailData.message || "Email send failed",
-        };
+        result = { success: false, error: emailData.message || "Email send failed" };
       }
     }
 
