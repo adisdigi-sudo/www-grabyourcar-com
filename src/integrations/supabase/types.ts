@@ -9772,6 +9772,125 @@ export type Database = {
           },
         ]
       }
+      integration_connections: {
+        Row: {
+          channel: string | null
+          config: Json | null
+          connected_at: string | null
+          connected_by: string | null
+          credentials_configured: boolean | null
+          display_name: string
+          error_rate: number | null
+          health_status: string | null
+          id: string
+          is_active: boolean | null
+          last_health_check: string | null
+          last_used_at: string | null
+          provider_id: string
+          total_messages_failed: number | null
+          total_messages_sent: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          channel?: string | null
+          config?: Json | null
+          connected_at?: string | null
+          connected_by?: string | null
+          credentials_configured?: boolean | null
+          display_name: string
+          error_rate?: number | null
+          health_status?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_health_check?: string | null
+          last_used_at?: string | null
+          provider_id: string
+          total_messages_failed?: number | null
+          total_messages_sent?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          channel?: string | null
+          config?: Json | null
+          connected_at?: string | null
+          connected_by?: string | null
+          credentials_configured?: boolean | null
+          display_name?: string
+          error_rate?: number | null
+          health_status?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_health_check?: string | null
+          last_used_at?: string | null
+          provider_id?: string
+          total_messages_failed?: number | null
+          total_messages_sent?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_connections_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "integration_providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integration_providers: {
+        Row: {
+          category: string
+          created_at: string | null
+          description: string | null
+          docs_url: string | null
+          id: string
+          is_available: boolean | null
+          logo_url: string | null
+          name: string
+          pricing_tier: string | null
+          required_secrets: string[] | null
+          setup_guide: string | null
+          slug: string
+          sort_order: number | null
+          supported_channels: string[] | null
+          website_url: string | null
+        }
+        Insert: {
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          docs_url?: string | null
+          id?: string
+          is_available?: boolean | null
+          logo_url?: string | null
+          name: string
+          pricing_tier?: string | null
+          required_secrets?: string[] | null
+          setup_guide?: string | null
+          slug: string
+          sort_order?: number | null
+          supported_channels?: string[] | null
+          website_url?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          docs_url?: string | null
+          id?: string
+          is_available?: boolean | null
+          logo_url?: string | null
+          name?: string
+          pricing_tier?: string | null
+          required_secrets?: string[] | null
+          setup_guide?: string | null
+          slug?: string
+          sort_order?: number | null
+          supported_channels?: string[] | null
+          website_url?: string | null
+        }
+        Relationships: []
+      }
       inventory_broadcast_logs: {
         Row: {
           channel: string
@@ -11962,6 +12081,170 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      omni_campaign_messages: {
+        Row: {
+          campaign_id: string
+          channel: string
+          clicked_at: string | null
+          created_at: string | null
+          delivered_at: string | null
+          error_message: string | null
+          external_id: string | null
+          failed_at: string | null
+          id: string
+          metadata: Json | null
+          opened_at: string | null
+          recipient_email: string | null
+          recipient_name: string | null
+          recipient_phone: string | null
+          sent_at: string | null
+          status: string | null
+        }
+        Insert: {
+          campaign_id: string
+          channel: string
+          clicked_at?: string | null
+          created_at?: string | null
+          delivered_at?: string | null
+          error_message?: string | null
+          external_id?: string | null
+          failed_at?: string | null
+          id?: string
+          metadata?: Json | null
+          opened_at?: string | null
+          recipient_email?: string | null
+          recipient_name?: string | null
+          recipient_phone?: string | null
+          sent_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          channel?: string
+          clicked_at?: string | null
+          created_at?: string | null
+          delivered_at?: string | null
+          error_message?: string | null
+          external_id?: string | null
+          failed_at?: string | null
+          id?: string
+          metadata?: Json | null
+          opened_at?: string | null
+          recipient_email?: string | null
+          recipient_name?: string | null
+          recipient_phone?: string | null
+          sent_at?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "omni_campaign_messages_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "omni_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      omni_campaigns: {
+        Row: {
+          batch_delay_seconds: number | null
+          batch_size: number | null
+          bounce_count: number | null
+          channel: string
+          click_count: number | null
+          completed_at: string | null
+          created_at: string | null
+          created_by: string | null
+          delivered_count: number | null
+          failed_count: number | null
+          from_email: string | null
+          from_name: string | null
+          html_content: string | null
+          id: string
+          message_body: string | null
+          name: string
+          open_count: number | null
+          optimal_time_send: boolean | null
+          reply_to: string | null
+          scheduled_at: string | null
+          segment_filter: Json | null
+          sent_count: number | null
+          started_at: string | null
+          status: string | null
+          subject: string | null
+          template_id: string | null
+          timezone_send: boolean | null
+          total_recipients: number | null
+          updated_at: string | null
+          wa_template_name: string | null
+        }
+        Insert: {
+          batch_delay_seconds?: number | null
+          batch_size?: number | null
+          bounce_count?: number | null
+          channel?: string
+          click_count?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          delivered_count?: number | null
+          failed_count?: number | null
+          from_email?: string | null
+          from_name?: string | null
+          html_content?: string | null
+          id?: string
+          message_body?: string | null
+          name: string
+          open_count?: number | null
+          optimal_time_send?: boolean | null
+          reply_to?: string | null
+          scheduled_at?: string | null
+          segment_filter?: Json | null
+          sent_count?: number | null
+          started_at?: string | null
+          status?: string | null
+          subject?: string | null
+          template_id?: string | null
+          timezone_send?: boolean | null
+          total_recipients?: number | null
+          updated_at?: string | null
+          wa_template_name?: string | null
+        }
+        Update: {
+          batch_delay_seconds?: number | null
+          batch_size?: number | null
+          bounce_count?: number | null
+          channel?: string
+          click_count?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          delivered_count?: number | null
+          failed_count?: number | null
+          from_email?: string | null
+          from_name?: string | null
+          html_content?: string | null
+          id?: string
+          message_body?: string | null
+          name?: string
+          open_count?: number | null
+          optimal_time_send?: boolean | null
+          reply_to?: string | null
+          scheduled_at?: string | null
+          segment_filter?: Json | null
+          sent_count?: number | null
+          started_at?: string | null
+          status?: string | null
+          subject?: string | null
+          template_id?: string | null
+          timezone_send?: boolean | null
+          total_recipients?: number | null
+          updated_at?: string | null
+          wa_template_name?: string | null
+        }
+        Relationships: []
       }
       omni_conversations: {
         Row: {
@@ -15412,6 +15695,115 @@ export type Database = {
           variables?: string[] | null
         }
         Relationships: []
+      }
+      webhook_endpoints: {
+        Row: {
+          created_at: string | null
+          endpoint_url: string | null
+          events_subscribed: string[] | null
+          id: string
+          is_active: boolean | null
+          last_received_at: string | null
+          name: string
+          provider_id: string | null
+          secret_header: string | null
+          secret_value: string | null
+          slug: string
+          total_failed: number | null
+          total_processed: number | null
+          total_received: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          endpoint_url?: string | null
+          events_subscribed?: string[] | null
+          id?: string
+          is_active?: boolean | null
+          last_received_at?: string | null
+          name: string
+          provider_id?: string | null
+          secret_header?: string | null
+          secret_value?: string | null
+          slug: string
+          total_failed?: number | null
+          total_processed?: number | null
+          total_received?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          endpoint_url?: string | null
+          events_subscribed?: string[] | null
+          id?: string
+          is_active?: boolean | null
+          last_received_at?: string | null
+          name?: string
+          provider_id?: string | null
+          secret_header?: string | null
+          secret_value?: string | null
+          slug?: string
+          total_failed?: number | null
+          total_processed?: number | null
+          total_received?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_endpoints_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "integration_providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhook_logs: {
+        Row: {
+          created_at: string | null
+          endpoint_id: string | null
+          error_message: string | null
+          event_type: string | null
+          headers: Json | null
+          id: string
+          ip_address: string | null
+          payload: Json | null
+          processing_time_ms: number | null
+          status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          endpoint_id?: string | null
+          error_message?: string | null
+          event_type?: string | null
+          headers?: Json | null
+          id?: string
+          ip_address?: string | null
+          payload?: Json | null
+          processing_time_ms?: number | null
+          status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          endpoint_id?: string | null
+          error_message?: string | null
+          event_type?: string | null
+          headers?: Json | null
+          id?: string
+          ip_address?: string | null
+          payload?: Json | null
+          processing_time_ms?: number | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_logs_endpoint_id_fkey"
+            columns: ["endpoint_id"]
+            isOneToOne: false
+            referencedRelation: "webhook_endpoints"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       whatsapp_broadcasts: {
         Row: {
