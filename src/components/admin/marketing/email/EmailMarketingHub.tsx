@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Mail, Send, FileText, Users, GitBranch, BarChart3, Blocks, Star, MousePointer, ShoppingCart, Vote } from "lucide-react";
+import { Mail, Send, FileText, Users, GitBranch, BarChart3, Blocks, Star, MousePointer, ShoppingCart, Vote, Sparkles, Layers } from "lucide-react";
 import { EmailBlockBuilder } from "./EmailBlockBuilder";
 import { SubscriberSegmentation } from "./SubscriberSegmentation";
 import { DripSequenceBuilder } from "./DripSequenceBuilder";
@@ -9,6 +9,7 @@ import { ContactScoringPanel } from "./ContactScoringPanel";
 import { PopupFormBuilder } from "./PopupFormBuilder";
 import { CartAbandonmentManager } from "./CartAbandonmentManager";
 import { EmailPollManager } from "./EmailPollManager";
+import { DynamicContentBuilder } from "./DynamicContentBuilder";
 import { EmailMarketingManagement } from "../../EmailMarketingManagement";
 
 export function EmailMarketingHub() {
@@ -43,6 +44,9 @@ export function EmailMarketingHub() {
           <TabsTrigger value="sequences" className="gap-1.5 text-xs sm:text-sm">
             <GitBranch className="h-3.5 w-3.5" />Drip Sequences
           </TabsTrigger>
+          <TabsTrigger value="dynamic" className="gap-1.5 text-xs sm:text-sm">
+            <Sparkles className="h-3.5 w-3.5" />Dynamic Content
+          </TabsTrigger>
           <TabsTrigger value="popups" className="gap-1.5 text-xs sm:text-sm">
             <MousePointer className="h-3.5 w-3.5" />Pop-ups
           </TabsTrigger>
@@ -62,6 +66,7 @@ export function EmailMarketingHub() {
         <TabsContent value="subscribers"><SubscriberSegmentation /></TabsContent>
         <TabsContent value="scoring"><ContactScoringPanel /></TabsContent>
         <TabsContent value="sequences"><DripSequenceBuilder /></TabsContent>
+        <TabsContent value="dynamic"><DynamicContentBuilder /></TabsContent>
         <TabsContent value="popups"><PopupFormBuilder /></TabsContent>
         <TabsContent value="cart"><CartAbandonmentManager /></TabsContent>
         <TabsContent value="polls"><EmailPollManager /></TabsContent>
