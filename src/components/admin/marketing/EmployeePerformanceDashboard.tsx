@@ -66,7 +66,7 @@ export const EmployeePerformanceDashboard = () => {
       const salesPipeline = await supabase.from("sales_pipeline").select("assigned_executive, pipeline_stage, deal_value, created_at, updated_at").gte("created_at", from).lte("created_at", to);
       const loanApps = await supabase.from("loan_applications").select("assigned_executive, stage, loan_amount, created_at").gte("created_at", from).lte("created_at", to);
       const [targets, leads] = await Promise.all([
-        supabase.from("team_targets").select("*").eq("month", format(new Date(), "yyyy-MM")),
+        supabase.from("team_targets").select("team_member_name, target_count, target_revenue, month_year").eq("month_year", format(new Date(), "yyyy-MM")),
         supabase.from("leads").select("assigned_to, status, created_at").gte("created_at", from).lte("created_at", to),
       ]);
 
@@ -152,7 +152,7 @@ export const EmployeePerformanceDashboard = () => {
           m.conversionRate = m.leadsHandled > 0 ? (m.dealsWon / m.leadsHandled) * 100 : 0;
           const target = targetList.find((t: any) => t.team_member_name === m.name);
           if (target) {
-            const targetRevenue = Number(target.target_revenue) || Number(target.target_deals) * 10000 || 100000;
+            const targetRevenue = Number((target as any).target_revenue) || Number((target as any).target_count) * 10000 || 100000;
             m.targetAchievement = targetRevenue > 0 ? (m.revenue / targetRevenue) * 100 : 0;
           }
           return m;
