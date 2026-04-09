@@ -556,6 +556,10 @@ const AdminLayout = () => {
         return <JourneyAutomationPanel />;
       case "revenue-intelligence":
         return <RevenueIntelligenceDashboard />;
+      case "ad-spend-analytics":
+        return <AdSpendAnalytics />;
+      case "employee-performance":
+        return <EmployeePerformanceDashboard />;
       case "lead-scoring":
         return <LeadScoringDashboard />;
       case "client-management":
