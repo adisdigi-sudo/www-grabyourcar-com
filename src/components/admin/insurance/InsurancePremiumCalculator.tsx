@@ -136,7 +136,17 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
 
   const securePremiumNum = parseFloat(securePremium) || 0;
 
+  const isThirdPartyOnly = policyType === "Third Party";
+
   const calc = useMemo(() => {
+    if (isThirdPartyOnly) {
+      if (!ccNum) return null;
+      const tp = getTPPremium(ccNum);
+      const subtotal = tp;
+      const gst = (subtotal * GST_RATE) / 100;
+      const total = subtotal + gst;
+      return { odRate: 0, basicOD: 0, odDiscount: 0, odAfterDiscount: 0, ncbDiscount: 0, netOD: 0, tp, securePremium: 0, addonTotal: 0, subtotal, gst, total };
+    }
     if (!idvNum || !ccNum) return null;
 
     const ccKey = ccNum > 1500 ? "above1500" : "upto1500";
@@ -155,7 +165,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
     const total = subtotal + gst;
 
     return { odRate, basicOD, odDiscount, odAfterDiscount, ncbDiscount, netOD, tp, securePremium: securePremiumNum, addonTotal, subtotal, gst, total };
-  }, [idvNum, ccNum, zone, discountPct, ncb, addons, ncbLocked, securePremiumNum]);
+  }, [idvNum, ccNum, zone, discountPct, ncb, addons, ncbLocked, securePremiumNum, isThirdPartyOnly]);
 
   const toggleAddon = (id: string) => {
     setAddons(prev => prev.map(a => a.id === id ? { ...a, enabled: !a.enabled } : a));
@@ -734,61 +744,65 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
               <Badge variant="secondary" className="ml-auto text-[10px]">Zone {zone}</Badge>
             </div>
 
-            {/* Auto IDV Calculator */}
-            <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-2">
-              <div className="flex items-center gap-1.5">
-                <Calculator className="h-3.5 w-3.5 text-primary" />
-                <span className="text-xs font-bold text-primary">Auto IDV Calculator</span>
+            {/* Auto IDV Calculator — hide for Third Party Only */}
+            {!isThirdPartyOnly && (
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-2">
+                <div className="flex items-center gap-1.5">
+                  <Calculator className="h-3.5 w-3.5 text-primary" />
+                  <span className="text-xs font-bold text-primary">Auto IDV Calculator</span>
+                </div>
+                <div>
+                  <Label className="text-xs">Ex-Showroom Price</Label>
+                  <div className="relative mt-1">
+                    <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input type="number" placeholder="e.g. 800000" value={exShowroomPrice} onChange={e => setExShowroomPrice(e.target.value)} className="pl-8 h-8 text-sm" />
+                  </div>
+                </div>
+                {(() => {
+                  const exPrice = parseFloat(exShowroomPrice) || 0;
+                  const yearNum = parseInt(vehicleYear) || new Date().getFullYear();
+                  const age = new Date().getFullYear() - yearNum;
+                  if (exPrice > 0 && age >= 0) {
+                    const depRate = Math.min(0.90, 0.05 + age * 0.10);
+                    const autoIdv = Math.round(exPrice * (1 - depRate));
+                    return (
+                      <div className="flex items-center justify-between gap-2 pt-1">
+                        <p className="text-[10px] text-muted-foreground">
+                          Age: {age}yr → Dep: {Math.round(depRate * 100)}% → IDV: Rs. {autoIdv.toLocaleString("en-IN")}
+                        </p>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="h-6 text-[10px] px-2 border-primary/30 text-primary hover:bg-primary/10"
+                          onClick={() => setIdv(String(autoIdv))}
+                        >
+                          Use This IDV
+                        </Button>
+                      </div>
+                    );
+                  }
+                  return <p className="text-[10px] text-muted-foreground">Enter Ex-Showroom Price + Vehicle Year to auto-calculate IDV</p>;
+                })()}
               </div>
+            )}
+
+            {!isThirdPartyOnly && (
               <div>
-                <Label className="text-xs">Ex-Showroom Price</Label>
+                <Label className="text-xs">IDV (Insured Declared Value)</Label>
                 <div className="relative mt-1">
                   <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                  <Input type="number" placeholder="e.g. 800000" value={exShowroomPrice} onChange={e => setExShowroomPrice(e.target.value)} className="pl-8 h-8 text-sm" />
+                  <Input type="number" placeholder="e.g. 500000" value={idv} onChange={e => setIdv(e.target.value)} className="pl-8 h-9 text-sm" />
                 </div>
               </div>
-              {(() => {
-                const exPrice = parseFloat(exShowroomPrice) || 0;
-                const yearNum = parseInt(vehicleYear) || new Date().getFullYear();
-                const age = new Date().getFullYear() - yearNum;
-                if (exPrice > 0 && age >= 0) {
-                  const depRate = Math.min(0.90, 0.05 + age * 0.10);
-                  const autoIdv = Math.round(exPrice * (1 - depRate));
-                  return (
-                    <div className="flex items-center justify-between gap-2 pt-1">
-                      <p className="text-[10px] text-muted-foreground">
-                        Age: {age}yr → Dep: {Math.round(depRate * 100)}% → IDV: ₹{autoIdv.toLocaleString("en-IN")}
-                      </p>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="h-6 text-[10px] px-2 border-primary/30 text-primary hover:bg-primary/10"
-                        onClick={() => setIdv(String(autoIdv))}
-                      >
-                        Use This IDV
-                      </Button>
-                    </div>
-                  );
-                }
-                return <p className="text-[10px] text-muted-foreground">Enter Ex-Showroom Price + Vehicle Year to auto-calculate IDV</p>;
-              })()}
-            </div>
-
-            <div>
-              <Label className="text-xs">IDV (Insured Declared Value)</Label>
-              <div className="relative mt-1">
-                <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                <Input type="number" placeholder="e.g. 500000" value={idv} onChange={e => setIdv(e.target.value)} className="pl-8 h-9 text-sm" />
-              </div>
-            </div>
+            )}
 
             <div>
               <Label className="text-xs">Engine CC</Label>
               <Input type="number" placeholder="e.g. 1199" value={cc} onChange={e => setCc(e.target.value)} className="h-9 text-sm mt-1" />
               {ccNum > 0 && (
                 <p className="text-[10px] text-muted-foreground mt-1">
-                  TP: {ccNum < 1000 ? "< 1000cc → ₹2,094" : ccNum <= 1500 ? "1000-1500cc → ₹3,416" : "> 1500cc → ₹7,897"}
+                  TP: {ccNum < 1000 ? "< 1000cc → Rs. 2,094" : ccNum <= 1500 ? "1000-1500cc → Rs. 3,416" : "> 1500cc → Rs. 7,897"}
                 </p>
               )}
             </div>
@@ -797,20 +811,36 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
               <Label className="text-xs">City / RTO Zone</Label>
               <Input placeholder="e.g. Delhi NCR, Bangalore, Jaipur" value={city} onChange={e => setCity(e.target.value)} className="h-9 text-sm mt-1" />
               <p className="text-[10px] text-muted-foreground mt-1">
-                {zone === "A" ? "🏙 Metro (Delhi NCR / Bangalore)" : "🌍 Non-Metro"} — OD Rate: {ccNum > 1500 ? OD_RATES[zone].above1500 : OD_RATES[zone].upto1500}%
+                {zone === "A" ? "Metro (Delhi NCR / Bangalore)" : "Non-Metro"} — OD Rate: {ccNum > 1500 ? OD_RATES[zone].above1500 : OD_RATES[zone].upto1500}%
               </p>
             </div>
 
-            <div>
-              <Label className="text-xs">Secure Premium</Label>
-              <div className="relative mt-1">
-                <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                <Input type="number" placeholder="0" value={securePremium} onChange={e => setSecurePremium(e.target.value)} className="pl-8 h-9 text-sm" />
+            {!isThirdPartyOnly && (
+              <div>
+                <Label className="text-xs">Secure Premium</Label>
+                <div className="relative mt-1">
+                  <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input type="number" placeholder="0" value={securePremium} onChange={e => setSecurePremium(e.target.value)} className="pl-8 h-9 text-sm" />
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* Third Party Only info banner */}
+            {isThirdPartyOnly && (
+              <div className="flex items-start gap-2 p-3 rounded-lg border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-950/30">
+                <Info className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-xs font-bold text-blue-800 dark:text-blue-300">Third Party Only Policy</p>
+                  <p className="text-[10px] text-blue-600 dark:text-blue-400 mt-0.5">
+                    IDV, NCB, OD discount, and add-on coverages are not applicable. Premium is based on engine CC capacity as per IRDAI tariff.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Discount & NCB Card */}
+          {/* Discount & NCB Card — hide for Third Party Only */}
+          {!isThirdPartyOnly && (
           <div className="rounded-xl border border-border bg-card p-4 space-y-3">
             <div className="flex items-center gap-2 mb-1">
               <Percent className="h-4 w-4 text-primary" />
@@ -940,8 +970,10 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
               </div>
             </div>
           </div>
+          )}
 
-          {/* Add-ons Card */}
+          {/* Add-ons Card — hide for Third Party Only */}
+          {!isThirdPartyOnly && (
           <div className="rounded-xl border border-border bg-card p-4 space-y-3">
             <button onClick={() => setShowAddons(!showAddons)} className="flex items-center gap-2 w-full">
               <Zap className="h-4 w-4 text-primary" />
@@ -974,6 +1006,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
               )}
             </AnimatePresence>
           </div>
+          )}
         </div>
 
         {/* ── RIGHT: Live Quote ── */}
@@ -981,7 +1014,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
           {!calc ? (
             <div className="rounded-xl border border-dashed border-border bg-muted/30 p-12 flex flex-col items-center justify-center text-center h-full min-h-[300px]">
               <Calculator className="h-12 w-12 text-muted-foreground/40 mb-3" />
-              <p className="text-sm font-medium text-muted-foreground">Enter IDV & Engine CC</p>
+              <p className="text-sm font-medium text-muted-foreground">{isThirdPartyOnly ? "Enter Engine CC" : "Enter IDV & Engine CC"}</p>
               <p className="text-xs text-muted-foreground/60 mt-1">Premium will auto-calculate</p>
             </div>
           ) : (
@@ -994,24 +1027,26 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
                 </div>
                 <div className="text-3xl md:text-4xl font-heading font-black text-foreground">{fmt(calc.total)}</div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {resolvedInsurer ? `${resolvedInsurer} • ` : ""}{policyType} • {fuelType} • Zone {zone} • {ccNum}cc • IDV {fmt(idvNum)}
+                  {resolvedInsurer ? `${resolvedInsurer} • ` : ""}{policyType} • {fuelType} • {ccNum}cc{!isThirdPartyOnly ? ` • Zone ${zone} • IDV ${fmt(idvNum)}` : ""}
                 </p>
               </div>
 
               {/* Breakdown */}
               <div className="rounded-xl border border-border bg-card divide-y divide-border">
-                <div className="p-4 space-y-2">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Shield className="h-3.5 w-3.5 text-blue-500" />
-                    <span className="text-xs font-bold text-foreground uppercase tracking-wide">Own Damage (OD)</span>
+                {!isThirdPartyOnly && (
+                  <div className="p-4 space-y-2">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Shield className="h-3.5 w-3.5 text-blue-500" />
+                      <span className="text-xs font-bold text-foreground uppercase tracking-wide">Own Damage (OD)</span>
+                    </div>
+                    <Row label={`Basic OD (${calc.odRate}% of IDV)`} value={fmt(calc.basicOD)} />
+                    {discountPct > 0 && <Row label={`OD Discount (${discountPct}%)`} value={`-${fmt(calc.odDiscount)}`} negative />}
+                    {!ncbLocked && ncb > 0 && <Row label={`NCB Discount (${ncb}%)`} value={`-${fmt(calc.ncbDiscount)}`} negative />}
+                    <div className="pt-1 border-t border-dashed border-border/60">
+                      <Row label="Net OD Premium" value={fmt(calc.netOD)} bold />
+                    </div>
                   </div>
-                  <Row label={`Basic OD (${calc.odRate}% of IDV)`} value={fmt(calc.basicOD)} />
-                  {discountPct > 0 && <Row label={`OD Discount (${discountPct}%)`} value={`-${fmt(calc.odDiscount)}`} negative />}
-                  {!ncbLocked && ncb > 0 && <Row label={`NCB Discount (${ncb}%)`} value={`-${fmt(calc.ncbDiscount)}`} negative />}
-                  <div className="pt-1 border-t border-dashed border-border/60">
-                    <Row label="Net OD Premium" value={fmt(calc.netOD)} bold />
-                  </div>
-                </div>
+                )}
 
                 <div className="p-4">
                   <div className="flex items-center gap-2 mb-2">
