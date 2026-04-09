@@ -666,8 +666,8 @@ Please set up the following templates on our WhatsApp Business Account:
                 <Button variant="outline" onClick={() => { navigator.clipboard.writeText(previewTemplate.content); toast({ title: "Copied!" }); }}>
                   <Copy className="h-4 w-4 mr-2" /> Copy Text
                 </Button>
-                <Button variant="outline" onClick={() => openFinbiteCopy(previewTemplate)}>
-                  <Share2 className="h-4 w-4 mr-2" /> Copy for Finbite
+                <Button variant="outline" onClick={() => openProviderCopy(previewTemplate)}>
+                  <Share2 className="h-4 w-4 mr-2" /> Copy for Provider
                 </Button>
               </div>
             </div>
