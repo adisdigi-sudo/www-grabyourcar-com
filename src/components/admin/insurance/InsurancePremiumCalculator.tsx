@@ -744,61 +744,65 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
               <Badge variant="secondary" className="ml-auto text-[10px]">Zone {zone}</Badge>
             </div>
 
-            {/* Auto IDV Calculator */}
-            <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-2">
-              <div className="flex items-center gap-1.5">
-                <Calculator className="h-3.5 w-3.5 text-primary" />
-                <span className="text-xs font-bold text-primary">Auto IDV Calculator</span>
+            {/* Auto IDV Calculator — hide for Third Party Only */}
+            {!isThirdPartyOnly && (
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-2">
+                <div className="flex items-center gap-1.5">
+                  <Calculator className="h-3.5 w-3.5 text-primary" />
+                  <span className="text-xs font-bold text-primary">Auto IDV Calculator</span>
+                </div>
+                <div>
+                  <Label className="text-xs">Ex-Showroom Price</Label>
+                  <div className="relative mt-1">
+                    <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input type="number" placeholder="e.g. 800000" value={exShowroomPrice} onChange={e => setExShowroomPrice(e.target.value)} className="pl-8 h-8 text-sm" />
+                  </div>
+                </div>
+                {(() => {
+                  const exPrice = parseFloat(exShowroomPrice) || 0;
+                  const yearNum = parseInt(vehicleYear) || new Date().getFullYear();
+                  const age = new Date().getFullYear() - yearNum;
+                  if (exPrice > 0 && age >= 0) {
+                    const depRate = Math.min(0.90, 0.05 + age * 0.10);
+                    const autoIdv = Math.round(exPrice * (1 - depRate));
+                    return (
+                      <div className="flex items-center justify-between gap-2 pt-1">
+                        <p className="text-[10px] text-muted-foreground">
+                          Age: {age}yr → Dep: {Math.round(depRate * 100)}% → IDV: Rs. {autoIdv.toLocaleString("en-IN")}
+                        </p>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="h-6 text-[10px] px-2 border-primary/30 text-primary hover:bg-primary/10"
+                          onClick={() => setIdv(String(autoIdv))}
+                        >
+                          Use This IDV
+                        </Button>
+                      </div>
+                    );
+                  }
+                  return <p className="text-[10px] text-muted-foreground">Enter Ex-Showroom Price + Vehicle Year to auto-calculate IDV</p>;
+                })()}
               </div>
+            )}
+
+            {!isThirdPartyOnly && (
               <div>
-                <Label className="text-xs">Ex-Showroom Price</Label>
+                <Label className="text-xs">IDV (Insured Declared Value)</Label>
                 <div className="relative mt-1">
                   <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                  <Input type="number" placeholder="e.g. 800000" value={exShowroomPrice} onChange={e => setExShowroomPrice(e.target.value)} className="pl-8 h-8 text-sm" />
+                  <Input type="number" placeholder="e.g. 500000" value={idv} onChange={e => setIdv(e.target.value)} className="pl-8 h-9 text-sm" />
                 </div>
               </div>
-              {(() => {
-                const exPrice = parseFloat(exShowroomPrice) || 0;
-                const yearNum = parseInt(vehicleYear) || new Date().getFullYear();
-                const age = new Date().getFullYear() - yearNum;
-                if (exPrice > 0 && age >= 0) {
-                  const depRate = Math.min(0.90, 0.05 + age * 0.10);
-                  const autoIdv = Math.round(exPrice * (1 - depRate));
-                  return (
-                    <div className="flex items-center justify-between gap-2 pt-1">
-                      <p className="text-[10px] text-muted-foreground">
-                        Age: {age}yr → Dep: {Math.round(depRate * 100)}% → IDV: ₹{autoIdv.toLocaleString("en-IN")}
-                      </p>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="h-6 text-[10px] px-2 border-primary/30 text-primary hover:bg-primary/10"
-                        onClick={() => setIdv(String(autoIdv))}
-                      >
-                        Use This IDV
-                      </Button>
-                    </div>
-                  );
-                }
-                return <p className="text-[10px] text-muted-foreground">Enter Ex-Showroom Price + Vehicle Year to auto-calculate IDV</p>;
-              })()}
-            </div>
-
-            <div>
-              <Label className="text-xs">IDV (Insured Declared Value)</Label>
-              <div className="relative mt-1">
-                <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                <Input type="number" placeholder="e.g. 500000" value={idv} onChange={e => setIdv(e.target.value)} className="pl-8 h-9 text-sm" />
-              </div>
-            </div>
+            )}
 
             <div>
               <Label className="text-xs">Engine CC</Label>
               <Input type="number" placeholder="e.g. 1199" value={cc} onChange={e => setCc(e.target.value)} className="h-9 text-sm mt-1" />
               {ccNum > 0 && (
                 <p className="text-[10px] text-muted-foreground mt-1">
-                  TP: {ccNum < 1000 ? "< 1000cc → ₹2,094" : ccNum <= 1500 ? "1000-1500cc → ₹3,416" : "> 1500cc → ₹7,897"}
+                  TP: {ccNum < 1000 ? "< 1000cc → Rs. 2,094" : ccNum <= 1500 ? "1000-1500cc → Rs. 3,416" : "> 1500cc → Rs. 7,897"}
                 </p>
               )}
             </div>
@@ -807,7 +811,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
               <Label className="text-xs">City / RTO Zone</Label>
               <Input placeholder="e.g. Delhi NCR, Bangalore, Jaipur" value={city} onChange={e => setCity(e.target.value)} className="h-9 text-sm mt-1" />
               <p className="text-[10px] text-muted-foreground mt-1">
-                {zone === "A" ? "🏙 Metro (Delhi NCR / Bangalore)" : "🌍 Non-Metro"} — OD Rate: {ccNum > 1500 ? OD_RATES[zone].above1500 : OD_RATES[zone].upto1500}%
+                {zone === "A" ? "Metro (Delhi NCR / Bangalore)" : "Non-Metro"} — OD Rate: {ccNum > 1500 ? OD_RATES[zone].above1500 : OD_RATES[zone].upto1500}%
               </p>
             </div>
 
