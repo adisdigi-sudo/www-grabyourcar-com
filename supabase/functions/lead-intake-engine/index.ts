@@ -87,7 +87,7 @@ serve(async (req) => {
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
   const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-  const FINBITE_BEARER_TOKEN = Deno.env.get("FINBITE_BEARER_TOKEN");
+  const WHATSAPP_ACCESS_TOKEN = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
   const WHATSAPP_PHONE_NUMBER_ID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
 
   const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
@@ -244,19 +244,20 @@ serve(async (req) => {
     const executivePhone = "+919855924442";
     const executiveEmail = "hello@grabyourcar.com";
 
-    if (FINBITE_BEARER_TOKEN && WHATSAPP_PHONE_NUMBER_ID) {
+    if (WHATSAPP_ACCESS_TOKEN && WHATSAPP_PHONE_NUMBER_ID) {
       try {
-        await fetch("https://app.finbite.in/api/v2/whatsapp-business/messages", {
+        await fetch(`https://graph.facebook.com/v21.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`, {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${FINBITE_BEARER_TOKEN}`,
+            Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
+            messaging_product: "whatsapp",
+            recipient_type: "individual",
             to: executivePhone,
-            phoneNoId: WHATSAPP_PHONE_NUMBER_ID,
             type: "text",
-            text: `🚨 *New Lead Assigned*\n\n*Name:* ${name}\n*Phone:* ${phone}\n*Email:* ${email}\n*City:* ${city}\n*Vertical:* ${verticalTag}\n*Source:* ${source} (${leadSourceType})${adPlatform ? `\n*Ad Platform:* ${adPlatform}` : ""}${utmCampaign ? `\n*Campaign:* ${utmCampaign}` : ""}\n*Message:* ${message}\n\n⏰ Please contact within 30 minutes!`,
+            text: { body: `🚨 *New Lead Assigned*\n\n*Name:* ${name}\n*Phone:* ${phone}\n*Email:* ${email}\n*City:* ${city}\n*Vertical:* ${verticalTag}\n*Source:* ${source} (${leadSourceType})${adPlatform ? `\n*Ad Platform:* ${adPlatform}` : ""}${utmCampaign ? `\n*Campaign:* ${utmCampaign}` : ""}\n*Message:* ${message}\n\n⏰ Please contact within 30 minutes!` },
           }),
         });
       } catch (e) {

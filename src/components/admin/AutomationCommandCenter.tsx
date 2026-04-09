@@ -633,7 +633,7 @@ export function AutomationCommandCenter() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <MessageSquare className="h-4 w-4 text-green-500" />
-                    <Label>WhatsApp (Finbite)</Label>
+                    <Label>WhatsApp (Meta API)</Label>
                   </div>
                   <Switch defaultChecked />
                 </div>

@@ -77,7 +77,7 @@ const allSearchItems: SearchResult[] = [
   
   // Integrations
   { id: "integrations-api", label: "API Portal", category: "Integrations", icon: Settings, keywords: ["api", "endpoint", "webhook", "key", "token"] },
-  { id: "integrations-whatsapp", label: "WhatsApp API", category: "Integrations", icon: MessageSquare, keywords: ["whatsapp", "api", "finbite", "config"] },
+  { id: "integrations-whatsapp", label: "WhatsApp API", category: "Integrations", icon: MessageSquare, keywords: ["whatsapp", "api", "meta", "waab", "config"] },
   { id: "integrations-chatbot", label: "AI Chatbot", category: "Integrations", icon: Brain, keywords: ["chatbot", "ai", "assistant", "conversation"] },
   
   // Settings

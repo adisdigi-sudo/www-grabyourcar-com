@@ -164,7 +164,7 @@ export function WhatsAppBroadcastManager() {
   };
 
   const handleStartBroadcast = async (broadcast: Broadcast) => {
-    if (!confirm(`Send WhatsApp messages to ${broadcast.total_recipients} recipients via Finbite API? This will use your WhatsApp credits.`)) return;
+    if (!confirm(`Send WhatsApp messages to ${broadcast.total_recipients} recipients via WhatsApp API? This will use your WhatsApp credits.`)) return;
 
     try {
       toast({ title: "Broadcast started", description: "Sending messages via WhatsApp API..." });

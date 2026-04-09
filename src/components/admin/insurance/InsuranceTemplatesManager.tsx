@@ -89,7 +89,7 @@ export function InsuranceTemplatesManager() {
       sample_body: form.sample_body,
       language: form.language,
       variables: vars,
-      provider: "finbite",
+      provider: "meta",
       is_active: true,
     });
     if (error) toast({ title: "Error", description: error.message, variant: "destructive" });

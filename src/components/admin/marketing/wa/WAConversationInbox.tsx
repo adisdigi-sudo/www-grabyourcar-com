@@ -62,7 +62,7 @@ export function WAConversationInbox() {
     setIsSending(true);
 
     try {
-      // Send via Finbite
+      // Send via WhatsApp API
       const { error } = await supabase.functions.invoke("whatsapp-send", {
         body: { to: selected.phone_number, message: replyText },
       });

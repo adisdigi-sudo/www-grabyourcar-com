@@ -69,8 +69,8 @@ export default function WhatsAppTemplateManager() {
   const [isAIGenerating, setIsAIGenerating] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
   const [isAIDialogOpen, setIsAIDialogOpen] = useState(false);
-  const [isFinbiteCopyOpen, setIsFinbiteCopyOpen] = useState(false);
-  const [finbiteCopyText, setFinbiteCopyText] = useState("");
+  const [isProviderCopyOpen, setIsProviderCopyOpen] = useState(false);
+  const [providerCopyText, setProviderCopyText] = useState("");
   const { toast } = useToast();
 
   useEffect(() => { fetchTemplates(); }, []);
@@ -272,8 +272,8 @@ Return ONLY the template text, nothing else.`,
     event.target.value = '';
   };
 
-  // ─── COPY FOR FINBITE SETUP ────────────────────────
-  const generateFinbiteCopyText = (template?: WhatsAppTemplate) => {
+  // ─── COPY FOR PROVIDER SETUP ────────────────────────
+  const generateProviderCopyText = (template?: WhatsAppTemplate) => {
     const templatesToExport = template ? [template] : templates;
     const lines = templatesToExport.map((t, i) => {
       const vars = (t.variables || []).map((v, idx) => `  {{${idx + 1}}} = ${v}`).join('\n');
@@ -292,7 +292,6 @@ ${vars || '  (No variables)'}
     }).join('\n\n');
 
     const header = `=== GRABYOURCAR WHATSAPP TEMPLATES ===
-Provider: Finbite
 Date: ${new Date().toLocaleDateString('en-IN')}
 Total Templates: ${templatesToExport.length}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -303,14 +302,14 @@ Please set up the following templates on our WhatsApp Business Account:
     return header + lines;
   };
 
-  const openFinbiteCopy = (template?: WhatsAppTemplate) => {
-    setFinbiteCopyText(generateFinbiteCopyText(template));
-    setIsFinbiteCopyOpen(true);
+  const openProviderCopy = (template?: WhatsAppTemplate) => {
+    setProviderCopyText(generateProviderCopyText(template));
+    setIsProviderCopyOpen(true);
   };
 
-  const copyFinbiteText = () => {
-    navigator.clipboard.writeText(finbiteCopyText);
-    toast({ title: "📋 Copied!", description: "Share this text with Finbite support to set up templates" });
+  const copyProviderText = () => {
+    navigator.clipboard.writeText(providerCopyText);
+    toast({ title: "📋 Copied!", description: "Share this text with your provider to set up templates" });
   };
 
   const filteredTemplates = templates.filter((t) => {
@@ -344,14 +343,14 @@ Please set up the following templates on our WhatsApp Business Account:
             <MessageSquare className="h-6 w-6 text-green-500" />
             WhatsApp Marketing Templates
           </h2>
-          <p className="text-muted-foreground">Create, manage & share templates with Finbite for setup</p>
+          <p className="text-muted-foreground">Create, manage & export templates for your WhatsApp provider</p>
         </div>
         <div className="flex gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={() => setIsAIDialogOpen(true)}>
             <Sparkles className="h-4 w-4 mr-1" /> AI Generate
           </Button>
-          <Button variant="outline" size="sm" onClick={() => openFinbiteCopy()}>
-            <Share2 className="h-4 w-4 mr-1" /> Copy All for Finbite
+          <Button variant="outline" size="sm" onClick={() => openProviderCopy()}>
+            <Share2 className="h-4 w-4 mr-1" /> Copy All for Provider
           </Button>
           <Button variant="outline" size="sm" onClick={handleExport}>
             <Download className="h-4 w-4 mr-1" /> Export
@@ -429,7 +428,7 @@ Please set up the following templates on our WhatsApp Business Account:
                     </div>
                     <div className="flex gap-1">
                       <Button size="sm" variant="ghost" onClick={() => setPreviewTemplate(template)}><Eye className="h-4 w-4" /></Button>
-                      <Button size="sm" variant="ghost" onClick={() => openFinbiteCopy(template)} title="Copy for Finbite"><Share2 className="h-4 w-4" /></Button>
+                      <Button size="sm" variant="ghost" onClick={() => openProviderCopy(template)} title="Copy for Provider"><Share2 className="h-4 w-4" /></Button>
                       <Button size="sm" variant="ghost" onClick={() => { setEditingTemplate(template); setIsEditing(true); }}><Edit className="h-4 w-4" /></Button>
                       <Button size="sm" variant="ghost" onClick={() => handleDelete(template.id)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
@@ -468,7 +467,7 @@ Please set up the following templates on our WhatsApp Business Account:
                       <TableCell>
                         <div className="flex gap-1">
                           <Button size="sm" variant="ghost" onClick={() => setPreviewTemplate(template)}><Eye className="h-4 w-4" /></Button>
-                          <Button size="sm" variant="ghost" onClick={() => openFinbiteCopy(template)}><Share2 className="h-4 w-4" /></Button>
+                          <Button size="sm" variant="ghost" onClick={() => openProviderCopy(template)}><Share2 className="h-4 w-4" /></Button>
                           <Button size="sm" variant="ghost" onClick={() => { setEditingTemplate(template); setIsEditing(true); }}><Edit className="h-4 w-4" /></Button>
                           <Button size="sm" variant="ghost" onClick={() => handleDelete(template.id)}><Trash2 className="h-4 w-4" /></Button>
                         </div>
@@ -531,29 +530,29 @@ Please set up the following templates on our WhatsApp Business Account:
         </DialogContent>
       </Dialog>
 
-      {/* ─── FINBITE COPY DIALOG ──────────────────── */}
-      <Dialog open={isFinbiteCopyOpen} onOpenChange={setIsFinbiteCopyOpen}>
+      {/* ─── PROVIDER COPY DIALOG ──────────────────── */}
+      <Dialog open={isProviderCopyOpen} onOpenChange={setIsProviderCopyOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh]">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Share2 className="h-5 w-5 text-green-500" /> Copy for Finbite Setup</DialogTitle>
-            <DialogDescription>Copy this formatted text and share with Finbite support to set up your templates</DialogDescription>
+            <DialogTitle className="flex items-center gap-2"><Share2 className="h-5 w-5 text-green-500" /> Copy for Provider Setup</DialogTitle>
+            <DialogDescription>Copy this formatted text and share with your WhatsApp provider to set up templates</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <Alert>
               <AlertDescription className="text-sm">
-                📋 Copy the text below → Share it with Finbite support via WhatsApp/Email → They will set up these templates on your WhatsApp Business Account
+                📋 Copy the text below → Share it with your WhatsApp provider via WhatsApp/Email → They will set up these templates on your WhatsApp Business Account
               </AlertDescription>
             </Alert>
             <Textarea
-              value={finbiteCopyText}
-              onChange={(e) => setFinbiteCopyText(e.target.value)}
+              value={providerCopyText}
+              onChange={(e) => setProviderCopyText(e.target.value)}
               rows={16}
               className="font-mono text-xs"
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsFinbiteCopyOpen(false)}>Close</Button>
-            <Button onClick={copyFinbiteText}>
+            <Button variant="outline" onClick={() => setIsProviderCopyOpen(false)}>Close</Button>
+            <Button onClick={copyProviderText}>
               <ClipboardCopy className="h-4 w-4 mr-2" /> Copy to Clipboard
             </Button>
           </DialogFooter>
@@ -667,8 +666,8 @@ Please set up the following templates on our WhatsApp Business Account:
                 <Button variant="outline" onClick={() => { navigator.clipboard.writeText(previewTemplate.content); toast({ title: "Copied!" }); }}>
                   <Copy className="h-4 w-4 mr-2" /> Copy Text
                 </Button>
-                <Button variant="outline" onClick={() => openFinbiteCopy(previewTemplate)}>
-                  <Share2 className="h-4 w-4 mr-2" /> Copy for Finbite
+                <Button variant="outline" onClick={() => openProviderCopy(previewTemplate)}>
+                  <Share2 className="h-4 w-4 mr-2" /> Copy for Provider
                 </Button>
               </div>
             </div>
