@@ -136,7 +136,17 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
 
   const securePremiumNum = parseFloat(securePremium) || 0;
 
+  const isThirdPartyOnly = policyType === "Third Party";
+
   const calc = useMemo(() => {
+    if (isThirdPartyOnly) {
+      if (!ccNum) return null;
+      const tp = getTPPremium(ccNum);
+      const subtotal = tp;
+      const gst = (subtotal * GST_RATE) / 100;
+      const total = subtotal + gst;
+      return { odRate: 0, basicOD: 0, odDiscount: 0, odAfterDiscount: 0, ncbDiscount: 0, netOD: 0, tp, securePremium: 0, addonTotal: 0, subtotal, gst, total };
+    }
     if (!idvNum || !ccNum) return null;
 
     const ccKey = ccNum > 1500 ? "above1500" : "upto1500";
@@ -155,7 +165,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
     const total = subtotal + gst;
 
     return { odRate, basicOD, odDiscount, odAfterDiscount, ncbDiscount, netOD, tp, securePremium: securePremiumNum, addonTotal, subtotal, gst, total };
-  }, [idvNum, ccNum, zone, discountPct, ncb, addons, ncbLocked, securePremiumNum]);
+  }, [idvNum, ccNum, zone, discountPct, ncb, addons, ncbLocked, securePremiumNum, isThirdPartyOnly]);
 
   const toggleAddon = (id: string) => {
     setAddons(prev => prev.map(a => a.id === id ? { ...a, enabled: !a.enabled } : a));
