@@ -78,7 +78,7 @@ async function sendViaFinbiteV2(
       to: fullPhone,
       phoneNoId: phoneId,
       type: "text",
-      text: { body: payload.message },
+      text: payload.message,
     };
   }
 
