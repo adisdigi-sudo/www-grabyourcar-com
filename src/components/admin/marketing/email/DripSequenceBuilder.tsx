@@ -71,7 +71,7 @@ export function DripSequenceBuilder() {
   const fetchAll = async () => {
     setIsLoading(true);
     const [seqRes, tmpRes] = await Promise.all([
-      supabase.from("email_sequences").select("*").order("created_at", { ascending: false }),
+      supabase.from("drip_sequences").select("*").order("created_at", { ascending: false }),
       supabase.from("email_templates").select("id, name, subject").eq("is_active", true),
     ]);
     if (seqRes.data) setSequences(seqRes.data as Sequence[]);
@@ -81,8 +81,8 @@ export function DripSequenceBuilder() {
 
   const fetchSteps = async (seqId: string) => {
     const [stepsRes, enrollRes] = await Promise.all([
-      supabase.from("email_sequence_steps").select("*").eq("sequence_id", seqId).order("step_order"),
-      supabase.from("email_drip_enrollments").select("*").eq("sequence_id", seqId),
+      supabase.from("drip_sequence_steps").select("*").eq("sequence_id", seqId).order("step_order"),
+      supabase.from("drip_enrollments").select("*").eq("sequence_id", seqId),
     ]);
     if (stepsRes.data) setSteps(stepsRes.data as Step[]);
     if (enrollRes.data) setEnrollments(enrollRes.data as Enrollment[]);
@@ -95,7 +95,7 @@ export function DripSequenceBuilder() {
 
   const handleCreateSequence = async () => {
     if (!seqForm.name) { toast.error("Name required"); return; }
-    const { error } = await supabase.from("email_sequences").insert({
+    const { error } = await supabase.from("drip_sequences").insert({
       name: seqForm.name,
       description: seqForm.description || null,
       trigger_type: seqForm.trigger_type,
@@ -112,7 +112,7 @@ export function DripSequenceBuilder() {
   const handleAddStep = async () => {
     if (!selectedSequence || !stepForm.template_id) { toast.error("Select a template"); return; }
     const nextOrder = steps.length + 1;
-    const { error } = await supabase.from("email_sequence_steps").insert({
+    const { error } = await supabase.from("drip_sequence_steps").insert({
       sequence_id: selectedSequence.id,
       template_id: stepForm.template_id,
       step_order: nextOrder,
@@ -129,13 +129,13 @@ export function DripSequenceBuilder() {
 
   const handleDeleteStep = async (id: string) => {
     if (!selectedSequence) return;
-    await supabase.from("email_sequence_steps").delete().eq("id", id);
+    await supabase.from("drip_sequence_steps").delete().eq("id", id);
     toast.success("Step removed");
     fetchSteps(selectedSequence.id);
   };
 
   const toggleSequenceActive = async (seq: Sequence) => {
-    await supabase.from("email_sequences").update({ is_active: !seq.is_active }).eq("id", seq.id);
+    await supabase.from("drip_sequences").update({ is_active: !seq.is_active }).eq("id", seq.id);
     toast.success(seq.is_active ? "Sequence paused" : "Sequence activated");
     fetchAll();
     if (selectedSequence?.id === seq.id) setSelectedSequence({ ...seq, is_active: !seq.is_active });
@@ -143,8 +143,8 @@ export function DripSequenceBuilder() {
 
   const handleDeleteSequence = async (id: string) => {
     if (!confirm("Delete this sequence and all its steps?")) return;
-    await supabase.from("email_sequence_steps").delete().eq("sequence_id", id);
-    await supabase.from("email_sequences").delete().eq("id", id);
+    await supabase.from("drip_sequence_steps").delete().eq("sequence_id", id);
+    await supabase.from("drip_sequences").delete().eq("id", id);
     toast.success("Sequence deleted");
     if (selectedSequence?.id === id) { setSelectedSequence(null); setSteps([]); }
     fetchAll();
