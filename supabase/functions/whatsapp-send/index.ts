@@ -1,25 +1,42 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 /**
- * WhatsApp Send — Direct Meta Cloud API
- * Base URL: https://graph.facebook.com/v21.0/{PHONE_NUMBER_ID}/messages
- * Auth: Bearer WHATSAPP_ACCESS_TOKEN (permanent system user token)
+ * WhatsApp Send — Provider-Agnostic Gateway
+ *
+ * Reads active WhatsApp provider from `channel_providers` table.
+ * Supported providers: meta, finbite, waab
+ * When WAAB credentials are added, just update channel_providers row.
  *
  * Supports: text, template, image, document, video, audio
  */
 
 interface SendMessageRequest {
   to: string;
+  phone?: string; // alias for `to`
   message?: string;
   messageType?: "text" | "template" | "image" | "document" | "video" | "audio";
   template_name?: string;
   template_variables?: Record<string, string>;
   mediaUrl?: string;
+  action?: string;
+  // Logging context
+  name?: string;
+  logEvent?: string;
+  lead_id?: string;
+}
+
+interface SendResult {
+  success: boolean;
+  messageId?: string;
+  error?: string;
+  provider?: string;
 }
 
 function normalizePhone(phone: string): { full: string; short: string; valid: boolean } {
@@ -32,12 +49,13 @@ function normalizePhone(phone: string): { full: string; short: string; valid: bo
   return { full: `91${short}`, short, valid };
 }
 
+// ── Meta Cloud API Provider ──
 async function sendViaMeta(
   token: string,
   phoneNumberId: string,
   to: string,
   payload: Record<string, unknown>
-): Promise<{ success: boolean; messageId?: string; error?: string }> {
+): Promise<SendResult> {
   const url = `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`;
   const body = {
     messaging_product: "whatsapp",
@@ -61,11 +79,173 @@ async function sendViaMeta(
   console.log("Meta API response:", JSON.stringify(result));
 
   if (response.ok && result.messages?.[0]?.id) {
-    return { success: true, messageId: result.messages[0].id };
+    return { success: true, messageId: result.messages[0].id, provider: "meta" };
   }
 
-  const errorMsg = result.error?.message || JSON.stringify(result);
-  return { success: false, error: errorMsg };
+  return { success: false, error: result.error?.message || JSON.stringify(result), provider: "meta" };
+}
+
+// ── Finbite v2 Provider ──
+async function sendViaFinbite(
+  apiKey: string,
+  phoneId: string,
+  to: string,
+  payload: { type: "text"; message: string } | { type: "template"; template_name: string; variables?: Record<string, string> }
+): Promise<SendResult> {
+  const BASE_URL = "https://app.finbite.in/api/v2/whatsapp-business/messages";
+
+  let body: Record<string, unknown>;
+  if (payload.type === "template") {
+    body = { to, phoneNoId: phoneId, type: "template", name: payload.template_name, language: "en_US" };
+  } else {
+    body = { to, phoneNoId: phoneId, type: "text", text: payload.message };
+  }
+
+  const response = await fetch(BASE_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+      "X-Phone-ID": phoneId,
+    },
+    body: JSON.stringify(body),
+  });
+
+  const contentType = response.headers.get("content-type") || "";
+  if (contentType.includes("application/json")) {
+    const result = await response.json();
+    if (response.ok && !result.error) {
+      return { success: true, messageId: result.messages?.[0]?.id || result.message_id || null, provider: "finbite" };
+    }
+    return { success: false, error: JSON.stringify(result), provider: "finbite" };
+  }
+
+  return { success: false, error: `Non-JSON response (${response.status})`, provider: "finbite" };
+}
+
+// ── WAAB Provider (ready for credentials) ──
+async function sendViaWaab(
+  apiKey: string,
+  baseUrl: string,
+  to: string,
+  payload: { type: "text"; message: string } | { type: "template"; template_name: string; variables?: Record<string, string> }
+): Promise<SendResult> {
+  // WAAB API integration — will be completed when API docs/credentials are provided
+  // Placeholder structure based on common WhatsApp BSP patterns
+  const endpoint = `${baseUrl}/api/v1/messages/send`;
+
+  let body: Record<string, unknown>;
+  if (payload.type === "template") {
+    body = {
+      to,
+      type: "template",
+      template: { name: payload.template_name, language: "en" },
+    };
+    if (payload.variables && Object.keys(payload.variables).length > 0) {
+      (body.template as any).parameters = Object.values(payload.variables).map(v => ({ type: "text", text: v }));
+    }
+  } else {
+    body = { to, type: "text", text: { body: payload.message } };
+  }
+
+  console.log("WAAB API request:", JSON.stringify(body));
+
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  const contentType = response.headers.get("content-type") || "";
+  if (contentType.includes("application/json")) {
+    const result = await response.json();
+    console.log("WAAB API response:", JSON.stringify(result));
+    if (response.ok && (result.success || result.messages?.[0]?.id || result.message_id)) {
+      return { success: true, messageId: result.messages?.[0]?.id || result.message_id || result.id, provider: "waab" };
+    }
+    return { success: false, error: JSON.stringify(result), provider: "waab" };
+  }
+
+  const text = await response.text();
+  console.error("WAAB non-JSON:", text.substring(0, 300));
+  return { success: false, error: `Non-JSON response (${response.status})`, provider: "waab" };
+}
+
+// ── Provider Router ──
+async function sendMessage(
+  providerName: string,
+  providerConfig: Record<string, any>,
+  to: string,
+  messageType: string,
+  message: string,
+  templateName?: string,
+  templateVars?: Record<string, string>,
+  mediaUrl?: string
+): Promise<SendResult> {
+  const phone = normalizePhone(to);
+  if (!phone.valid) {
+    return { success: false, error: "Invalid phone number format" };
+  }
+
+  // Build payload based on message type
+  if (providerName === "meta") {
+    const token = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
+    const phoneNumberId = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
+    if (!token || !phoneNumberId) {
+      return { success: false, error: "Meta API credentials not configured", provider: "meta" };
+    }
+
+    let payload: Record<string, unknown>;
+    if (messageType === "template" && templateName) {
+      const components: unknown[] = [];
+      if (templateVars && Object.keys(templateVars).length > 0) {
+        components.push({
+          type: "body",
+          parameters: Object.values(templateVars).map(val => ({ type: "text", text: val })),
+        });
+      }
+      payload = { type: "template", template: { name: templateName, language: { code: "en_US" }, ...(components.length > 0 ? { components } : {}) } };
+    } else if (messageType === "image" && mediaUrl) {
+      payload = { type: "image", image: { link: mediaUrl, caption: message || "" } };
+    } else if (messageType === "document" && mediaUrl) {
+      payload = { type: "document", document: { link: mediaUrl, caption: message || "", filename: "document.pdf" } };
+    } else {
+      payload = { type: "text", text: { preview_url: false, body: message || "Hello from GrabYourCar!" } };
+    }
+
+    return sendViaMeta(token, phoneNumberId, phone.full, payload);
+  }
+
+  if (providerName === "finbite") {
+    const apiKey = Deno.env.get("FINBITE_API_KEY") || Deno.env.get("FINBITE_BEARER_TOKEN");
+    const waClient = Deno.env.get("FINBITE_WHATSAPP_CLIENT");
+    if (!apiKey || !waClient) {
+      return { success: false, error: "Finbite credentials not configured", provider: "finbite" };
+    }
+
+    if (messageType === "template" && templateName) {
+      return sendViaFinbite(apiKey, waClient, phone.full, { type: "template", template_name: templateName, variables: templateVars });
+    }
+    return sendViaFinbite(apiKey, waClient, phone.full, { type: "text", message: message || "" });
+  }
+
+  if (providerName === "waab") {
+    const apiKey = Deno.env.get("WAAB_API_KEY");
+    const baseUrl = Deno.env.get("WAAB_BASE_URL") || providerConfig?.base_url || "";
+    if (!apiKey || !baseUrl) {
+      return { success: false, error: "WAAB credentials not configured. Add WAAB_API_KEY and WAAB_BASE_URL secrets.", provider: "waab" };
+    }
+
+    if (messageType === "template" && templateName) {
+      return sendViaWaab(apiKey, baseUrl, phone.full, { type: "template", template_name: templateName, variables: templateVars });
+    }
+    return sendViaWaab(apiKey, baseUrl, phone.full, { type: "text", message: message || "" });
+  }
+
+  return { success: false, error: `Unknown provider: ${providerName}` };
 }
 
 serve(async (req) => {
@@ -74,95 +254,111 @@ serve(async (req) => {
   }
 
   try {
-    const WHATSAPP_ACCESS_TOKEN = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
-    const WHATSAPP_PHONE_NUMBER_ID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
-
-    if (!WHATSAPP_ACCESS_TOKEN || !WHATSAPP_PHONE_NUMBER_ID) {
-      return new Response(
-        JSON.stringify({ error: "WhatsApp Meta API not configured. Missing WHATSAPP_ACCESS_TOKEN or WHATSAPP_PHONE_NUMBER_ID." }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     const body = await req.json();
 
-    // Health check action for Integration Hub
+    // Health check
     if (body.action === "health_check") {
+      const { data: provider } = await supabase
+        .from("channel_providers")
+        .select("*")
+        .eq("channel", "whatsapp")
+        .single();
+
       return new Response(
-        JSON.stringify({ status: "ok", configured: true, phoneNumberId: WHATSAPP_PHONE_NUMBER_ID.slice(-4) }),
+        JSON.stringify({
+          status: "ok",
+          configured: !!provider?.is_active,
+          provider: provider?.provider_name || "none",
+        }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const { to, message, messageType = "text", template_name, template_variables, mediaUrl }: SendMessageRequest = body;
-
+    // Resolve target phone
+    const to = body.to || body.phone;
     if (!to) {
       return new Response(
-        JSON.stringify({ error: "Phone number required" }),
+        JSON.stringify({ error: "Phone number required (to or phone)" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const phone = normalizePhone(to);
-    if (!phone.valid) {
+    const {
+      message = "",
+      messageType = "text",
+      template_name,
+      template_variables,
+      mediaUrl,
+      name,
+      logEvent,
+      lead_id,
+    }: SendMessageRequest = body;
+
+    // Get active WhatsApp provider from DB
+    const { data: provider } = await supabase
+      .from("channel_providers")
+      .select("*")
+      .eq("channel", "whatsapp")
+      .single();
+
+    const providerName = provider?.provider_name || "meta";
+    const providerConfig = provider?.config_json || {};
+    const isActive = provider?.is_active ?? false;
+
+    if (!isActive) {
       return new Response(
-        JSON.stringify({ error: "Invalid phone number format" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ success: false, status: "not_configured", error: "WhatsApp channel is not active. Enable it in Channel Providers settings." }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    let result: { success: boolean; messageId?: string; error?: string };
+    // Send via the active provider
+    const result = await sendMessage(
+      providerName,
+      providerConfig,
+      to,
+      messageType,
+      message,
+      template_name,
+      template_variables,
+      mediaUrl
+    );
 
-    if (messageType === "template" && template_name) {
-      const components: unknown[] = [];
-      if (template_variables && Object.keys(template_variables).length > 0) {
-        components.push({
-          type: "body",
-          parameters: Object.values(template_variables).map((val) => ({
-            type: "text",
-            text: val,
-          })),
-        });
-      }
-
-      result = await sendViaMeta(WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID, phone.full, {
-        type: "template",
-        template: {
-          name: template_name,
-          language: { code: "en_US" },
-          ...(components.length > 0 ? { components } : {}),
-        },
-      });
-    } else if (messageType === "image" && mediaUrl) {
-      result = await sendViaMeta(WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID, phone.full, {
-        type: "image",
-        image: { link: mediaUrl, caption: message || "" },
-      });
-    } else if (messageType === "document" && mediaUrl) {
-      result = await sendViaMeta(WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID, phone.full, {
-        type: "document",
-        document: { link: mediaUrl, caption: message || "", filename: "document.pdf" },
-      });
-    } else {
-      result = await sendViaMeta(WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID, phone.full, {
-        type: "text",
-        text: { preview_url: false, body: message || "Hello from GrabYourCar!" },
-      });
-    }
+    // Log to wa_message_logs
+    const phoneNorm = normalizePhone(to);
+    await supabase.from("wa_message_logs").insert({
+      phone: phoneNorm.full,
+      customer_name: name || null,
+      message_type: messageType === "template" ? "template" : "text",
+      message_content: message || null,
+      template_name: template_name || null,
+      trigger_event: logEvent || "api_send",
+      lead_id: lead_id || null,
+      status: result.success ? "sent" : "failed",
+      provider: result.provider || providerName,
+      provider_message_id: result.messageId || null,
+      error_message: result.error || null,
+      sent_at: result.success ? new Date().toISOString() : null,
+      failed_at: result.success ? null : new Date().toISOString(),
+    });
 
     if (result.success) {
       return new Response(
-        JSON.stringify({ success: true, messageId: result.messageId }),
+        JSON.stringify({ success: true, messageId: result.messageId, provider: result.provider }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     return new Response(
-      JSON.stringify({ error: "Failed to send message", details: result.error }),
+      JSON.stringify({ success: false, error: result.error, provider: result.provider }),
       { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("Send message error:", error);
+    console.error("whatsapp-send error:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
