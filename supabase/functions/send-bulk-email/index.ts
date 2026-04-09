@@ -41,7 +41,6 @@ serve(async (req) => {
     const { campaign_id, from_name, from_email, reply_to }: BulkEmailRequest = await req.json();
     if (!campaign_id) throw new Error("campaign_id is required");
 
-    // Fetch campaign
     const { data: campaign, error: campErr } = await supabase
       .from("email_campaigns")
       .select("*")
@@ -49,12 +48,10 @@ serve(async (req) => {
       .single();
     if (campErr || !campaign) throw new Error("Campaign not found");
 
-    // Build sender - support custom from addresses like anshdeep@grabyourcar.com
     const senderName = from_name || campaign.from_name || "GrabYourCar";
     const senderEmail = from_email || campaign.from_email || "noreply@grabyourcar.com";
     const fromLine = `${senderName} <${senderEmail}>`;
 
-    // Get HTML content - from campaign directly or from template
     let htmlContent = campaign.html_content;
     let subject = campaign.subject;
 
@@ -72,18 +69,19 @@ serve(async (req) => {
 
     if (!htmlContent) throw new Error("No email content found for campaign");
 
-    // Mark campaign as sending
+    // Load dynamic content rules
+    const { data: dynamicRules } = await supabase
+      .from("dynamic_content_rules")
+      .select("*")
+      .eq("is_active", true);
+
     await supabase.from("email_campaigns").update({
       status: "sending",
       started_at: new Date().toISOString(),
     }).eq("id", campaign_id);
 
-    // Fetch subscribers - filter by tags if segment_filter has tags
-    let query = supabase
-      .from("email_subscribers")
-      .select("*")
-      .eq("subscribed", true);
-
+    // Fetch subscribers
+    let query = supabase.from("email_subscribers").select("*").eq("subscribed", true);
     const segmentFilter = campaign.segment_filter as Record<string, unknown> | null;
     if (segmentFilter?.tags && Array.isArray(segmentFilter.tags) && segmentFilter.tags.length > 0) {
       query = query.overlaps("tags", segmentFilter.tags);
@@ -93,9 +91,7 @@ serve(async (req) => {
     if (subErr) throw new Error(`Failed to fetch subscribers: ${subErr.message}`);
     if (!subscribers || subscribers.length === 0) {
       await supabase.from("email_campaigns").update({
-        status: "completed",
-        total_recipients: 0,
-        completed_at: new Date().toISOString(),
+        status: "completed", total_recipients: 0, completed_at: new Date().toISOString(),
       }).eq("id", campaign_id);
       return new Response(
         JSON.stringify({ success: true, message: "No subscribers found", sent: 0 }),
@@ -103,39 +99,94 @@ serve(async (req) => {
       );
     }
 
-    // Update total recipients
-    await supabase.from("email_campaigns").update({
-      total_recipients: subscribers.length,
-    }).eq("id", campaign_id);
+    await supabase.from("email_campaigns").update({ total_recipients: subscribers.length }).eq("id", campaign_id);
 
-    console.log(`Sending campaign "${campaign.name}" from ${fromLine} to ${subscribers.length} subscribers`);
+    // Batch configuration from campaign
+    const batchSize = campaign.batch_size || 100;
+    const batchDelay = (campaign.batch_delay_seconds || 0) * 1000;
+
+    console.log(`Sending campaign "${campaign.name}" from ${fromLine} to ${subscribers.length} subscribers (batch: ${batchSize}, delay: ${batchDelay}ms)`);
 
     let sentCount = 0;
     let failedCount = 0;
 
-    // Resend batch API supports up to 100 emails per call
-    const BATCH_SIZE = 100;
-    const batches = [];
-
-    for (let i = 0; i < subscribers.length; i += BATCH_SIZE) {
-      batches.push(subscribers.slice(i, i + BATCH_SIZE));
+    // Ensure unsubscribe tokens exist for all subscribers
+    const subIds = subscribers.map(s => s.id);
+    const { data: existingTokens } = await supabase
+      .from("email_unsubscribe_tokens")
+      .select("subscriber_id, token")
+      .in("subscriber_id", subIds);
+    
+    const tokenMap = new Map((existingTokens || []).map(t => [t.subscriber_id, t.token]));
+    const missingIds = subIds.filter(id => !tokenMap.has(id));
+    
+    if (missingIds.length > 0) {
+      const newTokens = missingIds.map(id => ({ subscriber_id: id }));
+      const { data: inserted } = await supabase.from("email_unsubscribe_tokens")
+        .insert(newTokens).select("subscriber_id, token");
+      (inserted || []).forEach(t => tokenMap.set(t.subscriber_id, t.token));
     }
 
-    for (const batch of batches) {
+    // Create batches
+    const batches = [];
+    for (let i = 0; i < subscribers.length; i += batchSize) {
+      batches.push(subscribers.slice(i, i + batchSize));
+    }
+
+    for (let batchIdx = 0; batchIdx < batches.length; batchIdx++) {
+      const batch = batches[batchIdx];
+
       const emailPayloads = batch.map((sub) => {
+        const unsubToken = tokenMap.get(sub.id) || '';
+        const unsubUrl = `${supabaseUrl}/functions/v1/email-unsubscribe?token=${unsubToken}`;
+
         const variables: Record<string, string> = {
           customer_name: sub.name || "Valued Customer",
           name: sub.name || "Valued Customer",
           email: sub.email,
           phone: sub.phone || "",
           company: sub.company || "",
+          unsubscribe_url: unsubUrl,
         };
+
+        // Apply dynamic content rules
+        let personalizedHtml = replaceVariables(htmlContent, variables);
+        
+        if (dynamicRules && dynamicRules.length > 0) {
+          for (const rule of dynamicRules) {
+            const placeholder = `{{dynamic:${rule.name}}}`;
+            if (personalizedHtml.includes(placeholder)) {
+              const conditions = typeof rule.conditions === "string" ? JSON.parse(rule.conditions) : rule.conditions;
+              let matched = false;
+              
+              if (Array.isArray(conditions)) {
+                matched = conditions.every((c: any) => {
+                  const subValue = (sub as any)[c.field];
+                  if (c.operator === "equals") return subValue === c.value;
+                  if (c.operator === "contains") return String(subValue || "").includes(c.value);
+                  if (c.operator === "in" && Array.isArray(c.value)) return c.value.includes(subValue);
+                  if (c.operator === "has_tag") return Array.isArray(sub.tags) && sub.tags.includes(c.value);
+                  return false;
+                });
+              }
+              
+              personalizedHtml = personalizedHtml.replace(
+                placeholder,
+                matched ? (rule.content_html || '') : (rule.fallback_html || '')
+              );
+            }
+          }
+        }
+
+        // Add unsubscribe footer
+        personalizedHtml += `<div style="text-align:center;margin-top:30px;padding:20px;border-top:1px solid #eee;font-size:12px;color:#999"><a href="${unsubUrl}" style="color:#999">Unsubscribe</a> from these emails</div>`;
 
         const payload: Record<string, unknown> = {
           from: fromLine,
           to: [sub.email],
           subject: replaceVariables(subject, variables),
-          html: replaceVariables(htmlContent, variables),
+          html: personalizedHtml,
+          headers: { "List-Unsubscribe": `<${unsubUrl}>` },
         };
         if (reply_to) payload.reply_to = reply_to;
         return payload;
@@ -143,15 +194,12 @@ serve(async (req) => {
 
       try {
         const batchResult = await resend.batch.send(emailPayloads);
-        console.log(`Batch sent: ${emailPayloads.length} emails`, batchResult);
 
         const logEntries = batch.map((sub, idx) => {
           const batchData = batchResult.data as { data?: { id: string }[] } | null;
           const emailId = batchData?.data?.[idx]?.id;
           const hasError = !emailId;
-
-          if (hasError) failedCount++;
-          else sentCount++;
+          if (hasError) failedCount++; else sentCount++;
 
           return {
             campaign_id,
@@ -166,59 +214,42 @@ serve(async (req) => {
         });
 
         await supabase.from("email_logs").insert(logEntries);
-
-        await supabase.from("email_campaigns").update({
-          sent_count: sentCount,
-          failed_count: failedCount,
-        }).eq("id", campaign_id);
+        await supabase.from("email_campaigns").update({ sent_count: sentCount, failed_count: failedCount }).eq("id", campaign_id);
 
       } catch (batchError: any) {
         console.error("Batch send error:", batchError);
         failedCount += batch.length;
-
         const failLogs = batch.map((sub) => ({
-          campaign_id,
-          recipient_email: sub.email,
-          recipient_name: sub.name,
-          subject: replaceVariables(subject, { customer_name: sub.name || "Valued Customer", name: sub.name || "Valued Customer" }),
-          status: "failed",
-          error_message: batchError.message,
+          campaign_id, recipient_email: sub.email, recipient_name: sub.name,
+          subject: replaceVariables(subject, { customer_name: sub.name || "Valued Customer" }),
+          status: "failed", error_message: batchError.message,
           metadata: { campaign_name: campaign.name, from: fromLine },
         }));
         await supabase.from("email_logs").insert(failLogs);
       }
 
-      if (batches.length > 1) {
+      // Apply batch delay between batches
+      if (batchDelay > 0 && batchIdx < batches.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, batchDelay));
+      } else if (batches.length > 1) {
         await new Promise((resolve) => setTimeout(resolve, 200));
       }
     }
 
-    // Mark campaign as completed
     await supabase.from("email_campaigns").update({
-      status: "completed",
-      sent_count: sentCount,
-      failed_count: failedCount,
+      status: "completed", sent_count: sentCount, failed_count: failedCount,
       completed_at: new Date().toISOString(),
     }).eq("id", campaign_id);
 
     console.log(`Campaign completed: ${sentCount} sent, ${failedCount} failed`);
-
     return new Response(
-      JSON.stringify({
-        success: true,
-        message: `Campaign sent to ${sentCount} recipients`,
-        sent: sentCount,
-        failed: failedCount,
-        total: subscribers.length,
-      }),
+      JSON.stringify({ success: true, message: `Campaign sent to ${sentCount} recipients`, sent: sentCount, failed: failedCount, total: subscribers.length }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-
   } catch (error: any) {
     console.error("Error in send-bulk-email:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
   }
 });

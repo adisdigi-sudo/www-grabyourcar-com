@@ -1,57 +1,63 @@
 
 # Custom Email Suite for GrabYourCar
 
-## Part 1 — Webmail Client (Gmail-like Inbox)
+## Complete Brevo Professional Parity — Implementation Status
 
-### Prerequisites
-- Set up Zoho Mail account for grabyourcar.com (user does this in Zoho admin)
-- Create a Zoho API Console app (Self Client) to get OAuth credentials
-- Add `ZOHO_CLIENT_ID`, `ZOHO_CLIENT_SECRET`, `ZOHO_REFRESH_TOKEN` as secrets
+### ✅ Phase 1 — Core Features (DONE)
+1. **Campaigns** — create, send bulk via Resend with batch/timezone controls
+2. **Template Builder** — drag-and-drop block builder
+3. **AI Email Writer** — edge function generates HTML + subjects
+4. **Subscriber Segmentation** — tag-based filtering, list management
+5. **Contact Scoring** — engagement tiers (Hot→Cold) with recalculation
+6. **Batch Sending** — configurable batch size, delay, timezone, optimal time
+7. **Email Analytics Dashboard** — open/click/bounce from email_logs + Resend webhooks
 
-### What We Build
-1. **Edge Function: `zoho-mail-proxy`** — handles all Zoho Mail API calls (list messages, read, send, delete, folders, search)
-2. **Inbox Page** — full email client UI with:
-   - Folder navigation (Inbox, Sent, Drafts, Trash, Spam)
-   - Email list with sender, subject, preview, date
-   - Email reader with full HTML rendering
-   - Compose/Reply/Forward with rich text editor
-   - Search across all folders
-   - Unread count badges
-   - Star/archive/delete actions
+### ✅ Phase 2 — Advanced Automation (DONE)
+8. **Drip Sequences** — fixed backend (drip_sequences/steps/enrollments tables), actual Resend sends
+9. **Cart Abandonment** — automated cart-recovery-engine with pg_cron-ready architecture
+10. **Pop-up Forms** — builder UI + popup-form-submit edge function for lead capture
+11. **Email Polls** — creation UI + email-poll-vote edge function for vote tracking
+12. **Dynamic Content** — rule-based conditional blocks per subscriber attributes
+13. **Unsubscribe System** — email-unsubscribe edge function + List-Unsubscribe headers
+14. **Resend Webhooks** — resend-webhook edge function tracking opens/clicks/bounces/complaints
 
-### Zoho Mail API Endpoints Used
-- `GET /messages` — list emails in a folder
-- `GET /messages/{id}` — read a specific email
-- `POST /messages` — send an email
-- `PUT /messages/{id}` — mark read/unread, star
-- `DELETE /messages/{id}` — delete/trash
-- `GET /folders` — list folders
+### 🔜 Phase 3 — Future Enhancements
+15. SMS Marketing — Twilio integration
+16. Advanced Visual Workflow Editor — if/else branches, A/B splits
+17. Optimal Send Time ML — analyze open patterns per subscriber
+18. Dedicated IP Management — Resend dedicated IP config
+19. A/B Subject Line Testing
+20. CSV Import/Export with duplicate detection
+21. GDPR Compliance (data export, deletion)
 
-## Part 2 — Marketing Email Analytics Enhancement
+## Edge Functions
+| Function | Purpose | JWT |
+|---|---|---|
+| resend-webhook | Track opens/clicks/bounces | false |
+| cart-recovery-engine | Auto-send abandoned cart emails | false |
+| email-unsubscribe | One-click unsubscribe page | false |
+| email-poll-vote | Record poll votes from emails | false |
+| popup-form-submit | Handle popup form submissions | false |
+| process-drip-sequences | Execute drip sequence steps | false |
+| send-bulk-email | Send campaign emails with batch/dynamic content | true |
+| send-automated-email | Send template-based transactional emails | true |
+| ai-email-writer | AI-generated email content | true |
 
-### What We Build
-1. **Edge Function: `resend-webhook`** — receives Resend webhook events (open, click, bounce, complaint, delivery)
-2. **Database migration** — add `email_events` table for tracking opens, clicks, bounces
-3. **Enhanced Analytics Dashboard** — real-time metrics:
-   - Open rate, click rate, bounce rate per campaign
-   - Per-recipient delivery timeline
-   - Click heatmap (which links get clicked)
-   - Bounce/complaint management
-   - Daily/weekly volume charts
-4. **Update `email_logs`** — add columns for `opened_at`, `clicked_at`, `bounced_at`
-
-## Files to Create
-1. `supabase/functions/zoho-mail-proxy/index.ts`
-2. `src/pages/admin/EmailClient.tsx` (main webmail page)
-3. `src/components/admin/email-client/InboxSidebar.tsx`
-4. `src/components/admin/email-client/EmailList.tsx`
-5. `src/components/admin/email-client/EmailReader.tsx`
-6. `src/components/admin/email-client/ComposeEmail.tsx`
-7. `supabase/functions/resend-webhook/index.ts`
-8. `src/components/admin/marketing/email/EnhancedEmailAnalytics.tsx`
-
-## Order of Implementation
-1. Zoho Mail API setup (secrets + edge function)
-2. Webmail UI components
-3. Resend webhook for analytics
-4. Enhanced analytics dashboard
+## Database Tables (Email Suite)
+| Table | Purpose |
+|---|---|
+| email_campaigns | Campaign definitions with batch/timezone config |
+| email_templates | Reusable email templates |
+| email_subscribers | Subscriber profiles with scoring/timezone |
+| email_lists | Mailing lists |
+| email_logs | Send history with open/click/bounce timestamps |
+| email_events | Granular Resend webhook events |
+| drip_sequences | Automated sequence definitions |
+| drip_sequence_steps | Individual steps with delays |
+| drip_enrollments | Subscriber enrollment tracking |
+| popup_forms | Lead capture form configurations |
+| cart_events | Shopping cart abandonment tracking |
+| email_polls | Poll definitions |
+| email_poll_votes | Individual poll votes |
+| dynamic_content_rules | Conditional content blocks |
+| email_unsubscribe_tokens | Secure unsubscribe tokens |

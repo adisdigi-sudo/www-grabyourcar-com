@@ -1,22 +1,24 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.89.0';
+import { Resend } from "https://esm.sh/resend@2.0.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
-
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+    if (!resendApiKey) throw new Error("RESEND_API_KEY not configured");
 
-    // Get active sequences
+    const resend = new Resend(resendApiKey);
+    const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+
+    // Get active sequences from correct table
     const { data: sequences } = await supabase
-      .from('email_sequences')
+      .from('drip_sequences')
       .select('*')
       .eq('is_active', true);
 
@@ -32,7 +34,7 @@ Deno.serve(async (req) => {
     for (const seq of sequences) {
       // Get enrollments that are due
       const { data: enrollments } = await supabase
-        .from('email_drip_enrollments')
+        .from('drip_enrollments')
         .select('*')
         .eq('sequence_id', seq.id)
         .eq('status', 'active')
@@ -42,7 +44,7 @@ Deno.serve(async (req) => {
 
       // Get sequence steps
       const { data: steps } = await supabase
-        .from('email_sequence_steps')
+        .from('drip_sequence_steps')
         .select('*')
         .eq('sequence_id', seq.id)
         .eq('is_active', true)
@@ -54,9 +56,7 @@ Deno.serve(async (req) => {
         processed++;
         const currentStep = steps[enrollment.current_step_index];
         if (!currentStep) {
-          // All steps completed
-          await supabase
-            .from('email_drip_enrollments')
+          await supabase.from('drip_enrollments')
             .update({ status: 'completed', completed_at: new Date().toISOString() })
             .eq('id', enrollment.id);
           continue;
@@ -70,14 +70,14 @@ Deno.serve(async (req) => {
           .single();
 
         if (!subscriber || subscriber.subscribed === false) {
-          await supabase
-            .from('email_drip_enrollments')
+          await supabase.from('drip_enrollments')
             .update({ status: 'unsubscribed' })
             .eq('id', enrollment.id);
           continue;
         }
 
         // Get template
+        if (!currentStep.template_id) continue;
         const { data: template } = await supabase
           .from('email_templates')
           .select('*')
@@ -86,33 +86,78 @@ Deno.serve(async (req) => {
 
         if (!template) continue;
 
-        // Send via send-bulk-email or directly log
-        const { error: logError } = await supabase.from('email_logs').insert({
-          recipient_email: subscriber.email,
-          recipient_name: subscriber.name,
-          subject: template.subject,
-          template_id: template.id,
-          sequence_id: seq.id,
-          status: 'pending',
+        // Generate unsubscribe link
+        const { data: unsubToken } = await supabase
+          .from('email_unsubscribe_tokens')
+          .upsert({ subscriber_id: subscriber.id }, { onConflict: 'subscriber_id' })
+          .select('token')
+          .single();
+
+        const unsubUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/email-unsubscribe?token=${unsubToken?.token || ''}`;
+
+        // Replace variables in content
+        const variables: Record<string, string> = {
+          customer_name: subscriber.name || 'there',
+          email: subscriber.email,
+          unsubscribe_url: unsubUrl,
+        };
+        let subject = currentStep.subject_override || template.subject || 'Update from GrabYourCar';
+        let htmlContent = template.html_content || '';
+        Object.entries(variables).forEach(([key, value]) => {
+          const pattern = new RegExp(`\\{${key}\\}`, 'g');
+          subject = subject.replace(pattern, value);
+          htmlContent = htmlContent.replace(pattern, value);
         });
 
-        if (!logError) sent++;
+        // Add unsubscribe footer
+        htmlContent += `<div style="text-align:center;margin-top:30px;padding:20px;border-top:1px solid #eee;font-size:12px;color:#999"><a href="${unsubUrl}" style="color:#999">Unsubscribe</a> from these emails</div>`;
 
-        // Calculate next step
+        try {
+          const emailResult = await resend.emails.send({
+            from: 'GrabYourCar <noreply@grabyourcar.com>',
+            to: [subscriber.email],
+            subject,
+            html: htmlContent,
+            headers: { 'List-Unsubscribe': `<${unsubUrl}>` },
+          });
+
+          // Log the send
+          await supabase.from('email_logs').insert({
+            recipient_email: subscriber.email,
+            recipient_name: subscriber.name,
+            subject,
+            template_id: template.id,
+            sequence_id: seq.id,
+            status: emailResult.data?.id ? 'sent' : 'failed',
+            resend_id: emailResult.data?.id,
+            sent_at: new Date().toISOString(),
+            error_message: emailResult.error?.message,
+          });
+
+          if (emailResult.data?.id) sent++;
+        } catch (e) {
+          console.error(`Drip send failed for ${subscriber.email}:`, e);
+          await supabase.from('email_logs').insert({
+            recipient_email: subscriber.email,
+            subject,
+            template_id: template.id,
+            sequence_id: seq.id,
+            status: 'failed',
+            error_message: (e as Error).message,
+          });
+        }
+
+        // Advance to next step
         const nextStepIndex = enrollment.current_step_index + 1;
         const nextStep = steps[nextStepIndex];
         
         if (nextStep) {
           const delayMs = ((nextStep.delay_days || 0) * 86400 + (nextStep.delay_hours || 0) * 3600) * 1000;
-          const nextSendAt = new Date(Date.now() + delayMs).toISOString();
-          
-          await supabase
-            .from('email_drip_enrollments')
-            .update({ current_step_index: nextStepIndex, next_send_at: nextSendAt })
+          await supabase.from('drip_enrollments')
+            .update({ current_step_index: nextStepIndex, next_send_at: new Date(Date.now() + delayMs).toISOString() })
             .eq('id', enrollment.id);
         } else {
-          await supabase
-            .from('email_drip_enrollments')
+          await supabase.from('drip_enrollments')
             .update({ status: 'completed', completed_at: new Date().toISOString() })
             .eq('id', enrollment.id);
         }
@@ -123,9 +168,9 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    console.error('Drip sequence error:', error);
+    return new Response(JSON.stringify({ error: (error as Error).message }), {
+      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });

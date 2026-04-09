@@ -196,3 +196,21 @@ verify_jwt = false
 
 [functions.lead-followup-checker]
 verify_jwt = false
+
+[functions.resend-webhook]
+verify_jwt = false
+
+[functions.email-unsubscribe]
+verify_jwt = false
+
+[functions.email-poll-vote]
+verify_jwt = false
+
+[functions.popup-form-submit]
+verify_jwt = false
+
+[functions.cart-recovery-engine]
+verify_jwt = false
+
+[functions.process-drip-sequences]
+verify_jwt = false

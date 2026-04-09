@@ -4970,6 +4970,158 @@ export type Database = {
         }
         Relationships: []
       }
+      drip_enrollments: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          current_step_index: number | null
+          enrolled_at: string | null
+          id: string
+          next_send_at: string | null
+          sequence_id: string
+          status: string | null
+          subscriber_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          current_step_index?: number | null
+          enrolled_at?: string | null
+          id?: string
+          next_send_at?: string | null
+          sequence_id: string
+          status?: string | null
+          subscriber_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          current_step_index?: number | null
+          enrolled_at?: string | null
+          id?: string
+          next_send_at?: string | null
+          sequence_id?: string
+          status?: string | null
+          subscriber_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "drip_enrollments_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "drip_sequences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "drip_enrollments_subscriber_id_fkey"
+            columns: ["subscriber_id"]
+            isOneToOne: false
+            referencedRelation: "email_subscribers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      drip_sequence_steps: {
+        Row: {
+          conditions: Json | null
+          created_at: string | null
+          delay_days: number | null
+          delay_hours: number | null
+          id: string
+          is_active: boolean | null
+          sequence_id: string
+          step_order: number
+          subject_override: string | null
+          template_id: string | null
+        }
+        Insert: {
+          conditions?: Json | null
+          created_at?: string | null
+          delay_days?: number | null
+          delay_hours?: number | null
+          id?: string
+          is_active?: boolean | null
+          sequence_id: string
+          step_order?: number
+          subject_override?: string | null
+          template_id?: string | null
+        }
+        Update: {
+          conditions?: Json | null
+          created_at?: string | null
+          delay_days?: number | null
+          delay_hours?: number | null
+          id?: string
+          is_active?: boolean | null
+          sequence_id?: string
+          step_order?: number
+          subject_override?: string | null
+          template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "drip_sequence_steps_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "drip_sequences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "drip_sequence_steps_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "email_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      drip_sequences: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          list_id: string | null
+          name: string
+          trigger_event: string | null
+          trigger_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          list_id?: string | null
+          name: string
+          trigger_event?: string | null
+          trigger_type?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          list_id?: string | null
+          name?: string
+          trigger_event?: string | null
+          trigger_type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "drip_sequences_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "email_lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       driver_bookings: {
         Row: {
           api_partner_id: string | null
@@ -5100,6 +5252,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      dynamic_content_rules: {
+        Row: {
+          conditions: Json
+          content_html: string
+          created_at: string | null
+          description: string | null
+          fallback_html: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          conditions?: Json
+          content_html?: string
+          created_at?: string | null
+          description?: string | null
+          fallback_html?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          conditions?: Json
+          content_html?: string
+          created_at?: string | null
+          description?: string | null
+          fallback_html?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       ecommerce_orders: {
         Row: {
@@ -5343,6 +5531,56 @@ export type Database = {
           },
         ]
       }
+      email_events: {
+        Row: {
+          campaign_id: string | null
+          created_at: string | null
+          email_log_id: string | null
+          event_type: string
+          id: string
+          ip_address: string | null
+          link_url: string | null
+          metadata: Json | null
+          recipient_email: string | null
+          resend_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          campaign_id?: string | null
+          created_at?: string | null
+          email_log_id?: string | null
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          link_url?: string | null
+          metadata?: Json | null
+          recipient_email?: string | null
+          resend_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          campaign_id?: string | null
+          created_at?: string | null
+          email_log_id?: string | null
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          link_url?: string | null
+          metadata?: Json | null
+          recipient_email?: string | null
+          resend_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_events_email_log_id_fkey"
+            columns: ["email_log_id"]
+            isOneToOne: false
+            referencedRelation: "email_logs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_lists: {
         Row: {
           created_at: string
@@ -5369,6 +5607,7 @@ export type Database = {
       }
       email_logs: {
         Row: {
+          bounced_at: string | null
           campaign_id: string | null
           clicked_at: string | null
           created_at: string
@@ -5386,6 +5625,7 @@ export type Database = {
           template_id: string | null
         }
         Insert: {
+          bounced_at?: string | null
           campaign_id?: string | null
           clicked_at?: string | null
           created_at?: string
@@ -5403,6 +5643,7 @@ export type Database = {
           template_id?: string | null
         }
         Update: {
+          bounced_at?: string | null
           campaign_id?: string | null
           clicked_at?: string | null
           created_at?: string
@@ -5607,6 +5848,7 @@ export type Database = {
           last_clicked_at: string | null
           last_opened_at: string | null
           lead_id: string | null
+          list_id: string | null
           name: string | null
           optimal_send_hour: number | null
           phone: string | null
@@ -5629,6 +5871,7 @@ export type Database = {
           last_clicked_at?: string | null
           last_opened_at?: string | null
           lead_id?: string | null
+          list_id?: string | null
           name?: string | null
           optimal_send_hour?: number | null
           phone?: string | null
@@ -5651,6 +5894,7 @@ export type Database = {
           last_clicked_at?: string | null
           last_opened_at?: string | null
           lead_id?: string | null
+          list_id?: string | null
           name?: string | null
           optimal_send_hour?: number | null
           phone?: string | null
@@ -5664,7 +5908,15 @@ export type Database = {
           unsubscribed_at?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "email_subscribers_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "email_lists"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_templates: {
         Row: {
@@ -5710,6 +5962,35 @@ export type Database = {
           variables?: string[] | null
         }
         Relationships: []
+      }
+      email_unsubscribe_tokens: {
+        Row: {
+          created_at: string | null
+          id: string
+          subscriber_id: string
+          token: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          subscriber_id: string
+          token?: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          subscriber_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_unsubscribe_tokens_subscriber_id_fkey"
+            columns: ["subscriber_id"]
+            isOneToOne: false
+            referencedRelation: "email_subscribers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       employee_absence_logs: {
         Row: {
