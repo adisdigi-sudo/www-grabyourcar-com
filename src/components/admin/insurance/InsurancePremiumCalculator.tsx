@@ -815,13 +815,28 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
               </p>
             </div>
 
-            <div>
-              <Label className="text-xs">Secure Premium</Label>
-              <div className="relative mt-1">
-                <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                <Input type="number" placeholder="0" value={securePremium} onChange={e => setSecurePremium(e.target.value)} className="pl-8 h-9 text-sm" />
+            {!isThirdPartyOnly && (
+              <div>
+                <Label className="text-xs">Secure Premium</Label>
+                <div className="relative mt-1">
+                  <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input type="number" placeholder="0" value={securePremium} onChange={e => setSecurePremium(e.target.value)} className="pl-8 h-9 text-sm" />
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* Third Party Only info banner */}
+            {isThirdPartyOnly && (
+              <div className="flex items-start gap-2 p-3 rounded-lg border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-950/30">
+                <Info className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-xs font-bold text-blue-800 dark:text-blue-300">Third Party Only Policy</p>
+                  <p className="text-[10px] text-blue-600 dark:text-blue-400 mt-0.5">
+                    IDV, NCB, OD discount, and add-on coverages are not applicable. Premium is based on engine CC capacity as per IRDAI tariff.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Discount & NCB Card */}
