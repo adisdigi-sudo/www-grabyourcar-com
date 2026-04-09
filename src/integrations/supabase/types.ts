@@ -137,6 +137,81 @@ export type Database = {
         }
         Relationships: []
       }
+      ad_campaigns: {
+        Row: {
+          ad_id: string | null
+          ad_name: string | null
+          ad_set_id: string | null
+          ad_set_name: string | null
+          campaign_id: string | null
+          campaign_name: string
+          clicks: number | null
+          conversions: number | null
+          cost_per_lead: number | null
+          created_at: string | null
+          daily_budget: number | null
+          end_date: string | null
+          id: string
+          impressions: number | null
+          leads_generated: number | null
+          notes: string | null
+          platform: string
+          start_date: string | null
+          status: string | null
+          total_spend: number | null
+          updated_at: string | null
+          vertical: string | null
+        }
+        Insert: {
+          ad_id?: string | null
+          ad_name?: string | null
+          ad_set_id?: string | null
+          ad_set_name?: string | null
+          campaign_id?: string | null
+          campaign_name: string
+          clicks?: number | null
+          conversions?: number | null
+          cost_per_lead?: number | null
+          created_at?: string | null
+          daily_budget?: number | null
+          end_date?: string | null
+          id?: string
+          impressions?: number | null
+          leads_generated?: number | null
+          notes?: string | null
+          platform?: string
+          start_date?: string | null
+          status?: string | null
+          total_spend?: number | null
+          updated_at?: string | null
+          vertical?: string | null
+        }
+        Update: {
+          ad_id?: string | null
+          ad_name?: string | null
+          ad_set_id?: string | null
+          ad_set_name?: string | null
+          campaign_id?: string | null
+          campaign_name?: string
+          clicks?: number | null
+          conversions?: number | null
+          cost_per_lead?: number | null
+          created_at?: string | null
+          daily_budget?: number | null
+          end_date?: string | null
+          id?: string
+          impressions?: number | null
+          leads_generated?: number | null
+          notes?: string | null
+          platform?: string
+          start_date?: string | null
+          status?: string | null
+          total_spend?: number | null
+          updated_at?: string | null
+          vertical?: string | null
+        }
+        Relationships: []
+      }
       admin_activity_logs: {
         Row: {
           action: string
@@ -1256,6 +1331,8 @@ export type Database = {
       }
       automation_lead_tracking: {
         Row: {
+          ad_campaign_id: string | null
+          ad_platform: string | null
           assigned_at: string | null
           assigned_executive_email: string | null
           assigned_executive_phone: string | null
@@ -1265,8 +1342,10 @@ export type Database = {
           created_at: string
           email: string | null
           executive_notified: boolean
+          fbclid: string | null
           follow_up_alert_sent: boolean
           follow_up_due: string | null
+          gclid: string | null
           id: string
           last_updated: string
           lead_id: string
@@ -1279,9 +1358,14 @@ export type Database = {
           raw_data: Json | null
           source: string | null
           status: string
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
           vertical: string
         }
         Insert: {
+          ad_campaign_id?: string | null
+          ad_platform?: string | null
           assigned_at?: string | null
           assigned_executive_email?: string | null
           assigned_executive_phone?: string | null
@@ -1291,8 +1375,10 @@ export type Database = {
           created_at?: string
           email?: string | null
           executive_notified?: boolean
+          fbclid?: string | null
           follow_up_alert_sent?: boolean
           follow_up_due?: string | null
+          gclid?: string | null
           id?: string
           last_updated?: string
           lead_id: string
@@ -1305,9 +1391,14 @@ export type Database = {
           raw_data?: Json | null
           source?: string | null
           status?: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
           vertical?: string
         }
         Update: {
+          ad_campaign_id?: string | null
+          ad_platform?: string | null
           assigned_at?: string | null
           assigned_executive_email?: string | null
           assigned_executive_phone?: string | null
@@ -1317,8 +1408,10 @@ export type Database = {
           created_at?: string
           email?: string | null
           executive_notified?: boolean
+          fbclid?: string | null
           follow_up_alert_sent?: boolean
           follow_up_due?: string | null
+          gclid?: string | null
           id?: string
           last_updated?: string
           lead_id?: string
@@ -1331,6 +1424,9 @@ export type Database = {
           raw_data?: Json | null
           source?: string | null
           status?: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
           vertical?: string
         }
         Relationships: []
@@ -8564,6 +8660,7 @@ export type Database = {
       }
       insurance_clients: {
         Row: {
+          ad_platform: string | null
           advisor_name: string | null
           anniversary_date: string | null
           assigned_advisor_id: string | null
@@ -8647,6 +8744,7 @@ export type Database = {
           whatsapp_opted_in: boolean | null
         }
         Insert: {
+          ad_platform?: string | null
           advisor_name?: string | null
           anniversary_date?: string | null
           assigned_advisor_id?: string | null
@@ -8730,6 +8828,7 @@ export type Database = {
           whatsapp_opted_in?: boolean | null
         }
         Update: {
+          ad_platform?: string | null
           advisor_name?: string | null
           anniversary_date?: string | null
           assigned_advisor_id?: string | null
@@ -10798,6 +10897,10 @@ export type Database = {
       }
       leads: {
         Row: {
+          ad_campaign_id: string | null
+          ad_id: string | null
+          ad_platform: string | null
+          ad_set_id: string | null
           assigned_to: string | null
           budget_max: number | null
           budget_min: number | null
@@ -10809,10 +10912,13 @@ export type Database = {
           created_at: string | null
           customer_name: string | null
           email: string | null
+          fbclid: string | null
           follow_up_count: number | null
+          gclid: string | null
           id: string
           is_legacy: boolean | null
           last_contacted_at: string | null
+          lead_source_type: string | null
           lead_type: string | null
           name: string
           next_followup_at: string | null
@@ -10826,9 +10932,18 @@ export type Database = {
           tags: string[] | null
           team_assigned: string | null
           updated_at: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
           vertical_id: string | null
         }
         Insert: {
+          ad_campaign_id?: string | null
+          ad_id?: string | null
+          ad_platform?: string | null
+          ad_set_id?: string | null
           assigned_to?: string | null
           budget_max?: number | null
           budget_min?: number | null
@@ -10840,10 +10955,13 @@ export type Database = {
           created_at?: string | null
           customer_name?: string | null
           email?: string | null
+          fbclid?: string | null
           follow_up_count?: number | null
+          gclid?: string | null
           id?: string
           is_legacy?: boolean | null
           last_contacted_at?: string | null
+          lead_source_type?: string | null
           lead_type?: string | null
           name: string
           next_followup_at?: string | null
@@ -10857,9 +10975,18 @@ export type Database = {
           tags?: string[] | null
           team_assigned?: string | null
           updated_at?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
           vertical_id?: string | null
         }
         Update: {
+          ad_campaign_id?: string | null
+          ad_id?: string | null
+          ad_platform?: string | null
+          ad_set_id?: string | null
           assigned_to?: string | null
           budget_max?: number | null
           budget_min?: number | null
@@ -10871,10 +10998,13 @@ export type Database = {
           created_at?: string | null
           customer_name?: string | null
           email?: string | null
+          fbclid?: string | null
           follow_up_count?: number | null
+          gclid?: string | null
           id?: string
           is_legacy?: boolean | null
           last_contacted_at?: string | null
+          lead_source_type?: string | null
           lead_type?: string | null
           name?: string
           next_followup_at?: string | null
@@ -10888,6 +11018,11 @@ export type Database = {
           tags?: string[] | null
           team_assigned?: string | null
           updated_at?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
           vertical_id?: string | null
         }
         Relationships: [
@@ -11062,6 +11197,7 @@ export type Database = {
       loan_applications: {
         Row: {
           activity_count: number | null
+          ad_platform: string | null
           assigned_to: string | null
           bank_partner_id: string | null
           call_remarks: string | null
@@ -11112,9 +11248,13 @@ export type Database = {
           stage_updated_at: string | null
           tenure_months: number | null
           updated_at: string | null
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
         }
         Insert: {
           activity_count?: number | null
+          ad_platform?: string | null
           assigned_to?: string | null
           bank_partner_id?: string | null
           call_remarks?: string | null
@@ -11165,9 +11305,13 @@ export type Database = {
           stage_updated_at?: string | null
           tenure_months?: number | null
           updated_at?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
         }
         Update: {
           activity_count?: number | null
+          ad_platform?: string | null
           assigned_to?: string | null
           bank_partner_id?: string | null
           call_remarks?: string | null
@@ -11218,6 +11362,9 @@ export type Database = {
           stage_updated_at?: string | null
           tenure_months?: number | null
           updated_at?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
         }
         Relationships: [
           {
@@ -13923,6 +14070,7 @@ export type Database = {
       }
       sales_pipeline: {
         Row: {
+          ad_platform: string | null
           assigned_to: string | null
           booking_remarks: string | null
           booking_status: string | null
@@ -13961,8 +14109,12 @@ export type Database = {
           remarks_history: Json | null
           source: string | null
           updated_at: string | null
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
         }
         Insert: {
+          ad_platform?: string | null
           assigned_to?: string | null
           booking_remarks?: string | null
           booking_status?: string | null
@@ -14001,8 +14153,12 @@ export type Database = {
           remarks_history?: Json | null
           source?: string | null
           updated_at?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
         }
         Update: {
+          ad_platform?: string | null
           assigned_to?: string | null
           booking_remarks?: string | null
           booking_status?: string | null
@@ -14041,6 +14197,9 @@ export type Database = {
           remarks_history?: Json | null
           source?: string | null
           updated_at?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
         }
         Relationships: []
       }
