@@ -60,15 +60,12 @@ export const EmployeePerformanceDashboard = () => {
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["employeePerformance", period],
     queryFn: async () => {
-      const [
-        teamMembers, callLogs, insuranceClients, salesPipeline,
-        loanApps, targets, leads,
-      ] = await Promise.all([
-        supabase.from("team_members").select("id, user_id, name, phone, role, vertical_name, is_active").eq("is_active", true),
-        supabase.from("call_logs").select("agent_id, disposition, duration_seconds, lead_type, created_at").gte("created_at", from).lte("created_at", to),
-        supabase.from("insurance_clients").select("assigned_executive, lead_status, current_premium, pipeline_stage, created_at, updated_at").gte("created_at", from).lte("created_at", to),
-        supabase.from("sales_pipeline").select("assigned_executive, pipeline_stage, deal_value, created_at, updated_at").gte("created_at", from).lte("created_at", to),
-        supabase.from("loan_applications").select("assigned_executive, stage, loan_amount, created_at").gte("created_at", from).lte("created_at", to),
+      const teamMembers = await supabase.from("team_members").select("id, user_id, name, phone, role, vertical_name, is_active").eq("is_active", true);
+      const callLogs = await supabase.from("call_logs").select("agent_id, disposition, duration_seconds, lead_type, created_at").gte("created_at", from).lte("created_at", to);
+      const insuranceClients = await supabase.from("insurance_clients").select("assigned_executive, lead_status, current_premium, pipeline_stage, created_at, updated_at").gte("created_at", from).lte("created_at", to);
+      const salesPipeline = await supabase.from("sales_pipeline").select("assigned_executive, pipeline_stage, deal_value, created_at, updated_at").gte("created_at", from).lte("created_at", to);
+      const loanApps = await supabase.from("loan_applications").select("assigned_executive, stage, loan_amount, created_at").gte("created_at", from).lte("created_at", to);
+      const [targets, leads] = await Promise.all([
         supabase.from("team_targets").select("*").eq("month", format(new Date(), "yyyy-MM")),
         supabase.from("leads").select("assigned_to, status, created_at").gte("created_at", from).lte("created_at", to),
       ]);
