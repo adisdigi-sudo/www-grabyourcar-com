@@ -163,6 +163,9 @@ const AdSpendAnalytics = lazy(() =>
 const EmployeePerformanceDashboard = lazy(() =>
   import("@/components/admin/marketing/EmployeePerformanceDashboard").then((module) => ({ default: module.EmployeePerformanceDashboard })),
 );
+const AIAutomationHub = lazy(() =>
+  import("@/components/admin/automation/AIAutomationHub").then((module) => ({ default: module.AIAutomationHub })),
+);
 const LoanCRMDashboard = lazy(() =>
   import("@/components/admin/LoanCRMDashboard").then((module) => ({ default: module.LoanCRMDashboard })),
 );

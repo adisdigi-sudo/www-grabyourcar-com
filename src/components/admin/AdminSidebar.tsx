@@ -203,6 +203,9 @@ const navItems: NavItem[] = [
   { id: "employee-performance", label: "🏆 Employee Performance", icon: BarChart3, badge: "New",
     verticals: ["marketing"],
     allowedRoles: ["super_admin", "admin"] },
+  { id: "ai-automation-hub", label: "🤖 AI Automation Hub", icon: Brain, badge: "🔥",
+    verticals: ["marketing"],
+    allowedRoles: ["super_admin", "admin"] },
 
   // ── Car Database — isolated vertical ──
   { 
