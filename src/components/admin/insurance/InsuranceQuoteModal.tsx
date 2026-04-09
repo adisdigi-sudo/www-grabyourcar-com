@@ -608,37 +608,39 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
               </div>
             )}
 
-            <Separator />
+            {!isThirdPartyOnly && <Separator />}
 
-            {/* Add-ons */}
-            <div>
-              <button onClick={() => setShowAddons(!showAddons)} className="flex items-center gap-2 w-full">
-                <Zap className="h-4 w-4 text-primary" />
-                <span className="text-sm font-bold text-foreground">Coverage Add-ons</span>
-                <Badge variant="outline" className="ml-1 text-[10px]">{addons.filter(a => a.enabled).length} selected</Badge>
-                <div className="ml-auto">{showAddons ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}</div>
-              </button>
+            {/* Add-ons — hide for Third Party Only */}
+            {!isThirdPartyOnly && (
+              <div>
+                <button onClick={() => setShowAddons(!showAddons)} className="flex items-center gap-2 w-full">
+                  <Zap className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-bold text-foreground">Coverage Add-ons</span>
+                  <Badge variant="outline" className="ml-1 text-[10px]">{addons.filter(a => a.enabled).length} selected</Badge>
+                  <div className="ml-auto">{showAddons ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}</div>
+                </button>
 
-              <AnimatePresence>
-                {showAddons && (
-                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="space-y-1.5 overflow-hidden mt-3">
-                    {addons.map(addon => (
-                      <div key={addon.id} className={cn(
-                        "flex items-center gap-3 p-2 rounded-lg border transition-colors",
-                        addon.enabled ? "border-primary/30 bg-primary/5" : "border-border/50"
-                      )}>
-                        <Switch checked={addon.enabled} onCheckedChange={() => toggleAddon(addon.id)} className="scale-75" />
-                        <span className={cn("text-xs flex-1", addon.enabled ? "font-semibold text-foreground" : "text-muted-foreground")}>{addon.name}</span>
-                        <div className="relative w-20">
-                          <IndianRupee className="absolute left-1.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                          <Input type="number" value={addon.price} onChange={e => updateAddonPrice(addon.id, parseFloat(e.target.value) || 0)} className="h-7 text-xs pl-5 pr-1" />
+                <AnimatePresence>
+                  {showAddons && (
+                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="space-y-1.5 overflow-hidden mt-3">
+                      {addons.map(addon => (
+                        <div key={addon.id} className={cn(
+                          "flex items-center gap-3 p-2 rounded-lg border transition-colors",
+                          addon.enabled ? "border-primary/30 bg-primary/5" : "border-border/50"
+                        )}>
+                          <Switch checked={addon.enabled} onCheckedChange={() => toggleAddon(addon.id)} className="scale-75" />
+                          <span className={cn("text-xs flex-1", addon.enabled ? "font-semibold text-foreground" : "text-muted-foreground")}>{addon.name}</span>
+                          <div className="relative w-20">
+                            <IndianRupee className="absolute left-1.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                            <Input type="number" value={addon.price} onChange={e => updateAddonPrice(addon.id, parseFloat(e.target.value) || 0)} className="h-7 text-xs pl-5 pr-1" />
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
 
             <Separator />
 
@@ -648,16 +650,21 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
                 <div className="flex items-center gap-2 mb-2">
                   <Calculator className="h-4 w-4 text-primary" />
                   <span className="text-sm font-bold text-foreground">Auto-Calculated Breakup</span>
-                  <Badge className="ml-auto bg-primary/20 text-primary border-0 text-[10px]">Zone {zone} • {calc.odRate}%</Badge>
+                  {!isThirdPartyOnly && <Badge className="ml-auto bg-primary/20 text-primary border-0 text-[10px]">Zone {zone} • {calc.odRate}%</Badge>}
+                  {isThirdPartyOnly && <Badge className="ml-auto bg-blue-500/20 text-blue-700 dark:text-blue-300 border-0 text-[10px]">Third Party Only</Badge>}
                 </div>
 
-                <PremRow label={`Basic OD (${calc.odRate}% of IDV)`} value={fmt(calc.basicOD)} />
-                {discountPct > 0 && <PremRow label={`OD Discount (${discountPct}%)`} value={`-${fmt(calc.odDiscount)}`} negative />}
-                {!ncbLocked && ncb > 0 && <PremRow label={`NCB Discount (${ncb}%)`} value={`-${fmt(calc.ncbDiscount)}`} negative />}
-                <div className="border-t border-dashed border-border/60 pt-1">
-                  <PremRow label="Net OD Premium" value={fmt(calc.netOD)} bold />
-                </div>
-                <PremRow label={`Third Party (${ccNum < 1000 ? "<1000" : ccNum <= 1500 ? "1000-1500" : ">1500"}cc)`} value={fmt(calc.tp)} />
+                {!isThirdPartyOnly && (
+                  <>
+                    <PremRow label={`Basic OD (${calc.odRate}% of IDV)`} value={fmt(calc.basicOD)} />
+                    {discountPct > 0 && <PremRow label={`OD Discount (${discountPct}%)`} value={`-${fmt(calc.odDiscount)}`} negative />}
+                    {!ncbLocked && ncb > 0 && <PremRow label={`NCB Discount (${ncb}%)`} value={`-${fmt(calc.ncbDiscount)}`} negative />}
+                    <div className="border-t border-dashed border-border/60 pt-1">
+                      <PremRow label="Net OD Premium" value={fmt(calc.netOD)} bold />
+                    </div>
+                  </>
+                )}
+                <PremRow label={`Third Party (${ccNum < 1000 ? "<1000" : ccNum <= 1500 ? "1000-1500" : ">1500"}cc)`} value={fmt(calc.tp)} bold={isThirdPartyOnly} />
                 {securePremiumNum > 0 && <PremRow label="Secure Premium" value={fmt(securePremiumNum)} />}
                 {calc.addonTotal > 0 && <PremRow label={`Add-ons (${addons.filter(a => a.enabled).length})`} value={fmt(calc.addonTotal)} />}
 
