@@ -1027,24 +1027,26 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
                 </div>
                 <div className="text-3xl md:text-4xl font-heading font-black text-foreground">{fmt(calc.total)}</div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {resolvedInsurer ? `${resolvedInsurer} • ` : ""}{policyType} • {fuelType} • Zone {zone} • {ccNum}cc • IDV {fmt(idvNum)}
+                  {resolvedInsurer ? `${resolvedInsurer} • ` : ""}{policyType} • {fuelType} • {ccNum}cc{!isThirdPartyOnly ? ` • Zone ${zone} • IDV ${fmt(idvNum)}` : ""}
                 </p>
               </div>
 
               {/* Breakdown */}
               <div className="rounded-xl border border-border bg-card divide-y divide-border">
-                <div className="p-4 space-y-2">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Shield className="h-3.5 w-3.5 text-blue-500" />
-                    <span className="text-xs font-bold text-foreground uppercase tracking-wide">Own Damage (OD)</span>
+                {!isThirdPartyOnly && (
+                  <div className="p-4 space-y-2">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Shield className="h-3.5 w-3.5 text-blue-500" />
+                      <span className="text-xs font-bold text-foreground uppercase tracking-wide">Own Damage (OD)</span>
+                    </div>
+                    <Row label={`Basic OD (${calc.odRate}% of IDV)`} value={fmt(calc.basicOD)} />
+                    {discountPct > 0 && <Row label={`OD Discount (${discountPct}%)`} value={`-${fmt(calc.odDiscount)}`} negative />}
+                    {!ncbLocked && ncb > 0 && <Row label={`NCB Discount (${ncb}%)`} value={`-${fmt(calc.ncbDiscount)}`} negative />}
+                    <div className="pt-1 border-t border-dashed border-border/60">
+                      <Row label="Net OD Premium" value={fmt(calc.netOD)} bold />
+                    </div>
                   </div>
-                  <Row label={`Basic OD (${calc.odRate}% of IDV)`} value={fmt(calc.basicOD)} />
-                  {discountPct > 0 && <Row label={`OD Discount (${discountPct}%)`} value={`-${fmt(calc.odDiscount)}`} negative />}
-                  {!ncbLocked && ncb > 0 && <Row label={`NCB Discount (${ncb}%)`} value={`-${fmt(calc.ncbDiscount)}`} negative />}
-                  <div className="pt-1 border-t border-dashed border-border/60">
-                    <Row label="Net OD Premium" value={fmt(calc.netOD)} bold />
-                  </div>
-                </div>
+                )}
 
                 <div className="p-4">
                   <div className="flex items-center gap-2 mb-2">
