@@ -88,16 +88,27 @@ serve(async (req) => {
 
   const { mode = "fill_gaps", car_ids, skip = 0, limit = 5 } = await req.json();
 
-  // Get sets of car IDs that already have data
-  const { data: specCarIds } = await supabase.from("car_specifications").select("car_id");
-  const { data: colorCarIds } = await supabase.from("car_colors").select("car_id");
-  const { data: featureCarIds } = await supabase.from("car_features").select("car_id");
-  const { data: variantCarIds } = await supabase.from("car_variants").select("car_id");
+  // Get sets of car IDs that already have data (paginate to avoid 1000-row limit)
+  async function getAllCarIds(table: string): Promise<Set<string>> {
+    const ids = new Set<string>();
+    let from = 0;
+    const pageSize = 1000;
+    while (true) {
+      const { data } = await supabase.from(table).select("car_id").range(from, from + pageSize - 1);
+      if (!data || data.length === 0) break;
+      for (const row of data) ids.add((row as any).car_id);
+      if (data.length < pageSize) break;
+      from += pageSize;
+    }
+    return ids;
+  }
 
-  const hasSpecs = new Set((specCarIds || []).map((s: any) => s.car_id));
-  const hasColors = new Set((colorCarIds || []).map((c: any) => c.car_id));
-  const hasFeatures = new Set((featureCarIds || []).map((f: any) => f.car_id));
-  const hasVariants = new Set((variantCarIds || []).map((v: any) => v.car_id));
+  const [hasSpecs, hasColors, hasFeatures, hasVariants] = await Promise.all([
+    getAllCarIds("car_specifications"),
+    getAllCarIds("car_colors"),
+    getAllCarIds("car_features"),
+    getAllCarIds("car_variants"),
+  ]);
 
   const { data: allCars } = await supabase.from("cars").select("id, name, brand, slug").order("brand");
 
