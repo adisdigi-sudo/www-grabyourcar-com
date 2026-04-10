@@ -83,7 +83,7 @@ async function sendViaMeta(
   return { success: false, error: result.error?.message || JSON.stringify(result), provider: "meta" };
 }
 
-// ── WAAB Provider ──
+// ── WAAB Provider (legacy REST API) ──
 async function sendViaWaab(
   apiKey: string,
   baseUrl: string,
@@ -130,6 +130,43 @@ async function sendViaWaab(
   const text = await response.text();
   console.error("WAAB non-JSON:", text.substring(0, 300));
   return { success: false, error: `Non-JSON response (${response.status})`, provider: "waab" };
+}
+
+// ── WABB.in Provider (Webhook-based) ──
+async function sendViaWabb(
+  webhookUrl: string,
+  to: string,
+  message: string,
+  name?: string,
+): Promise<SendResult> {
+  const payload = {
+    Phone: to,
+    Name: name || "",
+    Message: message,
+  };
+
+  console.log("WABB webhook request:", JSON.stringify({ ...payload, webhookUrl: webhookUrl.substring(0, 40) + "..." }));
+
+  const response = await fetch(webhookUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  const responseText = await response.text();
+  console.log("WABB webhook response:", response.status, responseText.substring(0, 300));
+
+  if (response.ok) {
+    // WABB webhooks typically return 200 on success
+    let messageId = "wabb_" + Date.now();
+    try {
+      const parsed = JSON.parse(responseText);
+      messageId = parsed.id || parsed.message_id || messageId;
+    } catch { /* non-JSON OK for webhooks */ }
+    return { success: true, messageId, provider: "wabb" };
+  }
+
+  return { success: false, error: `WABB webhook error (${response.status}): ${responseText.substring(0, 200)}`, provider: "wabb" };
 }
 
 // ── Provider Router ──
