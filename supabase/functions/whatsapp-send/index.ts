@@ -226,6 +226,14 @@ async function sendMessage(
     return sendViaWaab(apiKey, baseUrl, phone.full, { type: "text", message: message || "" });
   }
 
+  if (providerName === "wabb") {
+    const webhookUrl = providerConfig?.webhook_url || Deno.env.get("WABB_WEBHOOK_URL");
+    if (!webhookUrl) {
+      return { success: false, error: "WABB webhook URL not configured. Add it in Channel Providers or set WABB_WEBHOOK_URL secret.", provider: "wabb" };
+    }
+    return sendViaWabb(webhookUrl, phone.full, message || "Hello from GrabYourCar!", name);
+  }
+
   return { success: false, error: `Unknown provider: ${providerName}` };
 }
 
