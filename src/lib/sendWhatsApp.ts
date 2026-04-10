@@ -63,9 +63,8 @@ function normalizePhone(phone: string): string {
 }
 
 /**
- * One-click WhatsApp send via Meta Cloud API.
- * Checks admin_settings for send mode — if "manual", opens wa.me directly.
- * Falls back to wa.me link if API fails.
+ * One-click WhatsApp send via backend WhatsApp provider.
+ * Checks admin_settings for send mode and stays API-only.
  */
 export async function sendWhatsApp({
   phone,
@@ -77,10 +76,10 @@ export async function sendWhatsApp({
   const fullPhone = normalizePhone(phone);
   const sendMode = await getSendMode();
 
-  // Manual mode — go straight to wa.me
+  // Manual mode is blocked in API-only flow
   if (sendMode === "manual") {
-    if (!silent) toast.error("WhatsApp API is in manual mode — no browser popup opened");
-    return { success: false, fallback: true, error: "manual_mode" };
+    if (!silent) toast.error("WhatsApp API manual mode is disabled in this flow");
+    return { success: false, fallback: false, error: "manual_mode" };
   }
 
   try {
@@ -104,11 +103,11 @@ export async function sendWhatsApp({
 
     throw new Error(data?.error || data?.details || "API send failed");
   } catch (err) {
-    console.warn("WhatsApp API send failed, falling back to wa.me:", err);
+    console.warn("WhatsApp API send failed:", err);
 
-    if (!silent) toast.error("WhatsApp API failed — popup fallback disabled");
+    if (!silent) toast.error("WhatsApp API failed — message not accepted by provider");
 
-    return { success: false, fallback: true, error: String(err) };
+    return { success: false, fallback: false, error: String(err) };
   }
 }
 

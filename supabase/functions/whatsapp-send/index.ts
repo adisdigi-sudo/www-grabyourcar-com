@@ -167,29 +167,57 @@ async function sendViaWabb(
       console.log(`WABB webhook response attempt ${attempt}:`, response.status, trimmedResponse.substring(0, 300));
 
       if (response.ok) {
-        let messageId = "wabb_" + Date.now();
-        try {
-          const parsed = JSON.parse(trimmedResponse || "{}");
-          messageId = parsed.id || parsed.message_id || messageId;
-        } catch {
-          // Non-JSON success response is acceptable for webhook mode
+        let parsed: Record<string, unknown> | null = null;
+        if (trimmedResponse) {
+          try {
+            parsed = JSON.parse(trimmedResponse);
+          } catch {
+            parsed = null;
+          }
         }
-        return { success: true, messageId, provider: "wabb" };
+
+        const messageId = typeof parsed?.id === "string"
+          ? parsed.id
+          : typeof parsed?.message_id === "string"
+            ? parsed.message_id
+            : undefined;
+
+        const accepted =
+          typeof parsed?.success === "boolean"
+            ? parsed.success
+            : typeof parsed?.status === "string"
+              ? ["success", "accepted", "queued", "sent"].includes(parsed.status.toLowerCase())
+              : false;
+
+        if (messageId || accepted) {
+          return { success: true, messageId: messageId || `wabb_${Date.now()}`, provider: "wabb" };
+        }
+
+        lastError = trimmedResponse.length === 0
+          ? "WABB webhook returned empty success response. Delivery not confirmed — verify the webhook is Published and field mapping uses Text for Phone, Name, Message."
+          : `WABB webhook did not confirm acceptance: ${trimmedResponse.substring(0, 200)}`;
+
+        const shouldRetry = attempt < 3;
+        if (!shouldRetry) {
+          return { success: false, error: lastError, provider: "wabb" };
+        }
+
+        console.warn(`Retrying WABB webhook after unconfirmed success on attempt ${attempt}`);
+      } else {
+        lastError = `WABB webhook error (${response.status}): ${trimmedResponse.substring(0, 200) || "empty response"}`;
+        const shouldRetry =
+          attempt < 3 && (
+            response.status === 429 ||
+            response.status >= 500 ||
+            ((response.status === 400 || response.status === 405) && trimmedResponse.length === 0)
+          );
+
+        if (!shouldRetry) {
+          return { success: false, error: lastError, provider: "wabb" };
+        }
+
+        console.warn(`Retrying WABB webhook after attempt ${attempt} failed with status ${response.status}`);
       }
-
-      lastError = `WABB webhook error (${response.status}): ${trimmedResponse.substring(0, 200) || "empty response"}`;
-      const shouldRetry =
-        attempt < 3 && (
-          response.status === 429 ||
-          response.status >= 500 ||
-          ((response.status === 400 || response.status === 405) && trimmedResponse.length === 0)
-        );
-
-      if (!shouldRetry) {
-        return { success: false, error: lastError, provider: "wabb" };
-      }
-
-      console.warn(`Retrying WABB webhook after attempt ${attempt} failed with status ${response.status}`);
     } catch (error) {
       lastError = error instanceof Error ? error.message : "Unknown WABB network error";
 
