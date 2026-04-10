@@ -1125,99 +1125,36 @@ export function InsuranceCRMDashboard() {
                               </p>
                             </div>
                             {r.phone && (
-                              <a href={`https://wa.me/91${r.phone}`} target="_blank" rel="noopener noreferrer">
-                                <Button size="icon" className="h-7 w-7 bg-emerald-600 hover:bg-emerald-700 text-white" title="WhatsApp">
-                                  <MessageSquare className="h-3.5 w-3.5" />
-                                </Button>
-                              </a>
+                              <Button
+                                size="icon"
+                                className="h-7 w-7 bg-emerald-600 hover:bg-emerald-700 text-white"
+                                title="Send on WhatsApp"
+                                onClick={() => void shareViaWhatsApp(r, r.phone)}
+                              >
+                                <MessageSquare className="h-3.5 w-3.5" />
+                              </Button>
                             )}
+...
                             {r.phone && (
-                              <a href={`tel:${r.phone}`}>
-                                <Button size="icon" className="h-7 w-7 bg-primary hover:bg-primary/90 text-primary-foreground" title="Call">
-                                  <Phone className="h-3 w-3" />
-                                </Button>
-                              </a>
+                              <Button
+                                size="icon"
+                                className="h-7 w-7 bg-emerald-600 hover:bg-emerald-700 text-white"
+                                title="Send on WhatsApp"
+                                onClick={() => void shareViaWhatsApp(r, r.phone)}
+                              >
+                                <MessageSquare className="h-3.5 w-3.5" />
+                              </Button>
                             )}
-                            <Button variant="ghost" size="icon" className="h-7 w-7"
-                              onClick={() => setSelectedPolicy(r)}>
-                              <ExternalLink className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
-        </TabsContent>
-
-        {/* Expired / Closed Tab */}
-        <TabsContent value="expired" className="mt-4">
-          <div className="space-y-3">
-            {expiredPolicies.length === 0 ? (
-              <Card className="border shadow-sm">
-                <CardContent className="py-12 text-center text-muted-foreground">
-                  <XCircle className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                  <p>No expired or closed policies</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-3">
-                <div className="flex items-center gap-2 mb-1">
-                  <XCircle className="h-4 w-4 text-destructive" />
-                  <p className="text-sm font-semibold text-destructive">{expiredPolicies.length} expired/closed policies — recovery needed</p>
-                </div>
-                {expiredPolicies.map(r => (
-                  <Card key={r.id} className="border transition-all hover:shadow-md bg-destructive/5 border-destructive/20">
-                    <CardContent className="py-3 px-4">
-                      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h4 className="font-semibold text-sm truncate">{r.customer_name}</h4>
-                            <Badge variant="destructive" className="text-[10px] shrink-0">Expired</Badge>
-                            {getStatusBadge(r.lead_status)}
-                          </div>
-                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                            <span className="flex items-center gap-1"><FileText className="h-3 w-3" /> {r.policy_number || "N/A"}</span>
-                            <span>{r.insurer}</span>
-                            {r.vehicle_number && <span className="flex items-center gap-1"><Car className="h-3 w-3" /> {r.vehicle_number}</span>}
-                            <span className="font-semibold">₹{r.premium?.toLocaleString("en-IN") || "—"}</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3 shrink-0">
-                          <div className="text-right">
-                            <p className="text-sm font-bold text-destructive">
-                              Expired {Math.abs(r.daysUntilRenewal || 0)}d ago
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              Was {r.renewal_date && format(new Date(r.renewal_date), "dd MMM yyyy")}
-                            </p>
-                          </div>
-                          <div className="flex flex-col gap-1">
+...
                             {r.phone && (
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button size="sm" className="h-7 gap-1 text-xs px-2 bg-emerald-600 hover:bg-emerald-700 text-white">
-                                    <Send className="h-3 w-3" /> Recover
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-52">
-                                  <DropdownMenuItem onClick={() => openReminderPreview(r, "notice")} className="cursor-pointer gap-2">
-                                    <Bell className="h-3.5 w-3.5" /> Send Renewal Notice
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => openReminderPreview(r, "quote")} className="cursor-pointer gap-2">
-                                    <FileText className="h-3.5 w-3.5" /> Send Renewal Quote
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            )}
-                            {r.phone && (
-                              <a href={`https://wa.me/91${r.phone}`} target="_blank" rel="noopener noreferrer">
-                                <Button size="icon" className="h-7 w-7 bg-emerald-600 hover:bg-emerald-700 text-white" title="WhatsApp">
-                                  <MessageSquare className="h-3.5 w-3.5" />
-                                </Button>
-                              </a>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="gap-1 h-7 text-xs text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                                onClick={() => void shareViaWhatsApp(r, r.phone)}
+                              >
+                                WhatsApp
+                              </Button>
                             )}
                             <Button variant="ghost" size="icon" className="h-7 w-7"
                               onClick={() => setSelectedPolicy(r)}>
