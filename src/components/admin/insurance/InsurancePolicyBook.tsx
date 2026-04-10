@@ -401,17 +401,26 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
             size="sm"
             variant="default"
             className="gap-1.5 text-xs"
-            onClick={() => {
+            onClick={async () => {
+              const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
               const selected = filtered.filter(p => selectedIds.has(p.id));
-              selected.forEach((policy, index) => {
+              let sent = 0;
+              let failed = 0;
+              for (const policy of selected) {
                 const phone = policy.insurance_clients?.phone;
                 if (phone && !phone.startsWith("IB_")) {
-                  const clean = phone.replace(/\D/g, "");
-                  const wa = `https://wa.me/${clean.startsWith("91") ? clean : `91${clean}`}?text=${encodeURIComponent(`Hi ${policy.insurance_clients?.customer_name || ""}, your policy ${policy.policy_number || ""} details are ready.`)}`;
-                  setTimeout(() => window.open(wa, "_blank"), index * 500);
+                  const result = await sendWhatsApp({
+                    phone,
+                    message: `Hi ${policy.insurance_clients?.customer_name || ""}, your policy ${policy.policy_number || ""} details are ready.`,
+                    name: policy.insurance_clients?.customer_name || undefined,
+                    logEvent: "policy_book_bulk_send",
+                    silent: true,
+                  });
+                  if (result.success) sent++;
+                  else failed++;
                 }
-              });
-              toast.success(`Opening WhatsApp for ${selected.length} clients`);
+              }
+              toast.success(`WhatsApp API processed: ${sent} sent, ${failed} failed`);
             }}
           >
             <Send className="h-3.5 w-3.5" /> Bulk Send ({selectedIds.size})

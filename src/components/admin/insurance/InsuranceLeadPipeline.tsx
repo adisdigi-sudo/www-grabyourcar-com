@@ -1363,9 +1363,14 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                           {phone && (
                             <>
                               <a href={`tel:${client.phone}`}><Button variant="ghost" size="icon" className="h-6 w-6"><PhoneCall className="h-3 w-3 text-primary" /></Button></a>
-                              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => {
-                                const clean = client.phone.replace(/\D/g, "");
-                                window.open(`https://wa.me/${clean.startsWith("91") ? clean : `91${clean}`}`, "_blank");
+                              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={async () => {
+                                const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+                                await sendWhatsApp({
+                                  phone: client.phone,
+                                  message: `Hi ${client.customer_name || ""}! This is GrabYourCar Insurance. How can we help you today?`,
+                                  name: client.customer_name,
+                                  logEvent: "lead_pipeline_quick_whatsapp",
+                                });
                               }}><MessageSquare className="h-3 w-3 text-green-600" /></Button>
                             </>
                           )}
@@ -1548,9 +1553,14 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                       {phone && (
                         <>
                           <a href={`tel:${selectedClient.phone}`}><Button size="sm" variant="outline" className="gap-1.5"><PhoneCall className="h-3.5 w-3.5" /> Call</Button></a>
-                          <Button size="sm" variant="outline" className="gap-1.5 text-green-600 border-green-200" onClick={() => {
-                            const clean = selectedClient.phone.replace(/\D/g, "");
-                            window.open(`https://wa.me/${clean.startsWith("91") ? clean : `91${clean}`}`, "_blank");
+                          <Button size="sm" variant="outline" className="gap-1.5 text-green-600 border-green-200" onClick={async () => {
+                            const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+                            await sendWhatsApp({
+                              phone: selectedClient.phone,
+                              message: `Hi ${selectedClient.customer_name || ""}! This is GrabYourCar Insurance. How can we help you today?`,
+                              name: selectedClient.customer_name,
+                              logEvent: "lead_pipeline_detail_whatsapp",
+                            });
                           }}><MessageSquare className="h-3.5 w-3.5" /> WhatsApp</Button>
                         </>
                       )}
