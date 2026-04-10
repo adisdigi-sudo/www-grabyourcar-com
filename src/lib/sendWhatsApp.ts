@@ -79,10 +79,8 @@ export async function sendWhatsApp({
 
   // Manual mode — go straight to wa.me
   if (sendMode === "manual") {
-    const waUrl = `https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`;
-    window.open(waUrl, "_blank");
-    if (!silent) toast.info("📱 Opened WhatsApp — please send manually");
-    return { success: false, fallback: true };
+    if (!silent) toast.error("WhatsApp API is in manual mode — no browser popup opened");
+    return { success: false, fallback: true, error: "manual_mode" };
   }
 
   try {
@@ -108,10 +106,7 @@ export async function sendWhatsApp({
   } catch (err) {
     console.warn("WhatsApp API send failed, falling back to wa.me:", err);
 
-    const waUrl = `https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`;
-    window.open(waUrl, "_blank");
-
-    if (!silent) toast.info("📱 Opened WhatsApp — please send manually");
+    if (!silent) toast.error("WhatsApp API failed — popup fallback disabled");
 
     return { success: false, fallback: true, error: String(err) };
   }

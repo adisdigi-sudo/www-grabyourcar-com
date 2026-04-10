@@ -220,11 +220,9 @@ export function InsuranceQuoteHub() {
                           <Send className="h-3.5 w-3.5" /> Share
                         </Button>
                         {phone && (
-                          <a href={`https://wa.me/91${phone.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer">
-                            <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-green-50 dark:hover:bg-green-950/30">
-                              <MessageCircle className="h-4 w-4 text-green-600" />
-                            </Button>
-                          </a>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-green-50 dark:hover:bg-green-950/30" onClick={() => setShareClient(client)}>
+                            <MessageCircle className="h-4 w-4 text-green-600" />
+                          </Button>
                         )}
                       </div>
                     </div>
