@@ -103,24 +103,19 @@ export async function omniSend(params: OmniSendParams): Promise<OmniSendResult> 
       return { success: true, messageId: data.messageId, channel };
     }
 
-    // If channel not configured, fallback for WhatsApp
-    if (data?.status === "not_configured" && channel === "whatsapp" && phone) {
-      const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-      window.open(waUrl, "_blank");
-      if (!silent) toast.info("📱 Opened WhatsApp — please send manually");
-      return { success: false, fallback: true, channel };
+    // WhatsApp stays API-only to avoid blocked popups and false-positive manual sends
+    if (data?.status === "not_configured" && channel === "whatsapp") {
+      if (!silent) toast.error(data?.error || "WhatsApp channel is not configured");
+      return { success: false, fallback: false, error: data?.error || "whatsapp_not_configured", channel };
     }
 
     throw new Error(data?.error || "Send failed");
   } catch (err) {
     console.warn(`Omni send failed for ${channel}:`, err);
 
-    // WhatsApp fallback
-    if (channel === "whatsapp" && phone) {
-      const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-      window.open(waUrl, "_blank");
-      if (!silent) toast.info("📱 Opened WhatsApp — please send manually");
-      return { success: false, fallback: true, error: String(err), channel };
+    if (channel === "whatsapp") {
+      if (!silent) toast.error("WhatsApp API failed — popup fallback disabled");
+      return { success: false, fallback: false, error: String(err), channel };
     }
 
     if (!silent) toast.error(`Failed to send ${channel} message`);
