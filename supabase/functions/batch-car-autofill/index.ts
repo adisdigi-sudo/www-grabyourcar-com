@@ -79,96 +79,33 @@ serve(async (req) => {
 
   const { mode = "fill_gaps", car_ids, skip = 0, limit = 5 } = await req.json();
 
-  // Mode: fill_gaps - find cars missing specs, colors, or features and fill them
-  // Mode: fill_features_from_specs - extract features from existing specs (no AI needed)
-  
-  if (mode === "fill_features_from_specs") {
-    // For cars that have specs but no features, extract features from spec data
-    const { data: carsWithSpecs } = await supabase
-      .from("cars")
-      .select("id, name, brand")
-      .not("id", "in", `(SELECT DISTINCT car_id FROM car_features)`);
-    
-    // Get all car IDs that already have features
-    const { data: featureCarIds } = await supabase.from("car_features").select("car_id");
-    const hasFeatures = new Set((featureCarIds || []).map((f: any) => f.car_id));
-    
-    const { data: allCars } = await supabase.from("cars").select("id, name, brand");
-    const carsNeedingFeatures = (allCars || []).filter((c: any) => !hasFeatures.has(c.id));
-    const batch = carsNeedingFeatures.slice(skip, skip + limit);
-    
-    const results: any[] = [];
-    for (const car of batch) {
-      // Get existing specs for this car
-      const { data: specs } = await supabase
-        .from("car_specifications")
-        .select("category, label, value")
-        .eq("car_id", car.id);
-      
-      const features: any[] = [];
-      let sortOrder = 0;
-      
-      if (specs && specs.length > 0) {
-        for (const spec of specs) {
-          let category = "Comfort";
-          if (spec.category === "safety") category = "Safety";
-          else if (spec.category === "features") category = "Technology";
-          else if (spec.category === "engine") category = "Engine";
-          else if (spec.category === "dimensions") continue; // skip dimensions as features
-          else if (spec.category === "performance") category = "Performance";
-          
-          features.push({
-            car_id: car.id,
-            category,
-            feature_name: `${spec.label}: ${spec.value}`,
-            is_standard: true,
-            sort_order: sortOrder++,
-          });
-        }
-      }
-      
-      if (features.length > 0) {
-        const { error } = await supabase.from("car_features").insert(features);
-        results.push({ car: car.name, features: features.length, status: error ? "error" : "ok" });
-      } else {
-        results.push({ car: car.name, features: 0, status: "no_specs" });
-      }
-    }
-    
-    return new Response(JSON.stringify({
-      done: batch.length < limit,
-      processed: results.length,
-      remaining: carsNeedingFeatures.length - skip - batch.length,
-      results,
-    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-  }
-
-  // Default mode: fill_gaps - use AI to fill missing specs/colors/features
-  const { data: allCars } = await supabase.from("cars").select("id, name, brand, slug");
+  // Get sets of car IDs that already have data
   const { data: specCarIds } = await supabase.from("car_specifications").select("car_id");
   const { data: colorCarIds } = await supabase.from("car_colors").select("car_id");
   const { data: featureCarIds } = await supabase.from("car_features").select("car_id");
   const { data: variantCarIds } = await supabase.from("car_variants").select("car_id");
-  
+
   const hasSpecs = new Set((specCarIds || []).map((s: any) => s.car_id));
   const hasColors = new Set((colorCarIds || []).map((c: any) => c.car_id));
   const hasFeatures = new Set((featureCarIds || []).map((f: any) => f.car_id));
   const hasVariants = new Set((variantCarIds || []).map((v: any) => v.car_id));
 
+  const { data: allCars } = await supabase.from("cars").select("id, name, brand, slug").order("brand");
+
   let carsToProcess: any[];
   if (car_ids?.length) {
     carsToProcess = (allCars || []).filter((c: any) => car_ids.includes(c.id));
   } else {
-    // Cars missing ANY of: specs, colors, features, or variants
-    carsToProcess = (allCars || []).filter((c: any) => 
-      !hasSpecs.has(c.id) || !hasColors.has(c.id) || !hasFeatures.has(c.id) || !hasVariants.has(c.id)
+    // Cars missing ANY of: specs, colors, or features
+    carsToProcess = (allCars || []).filter((c: any) =>
+      !hasSpecs.has(c.id) || !hasColors.has(c.id) || !hasFeatures.has(c.id)
     );
   }
 
   const batch = carsToProcess.slice(skip, skip + limit);
-  
+
   if (batch.length === 0) {
-    return new Response(JSON.stringify({ done: true, message: "All cars are complete!" }), {
+    return new Response(JSON.stringify({ done: true, message: "All cars are complete!", total_missing: carsToProcess.length }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
@@ -178,95 +115,79 @@ serve(async (req) => {
     const needSpecs = !hasSpecs.has(car.id);
     const needColors = !hasColors.has(car.id);
     const needFeatures = !hasFeatures.has(car.id);
-    const needVariants = !hasVariants.has(car.id);
-    
-    console.log(`Processing: ${car.brand} ${car.name} | needs: specs=${needSpecs} colors=${needColors} features=${needFeatures} variants=${needVariants}`);
-    
-    const modelName = car.name.replace(car.brand, "").replace("BMW ", "").replace("Isuzu ", "").replace("Lexus ", "").replace("Land Rover ", "").trim() || car.name;
-    
+
+    console.log(`Processing: ${car.brand} ${car.name} | needs: specs=${needSpecs} colors=${needColors} features=${needFeatures}`);
+
+    // Clean model name
+    const modelName = car.name
+      .replace(new RegExp(`^${car.brand}\\s*`, 'i'), '')
+      .replace(/^BMW\s*/i, '').replace(/^Isuzu\s*/i, '').replace(/^Lexus\s*/i, '').replace(/^Land Rover\s*/i, '')
+      .trim() || car.name;
+
     const ai = await callAI(car.brand, modelName, LOVABLE_API_KEY);
     if (!ai) {
       results.push({ car: `${car.brand} ${car.name}`, status: "ai_failed" });
       continue;
     }
 
-    let vCount = 0, cCount = 0, sCount = 0, fCount = 0;
+    let cCount = 0, sCount = 0, fCount = 0;
 
-    // Insert variants if missing
-    if (needVariants) {
-      const variants = ai.variants || [];
-      for (let i = 0; i < variants.length; i++) {
-        const v = variants[i];
-        const ex = v.ex_showroom || 0;
-        if (!ex) continue;
-        const bp = calcBreakup(ex);
-        let features = v.features || "";
-        if (typeof features === "string") features = features.split(",").map((f: string) => f.trim()).filter(Boolean);
-        const { error } = await supabase.from("car_variants").insert({
-          car_id: car.id, name: v.name || `Variant ${i + 1}`,
-          price: formatPrice(ex), price_numeric: ex,
-          fuel_type: v.fuel_type || "Petrol", transmission: v.transmission || "Manual",
-          features, sort_order: i + 1, ...bp,
-        });
-        if (!error) vCount++;
-      }
+    // Delete existing before re-inserting to prevent duplicates
+    if (needSpecs) {
+      await supabase.from("car_specifications").delete().eq("car_id", car.id);
+    }
+    if (needColors) {
+      await supabase.from("car_colors").delete().eq("car_id", car.id);
+    }
+    if (needFeatures) {
+      await supabase.from("car_features").delete().eq("car_id", car.id);
     }
 
-    // Insert colors if missing
-    if (needColors && ai.colors?.length) {
-      for (let i = 0; i < ai.colors.length; i++) {
-        const c = ai.colors[i];
-        const { error } = await supabase.from("car_colors").insert({
-          car_id: car.id, name: c.name || "Unknown", hex_code: c.hex_code || "#000000", sort_order: i + 1,
-        });
-        if (!error) cCount++;
-      }
-    }
-
-    // Insert specs if missing
+    // Insert specs
     if (needSpecs && ai.specifications?.length) {
-      for (let i = 0; i < ai.specifications.length; i++) {
-        const s = ai.specifications[i];
-        const { error } = await supabase.from("car_specifications").insert({
-          car_id: car.id, category: s.category || "engine", label: s.label || "", value: s.value || "", sort_order: i + 1,
-        });
-        if (!error) sCount++;
-      }
+      const specRows = ai.specifications.map((s: any, i: number) => ({
+        car_id: car.id, category: s.category || "engine", label: s.label || "", value: s.value || "", sort_order: i + 1,
+      }));
+      const { error } = await supabase.from("car_specifications").insert(specRows);
+      if (!error) sCount = specRows.length;
     }
 
-    // Insert features if missing
+    // Insert colors
+    if (needColors && ai.colors?.length) {
+      const colorRows = ai.colors.map((c: any, i: number) => ({
+        car_id: car.id, name: c.name || "Unknown", hex_code: c.hex_code || "#000000", sort_order: i + 1,
+      }));
+      const { error } = await supabase.from("car_colors").insert(colorRows);
+      if (!error) cCount = colorRows.length;
+    }
+
+    // Insert features
     if (needFeatures) {
       const featureList = ai.features || [];
       if (featureList.length > 0) {
-        for (let i = 0; i < featureList.length; i++) {
-          const f = featureList[i];
-          const { error } = await supabase.from("car_features").insert({
+        const featureRows = featureList.map((f: any, i: number) => ({
+          car_id: car.id,
+          category: f.category || "Comfort",
+          feature_name: f.name || f.feature_name || "",
+          is_standard: f.is_standard !== false,
+          sort_order: i + 1,
+        }));
+        const { error } = await supabase.from("car_features").insert(featureRows);
+        if (!error) fCount = featureRows.length;
+      } else if (ai.specifications?.length) {
+        // Fallback: extract from specs
+        const featureRows = ai.specifications
+          .filter((s: any) => s.category !== "dimensions")
+          .map((s: any, i: number) => ({
             car_id: car.id,
-            category: f.category || "Comfort",
-            feature_name: f.name || f.feature_name || "",
-            is_standard: f.is_standard !== false,
-            sort_order: i + 1,
-          });
-          if (!error) fCount++;
-        }
-      } else {
-        // Fallback: extract features from specs we just inserted or AI specs
-        const specsToUse = ai.specifications || [];
-        for (let i = 0; i < specsToUse.length; i++) {
-          const s = specsToUse[i];
-          if (s.category === "dimensions") continue;
-          let cat = "Comfort";
-          if (s.category === "safety") cat = "Safety";
-          else if (s.category === "features") cat = "Technology";
-          else if (s.category === "engine") cat = "Engine";
-          else if (s.category === "performance") cat = "Performance";
-          
-          const { error } = await supabase.from("car_features").insert({
-            car_id: car.id, category: cat,
+            category: s.category === "safety" ? "Safety" : s.category === "features" ? "Technology" : s.category === "engine" ? "Engine" : "Comfort",
             feature_name: `${s.label}: ${s.value}`,
-            is_standard: true, sort_order: i + 1,
-          });
-          if (!error) fCount++;
+            is_standard: true,
+            sort_order: i + 1,
+          }));
+        if (featureRows.length) {
+          const { error } = await supabase.from("car_features").insert(featureRows);
+          if (!error) fCount = featureRows.length;
         }
       }
     }
@@ -282,25 +203,16 @@ serve(async (req) => {
     if (ai.cons) updateData.cons = typeof ai.cons === "string" ? ai.cons.split("\n") : ai.cons;
     if (ai.key_highlights) updateData.key_highlights = typeof ai.key_highlights === "string" ? ai.key_highlights.split("\n") : ai.key_highlights;
 
-    if (needVariants && ai.variants?.length) {
-      const prices = ai.variants.map((v: any) => v.ex_showroom).filter(Boolean);
-      if (prices.length) {
-        const min = Math.min(...prices), max = Math.max(...prices);
-        updateData.price_range = min === max ? formatPrice(min) : `${formatPrice(min)} - ${formatPrice(max)}`;
-        updateData.price_numeric = min;
-      }
-    }
-
     if (Object.keys(updateData).length) {
       await supabase.from("cars").update(updateData).eq("id", car.id);
     }
 
-    results.push({ car: `${car.brand} ${car.name}`, variants: vCount, colors: cCount, specs: sCount, features: fCount, status: "ok" });
-    await new Promise(r => setTimeout(r, 1500));
+    results.push({ car: `${car.brand} ${car.name}`, colors: cCount, specs: sCount, features: fCount, status: "ok" });
+    await new Promise(r => setTimeout(r, 1000));
   }
 
   return new Response(JSON.stringify({
-    done: false,
+    done: batch.length < limit,
     processed: results.length,
     remaining: carsToProcess.length - skip - batch.length,
     results,
