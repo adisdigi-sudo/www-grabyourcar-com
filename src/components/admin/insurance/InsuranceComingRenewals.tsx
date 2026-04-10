@@ -216,17 +216,19 @@ export function InsuranceComingRenewals({ policies }: InsuranceComingRenewalsPro
           </SelectContent>
         </Select>
         {selectedIds.size > 0 && (
-          <Button size="sm" variant="default" className="gap-1.5 text-xs" onClick={() => {
+          <Button size="sm" variant="default" className="gap-1.5 text-xs" onClick={async () => {
             const sel = filtered.filter(p => selectedIds.has(p.id));
-            sel.forEach((p, i) => {
+            const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+            let sent = 0;
+            for (const p of sel) {
               const ph = p.insurance_clients?.phone;
               if (ph && !ph.startsWith("IB_")) {
-                const clean = ph.replace(/\D/g, "");
                 const days = differenceInDays(new Date(p.expiry_date!), new Date());
-                window.open(`https://wa.me/${clean.startsWith("91") ? clean : `91${clean}`}?text=${encodeURIComponent(`Hi ${p.insurance_clients?.customer_name || ""}, your ${p.insurer} policy expires in ${days} days. Contact us for the best renewal quote!`)}`, "_blank");
+                await sendWhatsApp({ phone: ph, message: `Hi ${p.insurance_clients?.customer_name || ""}, your ${p.insurer} policy expires in ${days} days. Contact us for the best renewal quote!`, name: p.insurance_clients?.customer_name || "", logEvent: "renewal_alert", silent: true });
+                sent++;
               }
-            });
-            toast.success(`Sending to ${sel.length} clients`);
+            }
+            toast.success(`✅ Sent renewal alert to ${sent} clients via API`);
           }}><Send className="h-3.5 w-3.5" /> Renewal Alert ({selectedIds.size})</Button>
         )}
         <Badge variant="outline" className="text-xs">{filtered.length} upcoming</Badge>
@@ -312,9 +314,9 @@ export function InsuranceComingRenewals({ policies }: InsuranceComingRenewalsPro
                           {phone && (
                             <>
                               <a href={`tel:${c?.phone}`}><Button variant="ghost" size="icon" className="h-6 w-6"><PhoneCall className="h-3 w-3 text-primary" /></Button></a>
-                              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => {
-                                const clean = (c?.phone || "").replace(/\D/g, "");
-                                window.open(`https://wa.me/${clean.startsWith("91") ? clean : `91${clean}`}`, "_blank");
+                              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={async () => {
+                                const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+                                await sendWhatsApp({ phone: c?.phone || "", message: `Hi ${c?.customer_name || ""}, your insurance policy is expiring soon. Contact us for renewal!`, name: c?.customer_name || "", logEvent: "renewal_wa" });
                               }}><MessageSquare className="h-3 w-3 text-green-600" /></Button>
                             </>
                           )}

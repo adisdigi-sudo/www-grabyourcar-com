@@ -498,9 +498,9 @@ export function InsuranceOverdueRenewals({ policies, clients }: Props) {
                           {phone && (
                             <>
                               <a href={`tel:${c?.phone}`}><Button variant="ghost" size="icon" className="h-6 w-6"><PhoneCall className="h-3 w-3 text-primary" /></Button></a>
-                              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => {
-                                const clean = (c?.phone || "").replace(/\D/g, "");
-                                window.open(`https://wa.me/${clean.startsWith("91") ? clean : `91${clean}`}`, "_blank");
+                              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={async () => {
+                                const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+                                await sendWhatsApp({ phone: c?.phone || "", message: `Hi ${c?.customer_name || ""}, your insurance policy has expired. Contact us urgently for renewal!`, name: c?.customer_name || "", logEvent: "overdue_wa" });
                               }}><MessageSquare className="h-3 w-3 text-green-600" /></Button>
                             </>
                           )}

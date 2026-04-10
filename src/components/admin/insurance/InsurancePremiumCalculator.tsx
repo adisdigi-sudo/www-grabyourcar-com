@@ -638,11 +638,9 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
 
       if (method === "whatsapp") {
         const quoteText = getQuoteText();
-        const phone = customerPhone?.replace(/\D/g, "") || "";
-        const waPhone = phone.startsWith("91") ? phone : `91${phone}`;
-        const waUrl = `https://wa.me/${waPhone}?text=${encodeURIComponent(quoteText)}`;
-        window.open(waUrl, "_blank");
-        toast.success("Quote saved & WhatsApp opened!");
+        const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+        await sendWhatsApp({ phone: customerPhone || "", message: quoteText, name: customerName || "", logEvent: "quote_share" });
+        toast.success("Quote saved & sent via WhatsApp API!");
       } else {
         doc.save(fileName);
         toast.success("Quote saved & PDF generated!");

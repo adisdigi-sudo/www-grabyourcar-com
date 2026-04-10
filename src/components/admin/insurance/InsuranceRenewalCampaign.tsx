@@ -206,13 +206,12 @@ export function InsuranceRenewalCampaign() {
           });
           if (!error) apiSuccess = true;
         } catch {
-          // API unavailable — fall through to wa.me
+          // API unavailable — skip this recipient
         }
 
         if (!apiSuccess) {
-          // Open wa.me link as manual fallback
-          const waUrl = `https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`;
-          window.open(waUrl, "_blank");
+          // Log failure but do NOT open browser popup
+          console.warn(`WhatsApp API failed for ${fullPhone}, skipping`);
         }
 
         await updateQuote.mutateAsync({
