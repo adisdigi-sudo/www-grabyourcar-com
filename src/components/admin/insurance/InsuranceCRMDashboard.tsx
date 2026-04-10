@@ -510,8 +510,29 @@ export function InsuranceCRMDashboard() {
   }, [now]);
 
   const shareViaWhatsApp = useCallback(async (r: PolicyRow, phone: string) => {
-    const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
-    await sendWhatsApp({ phone, message: getPolicyText(r), name: r.customer_name });
+    const cleanPhone = phone.replace(/\D/g, "");
+    if (!cleanPhone) {
+      toast.error("Valid WhatsApp number nahi mila");
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke("whatsapp-send", {
+        body: {
+          to: cleanPhone,
+          message: getPolicyText(r),
+          name: r.customer_name,
+          logEvent: "policy_share",
+        },
+      });
+
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || "WhatsApp send failed");
+
+      toast.success(`✅ WhatsApp sent to ${r.customer_name || cleanPhone}`);
+    } catch (error: any) {
+      toast.error(error?.message || "WhatsApp API se send nahi hua");
+    }
   }, []);
 
   const shareViaEmail = useCallback((r: PolicyRow, email: string) => {
@@ -1117,32 +1138,34 @@ export function InsuranceCRMDashboard() {
                             <span className="font-semibold">₹{r.premium?.toLocaleString("en-IN") || "—"}</span>
                           </div>
                         </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <div className="text-right">
-                              <p className="text-sm font-bold text-emerald-600">{r.daysUntilRenewal}d left</p>
-                              <p className="text-xs text-muted-foreground">
-                                Expires {r.renewal_date && format(new Date(r.renewal_date), "dd MMM yyyy")}
-                              </p>
-                            </div>
-                            {r.phone && (
-                              <a href={`https://wa.me/91${r.phone}`} target="_blank" rel="noopener noreferrer">
-                                <Button size="icon" className="h-7 w-7 bg-emerald-600 hover:bg-emerald-700 text-white" title="WhatsApp">
-                                  <MessageSquare className="h-3.5 w-3.5" />
-                                </Button>
-                              </a>
-                            )}
-                            {r.phone && (
-                              <a href={`tel:${r.phone}`}>
-                                <Button size="icon" className="h-7 w-7 bg-primary hover:bg-primary/90 text-primary-foreground" title="Call">
-                                  <Phone className="h-3 w-3" />
-                                </Button>
-                              </a>
-                            )}
-                            <Button variant="ghost" size="icon" className="h-7 w-7"
-                              onClick={() => setSelectedPolicy(r)}>
-                              <ExternalLink className="h-3.5 w-3.5" />
-                            </Button>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <div className="text-right">
+                            <p className="text-sm font-bold text-emerald-600">{r.daysUntilRenewal}d left</p>
+                            <p className="text-xs text-muted-foreground">
+                              Expires {r.renewal_date && format(new Date(r.renewal_date), "dd MMM yyyy")}
+                            </p>
                           </div>
+                          {r.phone && (
+                            <Button
+                              size="icon"
+                              className="h-7 w-7 bg-emerald-600 hover:bg-emerald-700 text-white"
+                              title="Send on WhatsApp"
+                              onClick={() => void shareViaWhatsApp(r, r.phone)}
+                            >
+                              <MessageSquare className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                          {r.phone && (
+                            <a href={`tel:${r.phone}`}>
+                              <Button size="icon" className="h-7 w-7 bg-primary hover:bg-primary/90 text-primary-foreground" title="Call">
+                                <Phone className="h-3 w-3" />
+                              </Button>
+                            </a>
+                          )}
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSelectedPolicy(r)}>
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -1213,14 +1236,16 @@ export function InsuranceCRMDashboard() {
                               </DropdownMenu>
                             )}
                             {r.phone && (
-                              <a href={`https://wa.me/91${r.phone}`} target="_blank" rel="noopener noreferrer">
-                                <Button size="icon" className="h-7 w-7 bg-emerald-600 hover:bg-emerald-700 text-white" title="WhatsApp">
-                                  <MessageSquare className="h-3.5 w-3.5" />
-                                </Button>
-                              </a>
+                              <Button
+                                size="icon"
+                                className="h-7 w-7 bg-emerald-600 hover:bg-emerald-700 text-white"
+                                title="Send on WhatsApp"
+                                onClick={() => void shareViaWhatsApp(r, r.phone)}
+                              >
+                                <MessageSquare className="h-3.5 w-3.5" />
+                              </Button>
                             )}
-                            <Button variant="ghost" size="icon" className="h-7 w-7"
-                              onClick={() => setSelectedPolicy(r)}>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSelectedPolicy(r)}>
                               <ExternalLink className="h-3.5 w-3.5" />
                             </Button>
                           </div>
@@ -1280,11 +1305,14 @@ export function InsuranceCRMDashboard() {
                               </a>
                             )}
                             {r.phone && (
-                              <a href={`https://wa.me/91${r.phone}`} target="_blank" rel="noopener noreferrer">
-                                <Button variant="outline" size="sm" className="gap-1 h-7 text-xs text-emerald-600 border-emerald-200 hover:bg-emerald-50">
-                                  WhatsApp
-                                </Button>
-                              </a>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="gap-1 h-7 text-xs text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                                onClick={() => void shareViaWhatsApp(r, r.phone)}
+                              >
+                                WhatsApp
+                              </Button>
                             )}
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -1975,7 +2003,7 @@ ${currentPremium && renewalPremium ? `\n📊 *Comparison:*\n💰 Current: ${form
             </Button>
           </div>
           <p className="text-[10px] text-center text-muted-foreground">
-            💡 "WhatsApp" opens wa.me link • "Auto-Send" triggers WhatsApp API directly
+            💡 Dono options ab direct WhatsApp API se send karte hain — browser wa.me fallback open nahi hoga.
           </p>
         </div>
       </DialogContent>
