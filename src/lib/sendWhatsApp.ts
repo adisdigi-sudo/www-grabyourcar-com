@@ -78,8 +78,8 @@ export async function sendWhatsApp({
 
   // Manual mode is blocked in API-only flow
   if (sendMode === "manual") {
-    if (!silent) toast.error("WhatsApp API is in manual mode — no browser popup opened");
-    return { success: false, fallback: true, error: "manual_mode" };
+    if (!silent) toast.error("WhatsApp API manual mode is disabled in this flow");
+    return { success: false, fallback: false, error: "manual_mode" };
   }
 
   try {
