@@ -178,7 +178,8 @@ async function sendMessage(
   message: string,
   templateName?: string,
   templateVars?: Record<string, string>,
-  mediaUrl?: string
+  mediaUrl?: string,
+  name?: string,
 ): Promise<SendResult> {
   const phone = normalizePhone(to);
   if (!phone.valid) {
