@@ -315,7 +315,8 @@ serve(async (req) => {
       message,
       template_name,
       template_variables,
-      mediaUrl
+      mediaUrl,
+      name,
     );
 
     // Log to wa_message_logs
