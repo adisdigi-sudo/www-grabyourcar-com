@@ -606,7 +606,6 @@ export const calculateStatePriceBreakup = (
     tempRegistration,
     greenTax,
     hsrp,
-    agentFees,
     onRoadPrice,
     roadTaxPercent,
     stateName: state.name,

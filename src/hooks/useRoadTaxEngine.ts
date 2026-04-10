@@ -31,7 +31,7 @@ export interface OnRoadPriceBreakup {
   exShowroom: number;
   roadTax: number;
   roadTaxPercent: number;
-  rto: number; // alias for roadTax
+  rto: number; // alias for roadTax (includes agent fees)
   insurance: number;
   tcs: number;
   fastag: number;
@@ -43,7 +43,6 @@ export interface OnRoadPriceBreakup {
   handling: number;
   additionalCess: number;
   luxurySurcharge: number;
-  agentFees: number; // ₹7,550 for cars above ₹10 Lakh
   onRoadPrice: number;
   stateName: string;
   ownershipType: string;
