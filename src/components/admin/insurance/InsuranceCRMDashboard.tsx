@@ -2003,7 +2003,7 @@ ${currentPremium && renewalPremium ? `\n📊 *Comparison:*\n💰 Current: ${form
             </Button>
           </div>
           <p className="text-[10px] text-center text-muted-foreground">
-            💡 "WhatsApp" opens wa.me link • "Auto-Send" triggers WhatsApp API directly
+            💡 Dono options ab direct WhatsApp API se send karte hain — browser wa.me fallback open nahi hoga.
           </p>
         </div>
       </DialogContent>
