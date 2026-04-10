@@ -829,7 +829,7 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
             const stage = PIPELINE_STAGES.find(s => s.value === (client.pipeline_stage || "new_lead")) || PIPELINE_STAGES[0];
             const stageIdx = PIPELINE_STAGES.findIndex(s => s.value === stage.value);
             const phone = displayPhone(client.phone);
-            const waLink = getWhatsAppLink(client.phone);
+            const waLink = null; // wa.me removed, using API
             const daysToExpiry = client.policy_expiry_date ? differenceInDays(new Date(client.policy_expiry_date), new Date()) : null;
 
             return (
@@ -1195,11 +1195,9 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
                             <PhoneCall className="h-3.5 w-3.5" /> Call
                           </Button>
                         </a>
-                        <a href={getWhatsAppLink(selectedClient.phone) || "#"} target="_blank" rel="noopener noreferrer">
-                          <Button size="sm" variant="outline" className="gap-1.5 text-emerald-600 border-emerald-200">
-                            <MessageSquare className="h-3.5 w-3.5" /> WhatsApp
-                          </Button>
-                        </a>
+                        <Button size="sm" variant="outline" className="gap-1.5 text-emerald-600 border-emerald-200" onClick={() => handleWhatsApp(selectedClient.phone, selectedClient.customer_name || "")}>
+                          <MessageSquare className="h-3.5 w-3.5" /> WhatsApp
+                        </Button>
                       </>
                     )}
                     <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setShowUploadPolicy(true); }}>
