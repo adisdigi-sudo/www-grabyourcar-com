@@ -17,38 +17,24 @@ const corsHeaders = {
  * Template is loaded from insurance_renewal_settings (fully editable from admin).
  */
 
-const DEFAULT_TEMPLATE = `🚗 *Grabyourcar Policy Renewal Reminder*
-━━━━━━━━━━━━━━━━━━━━━
+const DEFAULT_TEMPLATE = `Hi *{{customer_name}}* 👋
 
-Hello *{{customer_name}}*,
+Your car insurance for *{{vehicle_model}}* {{vehicle_number_line}}is expiring on *{{expiry_date}}* — only *{{days_remaining}} days* left! ⏳
 
-We hope you are enjoying a smooth and safe drive!
-
-This is a friendly reminder from *Grabyourcar Insurance Desk* that your *{{vehicle_model}}* {{vehicle_number_line}}insurance policy is set to expire on *{{expiry_date}}* — just *{{days_remaining}} days* to go.
-
-Renewing your policy before the expiry helps you:
-
-✅ Avoid inspection hassles
-✅ Maintain your No Claim Bonus
-✅ Stay financially protected
-✅ Ensure uninterrupted coverage
-
-Our team has already prepared renewal assistance for you to make the process quick and seamless.
-
-👉 Simply *reply to this message* or click below to get your renewal quote instantly.
-
-🔗 Renew Now: https://www.grabyourcar.com/insurance
+Please renew it on time to avoid:
+❌ Loss of No Claim Bonus
+❌ Inspection hassles
+❌ Legal penalties
 
 {{policy_details_section}}
 
-If you need any help, feel free to contact your dedicated advisor.
+✅ We can help you renew quickly with the best rates!
 
-📞 {{advisor_number}}
-🌐 www.grabyourcar.com
+👉 *Reply here* or call us at {{advisor_number}} to get your renewal quote instantly.
 
-Thank you for trusting *Grabyourcar* — we look forward to protecting your journeys ahead.
+🔗 https://www.grabyourcar.com/insurance
 
-Drive safe! 🚘`;
+— *Team Grabyourcar* 🚗💚`;
 
 const DEFAULT_WINDOWS = [60, 45, 30, 15, 7];
 const DEFAULT_ADVISOR = "+91 98559 24442";
