@@ -43,6 +43,7 @@ export interface OnRoadPriceBreakup {
   handling: number;
   additionalCess: number;
   luxurySurcharge: number;
+  agentFees: number; // ₹7,550 for cars above ₹10 Lakh
   onRoadPrice: number;
   stateName: string;
   ownershipType: string;
@@ -154,6 +155,9 @@ export const calculateOnRoadPrice = (
   const insurance = Math.round(exShowroomPrice * (insurancePercent / 100));
   const tcs = Math.round(exShowroomPrice * 0.01); // Always 1%
 
+  // Agent/Processing fees: ₹7,550 for cars above ₹10 Lakh
+  const agentFees = exShowroomPrice > 1000000 ? 7550 : 0;
+
   const onRoadPrice =
     exShowroomPrice +
     roadTax +
@@ -166,7 +170,8 @@ export const calculateOnRoadPrice = (
     handlingCharges +
     greenTax +
     additionalCess +
-    luxurySurcharge;
+    luxurySurcharge +
+    agentFees;
 
   const stateName = matchedRule?.state_name ?? stateCode;
 
@@ -186,6 +191,7 @@ export const calculateOnRoadPrice = (
     handling: handlingCharges,
     additionalCess,
     luxurySurcharge,
+    agentFees,
     onRoadPrice,
     stateName,
     ownershipType: normalizedOwnership,
