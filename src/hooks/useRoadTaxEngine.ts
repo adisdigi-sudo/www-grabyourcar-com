@@ -31,7 +31,7 @@ export interface OnRoadPriceBreakup {
   exShowroom: number;
   roadTax: number;
   roadTaxPercent: number;
-  rto: number; // alias for roadTax
+  rto: number; // alias for roadTax (includes agent fees)
   insurance: number;
   tcs: number;
   fastag: number;
@@ -43,7 +43,6 @@ export interface OnRoadPriceBreakup {
   handling: number;
   additionalCess: number;
   luxurySurcharge: number;
-  agentFees: number; // ₹7,550 for cars above ₹10 Lakh
   onRoadPrice: number;
   stateName: string;
   ownershipType: string;
@@ -150,13 +149,12 @@ export const calculateOnRoadPrice = (
   const luxurySurcharge = matchedRule?.luxury_surcharge ?? 0;
   const flatCharge = matchedRule?.flat_charge ?? 0;
 
-  // Calculate road tax: percentage-based + flat charge (some states like Puducherry use flat charges)
-  const roadTax = Math.round(exShowroomPrice * (taxPercent / 100)) + flatCharge;
+  // Calculate road tax: percentage-based + flat charge + agent fees (₹7,550 for >₹10L, hidden in RTO)
+  const roadTaxBase = Math.round(exShowroomPrice * (taxPercent / 100)) + flatCharge;
+  const agentFees = exShowroomPrice > 1000000 ? 7550 : 0;
+  const roadTax = roadTaxBase + agentFees;
   const insurance = Math.round(exShowroomPrice * (insurancePercent / 100));
   const tcs = Math.round(exShowroomPrice * 0.01); // Always 1%
-
-  // Agent/Processing fees: ₹7,550 for cars above ₹10 Lakh
-  const agentFees = exShowroomPrice > 1000000 ? 7550 : 0;
 
   const onRoadPrice =
     exShowroomPrice +
@@ -170,8 +168,7 @@ export const calculateOnRoadPrice = (
     handlingCharges +
     greenTax +
     additionalCess +
-    luxurySurcharge +
-    agentFees;
+    luxurySurcharge;
 
   const stateName = matchedRule?.state_name ?? stateCode;
 
@@ -191,7 +188,6 @@ export const calculateOnRoadPrice = (
     handling: handlingCharges,
     additionalCess,
     luxurySurcharge,
-    agentFees,
     onRoadPrice,
     stateName,
     ownershipType: normalizedOwnership,

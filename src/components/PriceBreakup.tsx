@@ -53,7 +53,6 @@ export const PriceBreakup = ({ variantName, carName, exShowroomPrice, onStateCha
     { label: "Temp Registration", value: breakup.tempRegistration, icon: FileText, description: "Temporary registration" },
     ...(breakup.greenTax > 0 ? [{ label: "Green Tax", value: breakup.greenTax, icon: Leaf, description: "Environment cess" }] : []),
     { label: "Handling & Logistics", value: breakup.handling, icon: Truck, description: "Dealer handling charges" },
-    ...(breakup.agentFees > 0 ? [{ label: "RTO Processing Fees", value: breakup.agentFees, icon: FileText, description: "Agent & processing charges" }] : []),
   ];
 
   return (
