@@ -1,0 +1,1 @@
+UPDATE public.channel_providers SET config_json = jsonb_set(COALESCE(config_json, '{}'::jsonb), '{webhook_url}', '"https://api.wabb.in/api/v1/webhooks-automation/catch/3870/yHmD3fj9h8PO/"') WHERE channel = 'whatsapp' AND provider_name = 'wabb';
