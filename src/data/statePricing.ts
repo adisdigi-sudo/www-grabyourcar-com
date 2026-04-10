@@ -546,6 +546,7 @@ export interface StatePriceBreakup {
   tempRegistration: number;
   greenTax: number;
   hsrp: number;
+  agentFees: number; // ₹7,550 for cars above ₹10 Lakh
   onRoadPrice: number;
   roadTaxPercent: number; // The actual % applied
   stateName: string;
@@ -577,6 +578,9 @@ export const calculateStatePriceBreakup = (
   const greenTax = state.greenTax;
   const hsrp = state.hsrpFee;
 
+  // Agent/Processing fees: ₹7,550 for cars above ₹10 Lakh
+  const agentFees = exShowroomPrice > 1000000 ? 7550 : 0;
+
   const onRoadPrice =
     exShowroomPrice +
     rto +
@@ -588,7 +592,8 @@ export const calculateStatePriceBreakup = (
     hypothecation +
     tempRegistration +
     greenTax +
-    hsrp;
+    hsrp +
+    agentFees;
 
   return {
     exShowroom: exShowroomPrice,
@@ -603,6 +608,7 @@ export const calculateStatePriceBreakup = (
     tempRegistration,
     greenTax,
     hsrp,
+    agentFees,
     onRoadPrice,
     roadTaxPercent,
     stateName: state.name,
