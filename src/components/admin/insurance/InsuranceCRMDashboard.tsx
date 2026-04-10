@@ -510,8 +510,29 @@ export function InsuranceCRMDashboard() {
   }, [now]);
 
   const shareViaWhatsApp = useCallback(async (r: PolicyRow, phone: string) => {
-    const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
-    await sendWhatsApp({ phone, message: getPolicyText(r), name: r.customer_name });
+    const cleanPhone = phone.replace(/\D/g, "");
+    if (!cleanPhone) {
+      toast.error("Valid WhatsApp number nahi mila");
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke("whatsapp-send", {
+        body: {
+          to: cleanPhone,
+          message: getPolicyText(r),
+          name: r.customer_name,
+          logEvent: "policy_share",
+        },
+      });
+
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || "WhatsApp send failed");
+
+      toast.success(`✅ WhatsApp sent to ${r.customer_name || cleanPhone}`);
+    } catch (error: any) {
+      toast.error(error?.message || "WhatsApp API se send nahi hua");
+    }
   }, []);
 
   const shareViaEmail = useCallback((r: PolicyRow, email: string) => {
