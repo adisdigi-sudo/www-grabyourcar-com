@@ -37,6 +37,8 @@ interface SendResult {
   provider?: string;
 }
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 function normalizePhone(phone: string): { full: string; short: string; valid: boolean } {
   const clean = phone.replace(/\D/g, "").replace(/^0+/, "");
   let short = clean;
@@ -141,32 +143,67 @@ async function sendViaWabb(
 ): Promise<SendResult> {
   const payload = {
     Phone: to,
-    Name: name || "",
-    Message: message,
+    Name: (name || "Customer").trim(),
+    Message: message.trim() || "Hello from GrabYourCar!",
   };
 
   console.log("WABB webhook request:", JSON.stringify({ ...payload, webhookUrl: webhookUrl.substring(0, 40) + "..." }));
 
-  const response = await fetch(webhookUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
+  let lastError = "Unknown WABB error";
 
-  const responseText = await response.text();
-  console.log("WABB webhook response:", response.status, responseText.substring(0, 300));
-
-  if (response.ok) {
-    // WABB webhooks typically return 200 on success
-    let messageId = "wabb_" + Date.now();
+  for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      const parsed = JSON.parse(responseText);
-      messageId = parsed.id || parsed.message_id || messageId;
-    } catch { /* non-JSON OK for webhooks */ }
-    return { success: true, messageId, provider: "wabb" };
+      const response = await fetch(webhookUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json, text/plain, */*",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const responseText = await response.text();
+      const trimmedResponse = responseText.trim();
+      console.log(`WABB webhook response attempt ${attempt}:`, response.status, trimmedResponse.substring(0, 300));
+
+      if (response.ok) {
+        let messageId = "wabb_" + Date.now();
+        try {
+          const parsed = JSON.parse(trimmedResponse || "{}");
+          messageId = parsed.id || parsed.message_id || messageId;
+        } catch {
+          // Non-JSON success response is acceptable for webhook mode
+        }
+        return { success: true, messageId, provider: "wabb" };
+      }
+
+      lastError = `WABB webhook error (${response.status}): ${trimmedResponse.substring(0, 200) || "empty response"}`;
+      const shouldRetry =
+        attempt < 3 && (
+          response.status === 429 ||
+          response.status >= 500 ||
+          ((response.status === 400 || response.status === 405) && trimmedResponse.length === 0)
+        );
+
+      if (!shouldRetry) {
+        return { success: false, error: lastError, provider: "wabb" };
+      }
+
+      console.warn(`Retrying WABB webhook after attempt ${attempt} failed with status ${response.status}`);
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : "Unknown WABB network error";
+
+      if (attempt === 3) {
+        return { success: false, error: `WABB webhook network error: ${lastError}`, provider: "wabb" };
+      }
+
+      console.warn(`Retrying WABB webhook after network failure on attempt ${attempt}:`, lastError);
+    }
+
+    await sleep(400 * attempt);
   }
 
-  return { success: false, error: `WABB webhook error (${response.status}): ${responseText.substring(0, 200)}`, provider: "wabb" };
+  return { success: false, error: lastError, provider: "wabb" };
 }
 
 // ── Provider Router ──
