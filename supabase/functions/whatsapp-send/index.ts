@@ -83,7 +83,7 @@ async function sendViaMeta(
   return { success: false, error: result.error?.message || JSON.stringify(result), provider: "meta" };
 }
 
-// ── WAAB Provider ──
+// ── WAAB Provider (legacy REST API) ──
 async function sendViaWaab(
   apiKey: string,
   baseUrl: string,
@@ -132,6 +132,43 @@ async function sendViaWaab(
   return { success: false, error: `Non-JSON response (${response.status})`, provider: "waab" };
 }
 
+// ── WABB.in Provider (Webhook-based) ──
+async function sendViaWabb(
+  webhookUrl: string,
+  to: string,
+  message: string,
+  name?: string,
+): Promise<SendResult> {
+  const payload = {
+    Phone: to,
+    Name: name || "",
+    Message: message,
+  };
+
+  console.log("WABB webhook request:", JSON.stringify({ ...payload, webhookUrl: webhookUrl.substring(0, 40) + "..." }));
+
+  const response = await fetch(webhookUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  const responseText = await response.text();
+  console.log("WABB webhook response:", response.status, responseText.substring(0, 300));
+
+  if (response.ok) {
+    // WABB webhooks typically return 200 on success
+    let messageId = "wabb_" + Date.now();
+    try {
+      const parsed = JSON.parse(responseText);
+      messageId = parsed.id || parsed.message_id || messageId;
+    } catch { /* non-JSON OK for webhooks */ }
+    return { success: true, messageId, provider: "wabb" };
+  }
+
+  return { success: false, error: `WABB webhook error (${response.status}): ${responseText.substring(0, 200)}`, provider: "wabb" };
+}
+
 // ── Provider Router ──
 async function sendMessage(
   providerName: string,
@@ -141,7 +178,8 @@ async function sendMessage(
   message: string,
   templateName?: string,
   templateVars?: Record<string, string>,
-  mediaUrl?: string
+  mediaUrl?: string,
+  name?: string,
 ): Promise<SendResult> {
   const phone = normalizePhone(to);
   if (!phone.valid) {
@@ -187,6 +225,14 @@ async function sendMessage(
       return sendViaWaab(apiKey, baseUrl, phone.full, { type: "template", template_name: templateName, variables: templateVars });
     }
     return sendViaWaab(apiKey, baseUrl, phone.full, { type: "text", message: message || "" });
+  }
+
+  if (providerName === "wabb") {
+    const webhookUrl = providerConfig?.webhook_url || Deno.env.get("WABB_WEBHOOK_URL");
+    if (!webhookUrl) {
+      return { success: false, error: "WABB webhook URL not configured. Add it in Channel Providers or set WABB_WEBHOOK_URL secret.", provider: "wabb" };
+    }
+    return sendViaWabb(webhookUrl, phone.full, message || "Hello from GrabYourCar!", name);
   }
 
   return { success: false, error: `Unknown provider: ${providerName}` };
@@ -269,7 +315,8 @@ serve(async (req) => {
       message,
       template_name,
       template_variables,
-      mediaUrl
+      mediaUrl,
+      name,
     );
 
     // Log to wa_message_logs
