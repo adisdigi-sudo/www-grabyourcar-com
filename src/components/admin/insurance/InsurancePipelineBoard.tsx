@@ -918,10 +918,10 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
                           <a href={`tel:${client.phone}`}>
                             <Button size="icon" variant="ghost" className="h-7 w-7"><PhoneCall className="h-3.5 w-3.5 text-primary" /></Button>
                           </a>
-                          {waLink && (
-                            <a href={waLink} target="_blank" rel="noopener noreferrer">
-                              <Button size="icon" variant="ghost" className="h-7 w-7"><MessageSquare className="h-3.5 w-3.5 text-primary" /></Button>
-                            </a>
+                          {phone && (
+                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleWhatsApp(client.phone, client.customer_name || "")}>
+                              <MessageSquare className="h-3.5 w-3.5 text-primary" />
+                            </Button>
                           )}
                         </>
                       )}
