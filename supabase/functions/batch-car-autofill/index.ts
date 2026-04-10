@@ -20,7 +20,9 @@ function calcBreakup(ex: number) {
 }
 
 async function callAI(brand: string, model: string, apiKey: string): Promise<any> {
-  const systemPrompt = `You are an Indian automotive data expert. Return ONLY valid JSON with no markdown.
+  const systemPrompt = `You are an Indian automotive data expert. Return ONLY valid JSON with no markdown, no code blocks.
+
+MANDATORY FIELDS - You MUST include ALL of these:
 {
   "body_type": "string",
   "tagline": "string",
@@ -29,21 +31,28 @@ async function callAI(brand: string, model: string, apiKey: string): Promise<any
   "transmission_types": ["Manual"],
   "is_hot": false, "is_new": true, "is_upcoming": false,
   "variants": [{"name":"variant","fuel_type":"Petrol","transmission":"Manual","ex_showroom":750000,"features":"f1, f2"}],
-  "colors": [{"name":"White","hex_code":"#FFFFFF"}],
+  "colors": [{"name":"Arctic White","hex_code":"#FFFFFF"},{"name":"Midnight Black","hex_code":"#1A1A1A"},{"name":"Silver","hex_code":"#C0C0C0"},{"name":"Red","hex_code":"#CC0000"},{"name":"Blue","hex_code":"#003399"}],
   "specifications": [{"category":"engine","label":"Displacement","value":"1197 cc"}],
   "features": [
     {"category":"Safety","name":"6 Airbags","is_standard":true},
+    {"category":"Safety","name":"ABS with EBD","is_standard":true},
     {"category":"Comfort","name":"Auto AC","is_standard":true},
+    {"category":"Comfort","name":"Push Button Start","is_standard":true},
     {"category":"Technology","name":"9-inch Touchscreen","is_standard":true},
+    {"category":"Technology","name":"Wireless CarPlay","is_standard":true},
     {"category":"Exterior","name":"LED Headlamps","is_standard":true},
-    {"category":"Interior","name":"Leather Seats","is_standard":false}
+    {"category":"Exterior","name":"Alloy Wheels","is_standard":true},
+    {"category":"Interior","name":"Leather Seats","is_standard":false},
+    {"category":"Interior","name":"Rear AC Vents","is_standard":true}
   ],
   "pros": "pro1\\npro2", "cons": "con1\\ncon2", "key_highlights": "h1\\nh2"
 }
-Include ALL Indian market variants with accurate 2024-2025 ex-showroom Delhi prices.
-Include at least 15-20 features across Safety, Comfort, Technology, Exterior, Interior categories.
-Include at least 5-8 colors with accurate hex codes.
-Include specs for engine, dimensions, performance, features, safety categories.`;
+
+CRITICAL RULES:
+- colors array MUST have at least 5 entries with accurate hex codes
+- features array MUST have at least 15 entries across Safety, Comfort, Technology, Exterior, Interior
+- specifications array MUST have at least 15 entries across engine, dimensions, performance, safety
+- DO NOT skip any of these arrays - they are ALL mandatory`;
 
   const models = ["google/gemini-2.5-flash", "google/gemini-3-flash-preview", "openai/gpt-5-mini"];
   for (const m of models) {
