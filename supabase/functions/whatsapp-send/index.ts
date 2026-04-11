@@ -58,7 +58,7 @@ async function sendViaMeta(
   to: string,
   payload: Record<string, unknown>
 ): Promise<SendResult> {
-  const url = `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`;
+  const url = `https://graph.facebook.com/v25.0/${phoneNumberId}/messages`;
   const body = {
     messaging_product: "whatsapp",
     recipient_type: "individual",
