@@ -72,6 +72,8 @@ interface Template {
   buttons: any;
   status: string;
   vertical: string | null;
+  meta_template_id: string | null;
+  meta_rejection_reason: string | null;
   created_at: string;
 }
 
@@ -454,14 +456,21 @@ export function WaTemplateManager() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-1.5">
-                              {getStatusIcon(t.status)}
-                              <span className="text-xs capitalize">{t.status}</span>
-                              {t.status === "approved" && (
-                                <Badge className="text-[9px] bg-green-100 text-green-700 border-green-200 ml-1">Send ✓</Badge>
-                              )}
-                              {(t.status === "draft" || t.status === "rejected" || t.status === "pending") && (
-                                <Badge variant="secondary" className="text-[9px] ml-1">Disabled</Badge>
+                            <div className="flex flex-col gap-0.5">
+                              <div className="flex items-center gap-1.5">
+                                {getStatusIcon(t.status)}
+                                <span className="text-xs capitalize">{t.status}</span>
+                                {t.status === "approved" && (
+                                  <Badge className="text-[9px] bg-green-100 text-green-700 border-green-200 ml-1">Send ✓</Badge>
+                                )}
+                                {(t.status === "draft" || t.status === "rejected" || t.status === "pending") && (
+                                  <Badge variant="secondary" className="text-[9px] ml-1">Disabled</Badge>
+                                )}
+                              </div>
+                              {t.status === "rejected" && t.meta_rejection_reason && (
+                                <p className="text-[10px] text-destructive line-clamp-2 max-w-[200px]" title={t.meta_rejection_reason}>
+                                  {t.meta_rejection_reason}
+                                </p>
                               )}
                             </div>
                           </TableCell>
@@ -737,18 +746,13 @@ export function WaTemplateManager() {
                   />
                 </div>
 
-                <div>
-                  <Label className="text-xs">Status</Label>
-                  <Select value={editItem?.status || "draft"} onValueChange={v => setEditItem({ ...editItem, status: v })}>
-                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="draft">Draft</SelectItem>
-                      <SelectItem value="pending">Pending Approval</SelectItem>
-                      <SelectItem value="approved">Approved</SelectItem>
-                      <SelectItem value="rejected">Rejected</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* Status is auto-managed by Meta — not editable */}
+                {editItem?.status && editItem.status !== "draft" && (
+                  <div className="bg-muted/50 rounded-lg p-2 text-xs flex items-center gap-2">
+                    {getStatusIcon(editItem.status)}
+                    <span>Status: <strong className="capitalize">{editItem.status}</strong> (managed by Meta)</span>
+                  </div>
+                )}
               </>
             ) : (
               <>

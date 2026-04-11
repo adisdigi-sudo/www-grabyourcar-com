@@ -238,17 +238,62 @@ serve(async (req) => {
 
       if (template.header_type && template.header_content) {
         if (template.header_type === "text") {
-          components.push({ type: "HEADER", format: "TEXT", text: template.header_content });
+          // Strip emojis, newlines, asterisks from header (Meta requirement)
+          const cleanHeader = (template.header_content as string)
+            .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\u{200D}\u{20E3}\u{2702}-\u{27B0}]/gu, "")
+            .replace(/[*\n\r]/g, "")
+            .trim();
+          if (cleanHeader) {
+            components.push({ type: "HEADER", format: "TEXT", text: cleanHeader });
+          }
         } else if (["image", "video", "document"].includes(template.header_type)) {
           components.push({ type: "HEADER", format: template.header_type.toUpperCase() });
         }
       }
 
+      // Convert named variables {{customer_name}} to positional {{1}}, {{2}}, etc.
+      let metaBody = template.body as string;
+      const namedVarMatches = metaBody.match(/\{\{([a-zA-Z_]\w*)\}\}/g) || [];
+      const uniqueNamedVars: string[] = [];
+      for (const m of namedVarMatches) {
+        const varName = m.replace(/[{}]/g, "");
+        if (!uniqueNamedVars.includes(varName)) uniqueNamedVars.push(varName);
+      }
+      
+      // Replace named vars with positional
+      if (uniqueNamedVars.length > 0) {
+        uniqueNamedVars.forEach((varName, i) => {
+          metaBody = metaBody.replace(new RegExp(`\\{\\{${varName}\\}\\}`, "g"), `{{${i + 1}}}`);
+        });
+      }
+
+      // Generate sample values for Meta approval
+      const sampleMap: Record<string, string> = {
+        customer_name: "Rahul Sharma",
+        name: "Rahul Sharma",
+        phone: "9876543210",
+        vehicle_number: "DL 01 AB 1234",
+        vehicle: "Hyundai Creta",
+        insurer: "HDFC ERGO",
+        premium: "₹12,500",
+        expiry_date: "15 Mar 2026",
+        policy_number: "POL-2025-001",
+        order_id: "ORD-12345",
+        amount: "₹25,000",
+        date: "11 Apr 2026",
+        booking_id: "BK-001",
+        txn_id: "TXN-78901",
+        car_model: "Hyundai Creta",
+        otp: "123456",
+      };
+
       // Body with example values for variables
-      const bodyComponent: any = { type: "BODY", text: template.body };
-      const bodyVars = template.body.match(/\{\{(\d+)\}\}/g) || [];
-      if (bodyVars.length > 0) {
-        const sampleValues = (template.sample_values as any[]) || bodyVars.map((_: string, i: number) => `Sample ${i + 1}`);
+      const bodyComponent: any = { type: "BODY", text: metaBody };
+      const positionalVars = metaBody.match(/\{\{(\d+)\}\}/g) || [];
+      if (positionalVars.length > 0 || uniqueNamedVars.length > 0) {
+        const sampleValues = uniqueNamedVars.length > 0
+          ? uniqueNamedVars.map(v => sampleMap[v] || `Sample ${v}`)
+          : positionalVars.map((_: string, i: number) => `Sample ${i + 1}`);
         bodyComponent.example = { body_text: [sampleValues] };
       }
       components.push(bodyComponent);
@@ -285,12 +330,13 @@ serve(async (req) => {
       const result = await resp.json();
 
       if (result.error) {
+        const metaErrMsg = result.error.error_user_msg || result.error.message || "Meta rejected this template";
         await supabase.from("wa_templates").update({
           status: "rejected",
-          meta_rejection_reason: result.error.message,
+          meta_rejection_reason: metaErrMsg,
         }).eq("id", template_id);
 
-        return new Response(JSON.stringify({ error: result.error.message, details: result.error }), {
+        return new Response(JSON.stringify({ error: metaErrMsg, details: result.error }), {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
