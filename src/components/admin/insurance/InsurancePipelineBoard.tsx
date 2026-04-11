@@ -570,10 +570,11 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
 
   const displayPhone = (phone: string | null) => (!phone || phone.startsWith("IB_")) ? null : phone;
 
-  const handleWhatsApp = async (phone: string | null, name: string) => {
+  const handleWhatsApp = (phone: string | null, name: string) => {
     if (!phone || phone.startsWith("IB_")) return;
-    const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
-    await sendWhatsApp({ phone, message: `Hi ${name}, reaching out regarding your insurance. Contact us for the best deal!`, name, logEvent: "pipeline_wa" });
+    import("@/lib/openWhatsAppChat").then(({ openWhatsAppChat }) => {
+      openWhatsAppChat(phone, `Hi ${name}, reaching out regarding your insurance. Contact us for the best deal!`);
+    });
   };
 
   const getPriorityColor = (p: string | null) => {
