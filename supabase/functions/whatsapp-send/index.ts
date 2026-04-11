@@ -294,6 +294,25 @@ async function sendMessage(
   }
 
   if (providerName === "wabb") {
+    // WABB Catch Webhook doesn't support templates — use Meta API for template sends
+    if (messageType === "template" && templateName) {
+      const metaToken = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
+      const metaPhoneId = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
+      if (metaToken && metaPhoneId) {
+        console.log("WABB: Template message — routing via Meta Cloud API");
+        const components: unknown[] = [];
+        if (templateVars && Object.keys(templateVars).length > 0) {
+          components.push({
+            type: "body",
+            parameters: Object.values(templateVars).map(val => ({ type: "text", text: val })),
+          });
+        }
+        const payload = { type: "template", template: { name: templateName, language: { code: "en_US" }, ...(components.length > 0 ? { components } : {}) } };
+        return sendViaMeta(metaToken, metaPhoneId, phone.full, payload);
+      }
+      console.warn("WABB: Template requested but Meta API credentials missing, falling back to text");
+    }
+
     const webhookUrl = providerConfig?.webhook_url || Deno.env.get("WABB_WEBHOOK_URL");
     if (!webhookUrl) {
       return { success: false, error: "WABB webhook URL not configured. Add it in Channel Providers or set WABB_WEBHOOK_URL secret.", provider: "wabb" };
