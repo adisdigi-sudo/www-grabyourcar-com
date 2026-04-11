@@ -201,6 +201,11 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
     fetchLastQuote();
   }, [open, prefilled, client.phone, client.vehicle_number, claimLockedByExpiry, client.previous_claim]);
 
+  // Reset prefilled flag when modal closes
+  useEffect(() => {
+    if (!open) setPrefilled(false);
+  }, [open]);
+
 
   const zone = getZone(city);
   const ccNum = parseInt(cc) || 0;
