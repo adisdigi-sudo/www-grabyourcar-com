@@ -594,11 +594,17 @@ export function InsuranceProspectPool() {
                               </Button>
                             </a>
                             <Button variant="ghost" size="icon" className="h-7 w-7" title="WhatsApp" onClick={() => {
+                              const name = p.customer_name || "Sir/Madam";
+                              const vehicle = p.vehicle_number ? ` for your vehicle *${p.vehicle_number}*` : "";
+                              const isLostProspect = p.prospect_status === "lost";
+                              const msg = isLostProspect
+                                ? `Hey ${name} 🙏\n\nWe really missed you! Please renew your car insurance${vehicle} with us and keep grabbing *Grabyourcar* exclusive offers:\n\n🚗 *FREE 2 Car Washes* per month\n🌸 *FREE 3 Car Perfumes* per month\n🆘 *FREE 24/7 Roadside Assistance*\n📋 *Personalized Claim Settlement Assistance*\n💰 *Best Premium Rates Guaranteed*\n\nWe are just a click away — ask and command us anything, anytime! 💚\n\n📞 +91 98559 24442\n🔗 https://www.grabyourcar.com/insurance\n\n— *Team Grabyourcar* 🚗`
+                                : `🙏 Namaste ${name},\n\nThis is *Grabyourcar Insurance* team.\n\nWe wanted to follow up regarding your motor insurance${vehicle}.\n\n✅ We can help you with the best rates!\n\n👉 *Reply here* or call us at +91 98559 24442\n🔗 https://www.grabyourcar.com/insurance\n\n— *Team Grabyourcar* 🚗💚`;
                               void sendWhatsApp({
                                 phone: p.phone,
-                                message: `🙏 Namaste ${p.customer_name || "Sir/Madam"},\n\nThis is *Grabyourcar Insurance* team.\n\nWe wanted to follow up regarding your motor insurance${p.vehicle_number ? ` for vehicle *${p.vehicle_number}*` : ""}.\n\n✅ We can help you with the best rates!\n\n👉 *Reply here* or call us at +91 98559 24442\n🔗 https://www.grabyourcar.com/insurance\n\n— *Team Grabyourcar* 🚗💚`,
+                                message: msg,
                                 name: p.customer_name || undefined,
-                                logEvent: "prospect_pool_whatsapp",
+                                logEvent: isLostProspect ? "lost_retarget_whatsapp" : "prospect_pool_whatsapp",
                               });
                             }}>
                               <MessageSquare className="h-3.5 w-3.5 text-green-600" />
