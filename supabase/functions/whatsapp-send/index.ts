@@ -193,16 +193,17 @@ async function sendViaWabb(
           return { success: true, messageId: messageId || `wabb_${Date.now()}`, provider: "wabb" };
         }
 
-        lastError = trimmedResponse.length === 0
-          ? "WABB webhook returned empty success response. Delivery not confirmed — verify the webhook is Published and field mapping uses Text for Phone, Name, Message."
-          : `WABB webhook did not confirm acceptance: ${trimmedResponse.substring(0, 200)}`;
-
-        const shouldRetry = attempt < 3;
-        if (!shouldRetry) {
-          return { success: false, error: lastError, provider: "wabb" };
+        // WABB Catch Webhook uses fire-and-forget model:
+        // A 200 response (even empty {} or empty body) means the webhook accepted the payload.
+        // The message will be processed and delivered asynchronously.
+        if (trimmedResponse.length === 0 || trimmedResponse === "{}") {
+          console.log(`WABB webhook accepted payload (fire-and-forget) on attempt ${attempt}`);
+          return { success: true, messageId: `wabb_${Date.now()}`, provider: "wabb" };
         }
 
-        console.warn(`Retrying WABB webhook after unconfirmed success on attempt ${attempt}`);
+        // If we got a 200 with unexpected content, still treat as accepted but log warning
+        console.warn(`WABB webhook returned 200 with unexpected body: ${trimmedResponse.substring(0, 200)}`);
+        return { success: true, messageId: `wabb_${Date.now()}`, provider: "wabb" };
       } else {
         lastError = `WABB webhook error (${response.status}): ${trimmedResponse.substring(0, 200) || "empty response"}`;
         const shouldRetry =
