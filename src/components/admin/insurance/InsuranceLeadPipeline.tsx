@@ -582,6 +582,44 @@ export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: Insura
   const [showForwardDialog, setShowForwardDialog] = useState(false);
   const [forwardClient, setForwardClient] = useState<Client | null>(null);
 
+  // Bulk select & send
+  const [bulkSelectedIds, setBulkSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkSending, setBulkSending] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState({ sent: 0, total: 0 });
+
+  const toggleBulkSelect = useCallback((id: string) => {
+    setBulkSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleSelectAll = useCallback(() => {
+    const validIds = filtered.filter(c => c.phone && !c.phone.startsWith("IB_")).map(c => c.id);
+    setBulkSelectedIds(prev => prev.size === validIds.length ? new Set() : new Set(validIds));
+  }, [filtered]);
+
+  const handleBulkFollowUpSend = useCallback(async () => {
+    const targets = filtered.filter(c => bulkSelectedIds.has(c.id) && c.phone && !c.phone.startsWith("IB_"));
+    if (targets.length === 0) { toast.error("No leads with valid phone selected"); return; }
+    setBulkSending(true);
+    setBulkProgress({ sent: 0, total: targets.length });
+    let sent = 0, failed = 0;
+    for (const client of targets) {
+      const msg = `🙏 Namaste ${client.customer_name || "Sir/Madam"},\n\nThis is *Grabyourcar Insurance* team.\n\nWe wanted to follow up regarding your motor insurance${client.vehicle_number ? ` for vehicle *${client.vehicle_number}*` : ""}.\n\n${client.current_insurer ? `🏢 Current insurer: *${client.current_insurer}*\n` : ""}${client.current_premium ? `💰 Premium: *₹${Number(client.current_premium).toLocaleString("en-IN")}*\n` : ""}\n✅ We can help you get the best renewal rates!\n\n👉 *Reply here* or call us at +91 98559 24442\n🔗 https://www.grabyourcar.com/insurance\n\n— *Team Grabyourcar* 🚗💚`;
+      try {
+        const result = await sendWhatsApp({ phone: client.phone, message: msg, name: client.customer_name || undefined, logEvent: "bulk_follow_up", silent: true });
+        if (result.success) sent++; else failed++;
+      } catch { failed++; }
+      setBulkProgress(p => ({ ...p, sent: p.sent + 1 }));
+      if (targets.indexOf(client) < targets.length - 1) await new Promise(r => setTimeout(r, 500));
+    }
+    setBulkSending(false);
+    setBulkSelectedIds(new Set());
+    toast.success(`📨 Bulk follow-up done: ${sent} sent, ${failed} failed out of ${targets.length}`);
+  }, [filtered, bulkSelectedIds]);
+
   useEffect(() => {
     if (!selectedClient) {
       setEditFields({});
