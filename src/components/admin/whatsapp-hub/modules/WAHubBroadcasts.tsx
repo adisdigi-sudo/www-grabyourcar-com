@@ -511,7 +511,7 @@ function EventTriggers() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {triggerRules.map((rule: any) => {
-          const eventKey = rule.trigger_keyword?.replace("event:", "") || "";
+          const eventKey = ((rule.intent_keywords || []) as string[]).find((k: string) => k.startsWith("event:"))?.replace("event:", "") || "";
           const event = TRIGGER_EVENTS.find((e) => e.value === eventKey);
           return (
             <Card key={rule.id} className={!rule.is_active ? "opacity-50" : ""}>
@@ -526,7 +526,7 @@ function EventTriggers() {
                   </div>
                   <Switch checked={rule.is_active} onCheckedChange={() => toggleRule(rule.id, rule.is_active)} />
                 </div>
-                <p className="text-xs text-muted-foreground mt-2 line-clamp-2 bg-muted/50 rounded p-2">{rule.response_message}</p>
+                <p className="text-xs text-muted-foreground mt-2 line-clamp-2 bg-muted/50 rounded p-2">{rule.response_content}</p>
               </CardContent>
             </Card>
           );
