@@ -588,8 +588,9 @@ export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: Insura
 
   const handleQuickWhatsApp = useCallback((client: Client) => {
     const defaultMessage = `Hi ${client.customer_name || ""}! This is GrabYourCar Insurance. How can we help you today?`;
-    const { openWhatsAppChat } = require("@/lib/openWhatsAppChat");
-    openWhatsAppChat(client.phone, defaultMessage);
+    import("@/lib/openWhatsAppChat").then(({ openWhatsAppChat }) => {
+      openWhatsAppChat(client.phone, defaultMessage);
+    });
   }, []);
 
   // Filter - exclude won/policy_issued leads from pipeline and deduplicate same lead/vehicle
