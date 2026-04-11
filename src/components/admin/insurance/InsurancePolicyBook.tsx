@@ -413,7 +413,10 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
 
               let sent = 0;
               let failed = 0;
-              for (const policy of selectedPolicies) {
+              const total = selectedPolicies.length;
+              const toastId = toast.loading(`Sending policies... 0/${total}`);
+              for (let i = 0; i < selectedPolicies.length; i++) {
+                const policy = selectedPolicies[i];
                 const phone = policy.insurance_clients?.phone;
                 if (phone && !phone.startsWith("IB_")) {
                   const custName = policy.insurance_clients?.customer_name || "Sir/Madam";
@@ -438,9 +441,13 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
 
                   if (result.success) sent++;
                   else failed++;
+                } else {
+                  failed++;
                 }
+                toast.loading(`Sending policies... ${sent + failed}/${total}`, { id: toastId });
+                if (i < selectedPolicies.length - 1) await new Promise(r => setTimeout(r, 500));
               }
-              toast.success(`📨 Policy share done: ${sent} sent, ${failed} failed`);
+              toast.success(`📨 Policy share done: ${sent} sent, ${failed} failed`, { id: toastId });
               setSelectedIds(new Set());
             }}
           >

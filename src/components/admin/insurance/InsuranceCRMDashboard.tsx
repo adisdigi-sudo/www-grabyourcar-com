@@ -433,6 +433,7 @@ export function InsuranceCRMDashboard() {
   const [quoteModalPolicy, setQuoteModalPolicy] = useState<PolicyRow | null>(null);
 
   const handleBulkSendMessage = useCallback(async () => {
+    const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
     const phonePolicies = filtered.filter(p => p.rawPhone && p.rawPhone.length >= 10);
     if (phonePolicies.length === 0) {
       toast.error("No policies with valid phone numbers found");
@@ -440,29 +441,28 @@ export function InsuranceCRMDashboard() {
     }
     setBulkSending(true);
     let sent = 0, failed = 0;
-    for (const p of phonePolicies) {
+    const toastId = toast.loading(`Sending WhatsApp... 0/${phonePolicies.length}`);
+    for (let i = 0; i < phonePolicies.length; i++) {
+      const p = phonePolicies[i];
       try {
         const daysLeft = p.renewal_date ? differenceInDays(new Date(p.renewal_date), now) : null;
-        const msg = `Hi ${p.customer_name || "Customer"},\nYour ${p.insurer || "insurance"} policy ${p.policy_number || ""} ${daysLeft !== null && daysLeft <= 0 ? "has expired" : `expires in ${daysLeft} days`}.\nRenew now to stay protected! 🚗\n— GrabYourCar Insurance`;
-        const phone = p.rawPhone!.replace(/\D/g, "");
-        const fullPhone = phone.startsWith("91") ? phone : `91${phone}`;
-        
-        await supabase.from("wa_message_logs").insert({
-          phone: phone.length > 10 ? phone.slice(-10) : phone,
-          customer_name: p.customer_name || null,
-          message_type: "text",
-          message_content: msg,
-          trigger_event: "bulk_renewal_reminder",
-          provider: "meta",
-          status: "queued",
+        const msg = `Hi ${p.customer_name || "Customer"},\nYour ${p.insurer || "insurance"} policy ${p.policy_number || ""} ${daysLeft !== null && daysLeft <= 0 ? "has expired" : `expires in ${daysLeft} days`}.\nRenew now to stay protected! 🚗\n— GrabYourCar Insurance\n📞 +91 98559 24442`;
+        const result = await sendWhatsApp({
+          phone: p.rawPhone!,
+          message: msg,
+          name: p.customer_name || undefined,
+          logEvent: "bulk_renewal_reminder",
+          silent: true,
         });
-        sent++;
+        if (result.success) sent++; else failed++;
       } catch {
         failed++;
       }
+      toast.loading(`Sending WhatsApp... ${sent + failed}/${phonePolicies.length}`, { id: toastId });
+      if (i < phonePolicies.length - 1) await new Promise(r => setTimeout(r, 500));
     }
     setBulkSending(false);
-    toast.success(`Bulk message queued: ${sent} sent, ${failed} failed out of ${phonePolicies.length}`);
+    toast.success(`✅ Bulk WA done: ${sent} sent, ${failed} failed out of ${phonePolicies.length}`, { id: toastId });
   }, [filtered, now]);
 
   const handleBulkSendNotification = useCallback(async () => {
