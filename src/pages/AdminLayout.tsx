@@ -326,7 +326,7 @@ const isTabAllowedForVertical = (tab: string, verticalSlug?: string) => {
 
   switch (verticalSlug) {
     case "insurance":
-      return ["services-insurance", "services-insurance-import", "services-messaging-channels"].includes(tab);
+      return ["services-insurance", "services-insurance-import", "services-messaging-channels", "d2c-inbox"].includes(tab);
     case "loans":
       return [
         "loan-crm",
@@ -337,13 +337,14 @@ const isTabAllowedForVertical = (tab: string, verticalSlug?: string) => {
         "services-emi-calculator",
         "services-emi-pdf",
         "services-messaging-channels",
+        "d2c-inbox",
       ].includes(tab);
     case "sales":
-      return ["sales-crm", "services-discounts", "services-quote-generator", "services-messaging-channels"].includes(tab);
+      return ["sales-crm", "services-discounts", "services-quote-generator", "services-messaging-channels", "d2c-inbox"].includes(tab);
     case "rental":
-      return ["rental-crm", "services-rentals", "services-driver-bookings", "services-api-partners", "services-messaging-channels"].includes(tab);
+      return ["rental-crm", "services-rentals", "services-driver-bookings", "services-api-partners", "services-messaging-channels", "d2c-inbox"].includes(tab);
     case "hsrp":
-      return ["hsrp-crm", "services-hsrp", "services-messaging-channels"].includes(tab);
+      return ["hsrp-crm", "services-hsrp", "services-messaging-channels", "d2c-inbox"].includes(tab);
     case "accessories":
       return [
         "ecommerce-accessories",
@@ -384,6 +385,8 @@ const isTabAllowedForVertical = (tab: string, verticalSlug?: string) => {
         "content-ai",
         "content-intelligence",
         "marketing-command",
+        "whatsapp-inbox",
+        "d2c-inbox",
         "holi-share",
         "marketing-email",
         "marketing-bulk",
