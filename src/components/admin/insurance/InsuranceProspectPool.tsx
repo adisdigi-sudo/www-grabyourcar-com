@@ -437,11 +437,9 @@ export function InsuranceProspectPool() {
                             <Button variant="ghost" size="icon" className="h-7 w-7" title="WhatsApp" onClick={() => {
                               void sendWhatsApp({
                                 phone: p.phone,
-                                message: `Hi ${p.customer_name || ""}! This is GrabYourCar Insurance. How can we help you today?`,
+                                message: `🙏 Namaste ${p.customer_name || "Sir/Madam"},\n\nThis is *Grabyourcar Insurance* team.\n\nWe wanted to follow up regarding your motor insurance${p.vehicle_number ? ` for vehicle *${p.vehicle_number}*` : ""}.\n\n✅ We can help you with the best rates!\n\n👉 *Reply here* or call us at +91 98559 24442\n🔗 https://www.grabyourcar.com/insurance\n\n— *Team Grabyourcar* 🚗💚`,
                                 name: p.customer_name || undefined,
                                 logEvent: "prospect_pool_whatsapp",
-                                templateName: "insurancefollowup",
-                                templateComponents: [{ type: "header", parameters: [{ type: "text", text: p.customer_name || "Valued Customer", parameter_name: "full_name" }] }],
                               });
                             }}>
                               <MessageSquare className="h-3.5 w-3.5 text-green-600" />
@@ -801,11 +799,9 @@ export function InsuranceProspectPool() {
                 <Button size="sm" variant="outline" className="gap-1.5" onClick={() => {
                   void sendWhatsApp({
                     phone: detailOpen.phone,
-                    message: `Hi ${detailOpen.customer_name || ""}! This is GrabYourCar Insurance. How can we help you today?`,
+                    message: `🙏 Namaste ${detailOpen.customer_name || "Sir/Madam"},\n\nThis is *Grabyourcar Insurance* team.\n\nWe wanted to follow up regarding your motor insurance${detailOpen.vehicle_number ? ` for vehicle *${detailOpen.vehicle_number}*` : ""}.\n\n✅ We can help you with the best rates!\n\n👉 *Reply here* or call us at +91 98559 24442\n🔗 https://www.grabyourcar.com/insurance\n\n— *Team Grabyourcar* 🚗💚`,
                     name: detailOpen.customer_name || undefined,
                     logEvent: "prospect_pool_detail_whatsapp",
-                    templateName: "insurancefollowup",
-                    templateComponents: [{ type: "header", parameters: [{ type: "text", text: detailOpen.customer_name || "Valued Customer", parameter_name: "full_name" }] }],
                   });
                 }}><MessageSquare className="h-3.5 w-3.5 text-green-600" /> WhatsApp</Button>
                 {detailOpen.email && <a href={`mailto:${detailOpen.email}`}><Button size="sm" variant="outline" className="gap-1.5"><Mail className="h-3.5 w-3.5" /> Email</Button></a>}

@@ -109,15 +109,6 @@ export function SharePdfDialog({
         message: shareMessage || `Hi ${customerName}! Your ${title} is ready. Please review and contact us for the best rates!`,
         name: customerName || undefined,
         logEvent: "pdf_share",
-        templateName: "insurancefollowup",
-        templateComponents: [{
-          type: "header",
-          parameters: [{
-            type: "text",
-            text: customerName?.trim() || "Valued Customer",
-            parameter_name: "full_name",
-          }],
-        }],
       });
 
       if (!result.success) return;
@@ -144,15 +135,6 @@ export function SharePdfDialog({
         message: shareMessage || `Your ${title} is ready. Please review and contact us for the best rates!`,
         name: customerName || undefined,
         logEvent: title.toLowerCase().includes("renewal") ? "insurance_renewal_share" : "insurance_quote_share",
-        templateName: "insurancefollowup",
-        templateComponents: [{
-          type: "header",
-          parameters: [{
-            type: "text",
-            text: customerName?.trim() || "Valued Customer",
-            parameter_name: "full_name",
-          }],
-        }],
       });
 
       if (!result.success) return;

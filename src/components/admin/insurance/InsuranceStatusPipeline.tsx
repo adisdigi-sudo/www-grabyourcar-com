@@ -685,15 +685,13 @@ export function InsuranceStatusPipeline() {
                               </Button>
                             </a>
                              <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-green-50 dark:hover:bg-green-950/30" title="WhatsApp" onClick={async () => {
-                               const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
-                               await sendWhatsApp({
-                                 phone: client.phone,
-                                 message: `Hi ${client.customer_name || ""}! This is GrabYourCar Insurance. How can we help you today?`,
-                                 name: client.customer_name,
-                                 logEvent: "status_pipeline_quick_whatsapp",
-                                 templateName: "insurancefollowup",
-                                 templateComponents: [{ type: "header", parameters: [{ type: "text", text: client.customer_name || "Valued Customer", parameter_name: "full_name" }] }],
-                               });
+                                const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+                                await sendWhatsApp({
+                                  phone: client.phone,
+                                  message: `🙏 Namaste ${client.customer_name || "Sir/Madam"},\n\nThis is *Grabyourcar Insurance* team.\n\nWe wanted to follow up regarding your motor insurance${client.vehicle_number ? ` for vehicle *${client.vehicle_number}*` : ""}.\n\n${client.current_insurer ? `🏢 Current insurer: *${client.current_insurer}*\n` : ""}${client.current_premium ? `💰 Premium: *₹${Number(client.current_premium).toLocaleString("en-IN")}*\n` : ""}\n✅ We can help you get the best renewal rates!\n\n👉 *Reply here* or call us at +91 98559 24442\n🔗 https://www.grabyourcar.com/insurance\n\n— *Team Grabyourcar* 🚗💚`,
+                                  name: client.customer_name,
+                                  logEvent: "status_pipeline_quick_whatsapp",
+                                });
                              }}>
                                <MessageSquare className="h-4 w-4 text-green-600" />
                              </Button>
@@ -853,15 +851,13 @@ export function InsuranceStatusPipeline() {
                           </Button>
                         </a>
                          <Button size="sm" variant="outline" className="gap-1.5" onClick={async () => {
-                           const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
-                           await sendWhatsApp({
-                             phone: editPhone,
-                             message: `Hi ${selectedClient.customer_name || ""}! This is GrabYourCar Insurance. How can we help you today?`,
-                             name: selectedClient.customer_name,
-                             logEvent: "status_pipeline_detail_whatsapp",
-                             templateName: "insurancefollowup",
-                             templateComponents: [{ type: "header", parameters: [{ type: "text", text: selectedClient.customer_name || "Valued Customer", parameter_name: "full_name" }] }],
-                           });
+                            const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+                            await sendWhatsApp({
+                              phone: editPhone,
+                              message: `🙏 Namaste ${selectedClient.customer_name || "Sir/Madam"},\n\nThis is *Grabyourcar Insurance* team.\n\nWe wanted to follow up regarding your motor insurance${selectedClient.vehicle_number ? ` for vehicle *${selectedClient.vehicle_number}*` : ""}.\n\n${selectedClient.current_insurer ? `🏢 Current insurer: *${selectedClient.current_insurer}*\n` : ""}${selectedClient.current_premium ? `💰 Premium: *₹${Number(selectedClient.current_premium).toLocaleString("en-IN")}*\n` : ""}\n✅ We can help you get the best renewal rates!\n\n👉 *Reply here* or call us at +91 98559 24442\n🔗 https://www.grabyourcar.com/insurance\n\n— *Team Grabyourcar* 🚗💚`,
+                              name: selectedClient.customer_name,
+                              logEvent: "status_pipeline_detail_whatsapp",
+                            });
                         }}>
                           <MessageSquare className="h-3.5 w-3.5 text-green-600" /> WhatsApp
                         </Button>

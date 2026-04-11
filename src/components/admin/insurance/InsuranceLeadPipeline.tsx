@@ -610,14 +610,12 @@ export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: Insura
   }, [selectedClient]);
 
   const handleQuickWhatsApp = useCallback((client: Client) => {
-    const defaultMessage = `Hi ${client.customer_name || ""}! This is GrabYourCar Insurance. How can we help you today?`;
+    const defaultMessage = `🙏 Namaste ${client.customer_name || "Sir/Madam"},\n\nThis is *Grabyourcar Insurance* team.\n\nWe wanted to follow up regarding your motor insurance${client.vehicle_number ? ` for vehicle *${client.vehicle_number}*` : ""}.\n\n${client.current_insurer ? `🏢 Current insurer: *${client.current_insurer}*\n` : ""}${client.current_premium ? `💰 Premium: *₹${Number(client.current_premium).toLocaleString("en-IN")}*\n` : ""}\n✅ We can help you get the best renewal rates!\n\n👉 *Reply here* or call us at +91 98559 24442\n🔗 https://www.grabyourcar.com/insurance\n\n— *Team Grabyourcar* 🚗💚`;
     void sendWhatsApp({
       phone: client.phone,
       message: defaultMessage,
       name: client.customer_name || undefined,
       logEvent: "lead_pipeline_quick_whatsapp",
-      templateName: "insurancefollowup",
-      templateComponents: [{ type: "header", parameters: [{ type: "text", text: client.customer_name || "Valued Customer", parameter_name: "full_name" }] }],
     });
   }, []);
 
@@ -1584,11 +1582,9 @@ export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: Insura
                           <Button size="sm" variant="outline" className="gap-1.5 text-green-600 border-green-200" onClick={() => {
                             void sendWhatsApp({
                               phone: selectedClient.phone,
-                              message: `Hi ${selectedClient.customer_name || ""}! This is GrabYourCar Insurance. How can we help you today?`,
+                              message: `🙏 Namaste ${selectedClient.customer_name || "Sir/Madam"},\n\nThis is *Grabyourcar Insurance* team.\n\nWe wanted to follow up regarding your motor insurance${selectedClient.vehicle_number ? ` for vehicle *${selectedClient.vehicle_number}*` : ""}.\n\n${selectedClient.current_insurer ? `🏢 Current insurer: *${selectedClient.current_insurer}*\n` : ""}${selectedClient.current_premium ? `💰 Premium: *₹${Number(selectedClient.current_premium).toLocaleString("en-IN")}*\n` : ""}\n✅ We can help you get the best renewal rates!\n\n👉 *Reply here* or call us at +91 98559 24442\n🔗 https://www.grabyourcar.com/insurance\n\n— *Team Grabyourcar* 🚗💚`,
                               name: selectedClient.customer_name || undefined,
                               logEvent: "lead_pipeline_detail_whatsapp",
-                              templateName: "insurancefollowup",
-                              templateComponents: [{ type: "header", parameters: [{ type: "text", text: selectedClient.customer_name || "Valued Customer", parameter_name: "full_name" }] }],
                             });
                           }}><MessageSquare className="h-3.5 w-3.5" /> WhatsApp</Button>
                         </>
