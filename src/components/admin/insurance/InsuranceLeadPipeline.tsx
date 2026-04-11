@@ -1275,6 +1275,29 @@ export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: Insura
         </div>
       )}
 
+      {/* Bulk Action Bar */}
+      {bulkSelectedIds.size > 0 && (
+        <div className="flex items-center gap-3 p-3 rounded-xl border bg-primary/5 border-primary/20">
+          <Checkbox
+            checked={bulkSelectedIds.size === filtered.filter(c => c.phone && !c.phone.startsWith("IB_")).length}
+            onCheckedChange={toggleSelectAll}
+          />
+          <span className="text-sm font-medium">{bulkSelectedIds.size} selected</span>
+          <Button
+            size="sm"
+            className="gap-1.5 bg-[#25D366] hover:bg-[#20BD5A] text-white"
+            disabled={bulkSending}
+            onClick={handleBulkFollowUpSend}
+          >
+            {bulkSending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Megaphone className="h-3.5 w-3.5" />}
+            {bulkSending ? `Sending ${bulkProgress.sent}/${bulkProgress.total}...` : `Send Follow-Up to All (${bulkSelectedIds.size})`}
+          </Button>
+          <Button size="sm" variant="ghost" className="text-xs" onClick={() => setBulkSelectedIds(new Set())}>
+            <X className="h-3 w-3 mr-1" /> Clear
+          </Button>
+        </div>
+      )}
+
       {/* Lead Table */}
       <Card>
         <CardContent className="p-0">
@@ -1282,6 +1305,12 @@ export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: Insura
             <Table>
               <TableHeader>
                <TableRow className="bg-muted/30">
+                  <TableHead className="w-8" onClick={e => e.stopPropagation()}>
+                    <Checkbox
+                      checked={filtered.length > 0 && bulkSelectedIds.size === filtered.filter(c => c.phone && !c.phone.startsWith("IB_")).length}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </TableHead>
                   <TableHead className="text-[10px] font-bold uppercase w-8">#</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase">Customer</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase">Phone</TableHead>
