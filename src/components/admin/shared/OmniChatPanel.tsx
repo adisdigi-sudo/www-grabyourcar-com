@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { toast } from "sonner";
 import {
   MessageSquare, Mail, Smartphone, Send, Loader2, User,
   Clock, CheckCheck, Search, RefreshCw
@@ -27,7 +26,8 @@ interface ChatThread {
   last_message: string;
   last_at: string;
   channel: string;
-  unread?: boolean;
+  unread_count?: number;
+  isDraft?: boolean;
 }
 
 interface ChatMessage {
@@ -40,6 +40,7 @@ interface ChatMessage {
   channel: string;
   provider: string;
   customer_name: string | null;
+  direction?: "inbound" | "outbound";
 }
 
 function normalizePhone(value: string): string {
@@ -47,6 +48,20 @@ function normalizePhone(value: string): string {
   if (clean.startsWith("91") && clean.length === 12) return clean;
   if (clean.length === 10 && /^[6-9]/.test(clean)) return `91${clean}`;
   return clean;
+}
+
+function mapInboxStatus(message: {
+  status?: string | null;
+  read_at?: string | null;
+  delivered_at?: string | null;
+  sent_at?: string | null;
+  failed_at?: string | null;
+}): string {
+  if (message.read_at) return "read";
+  if (message.delivered_at) return "delivered";
+  if (message.failed_at) return "failed";
+  if (message.sent_at) return "sent";
+  return message.status || "received";
 }
 
 export function OmniChatPanel({ phone, email, context, initialMessage, initialName }: OmniChatPanelProps) {
@@ -60,19 +75,16 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
   const [searchQuery, setSearchQuery] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Load threads
   useEffect(() => {
     loadThreads();
   }, []);
 
-  // Prime composer when opened from CRM quick actions
   useEffect(() => {
     if (!phone) return;
     setReplyChannel("whatsapp");
     setReplyMessage(initialMessage || "");
   }, [phone, initialMessage]);
 
-  // Auto-select thread if phone provided, or create a draft thread
   useEffect(() => {
     if (!phone) return;
 
@@ -99,18 +111,17 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
         last_message: initialMessage || "",
         last_at: new Date().toISOString(),
         channel: "whatsapp",
+        isDraft: true,
       };
     });
   }, [phone, threads, initialMessage, initialName]);
 
-  // Load messages for selected thread
   useEffect(() => {
     if (selectedThread) {
-      loadMessages(selectedThread.phone);
+      loadMessages(selectedThread);
     }
   }, [selectedThread]);
 
-  // Scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -118,43 +129,75 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
   async function loadThreads() {
     setLoading(true);
     try {
-      const { data } = await supabase
-        .from("wa_message_logs")
-        .select("phone, customer_name, message_content, sent_at, created_at, channel")
-        .order("created_at", { ascending: false })
-        .limit(500);
+      const { data: inboxThreads, error: inboxError } = await supabase
+        .from("wa_conversations")
+        .select("id, phone, customer_name, last_message, last_message_at, unread_count")
+        .order("last_message_at", { ascending: false })
+        .limit(200);
 
-      // Group by phone to get threads
-      const threadMap = new Map<string, ChatThread>();
-      for (const msg of data || []) {
-        if (!threadMap.has(msg.phone)) {
-          threadMap.set(msg.phone, {
-            id: msg.phone,
-            phone: msg.phone,
-            customer_name: msg.customer_name,
-            last_message: msg.message_content || "",
-            last_at: msg.sent_at || msg.created_at,
-            channel: msg.channel || "whatsapp",
-          });
-        }
-      }
+      if (inboxError) throw inboxError;
 
-      setThreads(Array.from(threadMap.values()));
+      const mappedThreads: ChatThread[] = (inboxThreads || []).map((thread) => ({
+        id: thread.id,
+        phone: thread.phone,
+        customer_name: thread.customer_name,
+        last_message: thread.last_message || "",
+        last_at: thread.last_message_at || new Date().toISOString(),
+        channel: "whatsapp",
+        unread_count: thread.unread_count || 0,
+      }));
+
+      setThreads(mappedThreads);
     } catch (err) {
       console.error("Failed to load threads:", err);
+      setThreads([]);
     }
     setLoading(false);
   }
 
-  async function loadMessages(phoneNum: string) {
-    const { data } = await supabase
-      .from("wa_message_logs")
-      .select("*")
-      .eq("phone", phoneNum)
-      .order("created_at", { ascending: true })
-      .limit(100);
+  async function loadMessages(thread: ChatThread) {
+    if (thread.isDraft) {
+      setMessages([]);
+      return;
+    }
 
-    setMessages((data as ChatMessage[]) || []);
+    const { data, error } = await supabase
+      .from("wa_inbox_messages")
+      .select("id, direction, content, message_type, status, sent_at, read_at, delivered_at, failed_at, created_at, sent_by_name")
+      .eq("conversation_id", thread.id)
+      .order("created_at", { ascending: true })
+      .limit(200);
+
+    if (error) {
+      console.error("Failed to load messages:", error);
+      setMessages([]);
+      return;
+    }
+
+    setMessages(((data || []) as Array<{
+      id: string;
+      direction: "inbound" | "outbound";
+      content: string | null;
+      message_type: string;
+      status: string | null;
+      sent_at: string | null;
+      read_at: string | null;
+      delivered_at: string | null;
+      failed_at: string | null;
+      created_at: string;
+      sent_by_name: string | null;
+    }>).map((msg) => ({
+      id: msg.id,
+      message_content: msg.content,
+      message_type: msg.message_type,
+      status: mapInboxStatus(msg),
+      sent_at: msg.sent_at || msg.created_at,
+      created_at: msg.created_at,
+      channel: "whatsapp",
+      provider: "meta",
+      customer_name: msg.direction === "inbound" ? selectedThread?.customer_name || null : msg.sent_by_name,
+      direction: msg.direction,
+    })));
   }
 
   async function handleReply() {
@@ -164,6 +207,7 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
     const result = await omniSend({
       channel: replyChannel,
       phone: selectedThread.phone,
+      email,
       message: replyMessage,
       name: selectedThread.customer_name || undefined,
       vertical: context,
@@ -172,8 +216,8 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
     if (result.success || result.fallback) {
       setReplyMessage("");
       setTimeout(() => {
-        loadMessages(selectedThread.phone);
         loadThreads();
+        if (selectedThread) loadMessages(selectedThread);
       }, 1000);
     }
     setSending(false);
@@ -210,7 +254,6 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
         </div>
       </CardHeader>
       <CardContent className="flex-1 flex gap-2 p-2 overflow-hidden">
-        {/* Thread List */}
         <div className="w-1/3 flex flex-col gap-1.5 border-r pr-2">
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
@@ -245,8 +288,13 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
                       <span className="font-medium truncate flex-1">
                         {t.customer_name || t.phone}
                       </span>
+                      {(t.unread_count || 0) > 0 && (
+                        <Badge variant="default" className="h-4 min-w-4 px-1 text-[9px]">
+                          {t.unread_count}
+                        </Badge>
+                      )}
                     </div>
-                    <p className="text-muted-foreground truncate text-[10px]">{t.last_message}</p>
+                    <p className="text-muted-foreground truncate text-[10px]">{t.last_message || "New message"}</p>
                     <p className="text-muted-foreground text-[9px] mt-0.5">
                       {new Date(t.last_at).toLocaleDateString("en-IN", {
                         day: "2-digit",
@@ -262,7 +310,6 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
           </ScrollArea>
         </div>
 
-        {/* Chat View */}
         <div className="flex-1 flex flex-col">
           {!selectedThread ? (
             <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
@@ -273,7 +320,6 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
             </div>
           ) : (
             <>
-              {/* Header */}
               <div className="flex items-center gap-2 p-2 border-b mb-1">
                 <User className="h-4 w-4 text-muted-foreground" />
                 <div className="flex-1 min-w-0">
@@ -285,36 +331,37 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
                 {channelIcon(selectedThread.channel)}
               </div>
 
-              {/* Messages */}
               <ScrollArea className="flex-1 px-2">
                 <div className="space-y-2 py-2">
-                  {messages.map((m) => (
-                    <div key={m.id} className="flex flex-col items-end">
-                      <div className="max-w-[80%] bg-primary/10 rounded-lg p-2">
-                        <p className="text-xs whitespace-pre-wrap">{m.message_content}</p>
-                        <div className="flex items-center gap-1 mt-1 justify-end">
-                          {channelIcon(m.channel || "whatsapp")}
-                          <span className="text-[9px] text-muted-foreground">
-                            {m.sent_at
-                              ? new Date(m.sent_at).toLocaleTimeString("en-IN", {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })
-                              : ""}
-                          </span>
-                          {m.status === "queued" && <Clock className="h-3 w-3 text-amber-500" />}
-                          {m.status === "sent" && <CheckCheck className="h-3 w-3 text-muted-foreground" />}
-                          {m.status === "delivered" && <CheckCheck className="h-3 w-3 text-blue-500" />}
-                          {m.status === "read" && <CheckCheck className="h-3 w-3 text-green-500" />}
+                  {messages.map((m) => {
+                    const isInbound = m.direction === "inbound";
+                    return (
+                      <div key={m.id} className={`flex flex-col ${isInbound ? "items-start" : "items-end"}`}>
+                        <div className={`max-w-[80%] rounded-lg p-2 ${isInbound ? "bg-muted" : "bg-primary/10"}`}>
+                          <p className="text-xs whitespace-pre-wrap">{m.message_content}</p>
+                          <div className="flex items-center gap-1 mt-1 justify-end">
+                            {channelIcon(m.channel || "whatsapp")}
+                            <span className="text-[9px] text-muted-foreground">
+                              {m.sent_at
+                                ? new Date(m.sent_at).toLocaleTimeString("en-IN", {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })
+                                : ""}
+                            </span>
+                            {!isInbound && m.status === "queued" && <Clock className="h-3 w-3 text-amber-500" />}
+                            {!isInbound && m.status === "sent" && <CheckCheck className="h-3 w-3 text-muted-foreground" />}
+                            {!isInbound && m.status === "delivered" && <CheckCheck className="h-3 w-3 text-blue-500" />}
+                            {!isInbound && m.status === "read" && <CheckCheck className="h-3 w-3 text-green-500" />}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   <div ref={messagesEndRef} />
                 </div>
               </ScrollArea>
 
-              {/* Reply */}
               <div className="border-t pt-2 space-y-1.5">
                 <div className="flex gap-1">
                   {(["whatsapp", "email", "rcs"] as OmniChannel[]).map((ch) => (
