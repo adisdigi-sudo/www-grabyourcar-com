@@ -12,18 +12,18 @@ import { Button } from "@/components/ui/button";
 import { AdminRenderBoundary } from "@/components/admin/shared/AdminRenderBoundary";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { Shield } from "lucide-react";
+import { AdminDashboard } from "@/components/admin/AdminDashboard";
 import { NotificationCenter } from "@/components/admin/NotificationCenter";
 import { InsuranceManagement } from "@/components/admin/InsuranceManagement";
 import { CRMAssistant } from "@/components/admin/CRMAssistant";
 import { AICofounderBanner } from "@/components/admin/AICofounderBanner";
+import { PersonalizedWelcomeBanner } from "@/components/admin/PersonalizedWelcomeBanner";
+import { InsuranceDashboard } from "@/components/admin/verticals/InsuranceDashboard";
 
 const ChannelProvidersSettings = lazy(() =>
   import("@/components/admin/settings/ChannelProvidersSettings").then((module) => ({ default: module.ChannelProvidersSettings })),
 );
 
-const AdminDashboard = lazy(() =>
-  import("@/components/admin/AdminDashboard").then((module) => ({ default: module.AdminDashboard })),
-);
 const LeadManagement = lazy(() =>
   import("@/components/admin/LeadManagement").then((module) => ({ default: module.LeadManagement })),
 );
@@ -198,9 +198,6 @@ const LaunchesManagement = lazy(() =>
 );
 const WhatsAppTemplateManager = lazy(() => import("@/components/admin/WhatsAppTemplateManager"));
 const EmailAutomationManager = lazy(() => import("@/components/admin/EmailAutomationManager"));
-const InsuranceDashboard = lazy(() =>
-  import("@/components/admin/verticals/InsuranceDashboard").then((module) => ({ default: module.InsuranceDashboard })),
-);
 const SalesDashboard = lazy(() =>
   import("@/components/admin/verticals/SalesDashboard").then((module) => ({ default: module.SalesDashboard })),
 );
@@ -253,10 +250,6 @@ const HRTemplates = lazy(() =>
 const EncouragementPopup = lazy(() =>
   import("@/components/admin/EncouragementPopup").then((module) => ({ default: module.EncouragementPopup })),
 );
-const PersonalizedWelcomeBanner = lazy(() =>
-  import("@/components/admin/PersonalizedWelcomeBanner").then((module) => ({ default: module.PersonalizedWelcomeBanner })),
-);
-
 const AdminPanelLoader = ({ className }: { className?: string }) => (
   <div className={cn("flex min-h-[240px] items-center justify-center", className)}>
     <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
@@ -842,13 +835,13 @@ const AdminLayout = () => {
         >
           {resolvedActiveTab === "dashboard" && (
             <Suspense fallback={null}>
-              <AdminRenderBoundary fallback={null} contextLabel="Welcome banner">
+              <AdminRenderBoundary contextLabel="Welcome banner">
                 <PersonalizedWelcomeBanner userRole={roles?.[0]?.role} userName={user?.email?.split('@')[0]} userVertical={activeVertical?.name} />
               </AdminRenderBoundary>
             </Suspense>
           )}
           <Suspense fallback={null}>
-            <AdminRenderBoundary fallback={null} contextLabel="AI Co-Founder banner">
+            <AdminRenderBoundary contextLabel="AI Co-Founder banner">
               <AICofounderBanner activeTab={resolvedActiveTab} userRole={roles?.[0]?.role} userName={user?.email?.split('@')[0]} userVertical={activeVertical?.name} />
             </AdminRenderBoundary>
           </Suspense>
