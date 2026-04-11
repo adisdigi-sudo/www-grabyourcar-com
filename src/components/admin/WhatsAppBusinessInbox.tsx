@@ -5,12 +5,10 @@ import { WaConversationSidebar } from "./inbox/WaConversationSidebar";
 import { WaChatWindow } from "./inbox/WaChatWindow";
 import { WaCustomerInfoPanel } from "./inbox/WaCustomerInfoPanel";
 import { WaTemplateManager } from "./inbox/WaTemplateManager";
-import { WaInboxAnalytics } from "./inbox/WaInboxAnalytics";
-import { WaContactManager } from "./inbox/WaContactManager";
-import { WaFlowBuilder } from "./inbox/WaFlowBuilder";
-import { WaChatbotBuilder } from "./inbox/WaChatbotBuilder";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MessageSquare, LayoutTemplate, BarChart3, Users, Workflow, Bot } from "lucide-react";
+import { MessageSquare, LayoutTemplate, BarChart3, Megaphone } from "lucide-react";
+import { WACampaignCommandCenter } from "./marketing/wa/WACampaignCommandCenter";
+import { WAAnalyticsDashboard } from "./marketing/wa/WAAnalyticsDashboard";
 
 export interface WaConversation {
   id: string;
@@ -169,17 +167,11 @@ export default function WhatsAppBusinessInbox() {
             <TabsTrigger value="inbox" className="gap-2">
               <MessageSquare className="h-4 w-4" /> Inbox
             </TabsTrigger>
-            <TabsTrigger value="contacts" className="gap-2">
-              <Users className="h-4 w-4" /> Contacts
-            </TabsTrigger>
             <TabsTrigger value="templates" className="gap-2">
               <LayoutTemplate className="h-4 w-4" /> Templates
             </TabsTrigger>
-            <TabsTrigger value="flows" className="gap-2">
-              <Workflow className="h-4 w-4" /> Flows
-            </TabsTrigger>
-            <TabsTrigger value="chatbot" className="gap-2">
-              <Bot className="h-4 w-4" /> Chatbot
+            <TabsTrigger value="broadcasts" className="gap-2">
+              <Megaphone className="h-4 w-4" /> Broadcasts
             </TabsTrigger>
             <TabsTrigger value="analytics" className="gap-2">
               <BarChart3 className="h-4 w-4" /> Analytics
@@ -210,24 +202,16 @@ export default function WhatsAppBusinessInbox() {
           )}
         </TabsContent>
 
-        <TabsContent value="contacts" className="flex-1 m-0 overflow-auto p-4">
-          <WaContactManager />
-        </TabsContent>
-
         <TabsContent value="templates" className="flex-1 m-0 overflow-auto p-4">
           <WaTemplateManager />
         </TabsContent>
 
-        <TabsContent value="flows" className="flex-1 m-0 overflow-auto p-4">
-          <WaFlowBuilder />
-        </TabsContent>
-
-        <TabsContent value="chatbot" className="flex-1 m-0 overflow-auto p-4">
-          <WaChatbotBuilder />
+        <TabsContent value="broadcasts" className="flex-1 m-0 overflow-auto p-4">
+          <WACampaignCommandCenter />
         </TabsContent>
 
         <TabsContent value="analytics" className="flex-1 m-0 overflow-auto p-4">
-          <WaInboxAnalytics />
+          <WAAnalyticsDashboard />
         </TabsContent>
       </Tabs>
     </div>
