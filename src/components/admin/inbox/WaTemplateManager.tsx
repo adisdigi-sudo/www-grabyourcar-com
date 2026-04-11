@@ -457,6 +457,12 @@ export function WaTemplateManager() {
                             <div className="flex items-center gap-1.5">
                               {getStatusIcon(t.status)}
                               <span className="text-xs capitalize">{t.status}</span>
+                              {t.status === "approved" && (
+                                <Badge className="text-[9px] bg-green-100 text-green-700 border-green-200 ml-1">Send ✓</Badge>
+                              )}
+                              {(t.status === "draft" || t.status === "rejected" || t.status === "pending") && (
+                                <Badge variant="secondary" className="text-[9px] ml-1">Disabled</Badge>
+                              )}
                             </div>
                           </TableCell>
                           <TableCell>
@@ -470,14 +476,16 @@ export function WaTemplateManager() {
                               <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { navigator.clipboard.writeText(t.body); toast.success("Copied!"); }}>
                                 <Copy className="h-3.5 w-3.5" />
                               </Button>
-                              {t.status === "draft" ? (
+                              {t.status === "draft" || t.status === "rejected" ? (
                                 <Button size="icon" variant="ghost" className="h-7 w-7 text-green-600" title="Submit to Meta" onClick={() => submitToMeta(t)}>
                                   <Send className="h-3.5 w-3.5" />
                                 </Button>
-                              ) : (
+                              ) : t.status === "approved" ? (
                                 <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" title="Delete from Meta" onClick={() => deleteFromMeta(t)}>
                                   <Trash2 className="h-3.5 w-3.5" />
                                 </Button>
+                              ) : (
+                                <Badge variant="outline" className="text-[9px] text-yellow-600">⏳</Badge>
                               )}
                             </div>
                           </TableCell>
