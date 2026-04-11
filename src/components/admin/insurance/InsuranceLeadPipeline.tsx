@@ -586,26 +586,11 @@ export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: Insura
     });
   }, [selectedClient]);
 
-  const handleQuickWhatsApp = useCallback(async (client: Client) => {
+  const handleQuickWhatsApp = useCallback((client: Client) => {
     const defaultMessage = `Hi ${client.customer_name || ""}! This is GrabYourCar Insurance. How can we help you today?`;
-
-    if (onOpenChat) {
-      onOpenChat({
-        phone: client.phone,
-        name: client.customer_name,
-        message: defaultMessage,
-      });
-      return;
-    }
-
-    const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
-    await sendWhatsApp({
-      phone: client.phone,
-      message: defaultMessage,
-      name: client.customer_name,
-      logEvent: "lead_pipeline_quick_whatsapp",
-    });
-  }, [onOpenChat]);
+    const { openWhatsAppChat } = require("@/lib/openWhatsAppChat");
+    openWhatsAppChat(client.phone, defaultMessage);
+  }, []);
 
   // Filter - exclude won/policy_issued leads from pipeline and deduplicate same lead/vehicle
   const pipelineClients = useMemo(() => {
