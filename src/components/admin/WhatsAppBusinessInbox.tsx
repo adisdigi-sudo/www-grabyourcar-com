@@ -68,8 +68,16 @@ export default function WhatsAppBusinessInbox() {
 
     if (error) {
       console.error("Error fetching conversations:", error);
+      setConversations([]);
+      setSelectedConvo(null);
     } else {
-      setConversations((data || []) as unknown as WaConversation[]);
+      const nextConversations = ((data || []) as unknown as WaConversation[]).filter((item) => item.phone);
+      setConversations(nextConversations);
+      setSelectedConvo((current) => {
+        if (!nextConversations.length) return null;
+        if (!current) return nextConversations[0];
+        return nextConversations.find((item) => item.id === current.id) || nextConversations[0];
+      });
     }
     setIsLoading(false);
   }, []);
@@ -103,7 +111,10 @@ export default function WhatsAppBusinessInbox() {
   }, [fetchConversations]);
 
   useEffect(() => {
-    if (!selectedConvo) return;
+    if (!selectedConvo) {
+      setMessages([]);
+      return;
+    }
 
     fetchMessages(selectedConvo.id);
 
