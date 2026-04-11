@@ -16642,72 +16642,107 @@ export type Database = {
       }
       wa_templates: {
         Row: {
+          ab_variant_label: string | null
+          ab_variant_of: string | null
           body: string
           buttons: Json | null
           category: string | null
+          conversion_rate: number | null
           created_at: string | null
           created_by: string | null
+          delivered_count: number | null
           display_name: string | null
+          failed_count: number | null
           footer: string | null
           header_content: string | null
           header_type: string | null
           id: string
           language: string | null
+          last_sent_at: string | null
           meta_quality_score: string | null
           meta_rejection_reason: string | null
           meta_template_id: string | null
           name: string
+          read_count: number | null
+          replied_count: number | null
           sample_values: Json | null
+          sent_count: number | null
           status: string | null
           updated_at: string | null
           variables: Json | null
           vertical: string | null
         }
         Insert: {
+          ab_variant_label?: string | null
+          ab_variant_of?: string | null
           body: string
           buttons?: Json | null
           category?: string | null
+          conversion_rate?: number | null
           created_at?: string | null
           created_by?: string | null
+          delivered_count?: number | null
           display_name?: string | null
+          failed_count?: number | null
           footer?: string | null
           header_content?: string | null
           header_type?: string | null
           id?: string
           language?: string | null
+          last_sent_at?: string | null
           meta_quality_score?: string | null
           meta_rejection_reason?: string | null
           meta_template_id?: string | null
           name: string
+          read_count?: number | null
+          replied_count?: number | null
           sample_values?: Json | null
+          sent_count?: number | null
           status?: string | null
           updated_at?: string | null
           variables?: Json | null
           vertical?: string | null
         }
         Update: {
+          ab_variant_label?: string | null
+          ab_variant_of?: string | null
           body?: string
           buttons?: Json | null
           category?: string | null
+          conversion_rate?: number | null
           created_at?: string | null
           created_by?: string | null
+          delivered_count?: number | null
           display_name?: string | null
+          failed_count?: number | null
           footer?: string | null
           header_content?: string | null
           header_type?: string | null
           id?: string
           language?: string | null
+          last_sent_at?: string | null
           meta_quality_score?: string | null
           meta_rejection_reason?: string | null
           meta_template_id?: string | null
           name?: string
+          read_count?: number | null
+          replied_count?: number | null
           sample_values?: Json | null
+          sent_count?: number | null
           status?: string | null
           updated_at?: string | null
           variables?: Json | null
           vertical?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "wa_templates_ab_variant_of_fkey"
+            columns: ["ab_variant_of"]
+            isOneToOne: false
+            referencedRelation: "wa_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       webhook_endpoints: {
         Row: {
