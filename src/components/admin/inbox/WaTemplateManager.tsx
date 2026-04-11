@@ -737,18 +737,13 @@ export function WaTemplateManager() {
                   />
                 </div>
 
-                <div>
-                  <Label className="text-xs">Status</Label>
-                  <Select value={editItem?.status || "draft"} onValueChange={v => setEditItem({ ...editItem, status: v })}>
-                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="draft">Draft</SelectItem>
-                      <SelectItem value="pending">Pending Approval</SelectItem>
-                      <SelectItem value="approved">Approved</SelectItem>
-                      <SelectItem value="rejected">Rejected</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* Status is auto-managed by Meta — not editable */}
+                {editItem?.status && editItem.status !== "draft" && (
+                  <div className="bg-muted/50 rounded-lg p-2 text-xs flex items-center gap-2">
+                    {getStatusIcon(editItem.status)}
+                    <span>Status: <strong className="capitalize">{editItem.status}</strong> (managed by Meta)</span>
+                  </div>
+                )}
               </>
             ) : (
               <>
