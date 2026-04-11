@@ -66,16 +66,26 @@ serve(async (req) => {
             : new Date().toISOString();
 
           if (statusUpdate.status === "sent") updates.sent_at = timestamp;
-          else if (statusUpdate.status === "delivered") updates.delivered_at = timestamp;
-          else if (statusUpdate.status === "read") updates.read_at = timestamp;
+          else if (statusUpdate.status === "delivered") { updates.delivered_at = timestamp; updates.status_updated_at = timestamp; }
+          else if (statusUpdate.status === "read") { updates.read_at = timestamp; updates.status_updated_at = timestamp; }
           else if (statusUpdate.status === "failed") {
             updates.error_message = statusUpdate.errors?.[0]?.title || "Delivery failed";
+            updates.error_code = statusUpdate.errors?.[0]?.code?.toString() || null;
+            updates.failed_at = timestamp;
+            updates.status_updated_at = timestamp;
           }
 
+          // Update wa_message_logs (legacy)
           await supabase
             .from("wa_message_logs")
             .update(updates)
             .eq("provider_message_id", statusUpdate.id);
+
+          // Update wa_inbox_messages (new inbox)
+          await supabase
+            .from("wa_inbox_messages")
+            .update(updates)
+            .eq("wa_message_id", statusUpdate.id);
         }
         return new Response(JSON.stringify({ success: true, processed: "statuses" }), {
           status: 200,
@@ -86,14 +96,85 @@ serve(async (req) => {
       // --- Handle incoming messages ---
       if (value.messages?.length > 0) {
         for (const msg of value.messages) {
-          const from = msg.from;
+          const from = msg.from; // full intl number like 919855924442
           const messageText = msg.text?.body || msg.caption || "";
           const contactName = value.contacts?.[0]?.profile?.name || "Customer";
           const messageType = msg.type || "text";
+          const waMessageId = msg.id || null;
 
           console.log(`Incoming from ${contactName} (${from}): [${messageType}] ${messageText}`);
 
-          // Get or create conversation
+          // ── Upsert wa_conversations (new inbox) ──
+          const windowExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+          const { data: inboxConvo } = await supabase
+            .from("wa_conversations")
+            .select("id, unread_count")
+            .eq("phone", from)
+            .maybeSingle();
+
+          let inboxConvoId: string;
+
+          if (inboxConvo) {
+            inboxConvoId = inboxConvo.id;
+            await supabase.from("wa_conversations").update({
+              customer_name: contactName,
+              last_message: messageText.slice(0, 200) || `[${messageType}]`,
+              last_message_at: new Date().toISOString(),
+              last_customer_message_at: new Date().toISOString(),
+              window_expires_at: windowExpiry,
+              unread_count: (inboxConvo.unread_count || 0) + 1,
+              status: "active",
+            }).eq("id", inboxConvoId);
+          } else {
+            const { data: newConvo } = await supabase.from("wa_conversations").insert({
+              phone: from,
+              customer_name: contactName,
+              last_message: messageText.slice(0, 200) || `[${messageType}]`,
+              last_message_at: new Date().toISOString(),
+              last_customer_message_at: new Date().toISOString(),
+              window_expires_at: windowExpiry,
+              unread_count: 1,
+              status: "active",
+            }).select("id").single();
+            inboxConvoId = newConvo?.id;
+          }
+
+          // ── Store in wa_inbox_messages ──
+          let mediaUrl: string | null = null;
+          let mediaMime: string | null = null;
+          let mediaFilename: string | null = null;
+
+          if (messageType === "image" && msg.image) {
+            mediaUrl = msg.image.id; // Meta media ID — can be fetched later
+            mediaMime = msg.image.mime_type;
+          } else if (messageType === "document" && msg.document) {
+            mediaUrl = msg.document.id;
+            mediaMime = msg.document.mime_type;
+            mediaFilename = msg.document.filename;
+          } else if (messageType === "audio" && msg.audio) {
+            mediaUrl = msg.audio.id;
+            mediaMime = msg.audio.mime_type;
+          } else if (messageType === "video" && msg.video) {
+            mediaUrl = msg.video.id;
+            mediaMime = msg.video.mime_type;
+          }
+
+          if (inboxConvoId) {
+            await supabase.from("wa_inbox_messages").insert({
+              conversation_id: inboxConvoId,
+              direction: "inbound",
+              message_type: messageType,
+              content: messageText || null,
+              media_url: mediaUrl,
+              media_mime_type: mediaMime,
+              media_filename: mediaFilename,
+              wa_message_id: waMessageId,
+              status: "received",
+              status_updated_at: new Date().toISOString(),
+            });
+          }
+
+          // ── Legacy: whatsapp_conversations + AI brain ──
           const { data: existingConvo } = await supabase
             .from("whatsapp_conversations")
             .select("*")
@@ -107,7 +188,6 @@ serve(async (req) => {
             conversationId = existingConvo.id;
             conversationHistory = (existingConvo.messages as any[]) || [];
 
-            // If human takeover is active, just save message and skip AI
             if (existingConvo.human_takeover) {
               console.log(`Human takeover active for ${from}, skipping AI`);
               conversationHistory.push({ role: "user", content: messageText });
@@ -119,7 +199,6 @@ serve(async (req) => {
               continue;
             }
           } else {
-            // New conversation — send greeting
             const { data: newConvo } = await supabase
               .from("whatsapp_conversations")
               .insert({
@@ -136,7 +215,7 @@ serve(async (req) => {
 
           conversationHistory.push({ role: "user", content: messageText });
 
-          // Call AI Brain v2 for intelligent response
+          // Call AI Brain
           let aiResponse = getFallbackResponse(messageText.toLowerCase());
           let intentDetected = "general";
           let leadCaptured = false;
@@ -170,7 +249,6 @@ serve(async (req) => {
 
           conversationHistory.push({ role: "assistant", content: aiResponse });
 
-          // Update conversation with intent
           await supabase.from("whatsapp_conversations").update({
             messages: conversationHistory.slice(-20),
             last_message_at: new Date().toISOString(),
@@ -200,7 +278,7 @@ serve(async (req) => {
             const sendData = await sendResult.json();
             const providerMessageId = sendData.messages?.[0]?.id || null;
 
-            // Log outgoing message
+            // Log in legacy table
             await supabase.from("wa_message_logs").insert({
               phone: from,
               customer_name: contactName,
@@ -212,6 +290,19 @@ serve(async (req) => {
               provider_message_id: providerMessageId,
               sent_at: new Date().toISOString(),
             });
+
+            // Log in inbox messages
+            if (inboxConvoId) {
+              await supabase.from("wa_inbox_messages").insert({
+                conversation_id: inboxConvoId,
+                direction: "outbound",
+                message_type: "text",
+                content: aiResponse,
+                wa_message_id: providerMessageId,
+                status: sendResult.ok ? "sent" : "failed",
+                sent_by_name: "AI Bot",
+              });
+            }
           }
         }
 
@@ -227,7 +318,6 @@ serve(async (req) => {
       });
     } catch (error) {
       console.error("Webhook error:", error);
-      // Always return 200 to Meta to prevent webhook deactivation
       return new Response(JSON.stringify({ error: "Processing failed" }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
