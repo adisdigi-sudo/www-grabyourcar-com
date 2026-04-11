@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -43,6 +43,8 @@ export function InsuranceComingRenewals({ policies }: InsuranceComingRenewalsPro
   const [wonPremium, setWonPremium] = useState("");
   const [wonExpiryDate, setWonExpiryDate] = useState<string>("");
   const [wonSaving, setWonSaving] = useState(false);
+  const [wonDocFile, setWonDocFile] = useState<File | null>(null);
+  const wonDocRef = useRef<HTMLInputElement>(null);
 
   // Lost dialog
   const [showLostDialog, setShowLostDialog] = useState(false);
@@ -100,17 +102,30 @@ export function InsuranceComingRenewals({ policies }: InsuranceComingRenewalsPro
       toast.error("Fill all required fields");
       return;
     }
+    if (!wonDocFile) {
+      toast.error("Please attach the policy document (PDF/Image)");
+      return;
+    }
     setWonSaving(true);
     try {
+      // Upload document
+      const fileExt = wonDocFile.name.split(".").pop() || "pdf";
+      const storagePath = `${targetPolicy.client_id}/${wonPolicyNumber.trim()}_renewal.${fileExt}`;
+      const { error: uploadErr } = await supabase.storage.from("policy-documents").upload(storagePath, wonDocFile, { upsert: true });
+      if (uploadErr) throw new Error("Document upload failed: " + uploadErr.message);
+      const { data: pubUrl } = supabase.storage.from("policy-documents").getPublicUrl(storagePath);
+      const policyDocumentUrl = pubUrl.publicUrl;
+
       await supabase.from("insurance_policies").update({ status: "renewed", renewal_status: "renewed" }).eq("id", targetPolicy.id);
 
       const newStart = targetPolicy.expiry_date ? new Date(targetPolicy.expiry_date) : new Date();
+      const premium = wonPremium ? parseFloat(wonPremium) : targetPolicy.premium_amount;
       await supabase.from("insurance_policies").insert({
         client_id: targetPolicy.client_id,
         policy_number: wonPolicyNumber.trim().toUpperCase(),
         policy_type: targetPolicy.policy_type,
         insurer: wonInsurer.trim(),
-        premium_amount: wonPremium ? parseFloat(wonPremium) : targetPolicy.premium_amount,
+        premium_amount: premium,
         start_date: format(newStart, "yyyy-MM-dd"),
         expiry_date: wonExpiryDate,
         status: "active",
@@ -121,6 +136,7 @@ export function InsuranceComingRenewals({ policies }: InsuranceComingRenewalsPro
         renewal_count: (targetPolicy.renewal_count || 0) + 1,
         plan_name: targetPolicy.plan_name,
         idv: targetPolicy.idv,
+        policy_document_url: policyDocumentUrl,
       } as any);
 
       await supabase.from("insurance_clients").update({
@@ -128,7 +144,7 @@ export function InsuranceComingRenewals({ policies }: InsuranceComingRenewalsPro
         lead_status: "won",
         current_policy_number: wonPolicyNumber.trim().toUpperCase(),
         current_insurer: wonInsurer.trim(),
-        current_premium: wonPremium ? parseFloat(wonPremium) : targetPolicy.premium_amount,
+        current_premium: premium,
         policy_expiry_date: wonExpiryDate,
         policy_start_date: format(newStart, "yyyy-MM-dd"),
         renewal_reminder_set: true,
@@ -146,10 +162,42 @@ export function InsuranceComingRenewals({ policies }: InsuranceComingRenewalsPro
         metadata: { new_stage: "policy_issued", policy_number: wonPolicyNumber, insurer: wonInsurer, previous_policy_id: targetPolicy.id } as any,
       });
 
+      // Auto WhatsApp send with document
+      const customerName = targetPolicy.insurance_clients?.customer_name || "Customer";
+      const phone = targetPolicy.insurance_clients?.phone;
+      if (phone && !phone.startsWith("IB_")) {
+        try {
+          const premiumLabel = premium ? `₹${Number(premium).toLocaleString("en-IN")}` : "";
+          const expiryLabel = format(new Date(wonExpiryDate), "dd MMM yyyy");
+          const vehicleNum = targetPolicy.insurance_clients?.vehicle_number || "";
+          const policyMsg = `Hello ${customerName} 🙏\n\nHere is your renewed motor insurance policy document from Grabyourcar Insurance.\n\n📋 Policy No: *${wonPolicyNumber.trim().toUpperCase()}*\n🏢 Insurer: *${wonInsurer.trim()}*\n${vehicleNum ? `🚗 Vehicle: *${vehicleNum}*\n` : ""}${premiumLabel ? `💰 Premium: *${premiumLabel}*\n` : ""}📅 Valid till: *${expiryLabel}*\n\nWe are just a click away — ask and command us anything, anytime! 💚\n\n📞 +91 98559 24442\n🔗 https://www.grabyourcar.com/insurance\n\n— *Team Grabyourcar* 🚗`;
+
+          const waResult = await sendWhatsApp({
+            phone,
+            message: policyMsg,
+            messageType: "document",
+            mediaUrl: policyDocumentUrl,
+            mediaFileName: `${wonPolicyNumber.trim()}_renewal.${fileExt}`,
+            name: customerName,
+            logEvent: "renewal_won_auto_send",
+            silent: true,
+          });
+          if (waResult.success) {
+            toast.success("🎉 Renewal won! Policy document sent on WhatsApp");
+          } else {
+            toast.success("🎉 Renewal won! (WhatsApp send failed — share manually)");
+          }
+        } catch {
+          toast.success("🎉 Renewal won! (WhatsApp send failed — share manually)");
+        }
+      } else {
+        toast.success("🎉 Renewal won! New policy created");
+      }
+
       queryClient.invalidateQueries({ queryKey: ["ins-policies-book"] });
       queryClient.invalidateQueries({ queryKey: ["ins-workspace-clients"] });
-      toast.success("🎉 Renewal won! New policy created");
       setShowWonDialog(false);
+      setWonDocFile(null);
     } catch (e: any) {
       toast.error(e?.message || "Failed");
     } finally {
