@@ -521,10 +521,30 @@ export function InsuranceProspectPool() {
         <CardContent className="p-0">
           {isLoading ? <p className="text-sm text-muted-foreground py-12 text-center">Loading prospects...</p> : (
             <>
-              <div className="overflow-x-auto">
+               <div className="overflow-x-auto">
+                {/* Bulk Action Bar */}
+                {selectedIds.size > 0 && (
+                  <div className="bg-primary/10 border border-primary/20 rounded-lg p-2 mx-3 mb-2 flex items-center gap-3">
+                    <Badge variant="secondary" className="text-xs">{selectedIds.size} selected</Badge>
+                    <Button size="sm" className="h-7 text-[10px] gap-1.5 bg-green-600 hover:bg-green-700 text-white"
+                      onClick={handleBulkWhatsApp} disabled={bulkSending}>
+                      {bulkSending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                      Send Bulk WhatsApp
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-7 text-[10px]" onClick={() => setSelectedIds(new Set())}>
+                      Clear
+                    </Button>
+                  </div>
+                )}
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 bg-card z-10 border-b">
                     <tr className="bg-muted/30">
+                      <th className="py-2.5 px-2 w-8">
+                        <Checkbox
+                          checked={paged.filter(p => p.phone && !p.phone.startsWith("IB_")).length > 0 && paged.filter(p => p.phone && !p.phone.startsWith("IB_")).every(p => selectedIds.has(p.id))}
+                          onCheckedChange={toggleSelectAll}
+                        />
+                      </th>
                       <th className="text-left py-2.5 px-3 font-medium text-xs w-8">#</th>
                       <th className="text-left py-2.5 px-3 font-medium text-xs">Phone</th>
                       <th className="text-left py-2.5 px-3 font-medium text-xs">Name</th>
