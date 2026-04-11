@@ -559,7 +559,10 @@ export function InsuranceProspectPool() {
                   </thead>
                   <tbody>
                     {paged.map((p, i) => (
-                      <tr key={p.id} className={`border-b hover:bg-muted/20 transition-colors ${p.prospect_status === "interested" ? "bg-emerald-500/5" : ""} ${p.is_grabyourcar_customer ? "bg-amber-500/5" : ""}`}>
+                      <tr key={p.id} className={`border-b hover:bg-muted/20 transition-colors ${selectedIds.has(p.id) ? "bg-primary/5" : ""} ${p.prospect_status === "interested" ? "bg-emerald-500/5" : ""} ${p.is_grabyourcar_customer ? "bg-amber-500/5" : ""}`}>
+                        <td className="py-2 px-2">
+                          <Checkbox checked={selectedIds.has(p.id)} onCheckedChange={() => toggleSelect(p.id)} disabled={!p.phone || p.phone.startsWith("IB_")} />
+                        </td>
                         <td className="py-2 px-3 text-xs text-muted-foreground">{page * pageSize + i + 1}</td>
                         <td className="py-2 px-3 font-mono text-xs">
                           <div className="flex items-center gap-1">
