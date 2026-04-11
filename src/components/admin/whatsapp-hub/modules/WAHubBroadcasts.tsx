@@ -162,7 +162,7 @@ function OneShotBroadcast() {
               <SelectContent>
                 <SelectItem value="all">All Contacts</SelectItem>
                 {segments?.map((s: any) => (
-                  <SelectItem key={s.id} value={s.id}>{s.name} ({s.contact_count || 0})</SelectItem>
+                  <SelectItem key={s.id} value={s.id}>{s.name} ({s.estimated_count || 0})</SelectItem>
                 ))}
               </SelectContent>
             </Select>
