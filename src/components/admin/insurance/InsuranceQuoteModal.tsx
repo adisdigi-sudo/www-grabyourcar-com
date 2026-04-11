@@ -363,15 +363,6 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
       message: msg,
       name: client.customer_name || undefined,
       logEvent: "quote_modal_share",
-      templateName: "insurancefollowup",
-      templateComponents: [{
-        type: "header",
-        parameters: [{
-          type: "text",
-          text: client.customer_name?.trim() || "Valued Customer",
-          parameter_name: "full_name",
-        }],
-      }],
     });
     if (!result.success) return;
     onQuoteSent?.();

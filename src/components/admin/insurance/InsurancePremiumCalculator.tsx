@@ -644,15 +644,6 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
           message: quoteText,
           name: customerName || undefined,
           logEvent: "premium_calculator_quote",
-          templateName: "insurancefollowup",
-          templateComponents: [{
-            type: "header",
-            parameters: [{
-              type: "text",
-              text: customerName?.trim() || "Valued Customer",
-              parameter_name: "full_name",
-            }],
-          }],
         });
         if (!result.success) return;
       } else {
