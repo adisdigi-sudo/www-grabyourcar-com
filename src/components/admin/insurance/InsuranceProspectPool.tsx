@@ -630,11 +630,11 @@ export function InsuranceProspectPool() {
       </Dialog>
 
       {/* ── Won Dialog ── */}
-      <Dialog open={!!wonOpen} onOpenChange={() => setWonOpen(null)}>
-        <DialogContent>
+      <Dialog open={!!wonOpen} onOpenChange={() => { setWonOpen(null); setWonDocFile(null); setWonPolicyNumber(""); setWonInsurer(""); setWonPremium(""); setWonExpiryDate(""); }}>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Trophy className="h-5 w-5 text-green-600" /> Mark as Won 🏆</DialogTitle>
-            <DialogDescription>This will create a new client in Insurance Clients and remove from prospects.</DialogDescription>
+            <DialogDescription>Create client with policy and auto-send document on WhatsApp.</DialogDescription>
           </DialogHeader>
           {wonOpen && (
             <div className="space-y-3">
@@ -642,20 +642,38 @@ export function InsuranceProspectPool() {
                 <p><strong>Name:</strong> {wonOpen.customer_name || "—"}</p>
                 <p><strong>Phone:</strong> {wonOpen.phone}</p>
                 <p><strong>Vehicle:</strong> {wonOpen.vehicle_number || "—"}</p>
-                <p><strong>Source:</strong> {getSourceLabel(wonOpen.data_source)}</p>
               </div>
-              <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3">
-                <Trophy className="h-5 w-5 text-emerald-600 shrink-0" />
-                <div className="text-sm">
-                  <p className="font-medium">Auto-creates client record</p>
-                  <p className="text-muted-foreground text-xs">Data, remarks & history will transfer to Insurance Clients.</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Policy Number *</Label>
+                  <Input value={wonPolicyNumber} onChange={e => setWonPolicyNumber(e.target.value.toUpperCase())} placeholder="e.g. OG-24-5678" className="h-9 text-sm font-mono" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Insurer *</Label>
+                  <Input value={wonInsurer} onChange={e => setWonInsurer(e.target.value)} className="h-9 text-sm" />
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Premium (₹)</Label>
+                  <Input type="number" value={wonPremium} onChange={e => setWonPremium(e.target.value)} className="h-9 text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Expiry Date *</Label>
+                  <Input type="date" value={wonExpiryDate} min={format(new Date(), "yyyy-MM-dd")} onChange={e => setWonExpiryDate(e.target.value)} className="h-9 text-sm" />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Policy Document (PDF/Image) *</Label>
+                <input ref={wonDocRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" onChange={e => setWonDocFile(e.target.files?.[0] || null)} className="block w-full text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer" />
+                {wonDocFile && <p className="text-[10px] text-emerald-600">📎 {wonDocFile.name}</p>}
+              </div>
+              <p className="text-[10px] text-muted-foreground">📲 Policy document will be auto-sent to customer on WhatsApp</p>
             </div>
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setWonOpen(null)}>Cancel</Button>
-            <Button className="bg-green-600 hover:bg-green-700" onClick={handleWon}>🏆 Confirm Won</Button>
+            <Button className="bg-green-600 hover:bg-green-700" onClick={handleWon} disabled={!wonPolicyNumber.trim() || !wonInsurer.trim() || !wonExpiryDate || !wonDocFile}>🏆 Confirm Won</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
