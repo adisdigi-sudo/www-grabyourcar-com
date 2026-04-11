@@ -100,9 +100,9 @@ export function WaFlowBuilder() {
       name: newFlow.name,
       description: newFlow.description || null,
       trigger_type: newFlow.trigger_type,
-      trigger_config: { type: newFlow.trigger_type },
-      nodes: [triggerNode],
-      edges: [],
+      trigger_config: { type: newFlow.trigger_type } as any,
+      nodes: [triggerNode] as any,
+      edges: [] as any,
       vertical: newFlow.vertical || null,
     }).select().single();
 
@@ -402,7 +402,7 @@ export function WaFlowBuilder() {
 
             {/* Add Node Button */}
             <div className="flex justify-center pt-2">
-              <Button variant="dashed" size="sm" className="gap-1.5 text-xs border-dashed" onClick={() => addNode("message")}>
+              <Button variant="outline" size="sm" className="gap-1.5 text-xs border-dashed" onClick={() => addNode("message")}>
                 <Plus className="h-3.5 w-3.5" /> Add Step
               </Button>
             </div>
