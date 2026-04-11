@@ -24,6 +24,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { INSURANCE_COMPANIES } from "@/lib/insuranceCompanies";
 import { BulkProspectImportButton } from "./BulkProspectImport";
 import { sendWhatsApp } from "@/lib/sendWhatsApp";
+import { buildInsuranceRetargetMessage } from "@/lib/insuranceRetargetMessage";
 
 const STATUSES = [
   { value: "new", label: "New", icon: Database, color: "bg-blue-500" },

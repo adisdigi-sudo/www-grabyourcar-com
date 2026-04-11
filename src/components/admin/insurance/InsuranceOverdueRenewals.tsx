@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
+import { buildInsuranceRetargetMessage } from "@/lib/insuranceRetargetMessage";
 import { cn } from "@/lib/utils";
 import { normalizeInsuranceStage as normalizeStage } from "@/lib/insuranceStages";
 import { format, differenceInDays } from "date-fns";
