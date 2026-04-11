@@ -456,14 +456,21 @@ export function WaTemplateManager() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-1.5">
-                              {getStatusIcon(t.status)}
-                              <span className="text-xs capitalize">{t.status}</span>
-                              {t.status === "approved" && (
-                                <Badge className="text-[9px] bg-green-100 text-green-700 border-green-200 ml-1">Send ✓</Badge>
-                              )}
-                              {(t.status === "draft" || t.status === "rejected" || t.status === "pending") && (
-                                <Badge variant="secondary" className="text-[9px] ml-1">Disabled</Badge>
+                            <div className="flex flex-col gap-0.5">
+                              <div className="flex items-center gap-1.5">
+                                {getStatusIcon(t.status)}
+                                <span className="text-xs capitalize">{t.status}</span>
+                                {t.status === "approved" && (
+                                  <Badge className="text-[9px] bg-green-100 text-green-700 border-green-200 ml-1">Send ✓</Badge>
+                                )}
+                                {(t.status === "draft" || t.status === "rejected" || t.status === "pending") && (
+                                  <Badge variant="secondary" className="text-[9px] ml-1">Disabled</Badge>
+                                )}
+                              </div>
+                              {t.status === "rejected" && t.meta_rejection_reason && (
+                                <p className="text-[10px] text-destructive line-clamp-2 max-w-[200px]" title={t.meta_rejection_reason}>
+                                  {t.meta_rejection_reason}
+                                </p>
                               )}
                             </div>
                           </TableCell>
