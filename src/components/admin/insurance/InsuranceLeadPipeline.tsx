@@ -12,6 +12,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SmartDatePicker } from "@/components/ui/smart-date-picker";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Loader2, Megaphone } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { getClientIdentityKey, normalizePolicyNumber } from "@/lib/insuranceIdentity";
@@ -580,6 +582,19 @@ export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: Insura
   const [showForwardDialog, setShowForwardDialog] = useState(false);
   const [forwardClient, setForwardClient] = useState<Client | null>(null);
 
+  // Bulk select & send
+  const [bulkSelectedIds, setBulkSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkSending, setBulkSending] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState({ sent: 0, total: 0 });
+
+  const toggleBulkSelect = useCallback((id: string) => {
+    setBulkSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+
   useEffect(() => {
     if (!selectedClient) {
       setEditFields({});
@@ -857,6 +872,31 @@ export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: Insura
       return bTime - aTime;
     });
   }, [pipelineClients, wonClients, selectedStage, search, sourceFilter, priorityFilter, expiryPreset, expiryFrom, expiryTo, executiveFilter, wonDatePreset, wonDateFrom, wonDateTo, getWonDateBounds, getWonEffectiveDate, applyExpiryFilter]);
+
+  const toggleSelectAll = useCallback(() => {
+    const validIds = filtered.filter(c => c.phone && !c.phone.startsWith("IB_")).map(c => c.id);
+    setBulkSelectedIds(prev => prev.size === validIds.length ? new Set() : new Set(validIds));
+  }, [filtered]);
+
+  const handleBulkFollowUpSend = useCallback(async () => {
+    const targets = filtered.filter(c => bulkSelectedIds.has(c.id) && c.phone && !c.phone.startsWith("IB_"));
+    if (targets.length === 0) { toast.error("No leads with valid phone selected"); return; }
+    setBulkSending(true);
+    setBulkProgress({ sent: 0, total: targets.length });
+    let sent = 0, failed = 0;
+    for (const client of targets) {
+      const msg = `🙏 Namaste ${client.customer_name || "Sir/Madam"},\n\nThis is *Grabyourcar Insurance* team.\n\nWe wanted to follow up regarding your motor insurance${client.vehicle_number ? ` for vehicle *${client.vehicle_number}*` : ""}.\n\n${client.current_insurer ? `🏢 Current insurer: *${client.current_insurer}*\n` : ""}${client.current_premium ? `💰 Premium: *₹${Number(client.current_premium).toLocaleString("en-IN")}*\n` : ""}\n✅ We can help you get the best renewal rates!\n\n👉 *Reply here* or call us at +91 98559 24442\n🔗 https://www.grabyourcar.com/insurance\n\n— *Team Grabyourcar* 🚗💚`;
+      try {
+        const result = await sendWhatsApp({ phone: client.phone, message: msg, name: client.customer_name || undefined, logEvent: "bulk_follow_up", silent: true });
+        if (result.success) sent++; else failed++;
+      } catch { failed++; }
+      setBulkProgress(p => ({ ...p, sent: p.sent + 1 }));
+      if (targets.indexOf(client) < targets.length - 1) await new Promise(r => setTimeout(r, 500));
+    }
+    setBulkSending(false);
+    setBulkSelectedIds(new Set());
+    toast.success(`📨 Bulk follow-up done: ${sent} sent, ${failed} failed out of ${targets.length}`);
+  }, [filtered, bulkSelectedIds]);
 
   const retargetCount = useMemo(() => pipelineClients.filter(c => c.retarget_status === "scheduled").length, [pipelineClients]);
 
@@ -1235,6 +1275,29 @@ export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: Insura
         </div>
       )}
 
+      {/* Bulk Action Bar */}
+      {bulkSelectedIds.size > 0 && (
+        <div className="flex items-center gap-3 p-3 rounded-xl border bg-primary/5 border-primary/20">
+          <Checkbox
+            checked={bulkSelectedIds.size === filtered.filter(c => c.phone && !c.phone.startsWith("IB_")).length}
+            onCheckedChange={toggleSelectAll}
+          />
+          <span className="text-sm font-medium">{bulkSelectedIds.size} selected</span>
+          <Button
+            size="sm"
+            className="gap-1.5 bg-[#25D366] hover:bg-[#20BD5A] text-white"
+            disabled={bulkSending}
+            onClick={handleBulkFollowUpSend}
+          >
+            {bulkSending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Megaphone className="h-3.5 w-3.5" />}
+            {bulkSending ? `Sending ${bulkProgress.sent}/${bulkProgress.total}...` : `Send Follow-Up to All (${bulkSelectedIds.size})`}
+          </Button>
+          <Button size="sm" variant="ghost" className="text-xs" onClick={() => setBulkSelectedIds(new Set())}>
+            <X className="h-3 w-3 mr-1" /> Clear
+          </Button>
+        </div>
+      )}
+
       {/* Lead Table */}
       <Card>
         <CardContent className="p-0">
@@ -1242,6 +1305,12 @@ export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: Insura
             <Table>
               <TableHeader>
                <TableRow className="bg-muted/30">
+                  <TableHead className="w-8" onClick={e => e.stopPropagation()}>
+                    <Checkbox
+                      checked={filtered.length > 0 && bulkSelectedIds.size === filtered.filter(c => c.phone && !c.phone.startsWith("IB_")).length}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </TableHead>
                   <TableHead className="text-[10px] font-bold uppercase w-8">#</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase">Customer</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase">Phone</TableHead>
@@ -1258,9 +1327,9 @@ export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: Insura
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableRow><TableCell colSpan={11} className="text-center py-12 text-muted-foreground">Loading...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={12} className="text-center py-12 text-muted-foreground">Loading...</TableCell></TableRow>
                 ) : filtered.length === 0 ? (
-                  <TableRow><TableCell colSpan={11} className="text-center py-12 text-muted-foreground">
+                  <TableRow><TableCell colSpan={12} className="text-center py-12 text-muted-foreground">
                     <Shield className="h-8 w-8 mx-auto mb-2 opacity-30" />
                     <p className="text-sm">No leads found</p>
                   </TableCell></TableRow>
@@ -1275,6 +1344,13 @@ export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: Insura
                   return (
                     <TableRow key={client.id} draggable onDragStart={() => handleDragStart(client)} onDragEnd={handleDragEnd}
                       className="cursor-pointer text-xs hover:bg-muted/30 transition-colors" onClick={() => setSelectedClient(client)}>
+                      <TableCell onClick={e => e.stopPropagation()}>
+                        <Checkbox
+                          checked={bulkSelectedIds.has(client.id)}
+                          onCheckedChange={() => toggleBulkSelect(client.id)}
+                          disabled={!client.phone || client.phone.startsWith("IB_")}
+                        />
+                      </TableCell>
                       <TableCell className="font-mono text-muted-foreground">{idx + 1}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
