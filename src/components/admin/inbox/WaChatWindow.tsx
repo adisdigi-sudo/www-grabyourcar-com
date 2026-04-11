@@ -1,0 +1,271 @@
+import { useState, useRef, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Send, Paperclip, Smile, Clock, Check, CheckCheck, X,
+  AlertTriangle, Info, Zap, LayoutTemplate, MessageSquare
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { format, formatDistanceToNowStrict } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import type { WaConversation, WaMessage } from "../WhatsAppBusinessInbox";
+
+interface Props {
+  conversation: WaConversation | null;
+  messages: WaMessage[];
+  onSend: (content: string, messageType?: string, extras?: Record<string, unknown>) => Promise<boolean>;
+  isWindowOpen: boolean;
+  onToggleInfo: () => void;
+}
+
+export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onToggleInfo }: Props) {
+  const [text, setText] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const [showQuickReplies, setShowQuickReplies] = useState(false);
+  const [quickReplies, setQuickReplies] = useState<Array<{ id: string; title: string; message: string }>>([]);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [templates, setTemplates] = useState<Array<{ id: string; name: string; display_name: string | null; body: string }>>([]);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  useEffect(() => {
+    supabase.from("wa_quick_replies").select("id, title, message").eq("is_active", true).order("sort_order").then(({ data }) => {
+      setQuickReplies((data || []) as any);
+    });
+    supabase.from("wa_templates").select("id, name, display_name, body").order("created_at", { ascending: false }).then(({ data }) => {
+      setTemplates((data || []) as any);
+    });
+  }, []);
+
+  const handleSend = async () => {
+    if (!text.trim() || isSending) return;
+    setIsSending(true);
+    const ok = await onSend(text.trim());
+    if (ok) setText("");
+    setIsSending(false);
+    inputRef.current?.focus();
+  };
+
+  const handleQuickReply = async (msg: string) => {
+    setShowQuickReplies(false);
+    setText(msg);
+    inputRef.current?.focus();
+  };
+
+  const handleTemplateSend = async (tpl: { name: string; body: string }) => {
+    setShowTemplates(false);
+    setIsSending(true);
+    await onSend(tpl.body, "template", { template_name: tpl.name });
+    setIsSending(false);
+  };
+
+  const getStatusIcon = (msg: WaMessage) => {
+    if (msg.direction === "inbound") return null;
+    switch (msg.status) {
+      case "pending": return <Clock className="h-3 w-3 text-muted-foreground" />;
+      case "sent": return <Check className="h-3 w-3 text-muted-foreground" />;
+      case "delivered": return <CheckCheck className="h-3 w-3 text-muted-foreground" />;
+      case "read": return <CheckCheck className="h-3 w-3 text-blue-500" />;
+      case "failed": return <AlertTriangle className="h-3 w-3 text-red-500" />;
+      default: return <Clock className="h-3 w-3 text-muted-foreground" />;
+    }
+  };
+
+  if (!conversation) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-muted/30">
+        <div className="text-center space-y-2">
+          <MessageSquare className="h-16 w-16 text-muted-foreground/30 mx-auto" />
+          <p className="text-muted-foreground text-sm">Select a conversation to start chatting</p>
+        </div>
+      </div>
+    );
+  }
+
+  const windowTimeLeft = conversation.window_expires_at
+    ? formatDistanceToNowStrict(new Date(conversation.window_expires_at), { addSuffix: false })
+    : null;
+
+  return (
+    <div className="flex-1 flex flex-col bg-[#efeae2] dark:bg-background/95">
+      {/* Chat Header */}
+      <div className="h-14 bg-card border-b flex items-center px-4 gap-3 shrink-0">
+        <div className={cn(
+          "h-9 w-9 rounded-full flex items-center justify-center text-sm font-bold",
+          isWindowOpen ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"
+        )}>
+          {(conversation.customer_name || conversation.phone)?.[0]?.toUpperCase() || "?"}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-sm truncate">{conversation.customer_name || conversation.phone}</p>
+          <p className="text-xs text-muted-foreground">{conversation.phone}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {isWindowOpen ? (
+            <Badge className="bg-green-100 text-green-700 text-[10px] gap-1">
+              <Clock className="h-3 w-3" /> {windowTimeLeft} left
+            </Badge>
+          ) : (
+            <Badge variant="secondary" className="text-[10px] gap-1 text-amber-600">
+              <AlertTriangle className="h-3 w-3" /> Window closed
+            </Badge>
+          )}
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onToggleInfo}>
+            <Info className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Messages */}
+      <ScrollArea className="flex-1 px-4 py-2">
+        <div className="max-w-2xl mx-auto space-y-1">
+          {messages.map((msg, i) => {
+            const isOut = msg.direction === "outbound";
+            const showDate = i === 0 || format(new Date(msg.created_at), "yyyy-MM-dd") !== format(new Date(messages[i - 1].created_at), "yyyy-MM-dd");
+
+            return (
+              <div key={msg.id}>
+                {showDate && (
+                  <div className="flex justify-center my-3">
+                    <Badge variant="secondary" className="text-[10px] font-normal">
+                      {format(new Date(msg.created_at), "MMMM d, yyyy")}
+                    </Badge>
+                  </div>
+                )}
+                <div className={cn("flex", isOut ? "justify-end" : "justify-start")}>
+                  <div className={cn(
+                    "max-w-[75%] rounded-lg px-3 py-1.5 shadow-sm relative group",
+                    isOut
+                      ? "bg-[#dcf8c6] dark:bg-green-900/30 text-foreground"
+                      : "bg-card text-foreground"
+                  )}>
+                    {isOut && msg.sent_by_name && (
+                      <p className="text-[10px] font-medium text-green-700 dark:text-green-400 mb-0.5">
+                        {msg.sent_by_name}
+                      </p>
+                    )}
+                    {msg.message_type === "image" && msg.media_url && (
+                      <div className="mb-1">
+                        <Badge variant="outline" className="text-[9px]">📷 Image</Badge>
+                      </div>
+                    )}
+                    {msg.message_type === "document" && (
+                      <div className="mb-1">
+                        <Badge variant="outline" className="text-[9px]">📄 {msg.media_filename || "Document"}</Badge>
+                      </div>
+                    )}
+                    {msg.template_name && (
+                      <div className="mb-1">
+                        <Badge variant="outline" className="text-[9px] bg-blue-50">📋 {msg.template_name}</Badge>
+                      </div>
+                    )}
+                    <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                    <div className="flex items-center justify-end gap-1 mt-0.5">
+                      <span className="text-[10px] text-muted-foreground">
+                        {format(new Date(msg.created_at), "HH:mm")}
+                      </span>
+                      {getStatusIcon(msg)}
+                    </div>
+                    {msg.status === "failed" && msg.error_message && (
+                      <p className="text-[10px] text-red-500 mt-0.5">⚠ {msg.error_message}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          <div ref={scrollRef} />
+        </div>
+      </ScrollArea>
+
+      {/* Composer */}
+      <div className="bg-card border-t p-2 shrink-0">
+        {!isWindowOpen && (
+          <div className="bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-xs px-3 py-1.5 rounded mb-2 flex items-center gap-2">
+            <AlertTriangle className="h-3 w-3 shrink-0" />
+            24hr window closed. Only template messages allowed.
+          </div>
+        )}
+        <div className="flex items-center gap-2">
+          {/* Quick Replies */}
+          <Popover open={showQuickReplies} onOpenChange={setShowQuickReplies}>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0">
+                <Zap className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-72 p-2" align="start">
+              <p className="text-xs font-semibold mb-2">Quick Replies</p>
+              <div className="space-y-1 max-h-48 overflow-auto">
+                {quickReplies.length === 0 ? (
+                  <p className="text-xs text-muted-foreground p-2">No quick replies yet</p>
+                ) : quickReplies.map(qr => (
+                  <button
+                    key={qr.id}
+                    onClick={() => handleQuickReply(qr.message)}
+                    className="w-full text-left px-2 py-1.5 rounded text-xs hover:bg-accent transition-colors"
+                  >
+                    <span className="font-medium">{qr.title}</span>
+                    <p className="text-muted-foreground truncate">{qr.message}</p>
+                  </button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Templates */}
+          <Popover open={showTemplates} onOpenChange={setShowTemplates}>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0">
+                <LayoutTemplate className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-2" align="start">
+              <p className="text-xs font-semibold mb-2">Templates {!isWindowOpen && <span className="text-amber-600">(required)</span>}</p>
+              <div className="space-y-1 max-h-56 overflow-auto">
+                {templates.length === 0 ? (
+                  <p className="text-xs text-muted-foreground p-2">No templates yet</p>
+                ) : templates.map(tpl => (
+                  <button
+                    key={tpl.id}
+                    onClick={() => handleTemplateSend(tpl)}
+                    className="w-full text-left px-2 py-1.5 rounded text-xs hover:bg-accent transition-colors"
+                  >
+                    <span className="font-medium">{tpl.display_name || tpl.name}</span>
+                    <p className="text-muted-foreground truncate">{tpl.body}</p>
+                  </button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          <Input
+            ref={inputRef}
+            placeholder={isWindowOpen ? "Type a message..." : "Use template (window closed)"}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
+            disabled={!isWindowOpen || isSending}
+            className="flex-1 h-9 text-sm"
+          />
+
+          <Button
+            onClick={handleSend}
+            disabled={!text.trim() || isSending || !isWindowOpen}
+            size="icon"
+            className="h-9 w-9 bg-green-600 hover:bg-green-700 shrink-0"
+          >
+            <Send className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
