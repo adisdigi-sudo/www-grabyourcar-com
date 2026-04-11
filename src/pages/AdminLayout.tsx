@@ -384,6 +384,8 @@ const isTabAllowedForVertical = (tab: string, verticalSlug?: string) => {
         "content-ai",
         "content-intelligence",
         "marketing-command",
+        "whatsapp-inbox",
+        "d2c-inbox",
         "holi-share",
         "marketing-email",
         "marketing-bulk",
