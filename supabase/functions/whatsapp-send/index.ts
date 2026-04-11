@@ -268,7 +268,7 @@ async function sendMessage(
           parameters: Object.values(templateVars).map(val => ({ type: "text", text: val })),
         });
       }
-      payload = { type: "template", template: { name: templateName, language: { code: "en_US" }, ...(components.length > 0 ? { components } : {}) } };
+      payload = { type: "template", template: { name: templateName, language: { code: "en" }, ...(components.length > 0 ? { components } : {}) } };
     } else if (messageType === "image" && mediaUrl) {
       payload = { type: "image", image: { link: mediaUrl, caption: message || "" } };
     } else if (messageType === "document" && mediaUrl) {
@@ -307,7 +307,7 @@ async function sendMessage(
             parameters: Object.values(templateVars).map(val => ({ type: "text", text: val })),
           });
         }
-        const payload = { type: "template", template: { name: templateName, language: { code: "en_US" }, ...(components.length > 0 ? { components } : {}) } };
+        const payload = { type: "template", template: { name: templateName, language: { code: "en" }, ...(components.length > 0 ? { components } : {}) } };
         return sendViaMeta(metaToken, metaPhoneId, phone.full, payload);
       }
       console.warn("WABB: Template requested but Meta API credentials missing, falling back to text");
