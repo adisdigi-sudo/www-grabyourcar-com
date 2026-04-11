@@ -28,7 +28,10 @@ serve(async (req) => {
 
     // ─── Get WABA ID from phone number ───
     const getWabaId = async (): Promise<string> => {
-      // Try multiple approaches to get WABA ID
+      // Approach 0: Use the env secret directly
+      const envWaba = Deno.env.get("WHATSAPP_WABA_ID");
+      if (envWaba) return envWaba;
+
       // Approach 1: Direct field on phone number
       const resp1 = await fetch(
         `https://graph.facebook.com/v21.0/${WHATSAPP_PHONE_NUMBER_ID}?fields=whatsapp_business_account`,
@@ -39,7 +42,6 @@ serve(async (req) => {
       if (data1?.whatsapp_business_account?.id) return data1.whatsapp_business_account.id;
 
       // Approach 2: Use the app's WABA listing
-      // The phone number ID owner typically gives us a path to WABA
       const resp2 = await fetch(
         `https://graph.facebook.com/v21.0/${WHATSAPP_PHONE_NUMBER_ID}?fields=owner`,
         { headers: { Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}` } }
