@@ -276,9 +276,8 @@ const navItems: NavItem[] = [
     allowedRoles: ["super_admin", "admin", "marketing"],
     children: [
       { id: "marketing-command", label: "🎯 Command Center", icon: Rocket },
-      { id: "whatsapp-inbox", label: "💬 WhatsApp Inbox", icon: MessageSquare, badge: "New" },
+      { id: "whatsapp-hub", label: "📱 WhatsApp Hub", icon: MessageSquare, badge: "All-in-One" },
       { id: "holi-share", label: "📣 Bulk Broadcast", icon: MessageSquare, badge: "New" },
-      { id: "marketing-templates", label: "📱 WhatsApp Templates", icon: MessageSquare },
       { id: "marketing-automation", label: "📧 Email Automation", icon: Mail },
       { id: "marketing-email", label: "Email Campaigns", icon: MessageSquare },
       { id: "marketing-bulk", label: "Bulk Data Manager", icon: Database },
@@ -295,7 +294,6 @@ const navItems: NavItem[] = [
     children: [
       { id: "integrations-api", label: "API Portal", icon: Database },
       { id: "open-api-portal", label: "Open API Keys", icon: KeyRound },
-      { id: "integrations-whatsapp", label: "WhatsApp API", icon: MessageSquare },
       { id: "integrations-shipping", label: "Shipping Partners", icon: Package },
       { id: "integrations-payments", label: "Payment Gateway", icon: CreditCard },
       { id: "integrations-ad-tracking", label: "Ad Tracking", icon: BarChart3 },
