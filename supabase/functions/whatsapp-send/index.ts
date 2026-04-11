@@ -432,6 +432,62 @@ serve(async (req) => {
       failed_at: result.success ? null : new Date().toISOString(),
     });
 
+    // ── Also log to wa_inbox_messages + wa_conversations for Hub visibility ──
+    if (result.success) {
+      try {
+        // Upsert conversation by phone
+        const convoPhone = phoneNorm.full;
+        const msgPreview = message ? message.substring(0, 100) : (template_name ? `[Template: ${template_name}]` : "Message sent");
+
+        const { data: existingConvo } = await supabase
+          .from("wa_conversations")
+          .select("id")
+          .eq("phone", convoPhone)
+          .maybeSingle();
+
+        let convoId: string;
+
+        if (existingConvo) {
+          convoId = existingConvo.id;
+          await supabase.from("wa_conversations").update({
+            last_message: msgPreview,
+            last_message_at: new Date().toISOString(),
+            customer_name: name || undefined,
+            updated_at: new Date().toISOString(),
+          }).eq("id", convoId);
+        } else {
+          const { data: newConvo } = await supabase.from("wa_conversations").insert({
+            phone: convoPhone,
+            customer_name: name || convoPhone,
+            last_message: msgPreview,
+            last_message_at: new Date().toISOString(),
+            status: "active",
+          }).select("id").single();
+          convoId = newConvo?.id;
+        }
+
+        if (convoId) {
+          await supabase.from("wa_inbox_messages").insert({
+            conversation_id: convoId,
+            direction: "outbound",
+            message_type: messageType === "document" ? "document" : messageType === "image" ? "image" : messageType === "template" ? "template" : "text",
+            content: message || null,
+            media_url: mediaUrl || null,
+            media_filename: mediaFileName || null,
+            template_name: template_name || null,
+            template_variables: template_variables ? template_variables : null,
+            wa_message_id: result.messageId || null,
+            status: "sent",
+            sent_by_name: "System",
+          });
+        }
+
+        console.log(`Logged outbound message to wa_inbox_messages for conversation ${convoId}`);
+      } catch (inboxErr) {
+        console.error("Failed to log to wa_inbox_messages (non-fatal):", inboxErr);
+      }
+    }
+
     if (result.success) {
       return new Response(
         JSON.stringify({ success: true, messageId: result.messageId, provider: result.provider, status: deliveryStatus }),
