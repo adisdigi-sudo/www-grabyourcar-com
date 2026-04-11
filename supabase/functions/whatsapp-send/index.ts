@@ -366,17 +366,15 @@ serve(async (req) => {
       );
     }
 
-    const {
-      message = "",
-      messageType = "text",
-      template_name,
-      template_variables,
-      template_components,
-      mediaUrl,
-      name,
-      logEvent,
-      lead_id,
-    }: SendMessageRequest = body;
+    const template_name = body.template_name || body.templateName;
+    const template_variables = body.template_variables || body.templateVariables;
+    const template_components = body.template_components || body.templateComponents;
+    const mediaUrl = body.mediaUrl || body.media_url;
+    const name = body.name;
+    const logEvent = body.logEvent || body.log_event;
+    const lead_id = body.lead_id || body.leadId;
+    const message = body.message || "";
+    const messageType = body.messageType || body.message_type || (template_name ? "template" : "text");
 
     // Get active WhatsApp provider from DB
     const { data: provider } = await supabase
