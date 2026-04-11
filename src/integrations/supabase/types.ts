@@ -15561,6 +15561,77 @@ export type Database = {
           },
         ]
       }
+      wa_broadcasts: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          created_by: string | null
+          delivered_count: number | null
+          failed_count: number | null
+          id: string
+          name: string
+          read_count: number | null
+          scheduled_at: string | null
+          segment_filter: Json | null
+          sent_count: number | null
+          started_at: string | null
+          status: string | null
+          template_id: string | null
+          template_name: string | null
+          total_recipients: number | null
+          updated_at: string | null
+          variables: Json | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          delivered_count?: number | null
+          failed_count?: number | null
+          id?: string
+          name: string
+          read_count?: number | null
+          scheduled_at?: string | null
+          segment_filter?: Json | null
+          sent_count?: number | null
+          started_at?: string | null
+          status?: string | null
+          template_id?: string | null
+          template_name?: string | null
+          total_recipients?: number | null
+          updated_at?: string | null
+          variables?: Json | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          delivered_count?: number | null
+          failed_count?: number | null
+          id?: string
+          name?: string
+          read_count?: number | null
+          scheduled_at?: string | null
+          segment_filter?: Json | null
+          sent_count?: number | null
+          started_at?: string | null
+          status?: string | null
+          template_id?: string | null
+          template_name?: string | null
+          total_recipients?: number | null
+          updated_at?: string | null
+          variables?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_broadcasts_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "wa_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wa_campaign_analytics: {
         Row: {
           campaign_id: string | null
@@ -16582,6 +16653,8 @@ export type Database = {
           header_type: string | null
           id: string
           language: string | null
+          meta_quality_score: string | null
+          meta_rejection_reason: string | null
           meta_template_id: string | null
           name: string
           sample_values: Json | null
@@ -16602,6 +16675,8 @@ export type Database = {
           header_type?: string | null
           id?: string
           language?: string | null
+          meta_quality_score?: string | null
+          meta_rejection_reason?: string | null
           meta_template_id?: string | null
           name: string
           sample_values?: Json | null
@@ -16622,6 +16697,8 @@ export type Database = {
           header_type?: string | null
           id?: string
           language?: string | null
+          meta_quality_score?: string | null
+          meta_rejection_reason?: string | null
           meta_template_id?: string | null
           name?: string
           sample_values?: Json | null
