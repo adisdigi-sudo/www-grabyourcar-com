@@ -216,6 +216,7 @@ const AppRouterShell = () => {
             <Route path="/document-viewer" element={<InsuranceDocumentViewer />} />
             <Route path="/track-order" element={<TrackOrder />} />
             <Route path="/unsubscribe" element={<Unsubscribe />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="*" element={<LegacyRouteHandler />} />
           </Routes>
           <RouteAwareChrome isChromelessExperience={isChromelessExperience} />
