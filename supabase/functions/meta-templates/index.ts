@@ -28,20 +28,35 @@ serve(async (req) => {
 
     // ─── Get WABA ID from phone number ───
     const getWabaId = async (): Promise<string> => {
-      // First get the WABA ID from the phone number
-      const phoneResp = await fetch(
-        `https://graph.facebook.com/v21.0/${WHATSAPP_PHONE_NUMBER_ID}?fields=id,verified_name,quality_rating,status,display_phone_number`,
-        { headers: { Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}` } }
-      );
-      const phoneData = await phoneResp.json();
-      
-      // Get WABA ID from phone number's owner
-      const wabaResp = await fetch(
+      // Try multiple approaches to get WABA ID
+      // Approach 1: Direct field on phone number
+      const resp1 = await fetch(
         `https://graph.facebook.com/v21.0/${WHATSAPP_PHONE_NUMBER_ID}?fields=whatsapp_business_account`,
         { headers: { Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}` } }
       );
-      const wabaData = await wabaResp.json();
-      return wabaData?.whatsapp_business_account?.id || "";
+      const data1 = await resp1.json();
+      console.log("WABA lookup approach 1:", JSON.stringify(data1));
+      if (data1?.whatsapp_business_account?.id) return data1.whatsapp_business_account.id;
+
+      // Approach 2: Use the app's WABA listing
+      // The phone number ID owner typically gives us a path to WABA
+      const resp2 = await fetch(
+        `https://graph.facebook.com/v21.0/${WHATSAPP_PHONE_NUMBER_ID}?fields=owner`,
+        { headers: { Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}` } }
+      );
+      const data2 = await resp2.json();
+      console.log("WABA lookup approach 2:", JSON.stringify(data2));
+      if (data2?.owner?.id) return data2.owner.id;
+
+      // Approach 3: Check stored WABA ID in admin_settings
+      const { data: setting } = await supabase
+        .from("admin_settings")
+        .select("setting_value")
+        .eq("setting_key", "waba_id")
+        .maybeSingle();
+      if (setting?.setting_value) return String(setting.setting_value);
+
+      return "";
     };
 
     // ═══════════════════════════════════════════════
