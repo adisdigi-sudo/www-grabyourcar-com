@@ -296,6 +296,8 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
   }, [deduplicatedPolicies, partnerFilter, periodFilter, search, dateFrom, dateTo]);
 
   const totalPremium = useMemo(() => filtered.reduce((sum, p) => sum + (p.premium_amount || 0), 0), [filtered]);
+  const shareablePolicies = useMemo(() => filtered.filter((policy) => Boolean(policy.policy_document_url)), [filtered]);
+  const selectedPolicies = useMemo(() => filtered.filter((policy) => selectedIds.has(policy.id)), [filtered, selectedIds]);
 
   const toggleSelect = (id: string) => setSelectedIds(prev => {
     const next = new Set(prev);
@@ -396,17 +398,22 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
           </PopoverContent>
         </Popover>
 
-        {selectedIds.size > 0 && (
+        {selectedPolicies.length > 0 && (
           <Button
             size="sm"
             variant="default"
             className="gap-1.5 text-xs"
             onClick={async () => {
               const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
-              const selected = filtered.filter(p => selectedIds.has(p.id));
+              const missingDocumentPolicies = selectedPolicies.filter((policy) => !policy.policy_document_url);
+              if (missingDocumentPolicies.length > 0) {
+                toast.error(`Upload policy document first for ${missingDocumentPolicies.length} selected polic${missingDocumentPolicies.length > 1 ? "ies" : "y"}`);
+                return;
+              }
+
               let sent = 0;
               let failed = 0;
-              for (const policy of selected) {
+              for (const policy of selectedPolicies) {
                 const phone = policy.insurance_clients?.phone;
                 if (phone && !phone.startsWith("IB_")) {
                   const custName = policy.insurance_clients?.customer_name || "Sir/Madam";
@@ -418,19 +425,17 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
 
                   const msg = `Hello ${custName} 🙏\n\nHere is your *motor insurance policy document* from *Grabyourcar Insurance*.\n\n${policyNo ? `📋 Policy No: *${policyNo}*\n` : ""}${insurer ? `🏢 Insurer: *${insurer}*\n` : ""}${vehicle ? `🚗 Vehicle: *${vehicle}*\n` : ""}${premium ? `💰 Premium: *${premium}*\n` : ""}${expiry ? `📅 Valid till: *${expiry}*\n` : ""}\nWe are just a click away — ask and command us anything, anytime! 💚\n\n📞 +91 98559 24442\n🔗 https://www.grabyourcar.com/insurance\n\n— *Team Grabyourcar* 🚗`;
 
-                  const hasDoc = !!policy.policy_document_url;
                   const result = await sendWhatsApp({
                     phone,
                     message: msg,
                     name: custName,
                     logEvent: "policy_book_bulk_send",
                     silent: true,
-                    ...(hasDoc ? {
-                      messageType: "document" as const,
-                      mediaUrl: policy.policy_document_url!,
-                      mediaFileName: `${policyNo || "policy"}_document.pdf`,
-                    } : {}),
+                    messageType: "document",
+                    mediaUrl: policy.policy_document_url!,
+                    mediaFileName: `${policyNo || "policy"}_document.pdf`,
                   });
+
                   if (result.success) sent++;
                   else failed++;
                 }
@@ -439,7 +444,7 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
               setSelectedIds(new Set());
             }}
           >
-            <Send className="h-3.5 w-3.5" /> Bulk Send ({selectedIds.size})
+            <Send className="h-3.5 w-3.5" /> Bulk Send ({selectedPolicies.length})
           </Button>
         )}
       </div>
