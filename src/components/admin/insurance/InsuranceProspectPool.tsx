@@ -440,6 +440,8 @@ export function InsuranceProspectPool() {
                                 message: `Hi ${p.customer_name || ""}! This is GrabYourCar Insurance. How can we help you today?`,
                                 name: p.customer_name || undefined,
                                 logEvent: "prospect_pool_whatsapp",
+                                templateName: "insurancefollowup",
+                                templateComponents: [{ type: "header", parameters: [{ type: "text", text: p.customer_name || "Valued Customer", parameter_name: "full_name" }] }],
                               });
                             }}>
                               <MessageSquare className="h-3.5 w-3.5 text-green-600" />
@@ -802,6 +804,8 @@ export function InsuranceProspectPool() {
                     message: `Hi ${detailOpen.customer_name || ""}! This is GrabYourCar Insurance. How can we help you today?`,
                     name: detailOpen.customer_name || undefined,
                     logEvent: "prospect_pool_detail_whatsapp",
+                    templateName: "insurancefollowup",
+                    templateComponents: [{ type: "header", parameters: [{ type: "text", text: detailOpen.customer_name || "Valued Customer", parameter_name: "full_name" }] }],
                   });
                 }}><MessageSquare className="h-3.5 w-3.5 text-green-600" /> WhatsApp</Button>
                 {detailOpen.email && <a href={`mailto:${detailOpen.email}`}><Button size="sm" variant="outline" className="gap-1.5"><Mail className="h-3.5 w-3.5" /> Email</Button></a>}

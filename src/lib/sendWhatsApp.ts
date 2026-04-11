@@ -7,6 +7,9 @@ interface SendWhatsAppParams {
   name?: string;
   logEvent?: string;
   silent?: boolean;
+  templateName?: string;
+  templateComponents?: unknown[];
+  templateVariables?: Record<string, string>;
 }
 
 interface SendWhatsAppResult {
@@ -72,6 +75,9 @@ export async function sendWhatsApp({
   name,
   logEvent,
   silent = false,
+  templateName,
+  templateComponents,
+  templateVariables,
 }: SendWhatsAppParams): Promise<SendWhatsAppResult> {
   const fullPhone = normalizePhone(phone);
   const sendMode = await getSendMode();
@@ -83,14 +89,19 @@ export async function sendWhatsApp({
   }
 
   try {
+    const body: Record<string, unknown> = {
+      to: fullPhone,
+      message,
+      messageType: templateName ? "template" : "text",
+      name,
+      logEvent: logEvent || "manual_send",
+    };
+    if (templateName) body.template_name = templateName;
+    if (templateComponents) body.template_components = templateComponents;
+    if (templateVariables) body.template_variables = templateVariables;
+
     const { data, error } = await supabase.functions.invoke("whatsapp-send", {
-      body: {
-        to: fullPhone,
-        message,
-        messageType: "text",
-        name,
-        logEvent: logEvent || "manual_send",
-      },
+      body,
     });
 
     if (error) throw error;
