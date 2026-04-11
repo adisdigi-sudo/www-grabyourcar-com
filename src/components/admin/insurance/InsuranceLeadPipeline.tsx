@@ -291,6 +291,7 @@ function WonPolicyDialog({
   const [insurer, setInsurer] = useState("");
   const [premium, setPremium] = useState("");
   const [startDate, setStartDate] = useState<Date | undefined>(new Date());
+  const [policyFile, setPolicyFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
 
   const buildExpiryDate = (start: Date) => {
@@ -310,16 +311,21 @@ function WonPolicyDialog({
       || parseDateValue(client.booking_date)
       || new Date();
 
-    // Don't pre-fill old policy number — user must enter the NEW policy number
     setPolicyNumber("");
     setInsurer(client.current_insurer || client.quote_insurer || "");
     setPremium(client.current_premium ? String(client.current_premium) : client.quote_amount ? String(client.quote_amount) : "");
     setStartDate(startBase);
+    setPolicyFile(null);
   }, [open, client]);
 
   const handleSave = async () => {
-    if (!client || !policyNumber.trim() || !insurer.trim() || !startDate || !expiryDate) {
-      toast.error("Fill all required fields");
+    if (!client || !policyNumber.trim() || !insurer.trim() || !startDate || !expiryDate || !policyFile) {
+      toast.error("Fill all required fields and attach the policy document");
+      return;
+    }
+
+    if (policyFile.size > 20 * 1024 * 1024) {
+      toast.error("Policy document is too large. Max 20MB.");
       return;
     }
 
@@ -343,12 +349,10 @@ function WonPolicyDialog({
         return;
       }
 
-      // Check by vehicle registration number across ALL clients for renewal detection
       let hasExistingVehiclePolicy = false;
       const vehicleNumber = client.vehicle_number?.trim();
       if (vehicleNumber) {
         const normalizedVehicle = vehicleNumber.replace(/\s+/g, '').toUpperCase();
-        // Find any active policies for this vehicle across all clients
         const { data: vehiclePolicies } = await supabase
           .from("insurance_policies")
           .select("id, client_id, insurance_clients!inner(vehicle_number)")
@@ -362,7 +366,6 @@ function WonPolicyDialog({
 
         if (matchingVehiclePolicies.length > 0) {
           hasExistingVehiclePolicy = true;
-          // Mark other clients' active policies for this vehicle as renewed
           await supabase
             .from("insurance_policies")
             .update({ status: "renewed", renewal_status: "renewed" })
@@ -370,7 +373,6 @@ function WonPolicyDialog({
         }
       }
 
-      // Also check current client's active policies
       const { data: activePolicies, error: activePoliciesError } = await supabase
         .from("insurance_policies")
         .select("id, renewal_count, policy_number")
@@ -384,7 +386,6 @@ function WonPolicyDialog({
       const isRenewal = hasExistingVehiclePolicy || hasOwnActivePolicies;
       const previousPolicy = activePolicies?.[0] || null;
 
-      // Mark all current client's active policies as renewed
       if (activePolicies && activePolicies.length > 0) {
         await supabase
           .from("insurance_policies")
@@ -392,7 +393,20 @@ function WonPolicyDialog({
           .in("id", activePolicies.map((p) => p.id));
       }
 
-      // Always INSERT a new policy (never update old one with new data)
+      const fileExt = policyFile.name.split(".").pop()?.toLowerCase() || "pdf";
+      const safePolicyNumber = nextPolicyNumber.replace(/[^A-Z0-9-_]/g, "-");
+      const safeFileName = `${safePolicyNumber}.${fileExt}`;
+      const storagePath = `${client.id}/${Date.now()}-${safeFileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("policy-documents")
+        .upload(storagePath, policyFile, { cacheControl: "3600", upsert: false });
+
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrlData } = supabase.storage.from("policy-documents").getPublicUrl(storagePath);
+      const policyDocumentUrl = publicUrlData.publicUrl;
+
       const policyPayload = {
         client_id: client.id,
         policy_number: nextPolicyNumber,
@@ -408,10 +422,11 @@ function WonPolicyDialog({
         source_label: isRenewal ? "Won (Renewal)" : "Won (New)",
         renewal_count: previousPolicy ? (previousPolicy.renewal_count || 0) + 1 : 0,
         policy_type: client.current_policy_type || "comprehensive",
+        policy_document_url: policyDocumentUrl,
+        document_file_name: safeFileName,
       } as any;
 
       const { error: savePolicyError } = await supabase.from("insurance_policies").insert(policyPayload);
-
       if (savePolicyError) throw savePolicyError;
 
       const { error: clientUpdateError } = await supabase.from("insurance_clients").update({
@@ -447,32 +462,39 @@ function WonPolicyDialog({
           start_date: nextStartDate,
           expiry_date: nextExpiryDate,
           previous_policy_id: previousPolicy?.id || null,
+          document_file_name: safeFileName,
         } as any,
       });
 
-      // Auto-send WhatsApp policy confirmation to customer
+      let whatsappSent = false;
       if (client.phone) {
         try {
           const customerName = client.customer_name || "Customer";
-          const vehicleInfo = [client.vehicle_make, client.vehicle_model].filter(Boolean).join(" ") || "your vehicle";
-          const policyMsg = `🎉 Congratulations ${customerName}!\n\nYour car insurance policy has been issued successfully!\n\n📋 *Policy Details:*\n• Policy #: ${nextPolicyNumber}\n• Insurer: ${insurer.trim()}\n• Vehicle: ${vehicleInfo}\n• Premium: ₹${premium || "N/A"}\n• Valid: ${nextStartDate} to ${nextExpiryDate}\n\nYour policy document will be shared shortly.\n\nThank you for choosing GrabYourCar! 🚗\nwww.grabyourcar.com`;
+          const premiumLabel = premium ? `₹${Number(premium).toLocaleString("en-IN")}` : "";
+          const expiryLabel = format(new Date(nextExpiryDate), "dd MMM yyyy");
+          const policyMsg = `Hello ${customerName} 🙏\n\nHere is your motor insurance policy document from Grabyourcar Insurance.\n\n📋 Policy No: *${nextPolicyNumber}*\n🏢 Insurer: *${insurer.trim()}*\n${client.vehicle_number ? `🚗 Vehicle: *${client.vehicle_number}*\n` : ""}${premiumLabel ? `💰 Premium: *${premiumLabel}*\n` : ""}📅 Valid till: *${expiryLabel}*\n\nWe are just a click away — ask and command us anything, anytime! 💚\n\n📞 +91 98559 24442\n🔗 https://www.grabyourcar.com/insurance\n\n— *Team Grabyourcar* 🚗`;
 
-          await supabase.functions.invoke("whatsapp-send", {
-            body: {
-              to: client.phone,
-              message: policyMsg,
-              messageType: "text",
-              name: customerName,
-              logEvent: "policy_won_auto_send",
-            },
+          const waResult = await sendWhatsApp({
+            phone: client.phone,
+            message: policyMsg,
+            messageType: "document",
+            mediaUrl: policyDocumentUrl,
+            mediaFileName: safeFileName,
+            name: customerName,
+            logEvent: "policy_won_auto_send",
+            silent: true,
           });
-          console.log("Auto WhatsApp sent for policy won:", client.phone);
+
+          whatsappSent = waResult.success;
+          if (!waResult.success) {
+            console.warn("Auto WhatsApp on Won failed (non-blocking):", waResult.error);
+          }
         } catch (waErr) {
           console.warn("Auto WhatsApp on Won failed (non-blocking):", waErr);
         }
       }
 
-      toast.success("Policy issued & WhatsApp sent! Now upload the policy document.", { duration: 5000 });
+      toast.success(whatsappSent ? "Policy issued and document sent on WhatsApp" : "Policy issued successfully");
       onSuccess();
       onOpenChange(false);
     } catch (e: any) {
@@ -520,11 +542,23 @@ function WonPolicyDialog({
                 <p className="text-[10px] text-muted-foreground">Auto-set to one day before same date next year</p>
               </div>
             </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Policy Document * (PDF/Image)</Label>
+              <Input
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.webp"
+                className="h-9 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-3 file:py-1 file:text-xs"
+                onChange={(e) => setPolicyFile(e.target.files?.[0] || null)}
+              />
+              <p className="text-[10px] text-muted-foreground">
+                {policyFile ? `Attached: ${policyFile.name}` : "Upload is mandatory before issuing the policy."}
+              </p>
+            </div>
           </div>
         )}
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave} disabled={saving || !policyNumber.trim() || !insurer.trim() || !startDate} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5">
+          <Button onClick={handleSave} disabled={saving || !policyNumber.trim() || !insurer.trim() || !startDate || !policyFile} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5">
             {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
             Issue Policy
           </Button>
