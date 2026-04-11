@@ -10,6 +10,9 @@ interface SendWhatsAppParams {
   templateName?: string;
   templateComponents?: unknown[];
   templateVariables?: Record<string, string>;
+  messageType?: "text" | "template" | "image" | "document" | "video" | "audio";
+  mediaUrl?: string;
+  mediaFileName?: string;
 }
 
 interface SendWhatsAppResult {
@@ -78,6 +81,9 @@ export async function sendWhatsApp({
   templateName,
   templateComponents,
   templateVariables,
+  messageType,
+  mediaUrl,
+  mediaFileName,
 }: SendWhatsAppParams): Promise<SendWhatsAppResult> {
   const fullPhone = normalizePhone(phone);
   const sendMode = await getSendMode();
@@ -92,13 +98,15 @@ export async function sendWhatsApp({
     const body: Record<string, unknown> = {
       to: fullPhone,
       message,
-      messageType: templateName ? "template" : "text",
+      messageType: messageType || (templateName ? "template" : mediaUrl ? "document" : "text"),
       name,
       logEvent: logEvent || "manual_send",
     };
     if (templateName) body.template_name = templateName;
     if (templateComponents) body.template_components = templateComponents;
     if (templateVariables) body.template_variables = templateVariables;
+    if (mediaUrl) body.mediaUrl = mediaUrl;
+    if (mediaFileName) body.mediaFileName = mediaFileName;
 
     const { data, error } = await supabase.functions.invoke("whatsapp-send", {
       body,
