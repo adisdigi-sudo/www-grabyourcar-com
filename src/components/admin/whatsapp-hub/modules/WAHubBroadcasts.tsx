@@ -520,7 +520,7 @@ function EventTriggers() {
                   <div className="flex items-center gap-2">
                     <span className="text-xl">{event?.icon || "⚡"}</span>
                     <div>
-                      <p className="font-medium text-sm">{rule.rule_name}</p>
+                      <p className="font-medium text-sm">{rule.name}</p>
                       <p className="text-xs text-muted-foreground">{event?.label || eventKey}</p>
                     </div>
                   </div>
