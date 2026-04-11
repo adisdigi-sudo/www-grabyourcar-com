@@ -12,6 +12,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SmartDatePicker } from "@/components/ui/smart-date-picker";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Loader2, Megaphone } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { getClientIdentityKey, normalizePolicyNumber } from "@/lib/insuranceIdentity";
