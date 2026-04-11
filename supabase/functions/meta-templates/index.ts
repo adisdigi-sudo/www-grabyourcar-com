@@ -244,11 +244,49 @@ serve(async (req) => {
         }
       }
 
+      // Convert named variables {{customer_name}} to positional {{1}}, {{2}}, etc.
+      let metaBody = template.body as string;
+      const namedVarMatches = metaBody.match(/\{\{([a-zA-Z_]\w*)\}\}/g) || [];
+      const uniqueNamedVars: string[] = [];
+      for (const m of namedVarMatches) {
+        const varName = m.replace(/[{}]/g, "");
+        if (!uniqueNamedVars.includes(varName)) uniqueNamedVars.push(varName);
+      }
+      
+      // Replace named vars with positional
+      if (uniqueNamedVars.length > 0) {
+        uniqueNamedVars.forEach((varName, i) => {
+          metaBody = metaBody.replace(new RegExp(`\\{\\{${varName}\\}\\}`, "g"), `{{${i + 1}}}`);
+        });
+      }
+
+      // Generate sample values for Meta approval
+      const sampleMap: Record<string, string> = {
+        customer_name: "Rahul Sharma",
+        name: "Rahul Sharma",
+        phone: "9876543210",
+        vehicle_number: "DL 01 AB 1234",
+        vehicle: "Hyundai Creta",
+        insurer: "HDFC ERGO",
+        premium: "₹12,500",
+        expiry_date: "15 Mar 2026",
+        policy_number: "POL-2025-001",
+        order_id: "ORD-12345",
+        amount: "₹25,000",
+        date: "11 Apr 2026",
+        booking_id: "BK-001",
+        txn_id: "TXN-78901",
+        car_model: "Hyundai Creta",
+        otp: "123456",
+      };
+
       // Body with example values for variables
-      const bodyComponent: any = { type: "BODY", text: template.body };
-      const bodyVars = template.body.match(/\{\{(\d+)\}\}/g) || [];
-      if (bodyVars.length > 0) {
-        const sampleValues = (template.sample_values as any[]) || bodyVars.map((_: string, i: number) => `Sample ${i + 1}`);
+      const bodyComponent: any = { type: "BODY", text: metaBody };
+      const positionalVars = metaBody.match(/\{\{(\d+)\}\}/g) || [];
+      if (positionalVars.length > 0 || uniqueNamedVars.length > 0) {
+        const sampleValues = uniqueNamedVars.length > 0
+          ? uniqueNamedVars.map(v => sampleMap[v] || `Sample ${v}`)
+          : positionalVars.map((_: string, i: number) => `Sample ${i + 1}`);
         bodyComponent.example = { body_text: [sampleValues] };
       }
       components.push(bodyComponent);
