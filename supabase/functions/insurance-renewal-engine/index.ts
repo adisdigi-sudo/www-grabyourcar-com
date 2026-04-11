@@ -178,14 +178,30 @@ serve(async (req) => {
 
       const message = custom_message || buildMessage(template, client, policy, daysRemaining, advisorNumber);
 
-      // Send via whatsapp-send
+      // Send via whatsapp-send using insurancefollowup Meta-approved template
+      const customerName = client.customer_name || "Valued Customer";
       const sendResp = await fetch(`${SUPABASE_URL}/functions/v1/whatsapp-send`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${SERVICE_KEY}`,
         },
-        body: JSON.stringify({ to: phone, message }),
+        body: JSON.stringify({
+          to: phone,
+          message,
+          messageType: "template",
+          template_name: "insurancefollowup",
+          template_components: [
+            {
+              type: "header",
+              parameters: [
+                { type: "text", text: customerName, parameter_name: "full_name" }
+              ]
+            }
+          ],
+          name: customerName,
+          logEvent: "renewal_reminder",
+        }),
       });
       const sendResult = await sendResp.json();
 
@@ -247,13 +263,28 @@ serve(async (req) => {
 
           // Send WhatsApp
           try {
+            const clientName = client.customer_name || "Valued Customer";
             await fetch(`${SUPABASE_URL}/functions/v1/whatsapp-send`, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${SERVICE_KEY}`,
               },
-              body: JSON.stringify({ to: phone, message }),
+              body: JSON.stringify({
+                to: phone,
+                message,
+                messageType: "template",
+                template_name: "insurancefollowup",
+                template_components: [
+                  {
+                    type: "header",
+                    parameters: [
+                      { type: "text", text: clientName, parameter_name: "full_name" }
+                    ]
+                  }
+                ],
+                logEvent: "renewal_reminder_auto",
+              }),
             });
             results.triggered++;
           } catch (e) {
@@ -342,13 +373,28 @@ serve(async (req) => {
           const recoveryMsg = `⚠️ *Urgent: Policy Expired*\n━━━━━━━━━━━━━━━━━━━━━\n\nDear *${client.customer_name || "Valued Customer"}*,\n\nYour motor insurance for *${client.vehicle_model || "your vehicle"}* ${client.vehicle_number ? `(${client.vehicle_number}) ` : ""}expired on *${formatDate(policy.expiry_date)}*.\n\n🚨 *Without active insurance:*\n❌ You cannot file claims\n❌ Legal penalties may apply\n❌ NCB discount may be lost\n❌ Vehicle inspection may be required\n\n💡 *Renew now to avoid complications!*\nOur team can help you get the best rates even after expiry.\n\n📞 Call us: ${advisorNumber}\n🔗 https://www.grabyourcar.com/insurance\n\n— *Grabyourcar Insurance* 🚗`;
 
           try {
+            const recoveryName = client.customer_name || "Valued Customer";
             await fetch(`${SUPABASE_URL}/functions/v1/whatsapp-send`, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${SERVICE_KEY}`,
               },
-              body: JSON.stringify({ to: phone, message: recoveryMsg }),
+              body: JSON.stringify({
+                to: phone,
+                message: recoveryMsg,
+                messageType: "template",
+                template_name: "insurancefollowup",
+                template_components: [
+                  {
+                    type: "header",
+                    parameters: [
+                      { type: "text", text: recoveryName, parameter_name: "full_name" }
+                    ]
+                  }
+                ],
+                logEvent: "lapsed_recovery",
+              }),
             });
           } catch (e) {
             console.error("Recovery WA failed:", e);
