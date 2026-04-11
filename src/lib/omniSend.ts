@@ -97,8 +97,12 @@ export async function omniSend(params: OmniSendParams): Promise<OmniSendResult> 
 
     if (data?.success) {
       if (!silent) {
-        const channelLabel = channel === "whatsapp" ? "WhatsApp" : channel === "email" ? "Email" : "RCS";
-        toast.success(`✅ ${channelLabel} sent to ${name || phone || email}`);
+        if (channel === "whatsapp") {
+          toast.success(`✅ WhatsApp queued for delivery to ${name || phone}`);
+        } else {
+          const channelLabel = channel === "email" ? "Email" : "RCS";
+          toast.success(`✅ ${channelLabel} sent to ${name || phone || email}`);
+        }
       }
       return { success: true, messageId: data.messageId, channel };
     }

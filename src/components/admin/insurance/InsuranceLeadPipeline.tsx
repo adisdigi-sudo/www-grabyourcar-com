@@ -512,9 +512,10 @@ function WonPolicyDialog({
 interface InsuranceLeadPipelineProps {
   clients: Client[];
   isLoading: boolean;
+  onOpenChat?: (draft: { phone: string; name?: string | null; message: string }) => void;
 }
 
-export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipelineProps) {
+export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: InsuranceLeadPipelineProps) {
   const queryClient = useQueryClient();
   const [selectedStage, setSelectedStage] = useState<string>("all");
   const [search, setSearch] = useState("");
@@ -584,6 +585,27 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
       assigned_executive: selectedClient.assigned_executive || "",
     });
   }, [selectedClient]);
+
+  const handleQuickWhatsApp = useCallback(async (client: Client) => {
+    const defaultMessage = `Hi ${client.customer_name || ""}! This is GrabYourCar Insurance. How can we help you today?`;
+
+    if (onOpenChat) {
+      onOpenChat({
+        phone: client.phone,
+        name: client.customer_name,
+        message: defaultMessage,
+      });
+      return;
+    }
+
+    const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+    await sendWhatsApp({
+      phone: client.phone,
+      message: defaultMessage,
+      name: client.customer_name,
+      logEvent: "lead_pipeline_quick_whatsapp",
+    });
+  }, [onOpenChat]);
 
   // Filter - exclude won/policy_issued leads from pipeline and deduplicate same lead/vehicle
   const pipelineClients = useMemo(() => {
@@ -1363,15 +1385,7 @@ export function InsuranceLeadPipeline({ clients, isLoading }: InsuranceLeadPipel
                           {phone && (
                             <>
                               <a href={`tel:${client.phone}`}><Button variant="ghost" size="icon" className="h-6 w-6"><PhoneCall className="h-3 w-3 text-primary" /></Button></a>
-                              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={async () => {
-                                const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
-                                await sendWhatsApp({
-                                  phone: client.phone,
-                                  message: `Hi ${client.customer_name || ""}! This is GrabYourCar Insurance. How can we help you today?`,
-                                  name: client.customer_name,
-                                  logEvent: "lead_pipeline_quick_whatsapp",
-                                });
-                              }}><MessageSquare className="h-3 w-3 text-green-600" /></Button>
+                              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => void handleQuickWhatsApp(client)}><MessageSquare className="h-3 w-3 text-green-600" /></Button>
                             </>
                           )}
                           <Button size="sm" variant="outline" className="h-6 text-[10px] gap-0.5 px-1.5 text-emerald-600 border-emerald-200" onClick={() => { setSelectedClient(client); setShowQuoteModal(true); }}>

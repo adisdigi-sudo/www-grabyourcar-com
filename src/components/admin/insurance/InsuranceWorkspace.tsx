@@ -29,6 +29,7 @@ import { InsurancePremiumCalculator } from "./InsurancePremiumCalculator";
 import { InsuranceKpiDetailDialog } from "./InsuranceKpiDetailDialog";
 import { InsuranceRenewalCampaign } from "./InsuranceRenewalCampaign";
 import { InsurancePerformance } from "./InsurancePerformance";
+import { OmniChatPanel } from "../shared/OmniChatPanel";
 
 type ActiveView = "pipeline" | "policy_book" | "renewals" | "overdue" | "bulk_tools" | "renewal_campaign" | "performance";
 type KpiType = "total_leads" | "in_pipeline" | "won" | "active_policies" | "conversion" | null;
@@ -40,6 +41,12 @@ type LegacyInsuranceLead = {
   source: string | null;
 };
 
+type ChatComposerDraft = {
+  phone: string;
+  name?: string | null;
+  message: string;
+};
+
 export function InsuranceWorkspace() {
   const queryClient = useQueryClient();
   const [activeView, setActiveView] = useState<ActiveView>("pipeline");
@@ -47,6 +54,7 @@ export function InsuranceWorkspace() {
   const [showCalcDialog, setShowCalcDialog] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showAddLead, setShowAddLead] = useState(false);
+  const [chatDraft, setChatDraft] = useState<ChatComposerDraft | null>(null);
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), "yyyy-MM"));
   const [newLead, setNewLead] = useState({
     customer_name: "", phone: "", email: "", city: "",
@@ -946,7 +954,7 @@ export function InsuranceWorkspace() {
 
       {activeView === "pipeline" && (
         <AdminRenderBoundary contextLabel="Insurance pipeline">
-          <InsuranceLeadPipeline clients={clients} isLoading={isLoading} />
+          <InsuranceLeadPipeline clients={clients} isLoading={isLoading} onOpenChat={setChatDraft} />
         </AdminRenderBoundary>
       )}
       {activeView === "policy_book" && (
@@ -979,6 +987,24 @@ export function InsuranceWorkspace() {
           <InsurancePerformance clients={dedupedClients} policies={performancePolicies as PolicyRecord[]} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} monthOptions={monthOptions} />
         </AdminRenderBoundary>
       )}
+
+      <Dialog open={!!chatDraft} onOpenChange={(open) => !open && setChatDraft(null)}>
+        <DialogContent className="max-w-5xl p-0 overflow-hidden">
+          <DialogHeader className="px-6 pt-6 pb-0">
+            <DialogTitle>WhatsApp Chat Composer</DialogTitle>
+          </DialogHeader>
+          {chatDraft && (
+            <div className="p-6 pt-4">
+              <OmniChatPanel
+                phone={chatDraft.phone}
+                context="Car Insurance"
+                initialMessage={chatDraft.message}
+                initialName={chatDraft.name || undefined}
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showCalcDialog} onOpenChange={setShowCalcDialog}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">

@@ -16,6 +16,8 @@ interface OmniChatPanelProps {
   phone?: string;
   email?: string;
   context?: string;
+  initialMessage?: string;
+  initialName?: string;
 }
 
 interface ChatThread {
@@ -40,7 +42,14 @@ interface ChatMessage {
   customer_name: string | null;
 }
 
-export function OmniChatPanel({ phone, email, context }: OmniChatPanelProps) {
+function normalizePhone(value: string): string {
+  const clean = value.replace(/\D/g, "").replace(/^0+/, "");
+  if (clean.startsWith("91") && clean.length === 12) return clean;
+  if (clean.length === 10 && /^[6-9]/.test(clean)) return `91${clean}`;
+  return clean;
+}
+
+export function OmniChatPanel({ phone, email, context, initialMessage, initialName }: OmniChatPanelProps) {
   const [threads, setThreads] = useState<ChatThread[]>([]);
   const [selectedThread, setSelectedThread] = useState<ChatThread | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -56,14 +65,43 @@ export function OmniChatPanel({ phone, email, context }: OmniChatPanelProps) {
     loadThreads();
   }, []);
 
-  // Auto-select thread if phone provided
+  // Prime composer when opened from CRM quick actions
   useEffect(() => {
-    if (phone && threads.length > 0) {
-      const cleanPhone = phone.replace(/\D/g, "");
-      const match = threads.find((t) => t.phone.includes(cleanPhone) || cleanPhone.includes(t.phone));
-      if (match) setSelectedThread(match);
+    if (!phone) return;
+    setReplyChannel("whatsapp");
+    setReplyMessage(initialMessage || "");
+  }, [phone, initialMessage]);
+
+  // Auto-select thread if phone provided, or create a draft thread
+  useEffect(() => {
+    if (!phone) return;
+
+    const normalizedPhone = normalizePhone(phone);
+    const match = threads.find((t) => {
+      const threadPhone = normalizePhone(t.phone);
+      return threadPhone === normalizedPhone ||
+        threadPhone.endsWith(normalizedPhone.slice(-10)) ||
+        normalizedPhone.endsWith(threadPhone.slice(-10));
+    });
+
+    if (match) {
+      setSelectedThread(match);
+      return;
     }
-  }, [phone, threads]);
+
+    setSelectedThread((current) => {
+      if (current && normalizePhone(current.phone) === normalizedPhone) return current;
+
+      return {
+        id: `draft-${normalizedPhone}`,
+        phone: normalizedPhone,
+        customer_name: initialName || null,
+        last_message: initialMessage || "",
+        last_at: new Date().toISOString(),
+        channel: "whatsapp",
+      };
+    });
+  }, [phone, threads, initialMessage, initialName]);
 
   // Load messages for selected thread
   useEffect(() => {
@@ -133,7 +171,10 @@ export function OmniChatPanel({ phone, email, context }: OmniChatPanelProps) {
 
     if (result.success || result.fallback) {
       setReplyMessage("");
-      setTimeout(() => loadMessages(selectedThread.phone), 1000);
+      setTimeout(() => {
+        loadMessages(selectedThread.phone);
+        loadThreads();
+      }, 1000);
     }
     setSending(false);
   }
@@ -261,6 +302,7 @@ export function OmniChatPanel({ phone, email, context }: OmniChatPanelProps) {
                                 })
                               : ""}
                           </span>
+                          {m.status === "queued" && <Clock className="h-3 w-3 text-amber-500" />}
                           {m.status === "sent" && <CheckCheck className="h-3 w-3 text-muted-foreground" />}
                           {m.status === "delivered" && <CheckCheck className="h-3 w-3 text-blue-500" />}
                           {m.status === "read" && <CheckCheck className="h-3 w-3 text-green-500" />}
