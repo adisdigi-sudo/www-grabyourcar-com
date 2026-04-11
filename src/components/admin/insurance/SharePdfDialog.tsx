@@ -95,6 +95,25 @@ export function SharePdfDialog({
     }
   };
 
+  const uploadPdfAndGetUrl = async (doc: jsPDF, fileName: string): Promise<string | null> => {
+    try {
+      const pdfBlob = doc.output("blob");
+      const storagePath = `shares/${Date.now()}_${fileName}`;
+      const { error: uploadError } = await supabase.storage
+        .from("quote-pdfs")
+        .upload(storagePath, pdfBlob, { contentType: "application/pdf", upsert: true });
+      if (uploadError) {
+        console.error("PDF upload error:", uploadError);
+        return null;
+      }
+      const { data: urlData } = supabase.storage.from("quote-pdfs").getPublicUrl(storagePath);
+      return urlData?.publicUrl || null;
+    } catch (err) {
+      console.error("PDF upload failed:", err);
+      return null;
+    }
+  };
+
   const handleWhatsAppShare = async () => {
     const cleanPhone = (phone || "").replace(/\D/g, "");
     if (cleanPhone.length < 10) { toast.error("Please enter a valid phone number"); return; }
@@ -103,12 +122,15 @@ export function SharePdfDialog({
       const { doc, fileName } = generatePdf();
       doc.save(fileName);
 
+      const pdfUrl = await uploadPdfAndGetUrl(doc, fileName);
+
       const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
       const result = await sendWhatsApp({
         phone: cleanPhone,
         message: shareMessage || `Hi ${customerName}! Your ${title} is ready. Please review and contact us for the best rates!`,
         name: customerName || undefined,
         logEvent: "pdf_share",
+        ...(pdfUrl ? { messageType: "document" as const, mediaUrl: pdfUrl, mediaFileName: fileName } : {}),
       });
 
       if (!result.success) return;
@@ -129,12 +151,15 @@ export function SharePdfDialog({
     setSendingApi(true);
     try {
       const { doc, fileName } = generatePdf();
+      const pdfUrl = await uploadPdfAndGetUrl(doc, fileName);
+
       const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
       const result = await sendWhatsApp({
         phone: cleanPhone,
         message: shareMessage || `Your ${title} is ready. Please review and contact us for the best rates!`,
         name: customerName || undefined,
         logEvent: title.toLowerCase().includes("renewal") ? "insurance_renewal_share" : "insurance_quote_share",
+        ...(pdfUrl ? { messageType: "document" as const, mediaUrl: pdfUrl, mediaFileName: fileName } : {}),
       });
 
       if (!result.success) return;
