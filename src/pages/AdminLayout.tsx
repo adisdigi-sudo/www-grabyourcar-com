@@ -710,11 +710,10 @@ const AdminLayout = () => {
       case "open-api-portal":
         return <OpenAPIPortal />;
       case "integrations-whatsapp":
-        return <WhatsAppManagement />;
       case "whatsapp-inbox":
-        return <WhatsAppBusinessInbox />;
       case "marketing-templates":
-        return <WhatsAppTemplateManager />;
+      case "whatsapp-hub":
+        return <WhatsAppHub />;
       case "marketing-automation":
         return <EmailAutomationManager />;
       case "integrations-shipping":
