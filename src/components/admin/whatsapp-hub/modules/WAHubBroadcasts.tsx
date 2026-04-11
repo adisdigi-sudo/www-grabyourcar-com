@@ -497,7 +497,7 @@ function EventTriggers() {
     qc.invalidateQueries({ queryKey: ["wa-trigger-rules"] });
   };
 
-  const triggerRules = (rules || []).filter((r: any) => r.trigger_keyword?.startsWith("event:") || r.category === "trigger");
+  const triggerRules = (rules || []).filter((r: any) => (r.intent_keywords || []).some((k: string) => k.startsWith("event:")));
 
   return (
     <div className="space-y-4">
