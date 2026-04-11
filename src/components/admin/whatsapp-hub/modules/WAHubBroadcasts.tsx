@@ -85,7 +85,7 @@ function OneShotBroadcast() {
   const { data: templates } = useQuery({
     queryKey: ["broadcast-templates"],
     queryFn: async () => {
-      const { data } = await supabase.from("wa_templates").select("id, name, content, status").eq("status", "approved").order("name");
+      const { data } = await supabase.from("wa_templates").select("id, name, body, status").eq("status", "approved").order("name");
       return data || [];
     },
   });
@@ -129,7 +129,7 @@ function OneShotBroadcast() {
 
   const handleTemplateSelect = (id: string) => {
     const t = templates?.find((t: any) => t.id === id);
-    setForm((p) => ({ ...p, template_id: id, message: t?.content || p.message }));
+    setForm((p) => ({ ...p, template_id: id, message: t?.body || p.message }));
   };
 
   return (
@@ -473,12 +473,12 @@ function EventTriggers() {
     mutationFn: async () => {
       if (!form.name || !form.message) throw new Error("Name and message required");
       const { error } = await supabase.from("wa_chatbot_rules").insert({
-        rule_name: form.name,
-        trigger_keyword: `event:${form.trigger_event}`,
-        response_message: form.message,
+        name: form.name,
+        intent_keywords: [`event:${form.trigger_event}`],
+        response_content: form.message,
+        response_type: "text",
         template_name: form.template_name || null,
         is_active: form.is_active,
-        category: "trigger",
         priority: 10,
       });
       if (error) throw error;
