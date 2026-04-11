@@ -28,7 +28,7 @@ import InsuranceQuoteModal from "./InsuranceQuoteModal";
 import { OmniShareDialog } from "@/components/admin/shared/OmniShareDialog";
 import { generateInsuranceQuotePdf } from "@/lib/generateInsuranceQuotePdf";
 import { ClientQuoteHistory } from "./ClientQuoteHistory";
-import { openWhatsAppChat } from "@/lib/openWhatsAppChat";
+import { sendWhatsApp } from "@/lib/sendWhatsApp";
 
 const PIPELINE_STAGES = [
   { value: "new", label: "New Lead", icon: UserPlus, color: "bg-blue-500", lightBg: "bg-blue-50 dark:bg-blue-950/40", border: "border-blue-200 dark:border-blue-800", textColor: "text-blue-700 dark:text-blue-300", emoji: "🆕" },
@@ -370,11 +370,17 @@ export function InsuranceStatusPipeline() {
   const requestPolicyViaWhatsApp = async (client: Client) => {
     if (!client.phone || client.phone.startsWith("IB_")) { toast.error("No phone number available"); return; }
     const msg = `🙏 Namaste ${client.customer_name || "Sir/Madam"},\n\nThis is *Grabyourcar Insurance* team.\n\nWe need your current motor insurance policy document for ${client.vehicle_number ? `vehicle *${client.vehicle_number}*` : "your vehicle"} to prepare the best renewal quote.\n\n📎 Please share:\n1️⃣ Current Policy PDF/Photo\n2️⃣ RC Copy (if available)\n\nYou can simply *reply to this message* with the documents.\n\nThank you! 🚗\n— *Grabyourcar Insurance*`;
-    openWhatsAppChat(client.phone, msg);
+    const result = await sendWhatsApp({
+      phone: client.phone,
+      message: msg,
+      name: client.customer_name || undefined,
+      logEvent: "policy_doc_request",
+    });
+    if (!result.success) return;
     supabase.from("insurance_activity_log").insert({
       client_id: client.id, activity_type: "whatsapp_sent",
-      title: "Policy document request opened in WhatsApp",
-      description: `WhatsApp chat opened for ${client.phone}`,
+      title: "Policy document request sent via WhatsApp API",
+      description: `WhatsApp API message queued for ${client.phone}`,
     } as any);
   };
 

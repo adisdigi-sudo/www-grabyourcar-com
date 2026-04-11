@@ -56,7 +56,7 @@ import { InsurancePolicyDocumentUploader } from "./InsurancePolicyDocumentUpload
 import { ClientQuoteHistory } from "./ClientQuoteHistory";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useQuery } from "@tanstack/react-query";
-import { openWhatsAppChat } from "@/lib/openWhatsAppChat";
+import { sendWhatsApp } from "@/lib/sendWhatsApp";
 
 export type Client = {
   id: string;
@@ -589,7 +589,12 @@ export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: Insura
 
   const handleQuickWhatsApp = useCallback((client: Client) => {
     const defaultMessage = `Hi ${client.customer_name || ""}! This is GrabYourCar Insurance. How can we help you today?`;
-    openWhatsAppChat(client.phone, defaultMessage);
+    void sendWhatsApp({
+      phone: client.phone,
+      message: defaultMessage,
+      name: client.customer_name || undefined,
+      logEvent: "lead_pipeline_quick_whatsapp",
+    });
   }, []);
 
   // Filter - exclude won/policy_issued leads from pipeline and deduplicate same lead/vehicle
@@ -1553,7 +1558,12 @@ export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: Insura
                         <>
                           <a href={`tel:${selectedClient.phone}`}><Button size="sm" variant="outline" className="gap-1.5"><PhoneCall className="h-3.5 w-3.5" /> Call</Button></a>
                           <Button size="sm" variant="outline" className="gap-1.5 text-green-600 border-green-200" onClick={() => {
-                            openWhatsAppChat(selectedClient.phone, `Hi ${selectedClient.customer_name || ""}! This is GrabYourCar Insurance. How can we help you today?`);
+                            void sendWhatsApp({
+                              phone: selectedClient.phone,
+                              message: `Hi ${selectedClient.customer_name || ""}! This is GrabYourCar Insurance. How can we help you today?`,
+                              name: selectedClient.customer_name || undefined,
+                              logEvent: "lead_pipeline_detail_whatsapp",
+                            });
                           }}><MessageSquare className="h-3.5 w-3.5" /> WhatsApp</Button>
                         </>
                       )}

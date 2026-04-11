@@ -19,7 +19,7 @@ import {
 import { BulkImportButton } from "./BulkClientImport";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format } from "date-fns";
-import { openWhatsAppChat } from "@/lib/openWhatsAppChat";
+import { sendWhatsApp } from "@/lib/sendWhatsApp";
 
 export function InsuranceClientsManager() {
   const [search, setSearch] = useState("");
@@ -271,7 +271,12 @@ export function InsuranceClientsManager() {
                                   </Button>
                                 </a>
                                 <Button variant="ghost" size="icon" className="h-7 w-7" title="WhatsApp" onClick={() => {
-                                  openWhatsAppChat(c.phone, `Hi ${c.customer_name || ""}! This is GrabYourCar Insurance. How can we help you today?`);
+                                  void sendWhatsApp({
+                                    phone: c.phone,
+                                    message: `Hi ${c.customer_name || ""}! This is GrabYourCar Insurance. How can we help you today?`,
+                                    name: c.customer_name || undefined,
+                                    logEvent: "clients_manager_whatsapp",
+                                  });
                                 }}>
                                   <MessageSquare className="h-3.5 w-3.5 text-green-600" />
                                 </Button>
@@ -453,7 +458,12 @@ function ClientDetailDialog({ client, policies, onClose }: { client: any; polici
                   </Button>
                 </a>
                 <Button size="sm" variant="outline" className="gap-1.5" onClick={() => {
-                  openWhatsAppChat(phone!, `Hi ${client.customer_name || ""}! This is GrabYourCar Insurance. How can we help?`);
+                  void sendWhatsApp({
+                    phone: phone!,
+                    message: `Hi ${client.customer_name || ""}! This is GrabYourCar Insurance. How can we help?`,
+                    name: client.customer_name || undefined,
+                    logEvent: "clients_detail_whatsapp",
+                  });
                 }}>
                   <MessageSquare className="h-3.5 w-3.5 text-green-600" /> WhatsApp
                 </Button>

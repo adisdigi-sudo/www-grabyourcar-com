@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { format, differenceInDays, startOfWeek, endOfWeek, startOfQuarter, endOfQuarter } from "date-fns";
 import { InsurancePolicyDocumentUploader } from "./InsurancePolicyDocumentUploader";
-import { openWhatsAppChat } from "@/lib/openWhatsAppChat";
+import { sendWhatsApp } from "@/lib/sendWhatsApp";
 
 // ── 9-Stage Pipeline (STRICT) ──
 const PIPELINE_STAGES = [
@@ -573,7 +573,12 @@ export function InsurancePipelineBoard({ onNavigate }: InsurancePipelineBoardPro
 
   const handleWhatsApp = (phone: string | null, name: string) => {
     if (!phone || phone.startsWith("IB_")) return;
-    openWhatsAppChat(phone, `Hi ${name}, reaching out regarding your insurance. Contact us for the best deal!`);
+    void sendWhatsApp({
+      phone,
+      message: `Hi ${name}, reaching out regarding your insurance. Contact us for the best deal!`,
+      name: name || undefined,
+      logEvent: "pipeline_board_whatsapp",
+    });
   };
 
   const getPriorityColor = (p: string | null) => {
