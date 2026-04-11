@@ -415,6 +415,9 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
                     name: policy.insurance_clients?.customer_name || undefined,
                     logEvent: "policy_book_bulk_send",
                     silent: true,
+                    messageType: policy.policy_document_url ? "document" : "text",
+                    mediaUrl: policy.policy_document_url || undefined,
+                    mediaFileName: `${policy.policy_number || "policy"}.pdf`,
                   });
                   if (result.success) sent++;
                   else failed++;
