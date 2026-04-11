@@ -114,6 +114,64 @@ export function WaTemplateManager() {
     setQuickReplies((qRes.data || []) as unknown as QuickReply[]);
   };
 
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const syncFromMeta = async () => {
+    setIsSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("meta-templates", {
+        body: { action: "sync_templates" },
+      });
+      if (error) throw error;
+      toast.success(`Synced ${data?.synced || 0} templates from Meta`);
+      await fetchAll();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to sync from Meta");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const submitToMeta = async (template: Template) => {
+    try {
+      const { data, error } = await supabase.functions.invoke("meta-templates", {
+        body: {
+          action: "create_template",
+          name: template.name,
+          category: (template.category || "utility").toUpperCase(),
+          language: template.language || "en",
+          body: template.body,
+          header_type: template.header_type,
+          header_content: template.header_content,
+          footer: template.footer,
+          buttons: template.buttons,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success("Template submitted to Meta for approval");
+      // After submitting, sync to get latest status
+      await syncFromMeta();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to submit to Meta");
+    }
+  };
+
+  const deleteFromMeta = async (template: Template) => {
+    if (!confirm(`Delete "${template.display_name || template.name}" from Meta? This cannot be undone.`)) return;
+    try {
+      const { data, error } = await supabase.functions.invoke("meta-templates", {
+        body: { action: "delete_template", template_name: template.name },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success("Template deleted from Meta");
+      await fetchAll();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete from Meta");
+    }
+  };
+
   const saveTemplate = async () => {
     if (!editItem?.name || !editItem?.body) {
       toast.error("Name and body are required");
@@ -241,8 +299,8 @@ export function WaTemplateManager() {
             <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => setPricingOpen(true)}>
               <IndianRupee className="h-3.5 w-3.5" /> Pricing Guide
             </Button>
-            <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={fetchAll}>
-              <RefreshCw className="h-3.5 w-3.5" /> Sync
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={syncFromMeta} disabled={isSyncing}>
+              <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? "animate-spin" : ""}`} /> {isSyncing ? "Syncing…" : "Sync from Meta"}
             </Button>
           </div>
         </div>
@@ -402,9 +460,15 @@ export function WaTemplateManager() {
                               <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { navigator.clipboard.writeText(t.body); toast.success("Copied!"); }}>
                                 <Copy className="h-3.5 w-3.5" />
                               </Button>
-                              <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => deleteItem(t.id, "template")}>
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
+                              {t.status === "draft" ? (
+                                <Button size="icon" variant="ghost" className="h-7 w-7 text-green-600" title="Submit to Meta" onClick={() => submitToMeta(t)}>
+                                  <Send className="h-3.5 w-3.5" />
+                                </Button>
+                              ) : (
+                                <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" title="Delete from Meta" onClick={() => deleteFromMeta(t)}>
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
                             </div>
                           </TableCell>
                         </TableRow>
