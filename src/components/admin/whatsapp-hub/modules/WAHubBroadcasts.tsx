@@ -93,7 +93,7 @@ function OneShotBroadcast() {
   const { data: segments } = useQuery({
     queryKey: ["broadcast-segments"],
     queryFn: async () => {
-      const { data } = await supabase.from("wa_contact_segments").select("id, name, contact_count").order("name");
+      const { data } = await supabase.from("wa_contact_segments").select("id, name, estimated_count").order("name");
       return data || [];
     },
   });
