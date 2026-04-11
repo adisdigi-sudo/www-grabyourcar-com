@@ -1,5 +1,5 @@
-import WhatsAppBusinessInbox from "../WhatsAppBusinessInbox";
+import { WAHubLayout } from "../whatsapp-hub/WAHubLayout";
 
 export function WhatsAppMarketingPortal() {
-  return <WhatsAppBusinessInbox />;
+  return <WAHubLayout />;
 }
