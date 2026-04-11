@@ -15730,6 +15730,60 @@ export type Database = {
           },
         ]
       }
+      wa_chatbot_rules: {
+        Row: {
+          ai_prompt: string | null
+          conditions: Json | null
+          created_at: string
+          id: string
+          intent_keywords: string[] | null
+          is_active: boolean | null
+          last_matched_at: string | null
+          match_count: number | null
+          name: string
+          priority: number | null
+          response_content: string | null
+          response_type: string
+          template_name: string | null
+          updated_at: string
+          vertical: string | null
+        }
+        Insert: {
+          ai_prompt?: string | null
+          conditions?: Json | null
+          created_at?: string
+          id?: string
+          intent_keywords?: string[] | null
+          is_active?: boolean | null
+          last_matched_at?: string | null
+          match_count?: number | null
+          name: string
+          priority?: number | null
+          response_content?: string | null
+          response_type?: string
+          template_name?: string | null
+          updated_at?: string
+          vertical?: string | null
+        }
+        Update: {
+          ai_prompt?: string | null
+          conditions?: Json | null
+          created_at?: string
+          id?: string
+          intent_keywords?: string[] | null
+          is_active?: boolean | null
+          last_matched_at?: string | null
+          match_count?: number | null
+          name?: string
+          priority?: number | null
+          response_content?: string | null
+          response_type?: string
+          template_name?: string | null
+          updated_at?: string
+          vertical?: string | null
+        }
+        Relationships: []
+      }
       wa_contact_segments: {
         Row: {
           created_at: string | null
@@ -15763,6 +15817,72 @@ export type Database = {
           name?: string
           rules?: Json | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      wa_contacts: {
+        Row: {
+          city: string | null
+          client_id: string | null
+          conversation_id: string | null
+          created_at: string
+          custom_fields: Json | null
+          email: string | null
+          id: string
+          is_active: boolean | null
+          last_message_at: string | null
+          lead_id: string | null
+          name: string | null
+          notes: string | null
+          opted_in: boolean | null
+          opted_in_at: string | null
+          phone: string
+          segment: string | null
+          tags: string[] | null
+          total_messages: number | null
+          updated_at: string
+        }
+        Insert: {
+          city?: string | null
+          client_id?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          custom_fields?: Json | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_message_at?: string | null
+          lead_id?: string | null
+          name?: string | null
+          notes?: string | null
+          opted_in?: boolean | null
+          opted_in_at?: string | null
+          phone: string
+          segment?: string | null
+          tags?: string[] | null
+          total_messages?: number | null
+          updated_at?: string
+        }
+        Update: {
+          city?: string | null
+          client_id?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          custom_fields?: Json | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_message_at?: string | null
+          lead_id?: string | null
+          name?: string | null
+          notes?: string | null
+          opted_in?: boolean | null
+          opted_in_at?: string | null
+          phone?: string
+          segment?: string | null
+          tags?: string[] | null
+          total_messages?: number | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -15967,6 +16087,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      wa_flows: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          edges: Json | null
+          id: string
+          is_active: boolean | null
+          last_run_at: string | null
+          name: string
+          nodes: Json | null
+          total_completions: number | null
+          total_failures: number | null
+          total_runs: number | null
+          trigger_config: Json | null
+          trigger_type: string
+          updated_at: string
+          vertical: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          edges?: Json | null
+          id?: string
+          is_active?: boolean | null
+          last_run_at?: string | null
+          name: string
+          nodes?: Json | null
+          total_completions?: number | null
+          total_failures?: number | null
+          total_runs?: number | null
+          trigger_config?: Json | null
+          trigger_type?: string
+          updated_at?: string
+          vertical?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          edges?: Json | null
+          id?: string
+          is_active?: boolean | null
+          last_run_at?: string | null
+          name?: string
+          nodes?: Json | null
+          total_completions?: number | null
+          total_failures?: number | null
+          total_runs?: number | null
+          trigger_config?: Json | null
+          trigger_type?: string
+          updated_at?: string
+          vertical?: string | null
+        }
+        Relationships: []
       }
       wa_inbox_messages: {
         Row: {
