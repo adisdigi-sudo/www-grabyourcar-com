@@ -125,7 +125,8 @@ export function WaChatbotBuilder() {
     const activeRules = rules.filter(r => r.is_active).sort((a, b) => a.priority - b.priority);
 
     for (const rule of activeRules) {
-      const matched = rule.intent_keywords.some(kw => msg.includes(kw.toLowerCase()));
+      const allKeywords = rule.intent_keywords.flatMap(kw => kw.split(",").map(k => k.trim().toLowerCase()).filter(Boolean));
+      const matched = allKeywords.some(kw => msg.includes(kw));
       if (matched) {
         setTestResult({
           matched: true,
