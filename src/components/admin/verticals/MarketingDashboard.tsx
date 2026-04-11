@@ -195,8 +195,7 @@ export const MarketingDashboard = ({ onNavigate }: MarketingDashboardProps) => {
           <CardContent>
             <div className="grid grid-cols-2 gap-2">
               {[
-                { label: "Bulk Broadcast", id: "holi-share", icon: MessageSquare },
-                { label: "WhatsApp API", id: "integrations-whatsapp", icon: Phone },
+                { label: "WhatsApp Hub", id: "whatsapp-hub", icon: MessageSquare },
                 { label: "Site Settings", id: "settings", icon: Settings },
                 { label: "Bulk Data", id: "marketing-bulk", icon: Database },
               ].map((a) => (

@@ -63,6 +63,9 @@ const AdTrackingSettings = lazy(() =>
 const WhatsAppManagement = lazy(() =>
   import("@/components/admin/WhatsAppManagement").then((module) => ({ default: module.WhatsAppManagement })),
 );
+const WhatsAppHub = lazy(() =>
+  import("@/components/admin/marketing/WhatsAppMarketingPortal").then((module) => ({ default: module.WhatsAppMarketingPortal })),
+);
 const WhatsAppBusinessInbox = lazy(() =>
   import("@/components/admin/WhatsAppBusinessInbox"),
 );
@@ -707,11 +710,10 @@ const AdminLayout = () => {
       case "open-api-portal":
         return <OpenAPIPortal />;
       case "integrations-whatsapp":
-        return <WhatsAppManagement />;
       case "whatsapp-inbox":
-        return <WhatsAppBusinessInbox />;
       case "marketing-templates":
-        return <WhatsAppTemplateManager />;
+      case "whatsapp-hub":
+        return <WhatsAppHub />;
       case "marketing-automation":
         return <EmailAutomationManager />;
       case "integrations-shipping":
