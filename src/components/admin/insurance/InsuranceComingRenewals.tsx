@@ -432,11 +432,18 @@ export function InsuranceComingRenewals({ policies }: InsuranceComingRenewalsPro
                   className="h-9 text-sm"
                 />
               </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Policy Document (PDF/Image) *</Label>
+                <input ref={wonDocRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" onChange={e => setWonDocFile(e.target.files?.[0] || null)} className="block w-full text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer" />
+                {wonDocFile && <p className="text-[10px] text-emerald-600">📎 {wonDocFile.name}</p>}
+              </div>
+              <p className="text-[10px] text-muted-foreground">📲 Policy document will be auto-sent to customer on WhatsApp</p>
             </div>
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowWonDialog(false)}>Cancel</Button>
-            <Button disabled={wonSaving || !wonExpiryDate || !wonPolicyNumber.trim() || !wonInsurer.trim()} onClick={handleWon} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5">
+            <Button disabled={wonSaving || !wonExpiryDate || !wonPolicyNumber.trim() || !wonInsurer.trim() || !wonDocFile} onClick={handleWon} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5">
+              {wonSaving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} Confirm Won
               {wonSaving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} Confirm Won
             </Button>
           </DialogFooter>
