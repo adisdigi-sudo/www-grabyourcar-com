@@ -59,6 +59,7 @@ import { ClientQuoteHistory } from "./ClientQuoteHistory";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useQuery } from "@tanstack/react-query";
 import { sendWhatsApp } from "@/lib/sendWhatsApp";
+import { buildInsuranceRetargetMessage } from "@/lib/insuranceRetargetMessage";
 
 export type Client = {
   id: string;

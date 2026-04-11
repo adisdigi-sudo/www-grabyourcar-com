@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
+import { buildInsuranceRetargetMessage } from "@/lib/insuranceRetargetMessage";
 import { cn } from "@/lib/utils";
 import { normalizeInsuranceStage as normalizeStage } from "@/lib/insuranceStages";
 import { format, differenceInDays } from "date-fns";
@@ -500,7 +501,12 @@ export function InsuranceOverdueRenewals({ policies, clients }: Props) {
                               <a href={`tel:${c?.phone}`}><Button variant="ghost" size="icon" className="h-6 w-6"><PhoneCall className="h-3 w-3 text-primary" /></Button></a>
                               <Button variant="ghost" size="icon" className="h-6 w-6" onClick={async () => {
                                 const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
-                                await sendWhatsApp({ phone: c?.phone || "", message: `Hi ${c?.customer_name || ""}, your insurance policy has expired. Contact us urgently for renewal!`, name: c?.customer_name || "", logEvent: "overdue_wa" });
+                                await sendWhatsApp({
+                                  phone: c?.phone || "",
+                                  message: buildInsuranceRetargetMessage({ customerName: c?.customer_name, vehicleNumber: c?.vehicle_number }),
+                                  name: c?.customer_name || "",
+                                  logEvent: "overdue_retarget_wa",
+                                });
                               }}><MessageSquare className="h-3 w-3 text-green-600" /></Button>
                             </>
                           )}

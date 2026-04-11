@@ -24,6 +24,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { INSURANCE_COMPANIES } from "@/lib/insuranceCompanies";
 import { BulkProspectImportButton } from "./BulkProspectImport";
 import { sendWhatsApp } from "@/lib/sendWhatsApp";
+import { buildInsuranceRetargetMessage } from "@/lib/insuranceRetargetMessage";
 
 const STATUSES = [
   { value: "new", label: "New", icon: Database, color: "bg-blue-500" },
@@ -350,9 +351,12 @@ export function InsuranceProspectPool() {
 
     for (let i = 0; i < targets.length; i++) {
       const p = targets[i];
-      const name = p.customer_name || "Sir/Madam";
-      const vehicle = p.vehicle_number ? ` for your vehicle *${p.vehicle_number}*` : "";
-      const message = `Hey ${name} 🙏\n\nWe really missed you! Please renew your car insurance${vehicle} with us and keep grabbing *Grabyourcar* exclusive offers:\n\n🚗 *FREE 2 Car Washes* per month\n🌸 *FREE 3 Car Perfumes* per month\n🆘 *FREE 24/7 Roadside Assistance*\n📋 *Personalized Claim Settlement Assistance*\n💰 *Best Premium Rates Guaranteed*\n\nWe are just a click away — ask and command us anything, anytime! 💚\n\n📞 +91 98559 24442\n🔗 https://www.grabyourcar.com/insurance\n\n— *Team Grabyourcar* 🚗`;
+      const message = buildInsuranceRetargetMessage({
+        customerName: p.customer_name,
+        vehicleNumber: p.vehicle_number,
+        insurer: p.insurer,
+        premium: p.premium_amount,
+      });
 
       const result = await sendWhatsApp({
         phone: p.phone,
@@ -598,7 +602,7 @@ export function InsuranceProspectPool() {
                               const vehicle = p.vehicle_number ? ` for your vehicle *${p.vehicle_number}*` : "";
                               const isLostProspect = p.prospect_status === "lost";
                               const msg = isLostProspect
-                                ? `Hey ${name} 🙏\n\nWe really missed you! Please renew your car insurance${vehicle} with us and keep grabbing *Grabyourcar* exclusive offers:\n\n🚗 *FREE 2 Car Washes* per month\n🌸 *FREE 3 Car Perfumes* per month\n🆘 *FREE 24/7 Roadside Assistance*\n📋 *Personalized Claim Settlement Assistance*\n💰 *Best Premium Rates Guaranteed*\n\nWe are just a click away — ask and command us anything, anytime! 💚\n\n📞 +91 98559 24442\n🔗 https://www.grabyourcar.com/insurance\n\n— *Team Grabyourcar* 🚗`
+                                ? buildInsuranceRetargetMessage({ customerName: p.customer_name, vehicleNumber: p.vehicle_number, insurer: p.insurer, premium: p.premium_amount })
                                 : `🙏 Namaste ${name},\n\nThis is *Grabyourcar Insurance* team.\n\nWe wanted to follow up regarding your motor insurance${vehicle}.\n\n✅ We can help you with the best rates!\n\n👉 *Reply here* or call us at +91 98559 24442\n🔗 https://www.grabyourcar.com/insurance\n\n— *Team Grabyourcar* 🚗💚`;
                               void sendWhatsApp({
                                 phone: p.phone,
@@ -980,11 +984,14 @@ export function InsuranceProspectPool() {
               <div className="flex flex-wrap gap-2 py-2 border-y">
                 <a href={`tel:${detailOpen.phone}`}><Button size="sm" className="gap-1.5 bg-green-600 hover:bg-green-700 text-white"><PhoneCall className="h-3.5 w-3.5" /> Call</Button></a>
                 <Button size="sm" variant="outline" className="gap-1.5" onClick={() => {
+                  const isLostProspect = detailOpen.prospect_status === "lost";
                   void sendWhatsApp({
                     phone: detailOpen.phone,
-                    message: `🙏 Namaste ${detailOpen.customer_name || "Sir/Madam"},\n\nThis is *Grabyourcar Insurance* team.\n\nWe wanted to follow up regarding your motor insurance${detailOpen.vehicle_number ? ` for vehicle *${detailOpen.vehicle_number}*` : ""}.\n\n✅ We can help you with the best rates!\n\n👉 *Reply here* or call us at +91 98559 24442\n🔗 https://www.grabyourcar.com/insurance\n\n— *Team Grabyourcar* 🚗💚`,
+                    message: isLostProspect
+                      ? buildInsuranceRetargetMessage({ customerName: detailOpen.customer_name, vehicleNumber: detailOpen.vehicle_number, insurer: detailOpen.insurer, premium: detailOpen.premium_amount })
+                      : `🙏 Namaste ${detailOpen.customer_name || "Sir/Madam"},\n\nThis is *Grabyourcar Insurance* team.\n\nWe wanted to follow up regarding your motor insurance${detailOpen.vehicle_number ? ` for vehicle *${detailOpen.vehicle_number}*` : ""}.\n\n✅ We can help you with the best rates!\n\n👉 *Reply here* or call us at +91 98559 24442\n🔗 https://www.grabyourcar.com/insurance\n\n— *Team Grabyourcar* 🚗💚`,
                     name: detailOpen.customer_name || undefined,
-                    logEvent: "prospect_pool_detail_whatsapp",
+                    logEvent: isLostProspect ? "prospect_pool_lost_detail_whatsapp" : "prospect_pool_detail_whatsapp",
                   });
                 }}><MessageSquare className="h-3.5 w-3.5 text-green-600" /> WhatsApp</Button>
                 {detailOpen.email && <a href={`mailto:${detailOpen.email}`}><Button size="sm" variant="outline" className="gap-1.5"><Mail className="h-3.5 w-3.5" /> Email</Button></a>}
