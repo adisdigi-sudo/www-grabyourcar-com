@@ -503,7 +503,7 @@ export function InsuranceOverdueRenewals({ policies, clients }: Props) {
                                 const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
                                 await sendWhatsApp({
                                   phone: c?.phone || "",
-                                  message: buildInsuranceRetargetMessage({ customerName: c?.customer_name, vehicleNumber: c?.vehicle_number, insurer: c?.current_insurer, premium: c?.current_premium }),
+                                  message: buildInsuranceRetargetMessage({ customerName: c?.customer_name, vehicleNumber: c?.vehicle_number }),
                                   name: c?.customer_name || "",
                                   logEvent: "overdue_retarget_wa",
                                 });
