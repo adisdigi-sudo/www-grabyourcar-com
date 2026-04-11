@@ -409,21 +409,34 @@ export function InsurancePolicyBook({ policies }: InsurancePolicyBookProps) {
               for (const policy of selected) {
                 const phone = policy.insurance_clients?.phone;
                 if (phone && !phone.startsWith("IB_")) {
+                  const custName = policy.insurance_clients?.customer_name || "Sir/Madam";
+                  const vehicle = policy.insurance_clients?.vehicle_number || "";
+                  const policyNo = policy.policy_number || "";
+                  const insurer = policy.insurer || "";
+                  const premium = policy.premium_amount ? `₹${policy.premium_amount.toLocaleString("en-IN")}` : "";
+                  const expiry = policy.expiry_date ? format(new Date(policy.expiry_date), "dd MMM yyyy") : "";
+
+                  const msg = `Hello ${custName} 🙏\n\nHere is your *motor insurance policy document* from *Grabyourcar Insurance*.\n\n${policyNo ? `📋 Policy No: *${policyNo}*\n` : ""}${insurer ? `🏢 Insurer: *${insurer}*\n` : ""}${vehicle ? `🚗 Vehicle: *${vehicle}*\n` : ""}${premium ? `💰 Premium: *${premium}*\n` : ""}${expiry ? `📅 Valid till: *${expiry}*\n` : ""}\nWe are just a click away — ask and command us anything, anytime! 💚\n\n📞 +91 98559 24442\n🔗 https://www.grabyourcar.com/insurance\n\n— *Team Grabyourcar* 🚗`;
+
+                  const hasDoc = !!policy.policy_document_url;
                   const result = await sendWhatsApp({
                     phone,
-                    message: `Hi ${policy.insurance_clients?.customer_name || ""}, your policy ${policy.policy_number || ""} details are ready.`,
-                    name: policy.insurance_clients?.customer_name || undefined,
+                    message: msg,
+                    name: custName,
                     logEvent: "policy_book_bulk_send",
                     silent: true,
-                    messageType: policy.policy_document_url ? "document" : "text",
-                    mediaUrl: policy.policy_document_url || undefined,
-                    mediaFileName: `${policy.policy_number || "policy"}.pdf`,
+                    ...(hasDoc ? {
+                      messageType: "document" as const,
+                      mediaUrl: policy.policy_document_url!,
+                      mediaFileName: `${policyNo || "policy"}_document.pdf`,
+                    } : {}),
                   });
                   if (result.success) sent++;
                   else failed++;
                 }
               }
-              toast.success(`WhatsApp API processed: ${sent} sent, ${failed} failed`);
+              toast.success(`📨 Policy share done: ${sent} sent, ${failed} failed`);
+              setSelectedIds(new Set());
             }}
           >
             <Send className="h-3.5 w-3.5" /> Bulk Send ({selectedIds.size})
