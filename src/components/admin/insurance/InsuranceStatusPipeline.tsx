@@ -691,6 +691,8 @@ export function InsuranceStatusPipeline() {
                                  message: `Hi ${client.customer_name || ""}! This is GrabYourCar Insurance. How can we help you today?`,
                                  name: client.customer_name,
                                  logEvent: "status_pipeline_quick_whatsapp",
+                                 templateName: "insurancefollowup",
+                                 templateComponents: [{ type: "header", parameters: [{ type: "text", text: client.customer_name || "Valued Customer", parameter_name: "full_name" }] }],
                                });
                              }}>
                                <MessageSquare className="h-4 w-4 text-green-600" />
@@ -850,14 +852,16 @@ export function InsuranceStatusPipeline() {
                             <PhoneCall className="h-3.5 w-3.5" /> Call
                           </Button>
                         </a>
-                        <Button size="sm" variant="outline" className="gap-1.5" onClick={async () => {
-                          const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
-                          await sendWhatsApp({
-                            phone: editPhone,
-                            message: `Hi ${selectedClient.customer_name || ""}! This is GrabYourCar Insurance. How can we help you today?`,
-                            name: selectedClient.customer_name,
-                            logEvent: "status_pipeline_detail_whatsapp",
-                          });
+                         <Button size="sm" variant="outline" className="gap-1.5" onClick={async () => {
+                           const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+                           await sendWhatsApp({
+                             phone: editPhone,
+                             message: `Hi ${selectedClient.customer_name || ""}! This is GrabYourCar Insurance. How can we help you today?`,
+                             name: selectedClient.customer_name,
+                             logEvent: "status_pipeline_detail_whatsapp",
+                             templateName: "insurancefollowup",
+                             templateComponents: [{ type: "header", parameters: [{ type: "text", text: selectedClient.customer_name || "Valued Customer", parameter_name: "full_name" }] }],
+                           });
                         }}>
                           <MessageSquare className="h-3.5 w-3.5 text-green-600" /> WhatsApp
                         </Button>

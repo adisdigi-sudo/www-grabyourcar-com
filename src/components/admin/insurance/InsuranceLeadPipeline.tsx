@@ -616,6 +616,8 @@ export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: Insura
       message: defaultMessage,
       name: client.customer_name || undefined,
       logEvent: "lead_pipeline_quick_whatsapp",
+      templateName: "insurancefollowup",
+      templateComponents: [{ type: "header", parameters: [{ type: "text", text: client.customer_name || "Valued Customer", parameter_name: "full_name" }] }],
     });
   }, []);
 
@@ -1585,6 +1587,8 @@ export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: Insura
                               message: `Hi ${selectedClient.customer_name || ""}! This is GrabYourCar Insurance. How can we help you today?`,
                               name: selectedClient.customer_name || undefined,
                               logEvent: "lead_pipeline_detail_whatsapp",
+                              templateName: "insurancefollowup",
+                              templateComponents: [{ type: "header", parameters: [{ type: "text", text: selectedClient.customer_name || "Valued Customer", parameter_name: "full_name" }] }],
                             });
                           }}><MessageSquare className="h-3.5 w-3.5" /> WhatsApp</Button>
                         </>

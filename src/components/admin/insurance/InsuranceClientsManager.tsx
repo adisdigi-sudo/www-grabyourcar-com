@@ -276,6 +276,8 @@ export function InsuranceClientsManager() {
                                     message: `Hi ${c.customer_name || ""}! This is GrabYourCar Insurance. How can we help you today?`,
                                     name: c.customer_name || undefined,
                                     logEvent: "clients_manager_whatsapp",
+                                    templateName: "insurancefollowup",
+                                    templateComponents: [{ type: "header", parameters: [{ type: "text", text: c.customer_name || "Valued Customer", parameter_name: "full_name" }] }],
                                   });
                                 }}>
                                   <MessageSquare className="h-3.5 w-3.5 text-green-600" />
