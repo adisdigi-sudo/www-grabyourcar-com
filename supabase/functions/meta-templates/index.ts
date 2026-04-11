@@ -330,12 +330,13 @@ serve(async (req) => {
       const result = await resp.json();
 
       if (result.error) {
+        const metaErrMsg = result.error.error_user_msg || result.error.message || "Meta rejected this template";
         await supabase.from("wa_templates").update({
           status: "rejected",
-          meta_rejection_reason: result.error.message,
+          meta_rejection_reason: metaErrMsg,
         }).eq("id", template_id);
 
-        return new Response(JSON.stringify({ error: result.error.message, details: result.error }), {
+        return new Response(JSON.stringify({ error: metaErrMsg, details: result.error }), {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
