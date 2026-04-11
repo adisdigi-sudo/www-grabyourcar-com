@@ -276,6 +276,7 @@ const navItems: NavItem[] = [
     allowedRoles: ["super_admin", "admin", "marketing"],
     children: [
       { id: "marketing-command", label: "🎯 Command Center", icon: Rocket },
+      { id: "whatsapp-inbox", label: "💬 WhatsApp Inbox", icon: MessageSquare, badge: "New" },
       { id: "holi-share", label: "📣 Bulk Broadcast", icon: MessageSquare, badge: "New" },
       { id: "marketing-templates", label: "📱 WhatsApp Templates", icon: MessageSquare },
       { id: "marketing-automation", label: "📧 Email Automation", icon: Mail },

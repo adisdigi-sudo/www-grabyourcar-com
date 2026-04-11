@@ -15766,6 +15766,69 @@ export type Database = {
         }
         Relationships: []
       }
+      wa_conversations: {
+        Row: {
+          assigned_user_id: string | null
+          assigned_vertical: string | null
+          client_id: string | null
+          created_at: string | null
+          customer_name: string | null
+          customer_profile_pic: string | null
+          id: string
+          is_pinned: boolean | null
+          last_customer_message_at: string | null
+          last_message: string | null
+          last_message_at: string | null
+          lead_id: string | null
+          phone: string
+          status: string | null
+          tags: string[] | null
+          unread_count: number | null
+          updated_at: string | null
+          window_expires_at: string | null
+        }
+        Insert: {
+          assigned_user_id?: string | null
+          assigned_vertical?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          customer_name?: string | null
+          customer_profile_pic?: string | null
+          id?: string
+          is_pinned?: boolean | null
+          last_customer_message_at?: string | null
+          last_message?: string | null
+          last_message_at?: string | null
+          lead_id?: string | null
+          phone: string
+          status?: string | null
+          tags?: string[] | null
+          unread_count?: number | null
+          updated_at?: string | null
+          window_expires_at?: string | null
+        }
+        Update: {
+          assigned_user_id?: string | null
+          assigned_vertical?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          customer_name?: string | null
+          customer_profile_pic?: string | null
+          id?: string
+          is_pinned?: boolean | null
+          last_customer_message_at?: string | null
+          last_message?: string | null
+          last_message_at?: string | null
+          lead_id?: string | null
+          phone?: string
+          status?: string | null
+          tags?: string[] | null
+          unread_count?: number | null
+          updated_at?: string | null
+          window_expires_at?: string | null
+        }
+        Relationships: []
+      }
       wa_drip_enrollments: {
         Row: {
           completed_at: string | null
@@ -15901,6 +15964,92 @@ export type Database = {
             columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "wa_template_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wa_inbox_messages: {
+        Row: {
+          button_payload: string | null
+          content: string | null
+          conversation_id: string
+          created_at: string | null
+          delivered_at: string | null
+          direction: string
+          error_code: string | null
+          error_message: string | null
+          failed_at: string | null
+          id: string
+          media_filename: string | null
+          media_mime_type: string | null
+          media_url: string | null
+          message_type: string
+          read_at: string | null
+          sent_by: string | null
+          sent_by_name: string | null
+          status: string | null
+          status_updated_at: string | null
+          template_name: string | null
+          template_variables: Json | null
+          updated_at: string | null
+          wa_message_id: string | null
+        }
+        Insert: {
+          button_payload?: string | null
+          content?: string | null
+          conversation_id: string
+          created_at?: string | null
+          delivered_at?: string | null
+          direction?: string
+          error_code?: string | null
+          error_message?: string | null
+          failed_at?: string | null
+          id?: string
+          media_filename?: string | null
+          media_mime_type?: string | null
+          media_url?: string | null
+          message_type?: string
+          read_at?: string | null
+          sent_by?: string | null
+          sent_by_name?: string | null
+          status?: string | null
+          status_updated_at?: string | null
+          template_name?: string | null
+          template_variables?: Json | null
+          updated_at?: string | null
+          wa_message_id?: string | null
+        }
+        Update: {
+          button_payload?: string | null
+          content?: string | null
+          conversation_id?: string
+          created_at?: string | null
+          delivered_at?: string | null
+          direction?: string
+          error_code?: string | null
+          error_message?: string | null
+          failed_at?: string | null
+          id?: string
+          media_filename?: string | null
+          media_mime_type?: string | null
+          media_url?: string | null
+          message_type?: string
+          read_at?: string | null
+          sent_by?: string | null
+          sent_by_name?: string | null
+          status?: string | null
+          status_updated_at?: string | null
+          template_name?: string | null
+          template_variables?: Json | null
+          updated_at?: string | null
+          wa_message_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_inbox_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "wa_conversations"
             referencedColumns: ["id"]
           },
         ]
@@ -16147,6 +16296,51 @@ export type Database = {
         }
         Relationships: []
       }
+      wa_quick_replies: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          message: string
+          shortcut: string | null
+          sort_order: number | null
+          title: string
+          updated_at: string | null
+          variables: string[] | null
+          vertical: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          message: string
+          shortcut?: string | null
+          sort_order?: number | null
+          title: string
+          updated_at?: string | null
+          variables?: string[] | null
+          vertical?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          message?: string
+          shortcut?: string | null
+          sort_order?: number | null
+          title?: string
+          updated_at?: string | null
+          variables?: string[] | null
+          vertical?: string | null
+        }
+        Relationships: []
+      }
       wa_template_catalog: {
         Row: {
           category: string
@@ -16195,6 +16389,69 @@ export type Database = {
           trigger_event?: string | null
           updated_at?: string
           variables?: string[] | null
+        }
+        Relationships: []
+      }
+      wa_templates: {
+        Row: {
+          body: string
+          buttons: Json | null
+          category: string | null
+          created_at: string | null
+          created_by: string | null
+          display_name: string | null
+          footer: string | null
+          header_content: string | null
+          header_type: string | null
+          id: string
+          language: string | null
+          meta_template_id: string | null
+          name: string
+          sample_values: Json | null
+          status: string | null
+          updated_at: string | null
+          variables: Json | null
+          vertical: string | null
+        }
+        Insert: {
+          body: string
+          buttons?: Json | null
+          category?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          display_name?: string | null
+          footer?: string | null
+          header_content?: string | null
+          header_type?: string | null
+          id?: string
+          language?: string | null
+          meta_template_id?: string | null
+          name: string
+          sample_values?: Json | null
+          status?: string | null
+          updated_at?: string | null
+          variables?: Json | null
+          vertical?: string | null
+        }
+        Update: {
+          body?: string
+          buttons?: Json | null
+          category?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          display_name?: string | null
+          footer?: string | null
+          header_content?: string | null
+          header_type?: string | null
+          id?: string
+          language?: string | null
+          meta_template_id?: string | null
+          name?: string
+          sample_values?: Json | null
+          status?: string | null
+          updated_at?: string | null
+          variables?: Json | null
+          vertical?: string | null
         }
         Relationships: []
       }
