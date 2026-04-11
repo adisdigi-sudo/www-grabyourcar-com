@@ -98,37 +98,65 @@ export function SharePdfDialog({
   const handleWhatsAppShare = async () => {
     const cleanPhone = (phone || "").replace(/\D/g, "");
     if (cleanPhone.length < 10) { toast.error("Please enter a valid phone number"); return; }
-    const { doc, fileName } = generatePdf();
-    doc.save(fileName);
-    const msg = shareMessage || `Hi ${customerName}! Please find the attached ${title}. For any queries, contact us at +91 98559 24442. - Grabyourcar Insurance`;
-    const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
-    await sendWhatsApp({ phone: cleanPhone, message: msg + `\n\nDocument: ${fileName}`, name: customerName, logEvent: "pdf_share" });
-    await autoSaveQuote(doc, fileName, "whatsapp");
-    toast.success("📋 Quote saved & shared via WhatsApp!");
-    onShared?.();
-    onOpenChange(false);
+
+    try {
+      const { doc, fileName } = generatePdf();
+      doc.save(fileName);
+
+      const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+      const result = await sendWhatsApp({
+        phone: cleanPhone,
+        message: shareMessage || `Hi ${customerName}! Your ${title} is ready. Please review and contact us for the best rates!`,
+        name: customerName || undefined,
+        logEvent: "pdf_share",
+        templateName: "insurancefollowup",
+        templateComponents: [{
+          type: "header",
+          parameters: [{
+            type: "text",
+            text: customerName?.trim() || "Valued Customer",
+            parameter_name: "full_name",
+          }],
+        }],
+      });
+
+      if (!result.success) return;
+
+      await autoSaveQuote(doc, fileName, "whatsapp");
+      toast.success("📋 Quote saved & shared via WhatsApp!");
+      onShared?.();
+      onOpenChange(false);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to share via WhatsApp");
+    }
   };
 
   const handleWhatsAppApiShare = async () => {
     const cleanPhone = (phone || "").replace(/\D/g, "");
     if (cleanPhone.length < 10) { toast.error("Please enter a valid phone number"); return; }
-    const fullPhone = cleanPhone.startsWith("91") ? cleanPhone : `91${cleanPhone}`;
+
     setSendingApi(true);
     try {
       const { doc, fileName } = generatePdf();
-      const { error } = await supabase.functions.invoke("wa-automation-trigger", {
-        body: {
-          event: title.toLowerCase().includes("renewal") ? "insurance_renewal_share" : "insurance_quote_share",
-          phone: fullPhone,
-          name: customerName || "Customer",
-          leadId: leadId,
-          data: {
-            document_type: title,
-            message: shareMessage || `Your ${title} is ready. Please review and contact us for the best rates!`,
-          },
-        },
+      const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+      const result = await sendWhatsApp({
+        phone: cleanPhone,
+        message: shareMessage || `Your ${title} is ready. Please review and contact us for the best rates!`,
+        name: customerName || undefined,
+        logEvent: title.toLowerCase().includes("renewal") ? "insurance_renewal_share" : "insurance_quote_share",
+        templateName: "insurancefollowup",
+        templateComponents: [{
+          type: "header",
+          parameters: [{
+            type: "text",
+            text: customerName?.trim() || "Valued Customer",
+            parameter_name: "full_name",
+          }],
+        }],
       });
-      if (error) throw error;
+
+      if (!result.success) return;
+
       await autoSaveQuote(doc, fileName, "whatsapp_api");
       toast.success(`🚀 ${title} sent via WhatsApp API & saved!`);
       onShared?.();
