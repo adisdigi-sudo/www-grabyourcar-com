@@ -702,6 +702,8 @@ const AdminLayout = () => {
         return <OpenAPIPortal />;
       case "integrations-whatsapp":
         return <WhatsAppManagement />;
+      case "whatsapp-inbox":
+        return <WhatsAppBusinessInbox />;
       case "marketing-templates":
         return <WhatsAppTemplateManager />;
       case "marketing-automation":
