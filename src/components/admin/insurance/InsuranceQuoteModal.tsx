@@ -143,6 +143,64 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
   const [addons, setAddons] = useState<Addon[]>(DEFAULT_ADDONS);
   const [securePremium, setSecurePremium] = useState<string>("500");
   const [showAddons, setShowAddons] = useState(true);
+  const [prefilled, setPrefilled] = useState(false);
+
+  // Auto-fill from last saved/shared quote
+  useEffect(() => {
+    if (!open || prefilled) return;
+    const cleanPhone = (client.phone || "").replace(/\D/g, "").slice(-10);
+    const cleanVehicle = (client.vehicle_number || "").replace(/\s+/g, "").toUpperCase();
+    if (!cleanPhone && !cleanVehicle) return;
+
+    const fetchLastQuote = async () => {
+      let query = supabase
+        .from("quote_share_history")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (cleanPhone && cleanVehicle) {
+        query = query.or(`customer_phone.ilike.%${cleanPhone},vehicle_number.ilike.%${cleanVehicle}`);
+      } else if (cleanPhone) {
+        query = query.ilike("customer_phone", `%${cleanPhone}`);
+      } else {
+        query = query.ilike("vehicle_number", `%${cleanVehicle}`);
+      }
+
+      const { data } = await query;
+      if (!data?.length) return;
+
+      const q = data[0];
+      const breakup = q.premium_breakup as any;
+
+      if (q.insurance_company) setInsuranceCompany(q.insurance_company);
+      if (q.policy_type) setPolicyType(q.policy_type);
+      if (q.idv) setIdv(String(q.idv));
+      if (breakup?.odDiscount && breakup?.basicOD && breakup.basicOD > 0) {
+        const pct = Math.round((breakup.odDiscount / breakup.basicOD) * 100);
+        setOdDiscountPct(String(pct));
+      }
+      if (breakup?.securePremium != null) setSecurePremium(String(breakup.securePremium));
+      if (q.addons?.length) {
+        setAddons(prev => prev.map(a => ({
+          ...a,
+          enabled: q.addons!.includes(a.name),
+        })));
+      }
+      if (q.notes) {
+        const ncbMatch = q.notes.match(/NCB:\s*(\d+)%/);
+        if (ncbMatch && !claimLockedByExpiry && !client.previous_claim) {
+          setNcb(parseInt(ncbMatch[1]));
+        }
+      }
+
+      setPrefilled(true);
+      toast.info("Last quote details auto-filled", { duration: 2000 });
+    };
+
+    fetchLastQuote();
+  }, [open, prefilled, client.phone, client.vehicle_number, claimLockedByExpiry, client.previous_claim]);
+
 
   const zone = getZone(city);
   const ccNum = parseInt(cc) || 0;
