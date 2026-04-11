@@ -75,17 +75,8 @@ serve(async (req) => {
             updates.status_updated_at = timestamp;
           }
 
-          // Update wa_message_logs (legacy)
-          await supabase
-            .from("wa_message_logs")
-            .update(updates)
-            .eq("provider_message_id", statusUpdate.id);
-
-          // Update wa_inbox_messages (new inbox)
-          await supabase
-            .from("wa_inbox_messages")
-            .update(updates)
-            .eq("wa_message_id", statusUpdate.id);
+          await supabase.from("wa_message_logs").update(updates).eq("provider_message_id", statusUpdate.id);
+          await supabase.from("wa_inbox_messages").update(updates).eq("wa_message_id", statusUpdate.id);
         }
         return new Response(JSON.stringify({ success: true, processed: "statuses" }), {
           status: 200,
@@ -96,7 +87,7 @@ serve(async (req) => {
       // --- Handle incoming messages ---
       if (value.messages?.length > 0) {
         for (const msg of value.messages) {
-          const from = msg.from; // full intl number like 919855924442
+          const from = msg.from;
           const messageText = msg.text?.body || msg.caption || "";
           const contactName = value.contacts?.[0]?.profile?.name || "Customer";
           const messageType = msg.type || "text";
@@ -139,25 +130,15 @@ serve(async (req) => {
             inboxConvoId = newConvo?.id;
           }
 
-          // ── Store in wa_inbox_messages ──
+          // ── Store inbound in wa_inbox_messages ──
           let mediaUrl: string | null = null;
           let mediaMime: string | null = null;
           let mediaFilename: string | null = null;
 
-          if (messageType === "image" && msg.image) {
-            mediaUrl = msg.image.id; // Meta media ID — can be fetched later
-            mediaMime = msg.image.mime_type;
-          } else if (messageType === "document" && msg.document) {
-            mediaUrl = msg.document.id;
-            mediaMime = msg.document.mime_type;
-            mediaFilename = msg.document.filename;
-          } else if (messageType === "audio" && msg.audio) {
-            mediaUrl = msg.audio.id;
-            mediaMime = msg.audio.mime_type;
-          } else if (messageType === "video" && msg.video) {
-            mediaUrl = msg.video.id;
-            mediaMime = msg.video.mime_type;
-          }
+          if (messageType === "image" && msg.image) { mediaUrl = msg.image.id; mediaMime = msg.image.mime_type; }
+          else if (messageType === "document" && msg.document) { mediaUrl = msg.document.id; mediaMime = msg.document.mime_type; mediaFilename = msg.document.filename; }
+          else if (messageType === "audio" && msg.audio) { mediaUrl = msg.audio.id; mediaMime = msg.audio.mime_type; }
+          else if (messageType === "video" && msg.video) { mediaUrl = msg.video.id; mediaMime = msg.video.mime_type; }
 
           if (inboxConvoId) {
             await supabase.from("wa_inbox_messages").insert({
@@ -174,7 +155,29 @@ serve(async (req) => {
             });
           }
 
-          // ── Legacy: whatsapp_conversations + AI brain ──
+          // ── Upsert wa_contacts ──
+          const cleanPhone = from.replace(/^91/, "");
+          const { data: existingContact } = await supabase
+            .from("wa_contacts")
+            .select("id")
+            .eq("phone", from)
+            .maybeSingle();
+
+          if (!existingContact) {
+            await supabase.from("wa_contacts").insert({
+              phone: from,
+              name: contactName,
+              tags: ["auto-captured"],
+              last_message_at: new Date().toISOString(),
+            }).select().maybeSingle();
+          } else {
+            await supabase.from("wa_contacts").update({
+              name: contactName,
+              last_message_at: new Date().toISOString(),
+            }).eq("id", existingContact.id);
+          }
+
+          // ── Legacy: whatsapp_conversations ──
           const { data: existingConvo } = await supabase
             .from("whatsapp_conversations")
             .select("*")
@@ -201,13 +204,7 @@ serve(async (req) => {
           } else {
             const { data: newConvo } = await supabase
               .from("whatsapp_conversations")
-              .insert({
-                phone_number: from,
-                customer_name: contactName,
-                messages: [],
-                status: "active",
-                ai_enabled: true,
-              })
+              .insert({ phone_number: from, customer_name: contactName, messages: [], status: "active", ai_enabled: true })
               .select()
               .single();
             conversationId = newConvo?.id;
@@ -215,36 +212,136 @@ serve(async (req) => {
 
           conversationHistory.push({ role: "user", content: messageText });
 
-          // Call AI Brain
-          let aiResponse = getFallbackResponse(messageText.toLowerCase());
+          // ══════════════════════════════════════════════════════════
+          // STEP 1: Check wa_chatbot_rules (Chatbot Builder rules)
+          // ══════════════════════════════════════════════════════════
+          let aiResponse: string | null = null;
           let intentDetected = "general";
           let leadCaptured = false;
+          let respondedBy = "ai_brain";
 
-          try {
-            const brainResponse = await fetch(`${SUPABASE_URL}/functions/v1/ai-brain`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-              },
-              body: JSON.stringify({
-                messages: conversationHistory.slice(-12),
-                channel: "whatsapp",
-                customer_name: contactName,
-                customer_phone: from,
-              }),
-            });
+          const { data: chatbotRules } = await supabase
+            .from("wa_chatbot_rules")
+            .select("*")
+            .eq("is_active", true)
+            .order("priority", { ascending: true });
 
-            if (brainResponse.ok) {
-              const brainData = await brainResponse.json();
-              aiResponse = brainData.response || aiResponse;
-              intentDetected = brainData.intent || "general";
-              leadCaptured = brainData.lead_captured || false;
-            } else {
-              console.error("AI Brain error:", brainResponse.status, await brainResponse.text());
+          if (chatbotRules && chatbotRules.length > 0) {
+            const msgLower = messageText.toLowerCase();
+
+            for (const rule of chatbotRules) {
+              // Split comma-separated keywords and match
+              const allKeywords = (rule.intent_keywords || [])
+                .flatMap((kw: string) => kw.split(",").map((k: string) => k.trim().toLowerCase()).filter(Boolean));
+
+              const matched = allKeywords.some((kw: string) => msgLower.includes(kw));
+
+              if (matched) {
+                console.log(`Chatbot rule matched: ${rule.name} (${rule.response_type})`);
+
+                // Update match count
+                await supabase.from("wa_chatbot_rules").update({
+                  match_count: (rule.match_count || 0) + 1,
+                  last_matched_at: new Date().toISOString(),
+                }).eq("id", rule.id);
+
+                if (rule.response_type === "text" && rule.response_content) {
+                  aiResponse = rule.response_content
+                    .replace(/\{\{customer_name\}\}/gi, contactName)
+                    .replace(/\{\{phone\}\}/gi, from);
+                  respondedBy = `chatbot_rule:${rule.name}`;
+                  intentDetected = rule.name;
+                } else if (rule.response_type === "ai_generated" && rule.ai_prompt) {
+                  // Use Lovable AI Gateway for AI-generated responses
+                  try {
+                    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+                    if (LOVABLE_API_KEY) {
+                      const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json",
+                          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+                        },
+                        body: JSON.stringify({
+                          model: "google/gemini-3-flash-preview",
+                          messages: [
+                            { role: "system", content: rule.ai_prompt },
+                            ...conversationHistory.slice(-8),
+                          ],
+                        }),
+                      });
+
+                      if (aiResp.ok) {
+                        const aiData = await aiResp.json();
+                        aiResponse = aiData.choices?.[0]?.message?.content || null;
+                        respondedBy = `chatbot_ai:${rule.name}`;
+                        intentDetected = rule.name;
+                      }
+                    }
+                  } catch (e) {
+                    console.error("Chatbot AI generation failed:", e);
+                  }
+                } else if (rule.response_type === "template" && rule.template_name) {
+                  // Send template via messaging-service
+                  try {
+                    await fetch(`${SUPABASE_URL}/functions/v1/messaging-service`, {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                      },
+                      body: JSON.stringify({
+                        action: "send_template",
+                        phone: from,
+                        template_name: rule.template_name,
+                        variables: { name: contactName },
+                        customer_name: contactName,
+                      }),
+                    });
+                    respondedBy = `chatbot_template:${rule.template_name}`;
+                    intentDetected = rule.name;
+                  } catch (e) {
+                    console.error("Template send failed:", e);
+                  }
+                }
+
+                break; // First matched rule wins
+              }
             }
-          } catch (e) {
-            console.error("AI Brain call failed, using fallback:", e);
+          }
+
+          // ══════════════════════════════════════════════════════════
+          // STEP 2: Fallback to AI Brain if no chatbot rule matched
+          // ══════════════════════════════════════════════════════════
+          if (!aiResponse) {
+            aiResponse = getFallbackResponse(messageText.toLowerCase());
+
+            try {
+              const brainResponse = await fetch(`${SUPABASE_URL}/functions/v1/ai-brain`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                },
+                body: JSON.stringify({
+                  messages: conversationHistory.slice(-12),
+                  channel: "whatsapp",
+                  customer_name: contactName,
+                  customer_phone: from,
+                }),
+              });
+
+              if (brainResponse.ok) {
+                const brainData = await brainResponse.json();
+                aiResponse = brainData.response || aiResponse;
+                intentDetected = brainData.intent || "general";
+                leadCaptured = brainData.lead_captured || false;
+              } else {
+                console.error("AI Brain error:", brainResponse.status);
+              }
+            } catch (e) {
+              console.error("AI Brain call failed, using fallback:", e);
+            }
           }
 
           conversationHistory.push({ role: "assistant", content: aiResponse });
@@ -256,11 +353,11 @@ serve(async (req) => {
             intent_detected: intentDetected,
           }).eq("id", conversationId);
 
-          // Send reply via Meta API
+          // ── Send reply via Meta API ──
           const WHATSAPP_ACCESS_TOKEN = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
           const WHATSAPP_PHONE_NUMBER_ID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
 
-          if (WHATSAPP_ACCESS_TOKEN && WHATSAPP_PHONE_NUMBER_ID) {
+          if (WHATSAPP_ACCESS_TOKEN && WHATSAPP_PHONE_NUMBER_ID && aiResponse) {
             const sendResult = await fetch(`https://graph.facebook.com/v21.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`, {
               method: "POST",
               headers: {
@@ -278,20 +375,18 @@ serve(async (req) => {
             const sendData = await sendResult.json();
             const providerMessageId = sendData.messages?.[0]?.id || null;
 
-            // Log in legacy table
             await supabase.from("wa_message_logs").insert({
               phone: from,
               customer_name: contactName,
               message_type: "text",
               message_content: aiResponse,
-              trigger_event: "ai_brain_v2_reply",
+              trigger_event: respondedBy,
               status: sendResult.ok ? "sent" : "failed",
               provider: "meta",
               provider_message_id: providerMessageId,
               sent_at: new Date().toISOString(),
             });
 
-            // Log in inbox messages
             if (inboxConvoId) {
               await supabase.from("wa_inbox_messages").insert({
                 conversation_id: inboxConvoId,
@@ -300,9 +395,94 @@ serve(async (req) => {
                 content: aiResponse,
                 wa_message_id: providerMessageId,
                 status: sendResult.ok ? "sent" : "failed",
-                sent_by_name: "AI Bot",
+                sent_by_name: respondedBy.startsWith("chatbot") ? "Chatbot" : "AI Bot",
               });
             }
+          }
+
+          // ── Trigger wa_flows if applicable ──
+          try {
+            const { data: activeFlows } = await supabase
+              .from("wa_flows")
+              .select("*")
+              .eq("is_active", true);
+
+            if (activeFlows && activeFlows.length > 0) {
+              for (const flow of activeFlows) {
+                const triggerConfig = flow.trigger_config as any;
+                let shouldTrigger = false;
+
+                if (flow.trigger_type === "keyword" && triggerConfig?.keywords) {
+                  const keywords = (triggerConfig.keywords as string[]).flatMap(
+                    (kw: string) => kw.split(",").map((k: string) => k.trim().toLowerCase()).filter(Boolean)
+                  );
+                  shouldTrigger = keywords.some((kw: string) => messageText.toLowerCase().includes(kw));
+                } else if (flow.trigger_type === "all_messages") {
+                  shouldTrigger = true;
+                } else if (flow.trigger_type === "first_message") {
+                  shouldTrigger = !existingConvo;
+                }
+
+                if (shouldTrigger) {
+                  console.log(`Flow triggered: ${flow.name}`);
+                  await supabase.from("wa_flows").update({
+                    total_runs: (flow.total_runs || 0) + 1,
+                    last_run_at: new Date().toISOString(),
+                  }).eq("id", flow.id);
+
+                  // Process flow nodes sequentially
+                  const nodes = (flow.nodes as any[]) || [];
+                  const edges = (flow.edges as any[]) || [];
+
+                  const processNode = async (nodeId: string) => {
+                    const node = nodes.find((n: any) => n.id === nodeId);
+                    if (!node) return;
+
+                    if (node.type === "send_message" && node.config?.message) {
+                      const flowMsg = node.config.message
+                        .replace(/\{\{name\}\}/gi, contactName)
+                        .replace(/\{\{phone\}\}/gi, from);
+
+                      if (WHATSAPP_ACCESS_TOKEN && WHATSAPP_PHONE_NUMBER_ID) {
+                        await fetch(`https://graph.facebook.com/v21.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`, {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json",
+                            Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
+                          },
+                          body: JSON.stringify({
+                            messaging_product: "whatsapp",
+                            to: from,
+                            type: "text",
+                            text: { body: flowMsg },
+                          }),
+                        });
+                      }
+                    } else if (node.type === "delay" && node.config?.seconds) {
+                      // In webhook context, we skip delays (queue for later in production)
+                      console.log(`Flow delay: ${node.config.seconds}s (skipped in webhook)`);
+                    }
+
+                    // Follow edges to next node
+                    const nextEdge = edges.find((e: any) => e.source === nodeId);
+                    if (nextEdge) {
+                      await processNode(nextEdge.target);
+                    }
+                  };
+
+                  // Start from trigger node
+                  const triggerNode = nodes.find((n: any) => n.type === "trigger");
+                  if (triggerNode) {
+                    const firstEdge = edges.find((e: any) => e.source === triggerNode.id);
+                    if (firstEdge) {
+                      await processNode(firstEdge.target);
+                    }
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            console.error("Flow execution error:", e);
           }
         }
 
