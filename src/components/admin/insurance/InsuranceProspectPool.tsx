@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRCLookup } from "@/hooks/useRCLookup";
 import { supabase } from "@/integrations/supabase/client";
@@ -87,6 +87,12 @@ export function InsuranceProspectPool() {
   const [remarkOpen, setRemarkOpen] = useState<Prospect | null>(null);
   const [remarkText, setRemarkText] = useState("");
   const [wonOpen, setWonOpen] = useState<Prospect | null>(null);
+  const [wonPolicyNumber, setWonPolicyNumber] = useState("");
+  const [wonInsurer, setWonInsurer] = useState("");
+  const [wonPremium, setWonPremium] = useState("");
+  const [wonExpiryDate, setWonExpiryDate] = useState("");
+  const [wonDocFile, setWonDocFile] = useState<File | null>(null);
+  const wonDocRef = useRef<HTMLInputElement>(null);
   const [lostOpen, setLostOpen] = useState<Prospect | null>(null);
   const [lostReason, setLostReason] = useState("");
   const [duplicateAlert, setDuplicateAlert] = useState<{ prospect: any; existingClient: any } | null>(null);
@@ -214,31 +220,107 @@ export function InsuranceProspectPool() {
     setRemarkOpen(null); setRemarkText("");
   };
 
-  // Won — auto convert to client
   const handleWon = async () => {
     if (!wonOpen) return;
+    if (!wonPolicyNumber.trim() || !wonInsurer.trim() || !wonExpiryDate) {
+      toast.error("Fill policy number, insurer, and expiry date");
+      return;
+    }
+    if (!wonDocFile) {
+      toast.error("Please attach the policy document (PDF/Image)");
+      return;
+    }
     try {
+      // Upload document
+      const fileExt = wonDocFile.name.split(".").pop() || "pdf";
+
       // Insert into insurance_clients
+      const premium = wonPremium ? parseFloat(wonPremium) : null;
       const { data: newClient, error } = await supabase.from("insurance_clients").insert({
         phone: wonOpen.phone, customer_name: wonOpen.customer_name || null, email: wonOpen.email || null,
         vehicle_number: wonOpen.vehicle_number || null, vehicle_make: wonOpen.vehicle_make || null,
         vehicle_model: wonOpen.vehicle_model || null, current_policy_type: wonOpen.policy_type || null,
         lead_source: wonOpen.data_source, notes: wonOpen.notes || null, lead_status: "won",
+        pipeline_stage: "policy_issued",
+        current_policy_number: wonPolicyNumber.trim().toUpperCase(),
+        current_insurer: wonInsurer.trim(),
+        current_premium: premium,
+        policy_expiry_date: wonExpiryDate,
       }).select("id").single();
       if (error) throw error;
+
+      // Upload doc to storage
+      const storagePath = `${newClient.id}/${wonPolicyNumber.trim()}_policy.${fileExt}`;
+      const { error: uploadErr } = await supabase.storage.from("policy-documents").upload(storagePath, wonDocFile, { upsert: true });
+      if (uploadErr) throw new Error("Document upload failed: " + uploadErr.message);
+      const { data: pubUrl } = supabase.storage.from("policy-documents").getPublicUrl(storagePath);
+      const policyDocumentUrl = pubUrl.publicUrl;
+
+      // Create policy record
+      const startDate = format(new Date(), "yyyy-MM-dd");
+      await supabase.from("insurance_policies").insert({
+        client_id: newClient.id,
+        policy_number: wonPolicyNumber.trim().toUpperCase(),
+        insurer: wonInsurer.trim(),
+        premium_amount: premium,
+        start_date: startDate,
+        expiry_date: wonExpiryDate,
+        status: "active",
+        issued_date: startDate,
+        booking_date: startDate,
+        source_label: "Won (Prospect)",
+        policy_document_url: policyDocumentUrl,
+        policy_type: wonOpen.policy_type || "comprehensive",
+      } as any);
 
       // Update prospect as won
       await supabase.from("insurance_prospects").update({
         prospect_status: "won", converted_to_lead_id: newClient.id, converted_at: new Date().toISOString(),
       }).eq("id", wonOpen.id);
 
-      await supabase.from("insurance_prospect_activity").insert({ prospect_id: wonOpen.id, activity_type: "won", title: "🏆 Lead Won!", description: "Converted to active client" });
-      await supabase.from("insurance_activity_log").insert({ client_id: newClient.id, activity_type: "lead_created", title: "Won from Prospect Pool", description: `Source: ${wonOpen.data_source}`, metadata: { prospect_id: wonOpen.id } });
+      await supabase.from("insurance_prospect_activity").insert({ prospect_id: wonOpen.id, activity_type: "won", title: "🏆 Lead Won!", description: "Converted to active client with policy" });
+      await supabase.from("insurance_activity_log").insert({ client_id: newClient.id, activity_type: "lead_created", title: "Won from Prospect Pool", description: `Policy ${wonPolicyNumber} by ${wonInsurer}`, metadata: { prospect_id: wonOpen.id } });
+
+      // Auto WhatsApp send with document
+      const customerName = wonOpen.customer_name || "Customer";
+      const phone = wonOpen.phone;
+      if (phone && !phone.startsWith("IB_")) {
+        try {
+          const premiumLabel = premium ? `₹${Number(premium).toLocaleString("en-IN")}` : "";
+          const expiryLabel = format(new Date(wonExpiryDate), "dd MMM yyyy");
+          const vehicleNum = wonOpen.vehicle_number || "";
+          const policyMsg = `Hello ${customerName} 🙏\n\nHere is your motor insurance policy document from Grabyourcar Insurance.\n\n📋 Policy No: *${wonPolicyNumber.trim().toUpperCase()}*\n🏢 Insurer: *${wonInsurer.trim()}*\n${vehicleNum ? `🚗 Vehicle: *${vehicleNum}*\n` : ""}${premiumLabel ? `💰 Premium: *${premiumLabel}*\n` : ""}📅 Valid till: *${expiryLabel}*\n\nWe are just a click away — ask and command us anything, anytime! 💚\n\n📞 +91 98559 24442\n🔗 https://www.grabyourcar.com/insurance\n\n— *Team Grabyourcar* 🚗`;
+
+          const waResult = await sendWhatsApp({
+            phone,
+            message: policyMsg,
+            messageType: "document",
+            mediaUrl: policyDocumentUrl,
+            mediaFileName: `${wonPolicyNumber.trim()}_policy.${fileExt}`,
+            name: customerName,
+            logEvent: "prospect_won_auto_send",
+            silent: true,
+          });
+          if (waResult.success) {
+            toast.success("🏆 Lead Won! Policy document sent on WhatsApp");
+          } else {
+            toast.success("🏆 Lead Won! (WhatsApp send failed — share manually)");
+          }
+        } catch {
+          toast.success("🏆 Lead Won! (WhatsApp send failed — share manually)");
+        }
+      } else {
+        toast.success("🏆 Lead Won! Client created successfully");
+      }
 
       qc.invalidateQueries({ queryKey: ["insurance-prospects"] });
       qc.invalidateQueries({ queryKey: ["ins-clients"] });
-      toast.success("🏆 Lead Won! Client created successfully");
       setWonOpen(null);
+      setWonDocFile(null);
+      setWonPolicyNumber("");
+      setWonInsurer("");
+      setWonPremium("");
+      setWonExpiryDate("");
     } catch (e: any) { toast.error(e.message); }
   };
 
