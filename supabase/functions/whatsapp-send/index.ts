@@ -385,6 +385,8 @@ serve(async (req) => {
       name,
     );
 
+    const deliveryStatus = result.success ? "queued" : "failed";
+
     // Log to wa_message_logs
     const phoneNorm = normalizePhone(to);
     await supabase.from("wa_message_logs").insert({
@@ -395,7 +397,7 @@ serve(async (req) => {
       template_name: template_name || null,
       trigger_event: logEvent || "api_send",
       lead_id: lead_id || null,
-      status: result.success ? "sent" : "failed",
+      status: deliveryStatus,
       provider: result.provider || providerName,
       provider_message_id: result.messageId || null,
       error_message: result.error || null,
@@ -405,7 +407,7 @@ serve(async (req) => {
 
     if (result.success) {
       return new Response(
-        JSON.stringify({ success: true, messageId: result.messageId, provider: result.provider }),
+        JSON.stringify({ success: true, messageId: result.messageId, provider: result.provider, status: deliveryStatus }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

@@ -96,7 +96,7 @@ export async function sendWhatsApp({
     if (error) throw error;
 
     if (data?.success) {
-      if (!silent) toast.success(`✅ WhatsApp sent to ${name || fullPhone}`);
+      if (!silent) toast.success(`✅ WhatsApp queued for delivery to ${name || fullPhone}`);
       // Logging is now handled inside whatsapp-send
       return { success: true, messageId: data.messageId };
     }
