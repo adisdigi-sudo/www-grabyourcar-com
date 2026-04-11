@@ -56,6 +56,7 @@ import { InsurancePolicyDocumentUploader } from "./InsurancePolicyDocumentUpload
 import { ClientQuoteHistory } from "./ClientQuoteHistory";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useQuery } from "@tanstack/react-query";
+import { openWhatsAppChat } from "@/lib/openWhatsAppChat";
 
 export type Client = {
   id: string;
@@ -588,9 +589,7 @@ export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: Insura
 
   const handleQuickWhatsApp = useCallback((client: Client) => {
     const defaultMessage = `Hi ${client.customer_name || ""}! This is GrabYourCar Insurance. How can we help you today?`;
-    import("@/lib/openWhatsAppChat").then(({ openWhatsAppChat }) => {
-      openWhatsAppChat(client.phone, defaultMessage);
-    });
+    openWhatsAppChat(client.phone, defaultMessage);
   }, []);
 
   // Filter - exclude won/policy_issued leads from pipeline and deduplicate same lead/vehicle
@@ -1554,9 +1553,7 @@ export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: Insura
                         <>
                           <a href={`tel:${selectedClient.phone}`}><Button size="sm" variant="outline" className="gap-1.5"><PhoneCall className="h-3.5 w-3.5" /> Call</Button></a>
                           <Button size="sm" variant="outline" className="gap-1.5 text-green-600 border-green-200" onClick={() => {
-                            import("@/lib/openWhatsAppChat").then(({ openWhatsAppChat }) => {
-                              openWhatsAppChat(selectedClient.phone, `Hi ${selectedClient.customer_name || ""}! This is GrabYourCar Insurance. How can we help you today?`);
-                            });
+                            openWhatsAppChat(selectedClient.phone, `Hi ${selectedClient.customer_name || ""}! This is GrabYourCar Insurance. How can we help you today?`);
                           }}><MessageSquare className="h-3.5 w-3.5" /> WhatsApp</Button>
                         </>
                       )}

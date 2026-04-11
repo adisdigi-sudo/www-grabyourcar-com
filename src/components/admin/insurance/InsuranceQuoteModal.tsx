@@ -22,6 +22,7 @@ import { generateInsuranceQuotePdf, InsuranceQuoteData } from "@/lib/generateIns
 import { INSURANCE_COMPANIES, getShortName } from "@/lib/insuranceCompanies";
 import { InsuranceComparisonBuilder } from "./InsuranceComparisonBuilder";
 import { motion, AnimatePresence } from "framer-motion";
+import { openWhatsAppChat } from "@/lib/openWhatsAppChat";
 
 // ── Zone logic ──
 const METRO_CITIES = ["delhi", "delhi ncr", "ncr", "new delhi", "noida", "gurgaon", "gurugram", "faridabad", "ghaziabad", "bangalore", "bengaluru"];
@@ -293,9 +294,8 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
     }
     const inspectionNote = claimLockedByExpiry ? "\n\n⚠ *Vehicle Inspection Required*: Policy lapsed >90 days. Physical inspection mandatory as per IRDAI guidelines." : "";
     const msg = `Hi ${client.customer_name || ""}! 🚗\n\nHere's your *Motor Insurance Quotation* from Grabyourcar:\n\n🏢 Insurer: ${insuranceCompany}\n🚘 Vehicle: ${client.vehicle_make || ""} ${client.vehicle_model || ""}\n📋 Reg: ${client.vehicle_number || "N/A"}\n💰 IDV: ${fmt(idvNum)}\n\n📊 *Premium Breakup:*\nNet OD: ${fmt(calc.netOD)}\nThird Party: ${fmt(calc.tp)}\nAdd-ons: ${fmt(calc.addonTotal)}\nGST (18%): ${fmt(calc.gst)}\n*Total: ${fmt(calc.total)}*\n\n✅ Coverage: ${addons.filter(a => a.enabled).map(a => a.name).join(", ")}${inspectionNote}\n\nPlease find the detailed PDF quote attached.\n\n— Grabyourcar Insurance Desk\n📞 +91 98559 24442`;
-    const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
-    await sendWhatsApp({ phone: client.phone || "", message: msg, name: client.customer_name, logEvent: "insurance_quote" });
-    toast.success("📲 Quote saved & WhatsApp opened!");
+    openWhatsAppChat(client.phone || "", msg);
+    toast.success("📲 Quote saved — WhatsApp chat opened");
     onQuoteSent?.();
   };
 

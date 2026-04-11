@@ -30,6 +30,7 @@ import { BulkQuoteSharePanel, BulkLeadItem } from "./BulkQuoteSharePanel";
 import { FileSpreadsheet } from "lucide-react";
 import InsuranceQuoteModal from "./InsuranceQuoteModal";
 import { openInsuranceStorageFile } from "@/lib/insuranceDocumentViewer";
+import { openWhatsAppChat } from "@/lib/openWhatsAppChat";
 
 type ViewFilter = "all" | "7" | "15" | "30" | "60" | "expired";
 type StatusFilter = "all" | "won" | "lost" | "running" | "new" | "grabyourcar";
@@ -1766,8 +1767,7 @@ ${currentPremium && renewalPremium ? `\n📊 *Comparison:*\n💰 Current: ${form
   const sendViaWhatsAppLink = async () => {
     const cleanPhone = phone.replace(/\D/g, "");
     if (!cleanPhone) { toast.error("Enter a valid phone number"); return; }
-    const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
-    await sendWhatsApp({ phone: cleanPhone, message: currentMessage, logEvent: activeTemplate === "notice" ? "renewal_notice" : "renewal_quote" });
+    openWhatsAppChat(cleanPhone, currentMessage);
     onClose();
   };
 
@@ -2092,8 +2092,7 @@ Thank you for choosing Grabyourcar for your motor insurance needs! Here's your p
   const sendTemplateViaWhatsApp = async (template: string) => {
     const phone = whatsappNumber.replace(/\D/g, "");
     if (!phone) { toast.error("Enter a valid phone number"); return; }
-    const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
-    await sendWhatsApp({ phone, message: template, logEvent: "template_send" });
+    openWhatsAppChat(phone, template);
   };
 
   return (

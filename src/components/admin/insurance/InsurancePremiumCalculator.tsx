@@ -20,6 +20,7 @@ import { InsuranceComparisonBuilder } from "./InsuranceComparisonBuilder";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
+import { openWhatsAppChat } from "@/lib/openWhatsAppChat";
 
 // ── Zone logic ──
 const METRO_CITIES = ["delhi", "delhi ncr", "ncr", "new delhi", "noida", "gurgaon", "gurugram", "faridabad", "ghaziabad", "bangalore", "bengaluru"];
@@ -638,9 +639,8 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
 
       if (method === "whatsapp") {
         const quoteText = getQuoteText();
-        const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
-        await sendWhatsApp({ phone: customerPhone || "", message: quoteText, name: customerName || "", logEvent: "quote_share" });
-        toast.success("Quote saved & sent via WhatsApp API!");
+        openWhatsAppChat(customerPhone || "", quoteText);
+        toast.success("Quote saved — WhatsApp chat opened!");
       } else {
         doc.save(fileName);
         toast.success("Quote saved & PDF generated!");
