@@ -17,7 +17,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { omniSend, type OmniChannel } from "@/lib/omniSend";
+import { type OmniChannel } from "@/lib/omniSend";
 
 interface OmniChatPanelProps {
   phone?: string;
@@ -248,23 +248,38 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
     if (!replyMessage.trim() || !selectedThread) return;
 
     setSending(true);
-    const result = await omniSend({
-      channel: replyChannel,
-      phone: selectedThread.phone,
-      email,
-      message: replyMessage,
-      name: selectedThread.customer_name || undefined,
-      vertical: context,
-    });
+    try {
+      if (replyChannel === "whatsapp" && !selectedThread.isDraft) {
+        const { data: userData } = await supabase.auth.getUser();
 
-    if (result.success || result.fallback) {
+        const { data, error } = await supabase.functions.invoke("wa-send-inbox", {
+          body: {
+            conversation_id: selectedThread.id,
+            phone: selectedThread.phone,
+            message_type: "text",
+            content: replyMessage,
+            sent_by: userData?.user?.id,
+            sent_by_name: userData?.user?.email?.split("@")[0] || "Agent",
+          },
+        });
+
+        if (error || !data?.success) {
+          throw new Error(data?.error || error?.message || "Failed to send WhatsApp reply");
+        }
+      } else {
+        throw new Error("Only active WhatsApp conversations are supported here");
+      }
+
       setReplyMessage("");
       setTimeout(() => {
         loadThreads();
         loadMessages(selectedThread);
-      }, 1000);
+      }, 800);
+    } catch (error) {
+      console.error("Failed to send reply:", error);
+    } finally {
+      setSending(false);
     }
-    setSending(false);
   }
 
   const filteredThreads = threads.filter((t) => {
