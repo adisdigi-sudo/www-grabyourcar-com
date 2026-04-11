@@ -5,12 +5,14 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
-  Send, Paperclip, Smile, Clock, Check, CheckCheck, X,
-  AlertTriangle, Info, Zap, LayoutTemplate, MessageSquare
+  Send, Paperclip, Clock, Check, CheckCheck, X,
+  AlertTriangle, Info, Zap, LayoutTemplate, MessageSquare,
+  UserPlus, Timer
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { format, formatDistanceToNowStrict } from "date-fns";
+import { format, formatDistanceToNowStrict, differenceInSeconds } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { WaConversation, WaMessage } from "../WhatsAppBusinessInbox";
 
 interface Props {
@@ -21,6 +23,48 @@ interface Props {
   onToggleInfo: () => void;
 }
 
+function LiveCountdown({ expiresAt }: { expiresAt: string }) {
+  const [timeLeft, setTimeLeft] = useState("");
+  const [urgency, setUrgency] = useState<"safe" | "warning" | "critical">("safe");
+
+  useEffect(() => {
+    const update = () => {
+      const now = new Date();
+      const exp = new Date(expiresAt);
+      const diffSec = differenceInSeconds(exp, now);
+
+      if (diffSec <= 0) {
+        setTimeLeft("Expired");
+        setUrgency("critical");
+        return;
+      }
+
+      const h = Math.floor(diffSec / 3600);
+      const m = Math.floor((diffSec % 3600) / 60);
+      const s = diffSec % 60;
+
+      setTimeLeft(`${h}h ${m}m ${s}s`);
+      setUrgency(diffSec < 1800 ? "critical" : diffSec < 7200 ? "warning" : "safe");
+    };
+
+    update();
+    const iv = setInterval(update, 1000);
+    return () => clearInterval(iv);
+  }, [expiresAt]);
+
+  const colors = {
+    safe: "bg-green-100 text-green-700 border-green-200",
+    warning: "bg-amber-100 text-amber-700 border-amber-200",
+    critical: "bg-red-100 text-red-700 border-red-200 animate-pulse",
+  };
+
+  return (
+    <Badge variant="outline" className={cn("text-[10px] gap-1 font-mono border", colors[urgency])}>
+      <Timer className="h-3 w-3" /> {timeLeft}
+    </Badge>
+  );
+}
+
 export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onToggleInfo }: Props) {
   const [text, setText] = useState("");
   const [isSending, setIsSending] = useState(false);
@@ -28,6 +72,8 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
   const [quickReplies, setQuickReplies] = useState<Array<{ id: string; title: string; message: string }>>([]);
   const [showTemplates, setShowTemplates] = useState(false);
   const [templates, setTemplates] = useState<Array<{ id: string; name: string; display_name: string | null; body: string }>>([]);
+  const [showAssign, setShowAssign] = useState(false);
+  const [agents, setAgents] = useState<Array<{ id: string; full_name: string; email: string }>>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -41,6 +87,9 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
     });
     supabase.from("wa_templates").select("id, name, display_name, body, status").eq("status", "approved").order("created_at", { ascending: false }).then(({ data }) => {
       setTemplates((data || []) as any);
+    });
+    supabase.from("crm_users").select("id, full_name, email").limit(50).then(({ data }) => {
+      setAgents((data || []) as any);
     });
   }, []);
 
@@ -66,6 +115,12 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
     setIsSending(false);
   };
 
+  const handleAssign = async (agentId: string) => {
+    if (!conversation) return;
+    await supabase.from("wa_conversations").update({ assigned_user_id: agentId }).eq("id", conversation.id);
+    setShowAssign(false);
+  };
+
   const getStatusIcon = (msg: WaMessage) => {
     if (msg.direction === "inbound") return null;
     switch (msg.status) {
@@ -89,10 +144,6 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
     );
   }
 
-  const windowTimeLeft = conversation.window_expires_at
-    ? formatDistanceToNowStrict(new Date(conversation.window_expires_at), { addSuffix: false })
-    : null;
-
   return (
     <div className="flex-1 flex flex-col bg-[#efeae2] dark:bg-background/95">
       {/* Chat Header */}
@@ -108,15 +159,49 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
           <p className="text-xs text-muted-foreground">{conversation.phone}</p>
         </div>
         <div className="flex items-center gap-2">
-          {isWindowOpen ? (
-            <Badge className="bg-green-100 text-green-700 text-[10px] gap-1">
-              <Clock className="h-3 w-3" /> {windowTimeLeft} left
-            </Badge>
+          {/* Live Countdown */}
+          {conversation.window_expires_at && isWindowOpen ? (
+            <LiveCountdown expiresAt={conversation.window_expires_at} />
           ) : (
             <Badge variant="secondary" className="text-[10px] gap-1 text-amber-600">
               <AlertTriangle className="h-3 w-3" /> Window closed
             </Badge>
           )}
+
+          {/* Agent Assignment */}
+          <Popover open={showAssign} onOpenChange={setShowAssign}>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8" title="Assign agent">
+                <UserPlus className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56 p-2" align="end">
+              <p className="text-xs font-semibold mb-2">Assign to Agent</p>
+              <div className="space-y-1 max-h-48 overflow-auto">
+                {agents.map(a => (
+                  <button
+                    key={a.id}
+                    onClick={() => handleAssign(a.id)}
+                    className={cn(
+                      "w-full text-left px-2 py-1.5 rounded text-xs hover:bg-accent transition-colors flex items-center gap-2",
+                      conversation.assigned_user_id === a.id && "bg-green-50 dark:bg-green-900/20"
+                    )}
+                  >
+                    <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold">
+                      {(a.full_name || a.email)?.[0]?.toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-medium truncate">{a.full_name || a.email?.split("@")[0]}</p>
+                    </div>
+                    {conversation.assigned_user_id === a.id && (
+                      <Check className="h-3 w-3 text-green-600 ml-auto shrink-0" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onToggleInfo}>
             <Info className="h-4 w-4" />
           </Button>
@@ -197,15 +282,15 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
           {/* Quick Replies */}
           <Popover open={showQuickReplies} onOpenChange={setShowQuickReplies}>
             <PopoverTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0">
+              <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" title="Quick Replies">
                 <Zap className="h-4 w-4" />
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-72 p-2" align="start">
-              <p className="text-xs font-semibold mb-2">Quick Replies</p>
+              <p className="text-xs font-semibold mb-2">⚡ Quick Replies</p>
               <div className="space-y-1 max-h-48 overflow-auto">
                 {quickReplies.length === 0 ? (
-                  <p className="text-xs text-muted-foreground p-2">No quick replies yet</p>
+                  <p className="text-xs text-muted-foreground p-2">No quick replies configured</p>
                 ) : quickReplies.map(qr => (
                   <button
                     key={qr.id}
@@ -223,15 +308,15 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
           {/* Templates */}
           <Popover open={showTemplates} onOpenChange={setShowTemplates}>
             <PopoverTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0">
+              <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" title="Templates">
                 <LayoutTemplate className="h-4 w-4" />
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-80 p-2" align="start">
-              <p className="text-xs font-semibold mb-2">Templates {!isWindowOpen && <span className="text-amber-600">(required)</span>}</p>
+              <p className="text-xs font-semibold mb-2">📋 Templates {!isWindowOpen && <span className="text-amber-600">(required)</span>}</p>
               <div className="space-y-1 max-h-56 overflow-auto">
                 {templates.length === 0 ? (
-                  <p className="text-xs text-muted-foreground p-2">No templates yet</p>
+                  <p className="text-xs text-muted-foreground p-2">No approved templates</p>
                 ) : templates.map(tpl => (
                   <button
                     key={tpl.id}
