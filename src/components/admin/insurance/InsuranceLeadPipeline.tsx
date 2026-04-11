@@ -448,7 +448,29 @@ function WonPolicyDialog({
         } as any,
       });
 
-      toast.success("Policy issued! Now upload the policy document.", { duration: 5000 });
+      // Auto-send WhatsApp policy confirmation to customer
+      if (client.phone) {
+        try {
+          const customerName = client.customer_name || "Customer";
+          const vehicleInfo = [client.vehicle_make, client.vehicle_model].filter(Boolean).join(" ") || "your vehicle";
+          const policyMsg = `🎉 Congratulations ${customerName}!\n\nYour car insurance policy has been issued successfully!\n\n📋 *Policy Details:*\n• Policy #: ${nextPolicyNumber}\n• Insurer: ${insurer.trim()}\n• Vehicle: ${vehicleInfo}\n• Premium: ₹${premium || "N/A"}\n• Valid: ${nextStartDate} to ${nextExpiryDate}\n\nYour policy document will be shared shortly.\n\nThank you for choosing GrabYourCar! 🚗\nwww.grabyourcar.com`;
+
+          await supabase.functions.invoke("whatsapp-send", {
+            body: {
+              to: client.phone,
+              message: policyMsg,
+              messageType: "text",
+              name: customerName,
+              logEvent: "policy_won_auto_send",
+            },
+          });
+          console.log("Auto WhatsApp sent for policy won:", client.phone);
+        } catch (waErr) {
+          console.warn("Auto WhatsApp on Won failed (non-blocking):", waErr);
+        }
+      }
+
+      toast.success("Policy issued & WhatsApp sent! Now upload the policy document.", { duration: 5000 });
       onSuccess();
       onOpenChange(false);
     } catch (e: any) {

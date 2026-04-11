@@ -251,10 +251,32 @@ export function InsuranceAddPolicyForm({ onSuccess }: { onSuccess?: () => void }
         description: `${form.insurer || "Unknown"} policy ${form.policy_number} added${docFile ? " with document" : ""}`,
       });
 
+      // Auto-send WhatsApp policy confirmation
+      const clientPhone = clientMode === "existing" ? searchPhone : newClient.phone;
+      const clientDisplayName = clientMode === "existing" ? clientName : newClient.customer_name;
+      if (clientPhone) {
+        try {
+          const vehicleInfo = clientMode === "existing" ? "" : [newClient.vehicle_make, newClient.vehicle_model].filter(Boolean).join(" ");
+          const policyMsg = `🎉 Congratulations ${clientDisplayName || "Customer"}!\n\nYour car insurance policy has been issued!\n\n📋 *Policy Details:*\n• Policy #: ${form.policy_number}\n• Insurer: ${form.insurer || "N/A"}\n• Premium: ₹${form.premium_amount || "N/A"}${vehicleInfo ? `\n• Vehicle: ${vehicleInfo}` : ""}\n• Valid: ${form.start_date || "N/A"} to ${form.expiry_date || "N/A"}\n\nYour policy document will be shared shortly.\n\nThank you for choosing GrabYourCar! 🚗`;
+
+          await supabase.functions.invoke("whatsapp-send", {
+            body: {
+              to: clientPhone,
+              message: policyMsg,
+              messageType: "text",
+              name: clientDisplayName || "Customer",
+              logEvent: "policy_added_auto_send",
+            },
+          });
+        } catch (waErr) {
+          console.warn("Auto WhatsApp on policy add failed:", waErr);
+        }
+      }
+
       const replacedCount = previousPolicies?.length || 0;
       toast.success(replacedCount > 0 
-        ? `✅ New policy added! ${replacedCount} previous policy(s) auto-marked as renewed.`
-        : "✅ Policy added successfully!");
+        ? `✅ Policy added & WhatsApp sent! ${replacedCount} previous policy(s) auto-renewed.`
+        : "✅ Policy added & WhatsApp sent!");
       
       // Reset form
       setForm({
