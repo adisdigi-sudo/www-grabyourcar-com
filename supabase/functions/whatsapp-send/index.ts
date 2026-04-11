@@ -23,6 +23,7 @@ interface SendMessageRequest {
   messageType?: "text" | "template" | "image" | "document" | "video" | "audio";
   template_name?: string;
   template_variables?: Record<string, string>;
+  template_components?: unknown[];
   mediaUrl?: string;
   action?: string;
   name?: string;
@@ -246,6 +247,7 @@ async function sendMessage(
   templateVars?: Record<string, string>,
   mediaUrl?: string,
   name?: string,
+  templateComponents?: unknown[],
 ): Promise<SendResult> {
   const phone = normalizePhone(to);
   if (!phone.valid) {
@@ -268,7 +270,9 @@ async function sendMessage(
           parameters: Object.values(templateVars).map(val => ({ type: "text", text: val })),
         });
       }
-      payload = { type: "template", template: { name: templateName, language: { code: "en" }, ...(components.length > 0 ? { components } : {}) } };
+      // If caller provided raw components array, use it directly (supports buttons with dynamic URLs)
+      const finalComponents = templateComponents && templateComponents.length > 0 ? templateComponents : components;
+      payload = { type: "template", template: { name: templateName, language: { code: "en" }, ...(finalComponents.length > 0 ? { components: finalComponents } : {}) } };
     } else if (messageType === "image" && mediaUrl) {
       payload = { type: "image", image: { link: mediaUrl, caption: message || "" } };
     } else if (messageType === "document" && mediaUrl) {
@@ -367,6 +371,7 @@ serve(async (req) => {
       messageType = "text",
       template_name,
       template_variables,
+      template_components,
       mediaUrl,
       name,
       logEvent,
@@ -402,6 +407,7 @@ serve(async (req) => {
       template_variables,
       mediaUrl,
       name,
+      template_components,
     );
 
     const deliveryStatus = result.success ? "queued" : "failed";
