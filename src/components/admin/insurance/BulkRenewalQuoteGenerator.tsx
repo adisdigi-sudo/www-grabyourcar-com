@@ -379,33 +379,36 @@ export function BulkRenewalQuoteGenerator({ onClose }: { onClose: () => void }) 
   };
 
   const handleBulkSendWhatsApp = async () => {
+    const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
     const selected = filteredQuotes.filter(q => selectedIds.has(q.id) && q.phone);
     if (!selected.length) { toast.error("Select quotes with phone numbers"); return; }
     setBulkAction(true);
     let sent = 0;
-    for (const q of selected) {
+    const toastId = toast.loading(`Sending bulk renewal quotes... 0/${selected.length}`);
+    for (let i = 0; i < selected.length; i++) {
+      const q = selected[i];
       try {
-        const phone = q.phone.replace(/\D/g, "");
-        const full = phone.startsWith("91") ? phone : `91${phone}`;
         const netOD = Math.max(0, q.basic_od - q.od_discount - q.ncb_discount);
         const netPremium = netOD + q.third_party + q.secure_premium + q.addon_premium;
         const gst = Math.round(netPremium * 0.18);
         const total = netPremium + gst;
-        await supabase.functions.invoke("wa-automation-trigger", {
-          body: {
-            event: "insurance_renewal_bulk", phone: full,
-            customerName: q.customer_name, vehicleNumber: q.vehicle_number,
-            vehicleMake: q.vehicle_make, vehicleModel: q.vehicle_model,
-            insuranceCompany: q.insurance_company,
-            totalPremium: `Rs. ${total.toLocaleString("en-IN")}`,
-          },
+        const msg = `🙏 Namaste ${q.customer_name || "Sir/Madam"},\n\nHere is your *Motor Insurance Renewal Quote* from *Grabyourcar Insurance*:\n\n🚗 Vehicle: *${q.vehicle_make || ""} ${q.vehicle_model || ""}*\n📋 Reg: *${q.vehicle_number || "N/A"}*\n🏢 Insurer: *${q.insurance_company || "Best Available"}*\n💰 Total Premium: *Rs. ${total.toLocaleString("en-IN")}*\n\n✅ Best rates guaranteed!\n\n👉 *Reply here* or call us at +91 98559 24442\n🔗 https://www.grabyourcar.com/insurance\n\n— *Team Grabyourcar* 🚗💚`;
+        const result = await sendWhatsApp({
+          phone: q.phone,
+          message: msg,
+          name: q.customer_name || undefined,
+          logEvent: "bulk_renewal_quote",
+          silent: true,
         });
-        await updateQuote.mutateAsync({ id: q.id, whatsapp_sent: true, whatsapp_sent_at: new Date().toISOString(), status: "sent" } as any);
-        sent++;
+        if (result.success) {
+          await updateQuote.mutateAsync({ id: q.id, whatsapp_sent: true, whatsapp_sent_at: new Date().toISOString(), status: "sent" } as any);
+          sent++;
+        }
       } catch (e) { console.error(e); }
-      await new Promise(r => setTimeout(r, 1500));
+      toast.loading(`Sending bulk renewal quotes... ${i + 1}/${selected.length}`, { id: toastId });
+      if (i < selected.length - 1) await new Promise(r => setTimeout(r, 500));
     }
-    toast.success(`WhatsApp sent to ${sent}/${selected.length} customers`);
+    toast.success(`✅ WhatsApp sent to ${sent}/${selected.length} customers`, { id: toastId });
     setBulkAction(false);
   };
 
