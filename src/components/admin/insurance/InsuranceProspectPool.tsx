@@ -98,6 +98,8 @@ export function InsuranceProspectPool() {
   const [lostReason, setLostReason] = useState("");
   const [duplicateAlert, setDuplicateAlert] = useState<{ prospect: any; existingClient: any } | null>(null);
   const [page, setPage] = useState(0);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkSending, setBulkSending] = useState(false);
   const pageSize = 20;
   const rcLookup = useRCLookup({ showToast: false });
   const [form, setForm] = useState({
