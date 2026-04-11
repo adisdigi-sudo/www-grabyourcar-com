@@ -358,7 +358,7 @@ serve(async (req) => {
           const WHATSAPP_PHONE_NUMBER_ID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
 
           if (WHATSAPP_ACCESS_TOKEN && WHATSAPP_PHONE_NUMBER_ID && aiResponse) {
-            const sendResult = await fetch(`https://graph.facebook.com/v21.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`, {
+            const sendResult = await fetch(`https://graph.facebook.com/v25.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
@@ -444,7 +444,7 @@ serve(async (req) => {
                         .replace(/\{\{phone\}\}/gi, from);
 
                       if (WHATSAPP_ACCESS_TOKEN && WHATSAPP_PHONE_NUMBER_ID) {
-                        await fetch(`https://graph.facebook.com/v21.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`, {
+                        await fetch(`https://graph.facebook.com/v25.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`, {
                           method: "POST",
                           headers: {
                             "Content-Type": "application/json",
