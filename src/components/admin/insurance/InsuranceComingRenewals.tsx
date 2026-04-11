@@ -19,6 +19,7 @@ import {
   Send, ArrowUpDown, RefreshCw
 } from "lucide-react";
 import type { PolicyRecord } from "./InsurancePolicyBook";
+import { openWhatsAppChat } from "@/lib/openWhatsAppChat";
 
 const LOST_REASONS = ["Too expensive", "Existing agent", "No response", "Not renewing", "Competitor offer", "Other"];
 const displayPhone = (phone: string | null) => (!phone || phone.startsWith("IB_")) ? null : phone;
@@ -315,9 +316,7 @@ export function InsuranceComingRenewals({ policies }: InsuranceComingRenewalsPro
                             <>
                               <a href={`tel:${c?.phone}`}><Button variant="ghost" size="icon" className="h-6 w-6"><PhoneCall className="h-3 w-3 text-primary" /></Button></a>
                               <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => {
-                                import("@/lib/openWhatsAppChat").then(({ openWhatsAppChat }) => {
-                                  openWhatsAppChat(c?.phone || "", `Hi ${c?.customer_name || ""}, your insurance policy is expiring soon. Contact us for renewal!`);
-                                });
+                                openWhatsAppChat(c?.phone || "", `Hi ${c?.customer_name || ""}, your insurance policy is expiring soon. Contact us for renewal!`);
                               }}><MessageSquare className="h-3 w-3 text-green-600" /></Button>
                             </>
                           )}

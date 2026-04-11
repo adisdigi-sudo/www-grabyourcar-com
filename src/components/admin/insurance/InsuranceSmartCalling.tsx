@@ -27,6 +27,7 @@ import { generateRenewalReminderPdf } from "@/lib/generateRenewalReminderPdf";
 import { generateInsuranceQuotePdf } from "@/lib/generateInsuranceQuotePdf";
 import { Checkbox } from "@/components/ui/checkbox";
 import { OmniShareDialog } from "@/components/admin/shared/OmniShareDialog";
+import { openWhatsAppChat } from "@/lib/openWhatsAppChat";
 
 interface SmartCallingClient {
   id: string;
@@ -1203,8 +1204,7 @@ export function InsuranceSmartCalling() {
                         : `Hi ${currentClient.customer_name || ""}! Your insurance renewal is due${currentClient.policy_expiry_date ? ` on ${currentClient.policy_expiry_date}` : " soon"} for your ${currentClient.vehicle_make || ""} ${currentClient.vehicle_model || ""}.\n\nVehicle: ${currentClient.vehicle_number || "N/A"}\nCurrent Insurer: ${currentClient.current_insurer || "N/A"}\nNCB: ${currentClient.ncb_percentage ?? "N/A"}%\n\nWe have the best renewal offers for you. Let's connect!`;
 
                       const handleWhatsApp = async () => {
-                        const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
-                        await sendWhatsApp({ phone: currentClient.phone || "", message: shareMsg, name: currentClient.customer_name, logEvent: `call_${o.value}` });
+                        openWhatsAppChat(currentClient.phone || "", shareMsg);
                         setCallOutcome(o.value);
                       };
 

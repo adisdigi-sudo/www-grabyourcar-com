@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { INSURANCE_COMPANIES } from "@/lib/insuranceCompanies";
 import { BulkProspectImportButton } from "./BulkProspectImport";
+import { openWhatsAppChat } from "@/lib/openWhatsAppChat";
 
 const STATUSES = [
   { value: "new", label: "New", icon: Database, color: "bg-blue-500" },
@@ -433,14 +434,11 @@ export function InsuranceProspectPool() {
                                 <PhoneCall className="h-3.5 w-3.5 text-green-600" />
                               </Button>
                             </a>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" title="WhatsApp" onClick={async () => {
-                              const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
-                              await sendWhatsApp({
-                                phone: p.phone,
-                                message: `Hi ${p.customer_name || ""}! This is GrabYourCar Insurance. How can we help you today?`,
-                                name: p.customer_name || undefined,
-                                logEvent: "prospect_pool_quick_whatsapp",
-                              });
+                            <Button variant="ghost" size="icon" className="h-7 w-7" title="WhatsApp" onClick={() => {
+                              openWhatsAppChat(
+                                p.phone,
+                                `Hi ${p.customer_name || ""}! This is GrabYourCar Insurance. How can we help you today?`,
+                              );
                             }}>
                               <MessageSquare className="h-3.5 w-3.5 text-green-600" />
                             </Button>
@@ -796,14 +794,11 @@ export function InsuranceProspectPool() {
               {/* Quick actions */}
               <div className="flex flex-wrap gap-2 py-2 border-y">
                 <a href={`tel:${detailOpen.phone}`}><Button size="sm" className="gap-1.5 bg-green-600 hover:bg-green-700 text-white"><PhoneCall className="h-3.5 w-3.5" /> Call</Button></a>
-                <Button size="sm" variant="outline" className="gap-1.5" onClick={async () => {
-                  const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
-                  await sendWhatsApp({
-                    phone: detailOpen.phone,
-                    message: `Hi ${detailOpen.customer_name || ""}! This is GrabYourCar Insurance. How can we help you today?`,
-                    name: detailOpen.customer_name || undefined,
-                    logEvent: "prospect_pool_detail_whatsapp",
-                  });
+                <Button size="sm" variant="outline" className="gap-1.5" onClick={() => {
+                  openWhatsAppChat(
+                    detailOpen.phone,
+                    `Hi ${detailOpen.customer_name || ""}! This is GrabYourCar Insurance. How can we help you today?`,
+                  );
                 }}><MessageSquare className="h-3.5 w-3.5 text-green-600" /> WhatsApp</Button>
                 {detailOpen.email && <a href={`mailto:${detailOpen.email}`}><Button size="sm" variant="outline" className="gap-1.5"><Mail className="h-3.5 w-3.5" /> Email</Button></a>}
                 <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setDetailOpen(null); setRemarkOpen(detailOpen); setRemarkText(""); }}>
