@@ -18,8 +18,9 @@ import {
   PhoneCall, MessageSquare, Mail, Clock, Plus, Filter,
   Database, UserCheck, UserX, PhoneOff, CalendarClock, RotateCcw,
   Trophy, XCircle, StickyNote, Eye, Trash2, Upload,
-  TrendingUp, Target, Flame, ChevronLeft, ChevronRight, Loader2, Car, Check
+  TrendingUp, Target, Flame, ChevronLeft, ChevronRight, Loader2, Car, Check, Send
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { INSURANCE_COMPANIES } from "@/lib/insuranceCompanies";
 import { BulkProspectImportButton } from "./BulkProspectImport";
 import { sendWhatsApp } from "@/lib/sendWhatsApp";
@@ -97,6 +98,8 @@ export function InsuranceProspectPool() {
   const [lostReason, setLostReason] = useState("");
   const [duplicateAlert, setDuplicateAlert] = useState<{ prospect: any; existingClient: any } | null>(null);
   const [page, setPage] = useState(0);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkSending, setBulkSending] = useState(false);
   const pageSize = 20;
   const rcLookup = useRCLookup({ showToast: false });
   const [form, setForm] = useState({
@@ -336,6 +339,57 @@ export function InsuranceProspectPool() {
     setLostOpen(null); setLostReason("");
   };
 
+  // ── Bulk WhatsApp Send ──
+  const handleBulkWhatsApp = async () => {
+    const targets = paged.filter(p => selectedIds.has(p.id) && p.phone && !p.phone.startsWith("IB_"));
+    if (targets.length === 0) { toast.error("No valid phone numbers selected"); return; }
+    setBulkSending(true);
+    let sent = 0, failed = 0;
+    const toastId = "bulk-wa-prospect";
+    toast.loading(`Sending... 0/${targets.length}`, { id: toastId });
+
+    for (let i = 0; i < targets.length; i++) {
+      const p = targets[i];
+      const name = p.customer_name || "Sir/Madam";
+      const vehicle = p.vehicle_number ? ` for your vehicle *${p.vehicle_number}*` : "";
+      const message = `Hey ${name} 🙏\n\nWe really missed you! Please renew your car insurance${vehicle} with us and keep grabbing *Grabyourcar* exclusive offers:\n\n🚗 *FREE 2 Car Washes* per month\n🌸 *FREE 3 Car Perfumes* per month\n🆘 *FREE 24/7 Roadside Assistance*\n📋 *Personalized Claim Settlement Assistance*\n💰 *Best Premium Rates Guaranteed*\n\nWe are just a click away — ask and command us anything, anytime! 💚\n\n📞 +91 98559 24442\n🔗 https://www.grabyourcar.com/insurance\n\n— *Team Grabyourcar* 🚗`;
+
+      const result = await sendWhatsApp({
+        phone: p.phone,
+        message,
+        name: p.customer_name || undefined,
+        logEvent: "bulk_retarget_send",
+        silent: true,
+      });
+      if (result.success) sent++; else failed++;
+      toast.loading(`Sending... ${i + 1}/${targets.length}`, { id: toastId });
+      if (i < targets.length - 1) await new Promise(r => setTimeout(r, 500));
+    }
+
+    toast.dismiss(toastId);
+    toast.success(`📨 Bulk send complete: ${sent} sent, ${failed} failed`);
+    setSelectedIds(new Set());
+    setBulkSending(false);
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    const validIds = paged.filter(p => p.phone && !p.phone.startsWith("IB_")).map(p => p.id);
+    const allSelected = validIds.every(id => selectedIds.has(id));
+    if (allSelected) {
+      setSelectedIds(prev => { const next = new Set(prev); validIds.forEach(id => next.delete(id)); return next; });
+    } else {
+      setSelectedIds(prev => { const next = new Set(prev); validIds.forEach(id => next.add(id)); return next; });
+    }
+  };
+
   // Delete prospect
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -467,10 +521,30 @@ export function InsuranceProspectPool() {
         <CardContent className="p-0">
           {isLoading ? <p className="text-sm text-muted-foreground py-12 text-center">Loading prospects...</p> : (
             <>
-              <div className="overflow-x-auto">
+               <div className="overflow-x-auto">
+                {/* Bulk Action Bar */}
+                {selectedIds.size > 0 && (
+                  <div className="bg-primary/10 border border-primary/20 rounded-lg p-2 mx-3 mb-2 flex items-center gap-3">
+                    <Badge variant="secondary" className="text-xs">{selectedIds.size} selected</Badge>
+                    <Button size="sm" className="h-7 text-[10px] gap-1.5 bg-green-600 hover:bg-green-700 text-white"
+                      onClick={handleBulkWhatsApp} disabled={bulkSending}>
+                      {bulkSending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                      Send Bulk WhatsApp
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-7 text-[10px]" onClick={() => setSelectedIds(new Set())}>
+                      Clear
+                    </Button>
+                  </div>
+                )}
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 bg-card z-10 border-b">
                     <tr className="bg-muted/30">
+                      <th className="py-2.5 px-2 w-8">
+                        <Checkbox
+                          checked={paged.filter(p => p.phone && !p.phone.startsWith("IB_")).length > 0 && paged.filter(p => p.phone && !p.phone.startsWith("IB_")).every(p => selectedIds.has(p.id))}
+                          onCheckedChange={toggleSelectAll}
+                        />
+                      </th>
                       <th className="text-left py-2.5 px-3 font-medium text-xs w-8">#</th>
                       <th className="text-left py-2.5 px-3 font-medium text-xs">Phone</th>
                       <th className="text-left py-2.5 px-3 font-medium text-xs">Name</th>
@@ -485,7 +559,10 @@ export function InsuranceProspectPool() {
                   </thead>
                   <tbody>
                     {paged.map((p, i) => (
-                      <tr key={p.id} className={`border-b hover:bg-muted/20 transition-colors ${p.prospect_status === "interested" ? "bg-emerald-500/5" : ""} ${p.is_grabyourcar_customer ? "bg-amber-500/5" : ""}`}>
+                      <tr key={p.id} className={`border-b hover:bg-muted/20 transition-colors ${selectedIds.has(p.id) ? "bg-primary/5" : ""} ${p.prospect_status === "interested" ? "bg-emerald-500/5" : ""} ${p.is_grabyourcar_customer ? "bg-amber-500/5" : ""}`}>
+                        <td className="py-2 px-2">
+                          <Checkbox checked={selectedIds.has(p.id)} onCheckedChange={() => toggleSelect(p.id)} disabled={!p.phone || p.phone.startsWith("IB_")} />
+                        </td>
                         <td className="py-2 px-3 text-xs text-muted-foreground">{page * pageSize + i + 1}</td>
                         <td className="py-2 px-3 font-mono text-xs">
                           <div className="flex items-center gap-1">
