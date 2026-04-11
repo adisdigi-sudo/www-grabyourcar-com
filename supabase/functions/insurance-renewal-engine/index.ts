@@ -178,14 +178,30 @@ serve(async (req) => {
 
       const message = custom_message || buildMessage(template, client, policy, daysRemaining, advisorNumber);
 
-      // Send via whatsapp-send
+      // Send via whatsapp-send using insurancefollowup Meta-approved template
+      const customerName = client.customer_name || "Valued Customer";
       const sendResp = await fetch(`${SUPABASE_URL}/functions/v1/whatsapp-send`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${SERVICE_KEY}`,
         },
-        body: JSON.stringify({ to: phone, message }),
+        body: JSON.stringify({
+          to: phone,
+          message,
+          messageType: "template",
+          template_name: "insurancefollowup",
+          template_components: [
+            {
+              type: "header",
+              parameters: [
+                { type: "text", text: customerName, parameter_name: "full_name" }
+              ]
+            }
+          ],
+          name: customerName,
+          logEvent: "renewal_reminder",
+        }),
       });
       const sendResult = await sendResp.json();
 
