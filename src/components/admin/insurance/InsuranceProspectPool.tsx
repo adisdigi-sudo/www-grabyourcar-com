@@ -339,6 +339,57 @@ export function InsuranceProspectPool() {
     setLostOpen(null); setLostReason("");
   };
 
+  // ── Bulk WhatsApp Send ──
+  const handleBulkWhatsApp = async () => {
+    const targets = paged.filter(p => selectedIds.has(p.id) && p.phone && !p.phone.startsWith("IB_"));
+    if (targets.length === 0) { toast.error("No valid phone numbers selected"); return; }
+    setBulkSending(true);
+    let sent = 0, failed = 0;
+    const toastId = "bulk-wa-prospect";
+    toast.loading(`Sending... 0/${targets.length}`, { id: toastId });
+
+    for (let i = 0; i < targets.length; i++) {
+      const p = targets[i];
+      const name = p.customer_name || "Sir/Madam";
+      const vehicle = p.vehicle_number ? ` for your vehicle *${p.vehicle_number}*` : "";
+      const message = `Hey ${name} 🙏\n\nWe really missed you! Please renew your car insurance${vehicle} with us and keep grabbing *Grabyourcar* exclusive offers:\n\n🚗 *FREE 2 Car Washes* per month\n🌸 *FREE 3 Car Perfumes* per month\n🆘 *FREE 24/7 Roadside Assistance*\n📋 *Personalized Claim Settlement Assistance*\n💰 *Best Premium Rates Guaranteed*\n\nWe are just a click away — ask and command us anything, anytime! 💚\n\n📞 +91 98559 24442\n🔗 https://www.grabyourcar.com/insurance\n\n— *Team Grabyourcar* 🚗`;
+
+      const result = await sendWhatsApp({
+        phone: p.phone,
+        message,
+        name: p.customer_name || undefined,
+        logEvent: "bulk_retarget_send",
+        silent: true,
+      });
+      if (result.success) sent++; else failed++;
+      toast.loading(`Sending... ${i + 1}/${targets.length}`, { id: toastId });
+      if (i < targets.length - 1) await new Promise(r => setTimeout(r, 500));
+    }
+
+    toast.dismiss(toastId);
+    toast.success(`📨 Bulk send complete: ${sent} sent, ${failed} failed`);
+    setSelectedIds(new Set());
+    setBulkSending(false);
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    const validIds = paged.filter(p => p.phone && !p.phone.startsWith("IB_")).map(p => p.id);
+    const allSelected = validIds.every(id => selectedIds.has(id));
+    if (allSelected) {
+      setSelectedIds(prev => { const next = new Set(prev); validIds.forEach(id => next.delete(id)); return next; });
+    } else {
+      setSelectedIds(prev => { const next = new Set(prev); validIds.forEach(id => next.add(id)); return next; });
+    }
+  };
+
   // Delete prospect
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
