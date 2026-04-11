@@ -5,8 +5,16 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  MessageSquare, Mail, Smartphone, Send, Loader2, User,
-  Clock, CheckCheck, Search, RefreshCw
+  MessageSquare,
+  Mail,
+  Smartphone,
+  Send,
+  Loader2,
+  User,
+  Clock,
+  CheckCheck,
+  Search,
+  RefreshCw,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { omniSend, type OmniChannel } from "@/lib/omniSend";
@@ -43,6 +51,19 @@ interface ChatMessage {
   direction?: "inbound" | "outbound";
 }
 
+type InboxMessageRow = {
+  id: string;
+  direction: "inbound" | "outbound";
+  content: string | null;
+  message_type: string;
+  status: string | null;
+  read_at: string | null;
+  delivered_at: string | null;
+  failed_at: string | null;
+  created_at: string | null;
+  sent_by_name: string | null;
+};
+
 function normalizePhone(value: string): string {
   const clean = value.replace(/\D/g, "").replace(/^0+/, "");
   if (clean.startsWith("91") && clean.length === 12) return clean;
@@ -54,13 +75,11 @@ function mapInboxStatus(message: {
   status?: string | null;
   read_at?: string | null;
   delivered_at?: string | null;
-  sent_at?: string | null;
   failed_at?: string | null;
 }): string {
   if (message.read_at) return "read";
   if (message.delivered_at) return "delivered";
   if (message.failed_at) return "failed";
-  if (message.sent_at) return "sent";
   return message.status || "received";
 }
 
@@ -77,6 +96,17 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
 
   useEffect(() => {
     loadThreads();
+
+    const convoChannel = supabase
+      .channel("omni-chat-conversations")
+      .on("postgres_changes", { event: "*", schema: "public", table: "wa_conversations" }, () => {
+        loadThreads();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(convoChannel);
+    };
   }, []);
 
   useEffect(() => {
@@ -91,9 +121,11 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
     const normalizedPhone = normalizePhone(phone);
     const match = threads.find((t) => {
       const threadPhone = normalizePhone(t.phone);
-      return threadPhone === normalizedPhone ||
+      return (
+        threadPhone === normalizedPhone ||
         threadPhone.endsWith(normalizedPhone.slice(-10)) ||
-        normalizedPhone.endsWith(threadPhone.slice(-10));
+        normalizedPhone.endsWith(threadPhone.slice(-10))
+      );
     });
 
     if (match) {
@@ -117,9 +149,32 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
   }, [phone, threads, initialMessage, initialName]);
 
   useEffect(() => {
-    if (selectedThread) {
-      loadMessages(selectedThread);
-    }
+    if (!selectedThread) return;
+
+    loadMessages(selectedThread);
+
+    if (selectedThread.isDraft) return;
+
+    const msgChannel = supabase
+      .channel(`omni-chat-messages-${selectedThread.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "wa_inbox_messages",
+          filter: `conversation_id=eq.${selectedThread.id}`,
+        },
+        () => {
+          loadMessages(selectedThread);
+          loadThreads();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(msgChannel);
+    };
   }, [selectedThread]);
 
   useEffect(() => {
@@ -151,8 +206,9 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
     } catch (err) {
       console.error("Failed to load threads:", err);
       setThreads([]);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   async function loadMessages(thread: ChatThread) {
@@ -163,7 +219,7 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
 
     const { data, error } = await supabase
       .from("wa_inbox_messages")
-      .select("id, direction, content, message_type, status, sent_at, read_at, delivered_at, failed_at, created_at, sent_by_name")
+      .select("id, direction, content, message_type, status, read_at, delivered_at, failed_at, created_at, sent_by_name")
       .eq("conversation_id", thread.id)
       .order("created_at", { ascending: true })
       .limit(200);
@@ -174,28 +230,16 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
       return;
     }
 
-    setMessages(((data || []) as Array<{
-      id: string;
-      direction: "inbound" | "outbound";
-      content: string | null;
-      message_type: string;
-      status: string | null;
-      sent_at: string | null;
-      read_at: string | null;
-      delivered_at: string | null;
-      failed_at: string | null;
-      created_at: string;
-      sent_by_name: string | null;
-    }>).map((msg) => ({
+    setMessages((((data || []) as unknown) as InboxMessageRow[]).map((msg) => ({
       id: msg.id,
       message_content: msg.content,
       message_type: msg.message_type,
       status: mapInboxStatus(msg),
-      sent_at: msg.sent_at || msg.created_at,
-      created_at: msg.created_at,
+      sent_at: msg.created_at,
+      created_at: msg.created_at || new Date().toISOString(),
       channel: "whatsapp",
       provider: "meta",
-      customer_name: msg.direction === "inbound" ? selectedThread?.customer_name || null : msg.sent_by_name,
+      customer_name: msg.direction === "inbound" ? thread.customer_name || null : msg.sent_by_name,
       direction: msg.direction,
     })));
   }
@@ -217,7 +261,7 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
       setReplyMessage("");
       setTimeout(() => {
         loadThreads();
-        if (selectedThread) loadMessages(selectedThread);
+        loadMessages(selectedThread);
       }, 1000);
     }
     setSending(false);
@@ -234,29 +278,34 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
   });
 
   const channelIcon = (ch: string) => {
-    if (ch === "email") return <Mail className="h-3 w-3 text-blue-500" />;
-    if (ch === "rcs") return <Smartphone className="h-3 w-3 text-purple-500" />;
-    return <MessageSquare className="h-3 w-3 text-green-500" />;
+    if (ch === "email") return <Mail className="h-3 w-3 text-primary" />;
+    if (ch === "rcs") return <Smartphone className="h-3 w-3 text-muted-foreground" />;
+    return <MessageSquare className="h-3 w-3 text-primary" />;
   };
 
   return (
-    <Card className="h-[600px] flex flex-col">
+    <Card className="flex h-[600px] flex-col">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-base">
             <MessageSquare className="h-4 w-4 text-primary" />
             Conversations
-            {context && <Badge variant="outline" className="text-[10px]">{context}</Badge>}
+            {context && (
+              <Badge variant="outline" className="text-[10px]">
+                {context}
+              </Badge>
+            )}
           </CardTitle>
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={loadThreads}>
             <RefreshCw className="h-3.5 w-3.5" />
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="flex-1 flex gap-2 p-2 overflow-hidden">
-        <div className="w-1/3 flex flex-col gap-1.5 border-r pr-2">
+
+      <CardContent className="flex flex-1 gap-2 overflow-hidden p-2">
+        <div className="flex w-1/3 flex-col gap-1.5 border-r pr-2">
           <div className="relative">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search..."
               className="h-8 pl-7 text-xs"
@@ -264,38 +313,37 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+
           <ScrollArea className="flex-1">
             {loading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
               </div>
             ) : filteredThreads.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-4">No conversations yet</p>
+              <p className="py-4 text-center text-xs text-muted-foreground">No conversations yet</p>
             ) : (
               <div className="space-y-1">
                 {filteredThreads.map((t) => (
                   <button
                     key={t.id}
                     onClick={() => setSelectedThread(t)}
-                    className={`w-full text-left p-2 rounded-lg text-xs transition-colors ${
+                    className={`w-full rounded-lg border p-2 text-left text-xs transition-colors ${
                       selectedThread?.id === t.id
-                        ? "bg-primary/10 border border-primary/20"
-                        : "hover:bg-muted/50"
+                        ? "border-primary/20 bg-primary/10"
+                        : "border-transparent hover:bg-muted/50"
                     }`}
                   >
-                    <div className="flex items-center gap-1.5 mb-0.5">
+                    <div className="mb-0.5 flex items-center gap-1.5">
                       {channelIcon(t.channel)}
-                      <span className="font-medium truncate flex-1">
-                        {t.customer_name || t.phone}
-                      </span>
+                      <span className="flex-1 truncate font-medium">{t.customer_name || t.phone}</span>
                       {(t.unread_count || 0) > 0 && (
                         <Badge variant="default" className="h-4 min-w-4 px-1 text-[9px]">
                           {t.unread_count}
                         </Badge>
                       )}
                     </div>
-                    <p className="text-muted-foreground truncate text-[10px]">{t.last_message || "New message"}</p>
-                    <p className="text-muted-foreground text-[9px] mt-0.5">
+                    <p className="truncate text-[10px] text-muted-foreground">{t.last_message || "New message"}</p>
+                    <p className="mt-0.5 text-[9px] text-muted-foreground">
                       {new Date(t.last_at).toLocaleDateString("en-IN", {
                         day: "2-digit",
                         month: "short",
@@ -310,22 +358,20 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
           </ScrollArea>
         </div>
 
-        <div className="flex-1 flex flex-col">
+        <div className="flex flex-1 flex-col">
           {!selectedThread ? (
-            <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
+            <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
               <div className="text-center">
-                <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                <MessageSquare className="mx-auto mb-2 h-8 w-8 opacity-30" />
                 <p>Select a conversation</p>
               </div>
             </div>
           ) : (
             <>
-              <div className="flex items-center gap-2 p-2 border-b mb-1">
+              <div className="mb-1 flex items-center gap-2 border-b p-2">
                 <User className="h-4 w-4 text-muted-foreground" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">
-                    {selectedThread.customer_name || selectedThread.phone}
-                  </p>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{selectedThread.customer_name || selectedThread.phone}</p>
                   <p className="text-[10px] text-muted-foreground">{selectedThread.phone}</p>
                 </div>
                 {channelIcon(selectedThread.channel)}
@@ -338,8 +384,8 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
                     return (
                       <div key={m.id} className={`flex flex-col ${isInbound ? "items-start" : "items-end"}`}>
                         <div className={`max-w-[80%] rounded-lg p-2 ${isInbound ? "bg-muted" : "bg-primary/10"}`}>
-                          <p className="text-xs whitespace-pre-wrap">{m.message_content}</p>
-                          <div className="flex items-center gap-1 mt-1 justify-end">
+                          <p className="whitespace-pre-wrap text-xs">{m.message_content}</p>
+                          <div className="mt-1 flex items-center justify-end gap-1">
                             {channelIcon(m.channel || "whatsapp")}
                             <span className="text-[9px] text-muted-foreground">
                               {m.sent_at
@@ -349,10 +395,10 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
                                   })
                                 : ""}
                             </span>
-                            {!isInbound && m.status === "queued" && <Clock className="h-3 w-3 text-amber-500" />}
-                            {!isInbound && m.status === "sent" && <CheckCheck className="h-3 w-3 text-muted-foreground" />}
-                            {!isInbound && m.status === "delivered" && <CheckCheck className="h-3 w-3 text-blue-500" />}
-                            {!isInbound && m.status === "read" && <CheckCheck className="h-3 w-3 text-green-500" />}
+                            {!isInbound && m.status === "queued" && <Clock className="h-3 w-3 text-muted-foreground" />}
+                            {!isInbound && ["sent", "delivered", "read"].includes(m.status) && (
+                              <CheckCheck className="h-3 w-3 text-muted-foreground" />
+                            )}
                           </div>
                         </div>
                       </div>
@@ -362,14 +408,14 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
                 </div>
               </ScrollArea>
 
-              <div className="border-t pt-2 space-y-1.5">
+              <div className="space-y-1.5 border-t pt-2">
                 <div className="flex gap-1">
                   {(["whatsapp", "email", "rcs"] as OmniChannel[]).map((ch) => (
                     <Button
                       key={ch}
                       variant={replyChannel === ch ? "default" : "ghost"}
                       size="sm"
-                      className="h-6 text-[10px] px-2"
+                      className="h-6 px-2 text-[10px]"
                       onClick={() => setReplyChannel(ch)}
                     >
                       {ch === "whatsapp" ? "WA" : ch === "email" ? "Email" : "RCS"}
@@ -381,7 +427,7 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
                     placeholder={`Reply via ${replyChannel}...`}
                     value={replyMessage}
                     onChange={(e) => setReplyMessage(e.target.value)}
-                    className="text-xs h-8"
+                    className="h-8 text-xs"
                     onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleReply()}
                     disabled={sending}
                   />
