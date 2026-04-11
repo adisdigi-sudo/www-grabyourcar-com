@@ -189,16 +189,6 @@ serve(async (req) => {
         body: JSON.stringify({
           to: phone,
           message,
-          messageType: "template",
-          template_name: "insurancefollowup",
-          template_components: [
-            {
-              type: "header",
-              parameters: [
-                { type: "text", text: customerName, parameter_name: "full_name" }
-              ]
-            }
-          ],
           name: customerName,
           logEvent: "renewal_reminder",
         }),
@@ -273,16 +263,7 @@ serve(async (req) => {
               body: JSON.stringify({
                 to: phone,
                 message,
-                messageType: "template",
-                template_name: "insurancefollowup",
-                template_components: [
-                  {
-                    type: "header",
-                    parameters: [
-                      { type: "text", text: clientName, parameter_name: "full_name" }
-                    ]
-                  }
-                ],
+                name: clientName,
                 logEvent: "renewal_reminder_auto",
               }),
             });
@@ -383,16 +364,7 @@ serve(async (req) => {
               body: JSON.stringify({
                 to: phone,
                 message: recoveryMsg,
-                messageType: "template",
-                template_name: "insurancefollowup",
-                template_components: [
-                  {
-                    type: "header",
-                    parameters: [
-                      { type: "text", text: recoveryName, parameter_name: "full_name" }
-                    ]
-                  }
-                ],
+                name: recoveryName,
                 logEvent: "lapsed_recovery",
               }),
             });
