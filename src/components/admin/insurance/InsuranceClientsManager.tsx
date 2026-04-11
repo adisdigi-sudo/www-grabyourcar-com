@@ -273,7 +273,7 @@ export function InsuranceClientsManager() {
                                 <Button variant="ghost" size="icon" className="h-7 w-7" title="WhatsApp" onClick={() => {
                                   void sendWhatsApp({
                                     phone: c.phone,
-                                    message: `🙏 Namaste ${c.customer_name || "Sir/Madam"},\n\nThis is *Grabyourcar Insurance* team.\n\nWe wanted to follow up regarding your motor insurance${c.vehicle_number ? ` for vehicle *${c.vehicle_number}*` : ""}.\n\n${c.current_insurer ? `🏢 Current insurer: *${c.current_insurer}*\n` : ""}\n✅ We can help you with the best rates!\n\n👉 *Reply here* or call us at +91 98559 24442\n🔗 https://www.grabyourcar.com/insurance\n\n— *Team Grabyourcar* 🚗💚`,
+                                    message: `🙏 Namaste ${c.customer_name || "Sir/Madam"},\n\nThis is *Grabyourcar Insurance* team.\n\nWe wanted to follow up regarding your motor insurance${c.vehicle_number ? ` for vehicle *${c.vehicle_number}*` : ""}.\n\n✅ We can help you with the best rates!\n\n👉 *Reply here* or call us at +91 98559 24442\n🔗 https://www.grabyourcar.com/insurance\n\n— *Team Grabyourcar* 🚗💚`,
                                     name: c.customer_name || undefined,
                                     logEvent: "clients_manager_whatsapp",
                                   });
