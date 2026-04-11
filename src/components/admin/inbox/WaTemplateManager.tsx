@@ -72,6 +72,8 @@ interface Template {
   buttons: any;
   status: string;
   vertical: string | null;
+  meta_template_id: string | null;
+  meta_rejection_reason: string | null;
   created_at: string;
 }
 
