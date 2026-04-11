@@ -75,7 +75,9 @@ const createQuoteStageLog = async ({
 const uploadQuotePdf = async (doc: jsPDF, fileName: string): Promise<string | null> => {
   try {
     const pdfBlob = doc.output("blob");
-    const storagePath = `quotes/${new Date().toISOString().slice(0, 10)}/${fileName}`;
+    const uniqueSuffix = Date.now().toString(36);
+    const baseName = fileName.replace(/\.pdf$/i, "");
+    const storagePath = `quotes/${new Date().toISOString().slice(0, 10)}/${baseName}_${uniqueSuffix}.pdf`;
 
     const { error } = await supabase.storage.from("quote-pdfs").upload(storagePath, pdfBlob, {
       contentType: "application/pdf",
