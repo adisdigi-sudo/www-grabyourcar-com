@@ -34,7 +34,7 @@ serve(async (req) => {
 
       // Approach 1: Direct field on phone number
       const resp1 = await fetch(
-        `https://graph.facebook.com/v21.0/${WHATSAPP_PHONE_NUMBER_ID}?fields=whatsapp_business_account`,
+        `https://graph.facebook.com/v25.0/${WHATSAPP_PHONE_NUMBER_ID}?fields=whatsapp_business_account`,
         { headers: { Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}` } }
       );
       const data1 = await resp1.json();
@@ -43,7 +43,7 @@ serve(async (req) => {
 
       // Approach 2: Use the app's WABA listing
       const resp2 = await fetch(
-        `https://graph.facebook.com/v21.0/${WHATSAPP_PHONE_NUMBER_ID}?fields=owner`,
+        `https://graph.facebook.com/v25.0/${WHATSAPP_PHONE_NUMBER_ID}?fields=owner`,
         { headers: { Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}` } }
       );
       const data2 = await resp2.json();
@@ -66,7 +66,7 @@ serve(async (req) => {
     // ═══════════════════════════════════════════════
     if (action === "get_status") {
       const phoneResp = await fetch(
-        `https://graph.facebook.com/v21.0/${WHATSAPP_PHONE_NUMBER_ID}?fields=id,verified_name,quality_rating,status,display_phone_number,code_verification_status,name_status,messaging_limit_tier`,
+        `https://graph.facebook.com/v25.0/${WHATSAPP_PHONE_NUMBER_ID}?fields=id,verified_name,quality_rating,status,display_phone_number,code_verification_status,name_status,messaging_limit_tier`,
         { headers: { Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}` } }
       );
       const phoneData = await phoneResp.json();
@@ -79,7 +79,7 @@ serve(async (req) => {
 
       // Get WABA info
       const wabaResp = await fetch(
-        `https://graph.facebook.com/v21.0/${WHATSAPP_PHONE_NUMBER_ID}?fields=whatsapp_business_account`,
+        `https://graph.facebook.com/v25.0/${WHATSAPP_PHONE_NUMBER_ID}?fields=whatsapp_business_account`,
         { headers: { Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}` } }
       );
       const wabaData = await wabaResp.json();
@@ -88,7 +88,7 @@ serve(async (req) => {
       let wabaInfo = null;
       if (wabaId) {
         const wabaInfoResp = await fetch(
-          `https://graph.facebook.com/v21.0/${wabaId}?fields=id,name,account_review_status,business_verification_status,messaging_limit_tier`,
+          `https://graph.facebook.com/v25.0/${wabaId}?fields=id,name,account_review_status,business_verification_status,messaging_limit_tier`,
           { headers: { Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}` } }
         );
         wabaInfo = await wabaInfoResp.json();
@@ -128,7 +128,7 @@ serve(async (req) => {
       }
 
       const resp = await fetch(
-        `https://graph.facebook.com/v21.0/${wabaId}/message_templates?limit=250`,
+        `https://graph.facebook.com/v25.0/${wabaId}/message_templates?limit=250`,
         { headers: { Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}` } }
       );
       const data = await resp.json();
@@ -271,7 +271,7 @@ serve(async (req) => {
       console.log("Submitting to Meta:", JSON.stringify(metaPayload));
 
       const resp = await fetch(
-        `https://graph.facebook.com/v21.0/${wabaId}/message_templates`,
+        `https://graph.facebook.com/v25.0/${wabaId}/message_templates`,
         {
           method: "POST",
           headers: {
@@ -320,7 +320,7 @@ serve(async (req) => {
       }
 
       const resp = await fetch(
-        `https://graph.facebook.com/v21.0/${wabaId}/message_templates?name=${template_name}`,
+        `https://graph.facebook.com/v25.0/${wabaId}/message_templates?name=${template_name}`,
         {
           method: "DELETE",
           headers: { Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}` },
@@ -404,7 +404,7 @@ serve(async (req) => {
           }
 
           const sendResp = await fetch(
-            `https://graph.facebook.com/v21.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`,
+            `https://graph.facebook.com/v25.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`,
             {
               method: "POST",
               headers: {

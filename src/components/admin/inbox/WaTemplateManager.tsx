@@ -136,22 +136,14 @@ export function WaTemplateManager() {
     try {
       const { data, error } = await supabase.functions.invoke("meta-templates", {
         body: {
-          action: "create_template",
-          name: template.name,
-          category: (template.category || "utility").toUpperCase(),
-          language: template.language || "en",
-          body: template.body,
-          header_type: template.header_type,
-          header_content: template.header_content,
-          footer: template.footer,
-          buttons: template.buttons,
+          action: "submit_template",
+          template_id: template.id,
         },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      toast.success("Template submitted to Meta for approval");
-      // After submitting, sync to get latest status
-      await syncFromMeta();
+      toast.success("Template submitted to Meta for approval ✅ Status will update automatically.");
+      await fetchAll();
     } catch (err: any) {
       toast.error(err.message || "Failed to submit to Meta");
     }
@@ -195,16 +187,34 @@ export function WaTemplateManager() {
       vertical: editItem.vertical || null,
     };
 
+    let savedId = editItem.id;
     if (editItem.id) {
       await supabase.from("wa_templates").update(payload).eq("id", editItem.id);
       toast.success("Template updated");
     } else {
-      await supabase.from("wa_templates").insert(payload);
-      toast.success("Template created");
+      const { data: inserted } = await supabase.from("wa_templates").insert(payload).select("id").single();
+      savedId = inserted?.id;
+      toast.success("Template created as Draft — submit to Meta for approval");
     }
     setIsEditing(false);
     setEditItem(null);
-    fetchAll();
+    await fetchAll();
+
+    // Auto-submit new drafts to Meta
+    if (savedId && (!editItem.id || editItem.status === "draft")) {
+      toast.info("Auto-submitting to Meta for approval…");
+      try {
+        const { data, error } = await supabase.functions.invoke("meta-templates", {
+          body: { action: "submit_template", template_id: savedId },
+        });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+        toast.success("Submitted to Meta ✅ Awaiting approval");
+        await fetchAll();
+      } catch (err: any) {
+        toast.error("Saved locally but Meta submission failed: " + (err.message || ""));
+      }
+    }
   };
 
   const saveQuickReply = async () => {
@@ -447,6 +457,12 @@ export function WaTemplateManager() {
                             <div className="flex items-center gap-1.5">
                               {getStatusIcon(t.status)}
                               <span className="text-xs capitalize">{t.status}</span>
+                              {t.status === "approved" && (
+                                <Badge className="text-[9px] bg-green-100 text-green-700 border-green-200 ml-1">Send ✓</Badge>
+                              )}
+                              {(t.status === "draft" || t.status === "rejected" || t.status === "pending") && (
+                                <Badge variant="secondary" className="text-[9px] ml-1">Disabled</Badge>
+                              )}
                             </div>
                           </TableCell>
                           <TableCell>
@@ -460,14 +476,16 @@ export function WaTemplateManager() {
                               <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { navigator.clipboard.writeText(t.body); toast.success("Copied!"); }}>
                                 <Copy className="h-3.5 w-3.5" />
                               </Button>
-                              {t.status === "draft" ? (
+                              {t.status === "draft" || t.status === "rejected" ? (
                                 <Button size="icon" variant="ghost" className="h-7 w-7 text-green-600" title="Submit to Meta" onClick={() => submitToMeta(t)}>
                                   <Send className="h-3.5 w-3.5" />
                                 </Button>
-                              ) : (
+                              ) : t.status === "approved" ? (
                                 <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" title="Delete from Meta" onClick={() => deleteFromMeta(t)}>
                                   <Trash2 className="h-3.5 w-3.5" />
                                 </Button>
+                              ) : (
+                                <Badge variant="outline" className="text-[9px] text-yellow-600">⏳</Badge>
                               )}
                             </div>
                           </TableCell>

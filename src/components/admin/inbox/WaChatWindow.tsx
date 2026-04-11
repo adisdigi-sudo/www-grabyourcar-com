@@ -39,7 +39,7 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
     supabase.from("wa_quick_replies").select("id, title, message").eq("is_active", true).order("sort_order").then(({ data }) => {
       setQuickReplies((data || []) as any);
     });
-    supabase.from("wa_templates").select("id, name, display_name, body").order("created_at", { ascending: false }).then(({ data }) => {
+    supabase.from("wa_templates").select("id, name, display_name, body, status").eq("status", "approved").order("created_at", { ascending: false }).then(({ data }) => {
       setTemplates((data || []) as any);
     });
   }, []);
