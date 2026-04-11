@@ -25,6 +25,7 @@ interface SendMessageRequest {
   template_variables?: Record<string, string>;
   template_components?: unknown[];
   mediaUrl?: string;
+  mediaFileName?: string;
   action?: string;
   name?: string;
   logEvent?: string;
@@ -246,6 +247,7 @@ async function sendMessage(
   templateName?: string,
   templateVars?: Record<string, string>,
   mediaUrl?: string,
+  mediaFileName?: string,
   name?: string,
   templateComponents?: unknown[],
 ): Promise<SendResult> {
@@ -276,7 +278,7 @@ async function sendMessage(
     } else if (messageType === "image" && mediaUrl) {
       payload = { type: "image", image: { link: mediaUrl, caption: message || "" } };
     } else if (messageType === "document" && mediaUrl) {
-      payload = { type: "document", document: { link: mediaUrl, caption: message || "", filename: "document.pdf" } };
+      payload = { type: "document", document: { link: mediaUrl, caption: message || "", filename: mediaFileName || "document.pdf" } };
     } else {
       payload = { type: "text", text: { preview_url: false, body: message || "Hello from GrabYourCar!" } };
     }
@@ -370,6 +372,7 @@ serve(async (req) => {
     const template_variables = body.template_variables || body.templateVariables;
     const template_components = body.template_components || body.templateComponents;
     const mediaUrl = body.mediaUrl || body.media_url;
+    const mediaFileName = body.mediaFileName || body.media_file_name;
     const name = body.name;
     const logEvent = body.logEvent || body.log_event;
     const lead_id = body.lead_id || body.leadId;
@@ -404,6 +407,7 @@ serve(async (req) => {
       template_name,
       template_variables,
       mediaUrl,
+      mediaFileName,
       name,
       template_components,
     );
@@ -415,7 +419,7 @@ serve(async (req) => {
     await supabase.from("wa_message_logs").insert({
       phone: phoneNorm.full,
       customer_name: name || null,
-      message_type: messageType === "template" ? "template" : "text",
+      message_type: messageType,
       message_content: message || null,
       template_name: template_name || null,
       trigger_event: logEvent || "api_send",

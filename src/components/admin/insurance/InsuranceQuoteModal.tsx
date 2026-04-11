@@ -349,9 +349,58 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
   const handleWhatsApp = async () => {
     const data = buildQuoteData();
     if (!data || !calc) { toast.error("Enter IDV & CC first"); return; }
+    let pdfUrl: string | null = null;
+    let fileName = "insurance-quote.pdf";
     try {
-      const { doc, fileName } = generateInsuranceQuotePdf(data);
-      await saveQuoteHistory(doc, fileName, "whatsapp");
+      const { doc, fileName: generatedFileName } = generateInsuranceQuotePdf(data);
+      fileName = generatedFileName;
+      const result = await persistInsuranceQuoteHistory({
+        doc,
+        fileName,
+        shareMethod: "whatsapp",
+        customerName: client.customer_name || "Customer",
+        customerPhone: client.phone,
+        customerEmail: client.email || null,
+        vehicleNumber: client.vehicle_number || null,
+        vehicleMake: client.vehicle_make || null,
+        vehicleModel: client.vehicle_model || null,
+        vehicleYear: client.vehicle_year || null,
+        insuranceCompany,
+        policyType,
+        idv: idvNum,
+        totalPremium: Math.round(calc.total),
+        premiumBreakup: {
+          basicOD: Math.round(calc.basicOD),
+          odDiscount: Math.round(calc.odDiscount),
+          ncbDiscount: Math.round(calc.ncbDiscount),
+          netOD: Math.round(calc.netOD),
+          tp: Math.round(calc.tp),
+          securePremium: Math.round(securePremiumNum),
+          addonTotal: Math.round(calc.addonTotal),
+          subtotal: Math.round(calc.subtotal),
+          gst: Math.round(calc.gst),
+          total: Math.round(calc.total),
+        },
+        addons: addons.filter(a => a.enabled).map(a => a.name),
+        notes: `Claim Taken: ${ncbLocked ? "Yes" : "No"} | NCB: ${ncbLocked ? 0 : ncb}% | OD Discount: ${discountPct}%${claimLockedByExpiry ? ` | Expired ${expiryDays} days ago | ⚠ Vehicle inspection required (policy lapsed >90 days) — IRDAI` : ""}`,
+        clientId: client.id,
+        quoteAmount: Math.round(calc.total),
+        quoteInsurer: insuranceCompany,
+        ncbPercentage: ncbLocked ? 0 : ncb,
+        previousClaim: ncbLocked,
+      });
+
+      setLastSavedQuote({
+        ref: result.quoteRef,
+        total: Math.round(calc.total),
+        insurer: insuranceCompany,
+        method: "whatsapp",
+      });
+      queryClient.invalidateQueries({ queryKey: ["client-quote-history"] });
+
+      if (result.pdfStoragePath) {
+        pdfUrl = supabase.storage.from("quote-pdfs").getPublicUrl(result.pdfStoragePath).data.publicUrl;
+      }
     } catch (error: any) {
       toast.error(error.message || "Failed to save quote");
       return;
@@ -363,6 +412,9 @@ export default function InsuranceQuoteModal({ open, onOpenChange, client, policy
       message: msg,
       name: client.customer_name || undefined,
       logEvent: "quote_modal_share",
+      messageType: pdfUrl ? "document" : "text",
+      mediaUrl: pdfUrl || undefined,
+      mediaFileName: fileName,
     });
     if (!result.success) return;
     onQuoteSent?.();
