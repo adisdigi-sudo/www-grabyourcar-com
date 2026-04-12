@@ -75,12 +75,20 @@ serve(async (req) => {
     let metaPayload: Record<string, unknown>;
 
     if (message_type === "template" && template_name) {
+      // Build components from template_variables if no explicit components provided
+      let finalComponents = template_components;
+      if (!finalComponents && template_variables && Object.keys(template_variables).length > 0) {
+        finalComponents = [{
+          type: "body",
+          parameters: Object.values(template_variables).map(val => ({ type: "text", text: String(val) })),
+        }];
+      }
       metaPayload = {
         type: "template",
         template: {
           name: template_name,
           language: { code: "en" },
-          ...(template_components ? { components: template_components } : {}),
+          ...(finalComponents ? { components: finalComponents } : {}),
         },
       };
     } else if (message_type === "image" && media_url) {
