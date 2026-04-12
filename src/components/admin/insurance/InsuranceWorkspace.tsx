@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { usePartnerLink, useUpdatePartnerLink, useCheckPartnerLinkHealth } from "@/hooks/usePartnerLink";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +16,7 @@ import { differenceInDays, format, startOfMonth, endOfMonth, parse } from "date-
 import { fetchAllPages } from "@/lib/fetchAllPages";
 import {
   UserPlus, Clock, CheckCircle2, Shield, TrendingUp,
-  Plus, FileSpreadsheet, BookOpen, CalendarClock, Wrench, AlertTriangle, Calculator, ArrowRight, Rocket, ExternalLink
+  Plus, FileSpreadsheet, BookOpen, CalendarClock, Wrench, AlertTriangle, Calculator, ArrowRight, Rocket, ExternalLink, Settings2, AlertCircle
 } from "lucide-react";
 import { LeadImportDialog } from "../shared/LeadImportDialog";
 import { StageNotificationBanner, buildInsuranceNotifications } from "../shared/StageNotificationBanner";
@@ -54,7 +55,13 @@ export function InsuranceWorkspace() {
   const [showCalcDialog, setShowCalcDialog] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showAddLead, setShowAddLead] = useState(false);
+  const [showPartnerLink, setShowPartnerLink] = useState(false);
+  const [editPartnerUrl, setEditPartnerUrl] = useState("");
   const [chatDraft, setChatDraft] = useState<ChatComposerDraft | null>(null);
+
+  const { data: partnerLink, isError: partnerLinkError } = usePartnerLink("insurance", "PolicyBazaar");
+  const updatePartnerLink = useUpdatePartnerLink();
+  const checkHealth = useCheckPartnerLinkHealth();
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), "yyyy-MM"));
   const [newLead, setNewLead] = useState({
     customer_name: "", phone: "", email: "", city: "",
@@ -517,8 +524,35 @@ export function InsuranceWorkspace() {
               <Button size="sm" onClick={() => setShowAddLead(true)} className="gap-1.5 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border border-white/20">
                 <Plus className="h-4 w-4" /> Add Lead
               </Button>
-              <Button size="sm" onClick={() => window.open("https://pbpci.policybazaar.com/?token=o5aMAq6qZ1tLXTODNpDyVbk4MP6pWDnq6hhpN5u%2BmyJLH9wHcj81JpXwkmKwLPBcDQlOpmql%2FtQgJKjQaQBk%2F6h5%2Bh6wxuKCTAtXRNQ1WBN7m6J2EwinhUfoywZ8E%2B%2BJFZQlcTcGh6a4upMh26MliMAXl%2FqWXTt%2B579hIW3zzfAGZ7aSNJ3WTeVCdfy%2FjJGe%2BQa3M6xdyWiN9%2FuvLVHo9A%3D%3D", "_blank")} className="gap-1.5 bg-emerald-500/80 hover:bg-emerald-500 text-white border border-emerald-400/30">
-                <ExternalLink className="h-4 w-4" /> Get Quote
+              <Button
+                size="sm"
+                onClick={() => {
+                  if (partnerLink?.partner_url) {
+                    window.open(partnerLink.partner_url, "_blank");
+                  } else {
+                    toast.error("Partner link not found. Add it in settings.");
+                    setShowPartnerLink(true);
+                  }
+                }}
+                className={cn(
+                  "gap-1.5 text-white border",
+                  partnerLinkError ? "bg-red-500/80 hover:bg-red-500 border-red-400/30" : "bg-emerald-500/80 hover:bg-emerald-500 border-emerald-400/30"
+                )}
+              >
+                {partnerLinkError ? <AlertCircle className="h-4 w-4" /> : <ExternalLink className="h-4 w-4" />}
+                Get Quote
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setEditPartnerUrl(partnerLink?.partner_url || "");
+                  setShowPartnerLink(true);
+                }}
+                className="gap-1 text-white/70 hover:text-white hover:bg-white/10 px-2"
+                title="Update Partner Quote Link"
+              >
+                <Settings2 className="h-3.5 w-3.5" />
               </Button>
             </div>
           </div>
@@ -1073,6 +1107,55 @@ export function InsuranceWorkspace() {
             <Button variant="outline" onClick={() => setShowAddLead(false)}>Cancel</Button>
             <Button onClick={addLead} disabled={!newLead.customer_name.trim() || !newLead.phone.trim()} className="gap-1.5">
               <Plus className="h-4 w-4" /> Add Lead
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Partner Link Edit Dialog */}
+      <Dialog open={showPartnerLink} onOpenChange={setShowPartnerLink}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings2 className="h-5 w-5 text-primary" /> Update Partner Quote Link
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <Label className="text-xs font-medium">PolicyBazaar Partner URL</Label>
+              <Input
+                placeholder="Paste new PBPartner link here..."
+                value={editPartnerUrl}
+                onChange={e => setEditPartnerUrl(e.target.value)}
+                className="text-xs font-mono"
+              />
+            </div>
+            {partnerLink && (
+              <div className="text-xs text-muted-foreground space-y-1">
+                <p>Status: <Badge variant={partnerLink.health_status === "checked" ? "default" : "secondary"} className="text-[10px]">{partnerLink.health_status}</Badge></p>
+                {partnerLink.last_health_check && <p>Last checked: {new Date(partnerLink.last_health_check).toLocaleString()}</p>}
+                <p className="text-orange-500 flex items-center gap-1"><AlertCircle className="h-3 w-3" /> Yeh link expire hone pe yahan update karo — website + CRM dono jagah auto-sync hoga</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" size="sm" onClick={() => setShowPartnerLink(false)}>Cancel</Button>
+            {partnerLink && (
+              <Button variant="outline" size="sm" onClick={() => checkHealth.mutate(partnerLink)} className="gap-1">
+                <ExternalLink className="h-3.5 w-3.5" /> Test Link
+              </Button>
+            )}
+            <Button
+              size="sm"
+              onClick={() => {
+                if (!partnerLink?.id || !editPartnerUrl.trim()) return;
+                updatePartnerLink.mutate({ id: partnerLink.id, partner_url: editPartnerUrl.trim() });
+                setShowPartnerLink(false);
+              }}
+              disabled={!editPartnerUrl.trim() || updatePartnerLink.isPending}
+              className="gap-1"
+            >
+              Save & Sync
             </Button>
           </DialogFooter>
         </DialogContent>

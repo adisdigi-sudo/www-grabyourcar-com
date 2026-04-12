@@ -12926,6 +12926,51 @@ export type Database = {
         }
         Relationships: []
       }
+      partner_links: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          health_status: string | null
+          id: string
+          is_active: boolean | null
+          last_health_check: string | null
+          notes: string | null
+          partner_name: string
+          partner_url: string
+          updated_at: string | null
+          updated_by: string | null
+          vertical: string
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          health_status?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_health_check?: string | null
+          notes?: string | null
+          partner_name: string
+          partner_url: string
+          updated_at?: string | null
+          updated_by?: string | null
+          vertical?: string
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          health_status?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_health_check?: string | null
+          notes?: string | null
+          partner_name?: string
+          partner_url?: string
+          updated_at?: string | null
+          updated_by?: string | null
+          vertical?: string
+        }
+        Relationships: []
+      }
       payment_received: {
         Row: {
           amount: number

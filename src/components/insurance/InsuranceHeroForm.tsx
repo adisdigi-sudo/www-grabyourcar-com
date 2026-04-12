@@ -4,8 +4,9 @@ import { Car, Shield, Loader2, Zap, Sparkles, Gift, Star } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { captureInsuranceLead } from "@/lib/insuranceLeadCapture";
+import { supabase } from "@/integrations/supabase/client";
 
-const PARTNER_URL = "https://pbpci.policybazaar.com/?token=o5aMAq6qZ1tLXTODNpDyVbk4MP6pWDnq6hhpN5u%2BmyJLH9wHcj81JpXwkmKwLPBcDQlOpmql%2FtQgJKjQaQBk%2F6h5%2Bh6wxuKCTAtXRNQ1WBN7m6J2EwinhUfoywZ8E%2B%2BJFZQlcTcGh6a4upMh26MliMAXl%2FqWXTt%2B579hIW3zzfAGZ7aSNJ3WTeVCdfy%2FjJGe%2BQa3M6xdyWiN9%2FuvLVHo9A%3D%3D";
+const FALLBACK_PARTNER_URL = "https://pbpci.policybazaar.com/?token=o5aMAq6qZ1tLXTODNpDyVbk4MP6pWDnq6hhpN5u%2BmyJLH9wHcj81JpXwkmKwLPBcDQlOpmql%2FtQgJKjQaQBk%2F6h5%2Bh6wxuKCTAtXRNQ1WBN7m6J2EwinhUfoywZ8E%2B%2BJFZQlcTcGh6a4upMh26MliMAXl%2FqWXTt%2B579hIW3zzfAGZ7aSNJ3WTeVCdfy%2FjJGe%2BQa3M6xdyWiN9%2FuvLVHo9A%3D%3D";
 
 const scrollingOffers = [
   { icon: Car, text: "1 Day Free Self-Drive Car" },
@@ -24,15 +25,29 @@ interface InsuranceHeroFormProps {
 
 export function InsuranceHeroForm({ policyType = "comprehensive", vehicleLabel = "vehicle", compact = false }: InsuranceHeroFormProps) {
   const [step, setStep] = useState<1 | 2>(1);
-  // Segmented vehicle number fields
-  const [state, setState] = useState(""); // e.g. DL, MH, PB
-  const [rtoCode, setRtoCode] = useState(""); // e.g. 01, 1, or empty for vintage
-  const [series, setSeries] = useState(""); // e.g. AB, CAJ, or empty
-  const [number, setNumber] = useState(""); // e.g. 1234, 4343
-
+  const [state, setState] = useState("");
+  const [rtoCode, setRtoCode] = useState("");
+  const [series, setSeries] = useState("");
+  const [number, setNumber] = useState("");
   const [phone, setPhone] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [partnerUrl, setPartnerUrl] = useState(FALLBACK_PARTNER_URL);
   const hasSubmittedRef = useRef(false);
+
+  // Fetch live partner URL from DB
+  useEffect(() => {
+    supabase
+      .from("partner_links" as any)
+      .select("partner_url")
+      .eq("vertical", "insurance")
+      .eq("partner_name", "PolicyBazaar")
+      .eq("is_active", true)
+      .limit(1)
+      .single()
+      .then(({ data }) => {
+        if (data && (data as any).partner_url) setPartnerUrl((data as any).partner_url);
+      });
+  }, []);
 
   const stateRef = useRef<HTMLInputElement>(null);
   const rtoRef = useRef<HTMLInputElement>(null);
@@ -113,7 +128,7 @@ export function InsuranceHeroForm({ policyType = "comprehensive", vehicleLabel =
     trackLeadConversion("insurance_hero", { policyType });
 
     toast.success("Redirecting you to get your quotes 🎉");
-    window.location.assign(PARTNER_URL);
+    window.location.assign(partnerUrl);
   };
 
   const handleStateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
