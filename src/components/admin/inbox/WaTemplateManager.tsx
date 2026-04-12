@@ -97,12 +97,31 @@ function validateTemplate(tpl: Partial<Template>, buttons: MetaButton[]): Valida
     if (body.length > 1024) {
       issues.push({ type: "error", field: "body", message: `Body exceeds 1024 chars (${body.length}/1024)` });
     }
-    // Check for invalid variable format
     const invalidVars = body.match(/\{\{[^}]*[^a-zA-Z0-9_}][^}]*\}\}/g);
     if (invalidVars) {
       issues.push({ type: "error", field: "body", message: `Invalid variable format: ${invalidVars.join(", ")}. Use {{variable_name}} format.` });
     }
-    // Marketing templates cannot have just variables
+
+    const normalizedBody = body.replace(/\{\{([^}]+)\}\}/g, (_match, inner: string) => `{{${inner.trim()}}}`);
+    const positionalMatches = normalizedBody.match(/\{\{\d+\}\}/g) || [];
+    const namedMatches = normalizedBody.match(/\{\{[a-zA-Z_][a-zA-Z0-9_]*\}\}/g) || [];
+    const totalVariables = positionalMatches.length + namedMatches.length;
+    const plainWords = normalizedBody
+      .replace(/\{\{[^}]+\}\}/g, " ")
+      .replace(/[^\p{L}\p{N}\s]/gu, " ")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    const minimumWordsNeeded = totalVariables * 3;
+
+    if (totalVariables > 0 && plainWords.length < minimumWordsNeeded) {
+      issues.push({
+        type: "error",
+        field: "body",
+        message: `Too many variables for body length: ${totalVariables} variables need about ${minimumWordsNeeded} real words, only ${plainWords.length} found. Add more text or reduce variables.`,
+      });
+    }
+
     if (category === "marketing" && body.replace(/\{\{\w+\}\}/g, "").trim().length < 10) {
       issues.push({ type: "warning", field: "body", message: "Marketing templates need substantial text content beyond variables" });
     }
