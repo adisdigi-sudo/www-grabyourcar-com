@@ -669,11 +669,11 @@ async function toolLookupPolicy(supabase: any, customerPhone?: string, vehicleNu
     .select("id, customer_name, phone, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_policy_number, current_policy_type, current_insurer, current_premium, policy_expiry_date, policy_start_date, pipeline_stage, ncb_percentage")
     .or(phones.map(p => `phone.eq.${p}`).join(","));
 
+  // STRICT: Even with vehicle number, ALWAYS require phone match first
+  // Vehicle number is only used as additional filter, never as standalone lookup
   if (vehicleNumber) {
     const cleanVehicle = vehicleNumber.replace(/\s+/g, "").toUpperCase();
-    query = supabase.from("insurance_clients")
-      .select("id, customer_name, phone, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_policy_number, current_policy_type, current_insurer, current_premium, policy_expiry_date, policy_start_date, pipeline_stage, ncb_percentage")
-      .or(phones.map(p => `phone.eq.${p}`).join(",") + `,vehicle_number.ilike.%${cleanVehicle}%`);
+    query = query.ilike("vehicle_number", `%${cleanVehicle}%`);
   }
 
   const { data: clients } = await query.limit(5);
