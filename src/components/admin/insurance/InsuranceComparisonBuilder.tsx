@@ -97,6 +97,9 @@ export function InsuranceComparisonBuilder(props: Props) {
   const idvNum = props.idv || 0;
   const zone = getZone(props.city || "Delhi NCR");
   const isTP = (props.policyType || "").toLowerCase().includes("third");
+  const isStandaloneOD = (props.policyType || "").toLowerCase().includes("standalone");
+  const showODFields = !isTP; // OD fields for Comprehensive & Standalone OD
+  const showTPInCalc = !isStandaloneOD; // TP for Comprehensive & Third Party Only
   const ncbPct = props.ncbLocked ? 0 : (props.ncb || 0);
 
   const computeQuote = (entry: InsurerEntry): InsurerQuote | null => {
@@ -126,7 +129,8 @@ export function InsuranceComparisonBuilder(props: Props) {
     const odAfterDiscount = basicOD - odDiscount;
     const ncbDiscount = (odAfterDiscount * ncbPct) / 100;
     const netOD = odAfterDiscount - ncbDiscount;
-    const tp = getTPPremium(ccNum);
+    // Standalone OD: NO Third Party premium (IRDAI rule)
+    const tp = isStandaloneOD ? 0 : getTPPremium(ccNum);
     const addonTotal = entry.addons.filter(a => a.enabled).reduce((s, a) => s + a.price, 0);
     const subtotal = netOD + tp + entry.securePremium + addonTotal;
     const gst = Math.round(subtotal * 0.18);
