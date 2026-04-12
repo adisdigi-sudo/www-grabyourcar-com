@@ -109,7 +109,7 @@ serve(async (req) => {
     }
 
     // Send via Meta Cloud API
-    const metaUrl = `https://graph.facebook.com/v21.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
+    const metaUrl = `https://graph.facebook.com/v25.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
     const response = await fetch(metaUrl, {
       method: "POST",
       headers: {
