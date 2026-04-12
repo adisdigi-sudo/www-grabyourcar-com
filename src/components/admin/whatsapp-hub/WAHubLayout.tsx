@@ -6,7 +6,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import {
   MessageSquare, LayoutTemplate, Megaphone, Bot, Users, BarChart3,
   UsersRound, ChevronLeft, ChevronRight, Wifi, WifiOff, Search,
-  Settings, Workflow
+  Settings, Workflow, MessageSquareText
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
