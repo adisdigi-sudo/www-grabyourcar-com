@@ -15933,6 +15933,57 @@ export type Database = {
         }
         Relationships: []
       }
+      wa_chatbot_flows: {
+        Row: {
+          completed_runs: number
+          created_at: string
+          created_by: string | null
+          description: string | null
+          failed_runs: number
+          id: string
+          name: string
+          nodes: Json
+          status: string
+          total_runs: number
+          trigger_type: string
+          trigger_value: string | null
+          updated_at: string
+          vertical: string | null
+        }
+        Insert: {
+          completed_runs?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          failed_runs?: number
+          id?: string
+          name: string
+          nodes?: Json
+          status?: string
+          total_runs?: number
+          trigger_type?: string
+          trigger_value?: string | null
+          updated_at?: string
+          vertical?: string | null
+        }
+        Update: {
+          completed_runs?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          failed_runs?: number
+          id?: string
+          name?: string
+          nodes?: Json
+          status?: string
+          total_runs?: number
+          trigger_type?: string
+          trigger_value?: string | null
+          updated_at?: string
+          vertical?: string | null
+        }
+        Relationships: []
+      }
       wa_chatbot_rules: {
         Row: {
           ai_prompt: string | null
@@ -16287,6 +16338,53 @@ export type Database = {
             columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "wa_template_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wa_flow_run_logs: {
+        Row: {
+          completed_at: string | null
+          contact_name: string | null
+          contact_phone: string
+          context: Json | null
+          created_at: string
+          current_node_id: string | null
+          flow_id: string
+          id: string
+          started_at: string
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          contact_name?: string | null
+          contact_phone: string
+          context?: Json | null
+          created_at?: string
+          current_node_id?: string | null
+          flow_id: string
+          id?: string
+          started_at?: string
+          status?: string
+        }
+        Update: {
+          completed_at?: string | null
+          contact_name?: string | null
+          contact_phone?: string
+          context?: Json | null
+          created_at?: string
+          current_node_id?: string | null
+          flow_id?: string
+          id?: string
+          started_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_flow_run_logs_flow_id_fkey"
+            columns: ["flow_id"]
+            isOneToOne: false
+            referencedRelation: "wa_chatbot_flows"
             referencedColumns: ["id"]
           },
         ]
