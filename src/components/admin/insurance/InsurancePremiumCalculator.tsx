@@ -1053,7 +1053,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
 
               {/* Breakdown */}
               <div className="rounded-xl border border-border bg-card divide-y divide-border">
-                {!isThirdPartyOnly && (
+                {showODFields && (
                   <div className="p-4 space-y-2">
                     <div className="flex items-center gap-2 mb-2">
                       <Shield className="h-3.5 w-3.5 text-blue-500" />
@@ -1068,14 +1068,16 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
                   </div>
                 )}
 
+                {showTPInCalc && (
                 <div className="p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <Car className="h-3.5 w-3.5 text-green-500" />
                     <span className="text-xs font-bold text-foreground uppercase tracking-wide">Third Party (TP)</span>
-                    <span className="text-[10px] text-muted-foreground ml-auto">Mandatory</span>
+                    <span className="text-[10px] text-muted-foreground ml-auto">{isComprehensive ? "Mandatory" : ""}</span>
                   </div>
                   <Row label={`TP Premium (${ccNum < 1000 ? "<1000" : ccNum <= 1500 ? "1000-1500" : ">1500"}cc)`} value={fmt(calc.tp)} bold />
                 </div>
+                )}
 
                 {securePremiumNum > 0 && (
                   <div className="p-4">
