@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { deleteMetaManagedTemplate, normalizeTemplateName, syncTemplateToMeta } from "@/lib/whatsappTemplateMirror";
 
 interface WhatsAppTemplate {
   id: string;
@@ -99,28 +100,52 @@ export default function WhatsAppTemplateManager() {
     try {
       const variableRegex = /\{[a-z_]+\}/g;
       const extractedVariables = editingTemplate.content.match(variableRegex) || [];
+      const normalizedName = normalizeTemplateName(editingTemplate.name);
       const templateData = {
-        name: editingTemplate.name,
+        name: normalizedName,
         category: editingTemplate.category || "welcome",
         template_type: editingTemplate.template_type || "text",
         content: editingTemplate.content,
         variables: Array.from(new Set(extractedVariables)),
         preview: editingTemplate.content.substring(0, 100) + "...",
         is_active: editingTemplate.is_active ?? true,
-        is_approved: editingTemplate.is_approved ?? false,
-        approval_status: editingTemplate.approval_status || "pending",
+        is_approved: false,
+        approval_status: "pending",
         language: editingTemplate.language || "en",
         use_cases: editingTemplate.use_cases || [],
         example_data: (editingTemplate.example_data || {}) as Record<string, string>,
       };
+      let savedId = editingTemplate.id;
       if (editingTemplate.id) {
-        const { error } = await supabase.from("whatsapp_templates").update(templateData).eq("id", editingTemplate.id);
+        const { data, error } = await supabase.from("whatsapp_templates").update(templateData).eq("id", editingTemplate.id).select("id").single();
         if (error) throw error;
-        toast({ title: "Template updated successfully" });
+        savedId = data.id;
       } else {
-        const { error } = await supabase.from("whatsapp_templates").insert([templateData]);
+        const { data, error } = await supabase.from("whatsapp_templates").insert([templateData]).select("id").single();
         if (error) throw error;
-        toast({ title: "Template created successfully" });
+        savedId = data.id;
+      }
+
+      const syncResult = await syncTemplateToMeta({
+        name: normalizedName,
+        displayName: editingTemplate.name,
+        body: editingTemplate.content,
+        category: editingTemplate.category || "welcome",
+        language: editingTemplate.language || "en",
+        variables: Array.from(new Set(extractedVariables.map((value) => value.replace(/[{}]/g, "")))),
+      });
+
+      if (savedId) {
+        await supabase.from("whatsapp_templates").update({
+          approval_status: syncResult.status,
+          is_approved: syncResult.status === "approved",
+        }).eq("id", savedId);
+      }
+
+      if (syncResult.error) {
+        toast({ title: "Template saved locally", description: `Meta submission failed: ${syncResult.error}`, variant: "destructive" });
+      } else {
+        toast({ title: editingTemplate.id ? "Template updated & submitted to Meta" : "Template created & submitted to Meta" });
       }
       setIsEditing(false);
       setEditingTemplate(null);
@@ -133,6 +158,10 @@ export default function WhatsAppTemplateManager() {
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this template?")) return;
     try {
+      const template = templates.find((item) => item.id === id);
+      if (template) {
+        await deleteMetaManagedTemplate({ name: template.name });
+      }
       await supabase.from("whatsapp_templates").delete().eq("id", id);
       toast({ title: "Template deleted" });
       fetchTemplates();

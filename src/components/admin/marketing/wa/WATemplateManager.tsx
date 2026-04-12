@@ -12,6 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Target, Plus, Trash2, CheckCircle, Clock, XCircle, Copy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { deleteMetaManagedTemplate, normalizeTemplateName, syncTemplateToMeta } from "@/lib/whatsappTemplateMirror";
 
 interface Template {
   id: string;
@@ -52,21 +53,53 @@ export function WATemplateManager() {
     // Extract variables from content
     const varMatches = form.content.match(/\{(\w+)\}/g);
     const variables = varMatches ? [...new Set(varMatches.map(v => v.replace(/[{}]/g, "")))] : [];
+    const normalizedName = normalizeTemplateName(form.name);
 
-    const { error } = await supabase.from("whatsapp_templates").insert({
-      name: form.name,
+    const { data: inserted, error } = await supabase.from("whatsapp_templates").insert({
+      name: normalizedName,
       category: form.category,
       template_type: form.template_type,
       content: form.content,
       variables,
       language: form.language,
-      approval_status: "approved", // Self-managed templates
-      is_approved: true,
+      approval_status: "pending",
+      is_approved: false,
       is_active: true,
-    });
+    }).select("id").single();
 
     if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
-    else { toast({ title: "Template created" }); setIsCreating(false); setForm({ name: "", category: "Marketing", template_type: "text", content: "", language: "en" }); fetchTemplates(); }
+    else {
+      try {
+        const syncResult = await syncTemplateToMeta({
+          name: normalizedName,
+          displayName: form.name,
+          body: form.content,
+          category: form.category,
+          language: form.language,
+          variables,
+        });
+
+        await supabase
+          .from("whatsapp_templates")
+          .update({
+            approval_status: syncResult.status,
+            is_approved: syncResult.status === "approved",
+          })
+          .eq("id", inserted.id);
+
+        if (syncResult.error) {
+          toast({ title: "Template saved locally", description: `Meta submission failed: ${syncResult.error}`, variant: "destructive" });
+        } else {
+          toast({ title: "Template submitted to Meta" });
+        }
+      } catch (syncError: any) {
+        toast({ title: "Template saved locally", description: `Meta sync failed: ${syncError.message}`, variant: "destructive" });
+      }
+
+      setIsCreating(false);
+      setForm({ name: "", category: "Marketing", template_type: "text", content: "", language: "en" });
+      fetchTemplates();
+    }
   };
 
   const toggleActive = async (id: string, isActive: boolean) => {
@@ -76,6 +109,10 @@ export function WATemplateManager() {
 
   const deleteTemplate = async (id: string) => {
     if (!confirm("Delete this template?")) return;
+    const template = templates.find((item) => item.id === id);
+    if (template) {
+      await deleteMetaManagedTemplate({ name: template.name });
+    }
     await supabase.from("whatsapp_templates").delete().eq("id", id);
     toast({ title: "Template deleted" });
     fetchTemplates();
