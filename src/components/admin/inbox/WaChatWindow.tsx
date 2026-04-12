@@ -309,7 +309,7 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
     );
   }
 
-  const selectedTemplateVariables = selectedTemplate ? extractTemplateVariables(selectedTemplate) : [];
+  // selectedTemplateVariables already declared above
 
   return (
     <>
