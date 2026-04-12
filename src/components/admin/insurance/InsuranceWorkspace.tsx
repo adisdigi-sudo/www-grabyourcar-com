@@ -15,7 +15,7 @@ import { differenceInDays, format, startOfMonth, endOfMonth, parse } from "date-
 import { fetchAllPages } from "@/lib/fetchAllPages";
 import {
   UserPlus, Clock, CheckCircle2, Shield, TrendingUp,
-  Plus, FileSpreadsheet, BookOpen, CalendarClock, Wrench, AlertTriangle, Calculator, ArrowRight, Rocket
+  Plus, FileSpreadsheet, BookOpen, CalendarClock, Wrench, AlertTriangle, Calculator, ArrowRight, Rocket, ExternalLink
 } from "lucide-react";
 import { LeadImportDialog } from "../shared/LeadImportDialog";
 import { StageNotificationBanner, buildInsuranceNotifications } from "../shared/StageNotificationBanner";
@@ -516,6 +516,9 @@ export function InsuranceWorkspace() {
               </Button>
               <Button size="sm" onClick={() => setShowAddLead(true)} className="gap-1.5 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border border-white/20">
                 <Plus className="h-4 w-4" /> Add Lead
+              </Button>
+              <Button size="sm" onClick={() => window.open("/insurance", "_blank")} className="gap-1.5 bg-emerald-500/80 hover:bg-emerald-500 text-white border border-emerald-400/30">
+                <ExternalLink className="h-4 w-4" /> Get Quote
               </Button>
             </div>
           </div>
