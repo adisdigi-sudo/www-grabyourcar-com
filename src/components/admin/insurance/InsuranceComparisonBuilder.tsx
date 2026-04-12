@@ -53,6 +53,8 @@ interface InsurerEntry {
   showCustom: boolean;
   odDiscountPct: number;
   securePremium: number;
+  customIdv: string; // per-insurer IDV override (empty = use global)
+  customNcb: string; // per-insurer NCB override (empty = use global)
   addons: { id: string; name: string; price: number; enabled: boolean }[];
 }
 
@@ -75,7 +77,7 @@ interface Props {
   onQuoteSaved?: () => void;
 }
 
-function createEntry(insurer = ""): InsurerEntry {
+function createEntry(insurer = "", defaultIdv?: number, defaultNcb?: number): InsurerEntry {
   return {
     id: `entry_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
     insurer,
@@ -83,6 +85,8 @@ function createEntry(insurer = ""): InsurerEntry {
     showCustom: false,
     odDiscountPct: 0,
     securePremium: 500,
+    customIdv: "",
+    customNcb: "",
     addons: DEFAULT_ADDONS.map(a => ({ ...a })),
   };
 }
@@ -121,13 +125,17 @@ export function InsuranceComparisonBuilder(props: Props) {
       };
     }
 
-    if (!idvNum) return null;
+    // Per-insurer IDV & NCB overrides
+    const entryIdv = entry.customIdv ? (parseFloat(entry.customIdv) || 0) : idvNum;
+    const entryNcb = entry.customNcb !== "" ? (parseFloat(entry.customNcb) || 0) : ncbPct;
+    
+    if (!entryIdv) return null;
     const ccKey = ccNum > 1500 ? "above1500" : "upto1500";
     const odRate = OD_RATES[zone][ccKey];
-    const basicOD = (idvNum * odRate) / 100;
+    const basicOD = (entryIdv * odRate) / 100;
     const odDiscount = (basicOD * entry.odDiscountPct) / 100;
     const odAfterDiscount = basicOD - odDiscount;
-    const ncbDiscount = (odAfterDiscount * ncbPct) / 100;
+    const ncbDiscount = (odAfterDiscount * entryNcb) / 100;
     const netOD = odAfterDiscount - ncbDiscount;
     // Standalone OD: NO Third Party premium (IRDAI rule)
     const tp = isStandaloneOD ? 0 : getTPPremium(ccNum);
@@ -138,7 +146,7 @@ export function InsuranceComparisonBuilder(props: Props) {
     return {
       insurerName: resolvedInsurer,
       policyType: props.policyType || "Comprehensive",
-      idv: idvNum,
+      idv: entryIdv,
       basicOD: Math.round(basicOD),
       odDiscount: Math.round(odDiscount),
       ncbDiscount: Math.round(ncbDiscount),
@@ -359,26 +367,52 @@ export function InsuranceComparisonBuilder(props: Props) {
                     </div>
 
                     {showODFields && (
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <Label className="text-[10px] text-muted-foreground">OD Discount %</Label>
-                          <Input
-                            type="number"
-                            min={0}
-                            max={100}
-                            value={entry.odDiscountPct}
-                            onChange={e => updateEntry(entry.id, { odDiscountPct: parseFloat(e.target.value) || 0 })}
-                            className="h-7 text-xs mt-0.5"
-                          />
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">IDV (₹) <span className="opacity-50">— blank = global</span></Label>
+                            <Input
+                              type="number"
+                              placeholder={idvNum ? String(idvNum) : "IDV"}
+                              value={entry.customIdv}
+                              onChange={e => updateEntry(entry.id, { customIdv: e.target.value })}
+                              className="h-7 text-xs mt-0.5"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">NCB % <span className="opacity-50">— blank = global</span></Label>
+                            <Input
+                              type="number"
+                              min={0}
+                              max={50}
+                              placeholder={String(ncbPct)}
+                              value={entry.customNcb}
+                              onChange={e => updateEntry(entry.id, { customNcb: e.target.value })}
+                              className="h-7 text-xs mt-0.5"
+                            />
+                          </div>
                         </div>
-                        <div>
-                          <Label className="text-[10px] text-muted-foreground">Secure Premium</Label>
-                          <Input
-                            type="number"
-                            value={entry.securePremium}
-                            onChange={e => updateEntry(entry.id, { securePremium: parseFloat(e.target.value) || 0 })}
-                            className="h-7 text-xs mt-0.5"
-                          />
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">OD Discount %</Label>
+                            <Input
+                              type="number"
+                              min={0}
+                              max={100}
+                              value={entry.odDiscountPct}
+                              onChange={e => updateEntry(entry.id, { odDiscountPct: parseFloat(e.target.value) || 0 })}
+                              className="h-7 text-xs mt-0.5"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">Secure Premium</Label>
+                            <Input
+                              type="number"
+                              value={entry.securePremium}
+                              onChange={e => updateEntry(entry.id, { securePremium: parseFloat(e.target.value) || 0 })}
+                              className="h-7 text-xs mt-0.5"
+                            />
+                          </div>
                         </div>
                       </div>
                     )}
