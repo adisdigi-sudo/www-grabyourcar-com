@@ -77,7 +77,7 @@ interface Props {
   onQuoteSaved?: () => void;
 }
 
-function createEntry(insurer = ""): InsurerEntry {
+function createEntry(insurer = "", defaultIdv?: number, defaultNcb?: number): InsurerEntry {
   return {
     id: `entry_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
     insurer,
@@ -85,6 +85,8 @@ function createEntry(insurer = ""): InsurerEntry {
     showCustom: false,
     odDiscountPct: 0,
     securePremium: 500,
+    customIdv: "",
+    customNcb: "",
     addons: DEFAULT_ADDONS.map(a => ({ ...a })),
   };
 }
