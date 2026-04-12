@@ -71,11 +71,27 @@ serve(async (req) => {
       });
     }
 
+    // ─── COST-SAVING STRATEGY ───
+    // If window IS open and agent is sending a template, auto-downgrade to free text
+    // This saves money: free service conversation vs paid template message
+    // Meta policy: inside 24hr window, free-form text is FREE
+    let effectiveMessageType = message_type;
+    let costSaved = false;
+
+    if (windowOpen && message_type === "template" && template_name && content && content.trim()) {
+      // We have rendered content from the Fill Template dialog — send as free text instead
+      console.log(`💰 Cost-saving: downgrading template "${template_name}" to free text (window open, ${
+        Math.round((new Date(convo.window_expires_at).getTime() - Date.now()) / 60000)
+      }min left)`);
+      effectiveMessageType = "text";
+      costSaved = true;
+    }
+
     // Build Meta API payload
     const to = phone.startsWith("91") ? phone : `91${phone.replace(/\D/g, "")}`;
     let metaPayload: Record<string, unknown>;
 
-    if (message_type === "template" && template_name) {
+    if (effectiveMessageType === "template" && template_name) {
       // ─── STRICT META-COMPLIANT TEMPLATE BUILDING ───
       
       // If explicit components provided (from Fill Template Dialog), use them directly
@@ -215,12 +231,12 @@ serve(async (req) => {
 
       console.log("Template payload:", JSON.stringify(metaPayload));
 
-    } else if (message_type === "image" && media_url) {
+    } else if (effectiveMessageType === "image" && media_url) {
       metaPayload = {
         type: "image",
         image: { link: media_url, caption: content || undefined },
       };
-    } else if (message_type === "document" && media_url) {
+    } else if (effectiveMessageType === "document" && media_url) {
       metaPayload = {
         type: "document",
         document: { link: media_url, filename: media_filename || "document", caption: content || undefined },
@@ -264,12 +280,12 @@ serve(async (req) => {
     await supabase.from("wa_inbox_messages").insert({
       conversation_id,
       direction: "outbound",
-      message_type,
+      message_type: costSaved ? "text" : message_type,
       content: displayContent,
       media_url: media_url || null,
       media_filename: media_filename || null,
-      template_name: template_name || null,
-      template_variables: template_variables || null,
+      template_name: costSaved ? null : (template_name || null),
+      template_variables: costSaved ? null : (template_variables || null),
       wa_message_id: waMessageId,
       status: success ? "sent" : "failed",
       status_updated_at: new Date().toISOString(),
@@ -288,19 +304,18 @@ serve(async (req) => {
     // Log in legacy wa_message_logs
     await supabase.from("wa_message_logs").insert({
       phone: to,
-      message_type: message_type,
+      message_type: costSaved ? "text_downgraded" : message_type,
       message_content: displayContent || template_name || "",
-      trigger_event: "inbox_send",
+      trigger_event: costSaved ? "inbox_send_cost_saved" : "inbox_send",
       status: success ? "sent" : "failed",
       provider: "meta",
       provider_message_id: waMessageId,
       sent_at: new Date().toISOString(),
     });
 
-    // Update template sent_count if applicable
-    if (success && message_type === "template" && template_name) {
+    // Update template sent_count only if actually sent as template (not downgraded)
+    if (success && !costSaved && message_type === "template" && template_name) {
       await supabase.rpc("increment_counter", { table_name: "wa_templates", column_name: "sent_count", row_id_column: "name", row_id_value: template_name }).catch(() => {
-        // Fallback: direct update
         supabase.from("wa_templates").select("id, sent_count").eq("name", template_name).single().then(({ data: t }) => {
           if (t) supabase.from("wa_templates").update({ sent_count: (t.sent_count || 0) + 1, last_sent_at: new Date().toISOString() }).eq("id", t.id);
         });
@@ -311,6 +326,8 @@ serve(async (req) => {
       success,
       messageId: waMessageId,
       window_open: windowOpen,
+      cost_saved: costSaved,
+      sent_as: costSaved ? "free_text" : effectiveMessageType,
       ...(success ? {} : { error: result.error?.message || result.error?.error_user_msg || "Send failed", meta_error_code: result.error?.code }),
     }), {
       status: success ? 200 : 500,

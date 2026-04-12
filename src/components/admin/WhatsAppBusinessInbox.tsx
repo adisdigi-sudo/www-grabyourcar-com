@@ -162,7 +162,11 @@ export default function WhatsAppBusinessInbox() {
       return false;
     }
 
-    toast({ title: "Message sent ✓" });
+    if (data?.cost_saved) {
+      toast({ title: "Message sent ✓ 💰", description: "Sent as free text (window open) — template cost saved!" });
+    } else {
+      toast({ title: "Message sent ✓" });
+    }
     return true;
   };
 
