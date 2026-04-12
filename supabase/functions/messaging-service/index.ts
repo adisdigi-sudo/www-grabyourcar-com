@@ -43,6 +43,19 @@ interface TriggerEventRequest {
   data?: Record<string, string>;
 }
 
+function normalizeTemplateVariables(variables?: Record<string, string>) {
+  if (!variables) return undefined;
+
+  const entries = Object.entries(variables).filter(([, value]) => value !== undefined && value !== null && String(value).trim().length > 0);
+  if (entries.length === 0) return undefined;
+
+  return entries.reduce<Record<string, string>>((acc, [key, value], index) => {
+    const normalizedKey = /^var_\d+$/.test(key) || /^\d+$/.test(key) ? key.replace(/^\d+$/, (match) => `var_${match}`) : key;
+    acc[normalizedKey || `var_${index + 1}`] = String(value);
+    return acc;
+  }, {});
+}
+
 type ServiceRequest = SendTemplateRequest | SendTextRequest | TriggerEventRequest;
 
 // ── Send via whatsapp-send gateway ──
@@ -157,11 +170,12 @@ serve(async (req) => {
 
         // Send immediately (no delay) or mark as scheduled
         if (trigger.delay_seconds === 0) {
+          const normalizedVariables = normalizeTemplateVariables(variables);
           const result = await sendViaGateway(
             SUPABASE_URL,
             SUPABASE_SERVICE_ROLE_KEY,
             resolvedPhone,
-            { messageType: "template", template_name: template.template_name, template_variables: variables },
+            { messageType: "template", template_name: template.template_name, template_variables: normalizedVariables },
             { name: resolvedName, logEvent: `trigger:${event}`, lead_id }
           );
 
@@ -195,11 +209,12 @@ serve(async (req) => {
 
     // ── Route: send_template ──
     if (request.action === "send_template") {
+      const normalizedVariables = normalizeTemplateVariables(request.variables);
       const result = await sendViaGateway(
         SUPABASE_URL,
         SUPABASE_SERVICE_ROLE_KEY,
         request.phone,
-        { messageType: "template", template_name: request.template_name, template_variables: request.variables },
+        { messageType: "template", template_name: request.template_name, template_variables: normalizedVariables },
         { name: request.customer_name, logEvent: "messaging_service_template", lead_id: request.lead_id }
       );
 
