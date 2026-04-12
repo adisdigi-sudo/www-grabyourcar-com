@@ -55,6 +55,7 @@ export function WAHubLayout() {
       case "contacts": return <WAHubContacts />;
       case "analytics": return <WAHubAnalytics />;
       case "team": return <WAHubTeam />;
+      case "crm-messages": return <WAHubCrmMessages />;
       default: return <WAHubInbox />;
     }
   };
