@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { getWhatsAppSignature } from "@/lib/senderSignature";
 
 // In-memory cache with 5 min TTL
 let cache: { data: Record<string, { body_text: string; variables: string[]; opt_out_footer: string | null; meta_category: string }> ; ts: number } | null = null;
