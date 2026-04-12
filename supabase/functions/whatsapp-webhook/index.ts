@@ -214,7 +214,13 @@ Deno.serve(async (req) => {
           conversationHistory.push({ role: "user", content: messageText });
 
           const lowerMessageText = messageText.toLowerCase();
-          const isStrictSelfServiceRequest = [
+          const lastAssistantMessage = [...conversationHistory]
+            .reverse()
+            .find((entry: any) => entry?.role === "assistant" && typeof entry?.content === "string")?.content?.toLowerCase() || "";
+          const hasPendingStrictInsurancePrompt = lastAssistantMessage.includes("for security, please reply in this exact format:")
+            || lastAssistantMessage.includes("your documents are not available here")
+            || lastAssistantMessage.includes("reply yes to connect to our insurance expert");
+          const isStrictSelfServiceRequest = hasPendingStrictInsurancePrompt || [
             "policy",
             "policy pdf",
             "policy copy",
