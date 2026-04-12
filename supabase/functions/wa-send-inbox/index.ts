@@ -280,12 +280,12 @@ serve(async (req) => {
     await supabase.from("wa_inbox_messages").insert({
       conversation_id,
       direction: "outbound",
-      message_type,
+      message_type: costSaved ? "text" : message_type,
       content: displayContent,
       media_url: media_url || null,
       media_filename: media_filename || null,
-      template_name: template_name || null,
-      template_variables: template_variables || null,
+      template_name: costSaved ? null : (template_name || null),
+      template_variables: costSaved ? null : (template_variables || null),
       wa_message_id: waMessageId,
       status: success ? "sent" : "failed",
       status_updated_at: new Date().toISOString(),
@@ -304,9 +304,9 @@ serve(async (req) => {
     // Log in legacy wa_message_logs
     await supabase.from("wa_message_logs").insert({
       phone: to,
-      message_type: message_type,
+      message_type: costSaved ? "text_downgraded" : message_type,
       message_content: displayContent || template_name || "",
-      trigger_event: "inbox_send",
+      trigger_event: costSaved ? "inbox_send_cost_saved" : "inbox_send",
       status: success ? "sent" : "failed",
       provider: "meta",
       provider_message_id: waMessageId,
