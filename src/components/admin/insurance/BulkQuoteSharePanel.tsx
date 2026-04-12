@@ -258,8 +258,25 @@ export function BulkQuoteSharePanel({ leads, source, onDone }: BulkQuoteSharePan
         const { error: uploadErr } = await supabase.storage.from("quote-pdfs").upload(storagePath, pdfBlob, { contentType: "application/pdf", upsert: true });
         const pdfUrl = !uploadErr ? supabase.storage.from("quote-pdfs").getPublicUrl(storagePath).data?.publicUrl : null;
 
-        // Send text
-        const result = await sendWhatsApp({ phone: l.phone || "", message: msg, name: l.customer_name || "", logEvent: "bulk_quote", silent: true });
+        const vehicleLabel = l.vehicle_number || `${l.vehicle_make || ""} ${l.vehicle_model || ""}`.trim() || "Your Vehicle";
+        const premiumStr = `Rs. ${(l.current_premium || l.premium || 0).toLocaleString("en-IN")}`;
+        const expiryStr = l.policy_expiry_date || l.renewal_date || "N/A";
+
+        // Send approved Meta template (works outside 24h window)
+        const result = await sendWhatsApp({
+          phone: l.phone || "", message: "", name: l.customer_name || "", logEvent: "bulk_quote", silent: true,
+          templateName: "insurance_quote_share",
+          templateComponents: [{
+            type: "body",
+            parameters: [
+              { type: "text", text: l.customer_name || "Valued Customer", parameter_name: "customer_name" },
+              { type: "text", text: vehicleLabel, parameter_name: "vehicle" },
+              { type: "text", text: premiumStr, parameter_name: "premium" },
+              { type: "text", text: expiryStr, parameter_name: "expiry_date" },
+            ],
+          }],
+          messageType: "template",
+        });
 
         // Send PDF
         if (result.success && pdfUrl) {
@@ -308,10 +325,25 @@ export function BulkQuoteSharePanel({ leads, source, onDone }: BulkQuoteSharePan
         const { error: uploadErr } = await supabase.storage.from("quote-pdfs").upload(storagePath, pdfBlob, { contentType: "application/pdf", upsert: true });
         const pdfUrl = !uploadErr ? supabase.storage.from("quote-pdfs").getPublicUrl(storagePath).data?.publicUrl : null;
 
-        const msg = `🔔 *Insurance Renewal Reminder*\n\nDear ${l.customer_name || "Customer"},\n\nYour ${l.current_policy_type || "motor insurance"} for *${l.vehicle_make || ""} ${l.vehicle_model || ""}* (${l.vehicle_number || "N/A"}) is ${daysLeft <= 0 ? "*overdue*" : `due in *${daysLeft} days*`}.\n\n🏢 Current Insurer: ${l.current_insurer || "N/A"}\n🎯 NCB: ${l.ncb_percentage ?? 0}%\n\n✅ We have the best renewal rates!\n📞 +91 98559 24442\n\n— *Team Grabyourcar* 🚗`;
+        const vehicleLabel = l.vehicle_number || `${l.vehicle_make || ""} ${l.vehicle_model || ""}`.trim() || "Your Vehicle";
+        const premiumStr = `Rs. ${(l.current_premium || l.premium || 0).toLocaleString("en-IN")}`;
+        const expiryStr = l.policy_expiry_date || l.renewal_date || "N/A";
 
-        // Send text
-        const result = await sendWhatsApp({ phone: l.phone || "", message: msg, name: l.customer_name || "", logEvent: "bulk_renewal_api", silent: true });
+        // Send approved Meta template (works outside 24h window)
+        const result = await sendWhatsApp({
+          phone: l.phone || "", message: "", name: l.customer_name || "", logEvent: "bulk_renewal_api", silent: true,
+          templateName: "insurance_quote_share",
+          templateComponents: [{
+            type: "body",
+            parameters: [
+              { type: "text", text: l.customer_name || "Valued Customer", parameter_name: "customer_name" },
+              { type: "text", text: vehicleLabel, parameter_name: "vehicle" },
+              { type: "text", text: premiumStr, parameter_name: "premium" },
+              { type: "text", text: expiryStr, parameter_name: "expiry_date" },
+            ],
+          }],
+          messageType: "template",
+        });
 
         // Send PDF
         if (result.success && pdfUrl) {

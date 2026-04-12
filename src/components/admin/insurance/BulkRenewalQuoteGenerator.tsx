@@ -400,15 +400,31 @@ export function BulkRenewalQuoteGenerator({ onClose }: { onClose: () => void }) 
         const { error: uploadErr } = await supabase.storage.from("quote-pdfs").upload(storagePath, pdfBlob, { contentType: "application/pdf", upsert: true });
         const pdfUrl = !uploadErr ? supabase.storage.from("quote-pdfs").getPublicUrl(storagePath).data?.publicUrl : null;
 
-        const msg = `🙏 Namaste ${q.customer_name || "Sir/Madam"},\n\nHere is your *Motor Insurance Renewal Quote* from *Grabyourcar Insurance*:\n\n🚗 Vehicle: *${q.vehicle_make || ""} ${q.vehicle_model || ""}*\n📋 Reg: *${q.vehicle_number || "N/A"}*\n🏢 Insurer: *${q.insurance_company || "Best Available"}*\n💰 Total Premium: *Rs. ${total.toLocaleString("en-IN")}*\n\n✅ Best rates guaranteed!\n\n👉 *Reply here* or call us at +91 98559 24442\n🔗 https://www.grabyourcar.com/insurance\n\n— *Team Grabyourcar* 🚗💚`;
+        // Build template variables
+        const vehicleLabel = q.vehicle_number || `${q.vehicle_make || ""} ${q.vehicle_model || ""}`.trim() || "Your Vehicle";
+        const premiumStr = `Rs. ${total.toLocaleString("en-IN")}`;
+        const expiryStr = q.policy_expiry || "N/A";
 
-        // Send text message
+        // Send approved Meta template first (works outside 24h window)
         const result = await sendWhatsApp({
           phone: q.phone,
-          message: msg,
+          message: "",
           name: q.customer_name || undefined,
           logEvent: "bulk_renewal_quote",
           silent: true,
+          templateName: "insurance_quote_share",
+          templateComponents: [
+            {
+              type: "body",
+              parameters: [
+                { type: "text", text: q.customer_name || "Valued Customer", parameter_name: "customer_name" },
+                { type: "text", text: vehicleLabel, parameter_name: "vehicle" },
+                { type: "text", text: premiumStr, parameter_name: "premium" },
+                { type: "text", text: expiryStr, parameter_name: "expiry_date" },
+              ],
+            },
+          ],
+          messageType: "template",
         });
 
         // Send PDF as separate document message
