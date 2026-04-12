@@ -71,20 +71,46 @@ serve(async (req) => {
       });
     }
 
-    // ─── COST-SAVING STRATEGY ───
-    // If window IS open and agent is sending a template, auto-downgrade to free text
-    // This saves money: free service conversation vs paid template message
-    // Meta policy: inside 24hr window, free-form text is FREE
+    // ─── STRICT META CATEGORY & COST-SAVING STRATEGY ───
+    // 1. SERVICE (FREE): CRM replies inside 24hr window → free text + opt-out footer
+    // 2. UTILITY: Existing client updates (renewals, bookings) → utility template
+    // 3. MARKETING: New client outreach, promos → marketing template (most expensive)
+    // Rule: Always prefer FREE service messages when window is open
     let effectiveMessageType = message_type;
     let costSaved = false;
+    let metaCategory = "service"; // default for inbox replies
 
+    // Lookup category rules from DB for this message context
+    const messageContext = body.message_context || "inbox_reply";
+    const { data: categoryRule } = await supabase
+      .from("wa_category_rules")
+      .select("meta_category, requires_template, opt_out_footer_required")
+      .eq("message_context", messageContext)
+      .eq("is_active", true)
+      .single();
+
+    if (categoryRule) {
+      metaCategory = categoryRule.meta_category;
+    }
+
+    // COST-SAVING: If window IS open, downgrade ANY template to free text
+    // Meta policy: inside 24hr window, free-form text is FREE (service conversation)
     if (windowOpen && message_type === "template" && template_name && content && content.trim()) {
-      // We have rendered content from the Fill Template dialog — send as free text instead
-      console.log(`💰 Cost-saving: downgrading template "${template_name}" to free text (window open, ${
-        Math.round((new Date(convo.window_expires_at).getTime() - Date.now()) / 60000)
-      }min left)`);
+      const minutesLeft = Math.round((new Date(convo.window_expires_at).getTime() - Date.now()) / 60000);
+      console.log(`💰 Cost-saving: downgrading ${metaCategory} template "${template_name}" to free text (window open, ${minutesLeft}min left)`);
       effectiveMessageType = "text";
       costSaved = true;
+      metaCategory = "service"; // downgraded to free service
+    }
+
+    // Add opt-out footer for free CRM messages (Meta compliance)
+    // Key clients get messages with footer so they know they can stop
+    let optOutFooter = "";
+    if (effectiveMessageType === "text" && metaCategory === "service") {
+      // Only add footer for outbound CRM messages, not direct replies
+      if (messageContext !== "inbox_reply") {
+        optOutFooter = "\n\n_Reply STOP to unsubscribe_";
+      }
     }
 
     // Build Meta API payload
@@ -242,9 +268,11 @@ serve(async (req) => {
         document: { link: media_url, filename: media_filename || "document", caption: content || undefined },
       };
     } else {
+      // Free text message — append opt-out footer if applicable
+      const textBody = (content || "") + optOutFooter;
       metaPayload = {
         type: "text",
-        text: { body: content || "" },
+        text: { body: textBody },
       };
     }
 
