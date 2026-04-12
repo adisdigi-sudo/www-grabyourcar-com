@@ -291,7 +291,7 @@ ${customer_phone ? `Customer phone: ${customer_phone}` : ""}`;
         const finalMessages = [
           ...aiMessages,
           { role: "assistant", content: null, tool_calls: toolResult.toolCalls },
-          ...toolResult.toolResults,
+          ...(toolResult.toolResults || []),
           { role: "user", content: "Now provide a helpful response incorporating the tool results above. Use markdown formatting." },
         ];
         
@@ -333,6 +333,7 @@ ${customer_phone ? `Customer phone: ${customer_phone}` : ""}`;
       intent: result.intent,
       lead_captured: result.leadCaptured,
       suggested_actions: result.suggestedActions,
+      document_share: result.documentShare || null,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
@@ -363,6 +364,12 @@ async function executeWithTools(
   toolsUsed: boolean;
   toolCalls?: any[];
   toolResults?: any[];
+  handledBy?: string;
+  documentShare?: {
+    url: string;
+    fileName?: string;
+    caption?: string;
+  } | null;
 }> {
   const firstResponse = await callAIWithTools(apiKey, messages);
 
@@ -380,6 +387,7 @@ async function executeWithTools(
   if (firstChoice.finish_reason === "tool_calls" && firstChoice.message?.tool_calls?.length) {
     const toolCalls = firstChoice.message.tool_calls;
     const toolResults: any[] = [];
+    const structuredToolResults: Array<{ name: string; result: any }> = [];
     let leadCaptured = false;
     let intent = "general";
 
@@ -453,6 +461,22 @@ async function executeWithTools(
         tool_call_id: tc.id,
         content: JSON.stringify(result),
       });
+      structuredToolResults.push({ name: fn.name, result });
+    }
+
+    const deterministicSelfService = buildSelfServiceResponse(structuredToolResults);
+    if (deterministicSelfService) {
+      return {
+        response: deterministicSelfService.response,
+        intent,
+        leadCaptured,
+        suggestedActions: getSuggestedActions(intent),
+        toolsUsed: true,
+        toolCalls,
+        toolResults,
+        handledBy: "self_service",
+        documentShare: deterministicSelfService.documentShare,
+      };
     }
 
     const secondMessages = [
@@ -471,6 +495,8 @@ async function executeWithTools(
       toolsUsed: true,
       toolCalls,
       toolResults,
+      handledBy: "ai_tools",
+      documentShare: null,
     };
   }
 
@@ -481,6 +507,8 @@ async function executeWithTools(
     leadCaptured: false,
     suggestedActions: [],
     toolsUsed: false,
+    handledBy: "ai_direct",
+    documentShare: null,
   };
 }
 
@@ -653,10 +681,10 @@ async function toolCaptureLead(supabase: any, args: any, customerName?: string, 
 function phoneVariants(phone?: string): string[] {
   if (!phone) return [];
   const clean = phone.replace(/\D/g, "");
-  const variants = [clean];
-  if (clean.startsWith("91") && clean.length > 10) variants.push(clean.slice(2));
-  if (!clean.startsWith("91") && clean.length === 10) variants.push("91" + clean);
-  return variants;
+  const variants = new Set<string>([clean]);
+  if (clean.startsWith("91") && clean.length > 10) variants.add(clean.slice(2));
+  if (!clean.startsWith("91") && clean.length === 10) variants.add("91" + clean);
+  return Array.from(variants).filter(Boolean);
 }
 
 async function toolLookupPolicy(supabase: any, customerPhone?: string, vehicleNumber?: string) {
@@ -691,15 +719,24 @@ async function toolLookupPolicy(supabase: any, customerPhone?: string, vehicleNu
   // Get policies for verified clients
   const clientIds = verifiedClients.map((c: any) => c.id);
   const { data: policies } = await supabase.from("insurance_policies")
-    .select("policy_number, policy_type, insurer, premium_amount, start_date, expiry_date, status, is_renewal")
+    .select("policy_number, policy_type, insurer, premium_amount, start_date, expiry_date, status, is_renewal, policy_document_url, document_file_name")
     .in("client_id", clientIds)
     .eq("status", "active")
     .order("created_at", { ascending: false })
     .limit(3);
 
+  const policyDocuments = (policies || [])
+    .filter((p: any) => Boolean(p.policy_document_url))
+    .map((p: any) => ({
+      policy_number: p.policy_number,
+      url: p.policy_document_url,
+      file_name: p.document_file_name || `${p.policy_number || "policy"}.pdf`,
+    }));
+
   return {
     found: true,
     customer: verifiedClients[0].customer_name,
+    phone_verified: true,
     vehicles: verifiedClients.map((c: any) => ({
       vehicle: `${c.vehicle_make || ""} ${c.vehicle_model || ""}`.trim() || "N/A",
       vehicle_number: c.vehicle_number,
@@ -721,6 +758,7 @@ async function toolLookupPolicy(supabase: any, customerPhone?: string, vehicleNu
       valid_until: p.expiry_date,
       renewal: p.is_renewal ? "Yes" : "No",
     })) || [],
+    policy_documents: policyDocuments,
   };
 }
 
@@ -991,6 +1029,150 @@ async function toolRecordManualPayment(supabase: any, customerPhone?: string, cu
     recorded: true,
     payment_id: data.id,
     message: `Payment of ₹${args.amount.toLocaleString("en-IN")} recorded successfully! Our team will verify it within 30 minutes. You'll receive a confirmation once verified. 🧾`,
+  };
+}
+
+const SELF_SERVICE_TOOL_NAMES = new Set([
+  "lookup_my_policy",
+  "lookup_my_invoices",
+  "lookup_my_loan",
+  "lookup_my_hsrp",
+  "lookup_my_payments",
+  "lookup_my_car_details",
+  "record_manual_payment",
+]);
+
+function buildSelfServiceResponse(structuredToolResults: Array<{ name: string; result: any }>): {
+  response: string;
+  documentShare: { url: string; fileName?: string; caption?: string } | null;
+} | null {
+  if (!structuredToolResults.length || !structuredToolResults.every(({ name }) => SELF_SERVICE_TOOL_NAMES.has(name))) {
+    return null;
+  }
+
+  const sections: string[] = [];
+  let documentShare: { url: string; fileName?: string; caption?: string } | null = null;
+
+  for (const { name, result } of structuredToolResults) {
+    if (name === "lookup_my_policy") {
+      const vehicles = Array.isArray(result?.vehicles) ? result.vehicles : [];
+      const primaryVehicle = vehicles[0];
+      const primaryDocument = Array.isArray(result?.policy_documents) ? result.policy_documents[0] : null;
+
+      if (result?.error) {
+        sections.push("I could not verify your registered mobile number, so no policy details can be shared.");
+        continue;
+      }
+
+      if (!result?.found || !primaryVehicle) {
+        sections.push("No insurance policy record was found for this WhatsApp number. For security, policy details are shared only with the registered number.");
+        continue;
+      }
+
+      const lines = [
+        `Policy holder: ${result.customer || "Customer"}`,
+        `Vehicle number: ${primaryVehicle.vehicle_number || "Not available"}`,
+        `Policy number: ${primaryVehicle.policy_number || "Not available"}`,
+        `Insurer: ${primaryVehicle.insurer || "Not available"}`,
+        `Policy type: ${primaryVehicle.policy_type || "Not available"}`,
+        `Valid from: ${result.active_policies?.[0]?.valid_from || primaryVehicle.start_date || "Not available"}`,
+        `Valid till: ${result.active_policies?.[0]?.valid_until || primaryVehicle.expiry || "Not available"}`,
+        `Premium: ${primaryVehicle.premium || "Not available"}`,
+      ];
+
+      if (primaryDocument?.url && !documentShare) {
+        documentShare = {
+          url: primaryDocument.url,
+          fileName: primaryDocument.file_name,
+          caption: `Your policy PDF for ${primaryVehicle.vehicle_number || result.customer || "your vehicle"}`,
+        };
+        lines.push("Your policy PDF is being shared now.");
+      } else {
+        lines.push("The policy PDF is not available in the system for this record yet.");
+      }
+
+      sections.push(lines.join("\n"));
+      continue;
+    }
+
+    if (name === "lookup_my_invoices") {
+      if (result?.error) {
+        sections.push("I could not verify your number for invoice access.");
+        continue;
+      }
+      if (!result?.found) {
+        sections.push("No invoices were found for this WhatsApp number.");
+        continue;
+      }
+      const invoices = (result.invoices || []).slice(0, 5).map((inv: any) => `${inv.invoice_number} | ${inv.service} | ${inv.amount} | ${inv.status}`);
+      sections.push([`Invoices found: ${result.total_invoices || invoices.length}`, ...invoices].join("\n"));
+      continue;
+    }
+
+    if (name === "lookup_my_loan") {
+      if (result?.error) {
+        sections.push("I could not verify your number for loan access.");
+        continue;
+      }
+      if (!result?.found) {
+        sections.push("No loan application was found for this WhatsApp number.");
+        continue;
+      }
+      const loans = (result.loans || []).slice(0, 3).map((loan: any) => `${loan.vehicle} | ${loan.status || "In process"} | EMI ${loan.emi || "N/A"} | Lender ${loan.lender || "N/A"}`);
+      sections.push(["Loan details:", ...loans].join("\n"));
+      continue;
+    }
+
+    if (name === "lookup_my_hsrp") {
+      if (result?.error) {
+        sections.push("I could not verify your number for HSRP access.");
+        continue;
+      }
+      if (!result?.found) {
+        sections.push("No HSRP booking was found for this WhatsApp number.");
+        continue;
+      }
+      const bookings = (result.bookings || []).slice(0, 3).map((booking: any) => `${booking.vehicle} | ${booking.order_status || "Pending"} | ${booking.payment_status || "Unpaid"}`);
+      sections.push(["HSRP status:", ...bookings].join("\n"));
+      continue;
+    }
+
+    if (name === "lookup_my_payments") {
+      if (result?.error) {
+        sections.push("I could not verify your number for payment access.");
+        continue;
+      }
+      if (!result?.found) {
+        sections.push("No payment records were found for this WhatsApp number.");
+        continue;
+      }
+      const payments = (result.payments || []).slice(0, 5).map((payment: any) => `${payment.type} | ${payment.amount} | ${payment.date || "N/A"} | ${payment.status}`);
+      sections.push([`Payments found: ${result.total || payments.length}`, ...payments].join("\n"));
+      continue;
+    }
+
+    if (name === "lookup_my_car_details") {
+      if (result?.error) {
+        sections.push("I could not verify your number for vehicle access.");
+        continue;
+      }
+      if (!result?.found) {
+        sections.push("No vehicle details were found for this WhatsApp number.");
+        continue;
+      }
+      const vehicles = (result.vehicles || []).slice(0, 5).map((vehicle: any) => `${vehicle.vehicle_number} | ${vehicle.make || vehicle.vehicle_name || "N/A"} ${vehicle.model || ""}`.trim());
+      sections.push([`Vehicle records found: ${result.total || vehicles.length}`, ...vehicles].join("\n"));
+      continue;
+    }
+
+    if (name === "record_manual_payment") {
+      sections.push(result?.message || "Your payment has been recorded for manual verification.");
+    }
+  }
+
+  return {
+    response: sections.filter(Boolean).join("\n\n") || "I could not verify any registered self-service record for this number.",
+    documentShare,
   };
 }
 
