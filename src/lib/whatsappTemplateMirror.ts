@@ -149,6 +149,28 @@ export async function upsertMetaManagedTemplate(input: LegacyTemplateMirrorInput
 export async function syncTemplateToMeta(input: LegacyTemplateMirrorInput) {
   const { templateId, normalizedName } = await upsertMetaManagedTemplate(input);
 
+  const normalizedBody = input.body.replace(/\{\{([^}]+)\}\}/g, (_match, inner: string) => `{{${inner.trim()}}}`);
+  const totalVariables = [
+    ...(normalizedBody.match(/\{\{\d+\}\}/g) || []),
+    ...(normalizedBody.match(/\{\{[a-zA-Z_][a-zA-Z0-9_]*\}\}/g) || []),
+  ].length;
+  const plainWords = normalizedBody
+    .replace(/\{\{[^}]+\}\}/g, " ")
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (totalVariables > 0 && plainWords.length < totalVariables * 3) {
+    return {
+      templateId,
+      normalizedName,
+      submitted: false,
+      error: `Meta blocked locally: ${totalVariables} variables ke liye around ${totalVariables * 3} real words chahiye, abhi ${plainWords.length} words hain.`,
+      status: "draft",
+    };
+  }
+
   const { data, error } = await supabase.functions.invoke("meta-templates", {
     body: { action: "submit_template", template_id: templateId },
   });
