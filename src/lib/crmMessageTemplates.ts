@@ -49,6 +49,10 @@ export async function getCrmMessage(
   msg = msg.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? "");
   msg = msg.replace(/\n{3,}/g, "\n\n").trim();
   
+  // Add sender signature
+  const signature = await getWhatsAppSignature();
+  msg += signature;
+  
   // Append opt-out footer for CRM messages (Meta compliance)
   if (tpl.opt_out_footer && tpl.meta_category === "service") {
     msg += `\n\n_${tpl.opt_out_footer}_`;
