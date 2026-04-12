@@ -382,9 +382,20 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
       {/* Composer */}
       <div className="bg-card border-t p-2 shrink-0">
         {!isWindowOpen && (
-          <div className="bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-xs px-3 py-1.5 rounded mb-2 flex items-center gap-2">
-            <AlertTriangle className="h-3 w-3 shrink-0" />
-            24hr window closed. Only template messages allowed.
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 text-xs px-3 py-2 rounded-lg mb-2 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+              <span>24hr window closed. Send a <strong>template message</strong> to re-open conversation.</span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs gap-1 border-amber-300 text-amber-700 hover:bg-amber-100 shrink-0"
+              onClick={() => setShowTemplates(true)}
+            >
+              <LayoutTemplate className="h-3.5 w-3.5" />
+              Send Template
+            </Button>
           </div>
         )}
         <div className="flex items-center gap-2">
