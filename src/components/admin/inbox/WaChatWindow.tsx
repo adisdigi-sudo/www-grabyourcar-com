@@ -9,8 +9,10 @@ import { Label } from "@/components/ui/label";
 import {
   Send, Paperclip, Clock, Check, CheckCheck, X,
   AlertTriangle, Info, Zap, LayoutTemplate, MessageSquare,
-  UserPlus, Timer
+  UserPlus, Timer, Image, FileText, Video, Loader2
 } from "lucide-react";
+import { supabase as sbClient } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format, formatDistanceToNowStrict, differenceInSeconds } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
