@@ -309,10 +309,12 @@ serve(async (req) => {
         }).eq("id", template_id);
 
         return new Response(JSON.stringify({ 
+          success: false,
           error: suggestion,
           fix_hint: "Increase message body length or reduce number of variables",
+          validation_failed: true,
         }), {
-          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
@@ -360,8 +362,8 @@ serve(async (req) => {
           meta_rejection_reason: metaErrMsg,
         }).eq("id", template_id);
 
-        return new Response(JSON.stringify({ error: metaErrMsg, details: result.error }), {
-          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        return new Response(JSON.stringify({ success: false, error: metaErrMsg, details: result.error, meta_rejected: true }), {
+          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 

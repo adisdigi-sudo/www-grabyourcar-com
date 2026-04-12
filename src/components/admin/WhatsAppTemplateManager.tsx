@@ -131,8 +131,21 @@ export default function WhatsAppTemplateManager() {
         savedId = data.id;
       }
 
+      const normalizedBody = (editingTemplate.content || "").replace(/\{\{([^}]+)\}\}/g, (_match, inner: string) => `{{${inner.trim()}}}`);
+      const totalVariables = [
+        ...(normalizedBody.match(/\{\{\d+\}\}/g) || []),
+        ...(normalizedBody.match(/\{\{[a-zA-Z_][a-zA-Z0-9_]*\}\}/g) || []),
+      ].length;
+      const plainWords = normalizedBody
+        .replace(/\{\{[^}]+\}\}/g, " ")
+        .replace(/[^\p{L}\p{N}\s]/gu, " ")
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
+      const ratioBlocked = totalVariables > 0 && plainWords.length < totalVariables * 3;
+
       // Auto-submit to Meta
-      if (savedId) {
+      if (savedId && !ratioBlocked) {
         const { data: syncData, error: syncError } = await supabase.functions.invoke("meta-templates", {
           body: { action: "submit_template", template_id: savedId },
         });
@@ -141,6 +154,12 @@ export default function WhatsAppTemplateManager() {
         } else {
           toast({ title: editingTemplate.id ? "Template updated & submitted to Meta" : "Template created & submitted to Meta" });
         }
+      } else if (savedId && ratioBlocked) {
+        toast({
+          title: "Saved as draft",
+          description: `Meta submit block kiya gaya: ${totalVariables} variables ke liye around ${totalVariables * 3} real words chahiye, abhi ${plainWords.length} words hain.`,
+          variant: "destructive",
+        });
       }
 
       setIsEditing(false);

@@ -35,6 +35,26 @@ interface Template {
 
 const CATEGORIES = ["Marketing", "Utility", "Authentication"];
 
+function hasMetaVariableRatioIssue(body: string) {
+  const normalizedBody = body.replace(/\{\{([^}]+)\}\}/g, (_match, inner: string) => `{{${inner.trim()}}}`);
+  const totalVariables = [
+    ...(normalizedBody.match(/\{\{\d+\}\}/g) || []),
+    ...(normalizedBody.match(/\{\{[a-zA-Z_][a-zA-Z0-9_]*\}\}/g) || []),
+  ].length;
+  const plainWords = normalizedBody
+    .replace(/\{\{[^}]+\}\}/g, " ")
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  return {
+    blocked: totalVariables > 0 && plainWords.length < totalVariables * 3,
+    totalVariables,
+    plainWordCount: plainWords.length,
+  };
+}
+
 /**
  * META POLICY ENFORCEMENT:
  * - APPROVED: Cannot edit. Can only send or delete+recreate.
@@ -113,7 +133,12 @@ export function WATemplateManager() {
 
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
 
-    await submitToMeta(inserted.id);
+    const ratioCheck = hasMetaVariableRatioIssue(form.content);
+    if (ratioCheck.blocked) {
+      toast({ title: "Saved as draft", description: `${ratioCheck.totalVariables} variables ke liye around ${ratioCheck.totalVariables * 3} words chahiye, abhi ${ratioCheck.plainWordCount} hain.`, variant: "destructive" });
+    } else {
+      await submitToMeta(inserted.id);
+    }
     setIsCreating(false);
     setForm({ name: "", category: "Utility", content: "", language: "en", footer: "" });
     fetchTemplates();
@@ -151,6 +176,15 @@ export function WATemplateManager() {
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
 
     // Step 3: Re-submit to Meta as new template
+    const ratioCheck = hasMetaVariableRatioIssue(form.content);
+    if (ratioCheck.blocked) {
+      toast({ title: "Saved as draft", description: `${ratioCheck.totalVariables} variables ke liye around ${ratioCheck.totalVariables * 3} words chahiye, abhi ${ratioCheck.plainWordCount} hain.`, variant: "destructive" });
+      setEditingTemplate(null);
+      setForm({ name: "", category: "Utility", content: "", language: "en", footer: "" });
+      fetchTemplates();
+      return;
+    }
+
     await submitToMeta(t.id);
     setEditingTemplate(null);
     setForm({ name: "", category: "Utility", content: "", language: "en", footer: "" });

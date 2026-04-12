@@ -6,6 +6,13 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function resolveTemplateVariables(content: string, variables: Record<string, string>) {
+  return content.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_match, rawKey: string) => {
+    const key = rawKey.trim();
+    return variables[key] ?? variables[key.toLowerCase()] ?? _match;
+  });
+}
+
 /**
  * wa-send-inbox — Sends messages from the CRM Inbox
  * Enforces 24hr window: free text inside window, templates outside
@@ -53,9 +60,9 @@ serve(async (req) => {
     }
 
     // Check 24hr window
-    const { data: convo } = await supabase
+      const { data: convo } = await supabase
       .from("wa_conversations")
-      .select("window_expires_at, last_customer_message_at")
+        .select("window_expires_at, last_customer_message_at, customer_name")
       .eq("id", conversation_id)
       .single();
 
@@ -93,9 +100,17 @@ serve(async (req) => {
       metaCategory = categoryRule.meta_category;
     }
 
-    // COST-SAVING: If window IS open, downgrade ANY template to free text
+      const resolvedContent = content && content.trim()
+        ? resolveTemplateVariables(content, {
+            customer_name: convo?.customer_name || sent_by_name || "Customer",
+            name: convo?.customer_name || sent_by_name || "Customer",
+            phone,
+          }).trim()
+        : content;
+
+      // COST-SAVING: If window IS open, downgrade ANY template to free text
     // Meta policy: inside 24hr window, free-form text is FREE (service conversation)
-    if (windowOpen && message_type === "template" && template_name && content && content.trim()) {
+      if (windowOpen && message_type === "template" && template_name && resolvedContent && resolvedContent.trim()) {
       const minutesLeft = Math.round((new Date(convo.window_expires_at).getTime() - Date.now()) / 60000);
       console.log(`💰 Cost-saving: downgrading ${metaCategory} template "${template_name}" to free text (window open, ${minutesLeft}min left)`);
       effectiveMessageType = "text";
@@ -260,16 +275,16 @@ serve(async (req) => {
     } else if (effectiveMessageType === "image" && media_url) {
       metaPayload = {
         type: "image",
-        image: { link: media_url, caption: content || undefined },
+        image: { link: media_url, caption: resolvedContent || undefined },
       };
     } else if (effectiveMessageType === "document" && media_url) {
       metaPayload = {
         type: "document",
-        document: { link: media_url, filename: media_filename || "document", caption: content || undefined },
+        document: { link: media_url, filename: media_filename || "document", caption: resolvedContent || undefined },
       };
     } else {
       // Free text message — append opt-out footer if applicable
-      const textBody = (content || "") + optOutFooter;
+      const textBody = (resolvedContent || "") + optOutFooter;
       metaPayload = {
         type: "text",
         text: { body: textBody },
@@ -299,9 +314,9 @@ serve(async (req) => {
     const success = response.ok && !!waMessageId;
 
     // Build display content for inbox
-    let displayContent = content || "";
+      let displayContent = resolvedContent || "";
     if (message_type === "template" && template_name) {
-      displayContent = content || `[Template: ${template_name}]`;
+      displayContent = resolvedContent || `[Template: ${template_name}]`;
     }
 
     // Insert into wa_inbox_messages
