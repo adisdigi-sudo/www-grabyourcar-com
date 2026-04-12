@@ -25,11 +25,6 @@ async function loadTemplates() {
 /**
  * Get a CRM message template by slug with variables replaced.
  * Variables in the template use {{variable_name}} syntax.
- * 
- * @param slug - Template slug (e.g., "insurance_follow_up")
- * @param vars - Key-value map of variable replacements
- * @param fallback - Fallback message if template not found
- * @returns The message with variables replaced
  */
 export async function getCrmMessage(
   slug: string,
@@ -44,9 +39,7 @@ export async function getCrmMessage(
   }
   
   let msg = tpl.body_text;
-  // Replace all {{variable}} with actual values, remove if no value
   msg = msg.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? "");
-  // Clean up empty lines from removed variables
   msg = msg.replace(/\n{3,}/g, "\n\n").trim();
   return msg;
 }
@@ -54,4 +47,66 @@ export async function getCrmMessage(
 /** Invalidate the template cache (e.g., after editing) */
 export function invalidateCrmTemplateCache() {
   cache = null;
+}
+
+/**
+ * Smart send: checks 24hr window and sends free text if open,
+ * falls back to approved Meta template if window closed.
+ * 
+ * @param phone - Customer phone number
+ * @param slug - CRM template slug for free-form message
+ * @param vars - Variables to replace in template
+ * @param metaTemplateName - Meta-approved template name (optional fallback)
+ * @param metaTemplateVars - Variables for Meta template (positional: var_1, var_2, etc.)
+ */
+export async function sendCrmWhatsApp(params: {
+  phone: string;
+  slug: string;
+  vars: Record<string, string>;
+  metaTemplateName?: string;
+  metaTemplateVars?: Record<string, string>;
+  logEvent?: string;
+  leadId?: string;
+}): Promise<{ success: boolean; method: "free_text" | "template" | "error"; error?: string }> {
+  const { phone, slug, vars, metaTemplateName, metaTemplateVars, logEvent, leadId } = params;
+  
+  // First try: send as free text via whatsapp-send
+  const freeMessage = await getCrmMessage(slug, vars);
+  
+  const { data, error } = await supabase.functions.invoke("whatsapp-send", {
+    body: {
+      to: phone,
+      message: freeMessage,
+      messageType: "text",
+      name: vars.customer_name || vars.name || "Customer",
+      logEvent: logEvent || slug,
+      lead_id: leadId,
+    },
+  });
+
+  if (!error && data?.success) {
+    return { success: true, method: "free_text" };
+  }
+
+  // If free text failed (possibly 24hr window expired), try template
+  if (metaTemplateName) {
+    const { data: tplData, error: tplError } = await supabase.functions.invoke("whatsapp-send", {
+      body: {
+        to: phone,
+        messageType: "template",
+        template_name: metaTemplateName,
+        template_variables: metaTemplateVars || {},
+        name: vars.customer_name || vars.name || "Customer",
+        logEvent: logEvent || slug,
+        lead_id: leadId,
+      },
+    });
+
+    if (!tplError && tplData?.success) {
+      return { success: true, method: "template" };
+    }
+    return { success: false, method: "error", error: tplData?.error || tplError?.message || "Both free text and template failed" };
+  }
+
+  return { success: false, method: "error", error: data?.error || error?.message || "Send failed" };
 }
