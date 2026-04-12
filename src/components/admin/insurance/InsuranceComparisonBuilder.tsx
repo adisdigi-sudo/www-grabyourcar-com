@@ -367,26 +367,52 @@ export function InsuranceComparisonBuilder(props: Props) {
                     </div>
 
                     {showODFields && (
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <Label className="text-[10px] text-muted-foreground">OD Discount %</Label>
-                          <Input
-                            type="number"
-                            min={0}
-                            max={100}
-                            value={entry.odDiscountPct}
-                            onChange={e => updateEntry(entry.id, { odDiscountPct: parseFloat(e.target.value) || 0 })}
-                            className="h-7 text-xs mt-0.5"
-                          />
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">IDV (₹) <span className="opacity-50">— blank = global</span></Label>
+                            <Input
+                              type="number"
+                              placeholder={idvNum ? String(idvNum) : "IDV"}
+                              value={entry.customIdv}
+                              onChange={e => updateEntry(entry.id, { customIdv: e.target.value })}
+                              className="h-7 text-xs mt-0.5"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">NCB % <span className="opacity-50">— blank = global</span></Label>
+                            <Input
+                              type="number"
+                              min={0}
+                              max={50}
+                              placeholder={String(ncbPct)}
+                              value={entry.customNcb}
+                              onChange={e => updateEntry(entry.id, { customNcb: e.target.value })}
+                              className="h-7 text-xs mt-0.5"
+                            />
+                          </div>
                         </div>
-                        <div>
-                          <Label className="text-[10px] text-muted-foreground">Secure Premium</Label>
-                          <Input
-                            type="number"
-                            value={entry.securePremium}
-                            onChange={e => updateEntry(entry.id, { securePremium: parseFloat(e.target.value) || 0 })}
-                            className="h-7 text-xs mt-0.5"
-                          />
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">OD Discount %</Label>
+                            <Input
+                              type="number"
+                              min={0}
+                              max={100}
+                              value={entry.odDiscountPct}
+                              onChange={e => updateEntry(entry.id, { odDiscountPct: parseFloat(e.target.value) || 0 })}
+                              className="h-7 text-xs mt-0.5"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">Secure Premium</Label>
+                            <Input
+                              type="number"
+                              value={entry.securePremium}
+                              onChange={e => updateEntry(entry.id, { securePremium: parseFloat(e.target.value) || 0 })}
+                              className="h-7 text-xs mt-0.5"
+                            />
+                          </div>
                         </div>
                       </div>
                     )}
