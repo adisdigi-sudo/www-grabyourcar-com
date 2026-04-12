@@ -114,6 +114,31 @@ serve(async (req) => {
       });
     }
 
+    // ─── STRICT META CATEGORY ENFORCEMENT ───
+    // Determine meta_category for this campaign
+    const campaignMetaCategory = campaign.meta_category || "marketing"; // default bulk = marketing
+    console.log(`📋 Campaign category: ${campaignMetaCategory}`);
+
+    // For marketing campaigns, template MUST be approved marketing template
+    // For utility campaigns, template MUST be approved utility template
+    if (campaign.template_id) {
+      const { data: tpl } = await supabase
+        .from("wa_templates")
+        .select("category, status")
+        .eq("id", campaign.template_id)
+        .single();
+      
+      if (tpl && tpl.status !== "approved") {
+        await supabase.from("wa_campaigns").update({ status: "failed", completed_at: new Date().toISOString() }).eq("id", campaignId);
+        return new Response(JSON.stringify({ error: `Template not approved (status: ${tpl.status}). Only approved templates can be used in campaigns.` }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (tpl && tpl.category !== campaignMetaCategory) {
+        console.warn(`⚠️ Template category (${tpl.category}) differs from campaign category (${campaignMetaCategory})`);
+      }
+    }
+
     // Create queue entries
     const queueEntries = validLeads.map((lead) => {
       const personalizedMsg = messageContent
@@ -132,6 +157,7 @@ serve(async (req) => {
         media_type: campaign.media_type || null,
         status: "queued",
         priority: 5,
+        meta_category: campaignMetaCategory,
         variables_data: { name: lead.name, phone: lead.phone, city: lead.city, email: lead.email, channel: campaignChannel },
       };
     });
