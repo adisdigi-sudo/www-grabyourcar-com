@@ -517,6 +517,9 @@ export function InsuranceWorkspace() {
               <Button size="sm" onClick={() => setShowAddLead(true)} className="gap-1.5 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border border-white/20">
                 <Plus className="h-4 w-4" /> Add Lead
               </Button>
+              <Button size="sm" onClick={() => window.open("/insurance", "_blank")} className="gap-1.5 bg-emerald-500/80 hover:bg-emerald-500 text-white border border-emerald-400/30">
+                <ExternalLink className="h-4 w-4" /> Get Quote
+              </Button>
             </div>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
