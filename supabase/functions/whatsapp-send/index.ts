@@ -39,6 +39,13 @@ interface SendResult {
   provider?: string;
 }
 
+interface ManagedTemplateMeta {
+  body?: string | null;
+  language?: string | null;
+  status?: string | null;
+  variables?: unknown;
+}
+
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function normalizePhone(phone: string): { full: string; short: string; valid: boolean } {
@@ -51,13 +58,46 @@ function normalizePhone(phone: string): { full: string; short: string; valid: bo
   return { full: `91${short}`, short, valid };
 }
 
-function buildTemplateParameters(templateVariables?: Record<string, unknown>) {
+function extractTemplateVariableOrder(templateMeta?: ManagedTemplateMeta) {
+  const explicit = Array.isArray(templateMeta?.variables)
+    ? templateMeta.variables
+        .map((value) => String(value).replace(/[{}]/g, "").trim())
+        .filter(Boolean)
+    : [];
+
+  if (explicit.length > 0) return explicit;
+
+  const body = templateMeta?.body || "";
+  const matches = Array.from(body.matchAll(/\{\{\s*([a-zA-Z_]\w*)\s*\}\}/g)).map((match) => match[1]);
+  return Array.from(new Set(matches));
+}
+
+function buildTemplateParameters(templateVariables?: Record<string, unknown>, orderedKeys: string[] = []) {
   if (!templateVariables) return [];
 
   const entries = Object.entries(templateVariables).filter(([, value]) => {
     if (value === null || value === undefined) return false;
     return String(value).trim().length > 0;
   });
+
+  if (orderedKeys.length > 0) {
+    const orderedValues = orderedKeys
+      .map((key, index) => {
+        const fallbackKeys = [key, `var_${index + 1}`, String(index + 1)];
+        const matchedKey = fallbackKeys.find((candidate) => {
+          const value = templateVariables[candidate];
+          return value !== null && value !== undefined && String(value).trim().length > 0;
+        });
+
+        if (!matchedKey) return null;
+        return templateVariables[matchedKey];
+      })
+      .filter((value): value is unknown => value !== null);
+
+    if (orderedValues.length === orderedKeys.length) {
+      return orderedValues.map((value) => ({ type: "text", text: String(value) }));
+    }
+  }
 
   const positionalEntries = entries
     .map(([key, value]) => {
@@ -277,6 +317,7 @@ async function sendMessage(
   mediaFileName?: string,
   name?: string,
   templateComponents?: unknown[],
+  templateMeta?: ManagedTemplateMeta,
 ): Promise<SendResult> {
   const phone = normalizePhone(to);
   if (!phone.valid) {
@@ -293,7 +334,8 @@ async function sendMessage(
     let payload: Record<string, unknown>;
     if (messageType === "template" && templateName) {
       const components: unknown[] = [];
-      const derivedParameters = buildTemplateParameters(templateVars);
+      const derivedParameters = buildTemplateParameters(templateVars, extractTemplateVariableOrder(templateMeta));
+      const templateLanguage = templateMeta?.language || "en";
       if (templateComponents && templateComponents.length > 0) {
         components.push(...templateComponents);
       } else if (derivedParameters.length > 0) {
@@ -307,7 +349,7 @@ async function sendMessage(
         type: "template",
         template: {
           name: templateName,
-          language: { code: "en" },
+          language: { code: templateLanguage },
           ...(components.length > 0 ? { components } : {}),
         },
       };
@@ -415,6 +457,18 @@ serve(async (req) => {
     const message = body.message || "";
     const messageType = body.messageType || body.message_type || (template_name ? "template" : "text");
 
+    let templateMeta: ManagedTemplateMeta | undefined;
+    if (messageType === "template" && template_name) {
+      const { data: templateRows } = await supabase
+        .from("wa_templates")
+        .select("body, language, status, variables")
+        .eq("name", template_name)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      templateMeta = templateRows?.[0] as ManagedTemplateMeta | undefined;
+    }
+
     // Get active WhatsApp provider from DB
     const { data: provider } = await supabase
       .from("channel_providers")
@@ -446,6 +500,7 @@ serve(async (req) => {
       mediaFileName,
       name,
       template_components,
+      templateMeta,
     );
 
     const deliveryStatus = result.success ? "queued" : "failed";

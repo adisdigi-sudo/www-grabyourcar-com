@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 
 export interface LegacyTemplateMirrorInput {
   name: string;
@@ -13,6 +14,23 @@ export interface LegacyTemplateMirrorInput {
   buttons?: unknown[] | null;
   variables?: string[] | null;
   status?: string | null;
+}
+
+function normalizeButtons(buttons?: unknown[] | null): Json {
+  if (!Array.isArray(buttons)) return [];
+
+  return buttons.map((button) => {
+    if (button && typeof button === "object" && !Array.isArray(button)) {
+      return Object.fromEntries(
+        Object.entries(button as Record<string, unknown>).map(([key, value]) => [
+          key,
+          value === undefined ? null : (value as Json),
+        ]),
+      ) as Json;
+    }
+
+    return String(button) as Json;
+  }) as Json;
 }
 
 const CATEGORY_MAP: Record<string, "marketing" | "utility" | "authentication"> = {
@@ -96,19 +114,21 @@ export async function upsertMetaManagedTemplate(input: LegacyTemplateMirrorInput
     header_type: input.headerType || null,
     header_content: input.headerContent || null,
     footer: input.footer || null,
-    buttons: input.buttons || [],
+    buttons: normalizeButtons(input.buttons),
     variables,
     vertical: input.vertical || null,
     status: normalizeStatus(input.status),
   };
 
-  const { data: existing, error: existingError } = await supabase
+  const { data: existingRows, error: existingError } = await supabase
     .from("wa_templates")
-    .select("id")
+    .select("id, created_at, meta_template_id")
     .eq("name", name)
-    .maybeSingle();
+    .order("created_at", { ascending: false });
 
   if (existingError) throw existingError;
+
+  const existing = existingRows?.[0] || null;
 
   if (existing?.id) {
     const { error } = await supabase.from("wa_templates").update(payload).eq("id", existing.id);
@@ -118,7 +138,7 @@ export async function upsertMetaManagedTemplate(input: LegacyTemplateMirrorInput
 
   const { data, error } = await supabase
     .from("wa_templates")
-    .insert(payload)
+    .insert([payload])
     .select("id")
     .single();
 
