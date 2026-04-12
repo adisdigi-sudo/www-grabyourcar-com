@@ -254,9 +254,12 @@ export function BulkQuoteSharePanel({ leads, source, onDone }: BulkQuoteSharePan
         }, { skipDownload: true });
 
         const pdfBlob = pdfResult.doc.output("blob");
+        console.log("PDF blob size:", pdfBlob.size, "bytes for", l.customer_name);
         const storagePath = `shares/${Date.now()}_${pdfResult.fileName}`;
         const { error: uploadErr } = await supabase.storage.from("quote-pdfs").upload(storagePath, pdfBlob, { contentType: "application/pdf", upsert: true });
+        if (uploadErr) console.error("PDF upload failed:", uploadErr.message, uploadErr);
         const pdfUrl = !uploadErr ? supabase.storage.from("quote-pdfs").getPublicUrl(storagePath).data?.publicUrl : null;
+        console.log("PDF URL:", pdfUrl ? "OK" : "MISSING", pdfUrl);
 
         const vehicleLabel = l.vehicle_number || `${l.vehicle_make || ""} ${l.vehicle_model || ""}`.trim() || "Your Vehicle";
         const premiumStr = `Rs. ${(l.current_premium || l.premium || 0).toLocaleString("en-IN")}`;
@@ -273,7 +276,11 @@ export function BulkQuoteSharePanel({ leads, source, onDone }: BulkQuoteSharePan
         // Step 2: Send PDF as document (FREE — within 24h window opened by template)
         if (result.success && pdfUrl) {
           await new Promise(r => setTimeout(r, 800));
-          await sendWhatsApp({ phone: l.phone || "", message: `📄 ${l.customer_name || "Customer"} - Insurance Quote`, name: l.customer_name || "", messageType: "document", mediaUrl: pdfUrl, mediaFileName: pdfResult.fileName, silent: true, logEvent: "bulk_quote_pdf" });
+          console.log("Sending PDF document to", l.phone, "URL:", pdfUrl);
+          const pdfSendResult = await sendWhatsApp({ phone: l.phone || "", message: `📄 ${l.customer_name || "Customer"} - Insurance Quote`, name: l.customer_name || "", messageType: "document", mediaUrl: pdfUrl, mediaFileName: pdfResult.fileName, silent: true, logEvent: "bulk_quote_pdf" });
+          console.log("PDF send result:", pdfSendResult);
+        } else {
+          console.warn("Skipping PDF send - template success:", result.success, "pdfUrl:", !!pdfUrl);
         }
         if (result.success) sent++;
       } catch (e) { console.error(e); }
