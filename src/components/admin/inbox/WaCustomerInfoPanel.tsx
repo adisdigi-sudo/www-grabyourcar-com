@@ -98,6 +98,47 @@ export function WaCustomerInfoPanel({ conversation, messageCount, onClose }: Pro
     toast.success("Notes saved");
   };
 
+  const VERTICALS = [
+    { value: "car-insurance", label: "🛡️ Insurance" },
+    { value: "car-sales", label: "🚗 Car Sales" },
+    { value: "car-loan", label: "💰 Car Loan" },
+    { value: "self-drive", label: "🚙 Self Drive" },
+    { value: "hsrp", label: "📋 HSRP" },
+    { value: "accessories", label: "🔧 Accessories" },
+  ];
+
+  const handleAddAsLead = async () => {
+    if (!addLeadVertical) { toast.error("Select a vertical first"); return; }
+    setAddingLead(true);
+    try {
+      const phone = conversation.phone?.replace(/\D/g, "") || "";
+      const name = conversation.customer_name || "WhatsApp Lead";
+
+      const { data, error } = await supabase.functions.invoke("submit-lead", {
+        body: {
+          name,
+          phone,
+          source: "whatsapp_inbox",
+          serviceCategory: addLeadVertical,
+          message: `Added as lead from WhatsApp chat`,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.leadId) {
+        await supabase.from("wa_conversations").update({ lead_id: data.leadId }).eq("id", conversation.id);
+        setLinkedLead({ id: data.leadId, name, status: "new", source: "whatsapp_inbox" });
+      }
+
+      toast.success(`✅ ${name} added as lead to ${VERTICALS.find(v => v.value === addLeadVertical)?.label || addLeadVertical}!`);
+      setAddLeadVertical("");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to add as lead");
+    }
+    setAddingLead(false);
+  };
+
   return (
     <div className="w-80 border-l bg-card flex flex-col shrink-0">
       <div className="h-14 flex items-center justify-between px-4 border-b">
