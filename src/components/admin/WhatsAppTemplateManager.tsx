@@ -278,19 +278,16 @@ Return ONLY the template text, nothing else.`,
       if (!Array.isArray(imported)) throw new Error("Invalid format");
 
       const toInsert = imported.map((t: any) => ({
-        name: t.name || "Imported Template",
-        category: t.category || "welcome",
-        template_type: t.template_type || "text",
-        content: t.content || "",
-        variables: t.variables || [],
-        preview: (t.content || "").substring(0, 100) + "...",
+        name: normalizeTemplateName(t.name || "imported_template"),
+        display_name: t.name || "Imported Template",
+        category: (t.category || "utility").toLowerCase(),
+        body: t.content || t.body || "",
+        variables: (t.variables || []).map((v: string) => v.replace(/[{}]/g, "")),
         language: t.language || "en",
-        is_active: true,
-        is_approved: false,
-        approval_status: "pending",
+        status: "draft",
       }));
 
-      const { error } = await supabase.from("whatsapp_templates").insert(toInsert);
+      const { error } = await supabase.from("wa_templates").insert(toInsert);
       if (error) throw error;
 
       toast({ title: "Imported!", description: `${toInsert.length} templates imported` });
