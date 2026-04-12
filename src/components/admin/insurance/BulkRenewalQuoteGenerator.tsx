@@ -392,7 +392,17 @@ export function BulkRenewalQuoteGenerator({ onClose }: { onClose: () => void }) 
         const netPremium = netOD + q.third_party + q.secure_premium + q.addon_premium;
         const gst = Math.round(netPremium * 0.18);
         const total = netPremium + gst;
+
+        // Generate PDF silently & upload
+        const pdfResult = generateInsuranceQuotePdf(toQuoteData(q), { skipDownload: true });
+        const pdfBlob = pdfResult.doc.output("blob");
+        const storagePath = `shares/${Date.now()}_${pdfResult.fileName}`;
+        const { error: uploadErr } = await supabase.storage.from("quote-pdfs").upload(storagePath, pdfBlob, { contentType: "application/pdf", upsert: true });
+        const pdfUrl = !uploadErr ? supabase.storage.from("quote-pdfs").getPublicUrl(storagePath).data?.publicUrl : null;
+
         const msg = `🙏 Namaste ${q.customer_name || "Sir/Madam"},\n\nHere is your *Motor Insurance Renewal Quote* from *Grabyourcar Insurance*:\n\n🚗 Vehicle: *${q.vehicle_make || ""} ${q.vehicle_model || ""}*\n📋 Reg: *${q.vehicle_number || "N/A"}*\n🏢 Insurer: *${q.insurance_company || "Best Available"}*\n💰 Total Premium: *Rs. ${total.toLocaleString("en-IN")}*\n\n✅ Best rates guaranteed!\n\n👉 *Reply here* or call us at +91 98559 24442\n🔗 https://www.grabyourcar.com/insurance\n\n— *Team Grabyourcar* 🚗💚`;
+
+        // Send text message
         const result = await sendWhatsApp({
           phone: q.phone,
           message: msg,
@@ -400,15 +410,29 @@ export function BulkRenewalQuoteGenerator({ onClose }: { onClose: () => void }) 
           logEvent: "bulk_renewal_quote",
           silent: true,
         });
+
+        // Send PDF as separate document message
+        if (result.success && pdfUrl) {
+          await sendWhatsApp({
+            phone: q.phone,
+            message: "📄 Insurance Renewal Quote PDF",
+            messageType: "document",
+            mediaUrl: pdfUrl,
+            mediaFileName: pdfResult.fileName,
+            silent: true,
+            logEvent: "bulk_renewal_quote_pdf",
+          });
+        }
+
         if (result.success) {
-          await updateQuote.mutateAsync({ id: q.id, whatsapp_sent: true, whatsapp_sent_at: new Date().toISOString(), status: "sent" } as any);
+          await updateQuote.mutateAsync({ id: q.id, whatsapp_sent: true, whatsapp_sent_at: new Date().toISOString(), status: "sent", pdf_generated: true, pdf_generated_at: new Date().toISOString() } as any);
           sent++;
         }
       } catch (e) { console.error(e); }
       toast.loading(`Sending bulk renewal quotes... ${i + 1}/${selected.length}`, { id: toastId });
       if (i < selected.length - 1) await new Promise(r => setTimeout(r, 500));
     }
-    toast.success(`✅ WhatsApp sent to ${sent}/${selected.length} customers`, { id: toastId });
+    toast.success(`✅ WhatsApp sent with PDFs to ${sent}/${selected.length} customers`, { id: toastId });
     setBulkAction(false);
   };
 
