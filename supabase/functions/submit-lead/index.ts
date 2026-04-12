@@ -111,6 +111,7 @@ serve(async (req) => {
     const { data: lead, error: insertError } = await supabaseAdmin
       .from('leads')
       .insert({
+        name: name,
         customer_name: name,
         phone,
         email: safeEmail,
