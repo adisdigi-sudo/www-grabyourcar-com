@@ -25,15 +25,29 @@ interface InsuranceHeroFormProps {
 
 export function InsuranceHeroForm({ policyType = "comprehensive", vehicleLabel = "vehicle", compact = false }: InsuranceHeroFormProps) {
   const [step, setStep] = useState<1 | 2>(1);
-  // Segmented vehicle number fields
-  const [state, setState] = useState(""); // e.g. DL, MH, PB
-  const [rtoCode, setRtoCode] = useState(""); // e.g. 01, 1, or empty for vintage
-  const [series, setSeries] = useState(""); // e.g. AB, CAJ, or empty
-  const [number, setNumber] = useState(""); // e.g. 1234, 4343
-
+  const [state, setState] = useState("");
+  const [rtoCode, setRtoCode] = useState("");
+  const [series, setSeries] = useState("");
+  const [number, setNumber] = useState("");
   const [phone, setPhone] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [partnerUrl, setPartnerUrl] = useState(FALLBACK_PARTNER_URL);
   const hasSubmittedRef = useRef(false);
+
+  // Fetch live partner URL from DB
+  useEffect(() => {
+    supabase
+      .from("partner_links" as any)
+      .select("partner_url")
+      .eq("vertical", "insurance")
+      .eq("partner_name", "PolicyBazaar")
+      .eq("is_active", true)
+      .limit(1)
+      .single()
+      .then(({ data }) => {
+        if (data && (data as any).partner_url) setPartnerUrl((data as any).partner_url);
+      });
+  }, []);
 
   const stateRef = useRef<HTMLInputElement>(null);
   const rtoRef = useRef<HTMLInputElement>(null);
