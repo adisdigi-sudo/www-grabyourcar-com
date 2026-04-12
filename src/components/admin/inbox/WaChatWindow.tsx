@@ -292,6 +292,60 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
     setShowAssign(false);
   };
 
+  const handleAttachClick = (type: "image" | "document" | "video") => {
+    const accepts: Record<string, string> = {
+      image: "image/jpeg,image/png,image/webp",
+      document: "application/pdf,.doc,.docx,.xls,.xlsx,.csv,.txt",
+      video: "video/mp4,video/3gpp",
+    };
+    setFileAccept(accepts[type]);
+    setShowAttachMenu(false);
+    setTimeout(() => fileInputRef.current?.click(), 50);
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !conversation) return;
+    e.target.value = "";
+
+    const maxSize = 16 * 1024 * 1024; // 16MB WhatsApp limit
+    if (file.size > maxSize) {
+      toast.error("File too large. WhatsApp allows max 16MB.");
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `inbox/${conversation.phone}/${Date.now()}_${file.name}`;
+      
+      const { error: upErr } = await sbClient.storage.from("broadcast-media").upload(path, file);
+      if (upErr) throw upErr;
+
+      const { data: urlData } = sbClient.storage.from("broadcast-media").getPublicUrl(path);
+      const publicUrl = urlData?.publicUrl;
+      if (!publicUrl) throw new Error("Failed to get public URL");
+
+      const isImage = file.type.startsWith("image/");
+      const isVideo = file.type.startsWith("video/");
+      const msgType = isImage ? "image" : isVideo ? "video" : "document";
+
+      const ok = await onSend(
+        text.trim() || "",
+        msgType,
+        { media_url: publicUrl, media_filename: file.name }
+      );
+      if (ok) {
+        setText("");
+        toast.success(`${msgType === "image" ? "📷" : msgType === "video" ? "🎥" : "📄"} ${file.name} sent!`);
+      }
+    } catch (err) {
+      toast.error("Upload failed: " + (err instanceof Error ? err.message : "Unknown error"));
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const getStatusIcon = (msg: WaMessage) => {
     if (msg.direction === "inbound") return null;
     switch (msg.status) {
