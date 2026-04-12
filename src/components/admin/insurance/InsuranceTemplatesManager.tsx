@@ -12,6 +12,7 @@ import { MessageSquare, Plus, Trash2, Copy, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { InsurancePdfBrandingManager } from "./InsurancePdfBrandingManager";
+import { deleteMetaManagedTemplate, normalizeTemplateName, syncTemplateToMeta } from "@/lib/whatsappTemplateMirror";
 
 const CATEGORIES = [
   "renewal_reminder", "welcome", "policy_issued", "payment", "claim",
@@ -81,9 +82,10 @@ export function InsuranceTemplatesManager() {
     }
     // Extract variables from sample_body
     const vars = (form.sample_body.match(/\{\{(\w+)\}\}/g) || []).map(v => v.replace(/[{}]/g, ""));
+    const normalizedName = normalizeTemplateName(form.template_name);
     
-    const { error } = await supabase.from("wa_template_catalog").insert({
-      template_name: form.template_name.toLowerCase().replace(/\s+/g, "_"),
+    const { data: inserted, error } = await supabase.from("wa_template_catalog").insert({
+      template_name: normalizedName,
       category: form.category,
       description: form.description || null,
       sample_body: form.sample_body,
@@ -91,9 +93,36 @@ export function InsuranceTemplatesManager() {
       variables: vars,
       provider: "meta",
       is_active: true,
-    });
+    }).select("id").single();
     if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
-    else { toast({ title: "Template created" }); setIsCreating(false); fetchTemplates(); }
+    else {
+      try {
+        const syncResult = await syncTemplateToMeta({
+          name: normalizedName,
+          displayName: form.template_name,
+          body: form.sample_body,
+          category: form.category,
+          language: form.language,
+          vertical: "Insurance",
+          variables: vars,
+        });
+
+        await supabase.from("wa_template_catalog").update({
+          template_id: syncResult.templateId,
+        }).eq("id", inserted.id);
+
+        if (syncResult.error) {
+          toast({ title: "Template created locally", description: `Meta submission failed: ${syncResult.error}`, variant: "destructive" });
+        } else {
+          toast({ title: "Template submitted to Meta" });
+        }
+      } catch (syncError: any) {
+        toast({ title: "Template created locally", description: `Meta sync failed: ${syncError.message}`, variant: "destructive" });
+      }
+
+      setIsCreating(false);
+      fetchTemplates();
+    }
   };
 
   const toggleTemplate = async (id: string, isActive: boolean) => {
@@ -103,6 +132,10 @@ export function InsuranceTemplatesManager() {
 
   const deleteTemplate = async (id: string) => {
     if (!confirm("Delete this template?")) return;
+    const template = templates.find((item) => item.id === id);
+    if (template?.template_id || template?.template_name) {
+      await deleteMetaManagedTemplate({ templateId: template.template_id, name: template.template_name });
+    }
     await supabase.from("wa_template_catalog").delete().eq("id", id);
     toast({ title: "Template deleted" });
     fetchTemplates();

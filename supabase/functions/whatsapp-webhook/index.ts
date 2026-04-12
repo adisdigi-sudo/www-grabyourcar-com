@@ -352,50 +352,82 @@ Deno.serve(async (req) => {
             intent_detected: intentDetected,
           }).eq("id", conversationId);
 
-          // ── Send reply via Meta API ──
+          // ── Send reply via gateway first, fallback to direct Meta API ──
           const WHATSAPP_ACCESS_TOKEN = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
           const WHATSAPP_PHONE_NUMBER_ID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
 
-          if (WHATSAPP_ACCESS_TOKEN && WHATSAPP_PHONE_NUMBER_ID && aiResponse) {
-            const sendResult = await fetch(`https://graph.facebook.com/v25.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
-              },
-              body: JSON.stringify({
-                messaging_product: "whatsapp",
-                to: from,
-                type: "text",
-                text: { body: aiResponse },
-              }),
-            });
+          if (aiResponse) {
+            let gatewaySent = false;
 
-            const sendData = await sendResult.json();
-            const providerMessageId = sendData.messages?.[0]?.id || null;
-
-            await supabase.from("wa_message_logs").insert({
-              phone: from,
-              customer_name: contactName,
-              message_type: "text",
-              message_content: aiResponse,
-              trigger_event: respondedBy,
-              status: sendResult.ok ? "sent" : "failed",
-              provider: "meta",
-              provider_message_id: providerMessageId,
-              sent_at: new Date().toISOString(),
-            });
-
-            if (inboxConvoId) {
-              await supabase.from("wa_inbox_messages").insert({
-                conversation_id: inboxConvoId,
-                direction: "outbound",
-                message_type: "text",
-                content: aiResponse,
-                wa_message_id: providerMessageId,
-                status: sendResult.ok ? "sent" : "failed",
-                sent_by_name: respondedBy.startsWith("chatbot") ? "Chatbot" : "AI Bot",
+            try {
+              const gatewayResponse = await fetch(`${SUPABASE_URL}/functions/v1/whatsapp-send`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                },
+                body: JSON.stringify({
+                  to: from,
+                  message: aiResponse,
+                  name: contactName,
+                  logEvent: respondedBy,
+                  messageType: "text",
+                }),
               });
+
+              const gatewayData = await gatewayResponse.json();
+              gatewaySent = gatewayResponse.ok && gatewayData?.success === true;
+
+              if (!gatewaySent) {
+                console.error("AI gateway send failed:", gatewayData?.error || gatewayData);
+              }
+            } catch (gatewayError) {
+              console.error("AI gateway send exception:", gatewayError);
+            }
+
+            if (!gatewaySent && WHATSAPP_ACCESS_TOKEN && WHATSAPP_PHONE_NUMBER_ID) {
+              const sendResult = await fetch(`https://graph.facebook.com/v25.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
+                },
+                body: JSON.stringify({
+                  messaging_product: "whatsapp",
+                  to: from,
+                  type: "text",
+                  text: { body: aiResponse },
+                }),
+              });
+
+              const sendData = await sendResult.json();
+              const providerMessageId = sendData.messages?.[0]?.id || null;
+
+              await supabase.from("wa_message_logs").insert({
+                phone: from,
+                customer_name: contactName,
+                message_type: "text",
+                message_content: aiResponse,
+                trigger_event: respondedBy,
+                status: sendResult.ok ? "sent" : "failed",
+                provider: "meta",
+                provider_message_id: providerMessageId,
+                sent_at: sendResult.ok ? new Date().toISOString() : null,
+                failed_at: sendResult.ok ? null : new Date().toISOString(),
+                error_message: sendResult.ok ? null : (sendData.error?.message || "AI reply send failed"),
+              });
+
+              if (inboxConvoId) {
+                await supabase.from("wa_inbox_messages").insert({
+                  conversation_id: inboxConvoId,
+                  direction: "outbound",
+                  message_type: "text",
+                  content: aiResponse,
+                  wa_message_id: providerMessageId,
+                  status: sendResult.ok ? "sent" : "failed",
+                  sent_by_name: respondedBy.startsWith("chatbot") ? "Chatbot" : "AI Bot",
+                });
+              }
             }
           }
 

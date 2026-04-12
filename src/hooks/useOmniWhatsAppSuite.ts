@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { normalizeTemplateName, syncTemplateToMeta } from "@/lib/whatsappTemplateMirror";
 
 export function useWhatsAppTemplates() {
   return useQuery({
@@ -16,15 +17,37 @@ export function useCreateWhatsAppTemplate() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (template: { name: string; category?: string; language?: string; body_text: string; header_type?: string; header_content?: string; footer_text?: string; buttons?: unknown[]; variables?: unknown[] }) => {
+      const normalizedName = normalizeTemplateName(template.name);
       const { data, error } = await supabase.from("whatsapp_templates").insert({
-        name: template.name,
+        name: normalizedName,
         category: template.category || 'marketing',
         language: template.language || 'en',
         content: template.body_text,
         template_type: 'custom',
         preview: template.body_text?.substring(0, 100),
+        approval_status: 'pending',
+        is_approved: false,
       }).select().single();
       if (error) throw error;
+
+      const syncResult = await syncTemplateToMeta({
+        name: normalizedName,
+        displayName: template.name,
+        body: template.body_text,
+        category: template.category || 'marketing',
+        language: template.language || 'en',
+        headerType: template.header_type,
+        headerContent: template.header_content,
+        footer: template.footer_text,
+        buttons: (template.buttons as unknown[]) || [],
+        variables: (template.variables as string[]) || [],
+      });
+
+      await supabase.from("whatsapp_templates").update({
+        approval_status: syncResult.status,
+        is_approved: syncResult.status === 'approved',
+      }).eq("id", data.id);
+
       return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["wa-suite-templates"] }),
