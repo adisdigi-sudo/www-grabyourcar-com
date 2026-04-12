@@ -55,7 +55,13 @@ export function InsuranceWorkspace() {
   const [showCalcDialog, setShowCalcDialog] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showAddLead, setShowAddLead] = useState(false);
+  const [showPartnerLink, setShowPartnerLink] = useState(false);
+  const [editPartnerUrl, setEditPartnerUrl] = useState("");
   const [chatDraft, setChatDraft] = useState<ChatComposerDraft | null>(null);
+
+  const { data: partnerLink, isError: partnerLinkError } = usePartnerLink("insurance", "PolicyBazaar");
+  const updatePartnerLink = useUpdatePartnerLink();
+  const checkHealth = useCheckPartnerLinkHealth();
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), "yyyy-MM"));
   const [newLead, setNewLead] = useState({
     customer_name: "", phone: "", email: "", city: "",
