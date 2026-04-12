@@ -5,9 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   X, Phone, Tag, Clock, MessageSquare, UserCheck, Plus,
-  StickyNote, History, ExternalLink, User, Shield, Timer
+  StickyNote, History, ExternalLink, User, Shield, Timer, UserPlus
 } from "lucide-react";
 import { format, formatDistanceToNowStrict, differenceInSeconds } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
