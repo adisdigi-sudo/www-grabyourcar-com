@@ -203,14 +203,14 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
       customerName ? `Customer: ${customerName}` : null,
       vehicleNumber ? `Vehicle: ${vehicleNumber}` : null,
       resolvedInsurer ? `Insurer: ${resolvedInsurer}` : null,
-      `IDV: ${fmt(idvNum)} | CC: ${ccNum} | Zone: ${zone} (${city})`,
+      !isThirdPartyOnly ? `IDV: ${fmt(idvNum)} | CC: ${ccNum} | Zone: ${zone} (${city})` : `CC: ${ccNum}`,
       `Policy: ${policyType} | Fuel: ${fuelType}`,
       `──────────────────`,
-      `Basic OD: ${fmt(calc.basicOD)} (${calc.odRate}%)`,
-      discountPct > 0 ? `OD Discount: -${fmt(calc.odDiscount)} (${discountPct}%)` : null,
-      !ncbLocked && ncb > 0 ? `NCB Discount: -${fmt(calc.ncbDiscount)} (${ncb}%)` : null,
-      `Net OD Premium: ${fmt(calc.netOD)}`,
-      `Third Party: ${fmt(calc.tp)}`,
+      !isThirdPartyOnly ? `Basic OD: ${fmt(calc.basicOD)} (${calc.odRate}%)` : null,
+      !isThirdPartyOnly && discountPct > 0 ? `OD Discount: -${fmt(calc.odDiscount)} (${discountPct}%)` : null,
+      !isThirdPartyOnly && !ncbLocked && ncb > 0 ? `NCB Discount: -${fmt(calc.ncbDiscount)} (${ncb}%)` : null,
+      !isThirdPartyOnly ? `Net OD Premium: ${fmt(calc.netOD)}` : null,
+      showTPInCalc ? `Third Party: ${fmt(calc.tp)}` : null,
       securePremiumNum > 0 ? `Secure Premium: ${fmt(securePremiumNum)}` : null,
       calc.addonTotal > 0 ? `Add-ons: ${fmt(calc.addonTotal)}` : null,
       `──────────────────`,
@@ -754,7 +754,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
             </div>
 
             {/* Auto IDV Calculator — hide for Third Party Only */}
-            {!isThirdPartyOnly && (
+            {showODFields && (
               <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-2">
                 <div className="flex items-center gap-1.5">
                   <Calculator className="h-3.5 w-3.5 text-primary" />
@@ -796,7 +796,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
               </div>
             )}
 
-            {!isThirdPartyOnly && (
+            {showODFields && (
               <div>
                 <Label className="text-xs">IDV (Insured Declared Value)</Label>
                 <div className="relative mt-1">
@@ -824,7 +824,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
               </p>
             </div>
 
-            {!isThirdPartyOnly && (
+            {showODFields && (
               <div>
                 <Label className="text-xs">Secure Premium</Label>
                 <div className="relative mt-1">
@@ -849,7 +849,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
           </div>
 
           {/* Discount & NCB Card — hide for Third Party Only */}
-          {!isThirdPartyOnly && (
+          {showODFields && (
           <div className="rounded-xl border border-border bg-card p-4 space-y-3">
             <div className="flex items-center gap-2 mb-1">
               <Percent className="h-4 w-4 text-primary" />
