@@ -96,6 +96,7 @@ export function InsuranceComparisonBuilder(props: Props) {
   const [entries, setEntries] = useState<InsurerEntry[]>([createEntry()]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [expanded, setExpanded] = useState(true);
+  const [termsAndConditions, setTermsAndConditions] = useState("");
 
   const ccNum = props.cc || 0;
   const idvNum = props.idv || 0;
