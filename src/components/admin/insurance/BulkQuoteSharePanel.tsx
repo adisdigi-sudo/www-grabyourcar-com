@@ -321,9 +321,12 @@ export function BulkQuoteSharePanel({ leads, source, onDone }: BulkQuoteSharePan
         }, { skipDownload: true });
 
         const pdfBlob = pdfResult.doc.output("blob");
+        console.log("Renewal PDF blob size:", pdfBlob.size, "bytes for", l.customer_name);
         const storagePath = `shares/${Date.now()}_${pdfResult.fileName}`;
         const { error: uploadErr } = await supabase.storage.from("quote-pdfs").upload(storagePath, pdfBlob, { contentType: "application/pdf", upsert: true });
+        if (uploadErr) console.error("Renewal PDF upload failed:", uploadErr.message, uploadErr);
         const pdfUrl = !uploadErr ? supabase.storage.from("quote-pdfs").getPublicUrl(storagePath).data?.publicUrl : null;
+        console.log("Renewal PDF URL:", pdfUrl ? "OK" : "MISSING");
 
         const vehicleLabel = l.vehicle_number || `${l.vehicle_make || ""} ${l.vehicle_model || ""}`.trim() || "Your Vehicle";
         const premiumStr = `Rs. ${(l.current_premium || l.premium || 0).toLocaleString("en-IN")}`;
