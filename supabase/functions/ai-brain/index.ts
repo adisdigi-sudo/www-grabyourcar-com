@@ -291,7 +291,7 @@ ${customer_phone ? `Customer phone: ${customer_phone}` : ""}`;
         const finalMessages = [
           ...aiMessages,
           { role: "assistant", content: null, tool_calls: toolResult.toolCalls },
-          ...toolResult.toolResults,
+          ...(toolResult.toolResults || []),
           { role: "user", content: "Now provide a helpful response incorporating the tool results above. Use markdown formatting." },
         ];
         
@@ -333,6 +333,7 @@ ${customer_phone ? `Customer phone: ${customer_phone}` : ""}`;
       intent: result.intent,
       lead_captured: result.leadCaptured,
       suggested_actions: result.suggestedActions,
+      document_share: result.documentShare || null,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

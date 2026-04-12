@@ -483,6 +483,13 @@ Deno.serve(async (req) => {
 
           // ── Trigger wa_flows if applicable ──
           try {
+            if (isStrictSelfServiceRequest) {
+              return new Response(JSON.stringify({ success: true, processed: "messages" }), {
+                status: 200,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              });
+            }
+
             const { data: activeFlows } = await supabase
               .from("wa_flows")
               .select("*")
