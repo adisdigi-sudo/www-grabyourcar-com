@@ -403,7 +403,7 @@ export function BulkRenewalQuoteGenerator({ onClose }: { onClose: () => void }) 
         // Build template variables
         const vehicleLabel = q.vehicle_number || `${q.vehicle_make || ""} ${q.vehicle_model || ""}`.trim() || "Your Vehicle";
         const premiumStr = `Rs. ${total.toLocaleString("en-IN")}`;
-        const expiryStr = q.policy_expiry || "N/A";
+        const expiryStr = "N/A";
 
         // Send approved Meta template first (works outside 24h window)
         const result = await sendWhatsApp({
