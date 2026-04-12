@@ -1156,9 +1156,9 @@ export function WaTemplateManager() {
             )}
           </div>
           <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => { setIsEditing(false); setEditItem(null); setEditButtons([]); }}>Cancel</Button>
-            <Button onClick={mainTab === "quick_replies" ? saveQuickReply : saveTemplate} className="gap-2" disabled={mainTab !== "quick_replies" && hasErrors}>
-              <Save className="h-4 w-4" /> {hasErrors ? "Fix Errors First" : "Save & Submit to Meta"}
+            <Button variant="outline" onClick={() => { setIsEditing(false); setEditItem(null); setEditButtons([]); }} disabled={isSavingTemplate}>Cancel</Button>
+            <Button onClick={mainTab === "quick_replies" ? saveQuickReply : saveTemplate} className="gap-2" disabled={(mainTab !== "quick_replies" && hasErrors) || isSavingTemplate}>
+              <Save className="h-4 w-4" /> {isSavingTemplate ? "Saving..." : hasErrors ? "Fix Errors First" : "Save & Submit to Meta"}
             </Button>
           </DialogFooter>
         </DialogContent>
