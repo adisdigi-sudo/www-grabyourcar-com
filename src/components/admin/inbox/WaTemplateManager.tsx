@@ -811,6 +811,11 @@ export function WaTemplateManager() {
             </div>
           )}
         </TabsContent>
+
+        {/* Category Rules Tab */}
+        <TabsContent value="category_rules" className="mt-3">
+          <CategoryRulesPanel />
+        </TabsContent>
       </Tabs>
 
       {/* Create/Edit Dialog */}
