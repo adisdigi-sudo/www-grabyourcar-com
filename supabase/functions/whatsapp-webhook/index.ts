@@ -216,6 +216,13 @@ Deno.serve(async (req) => {
           const lowerMessageText = messageText.toLowerCase();
           const isStrictSelfServiceRequest = [
             "policy",
+            "policy pdf",
+            "policy copy",
+            "document",
+            "insurance",
+            "quote",
+            "premium",
+            "renewal",
             "invoice",
             "bill",
             "receipt",
@@ -236,6 +243,7 @@ Deno.serve(async (req) => {
           let leadCaptured = false;
           let respondedBy = "ai_brain";
           let documentShare: { url: string; fileName?: string; caption?: string } | null = null;
+          let humanHandover: { vertical?: string; reason?: string } | null = null;
 
           const { data: chatbotRules } = isStrictSelfServiceRequest
             ? { data: [] as any[] }
@@ -356,11 +364,18 @@ Deno.serve(async (req) => {
                 intentDetected = brainData.intent || "general";
                 leadCaptured = brainData.lead_captured || false;
                 documentShare = brainData.document_share || null;
+                humanHandover = brainData.human_handover || null;
               } else {
                 console.error("AI Brain error:", brainResponse.status);
+                if (isStrictSelfServiceRequest) {
+                  aiResponse = "For security, we only share details after verifying the registered mobile number, full name, and car number.";
+                }
               }
             } catch (e) {
               console.error("AI Brain call failed, using fallback:", e);
+              if (isStrictSelfServiceRequest) {
+                aiResponse = "For security, we only share details after verifying the registered mobile number, full name, and car number.";
+              }
             }
           }
 
@@ -372,7 +387,16 @@ Deno.serve(async (req) => {
             last_message_at: new Date().toISOString(),
             customer_name: contactName,
             intent_detected: intentDetected,
+            human_takeover: humanHandover ? true : undefined,
+            status: humanHandover ? "needs_human" : undefined,
           }).eq("id", conversationId);
+
+          if (humanHandover && inboxConvoId) {
+            await supabase.from("wa_conversations").update({
+              assigned_vertical: humanHandover.vertical || "insurance",
+              status: "needs_human",
+            }).eq("id", inboxConvoId);
+          }
 
           // ── Send reply via gateway first, fallback to direct Meta API ──
           const WHATSAPP_ACCESS_TOKEN = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
