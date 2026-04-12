@@ -305,7 +305,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
     const { doc } = result;
     const fileName = `Quote_${(customerName || "Customer").replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.pdf`;
 
-    await persistInsuranceQuoteHistory({
+    const persistResult = await persistInsuranceQuoteHistory({
       doc,
       fileName,
       shareMethod,
@@ -318,7 +318,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
       queryClient.invalidateQueries({ queryKey: ["ins-bulk-quotes"] }),
     ]);
 
-    return { doc, fileName };
+    return { doc, fileName, pdfPublicUrl: persistResult.pdfPublicUrl };
   };
 
   const copyQuote = async () => {
@@ -644,7 +644,8 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
     if (!calc) return;
     setIsSaving(true);
     try {
-      const { doc, fileName } = await persistQuoteAction(method === "whatsapp" ? "whatsapp" : "save_quote");
+      const persistResult = await persistQuoteAction(method === "whatsapp" ? "whatsapp" : "save_quote");
+      const { doc, fileName } = persistResult;
 
       onQuoteSaved?.();
 
@@ -655,6 +656,9 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
           message: quoteText,
           name: customerName || undefined,
           logEvent: "premium_calculator_quote",
+          mediaUrl: persistResult.pdfPublicUrl || undefined,
+          mediaFileName: fileName,
+          messageType: persistResult.pdfPublicUrl ? "document" : "text",
         });
         if (!result.success) return;
       } else {
