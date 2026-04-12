@@ -141,13 +141,51 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
 
   const buildInitialTemplateValues = (template: TemplateOption) => {
     const defaults: Record<string, string> = {};
+    const variables = extractTemplateVariables(template);
+    const body = (template.body || "").toLowerCase();
 
-    extractTemplateVariables(template).forEach((key) => {
+    // Build a context map from conversation data
+    const customerName = conversation?.customer_name || "";
+    const phone = conversation?.phone || "";
+
+    // For named variables, map by key name
+    // For positional variables (var_1, var_2...), try to infer from template body context
+    const positionalHints: string[] = [];
+    const bodyLower = body;
+    // Extract surrounding text for each {{N}} to guess what it represents
+    const positionalMatches = [...(template.body || "").matchAll(/\{\{(\d+)\}\}/g)];
+    for (const match of positionalMatches) {
+      const idx = match.index || 0;
+      const before = (template.body || "").substring(Math.max(0, idx - 30), idx).toLowerCase();
+      if (before.includes("hi") || before.includes("hello") || before.includes("dear") || before.includes("hey") || idx < 10) {
+        positionalHints.push("name");
+      } else if (before.includes("insurance") || before.includes("policy") || before.includes("vehicle") || before.includes("car")) {
+        positionalHints.push("vehicle");
+      } else if (before.includes("expir") || before.includes("date") || before.includes("renew")) {
+        positionalHints.push("date");
+      } else if (before.includes("price") || before.includes("amount") || before.includes("premium") || before.includes("save")) {
+        positionalHints.push("amount");
+      } else {
+        positionalHints.push("");
+      }
+    }
+
+    variables.forEach((key, idx) => {
       const normalized = key.toLowerCase();
+
+      // Named variable matching
       if (["customer_name", "full_name", "name"].includes(normalized)) {
-        defaults[key] = conversation?.customer_name || "";
+        defaults[key] = customerName;
       } else if (normalized === "phone") {
-        defaults[key] = conversation?.phone || "";
+        defaults[key] = phone;
+      } else if (key.match(/^var_\d+$/)) {
+        // Positional variable — use hints from template body context
+        const hint = positionalHints[idx] || "";
+        if (hint === "name") {
+          defaults[key] = customerName;
+        } else {
+          defaults[key] = ""; // Can't auto-fill, user must enter
+        }
       } else {
         defaults[key] = "";
       }
