@@ -287,5 +287,12 @@ export async function persistInsuranceQuoteHistory(input: PersistQuoteHistoryInp
     }
   }
 
-  return { pdfStoragePath, quoteRef, clientId: resolvedClientId };
+  // Build public URL for the uploaded PDF
+  let pdfPublicUrl: string | null = null;
+  if (pdfStoragePath) {
+    const { data: urlData } = supabase.storage.from("quote-pdfs").getPublicUrl(pdfStoragePath);
+    pdfPublicUrl = urlData?.publicUrl || null;
+  }
+
+  return { pdfStoragePath, pdfPublicUrl, quoteRef, clientId: resolvedClientId };
 }

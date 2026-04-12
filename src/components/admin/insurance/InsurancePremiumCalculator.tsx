@@ -305,7 +305,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
     const { doc } = result;
     const fileName = `Quote_${(customerName || "Customer").replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.pdf`;
 
-    await persistInsuranceQuoteHistory({
+    const persistResult = await persistInsuranceQuoteHistory({
       doc,
       fileName,
       shareMethod,
@@ -318,7 +318,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
       queryClient.invalidateQueries({ queryKey: ["ins-bulk-quotes"] }),
     ]);
 
-    return { doc, fileName };
+    return { doc, fileName, pdfPublicUrl: persistResult.pdfPublicUrl };
   };
 
   const copyQuote = async () => {
@@ -644,19 +644,34 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
     if (!calc) return;
     setIsSaving(true);
     try {
-      const { doc, fileName } = await persistQuoteAction(method === "whatsapp" ? "whatsapp" : "save_quote");
+      const persistResult = await persistQuoteAction(method === "whatsapp" ? "whatsapp" : "save_quote");
+      const { doc, fileName } = persistResult;
 
       onQuoteSaved?.();
 
       if (method === "whatsapp") {
         const quoteText = getQuoteText();
-        const result = await sendWhatsApp({
+        // Send text message first
+        const textResult = await sendWhatsApp({
           phone: customerPhone || "",
           message: quoteText,
           name: customerName || undefined,
           logEvent: "premium_calculator_quote",
         });
-        if (!result.success) return;
+        if (!textResult.success) return;
+        // Then send PDF as document attachment
+        if (persistResult.pdfPublicUrl) {
+          await sendWhatsApp({
+            phone: customerPhone || "",
+            message: "📄 Quote PDF",
+            name: customerName || undefined,
+            logEvent: "premium_calculator_quote_pdf",
+            mediaUrl: persistResult.pdfPublicUrl,
+            mediaFileName: fileName,
+            messageType: "document",
+            silent: true,
+          });
+        }
       } else {
         doc.save(fileName);
         toast.success("Quote saved & PDF generated!");
