@@ -2,10 +2,9 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Package, CheckCircle2, ShoppingCart, FileText, Tags, Send } from "lucide-react";
+import { Package, CheckCircle2, ShoppingCart, FileText, Tags } from "lucide-react";
 import { AccessoriesManagement } from "../AccessoriesManagement";
 import CrossSellManagement from "../CrossSellManagement";
-import { OmniMessagingWorkspace } from "../shared/OmniMessagingWorkspace";
 
 export function AccessoriesVerticalWorkspace() {
   const [activeTab, setActiveTab] = useState("products");
@@ -13,7 +12,6 @@ export function AccessoriesVerticalWorkspace() {
   const tabs = [
     { id: "products", label: "Products & Orders", icon: ShoppingCart },
     { id: "crosssell", label: "Cross-Sell Rules", icon: Tags },
-    { id: "messaging", label: "Messaging", icon: Send },
   ];
 
   return (
@@ -52,7 +50,6 @@ export function AccessoriesVerticalWorkspace() {
       <div>
         {activeTab === "products" && <AccessoriesManagement />}
         {activeTab === "crosssell" && <CrossSellManagement />}
-        {activeTab === "messaging" && <OmniMessagingWorkspace context="Accessories" showSettings />}
       </div>
     </div>
   );

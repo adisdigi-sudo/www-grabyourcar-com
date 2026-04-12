@@ -273,7 +273,7 @@ function InsuranceVerticalWorkspace() {
     { id: "advisors", label: "Advisors", icon: Briefcase },
     { id: "automation", label: "Automation", icon: Zap },
     { id: "templates", label: "Templates", icon: MessageSquare },
-    { id: "messaging", label: "Messaging", icon: Send },
+    
     { id: "extractor", label: "AI Extractor", icon: Sparkles },
     { id: "crosssell", label: "Cross-Sell", icon: Package },
     { id: "analytics", label: "Analytics", icon: TrendingUp },
@@ -307,7 +307,7 @@ function InsuranceVerticalWorkspace() {
       case "advisors": return <InsuranceAdvisorsManager />;
       case "automation": return <InsuranceAutomationPanel />;
       case "templates": return <InsuranceTemplatesManager />;
-      case "messaging": return <OmniMessagingWorkspace context="Car Insurance" showSettings />;
+      
       case "extractor": return <InsuranceSmartExtractor />;
       case "crosssell": return <InsuranceCrossSellEngine />;
       case "analytics": return <InsuranceAnalyticsDashboard />;
