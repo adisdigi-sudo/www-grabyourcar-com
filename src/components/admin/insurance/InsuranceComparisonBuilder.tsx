@@ -155,7 +155,7 @@ export function InsuranceComparisonBuilder(props: Props) {
 
   const quotes = useMemo(() => {
     return entries.map(e => computeQuote(e)).filter(Boolean) as InsurerQuote[];
-  }, [entries, ccNum, idvNum, zone, isTP, ncbPct]);
+  }, [entries, ccNum, idvNum, zone, isTP, isStandaloneOD, ncbPct]);
 
   const addEntry = () => {
     if (entries.length >= 3) { toast.info("Maximum 3 insurers for comparison"); return; }
@@ -358,7 +358,7 @@ export function InsuranceComparisonBuilder(props: Props) {
                       )}
                     </div>
 
-                    {!isTP && (
+                    {showODFields && (
                       <div className="grid grid-cols-2 gap-2">
                         <div>
                           <Label className="text-[10px] text-muted-foreground">OD Discount %</Label>
@@ -384,7 +384,7 @@ export function InsuranceComparisonBuilder(props: Props) {
                     )}
 
                     {/* Addons — compact toggle row for non-TP */}
-                    {!isTP && (
+                    {showODFields && (
                       <div className="flex flex-wrap gap-1">
                         {entry.addons.map(addon => (
                           <button
