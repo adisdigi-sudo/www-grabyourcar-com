@@ -96,9 +96,19 @@ export async function sendWhatsApp({
   }
 
   try {
+    // Append sender signature to text messages (not templates, not media-only)
+    let finalMessage = message;
+    if (!templateName && (!messageType || messageType === "text")) {
+      // Only add signature if message doesn't already have one (from getCrmMessage)
+      if (!finalMessage.includes("Regards,\n*")) {
+        const sig = await getWhatsAppSignature();
+        finalMessage += sig;
+      }
+    }
+
     const body: Record<string, unknown> = {
       to: fullPhone,
-      message,
+      message: finalMessage,
       messageType: messageType || (templateName ? "template" : mediaUrl ? "document" : "text"),
       name,
       logEvent: logEvent || "manual_send",
