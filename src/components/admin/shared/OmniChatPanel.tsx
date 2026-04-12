@@ -85,6 +85,7 @@ function mapInboxStatus(message: {
 }
 
 export function OmniChatPanel({ phone, email, context, initialMessage, initialName }: OmniChatPanelProps) {
+  const { toast } = useToast();
   const [threads, setThreads] = useState<ChatThread[]>([]);
   const [selectedThread, setSelectedThread] = useState<ChatThread | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
