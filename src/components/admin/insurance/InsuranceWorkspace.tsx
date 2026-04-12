@@ -1112,6 +1112,55 @@ export function InsuranceWorkspace() {
         </DialogContent>
       </Dialog>
 
+      {/* Partner Link Edit Dialog */}
+      <Dialog open={showPartnerLink} onOpenChange={setShowPartnerLink}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings2 className="h-5 w-5 text-primary" /> Update Partner Quote Link
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <Label className="text-xs font-medium">PolicyBazaar Partner URL</Label>
+              <Input
+                placeholder="Paste new PBPartner link here..."
+                value={editPartnerUrl}
+                onChange={e => setEditPartnerUrl(e.target.value)}
+                className="text-xs font-mono"
+              />
+            </div>
+            {partnerLink && (
+              <div className="text-xs text-muted-foreground space-y-1">
+                <p>Status: <Badge variant={partnerLink.health_status === "checked" ? "default" : "secondary"} className="text-[10px]">{partnerLink.health_status}</Badge></p>
+                {partnerLink.last_health_check && <p>Last checked: {new Date(partnerLink.last_health_check).toLocaleString()}</p>}
+                <p className="text-orange-500 flex items-center gap-1"><AlertCircle className="h-3 w-3" /> Yeh link expire hone pe yahan update karo — website + CRM dono jagah auto-sync hoga</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" size="sm" onClick={() => setShowPartnerLink(false)}>Cancel</Button>
+            {partnerLink && (
+              <Button variant="outline" size="sm" onClick={() => checkHealth.mutate(partnerLink)} className="gap-1">
+                <ExternalLink className="h-3.5 w-3.5" /> Test Link
+              </Button>
+            )}
+            <Button
+              size="sm"
+              onClick={() => {
+                if (!partnerLink?.id || !editPartnerUrl.trim()) return;
+                updatePartnerLink.mutate({ id: partnerLink.id, partner_url: editPartnerUrl.trim() });
+                setShowPartnerLink(false);
+              }}
+              disabled={!editPartnerUrl.trim() || updatePartnerLink.isPending}
+              className="gap-1"
+            >
+              Save & Sync
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <InsuranceKpiDetailDialog
         open={!!kpiDetail}
         onOpenChange={(v) => { if (!v) setKpiDetail(null); }}
