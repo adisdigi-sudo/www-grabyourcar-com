@@ -122,8 +122,12 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
   const [agents, setAgents] = useState<Array<{ id: string; full_name: string; email: string }>>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateOption | null>(null);
   const [templateValues, setTemplateValues] = useState<Record<string, string>>({});
+  const [isUploading, setIsUploading] = useState(false);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [fileAccept, setFileAccept] = useState("");
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
