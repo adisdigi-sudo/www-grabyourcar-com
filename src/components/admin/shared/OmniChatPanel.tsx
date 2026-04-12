@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -84,6 +85,7 @@ function mapInboxStatus(message: {
 }
 
 export function OmniChatPanel({ phone, email, context, initialMessage, initialName }: OmniChatPanelProps) {
+  const { toast } = useToast();
   const [threads, setThreads] = useState<ChatThread[]>([]);
   const [selectedThread, setSelectedThread] = useState<ChatThread | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -264,6 +266,11 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
         });
 
         if (error || !data?.success) {
+          if (data?.window_expired) {
+            toast({ title: "⏰ 24hr Window Expired", description: "Message not sent. Please send an approved template message to re-open the conversation.", variant: "destructive" });
+            setSending(false);
+            return;
+          }
           throw new Error(data?.error || error?.message || "Failed to send WhatsApp reply");
         }
       } else {
