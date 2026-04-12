@@ -651,16 +651,27 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
 
       if (method === "whatsapp") {
         const quoteText = getQuoteText();
-        const result = await sendWhatsApp({
+        // Send text message first
+        const textResult = await sendWhatsApp({
           phone: customerPhone || "",
           message: quoteText,
           name: customerName || undefined,
           logEvent: "premium_calculator_quote",
-          mediaUrl: persistResult.pdfPublicUrl || undefined,
-          mediaFileName: fileName,
-          messageType: persistResult.pdfPublicUrl ? "document" : "text",
         });
-        if (!result.success) return;
+        if (!textResult.success) return;
+        // Then send PDF as document attachment
+        if (persistResult.pdfPublicUrl) {
+          await sendWhatsApp({
+            phone: customerPhone || "",
+            message: "📄 Quote PDF",
+            name: customerName || undefined,
+            logEvent: "premium_calculator_quote_pdf",
+            mediaUrl: persistResult.pdfPublicUrl,
+            mediaFileName: fileName,
+            messageType: "document",
+            silent: true,
+          });
+        }
       } else {
         doc.save(fileName);
         toast.success("Quote saved & PDF generated!");

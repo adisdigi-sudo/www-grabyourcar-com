@@ -264,16 +264,27 @@ export function InsuranceComparisonBuilder(props: Props) {
       } else {
         const savings = Math.max(...quotes.map(q => q.total)) - bestQuote.total;
         const msg = `Hi ${props.customerName || ""}! 🚗\n\nHere's your *Insurance Comparison* from Grabyourcar:\n\n${quotes.map((q, i) => `${i + 1}. ${q.insurerName}: *${fmt(q.total)}*`).join("\n")}\n\n✅ Best Price: *${bestQuote.insurerName}* at *${fmt(bestQuote.total)}*${savings > 0 ? `\n💰 You save ${fmt(savings)}!` : ""}\n\nPDF comparison attached.\n\n— Grabyourcar Insurance Desk\n📞 +91 98559 24442`;
+        // Send text message first
         const result = await sendWhatsApp({
           phone: props.customerPhone || "",
           message: msg,
           name: props.customerName || undefined,
           logEvent: "comparison_builder_share",
-          mediaUrl: persistResult.pdfPublicUrl || undefined,
-          mediaFileName: fileName,
-          messageType: persistResult.pdfPublicUrl ? "document" : "text",
         });
         if (!result.success) return;
+        // Then send PDF as document attachment
+        if (persistResult.pdfPublicUrl) {
+          await sendWhatsApp({
+            phone: props.customerPhone || "",
+            message: "📄 Insurance Comparison PDF",
+            name: props.customerName || undefined,
+            logEvent: "comparison_builder_pdf",
+            mediaUrl: persistResult.pdfPublicUrl,
+            mediaFileName: fileName,
+            messageType: "document",
+            silent: true,
+          });
+        }
       }
 
       queryClient.invalidateQueries({ queryKey: ["client-quote-history"] });
