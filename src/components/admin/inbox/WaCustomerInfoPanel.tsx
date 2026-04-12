@@ -5,9 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   X, Phone, Tag, Clock, MessageSquare, UserCheck, Plus,
-  StickyNote, History, ExternalLink, User, Shield, Timer
+  StickyNote, History, ExternalLink, User, Shield, Timer, UserPlus
 } from "lucide-react";
 import { format, formatDistanceToNowStrict, differenceInSeconds } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -60,6 +61,8 @@ export function WaCustomerInfoPanel({ conversation, messageCount, onClose }: Pro
   const [tags, setTags] = useState<string[]>(conversation.tags || []);
   const [linkedLead, setLinkedLead] = useState<any>(null);
   const [linkedClient, setLinkedClient] = useState<any>(null);
+  const [addLeadVertical, setAddLeadVertical] = useState("");
+  const [addingLead, setAddingLead] = useState(false);
   const isWindowOpen = conversation.window_expires_at && new Date(conversation.window_expires_at) > new Date();
 
   useEffect(() => {
@@ -93,6 +96,47 @@ export function WaCustomerInfoPanel({ conversation, messageCount, onClose }: Pro
   const saveNotes = async () => {
     // Store notes in status field or a dedicated column
     toast.success("Notes saved");
+  };
+
+  const VERTICALS = [
+    { value: "car-insurance", label: "🛡️ Insurance" },
+    { value: "car-sales", label: "🚗 Car Sales" },
+    { value: "car-loan", label: "💰 Car Loan" },
+    { value: "self-drive", label: "🚙 Self Drive" },
+    { value: "hsrp", label: "📋 HSRP" },
+    { value: "accessories", label: "🔧 Accessories" },
+  ];
+
+  const handleAddAsLead = async () => {
+    if (!addLeadVertical) { toast.error("Select a vertical first"); return; }
+    setAddingLead(true);
+    try {
+      const phone = conversation.phone?.replace(/\D/g, "") || "";
+      const name = conversation.customer_name || "WhatsApp Lead";
+
+      const { data, error } = await supabase.functions.invoke("submit-lead", {
+        body: {
+          name,
+          phone,
+          source: "whatsapp_inbox",
+          serviceCategory: addLeadVertical,
+          message: `Added as lead from WhatsApp chat`,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.leadId) {
+        await supabase.from("wa_conversations").update({ lead_id: data.leadId }).eq("id", conversation.id);
+        setLinkedLead({ id: data.leadId, name, status: "new", source: "whatsapp_inbox" });
+      }
+
+      toast.success(`✅ ${name} added as lead to ${VERTICALS.find(v => v.value === addLeadVertical)?.label || addLeadVertical}!`);
+      setAddLeadVertical("");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to add as lead");
+    }
+    setAddingLead(false);
   };
 
   return (
@@ -242,7 +286,35 @@ export function WaCustomerInfoPanel({ conversation, messageCount, onClose }: Pro
 
           <Separator />
 
-          {/* Details */}
+          {/* Add as Lead */}
+          <div>
+            <p className="text-xs font-medium mb-2 flex items-center gap-1">
+              <UserPlus className="h-3 w-3" /> Add as Lead
+            </p>
+            <div className="space-y-2">
+              <Select value={addLeadVertical} onValueChange={setAddLeadVertical}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="Select vertical..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {VERTICALS.map(v => (
+                    <SelectItem key={v.value} value={v.value} className="text-xs">{v.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                size="sm"
+                className="w-full h-8 text-xs gap-1.5"
+                disabled={!addLeadVertical || addingLead}
+                onClick={handleAddAsLead}
+              >
+                <UserPlus className="h-3 w-3" />
+                {addingLead ? "Adding..." : "Add to CRM Pipeline"}
+              </Button>
+            </div>
+          </div>
+
+          <Separator />
           <div className="space-y-1.5">
             <p className="text-xs font-medium mb-1">Details</p>
             <div className="flex items-center gap-2 text-xs">

@@ -222,53 +222,108 @@ export function BulkQuoteSharePanel({ leads, source, onDone }: BulkQuoteSharePan
     onDone?.();
   }, [selectedLeads, onDone]);
 
-  // Bulk WhatsApp via wa.me
+  // Bulk WhatsApp with PDF
   const bulkWhatsApp = useCallback(async () => {
     const target = selectedLeads.filter(l => l.phone && !l.phone.startsWith("IB_"));
     if (target.length === 0) { toast.error("No leads with valid phone numbers"); return; }
     setSending(true); setProgress(0);
-    const { sendWhatsAppBulk } = await import("@/lib/sendWhatsApp");
-    const recipients = target.map(l => {
-      const daysLeft = l.policy_expiry_date ? differenceInDays(new Date(l.policy_expiry_date), new Date()) :
-                       l.renewal_date ? differenceInDays(new Date(l.renewal_date), new Date()) : 0;
-      return { phone: l.phone || "", name: l.customer_name || "", message: `Hi ${l.customer_name || ""}! Your insurance renewal is ${daysLeft <= 0 ? "overdue" : `due in ${daysLeft} days`} for ${l.vehicle_make || ""} ${l.vehicle_model || ""} (${l.vehicle_number || ""}).\n\nCurrent Insurer: ${l.current_insurer || "N/A"}\nNCB: ${l.ncb_percentage ?? 0}%\n\nWe have the best renewal offers!\n📞 +91 98559 24442\n🌐 www.grabyourcar.com\n— Grabyourcar Insurance` };
-    });
-    await sendWhatsAppBulk(recipients, { onProgress: (sent, total) => setProgress(Math.round((sent / total) * 100)) });
-    setSending(false);
-  }, [selectedLeads]);
+    const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+    let sent = 0;
+    for (let i = 0; i < target.length; i++) {
+      const l = target[i];
+      try {
+        const daysLeft = l.policy_expiry_date ? differenceInDays(new Date(l.policy_expiry_date), new Date()) :
+                         l.renewal_date ? differenceInDays(new Date(l.renewal_date), new Date()) : 0;
+        const msg = `Hi ${l.customer_name || ""}! Your insurance renewal is ${daysLeft <= 0 ? "overdue" : `due in ${daysLeft} days`} for ${l.vehicle_make || ""} ${l.vehicle_model || ""} (${l.vehicle_number || ""}).\n\nCurrent Insurer: ${l.current_insurer || "N/A"}\nNCB: ${l.ncb_percentage ?? 0}%\n\nWe have the best renewal offers!\n📞 +91 98559 24442\n🌐 www.grabyourcar.com\n— Grabyourcar Insurance`;
 
-  // Bulk WhatsApp API
+        // Generate PDF silently & upload
+        const pdfResult = generateInsuranceQuotePdf({
+          customerName: l.customer_name || "Customer",
+          phone: l.phone || "",
+          vehicleMake: l.vehicle_make || "N/A",
+          vehicleModel: l.vehicle_model || "N/A",
+          vehicleNumber: l.vehicle_number || "N/A",
+          vehicleYear: l.vehicle_year || new Date().getFullYear(),
+          fuelType: "Petrol",
+          insuranceCompany: l.current_insurer || "Best Available",
+          policyType: l.current_policy_type || "Comprehensive",
+          idv: 500000, basicOD: 8000, odDiscount: 1500,
+          ncbDiscount: Math.round((l.ncb_percentage || 0) * 80),
+          thirdParty: 6521, securePremium: 500, addonPremium: 3500,
+          addons: ["Zero Depreciation", "Engine Protection", "RSA"],
+        }, { skipDownload: true });
+
+        const pdfBlob = pdfResult.doc.output("blob");
+        const storagePath = `shares/${Date.now()}_${pdfResult.fileName}`;
+        const { error: uploadErr } = await supabase.storage.from("quote-pdfs").upload(storagePath, pdfBlob, { contentType: "application/pdf", upsert: true });
+        const pdfUrl = !uploadErr ? supabase.storage.from("quote-pdfs").getPublicUrl(storagePath).data?.publicUrl : null;
+
+        // Send text
+        const result = await sendWhatsApp({ phone: l.phone || "", message: msg, name: l.customer_name || "", logEvent: "bulk_quote", silent: true });
+
+        // Send PDF
+        if (result.success && pdfUrl) {
+          await sendWhatsApp({ phone: l.phone || "", message: "📄 Insurance Quote PDF", messageType: "document", mediaUrl: pdfUrl, mediaFileName: pdfResult.fileName, silent: true, logEvent: "bulk_quote_pdf" });
+        }
+        if (result.success) sent++;
+      } catch (e) { console.error(e); }
+      setProgress(Math.round(((i + 1) / target.length) * 100));
+      if (i < target.length - 1) await new Promise(r => setTimeout(r, 500));
+    }
+    setSending(false);
+    toast.success(`📨 Sent ${sent}/${target.length} quotes with PDFs via WhatsApp`);
+    onDone?.();
+  }, [selectedLeads, onDone]);
+
+  // Bulk WhatsApp API with PDF
   const bulkWhatsAppAPI = useCallback(async () => {
     const target = selectedLeads.filter(l => l.phone && !l.phone.startsWith("IB_"));
     if (target.length === 0) { toast.error("No leads with valid phone numbers"); return; }
     setSending(true); setProgress(0);
+    const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
     let sent = 0;
-    for (const l of target) {
-      const clean = (l.phone || "").replace(/\D/g, "");
-      const full = clean.startsWith("91") ? clean : `91${clean}`;
+    for (let i = 0; i < target.length; i++) {
+      const l = target[i];
       try {
-        await supabase.functions.invoke("wa-automation-trigger", {
-          body: {
-            event: "insurance_renewal_bulk",
-            phone: full,
-            name: l.customer_name || "Customer",
-            leadId: l.id,
-            data: {
-              vehicle: `${l.vehicle_make || ""} ${l.vehicle_model || ""}`.trim(),
-              vehicle_number: l.vehicle_number || "N/A",
-              insurer: l.current_insurer || "N/A",
-              ncb: `${l.ncb_percentage ?? 0}%`,
-              expiry: l.policy_expiry_date || l.renewal_date || "N/A",
-            },
-          },
-        });
-        sent++;
+        const daysLeft = l.policy_expiry_date ? differenceInDays(new Date(l.policy_expiry_date), new Date()) :
+                         l.renewal_date ? differenceInDays(new Date(l.renewal_date), new Date()) : 0;
+
+        // Generate PDF silently & upload
+        const pdfResult = generateRenewalReminderPdf({
+          customerName: l.customer_name || "Customer",
+          phone: l.phone || "",
+          vehicleMake: l.vehicle_make || "N/A",
+          vehicleModel: l.vehicle_model || "N/A",
+          vehicleNumber: l.vehicle_number || "N/A",
+          vehicleYear: l.vehicle_year || new Date().getFullYear(),
+          currentInsurer: l.current_insurer || "N/A",
+          policyType: l.current_policy_type || "Comprehensive",
+          policyExpiry: l.policy_expiry_date || l.renewal_date || new Date().toISOString(),
+          currentPremium: l.current_premium || l.premium || 0,
+          ncbPercentage: l.ncb_percentage || 0,
+        }, { skipDownload: true });
+
+        const pdfBlob = pdfResult.doc.output("blob");
+        const storagePath = `shares/${Date.now()}_${pdfResult.fileName}`;
+        const { error: uploadErr } = await supabase.storage.from("quote-pdfs").upload(storagePath, pdfBlob, { contentType: "application/pdf", upsert: true });
+        const pdfUrl = !uploadErr ? supabase.storage.from("quote-pdfs").getPublicUrl(storagePath).data?.publicUrl : null;
+
+        const msg = `🔔 *Insurance Renewal Reminder*\n\nDear ${l.customer_name || "Customer"},\n\nYour ${l.current_policy_type || "motor insurance"} for *${l.vehicle_make || ""} ${l.vehicle_model || ""}* (${l.vehicle_number || "N/A"}) is ${daysLeft <= 0 ? "*overdue*" : `due in *${daysLeft} days*`}.\n\n🏢 Current Insurer: ${l.current_insurer || "N/A"}\n🎯 NCB: ${l.ncb_percentage ?? 0}%\n\n✅ We have the best renewal rates!\n📞 +91 98559 24442\n\n— *Team Grabyourcar* 🚗`;
+
+        // Send text
+        const result = await sendWhatsApp({ phone: l.phone || "", message: msg, name: l.customer_name || "", logEvent: "bulk_renewal_api", silent: true });
+
+        // Send PDF
+        if (result.success && pdfUrl) {
+          await sendWhatsApp({ phone: l.phone || "", message: "📄 Insurance Renewal Reminder PDF", messageType: "document", mediaUrl: pdfUrl, mediaFileName: pdfResult.fileName, silent: true, logEvent: "bulk_renewal_api_pdf" });
+        }
+        if (result.success) sent++;
       } catch { /* continue */ }
-      setProgress(Math.round(((sent) / target.length) * 100));
-      await new Promise(r => setTimeout(r, 200));
+      setProgress(Math.round(((i + 1) / target.length) * 100));
+      if (i < target.length - 1) await new Promise(r => setTimeout(r, 500));
     }
     setSending(false);
-    toast.success(`🚀 Sent via WhatsApp API to ${sent} clients!`);
+    toast.success(`🚀 Sent ${sent}/${target.length} renewal reminders with PDFs via WA API!`);
     onDone?.();
   }, [selectedLeads, onDone]);
 
