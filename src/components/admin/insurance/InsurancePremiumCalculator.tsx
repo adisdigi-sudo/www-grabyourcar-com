@@ -21,6 +21,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import { sendWhatsApp } from "@/lib/sendWhatsApp";
+import { addWatermark, PDF_ENCRYPTION } from "@/lib/insurancePdfSecurity";
 
 // ── Zone logic ──
 const METRO_CITIES = ["delhi", "delhi ncr", "ncr", "new delhi", "noida", "gurgaon", "gurugram", "faridabad", "ghaziabad", "bangalore", "bengaluru"];
@@ -338,7 +339,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
 
   const generatePDF = () => {
     if (!calc) return null;
-    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", encryption: PDF_ENCRYPTION } as any);
     const pw = doc.internal.pageSize.getWidth();
     const ph = doc.internal.pageSize.getHeight();
     const m = 14;
@@ -616,6 +617,9 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
 
     // ── Footer ──
     drawFooter();
+
+    // ── Watermark ──
+    addWatermark(doc);
 
     return { doc, quoteRef };
   };
