@@ -43,8 +43,14 @@ export function WATemplateManager() {
   useEffect(() => { fetchTemplates(); }, []);
 
   const fetchTemplates = async () => {
-    const { data } = await supabase.from("whatsapp_templates").select("*").order("created_at", { ascending: false });
-    if (data) setTemplates(data as any);
+    // Use wa_templates (Meta source of truth)
+    const { data } = await supabase.from("wa_templates").select("*").order("created_at", { ascending: false });
+    if (data) setTemplates(data.map((t: any) => ({
+      id: t.id, name: t.name, category: t.category, template_type: "text",
+      content: t.body, variables: t.variables, preview: null,
+      is_approved: t.status === "approved", is_active: t.status !== "disabled",
+      approval_status: t.status, language: t.language, use_cases: null, created_at: t.created_at,
+    })));
   };
 
   const handleCreate = async () => {

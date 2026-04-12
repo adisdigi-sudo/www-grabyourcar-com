@@ -72,7 +72,7 @@ export function WAAutomationRules() {
       description: form.description || null,
       trigger_event: form.trigger_event,
       template_id: form.template_id || null,
-      message_content: template?.content || form.message_content,
+      message_content: (template as any)?.body || form.message_content,
       delay_minutes: parseInt(form.delay_minutes) || 0,
       max_sends_per_lead: parseInt(form.max_sends_per_lead) || 1,
       cooldown_hours: parseInt(form.cooldown_hours) || 24,
