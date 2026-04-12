@@ -66,6 +66,52 @@ const TRIGGER_TYPES = [
   { value: "new_chat", label: "New Conversation", desc: "When a new customer messages first time" },
 ];
 
+const getDefaultTriggerConfig = (triggerType: string): Record<string, any> => {
+  switch (triggerType) {
+    case "keyword":
+      return { type: "keyword", keywords: [] };
+    case "event":
+      return { type: "event", event_name: "" };
+    case "schedule":
+      return { type: "schedule", schedule: "" };
+    case "new_chat":
+      return { type: "new_chat" };
+    case "manual":
+      return { type: "manual" };
+    default:
+      return { type: triggerType };
+  }
+};
+
+const buildTriggerConfig = (flow: Flow): Record<string, any> => {
+  const triggerNode = (flow.nodes || []).find((node) => node.type === "trigger");
+  const nodeConfig = triggerNode?.config || {};
+
+  switch (flow.trigger_type) {
+    case "keyword":
+      return {
+        type: "keyword",
+        keywords: Array.isArray(nodeConfig.keywords) ? nodeConfig.keywords.filter(Boolean) : [],
+      };
+    case "event":
+      return {
+        type: "event",
+        event_name: nodeConfig.event_name || "",
+      };
+    case "schedule":
+      return {
+        type: "schedule",
+        schedule: nodeConfig.schedule || "",
+      };
+    case "new_chat":
+      return { type: "new_chat" };
+    case "manual":
+      return { type: "manual" };
+    default:
+      return { type: flow.trigger_type };
+  }
+};
+
 export function WaFlowBuilder() {
   const [flows, setFlows] = useState<Flow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -88,11 +134,12 @@ export function WaFlowBuilder() {
 
   const createFlow = async () => {
     if (!newFlow.name) { toast.error("Name required"); return; }
+    const triggerConfig = getDefaultTriggerConfig(newFlow.trigger_type);
     const triggerNode: FlowNode = {
       id: "trigger-1",
       type: "trigger",
       label: TRIGGER_TYPES.find(t => t.value === newFlow.trigger_type)?.label || "Trigger",
-      config: { trigger_type: newFlow.trigger_type, keywords: [] },
+      config: triggerConfig,
       position: { x: 300, y: 80 },
     };
 
@@ -100,7 +147,7 @@ export function WaFlowBuilder() {
       name: newFlow.name,
       description: newFlow.description || null,
       trigger_type: newFlow.trigger_type,
-      trigger_config: { type: newFlow.trigger_type } as any,
+      trigger_config: triggerConfig as any,
       nodes: [triggerNode] as any,
       edges: [] as any,
       vertical: newFlow.vertical || null,
@@ -173,10 +220,11 @@ export function WaFlowBuilder() {
 
   const saveFlow = async () => {
     if (!selectedFlow) return;
+    const triggerConfig = buildTriggerConfig(selectedFlow);
     const { error } = await supabase.from("wa_flows").update({
       nodes: selectedFlow.nodes as any,
       edges: selectedFlow.edges as any,
-      trigger_config: selectedFlow.trigger_config as any,
+      trigger_config: triggerConfig as any,
     }).eq("id", selectedFlow.id);
     if (error) toast.error(error.message);
     else toast.success("Flow saved");
@@ -350,15 +398,13 @@ export function WaFlowBuilder() {
                         </div>
                       </div>
                       <div className="flex gap-1">
+                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setEditingNode(node)}>
+                          <Edit className="h-3 w-3" />
+                        </Button>
                         {node.type !== "trigger" && (
-                          <>
-                            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setEditingNode(node)}>
-                              <Edit className="h-3 w-3" />
-                            </Button>
-                            <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => removeNode(node.id)}>
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </>
+                          <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => removeNode(node.id)}>
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
                         )}
                       </div>
                     </div>
@@ -366,7 +412,18 @@ export function WaFlowBuilder() {
                     {/* Node Config Preview */}
                     <div className="mt-2 text-xs text-muted-foreground">
                       {node.type === "trigger" && (
-                        <Badge variant="outline" className="text-[10px]">{selectedFlow.trigger_type}</Badge>
+                        <div className="space-y-1">
+                          <Badge variant="outline" className="text-[10px]">{selectedFlow.trigger_type}</Badge>
+                          {selectedFlow.trigger_type === "keyword" && (
+                            <p className="line-clamp-2">{(node.config.keywords || []).length ? `Keywords: ${(node.config.keywords || []).join(", ")}` : "No trigger keywords set"}</p>
+                          )}
+                          {selectedFlow.trigger_type === "event" && node.config.event_name && (
+                            <p>Event: {node.config.event_name}</p>
+                          )}
+                          {selectedFlow.trigger_type === "schedule" && node.config.schedule && (
+                            <p>Schedule: {node.config.schedule}</p>
+                          )}
+                        </div>
                       )}
                       {node.type === "message" && (
                         <p className="line-clamp-2">{node.config.content || "No message set"}</p>
@@ -421,6 +478,69 @@ export function WaFlowBuilder() {
           </DialogHeader>
           {editingNode && (
             <div className="space-y-3">
+              {editingNode.type === "trigger" && (
+                <>
+                  {selectedFlow.trigger_type === "keyword" && (
+                    <div>
+                      <Label className="text-xs">Trigger Keywords</Label>
+                      <Textarea
+                        value={Array.isArray(editingNode.config.keywords) ? editingNode.config.keywords.join(", ") : ""}
+                        onChange={e => {
+                          const keywords = e.target.value
+                            .split(/[,\n]/)
+                            .map((value) => value.trim())
+                            .filter(Boolean);
+                          updateNodeConfig(editingNode.id, { keywords });
+                          setEditingNode({ ...editingNode, config: { ...editingNode.config, keywords } });
+                        }}
+                        placeholder="hi, hello, insurance, quote"
+                        rows={4}
+                        className="text-sm"
+                      />
+                      <p className="mt-1 text-[10px] text-muted-foreground">Comma ya new line me keywords daalo.</p>
+                    </div>
+                  )}
+
+                  {selectedFlow.trigger_type === "event" && (
+                    <div>
+                      <Label className="text-xs">Event Name</Label>
+                      <Input
+                        value={editingNode.config.event_name || ""}
+                        onChange={e => {
+                          updateNodeConfig(editingNode.id, { event_name: e.target.value });
+                          setEditingNode({ ...editingNode, config: { ...editingNode.config, event_name: e.target.value } });
+                        }}
+                        placeholder="lead_created"
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                  )}
+
+                  {selectedFlow.trigger_type === "schedule" && (
+                    <div>
+                      <Label className="text-xs">Schedule</Label>
+                      <Input
+                        value={editingNode.config.schedule || ""}
+                        onChange={e => {
+                          updateNodeConfig(editingNode.id, { schedule: e.target.value });
+                          setEditingNode({ ...editingNode, config: { ...editingNode.config, schedule: e.target.value } });
+                        }}
+                        placeholder="Every day at 10:00 AM"
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                  )}
+
+                  {selectedFlow.trigger_type === "new_chat" && (
+                    <p className="text-sm text-muted-foreground">Yeh flow customer ke first inbound WhatsApp message par trigger hoga.</p>
+                  )}
+
+                  {selectedFlow.trigger_type === "manual" && (
+                    <p className="text-sm text-muted-foreground">Yeh flow sirf manual run hone ke liye configured hai.</p>
+                  )}
+                </>
+              )}
+
               {editingNode.type === "message" && (
                 <>
                   <div>
