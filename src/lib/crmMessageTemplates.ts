@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { getWhatsAppSignature } from "@/lib/senderSignature";
 
 // In-memory cache with 5 min TTL
 let cache: { data: Record<string, { body_text: string; variables: string[]; opt_out_footer: string | null; meta_category: string }> ; ts: number } | null = null;
@@ -47,6 +48,10 @@ export async function getCrmMessage(
   let msg = tpl.body_text;
   msg = msg.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? "");
   msg = msg.replace(/\n{3,}/g, "\n\n").trim();
+  
+  // Add sender signature
+  const signature = await getWhatsAppSignature();
+  msg += signature;
   
   // Append opt-out footer for CRM messages (Meta compliance)
   if (tpl.opt_out_footer && tpl.meta_category === "service") {
