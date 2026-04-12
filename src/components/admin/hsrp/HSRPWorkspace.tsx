@@ -493,7 +493,15 @@ function HSRPDetailModal({ open, onOpenChange, booking, onUpdate }: any) {
   };
 
   const handleShareWhatsApp = async () => {
-    const msg = `*HSRP Booking - GrabYourCar*\n\nOwner: ${booking.owner_name}\nVehicle: ${booking.registration_number}\nService: ${booking.service_type}\nAmount: Rs.${(booking.payment_amount || 0).toLocaleString("en-IN")}\nStatus: ${booking.payment_status}\n${booking.scheduled_date ? `Scheduled: ${booking.scheduled_date}` : ""}\n\nwww.grabyourcar.com`;
+    const { getCrmMessage } = await import("@/lib/crmMessageTemplates");
+    const msg = await getCrmMessage("hsrp_share", {
+      owner_name: booking.owner_name || "",
+      registration_number: booking.registration_number || "",
+      service_type: booking.service_type || "HSRP",
+      payment_amount: (booking.payment_amount || 0).toLocaleString("en-IN"),
+      payment_status: booking.payment_status || "",
+      scheduled_line: booking.scheduled_date ? `Scheduled: ${booking.scheduled_date}` : "",
+    });
     const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
     await sendWhatsApp({ phone: booking.mobile || "", message: msg, name: booking.owner_name, logEvent: "hsrp_share" });
   };
