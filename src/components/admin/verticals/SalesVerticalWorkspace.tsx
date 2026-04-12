@@ -4,12 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Car, CheckCircle2, Target, Handshake, BarChart3, Send, TrendingUp } from "lucide-react";
+import { Car, CheckCircle2, Target, Handshake, BarChart3, TrendingUp } from "lucide-react";
 import { SalesWorkspace } from "../sales/SalesWorkspace";
 import { SalesDealTracker } from "../sales/SalesDealTracker";
 import { SalesRealTimeDashboard } from "../sales/SalesRealTimeDashboard";
 import { SalesPerformanceDashboard } from "../sales/SalesPerformanceDashboard";
-import { OmniMessagingWorkspace } from "../shared/OmniMessagingWorkspace";
+
 import { DateFilterBar, type DateFilterValue } from "../shared/DateFilterBar";
 import { startOfDay, subDays, startOfMonth, isWithinInterval } from "date-fns";
 import type { DateRange } from "react-day-picker";
@@ -95,7 +95,7 @@ export function SalesVerticalWorkspace() {
       </Card>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="w-full grid grid-cols-5">
+        <TabsList className="w-full grid grid-cols-4">
           <TabsTrigger value="pipeline" className="gap-1.5">
             <Target className="h-3.5 w-3.5" /> Pipeline
           </TabsTrigger>
@@ -107,9 +107,6 @@ export function SalesVerticalWorkspace() {
           </TabsTrigger>
           <TabsTrigger value="performance" className="gap-1.5">
             <TrendingUp className="h-3.5 w-3.5" /> Performance
-          </TabsTrigger>
-          <TabsTrigger value="messaging" className="gap-1.5">
-            <Send className="h-3.5 w-3.5" /> Messaging
           </TabsTrigger>
         </TabsList>
 
@@ -135,9 +132,6 @@ export function SalesVerticalWorkspace() {
           <SalesPerformanceDashboard leads={filteredLeads} dateFilter={dateFilter} />
         </TabsContent>
 
-        <TabsContent value="messaging" className="mt-4">
-          <OmniMessagingWorkspace context="Car Sales" showSettings />
-        </TabsContent>
       </Tabs>
     </div>
   );
