@@ -104,7 +104,10 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
 
   const handleQuickReply = async (msg: string) => {
     setShowQuickReplies(false);
-    setText(msg);
+    setIsSending(true);
+    const ok = await onSend(msg);
+    if (!ok) setText(msg); // Keep in input if send failed so user can retry
+    setIsSending(false);
     inputRef.current?.focus();
   };
 

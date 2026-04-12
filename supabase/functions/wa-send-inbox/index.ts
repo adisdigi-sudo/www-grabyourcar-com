@@ -75,12 +75,20 @@ serve(async (req) => {
     let metaPayload: Record<string, unknown>;
 
     if (message_type === "template" && template_name) {
+      // Build components from template_variables if no explicit components provided
+      let finalComponents = template_components;
+      if (!finalComponents && template_variables && Object.keys(template_variables).length > 0) {
+        finalComponents = [{
+          type: "body",
+          parameters: Object.values(template_variables).map(val => ({ type: "text", text: String(val) })),
+        }];
+      }
       metaPayload = {
         type: "template",
         template: {
           name: template_name,
           language: { code: "en" },
-          ...(template_components ? { components: template_components } : {}),
+          ...(finalComponents ? { components: finalComponents } : {}),
         },
       };
     } else if (message_type === "image" && media_url) {
@@ -101,7 +109,7 @@ serve(async (req) => {
     }
 
     // Send via Meta Cloud API
-    const metaUrl = `https://graph.facebook.com/v21.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
+    const metaUrl = `https://graph.facebook.com/v25.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
     const response = await fetch(metaUrl, {
       method: "POST",
       headers: {
