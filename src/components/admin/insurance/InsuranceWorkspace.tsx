@@ -517,7 +517,7 @@ export function InsuranceWorkspace() {
               <Button size="sm" onClick={() => setShowAddLead(true)} className="gap-1.5 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border border-white/20">
                 <Plus className="h-4 w-4" /> Add Lead
               </Button>
-              <Button size="sm" onClick={() => window.open("/insurance", "_blank")} className="gap-1.5 bg-emerald-500/80 hover:bg-emerald-500 text-white border border-emerald-400/30">
+              <Button size="sm" onClick={() => window.open("https://pbpci.policybazaar.com/?token=o5aMAq6qZ1tLXTODNpDyVbk4MP6pWDnq6hhpN5u%2BmyJLH9wHcj81JpXwkmKwLPBcDQlOpmql%2FtQgJKjQaQBk%2F6h5%2Bh6wxuKCTAtXRNQ1WBN7m6J2EwinhUfoywZ8E%2B%2BJFZQlcTcGh6a4upMh26MliMAXl%2FqWXTt%2B579hIW3zzfAGZ7aSNJ3WTeVCdfy%2FjJGe%2BQa3M6xdyWiN9%2FuvLVHo9A%3D%3D", "_blank")} className="gap-1.5 bg-emerald-500/80 hover:bg-emerald-500 text-white border border-emerald-400/30">
                 <ExternalLink className="h-4 w-4" /> Get Quote
               </Button>
             </div>
