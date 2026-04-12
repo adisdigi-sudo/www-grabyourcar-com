@@ -16532,6 +16532,63 @@ export type Database = {
           },
         ]
       }
+      wa_manual_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          customer_name: string | null
+          customer_phone: string
+          id: string
+          linked_invoice_id: string | null
+          notes: string | null
+          payment_mode: string
+          reference_number: string | null
+          rejection_reason: string | null
+          service: string
+          source: string | null
+          status: string
+          updated_at: string
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          customer_name?: string | null
+          customer_phone: string
+          id?: string
+          linked_invoice_id?: string | null
+          notes?: string | null
+          payment_mode?: string
+          reference_number?: string | null
+          rejection_reason?: string | null
+          service?: string
+          source?: string | null
+          status?: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          customer_name?: string | null
+          customer_phone?: string
+          id?: string
+          linked_invoice_id?: string | null
+          notes?: string | null
+          payment_mode?: string
+          reference_number?: string | null
+          rejection_reason?: string | null
+          service?: string
+          source?: string | null
+          status?: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: []
+      }
       wa_message_logs: {
         Row: {
           campaign_id: string | null
@@ -16819,6 +16876,63 @@ export type Database = {
           updated_at?: string | null
           variables?: string[] | null
           vertical?: string | null
+        }
+        Relationships: []
+      }
+      wa_retargeting_queue: {
+        Row: {
+          amount_due: number | null
+          attempts: number
+          completed_at: string | null
+          created_at: string
+          customer_name: string | null
+          customer_phone: string
+          id: string
+          last_attempt_at: string | null
+          max_attempts: number
+          message_template: string | null
+          next_attempt_at: string | null
+          related_id: string | null
+          retarget_type: string
+          service: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount_due?: number | null
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          customer_name?: string | null
+          customer_phone: string
+          id?: string
+          last_attempt_at?: string | null
+          max_attempts?: number
+          message_template?: string | null
+          next_attempt_at?: string | null
+          related_id?: string | null
+          retarget_type?: string
+          service?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount_due?: number | null
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          customer_name?: string | null
+          customer_phone?: string
+          id?: string
+          last_attempt_at?: string | null
+          max_attempts?: number
+          message_template?: string | null
+          next_attempt_at?: string | null
+          related_id?: string | null
+          retarget_type?: string
+          service?: string | null
+          status?: string
+          updated_at?: string
         }
         Relationships: []
       }
