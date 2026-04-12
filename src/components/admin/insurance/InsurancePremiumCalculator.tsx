@@ -139,6 +139,10 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
   const securePremiumNum = parseFloat(securePremium) || 0;
 
   const isThirdPartyOnly = policyType === "Third Party";
+  const isStandaloneOD = policyType === "Standalone OD";
+  const isComprehensive = policyType === "Comprehensive";
+  const showODFields = !isThirdPartyOnly; // OD fields visible for Comprehensive & Standalone OD
+  const showTPInCalc = !isStandaloneOD; // TP included in Comprehensive & Third Party Only
 
   const calc = useMemo(() => {
     if (isThirdPartyOnly) {
@@ -160,14 +164,15 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
     const ncbDiscount = (odAfterDiscount * effectiveNcb) / 100;
     const netOD = odAfterDiscount - ncbDiscount;
 
-    const tp = getTPPremium(ccNum);
+    // Standalone OD: NO Third Party premium (IRDAI rule)
+    const tp = isStandaloneOD ? 0 : getTPPremium(ccNum);
     const addonTotal = addons.filter(a => a.enabled).reduce((s, a) => s + a.price, 0);
     const subtotal = netOD + tp + securePremiumNum + addonTotal;
     const gst = (subtotal * GST_RATE) / 100;
     const total = subtotal + gst;
 
     return { odRate, basicOD, odDiscount, odAfterDiscount, ncbDiscount, netOD, tp, securePremium: securePremiumNum, addonTotal, subtotal, gst, total };
-  }, [idvNum, ccNum, zone, discountPct, ncb, addons, ncbLocked, securePremiumNum, isThirdPartyOnly]);
+  }, [idvNum, ccNum, zone, discountPct, ncb, addons, ncbLocked, securePremiumNum, isThirdPartyOnly, isStandaloneOD]);
 
   const toggleAddon = (id: string) => {
     setAddons(prev => prev.map(a => a.id === id ? { ...a, enabled: !a.enabled } : a));
@@ -198,14 +203,14 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
       customerName ? `Customer: ${customerName}` : null,
       vehicleNumber ? `Vehicle: ${vehicleNumber}` : null,
       resolvedInsurer ? `Insurer: ${resolvedInsurer}` : null,
-      `IDV: ${fmt(idvNum)} | CC: ${ccNum} | Zone: ${zone} (${city})`,
+      !isThirdPartyOnly ? `IDV: ${fmt(idvNum)} | CC: ${ccNum} | Zone: ${zone} (${city})` : `CC: ${ccNum}`,
       `Policy: ${policyType} | Fuel: ${fuelType}`,
       `──────────────────`,
-      `Basic OD: ${fmt(calc.basicOD)} (${calc.odRate}%)`,
-      discountPct > 0 ? `OD Discount: -${fmt(calc.odDiscount)} (${discountPct}%)` : null,
-      !ncbLocked && ncb > 0 ? `NCB Discount: -${fmt(calc.ncbDiscount)} (${ncb}%)` : null,
-      `Net OD Premium: ${fmt(calc.netOD)}`,
-      `Third Party: ${fmt(calc.tp)}`,
+      !isThirdPartyOnly ? `Basic OD: ${fmt(calc.basicOD)} (${calc.odRate}%)` : null,
+      !isThirdPartyOnly && discountPct > 0 ? `OD Discount: -${fmt(calc.odDiscount)} (${discountPct}%)` : null,
+      !isThirdPartyOnly && !ncbLocked && ncb > 0 ? `NCB Discount: -${fmt(calc.ncbDiscount)} (${ncb}%)` : null,
+      !isThirdPartyOnly ? `Net OD Premium: ${fmt(calc.netOD)}` : null,
+      showTPInCalc ? `Third Party: ${fmt(calc.tp)}` : null,
       securePremiumNum > 0 ? `Secure Premium: ${fmt(securePremiumNum)}` : null,
       calc.addonTotal > 0 ? `Add-ons: ${fmt(calc.addonTotal)}` : null,
       `──────────────────`,
@@ -521,13 +526,15 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
     addRow("Fuel Type", fuelType);
     y += 3; rowIdx = 0;
 
-    addRow(`Basic OD Premium (${calc.odRate}%)`, fmt(calc.basicOD));
-    if (discountPct > 0) addRow(`OD Discount (${discountPct}%)`, `- ${fmt(calc.odDiscount)}`);
-    if (ncb > 0) addRow(`NCB Discount (${ncb}%)`, `- ${fmt(calc.ncbDiscount)}`);
-    addRow("Net OD Premium", fmt(calc.netOD), true);
-    y += 3; rowIdx = 0;
+    if (!isThirdPartyOnly) {
+      addRow(`Basic OD Premium (${calc.odRate}%)`, fmt(calc.basicOD));
+      if (discountPct > 0) addRow(`OD Discount (${discountPct}%)`, `- ${fmt(calc.odDiscount)}`);
+      if (ncb > 0) addRow(`NCB Discount (${ncb}%)`, `- ${fmt(calc.ncbDiscount)}`);
+      addRow("Net OD Premium", fmt(calc.netOD), true);
+      y += 3; rowIdx = 0;
+    }
 
-    addRow("Third Party Premium", fmt(calc.tp));
+    if (showTPInCalc) addRow("Third Party Premium", fmt(calc.tp));
     if (securePremiumNum > 0) addRow("Secure Premium", fmt(securePremiumNum));
 
     // ── Add-ons ──
@@ -749,7 +756,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
             </div>
 
             {/* Auto IDV Calculator — hide for Third Party Only */}
-            {!isThirdPartyOnly && (
+            {showODFields && (
               <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-2">
                 <div className="flex items-center gap-1.5">
                   <Calculator className="h-3.5 w-3.5 text-primary" />
@@ -791,7 +798,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
               </div>
             )}
 
-            {!isThirdPartyOnly && (
+            {showODFields && (
               <div>
                 <Label className="text-xs">IDV (Insured Declared Value)</Label>
                 <div className="relative mt-1">
@@ -819,7 +826,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
               </p>
             </div>
 
-            {!isThirdPartyOnly && (
+            {showODFields && (
               <div>
                 <Label className="text-xs">Secure Premium</Label>
                 <div className="relative mt-1">
@@ -829,7 +836,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
               </div>
             )}
 
-            {/* Third Party Only info banner */}
+            {/* Policy type info banner */}
             {isThirdPartyOnly && (
               <div className="flex items-start gap-2 p-3 rounded-lg border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-950/30">
                 <Info className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
@@ -841,10 +848,21 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
                 </div>
               </div>
             )}
+            {isStandaloneOD && (
+              <div className="flex items-start gap-2 p-3 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30">
+                <Info className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-xs font-bold text-amber-800 dark:text-amber-300">Standalone OD Policy</p>
+                  <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5">
+                    Only Own Damage coverage. Third Party premium is NOT included — customer must have a separate active TP policy as per IRDAI guidelines.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Discount & NCB Card — hide for Third Party Only */}
-          {!isThirdPartyOnly && (
+          {showODFields && (
           <div className="rounded-xl border border-border bg-card p-4 space-y-3">
             <div className="flex items-center gap-2 mb-1">
               <Percent className="h-4 w-4 text-primary" />
@@ -977,7 +995,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
           )}
 
           {/* Add-ons Card — hide for Third Party Only */}
-          {!isThirdPartyOnly && (
+          {showODFields && (
           <div className="rounded-xl border border-border bg-card p-4 space-y-3">
             <button onClick={() => setShowAddons(!showAddons)} className="flex items-center gap-2 w-full">
               <Zap className="h-4 w-4 text-primary" />
@@ -1037,7 +1055,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
 
               {/* Breakdown */}
               <div className="rounded-xl border border-border bg-card divide-y divide-border">
-                {!isThirdPartyOnly && (
+                {showODFields && (
                   <div className="p-4 space-y-2">
                     <div className="flex items-center gap-2 mb-2">
                       <Shield className="h-3.5 w-3.5 text-blue-500" />
@@ -1052,14 +1070,16 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
                   </div>
                 )}
 
+                {showTPInCalc && (
                 <div className="p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <Car className="h-3.5 w-3.5 text-green-500" />
                     <span className="text-xs font-bold text-foreground uppercase tracking-wide">Third Party (TP)</span>
-                    <span className="text-[10px] text-muted-foreground ml-auto">Mandatory</span>
+                    <span className="text-[10px] text-muted-foreground ml-auto">{isComprehensive ? "Mandatory" : ""}</span>
                   </div>
                   <Row label={`TP Premium (${ccNum < 1000 ? "<1000" : ccNum <= 1500 ? "1000-1500" : ">1500"}cc)`} value={fmt(calc.tp)} bold />
                 </div>
+                )}
 
                 {securePremiumNum > 0 && (
                   <div className="p-4">

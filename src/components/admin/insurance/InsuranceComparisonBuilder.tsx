@@ -97,6 +97,9 @@ export function InsuranceComparisonBuilder(props: Props) {
   const idvNum = props.idv || 0;
   const zone = getZone(props.city || "Delhi NCR");
   const isTP = (props.policyType || "").toLowerCase().includes("third");
+  const isStandaloneOD = (props.policyType || "").toLowerCase().includes("standalone");
+  const showODFields = !isTP; // OD fields for Comprehensive & Standalone OD
+  const showTPInCalc = !isStandaloneOD; // TP for Comprehensive & Third Party Only
   const ncbPct = props.ncbLocked ? 0 : (props.ncb || 0);
 
   const computeQuote = (entry: InsurerEntry): InsurerQuote | null => {
@@ -126,7 +129,8 @@ export function InsuranceComparisonBuilder(props: Props) {
     const odAfterDiscount = basicOD - odDiscount;
     const ncbDiscount = (odAfterDiscount * ncbPct) / 100;
     const netOD = odAfterDiscount - ncbDiscount;
-    const tp = getTPPremium(ccNum);
+    // Standalone OD: NO Third Party premium (IRDAI rule)
+    const tp = isStandaloneOD ? 0 : getTPPremium(ccNum);
     const addonTotal = entry.addons.filter(a => a.enabled).reduce((s, a) => s + a.price, 0);
     const subtotal = netOD + tp + entry.securePremium + addonTotal;
     const gst = Math.round(subtotal * 0.18);
@@ -151,7 +155,7 @@ export function InsuranceComparisonBuilder(props: Props) {
 
   const quotes = useMemo(() => {
     return entries.map(e => computeQuote(e)).filter(Boolean) as InsurerQuote[];
-  }, [entries, ccNum, idvNum, zone, isTP, ncbPct]);
+  }, [entries, ccNum, idvNum, zone, isTP, isStandaloneOD, ncbPct]);
 
   const addEntry = () => {
     if (entries.length >= 3) { toast.info("Maximum 3 insurers for comparison"); return; }
@@ -354,7 +358,7 @@ export function InsuranceComparisonBuilder(props: Props) {
                       )}
                     </div>
 
-                    {!isTP && (
+                    {showODFields && (
                       <div className="grid grid-cols-2 gap-2">
                         <div>
                           <Label className="text-[10px] text-muted-foreground">OD Discount %</Label>
@@ -380,7 +384,7 @@ export function InsuranceComparisonBuilder(props: Props) {
                     )}
 
                     {/* Addons — compact toggle row for non-TP */}
-                    {!isTP && (
+                    {showODFields && (
                       <div className="flex flex-wrap gap-1">
                         {entry.addons.map(addon => (
                           <button
