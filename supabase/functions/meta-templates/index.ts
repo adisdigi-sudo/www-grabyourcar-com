@@ -296,6 +296,26 @@ serve(async (req) => {
         sampleValues.push(sampleMap[key] || `Sample ${origName}`);
       }
 
+      // ── Meta Policy: Variable-to-word ratio validation ──
+      // Meta requires enough non-variable words relative to variable count
+      const plainWords = metaBody.replace(/\{\{\d+\}\}/g, "").replace(/[^\w\s]/g, "").trim().split(/\s+/).filter(Boolean);
+      const wordCount = plainWords.length;
+      // Meta's approximate rule: need at least ~3 words per variable
+      if (numVars > 0 && wordCount < numVars * 3) {
+        const suggestion = `Body has ${wordCount} words and ${numVars} variables. Meta requires at least ~${numVars * 3} words. Add more descriptive text or reduce variables.`;
+        await supabase.from("wa_templates").update({
+          status: "rejected",
+          meta_rejection_reason: suggestion,
+        }).eq("id", template_id);
+
+        return new Response(JSON.stringify({ 
+          error: suggestion,
+          fix_hint: "Increase message body length or reduce number of variables",
+        }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       const bodyComponent: any = { type: "BODY", text: metaBody };
       if (sampleValues.length > 0) {
         bodyComponent.example = { body_text: [sampleValues] };
