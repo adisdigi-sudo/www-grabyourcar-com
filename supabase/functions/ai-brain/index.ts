@@ -94,6 +94,99 @@ const TOOLS = [
       },
     },
   },
+  // ====== CUSTOMER SELF-SERVICE TOOLS ======
+  {
+    type: "function",
+    function: {
+      name: "lookup_my_policy",
+      description: "Look up customer's insurance policy details. ONLY returns data for the customer's own registered phone number. Use when customer asks about their insurance policy, policy copy, policy status, or renewal.",
+      parameters: {
+        type: "object",
+        properties: {
+          vehicle_number: { type: "string", description: "Vehicle registration number like DL10CJ4761" },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "lookup_my_invoices",
+      description: "Look up customer's invoices and bills. ONLY returns invoices linked to the customer's registered phone number. Use when customer asks for invoice, bill, receipt, or payment history.",
+      parameters: {
+        type: "object",
+        properties: {
+          invoice_type: { type: "string", enum: ["all", "insurance", "hsrp", "accessories", "car_sales", "self_drive"], description: "Filter by service type" },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "lookup_my_loan",
+      description: "Look up customer's car loan application status, EMI details, and disbursement info. ONLY returns data for the customer's registered phone number.",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "lookup_my_hsrp",
+      description: "Look up customer's HSRP booking status and details. ONLY returns data for the customer's registered phone number.",
+      parameters: {
+        type: "object",
+        properties: {
+          vehicle_number: { type: "string", description: "Vehicle registration number" },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "lookup_my_payments",
+      description: "Look up all payments made by the customer across all services (insurance, HSRP, accessories, loans, rentals). ONLY returns data for the customer's registered phone number.",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "lookup_my_car_details",
+      description: "Look up customer's car/vehicle details from our records using their phone number or vehicle number.",
+      parameters: {
+        type: "object",
+        properties: {
+          vehicle_number: { type: "string", description: "Vehicle registration number" },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "record_manual_payment",
+      description: "Record a manual payment from customer. Use when customer says they have paid, transferred money, or made UPI/cash payment. Creates a payment entry for admin verification.",
+      parameters: {
+        type: "object",
+        properties: {
+          amount: { type: "number", description: "Payment amount in rupees" },
+          payment_mode: { type: "string", enum: ["upi", "bank_transfer", "cash", "cheque", "card", "other"], description: "Payment method" },
+          reference_number: { type: "string", description: "UPI transaction ID, cheque number, or bank reference" },
+          service: { type: "string", enum: ["insurance", "hsrp", "accessories", "car_purchase", "loan_emi", "rental", "other"], description: "What the payment is for" },
+          notes: { type: "string", description: "Additional details about the payment" },
+        },
+        required: ["amount", "payment_mode", "service"],
+      },
+    },
+  },
 ];
 
 serve(async (req) => {
@@ -139,7 +232,19 @@ serve(async (req) => {
 
     // Channel-specific instructions
     const channelInstructions: Record<string, string> = {
-      whatsapp: `You are GrabYourCar's WhatsApp AI assistant. Keep responses under 200 words. Use emojis sparingly. Use friendly Hindi-English mix tone. Always try to capture name, phone, preferred car, and city. End with a call-to-action. When using tools, summarize results naturally.`,
+      whatsapp: `You are GrabYourCar's WhatsApp AI assistant. Keep responses under 200 words. Use emojis sparingly. Use friendly Hindi-English mix tone. Always try to capture name, phone, preferred car, and city. End with a call-to-action. When using tools, summarize results naturally.
+
+CRITICAL SECURITY RULE: When a customer asks for their policy, invoice, loan details, payments, or any personal data — you MUST use the lookup tools which ONLY return data matching the customer's OWN registered phone number (${customer_phone || 'unknown'}). NEVER share anyone else's data. If the phone doesn't match, politely refuse.
+
+SELF-SERVICE CAPABILITIES:
+- When customer asks "meri policy bhejo" / "send my policy" → use lookup_my_policy
+- When customer asks "mera invoice" / "bill bhejo" → use lookup_my_invoices  
+- When customer asks "loan status" / "EMI details" → use lookup_my_loan
+- When customer asks "HSRP status" → use lookup_my_hsrp
+- When customer asks "payment history" / "receipts" → use lookup_my_payments
+- When customer asks "meri gaadi ki details" → use lookup_my_car_details
+- When customer says "maine payment kiya" / "paid" / "transferred" → use record_manual_payment
+- Always verify and confirm data belongs to the calling number before sharing`,
       website: `You are GrabYourCar's website car advisor chatbot. Be helpful, informative, and guide users to explore cars. Mention specific car pages and features. Use markdown formatting for readability. When you find relevant cars via search, present them with prices and key highlights. Always try to naturally capture lead information when the user shows buying intent.`,
       crm: `You are GrabYourCar's internal CRM AI assistant. Help staff with lead analysis, follow-up suggestions, draft messages, and data insights. Be concise and action-oriented. Use tables and bullet points.`,
     };
@@ -150,7 +255,7 @@ serve(async (req) => {
 ${knowledgeContext}
 
 === TOOLS AVAILABLE ===
-You have tools to search our car database, calculate EMIs, find on-road prices, locate dealers, and capture leads. USE THEM whenever relevant to give accurate, real-time data instead of generic answers.
+You have tools to search our car database, calculate EMIs, find on-road prices, locate dealers, capture leads, AND customer self-service tools (policy lookup, invoice lookup, loan status, HSRP status, payment history, manual payment recording). USE THEM whenever relevant to give accurate, real-time data instead of generic answers.
 
 === GUIDELINES ===
 - When a customer asks about a specific car, USE search_cars to get real data
@@ -158,6 +263,8 @@ You have tools to search our car database, calculate EMIs, find on-road prices, 
 - When they mention budget or EMI, USE calculate_emi
 - When they share contact info or show strong intent, USE capture_lead
 - For dealer/showroom queries, USE find_dealers
+- For personal data requests (policy/invoice/loan/HSRP/payments), USE the lookup tools — STRICTLY phone-verified
+- For payment confirmations, USE record_manual_payment
 - Always be helpful and provide specific, data-backed answers
 - For website channel: use markdown (bold, bullets, links)
 - Link to relevant pages: /car/{slug}, /car-loans, /car-insurance, /compare
@@ -173,12 +280,9 @@ ${customer_phone ? `Customer phone: ${customer_phone}` : ""}`;
 
     // === STREAMING MODE (Website Chatbot) ===
     if (stream) {
-      // For streaming, we do a non-tool call first pass, then stream the response
-      // Use tool calling in non-stream mode, get result, then stream final answer
       const toolResult = await executeWithTools(LOVABLE_API_KEY, supabase, aiMessages, channel, customer_name, customer_phone);
       
       if (toolResult.toolsUsed) {
-        // Tools were called — stream the final response with tool context
         const finalMessages = [
           ...aiMessages,
           { role: "assistant", content: null, tool_calls: toolResult.toolCalls },
@@ -195,7 +299,6 @@ ${customer_phone ? `Customer phone: ${customer_phone}` : ""}`;
         });
       }
 
-      // No tools needed — direct stream
       const streamResponse = await callAI(LOVABLE_API_KEY, aiMessages, true);
       if (!streamResponse.ok) {
         return handleAIError(streamResponse);
@@ -256,7 +359,6 @@ async function executeWithTools(
   toolCalls?: any[];
   toolResults?: any[];
 }> {
-  // First call with tools
   const firstResponse = await callAIWithTools(apiKey, messages);
 
   if (!firstResponse.ok) {
@@ -270,7 +372,6 @@ async function executeWithTools(
 
   if (!firstChoice) throw new Error("No AI response");
 
-  // Check if AI wants to call tools
   if (firstChoice.finish_reason === "tool_calls" && firstChoice.message?.tool_calls?.length) {
     const toolCalls = firstChoice.message.tool_calls;
     const toolResults: any[] = [];
@@ -309,6 +410,35 @@ async function executeWithTools(
           leadCaptured = true;
           intent = args.service || "new_car";
           break;
+        // ====== SELF-SERVICE TOOLS ======
+        case "lookup_my_policy":
+          result = await toolLookupPolicy(supabase, customerPhone, args.vehicle_number);
+          intent = "insurance";
+          break;
+        case "lookup_my_invoices":
+          result = await toolLookupInvoices(supabase, customerPhone, args.invoice_type);
+          intent = "invoice";
+          break;
+        case "lookup_my_loan":
+          result = await toolLookupLoan(supabase, customerPhone);
+          intent = "loan";
+          break;
+        case "lookup_my_hsrp":
+          result = await toolLookupHSRP(supabase, customerPhone, args.vehicle_number);
+          intent = "hsrp";
+          break;
+        case "lookup_my_payments":
+          result = await toolLookupPayments(supabase, customerPhone);
+          intent = "payments";
+          break;
+        case "lookup_my_car_details":
+          result = await toolLookupCarDetails(supabase, customerPhone, args.vehicle_number);
+          intent = "car_details";
+          break;
+        case "record_manual_payment":
+          result = await toolRecordManualPayment(supabase, customerPhone, customerName, args);
+          intent = "payment_recorded";
+          break;
         default:
           result = { error: "Unknown tool" };
       }
@@ -320,7 +450,6 @@ async function executeWithTools(
       });
     }
 
-    // Second call with tool results
     const secondMessages = [
       ...messages,
       firstChoice.message,
@@ -340,7 +469,6 @@ async function executeWithTools(
     };
   }
 
-  // No tools called — direct response
   const content = firstChoice.message?.content?.trim() || "I'm here to help!";
   return {
     response: content,
@@ -351,7 +479,7 @@ async function executeWithTools(
   };
 }
 
-// ===== TOOL IMPLEMENTATIONS =====
+// ===== ORIGINAL TOOL IMPLEMENTATIONS =====
 async function toolSearchCars(supabase: any, args: any) {
   let query = supabase.from("cars").select("name, brand, slug, price_range, body_type, fuel_types, is_bestseller, is_new, tagline, discount").eq("is_discontinued", false);
 
@@ -405,14 +533,12 @@ function toolCalculateEMI(args: any) {
 }
 
 async function toolGetOnRoadPrice(supabase: any, args: any) {
-  // Find the car first
   const { data: cars } = await supabase.from("cars")
     .select("id, name, brand, price_range, slug")
     .ilike("name", `%${args.car_name.replace(/\s+/g, "%")}%`)
     .limit(1);
 
   if (!cars?.length) {
-    // Try brand + name combo
     const parts = args.car_name.split(" ");
     const { data: cars2 } = await supabase.from("cars")
       .select("id, name, brand, price_range, slug")
@@ -428,14 +554,12 @@ async function toolGetOnRoadPrice(supabase: any, args: any) {
 }
 
 async function getPricingForCar(supabase: any, car: any, city?: string) {
-  // Get variants
   const { data: variants } = await supabase.from("car_variants")
     .select("name, price, fuel_type, transmission, ex_showroom, on_road_price")
     .eq("car_id", car.id)
     .order("sort_order")
     .limit(5);
 
-  // Get city pricing if city specified
   let cityPricing = null;
   if (city) {
     const { data } = await supabase.from("car_city_pricing")
@@ -518,12 +642,364 @@ async function toolCaptureLead(supabase: any, args: any, customerName?: string, 
   }
 }
 
+// ===== CUSTOMER SELF-SERVICE TOOL IMPLEMENTATIONS =====
+
+/** Normalize phone for DB matching: try with/without 91 prefix */
+function phoneVariants(phone?: string): string[] {
+  if (!phone) return [];
+  const clean = phone.replace(/\D/g, "");
+  const variants = [clean];
+  if (clean.startsWith("91") && clean.length > 10) variants.push(clean.slice(2));
+  if (!clean.startsWith("91") && clean.length === 10) variants.push("91" + clean);
+  return variants;
+}
+
+async function toolLookupPolicy(supabase: any, customerPhone?: string, vehicleNumber?: string) {
+  if (!customerPhone) return { error: "Phone number not available. Please share your registered mobile number." };
+  
+  const phones = phoneVariants(customerPhone);
+  
+  // Find insurance client by phone
+  let query = supabase.from("insurance_clients")
+    .select("id, customer_name, phone, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_policy_number, current_policy_type, current_insurer, current_premium, policy_expiry_date, policy_start_date, pipeline_stage, ncb_percentage")
+    .or(phones.map(p => `phone.eq.${p}`).join(","));
+
+  if (vehicleNumber) {
+    const cleanVehicle = vehicleNumber.replace(/\s+/g, "").toUpperCase();
+    query = supabase.from("insurance_clients")
+      .select("id, customer_name, phone, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_policy_number, current_policy_type, current_insurer, current_premium, policy_expiry_date, policy_start_date, pipeline_stage, ncb_percentage")
+      .or(phones.map(p => `phone.eq.${p}`).join(",") + `,vehicle_number.ilike.%${cleanVehicle}%`);
+  }
+
+  const { data: clients } = await query.limit(5);
+  
+  if (!clients?.length) {
+    return { found: false, message: "No insurance records found for your number. Would you like to get a new insurance quote?" };
+  }
+
+  // Verify phone matches (strict security)
+  const verifiedClients = clients.filter((c: any) => phones.includes(c.phone?.replace(/\D/g, "")));
+  if (!verifiedClients.length) {
+    return { found: false, message: "For security, we can only share policy details with the registered mobile number. Please contact from your registered number." };
+  }
+
+  // Get policies for verified clients
+  const clientIds = verifiedClients.map((c: any) => c.id);
+  const { data: policies } = await supabase.from("insurance_policies")
+    .select("policy_number, policy_type, insurer, premium_amount, start_date, expiry_date, status, is_renewal")
+    .in("client_id", clientIds)
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .limit(3);
+
+  return {
+    found: true,
+    customer: verifiedClients[0].customer_name,
+    vehicles: verifiedClients.map((c: any) => ({
+      vehicle: `${c.vehicle_make || ""} ${c.vehicle_model || ""}`.trim() || "N/A",
+      vehicle_number: c.vehicle_number,
+      year: c.vehicle_year,
+      policy_number: c.current_policy_number,
+      policy_type: c.current_policy_type,
+      insurer: c.current_insurer,
+      premium: c.current_premium ? `₹${c.current_premium.toLocaleString("en-IN")}` : "N/A",
+      expiry: c.policy_expiry_date,
+      ncb: c.ncb_percentage ? `${c.ncb_percentage}%` : "N/A",
+      status: c.pipeline_stage,
+    })),
+    active_policies: policies?.map((p: any) => ({
+      policy_number: p.policy_number,
+      type: p.policy_type,
+      insurer: p.insurer,
+      premium: p.premium_amount ? `₹${p.premium_amount.toLocaleString("en-IN")}` : "N/A",
+      valid_from: p.start_date,
+      valid_until: p.expiry_date,
+      renewal: p.is_renewal ? "Yes" : "No",
+    })) || [],
+  };
+}
+
+async function toolLookupInvoices(supabase: any, customerPhone?: string, invoiceType?: string) {
+  if (!customerPhone) return { error: "Phone number not available." };
+  
+  const phones = phoneVariants(customerPhone);
+  
+  let query = supabase.from("invoices")
+    .select("invoice_number, invoice_date, client_name, total_amount, amount_paid, balance_due, status, vertical_name, paid_at")
+    .or(phones.map(p => `client_phone.eq.${p}`).join(","))
+    .order("invoice_date", { ascending: false })
+    .limit(10);
+
+  if (invoiceType && invoiceType !== "all") {
+    const verticalMap: Record<string, string> = {
+      insurance: "Insurance", hsrp: "HSRP", accessories: "Accessories",
+      car_sales: "Car Sales", self_drive: "Self Drive",
+    };
+    if (verticalMap[invoiceType]) query = query.eq("vertical_name", verticalMap[invoiceType]);
+  }
+
+  const { data: invoices } = await query;
+  
+  if (!invoices?.length) return { found: false, message: "No invoices found for your number." };
+
+  return {
+    found: true,
+    total_invoices: invoices.length,
+    invoices: invoices.map((inv: any) => ({
+      invoice_number: inv.invoice_number,
+      date: inv.invoice_date,
+      amount: `₹${inv.total_amount?.toLocaleString("en-IN")}`,
+      paid: `₹${(inv.amount_paid || 0).toLocaleString("en-IN")}`,
+      balance: `₹${(inv.balance_due || 0).toLocaleString("en-IN")}`,
+      status: inv.status,
+      service: inv.vertical_name,
+    })),
+  };
+}
+
+async function toolLookupLoan(supabase: any, customerPhone?: string) {
+  if (!customerPhone) return { error: "Phone number not available." };
+  
+  const phones = phoneVariants(customerPhone);
+  
+  const { data: loans } = await supabase.from("loan_applications")
+    .select("id, customer_name, phone, vehicle_name, vehicle_number, loan_amount, interest_rate, tenure_months, emi_amount, lender_name, stage, disbursement_amount, disbursement_date, approval_date, sanction_amount")
+    .or(phones.map(p => `phone.eq.${p}`).join(","))
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  if (!loans?.length) return { found: false, message: "No loan applications found for your number." };
+
+  return {
+    found: true,
+    loans: loans.map((l: any) => ({
+      vehicle: l.vehicle_name || l.vehicle_number || "N/A",
+      loan_amount: l.loan_amount ? `₹${(l.loan_amount / 100000).toFixed(1)}L` : "N/A",
+      emi: l.emi_amount ? `₹${l.emi_amount.toLocaleString("en-IN")}/mo` : "N/A",
+      rate: l.interest_rate ? `${l.interest_rate}%` : "N/A",
+      tenure: l.tenure_months ? `${l.tenure_months} months` : "N/A",
+      lender: l.lender_name || "Processing",
+      status: l.stage,
+      sanctioned: l.sanction_amount ? `₹${(l.sanction_amount / 100000).toFixed(1)}L` : null,
+      disbursed: l.disbursement_amount ? `₹${(l.disbursement_amount / 100000).toFixed(1)}L` : null,
+      disbursement_date: l.disbursement_date,
+    })),
+  };
+}
+
+async function toolLookupHSRP(supabase: any, customerPhone?: string, vehicleNumber?: string) {
+  if (!customerPhone) return { error: "Phone number not available." };
+  
+  const phones = phoneVariants(customerPhone);
+  
+  let query = supabase.from("hsrp_bookings")
+    .select("id, owner_name, mobile, registration_number, vehicle_category, service_type, service_price, payment_status, payment_amount, order_status, razorpay_order_id, created_at")
+    .or(phones.map(p => `mobile.eq.${p}`).join(","))
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  const { data: bookings } = await query;
+  
+  if (!bookings?.length) return { found: false, message: "No HSRP bookings found for your number." };
+
+  return {
+    found: true,
+    bookings: bookings.map((b: any) => ({
+      vehicle: b.registration_number,
+      category: b.vehicle_category,
+      service: b.service_type,
+      price: `₹${(b.service_price || b.payment_amount || 0).toLocaleString("en-IN")}`,
+      payment_status: b.payment_status,
+      order_status: b.order_status,
+      booked_on: b.created_at?.split("T")[0],
+    })),
+  };
+}
+
+async function toolLookupPayments(supabase: any, customerPhone?: string) {
+  if (!customerPhone) return { error: "Phone number not available." };
+  
+  const phones = phoneVariants(customerPhone);
+  const results: any[] = [];
+
+  // Invoices (paid)
+  const { data: paidInvoices } = await supabase.from("invoices")
+    .select("invoice_number, total_amount, paid_at, vertical_name, status")
+    .or(phones.map(p => `client_phone.eq.${p}`).join(","))
+    .eq("status", "paid")
+    .order("paid_at", { ascending: false })
+    .limit(10);
+
+  if (paidInvoices?.length) {
+    for (const inv of paidInvoices) {
+      results.push({
+        type: inv.vertical_name || "Invoice",
+        amount: `₹${inv.total_amount?.toLocaleString("en-IN")}`,
+        date: inv.paid_at?.split("T")[0],
+        reference: inv.invoice_number,
+        status: "Paid ✅",
+      });
+    }
+  }
+
+  // HSRP payments
+  const { data: hsrpPayments } = await supabase.from("hsrp_bookings")
+    .select("registration_number, payment_amount, payment_status, created_at")
+    .or(phones.map(p => `mobile.eq.${p}`).join(","))
+    .eq("payment_status", "paid")
+    .limit(5);
+
+  if (hsrpPayments?.length) {
+    for (const h of hsrpPayments) {
+      results.push({
+        type: "HSRP",
+        amount: `₹${(h.payment_amount || 0).toLocaleString("en-IN")}`,
+        date: h.created_at?.split("T")[0],
+        reference: h.registration_number,
+        status: "Paid ✅",
+      });
+    }
+  }
+
+  // Accessory orders
+  const { data: accOrders } = await supabase.from("accessory_orders")
+    .select("order_id, total_amount, payment_status, created_at")
+    .or(phones.map(p => `shipping_phone.eq.${p}`).join(","))
+    .limit(5);
+
+  if (accOrders?.length) {
+    for (const o of accOrders) {
+      results.push({
+        type: "Accessories",
+        amount: `₹${o.total_amount?.toLocaleString("en-IN")}`,
+        date: o.created_at?.split("T")[0],
+        reference: o.order_id,
+        status: o.payment_status === "paid" ? "Paid ✅" : o.payment_status,
+      });
+    }
+  }
+
+  // Manual payments
+  const { data: manualPayments } = await supabase.from("wa_manual_payments")
+    .select("amount, payment_mode, reference_number, service, status, created_at")
+    .or(phones.map(p => `customer_phone.eq.${p}`).join(","))
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  if (manualPayments?.length) {
+    for (const mp of manualPayments) {
+      results.push({
+        type: mp.service,
+        amount: `₹${mp.amount?.toLocaleString("en-IN")}`,
+        date: mp.created_at?.split("T")[0],
+        reference: mp.reference_number || "Manual",
+        status: mp.status === "verified" ? "Verified ✅" : mp.status === "rejected" ? "Rejected ❌" : "Pending ⏳",
+      });
+    }
+  }
+
+  if (!results.length) return { found: false, message: "No payment records found for your number." };
+
+  return { found: true, total: results.length, payments: results };
+}
+
+async function toolLookupCarDetails(supabase: any, customerPhone?: string, vehicleNumber?: string) {
+  if (!customerPhone) return { error: "Phone number not available." };
+  
+  const phones = phoneVariants(customerPhone);
+  const vehicles: any[] = [];
+
+  // Insurance clients
+  const { data: insClients } = await supabase.from("insurance_clients")
+    .select("vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_insurer, policy_expiry_date")
+    .or(phones.map(p => `phone.eq.${p}`).join(","))
+    .limit(5);
+
+  if (insClients?.length) {
+    for (const c of insClients) {
+      vehicles.push({
+        vehicle_number: c.vehicle_number,
+        make: c.vehicle_make,
+        model: c.vehicle_model,
+        year: c.vehicle_year,
+        insurer: c.current_insurer,
+        insurance_expiry: c.policy_expiry_date,
+        source: "Insurance Records",
+      });
+    }
+  }
+
+  // HSRP bookings
+  const { data: hsrpBookings } = await supabase.from("hsrp_bookings")
+    .select("registration_number, vehicle_category")
+    .or(phones.map(p => `mobile.eq.${p}`).join(","))
+    .limit(5);
+
+  if (hsrpBookings?.length) {
+    for (const h of hsrpBookings) {
+      if (!vehicles.some(v => v.vehicle_number === h.registration_number)) {
+        vehicles.push({ vehicle_number: h.registration_number, category: h.vehicle_category, source: "HSRP Records" });
+      }
+    }
+  }
+
+  // Loan applications
+  const { data: loans } = await supabase.from("loan_applications")
+    .select("vehicle_name, vehicle_number, stage")
+    .or(phones.map(p => `phone.eq.${p}`).join(","))
+    .limit(5);
+
+  if (loans?.length) {
+    for (const l of loans) {
+      if (l.vehicle_number && !vehicles.some(v => v.vehicle_number === l.vehicle_number)) {
+        vehicles.push({ vehicle_number: l.vehicle_number, vehicle_name: l.vehicle_name, loan_status: l.stage, source: "Loan Records" });
+      }
+    }
+  }
+
+  if (!vehicles.length) return { found: false, message: "No vehicle records found for your number." };
+
+  return { found: true, total: vehicles.length, vehicles };
+}
+
+async function toolRecordManualPayment(supabase: any, customerPhone?: string, customerName?: string, args?: any) {
+  if (!customerPhone) return { error: "Phone number not available. Cannot record payment." };
+
+  const { data, error } = await supabase.from("wa_manual_payments").insert({
+    customer_phone: customerPhone,
+    customer_name: customerName || "WhatsApp Customer",
+    amount: args.amount,
+    payment_mode: args.payment_mode,
+    reference_number: args.reference_number || null,
+    service: args.service,
+    notes: args.notes || null,
+    status: "pending_verification",
+    source: "whatsapp_bot",
+  }).select("id").single();
+
+  if (error) {
+    console.error("Manual payment record error:", error);
+    return { recorded: false, message: "Could not record payment. Please try again or contact our team." };
+  }
+
+  return {
+    recorded: true,
+    payment_id: data.id,
+    message: `Payment of ₹${args.amount.toLocaleString("en-IN")} recorded successfully! Our team will verify it within 30 minutes. You'll receive a confirmation once verified. 🧾`,
+  };
+}
+
 function getSuggestedActions(intent: string): string[] {
   const actionMap: Record<string, string[]> = {
     car_inquiry: ["View car details", "Compare with alternatives", "Book test drive"],
     loan: ["Apply for car loan", "Check eligibility", "Compare EMI plans"],
     insurance: ["Get insurance quote", "Compare plans", "Renew policy"],
     test_drive: ["Book test drive", "Find nearest dealer"],
+    invoice: ["Download invoice", "Payment history"],
+    hsrp: ["Track HSRP order", "Book HSRP"],
+    payments: ["View all payments", "Download receipts"],
+    payment_recorded: ["Check payment status", "Contact support"],
+    car_details: ["View car specs", "Get insurance quote"],
     general: ["Browse cars", "Calculate EMI", "Get expert help"],
   };
   return actionMap[intent] || actionMap.general;
