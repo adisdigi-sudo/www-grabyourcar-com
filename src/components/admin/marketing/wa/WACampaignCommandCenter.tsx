@@ -112,7 +112,7 @@ function CampaignBuilder({ channel, onCampaignCreated }: { channel: Channel; onC
   const { data: templates } = useQuery({
     queryKey: ["wa-templates-list"],
     queryFn: async () => {
-      const { data } = await supabase.from("whatsapp_templates").select("id, name, content").eq("is_active", true).order("name");
+      const { data } = await supabase.from("wa_templates").select("id, name, body").eq("status", "approved").order("name");
       return data || [];
     },
     enabled: channel === "whatsapp",
@@ -128,7 +128,7 @@ function CampaignBuilder({ channel, onCampaignCreated }: { channel: Channel; onC
 
   const handleTemplateSelect = (templateId: string) => {
     const tpl = templates?.find((t: any) => t.id === templateId);
-    setForm((prev) => ({ ...prev, template_id: templateId, message_content: tpl?.content || prev.message_content }));
+    setForm((prev) => ({ ...prev, template_id: templateId, message_content: tpl?.body || prev.message_content }));
   };
 
   const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {

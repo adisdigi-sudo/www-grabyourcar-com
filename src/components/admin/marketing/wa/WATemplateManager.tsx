@@ -43,8 +43,14 @@ export function WATemplateManager() {
   useEffect(() => { fetchTemplates(); }, []);
 
   const fetchTemplates = async () => {
-    const { data } = await supabase.from("whatsapp_templates").select("*").order("created_at", { ascending: false });
-    if (data) setTemplates(data as any);
+    // Use wa_templates (Meta source of truth)
+    const { data } = await supabase.from("wa_templates").select("*").order("created_at", { ascending: false });
+    if (data) setTemplates(data.map((t: any) => ({
+      id: t.id, name: t.name, category: t.category, template_type: "text",
+      content: t.body, variables: t.variables, preview: null,
+      is_approved: t.status === "approved", is_active: t.status !== "disabled",
+      approval_status: t.status, language: t.language, use_cases: null, created_at: t.created_at,
+    })));
   };
 
   const handleCreate = async () => {
@@ -55,42 +61,28 @@ export function WATemplateManager() {
     const variables = varMatches ? [...new Set(varMatches.map(v => v.replace(/[{}]/g, "")))] : [];
     const normalizedName = normalizeTemplateName(form.name);
 
-    const { data: inserted, error } = await supabase.from("whatsapp_templates").insert({
+    // Save directly to wa_templates (Meta source of truth)
+    const { data: inserted, error } = await supabase.from("wa_templates").insert({
       name: normalizedName,
-      category: form.category,
-      template_type: form.template_type,
-      content: form.content,
-      variables,
+      display_name: form.name,
+      category: form.category.toLowerCase(),
+      body: form.content,
       language: form.language,
-      approval_status: "pending",
-      is_approved: false,
-      is_active: true,
+      status: "draft",
     }).select("id").single();
 
     if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
     else {
+      // Auto-submit to Meta for approval
       try {
-        const syncResult = await syncTemplateToMeta({
-          name: normalizedName,
-          displayName: form.name,
-          body: form.content,
-          category: form.category,
-          language: form.language,
-          variables,
+        const { data: syncData, error: syncError } = await supabase.functions.invoke("meta-templates", {
+          body: { action: "submit_template", template_id: inserted.id },
         });
-
-        await supabase
-          .from("whatsapp_templates")
-          .update({
-            approval_status: syncResult.status,
-            is_approved: syncResult.status === "approved",
-          })
-          .eq("id", inserted.id);
-
-        if (syncResult.error) {
-          toast({ title: "Template saved locally", description: `Meta submission failed: ${syncResult.error}`, variant: "destructive" });
+        if (syncError) throw syncError;
+        if (syncData?.error) {
+          toast({ title: "Template saved", description: `Meta submission failed: ${syncData.error}`, variant: "destructive" });
         } else {
-          toast({ title: "Template submitted to Meta" });
+          toast({ title: "Template submitted to Meta for approval ✅" });
         }
       } catch (syncError: any) {
         toast({ title: "Template saved locally", description: `Meta sync failed: ${syncError.message}`, variant: "destructive" });
@@ -103,7 +95,7 @@ export function WATemplateManager() {
   };
 
   const toggleActive = async (id: string, isActive: boolean) => {
-    await supabase.from("whatsapp_templates").update({ is_active: !isActive }).eq("id", id);
+    await supabase.from("wa_templates").update({ status: isActive ? "disabled" : "approved" }).eq("id", id);
     fetchTemplates();
   };
 
@@ -111,9 +103,13 @@ export function WATemplateManager() {
     if (!confirm("Delete this template?")) return;
     const template = templates.find((item) => item.id === id);
     if (template) {
-      await deleteMetaManagedTemplate({ name: template.name });
+      try {
+        await supabase.functions.invoke("meta-templates", {
+          body: { action: "delete_template", template_name: template.name },
+        });
+      } catch {}
     }
-    await supabase.from("whatsapp_templates").delete().eq("id", id);
+    await supabase.from("wa_templates").delete().eq("id", id);
     toast({ title: "Template deleted" });
     fetchTemplates();
   };
