@@ -57,6 +57,7 @@ export function generateInsuranceComparisonPdf(data: ComparisonPdfData): { doc: 
   const quotes = data.quotes.slice(0, 3);
   const bestIdx = quotes.reduce((best, q, i) => (q.total < quotes[best].total ? i : best), 0);
   const isTP = quotes.every(q => q.policyType?.toLowerCase().includes("third"));
+  const isStandaloneOD = quotes.every(q => q.policyType?.toLowerCase().includes("standalone"));
 
   let y = 0;
   const footerH = 16;
@@ -205,7 +206,8 @@ export function generateInsuranceComparisonPdf(data: ComparisonPdfData): { doc: 
       if (q.idv) rows.push(["IDV", fmtINR(q.idv)]);
       if (q.netOD !== undefined) rows.push(["Net OD", fmtINR(q.netOD)]);
     }
-    rows.push(["Third Party", fmtINR(q.thirdParty)]);
+    // Standalone OD: TP is NOT included (IRDAI rule) — hide the row entirely
+    if (!isStandaloneOD) rows.push(["Third Party", fmtINR(q.thirdParty)]);
     if (!isTP && q.addonPremium && q.addonPremium > 0) rows.push(["Add-ons", fmtINR(q.addonPremium)]);
     rows.push(["GST (18%)", fmtINR(q.gst)]);
 
