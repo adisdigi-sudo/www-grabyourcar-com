@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { INSURANCE_COMPANIES, getShortName } from "@/lib/insuranceCompanies";
@@ -96,6 +97,7 @@ export function InsuranceComparisonBuilder(props: Props) {
   const [entries, setEntries] = useState<InsurerEntry[]>([createEntry()]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [expanded, setExpanded] = useState(true);
+  const [termsAndConditions, setTermsAndConditions] = useState("");
 
   const ccNum = props.cc || 0;
   const idvNum = props.idv || 0;
@@ -213,6 +215,7 @@ export function InsuranceComparisonBuilder(props: Props) {
         fuelType: props.fuelType || "Petrol",
         cc: ccNum,
         city: props.city,
+        termsAndConditions: termsAndConditions.trim() || undefined,
         quotes,
       };
 
@@ -417,23 +420,58 @@ export function InsuranceComparisonBuilder(props: Props) {
                       </div>
                     )}
 
-                    {/* Addons — compact toggle row for non-TP */}
+                    {/* Addons — compact toggle row + custom addon for non-TP */}
                     {showODFields && (
-                      <div className="flex flex-wrap gap-1">
-                        {entry.addons.map(addon => (
-                          <button
-                            key={addon.id}
-                            onClick={() => toggleAddon(entry.id, addon.id)}
-                            className={cn(
-                              "text-[10px] px-2 py-0.5 rounded-full border transition-colors",
-                              addon.enabled
-                                ? "bg-primary/10 border-primary/30 text-primary font-semibold"
-                                : "bg-muted border-border text-muted-foreground"
-                            )}
+                      <div className="space-y-1.5">
+                        <div className="flex flex-wrap gap-1">
+                          {entry.addons.map(addon => (
+                            <button
+                              key={addon.id}
+                              onClick={() => toggleAddon(entry.id, addon.id)}
+                              className={cn(
+                                "text-[10px] px-2 py-0.5 rounded-full border transition-colors",
+                                addon.enabled
+                                  ? "bg-primary/10 border-primary/30 text-primary font-semibold"
+                                  : "bg-muted border-border text-muted-foreground"
+                              )}
+                            >
+                              {addon.name} ({fmt(addon.price)})
+                            </button>
+                          ))}
+                        </div>
+                        {/* Custom add-on inline */}
+                        <div className="flex gap-1 items-end">
+                          <Input
+                            placeholder="Custom addon"
+                            className="h-6 text-[10px] flex-1"
+                            id={`ca-name-${entry.id}`}
+                          />
+                          <Input
+                            type="number"
+                            placeholder="₹"
+                            className="h-6 text-[10px] w-16"
+                            id={`ca-price-${entry.id}`}
+                          />
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6 shrink-0"
+                            onClick={() => {
+                              const nameEl = document.getElementById(`ca-name-${entry.id}`) as HTMLInputElement;
+                              const priceEl = document.getElementById(`ca-price-${entry.id}`) as HTMLInputElement;
+                              if (!nameEl?.value || !priceEl?.value) return;
+                              const newAddon = { id: `custom_${Date.now()}`, name: nameEl.value, price: parseFloat(priceEl.value) || 0, enabled: true };
+                              setEntries(prev => prev.map(e =>
+                                e.id === entry.id ? { ...e, addons: [...e.addons, newAddon] } : e
+                              ));
+                              nameEl.value = ""; priceEl.value = "";
+                              toast.success(`Add-on "${newAddon.name}" added`);
+                            }}
                           >
-                            {addon.name} ({fmt(addon.price)})
-                          </button>
-                        ))}
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </div>
                     )}
 
@@ -497,6 +535,18 @@ export function InsuranceComparisonBuilder(props: Props) {
                   </div>
                 </div>
               )}
+
+              {/* Terms & Conditions */}
+              <div>
+                <Label className="text-[10px] text-muted-foreground">Terms & Conditions (optional — will appear on PDF)</Label>
+                <Textarea
+                  value={termsAndConditions}
+                  onChange={e => setTermsAndConditions(e.target.value)}
+                  placeholder="E.g. Quote valid for 7 days. Subject to insurer verification. No claim bonus applicable on renewal..."
+                  className="min-h-[50px] text-[10px] mt-0.5 resize-none"
+                  rows={2}
+                />
+              </div>
 
               <Separator />
 

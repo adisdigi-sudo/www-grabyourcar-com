@@ -1,5 +1,6 @@
 import jsPDF from "jspdf";
 import { format } from "date-fns";
+import { addWatermark, PDF_ENCRYPTION } from "./insurancePdfSecurity";
 
 export interface InsurerQuote {
   insurerName: string;
@@ -28,13 +29,14 @@ export interface ComparisonPdfData {
   fuelType: string;
   cc: number;
   city?: string;
+  termsAndConditions?: string;
   quotes: InsurerQuote[];
 }
 
 const fmtINR = (n: number) => `Rs. ${Math.round(n).toLocaleString("en-IN")}`;
 
 export function generateInsuranceComparisonPdf(data: ComparisonPdfData): { doc: jsPDF; fileName: string } {
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", encryption: PDF_ENCRYPTION } as any);
   const pw = doc.internal.pageSize.getWidth();
   const ph = doc.internal.pageSize.getHeight();
   const m = 12;
@@ -283,8 +285,31 @@ export function generateInsuranceComparisonPdf(data: ComparisonPdfData): { doc: 
     y += wrapped.length * 3 + 1;
   });
 
+  // ── Terms & Conditions ──
+  if (data.termsAndConditions?.trim()) {
+    y += 4;
+    if (y > ph - footerH - 30) { doc.addPage(); y = 15; drawFooter(); }
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7);
+    doc.setTextColor(...dark);
+    doc.text("Terms & Conditions", m + 2, y);
+    y += 4;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(5.5);
+    doc.setTextColor(...gray);
+    const tcLines = doc.splitTextToSize(data.termsAndConditions.trim(), cw - 4) as string[];
+    tcLines.forEach((line: string) => {
+      if (y > ph - footerH - 6) { doc.addPage(); y = 15; drawFooter(); }
+      doc.text(line, m + 2, y);
+      y += 3;
+    });
+  }
+
   // ── Footer ──
   drawFooter();
+
+  // ── Watermark ──
+  addWatermark(doc);
 
   const fileName = `Insurance_Comparison_${(data.customerName || "Customer").replace(/\s+/g, "_")}_${format(new Date(), "ddMMyyyy_HHmm")}.pdf`;
   return { doc, fileName };
