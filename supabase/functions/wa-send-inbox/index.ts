@@ -6,6 +6,36 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function buildTemplateParameters(templateVariables?: Record<string, unknown> | null) {
+  if (!templateVariables) return [];
+
+  const entries = Object.entries(templateVariables).filter(([, value]) => {
+    if (value === null || value === undefined) return false;
+    return String(value).trim().length > 0;
+  });
+
+  const positionalEntries = entries
+    .map(([key, value]) => {
+      const match = key.match(/^var_(\d+)$/) || key.match(/^(\d+)$/);
+      return match ? { index: Number(match[1]), value } : null;
+    })
+    .filter((entry): entry is { index: number; value: unknown } => entry !== null)
+    .sort((a, b) => a.index - b.index);
+
+  if (positionalEntries.length === entries.length) {
+    return positionalEntries.map(({ value }) => ({
+      type: "text",
+      text: String(value),
+    }));
+  }
+
+  return entries.map(([key, value]) => ({
+    type: "text",
+    parameter_name: key,
+    text: String(value),
+  }));
+}
+
 /**
  * wa-send-inbox — Sends messages from the CRM Inbox
  * Enforces 24hr window: free text inside window, templates outside
@@ -78,9 +108,10 @@ serve(async (req) => {
       // Build components from template_variables if no explicit components provided
       let finalComponents = template_components;
       if (!finalComponents && template_variables && Object.keys(template_variables).length > 0) {
+        const parameters = buildTemplateParameters(template_variables);
         finalComponents = [{
           type: "body",
-          parameters: Object.values(template_variables).map(val => ({ type: "text", text: String(val) })),
+          parameters,
         }];
       }
       metaPayload = {
