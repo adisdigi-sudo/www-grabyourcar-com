@@ -34,6 +34,9 @@ const FloatingCallButton = lazy(() =>
 const CookieConsentBanner = lazy(() =>
   import("./components/CookieConsentBanner").then((module) => ({ default: module.CookieConsentBanner })),
 );
+const FloatingGetQuote = lazy(() =>
+  import("./components/FloatingGetQuote").then((module) => ({ default: module.FloatingGetQuote })),
+);
 const SiteStructuredData = lazy(() =>
   import("./components/seo/SiteStructuredData").then((module) => ({ default: module.SiteStructuredData })),
 );
@@ -249,6 +252,7 @@ const RouteAwareChrome = ({ isChromelessExperience }: { isChromelessExperience: 
         <FloatingCompareBar />
         <WhatsAppFloatingButton />
         <FloatingCallButton />
+        <FloatingGetQuote />
         <CookieConsentBanner />
       </>
     </Suspense>
