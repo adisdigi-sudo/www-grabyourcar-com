@@ -313,10 +313,9 @@ serve(async (req) => {
       sent_at: new Date().toISOString(),
     });
 
-    // Update template sent_count if applicable
-    if (success && message_type === "template" && template_name) {
+    // Update template sent_count only if actually sent as template (not downgraded)
+    if (success && !costSaved && message_type === "template" && template_name) {
       await supabase.rpc("increment_counter", { table_name: "wa_templates", column_name: "sent_count", row_id_column: "name", row_id_value: template_name }).catch(() => {
-        // Fallback: direct update
         supabase.from("wa_templates").select("id, sent_count").eq("name", template_name).single().then(({ data: t }) => {
           if (t) supabase.from("wa_templates").update({ sent_count: (t.sent_count || 0) + 1, last_sent_at: new Date().toISOString() }).eq("id", t.id);
         });
@@ -327,6 +326,8 @@ serve(async (req) => {
       success,
       messageId: waMessageId,
       window_open: windowOpen,
+      cost_saved: costSaved,
+      sent_as: costSaved ? "free_text" : effectiveMessageType,
       ...(success ? {} : { error: result.error?.message || result.error?.error_user_msg || "Send failed", meta_error_code: result.error?.code }),
     }), {
       status: success ? 200 : 500,
