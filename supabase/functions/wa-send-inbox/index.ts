@@ -71,11 +71,27 @@ serve(async (req) => {
       });
     }
 
+    // ─── COST-SAVING STRATEGY ───
+    // If window IS open and agent is sending a template, auto-downgrade to free text
+    // This saves money: free service conversation vs paid template message
+    // Meta policy: inside 24hr window, free-form text is FREE
+    let effectiveMessageType = message_type;
+    let costSaved = false;
+
+    if (windowOpen && message_type === "template" && template_name && content && content.trim()) {
+      // We have rendered content from the Fill Template dialog — send as free text instead
+      console.log(`💰 Cost-saving: downgrading template "${template_name}" to free text (window open, ${
+        Math.round((new Date(convo.window_expires_at).getTime() - Date.now()) / 60000)
+      }min left)`);
+      effectiveMessageType = "text";
+      costSaved = true;
+    }
+
     // Build Meta API payload
     const to = phone.startsWith("91") ? phone : `91${phone.replace(/\D/g, "")}`;
     let metaPayload: Record<string, unknown>;
 
-    if (message_type === "template" && template_name) {
+    if (effectiveMessageType === "template" && template_name) {
       // ─── STRICT META-COMPLIANT TEMPLATE BUILDING ───
       
       // If explicit components provided (from Fill Template Dialog), use them directly
