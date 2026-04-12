@@ -38,6 +38,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: "contacts", label: "Contacts", icon: Users, color: "text-cyan-500" },
   { id: "analytics", label: "Analytics", icon: BarChart3, color: "text-amber-500" },
   { id: "team", label: "Team", icon: UsersRound, color: "text-rose-500" },
+  { id: "crm-messages", label: "CRM Messages", icon: MessageSquareText, color: "text-emerald-500" },
 ];
 
 export function WAHubLayout() {
