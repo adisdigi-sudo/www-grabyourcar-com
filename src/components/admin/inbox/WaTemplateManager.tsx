@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,13 +10,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import {
   Plus, Edit, Trash2, Copy, Zap, LayoutTemplate, Save, CheckCircle, Clock, XCircle,
-  AlertTriangle, IndianRupee, Eye, Send, MessageSquare, Shield, Megaphone,
+  AlertTriangle, Eye, Send, MessageSquare, Shield, Megaphone,
   FileText, Image, Video, Globe, Search, Filter, RefreshCw, BarChart3,
-  GitBranch, TrendingUp, Phone
+  GitBranch, TrendingUp, Phone, Link, Reply, PhoneCall, X
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -24,10 +23,10 @@ import { cn } from "@/lib/utils";
 
 // --- Types & Constants ---
 const META_CATEGORIES = {
-  utility: { label: "Utility", icon: <Zap className="h-3.5 w-3.5" />, color: "bg-blue-500/10 text-blue-700 border-blue-200", pricing: "₹0.35/msg", freeInWindow: true },
-  authentication: { label: "Auth", icon: <Shield className="h-3.5 w-3.5" />, color: "bg-green-500/10 text-green-700 border-green-200", pricing: "₹0.30/msg", freeInWindow: false },
-  marketing: { label: "Marketing", icon: <Megaphone className="h-3.5 w-3.5" />, color: "bg-orange-500/10 text-orange-700 border-orange-200", pricing: "₹0.80/msg", freeInWindow: false },
-  service: { label: "Service", icon: <MessageSquare className="h-3.5 w-3.5" />, color: "bg-emerald-500/10 text-emerald-700 border-emerald-200", pricing: "FREE", freeInWindow: true },
+  utility: { label: "Utility", icon: <Zap className="h-3.5 w-3.5" />, color: "bg-blue-500/10 text-blue-700 border-blue-200", pricing: "₹0.35/msg", desc: "Order updates, account alerts, appointment reminders" },
+  authentication: { label: "Auth", icon: <Shield className="h-3.5 w-3.5" />, color: "bg-green-500/10 text-green-700 border-green-200", pricing: "₹0.30/msg", desc: "OTP, login verification codes" },
+  marketing: { label: "Marketing", icon: <Megaphone className="h-3.5 w-3.5" />, color: "bg-orange-500/10 text-orange-700 border-orange-200", pricing: "₹0.80/msg", desc: "Promotions, offers, product launches" },
+  service: { label: "Service", icon: <MessageSquare className="h-3.5 w-3.5" />, color: "bg-emerald-500/10 text-emerald-700 border-emerald-200", pricing: "FREE", desc: "Customer service replies" },
 } as const;
 type MetaCategory = keyof typeof META_CATEGORIES;
 
@@ -46,22 +45,144 @@ interface QuickReply {
   variables: string[] | null; category: string; vertical: string | null; is_active: boolean;
 }
 
+interface MetaButton {
+  type: "URL" | "QUICK_REPLY" | "PHONE_NUMBER";
+  text: string;
+  url?: string;
+  phone_number?: string;
+}
+
 const COMMON_VARS = ["customer_name", "phone", "vehicle_number", "insurer", "premium", "expiry_date", "policy_number", "order_id", "amount", "date"];
 const VERTICALS = ["Insurance", "Car Sales", "Self Drive", "HSRP", "Accessories", "Loans", "Marketing"];
 
-// --- Phone Preview Component ---
-function PhonePreview({ template }: { template: Partial<Template> }) {
-  const sampleVars: Record<string, string> = {
-    customer_name: "Rahul Sharma", phone: "9876543210", vehicle_number: "MH02AB1234",
-    insurer: "HDFC ERGO", premium: "₹12,500", expiry_date: "15 Apr 2026",
-    policy_number: "POL-2024-12345", order_id: "ORD-789", amount: "₹8,500", date: "11 Apr 2026",
-  };
+const SAMPLE_VALUES: Record<string, string> = {
+  customer_name: "Rahul Sharma", phone: "9876543210", vehicle_number: "MH02AB1234",
+  insurer: "HDFC ERGO", premium: "₹12,500", expiry_date: "15 Apr 2026",
+  policy_number: "POL-2024-12345", order_id: "ORD-789", amount: "₹8,500", date: "11 Apr 2026",
+  otp: "123456", car_model: "Hyundai Creta", booking_id: "BK-001",
+};
 
-  const renderBody = (text: string) => text.replace(/\{\{(\w+)\}\}/g, (_, v) => sampleVars[v] || `[${v}]`);
+// ─── META VALIDATION ENGINE ───
+interface ValidationIssue {
+  type: "error" | "warning";
+  field: string;
+  message: string;
+}
+
+function validateTemplate(tpl: Partial<Template>, buttons: MetaButton[]): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  const name = tpl.name || "";
+  const body = tpl.body || "";
+  const category = tpl.category || "utility";
+
+  // Name validation
+  if (!name) {
+    issues.push({ type: "error", field: "name", message: "Template name is required" });
+  } else {
+    if (!/^[a-z0-9_]+$/.test(name)) {
+      issues.push({ type: "error", field: "name", message: "Name must be lowercase with only letters, numbers, underscore. No spaces or special chars." });
+    }
+    if (name.length > 512) {
+      issues.push({ type: "error", field: "name", message: "Name must be under 512 characters" });
+    }
+    if (name.startsWith("_") || name.endsWith("_")) {
+      issues.push({ type: "warning", field: "name", message: "Avoid starting/ending with underscore" });
+    }
+  }
+
+  // Body validation
+  if (!body) {
+    issues.push({ type: "error", field: "body", message: "Message body is required" });
+  } else {
+    if (body.length > 1024) {
+      issues.push({ type: "error", field: "body", message: `Body exceeds 1024 chars (${body.length}/1024)` });
+    }
+    // Check for invalid variable format
+    const invalidVars = body.match(/\{\{[^}]*[^a-zA-Z0-9_}][^}]*\}\}/g);
+    if (invalidVars) {
+      issues.push({ type: "error", field: "body", message: `Invalid variable format: ${invalidVars.join(", ")}. Use {{variable_name}} format.` });
+    }
+    // Marketing templates cannot have just variables
+    if (category === "marketing" && body.replace(/\{\{\w+\}\}/g, "").trim().length < 10) {
+      issues.push({ type: "warning", field: "body", message: "Marketing templates need substantial text content beyond variables" });
+    }
+  }
+
+  // Header validation
+  if (tpl.header_type === "text" && tpl.header_content) {
+    const h = tpl.header_content;
+    if (h.length > 60) {
+      issues.push({ type: "error", field: "header", message: "Text header must be under 60 characters" });
+    }
+    if (/[\n\r]/.test(h)) {
+      issues.push({ type: "error", field: "header", message: "Header cannot contain newlines" });
+    }
+    if (/\*/.test(h)) {
+      issues.push({ type: "error", field: "header", message: "Header cannot contain asterisks (*)" });
+    }
+    if (/[\u{1F600}-\u{1F9FF}\u{2600}-\u{27BF}]/u.test(h)) {
+      issues.push({ type: "error", field: "header", message: "Header cannot contain emojis" });
+    }
+    const headerVars = h.match(/\{\{\w+\}\}/g) || [];
+    if (headerVars.length > 1) {
+      issues.push({ type: "error", field: "header", message: "Header can have at most 1 variable" });
+    }
+  }
+
+  // Footer validation
+  if (tpl.footer) {
+    if (tpl.footer.length > 60) {
+      issues.push({ type: "error", field: "footer", message: "Footer must be under 60 characters" });
+    }
+    if (/\{\{/.test(tpl.footer)) {
+      issues.push({ type: "error", field: "footer", message: "Footer cannot contain variables" });
+    }
+  }
+
+  // Button validation
+  if (buttons.length > 3) {
+    issues.push({ type: "error", field: "buttons", message: "Maximum 3 buttons allowed" });
+  }
+  const urlButtons = buttons.filter(b => b.type === "URL");
+  const phoneButtons = buttons.filter(b => b.type === "PHONE_NUMBER");
+  if (urlButtons.length > 2) {
+    issues.push({ type: "error", field: "buttons", message: "Maximum 2 URL buttons allowed" });
+  }
+  if (phoneButtons.length > 1) {
+    issues.push({ type: "error", field: "buttons", message: "Maximum 1 phone number button allowed" });
+  }
+  buttons.forEach((btn, i) => {
+    if (!btn.text || btn.text.length > 25) {
+      issues.push({ type: "error", field: "buttons", message: `Button ${i + 1}: Text required & max 25 chars` });
+    }
+    if (btn.type === "URL" && !btn.url) {
+      issues.push({ type: "error", field: "buttons", message: `Button ${i + 1}: URL is required` });
+    }
+    if (btn.type === "PHONE_NUMBER" && !btn.phone_number) {
+      issues.push({ type: "error", field: "buttons", message: `Button ${i + 1}: Phone number is required` });
+    }
+    if (btn.type === "URL" && btn.url && !/^https?:\/\//.test(btn.url)) {
+      issues.push({ type: "error", field: "buttons", message: `Button ${i + 1}: URL must start with http:// or https://` });
+    }
+  });
+
+  // Auth category specific
+  if (category === "authentication") {
+    if (!body.includes("{{") || !body.match(/\{\{(otp|code|1)\}\}/i)) {
+      issues.push({ type: "warning", field: "body", message: "Auth templates typically need an OTP/code variable" });
+    }
+  }
+
+  return issues;
+}
+
+// --- Phone Preview Component ---
+function PhonePreview({ template, buttons }: { template: Partial<Template>; buttons?: MetaButton[] }) {
+  const renderBody = (text: string) => text.replace(/\{\{(\w+)\}\}/g, (_, v) => SAMPLE_VALUES[v] || `[${v}]`);
+  const btns = buttons || (template.buttons as MetaButton[]) || [];
 
   return (
     <div className="w-[280px] mx-auto">
-      {/* Phone Frame */}
       <div className="bg-gray-900 rounded-[2rem] p-2 shadow-2xl">
         <div className="bg-gray-900 rounded-t-[1.5rem] pt-6 pb-1 px-4">
           <div className="flex items-center gap-2 text-white text-xs">
@@ -75,7 +196,7 @@ function PhonePreview({ template }: { template: Partial<Template> }) {
         <div className="bg-[#e5ddd5] rounded-b-[1.5rem] p-3 min-h-[320px] flex flex-col justify-end">
           <div className="bg-white rounded-lg p-2.5 shadow-sm max-w-[90%] ml-auto">
             {template.header_type === "text" && template.header_content && (
-              <p className="font-bold text-xs mb-1">{template.header_content}</p>
+              <p className="font-bold text-xs mb-1">{renderBody(template.header_content)}</p>
             )}
             {template.header_type === "image" && (
               <div className="bg-gray-200 rounded h-24 flex items-center justify-center mb-2">
@@ -97,16 +218,112 @@ function PhonePreview({ template }: { template: Partial<Template> }) {
               {new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })} ✓✓
             </p>
           </div>
-          {/* Category & Cost Badge */}
+          {/* Buttons */}
+          {btns.length > 0 && (
+            <div className="mt-1 max-w-[90%] ml-auto space-y-0.5">
+              {btns.map((btn, i) => (
+                <div key={i} className="bg-white rounded-lg py-1.5 text-center text-[11px] text-blue-600 font-medium shadow-sm flex items-center justify-center gap-1">
+                  {btn.type === "URL" && <Globe className="h-3 w-3" />}
+                  {btn.type === "PHONE_NUMBER" && <PhoneCall className="h-3 w-3" />}
+                  {btn.type === "QUICK_REPLY" && <Reply className="h-3 w-3" />}
+                  {btn.text || "Button"}
+                </div>
+              ))}
+            </div>
+          )}
+          {/* Category Badge */}
           <div className="flex items-center gap-1.5 mt-2 justify-end">
             {template.category && (
               <Badge variant="outline" className={cn("text-[8px]", META_CATEGORIES[template.category as MetaCategory]?.color)}>
-                {META_CATEGORIES[template.category as MetaCategory]?.label}
+                {META_CATEGORIES[template.category as MetaCategory]?.label || template.category}
               </Badge>
             )}
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// --- Validation Panel ---
+function ValidationPanel({ issues }: { issues: ValidationIssue[] }) {
+  const errors = issues.filter(i => i.type === "error");
+  const warnings = issues.filter(i => i.type === "warning");
+  if (issues.length === 0) {
+    return (
+      <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 rounded-lg p-2.5 text-xs text-green-700 flex items-center gap-2">
+        <CheckCircle className="h-4 w-4" />
+        <span className="font-medium">✅ Meta Ready — Template passes all validation checks</span>
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-1.5">
+      {errors.map((e, i) => (
+        <div key={`e-${i}`} className="bg-red-50 dark:bg-red-950/20 border border-red-200 rounded-lg p-2 text-xs text-red-700 flex items-start gap-2">
+          <XCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+          <div><span className="font-medium capitalize">{e.field}:</span> {e.message}</div>
+        </div>
+      ))}
+      {warnings.map((w, i) => (
+        <div key={`w-${i}`} className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 rounded-lg p-2 text-xs text-amber-700 flex items-start gap-2">
+          <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+          <div><span className="font-medium capitalize">{w.field}:</span> {w.message}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// --- Button Editor Component ---
+function ButtonEditor({ buttons, onChange }: { buttons: MetaButton[]; onChange: (b: MetaButton[]) => void }) {
+  const addButton = (type: MetaButton["type"]) => {
+    if (buttons.length >= 3) { toast.error("Max 3 buttons"); return; }
+    onChange([...buttons, { type, text: "", url: type === "URL" ? "https://" : undefined, phone_number: type === "PHONE_NUMBER" ? "+91" : undefined }]);
+  };
+  const removeButton = (idx: number) => onChange(buttons.filter((_, i) => i !== idx));
+  const updateButton = (idx: number, updates: Partial<MetaButton>) => {
+    onChange(buttons.map((b, i) => i === idx ? { ...b, ...updates } : b));
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <Label className="text-xs font-medium">Buttons (optional, max 3)</Label>
+        <div className="flex gap-1">
+          <Button type="button" size="sm" variant="outline" className="h-6 text-[10px] gap-1" onClick={() => addButton("URL")} disabled={buttons.length >= 3}>
+            <Globe className="h-3 w-3" /> URL
+          </Button>
+          <Button type="button" size="sm" variant="outline" className="h-6 text-[10px] gap-1" onClick={() => addButton("QUICK_REPLY")} disabled={buttons.length >= 3}>
+            <Reply className="h-3 w-3" /> Reply
+          </Button>
+          <Button type="button" size="sm" variant="outline" className="h-6 text-[10px] gap-1" onClick={() => addButton("PHONE_NUMBER")} disabled={buttons.length >= 3}>
+            <PhoneCall className="h-3 w-3" /> Call
+          </Button>
+        </div>
+      </div>
+      {buttons.map((btn, idx) => (
+        <div key={idx} className="border rounded-lg p-2.5 space-y-1.5 bg-muted/30">
+          <div className="flex items-center justify-between">
+            <Badge variant="outline" className="text-[9px]">
+              {btn.type === "URL" ? "🔗 URL" : btn.type === "PHONE_NUMBER" ? "📞 Call" : "↩️ Quick Reply"}
+            </Badge>
+            <Button type="button" variant="ghost" size="icon" className="h-5 w-5" onClick={() => removeButton(idx)}>
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+          <Input value={btn.text} onChange={e => updateButton(idx, { text: e.target.value })} placeholder="Button text (max 25 chars)" className="h-7 text-xs" maxLength={25} />
+          {btn.type === "URL" && (
+            <div>
+              <Input value={btn.url || ""} onChange={e => updateButton(idx, { url: e.target.value })} placeholder="https://example.com/{{1}}" className="h-7 text-xs font-mono" />
+              <p className="text-[9px] text-muted-foreground mt-0.5">Use {"{{1}}"} for dynamic URL suffix</p>
+            </div>
+          )}
+          {btn.type === "PHONE_NUMBER" && (
+            <Input value={btn.phone_number || ""} onChange={e => updateButton(idx, { phone_number: e.target.value })} placeholder="+919577200023" className="h-7 text-xs font-mono" />
+          )}
+        </div>
+      ))}
     </div>
   );
 }
@@ -117,7 +334,6 @@ function TemplateStats({ template }: { template: Template }) {
   const deliveryRate = total > 0 ? Math.round((template.delivered_count / total) * 100) : 0;
   const readRate = total > 0 ? Math.round((template.read_count / total) * 100) : 0;
   const replyRate = total > 0 ? Math.round((template.replied_count / total) * 100) : 0;
-  const failRate = total > 0 ? Math.round((template.failed_count / total) * 100) : 0;
 
   return (
     <div className="space-y-2.5">
@@ -136,18 +352,18 @@ function TemplateStats({ template }: { template: Template }) {
         ))}
       </div>
       <div className="space-y-1.5">
-        <div className="flex items-center justify-between text-[10px]">
-          <span>Delivery</span><span className="font-mono">{deliveryRate}%</span>
-        </div>
-        <Progress value={deliveryRate} className="h-1.5" />
-        <div className="flex items-center justify-between text-[10px]">
-          <span>Read</span><span className="font-mono">{readRate}%</span>
-        </div>
-        <Progress value={readRate} className="h-1.5" />
-        <div className="flex items-center justify-between text-[10px]">
-          <span>Reply</span><span className="font-mono">{replyRate}%</span>
-        </div>
-        <Progress value={replyRate} className="h-1.5" />
+        {[
+          { label: "Delivery", val: deliveryRate },
+          { label: "Read", val: readRate },
+          { label: "Reply", val: replyRate },
+        ].map(s => (
+          <div key={s.label}>
+            <div className="flex items-center justify-between text-[10px]">
+              <span>{s.label}</span><span className="font-mono">{s.val}%</span>
+            </div>
+            <Progress value={s.val} className="h-1.5" />
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -160,6 +376,7 @@ export function WaTemplateManager() {
   const [mainTab, setMainTab] = useState("templates");
   const [isEditing, setIsEditing] = useState(false);
   const [editItem, setEditItem] = useState<Partial<Template & QuickReply> | null>(null);
+  const [editButtons, setEditButtons] = useState<MetaButton[]>([]);
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterVertical, setFilterVertical] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -168,10 +385,17 @@ export function WaTemplateManager() {
   const [statsOpen, setStatsOpen] = useState(false);
   const [statsTemplate, setStatsTemplate] = useState<Template | null>(null);
   const [abCompareOpen, setAbCompareOpen] = useState(false);
-  const [abCompareTemplates, setAbCompareTemplates] = useState<Template[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => { fetchAll(); }, []);
+
+  // Live validation
+  const validationIssues = useMemo(() => {
+    if (!editItem || mainTab === "quick_replies") return [];
+    return validateTemplate(editItem, editButtons);
+  }, [editItem, editButtons, mainTab]);
+
+  const hasErrors = validationIssues.some(i => i.type === "error");
 
   const fetchAll = async () => {
     const [tRes, qRes] = await Promise.all([
@@ -214,6 +438,10 @@ export function WaTemplateManager() {
   };
 
   const saveTemplate = async () => {
+    if (hasErrors) {
+      toast.error("Fix validation errors before saving");
+      return;
+    }
     if (!editItem?.name || !editItem?.body) { toast.error("Name and body required"); return; }
     const cleanName = editItem.name.toLowerCase().replace(/[^a-z0-9_]/g, "_");
     const payload: any = {
@@ -221,7 +449,7 @@ export function WaTemplateManager() {
       category: editItem.category || "utility", language: editItem.language || "en",
       body: editItem.body, header_type: editItem.header_type || null,
       header_content: editItem.header_content || null, footer: editItem.footer || null,
-      variables: editItem.variables || [], buttons: editItem.buttons || [],
+      variables: editItem.variables || [], buttons: editButtons.length > 0 ? editButtons : [],
       status: editItem.status || "draft", vertical: editItem.vertical || null,
       ab_variant_of: editItem.ab_variant_of || null,
       ab_variant_label: editItem.ab_variant_label || null,
@@ -236,7 +464,7 @@ export function WaTemplateManager() {
       savedId = ins?.id;
       toast.success("Template created as Draft");
     }
-    setIsEditing(false); setEditItem(null); await fetchAll();
+    setIsEditing(false); setEditItem(null); setEditButtons([]); await fetchAll();
 
     if (savedId && (!editItem.id || editItem.status === "draft")) {
       toast.info("Auto-submitting to Meta…");
@@ -276,23 +504,13 @@ export function WaTemplateManager() {
     setEditItem({
       name: parentTemplate.name + "_b",
       display_name: (parentTemplate.display_name || parentTemplate.name) + " (Variant B)",
-      category: parentTemplate.category,
-      language: parentTemplate.language,
-      body: parentTemplate.body,
-      header_type: parentTemplate.header_type,
-      header_content: parentTemplate.header_content,
-      footer: parentTemplate.footer,
-      vertical: parentTemplate.vertical,
-      ab_variant_of: parentTemplate.id,
-      ab_variant_label: "B",
+      category: parentTemplate.category, language: parentTemplate.language,
+      body: parentTemplate.body, header_type: parentTemplate.header_type,
+      header_content: parentTemplate.header_content, footer: parentTemplate.footer,
+      vertical: parentTemplate.vertical, ab_variant_of: parentTemplate.id, ab_variant_label: "B",
     });
+    setEditButtons((parentTemplate.buttons as MetaButton[]) || []);
     setIsEditing(true);
-  };
-
-  const openAbCompare = (template: Template) => {
-    const variants = templates.filter(t => t.ab_variant_of === template.id || t.id === template.id);
-    setAbCompareTemplates(variants);
-    setAbCompareOpen(true);
   };
 
   const insertVariable = (varName: string) => {
@@ -330,20 +548,18 @@ export function WaTemplateManager() {
             <div>
               <h2 className="font-semibold text-base flex items-center gap-2">
                 Template Manager Pro
-                <Badge variant="outline" className="text-[10px] border-green-300 text-green-700">Meta Compliant</Badge>
+                <Badge variant="outline" className="text-[10px] border-green-300 text-green-700">Meta Live Sync</Badge>
               </h2>
-              <p className="text-xs text-muted-foreground">Create, A/B test, and track template performance</p>
+              <p className="text-xs text-muted-foreground">Create, validate, A/B test — strict Meta compliance</p>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={syncFromMeta} disabled={isSyncing}>
-              <RefreshCw className={cn("h-3.5 w-3.5", isSyncing && "animate-spin")} /> {isSyncing ? "Syncing…" : "Sync Meta"}
-            </Button>
-          </div>
+          <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={syncFromMeta} disabled={isSyncing}>
+            <RefreshCw className={cn("h-3.5 w-3.5", isSyncing && "animate-spin")} /> {isSyncing ? "Syncing…" : "Sync from Meta"}
+          </Button>
         </div>
       </div>
 
-      {/* Stats Row */}
+      {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {[
           { label: "Total", val: templates.length, icon: LayoutTemplate, color: "text-primary" },
@@ -372,7 +588,7 @@ export function WaTemplateManager() {
             <TabsTrigger value="quick_replies" className="gap-1.5 text-xs"><Zap className="h-3.5 w-3.5" /> Quick Replies</TabsTrigger>
             <TabsTrigger value="ab_testing" className="gap-1.5 text-xs"><GitBranch className="h-3.5 w-3.5" /> A/B Tests</TabsTrigger>
           </TabsList>
-          <Button size="sm" className="gap-1.5 text-xs" onClick={() => { setEditItem({}); setIsEditing(true); }}>
+          <Button size="sm" className="gap-1.5 text-xs" onClick={() => { setEditItem({}); setEditButtons([]); setIsEditing(true); }}>
             <Plus className="h-3.5 w-3.5" /> {mainTab === "quick_replies" ? "New Quick Reply" : "New Template"}
           </Button>
         </div>
@@ -423,6 +639,7 @@ export function WaTemplateManager() {
                       const hasVariants = templates.some(v => v.ab_variant_of === t.id);
                       const total = t.sent_count || 0;
                       const readPct = total > 0 ? Math.round((t.read_count / total) * 100) : 0;
+                      const btnCount = Array.isArray(t.buttons) ? t.buttons.length : 0;
                       return (
                         <TableRow key={t.id} className="group">
                           <TableCell>
@@ -434,11 +651,8 @@ export function WaTemplateManager() {
                                     <GitBranch className="h-2.5 w-2.5 mr-0.5" />{t.ab_variant_label}
                                   </Badge>
                                 )}
-                                {hasVariants && (
-                                  <Badge variant="outline" className="text-[9px] bg-purple-50 text-purple-700 border-purple-200">
-                                    A/B
-                                  </Badge>
-                                )}
+                                {hasVariants && <Badge variant="outline" className="text-[9px] bg-purple-50 text-purple-700">A/B</Badge>}
+                                {btnCount > 0 && <Badge variant="outline" className="text-[9px]">{btnCount} btn</Badge>}
                               </div>
                               <p className="text-[10px] text-muted-foreground font-mono">{t.name}</p>
                               <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{t.body}</p>
@@ -463,17 +677,11 @@ export function WaTemplateManager() {
                           <TableCell>
                             {total > 0 ? (
                               <div className="flex items-center gap-2">
-                                <div className="text-[10px]">
-                                  <span className="font-medium">{total}</span> sent
-                                </div>
-                                <div className="w-16">
-                                  <Progress value={readPct} className="h-1" />
-                                </div>
-                                <span className="text-[10px] text-muted-foreground">{readPct}% read</span>
+                                <span className="text-[10px] font-medium">{total} sent</span>
+                                <div className="w-16"><Progress value={readPct} className="h-1" /></div>
+                                <span className="text-[10px] text-muted-foreground">{readPct}%</span>
                               </div>
-                            ) : (
-                              <span className="text-[10px] text-muted-foreground">—</span>
-                            )}
+                            ) : <span className="text-[10px] text-muted-foreground">—</span>}
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-0.5 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
@@ -484,17 +692,21 @@ export function WaTemplateManager() {
                                 <BarChart3 className="h-3.5 w-3.5" />
                               </Button>
                               {!t.ab_variant_of && t.status === "approved" && (
-                                <Button size="icon" variant="ghost" className="h-7 w-7 text-purple-600" title="Create A/B Variant" onClick={() => createAbVariant(t)}>
+                                <Button size="icon" variant="ghost" className="h-7 w-7 text-purple-600" title="A/B Variant" onClick={() => createAbVariant(t)}>
                                   <GitBranch className="h-3.5 w-3.5" />
                                 </Button>
                               )}
-                              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditItem(t); setIsEditing(true); }}>
+                              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => {
+                                setEditItem(t);
+                                setEditButtons(Array.isArray(t.buttons) ? t.buttons as MetaButton[] : []);
+                                setIsEditing(true);
+                              }}>
                                 <Edit className="h-3.5 w-3.5" />
                               </Button>
                               <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { navigator.clipboard.writeText(t.body); toast.success("Copied!"); }}>
                                 <Copy className="h-3.5 w-3.5" />
                               </Button>
-                              {t.status === "draft" || t.status === "rejected" ? (
+                              {(t.status === "draft" || t.status === "rejected") ? (
                                 <Button size="icon" variant="ghost" className="h-7 w-7 text-green-600" title="Submit to Meta" onClick={() => submitToMeta(t)}>
                                   <Send className="h-3.5 w-3.5" />
                                 </Button>
@@ -552,11 +764,8 @@ export function WaTemplateManager() {
             <Card>
               <CardContent className="p-8 text-center space-y-3">
                 <GitBranch className="h-12 w-12 text-muted-foreground/30 mx-auto" />
-                <div>
-                  <p className="font-medium">No A/B Tests Yet</p>
-                  <p className="text-sm text-muted-foreground">Create a variant of any approved template to start A/B testing</p>
-                </div>
-                <p className="text-xs text-muted-foreground">Go to Templates tab → hover over an approved template → click the <GitBranch className="inline h-3 w-3" /> icon</p>
+                <p className="font-medium">No A/B Tests Yet</p>
+                <p className="text-sm text-muted-foreground">Create a variant of any approved template to start A/B testing</p>
               </CardContent>
             </Card>
           ) : (
@@ -582,21 +791,11 @@ export function WaTemplateManager() {
                     <CardContent>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {allVersions.map(t => (
-                          <div key={t.id} className={cn(
-                            "border rounded-lg p-3 space-y-2",
-                            t.id === bestPerf?.id && t.sent_count > 0 && "border-green-300 bg-green-50/50 dark:bg-green-950/10"
-                          )}>
+                          <div key={t.id} className={cn("border rounded-lg p-3 space-y-2", t.id === bestPerf?.id && t.sent_count > 0 && "border-green-300 bg-green-50/50")}>
                             <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-1.5">
-                                <Badge variant="outline" className="text-[10px] bg-purple-50 text-purple-700">
-                                  {t.ab_variant_label || "A"}
-                                </Badge>
-                                <span className="text-xs font-medium truncate">{t.display_name || t.name}</span>
-                              </div>
+                              <Badge variant="outline" className="text-[10px] bg-purple-50 text-purple-700">{t.ab_variant_label || "A"}</Badge>
                               {t.id === bestPerf?.id && t.sent_count > 0 && (
-                                <Badge className="text-[9px] bg-green-600">
-                                  <TrendingUp className="h-2.5 w-2.5 mr-0.5" /> Winner
-                                </Badge>
+                                <Badge className="text-[9px] bg-green-600"><TrendingUp className="h-2.5 w-2.5 mr-0.5" /> Winner</Badge>
                               )}
                             </div>
                             <p className="text-[11px] text-muted-foreground line-clamp-2">{t.body}</p>
@@ -613,9 +812,9 @@ export function WaTemplateManager() {
         </TabsContent>
       </Tabs>
 
-      {/* Create/Edit Dialog with Side-by-Side Phone Preview */}
-      <Dialog open={isEditing} onOpenChange={(v) => { if (!v) { setIsEditing(false); setEditItem(null); } }}>
-        <DialogContent className="max-w-4xl max-h-[85vh] overflow-auto">
+      {/* Create/Edit Dialog */}
+      <Dialog open={isEditing} onOpenChange={v => { if (!v) { setIsEditing(false); setEditItem(null); setEditButtons([]); } }}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {editItem?.id ? "Edit" : "Create"} {mainTab === "quick_replies" ? "Quick Reply" : "Template"}
@@ -624,17 +823,27 @@ export function WaTemplateManager() {
           </DialogHeader>
           <div className="flex gap-6">
             {/* Form */}
-            <div className="flex-1 space-y-4">
+            <div className="flex-1 space-y-3 min-w-0">
               {mainTab !== "quick_replies" ? (
                 <>
-                  {editItem?.category === "marketing" && (
-                    <div className="bg-orange-50 dark:bg-orange-950/20 border border-orange-200 rounded-lg p-2 text-xs text-orange-700">
-                      <p className="font-medium flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Marketing — ₹0.80/msg</p>
+                  {/* Live Validation Panel */}
+                  <ValidationPanel issues={validationIssues} />
+
+                  {/* Category info banner */}
+                  {editItem?.category && (
+                    <div className={cn("border rounded-lg p-2 text-xs flex items-center gap-2", META_CATEGORIES[editItem.category as MetaCategory]?.color)}>
+                      {META_CATEGORIES[editItem.category as MetaCategory]?.icon}
+                      <div>
+                        <span className="font-medium">{META_CATEGORIES[editItem.category as MetaCategory]?.label}</span>
+                        <span className="ml-1.5 opacity-70">— {META_CATEGORIES[editItem.category as MetaCategory]?.pricing}</span>
+                        <span className="ml-1.5 opacity-60">| {META_CATEGORIES[editItem.category as MetaCategory]?.desc}</span>
+                      </div>
                     </div>
                   )}
+
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <Label className="text-xs">Template Name *</Label>
+                      <Label className="text-xs">Template Name * <span className="text-muted-foreground">(lowercase, underscores only)</span></Label>
                       <Input value={editItem?.name || ""} onChange={e => setEditItem({ ...editItem, name: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_") })} placeholder="insurance_followup" className="h-8 text-sm font-mono" />
                     </div>
                     <div>
@@ -644,13 +853,13 @@ export function WaTemplateManager() {
                   </div>
                   <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <Label className="text-xs">Category</Label>
+                      <Label className="text-xs">Category *</Label>
                       <Select value={editItem?.category || "utility"} onValueChange={v => setEditItem({ ...editItem, category: v })}>
                         <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="utility">Utility</SelectItem>
-                          <SelectItem value="marketing">Marketing</SelectItem>
-                          <SelectItem value="authentication">Auth</SelectItem>
+                          <SelectItem value="utility">🔧 Utility — ₹0.35/msg</SelectItem>
+                          <SelectItem value="marketing">📢 Marketing — ₹0.80/msg</SelectItem>
+                          <SelectItem value="authentication">🔐 Auth — ₹0.30/msg</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -678,32 +887,41 @@ export function WaTemplateManager() {
                   <div>
                     <Label className="text-xs">Header</Label>
                     <div className="flex gap-1.5 mb-1.5">
-                      {["none", "text", "image", "video"].map(ht => (
+                      {["none", "text", "image", "video", "document"].map(ht => (
                         <Button key={ht} type="button" size="sm" variant={(editItem?.header_type || "none") === ht ? "default" : "outline"} className="h-7 text-[10px]" onClick={() => setEditItem({ ...editItem, header_type: ht === "none" ? null : ht })}>
                           {ht.charAt(0).toUpperCase() + ht.slice(1)}
                         </Button>
                       ))}
                     </div>
-                    {editItem?.header_type && (
-                      <Input value={editItem?.header_content || ""} onChange={e => setEditItem({ ...editItem, header_content: e.target.value })} placeholder={editItem.header_type === "text" ? "Header text" : "Media URL"} className="h-8 text-sm" />
+                    {editItem?.header_type === "text" && (
+                      <div>
+                        <Input value={editItem?.header_content || ""} onChange={e => setEditItem({ ...editItem, header_content: e.target.value })} placeholder="Header text (max 60 chars, no emoji/bold)" className="h-8 text-sm" maxLength={60} />
+                        <p className="text-[9px] text-muted-foreground mt-0.5">No emojis, no *, no newlines. Max 1 variable.</p>
+                      </div>
+                    )}
+                    {editItem?.header_type && editItem.header_type !== "text" && (
+                      <p className="text-[10px] text-muted-foreground">Media header — upload at send time. No URL needed here.</p>
                     )}
                   </div>
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <Label className="text-xs">Body *</Label>
+                      <Label className="text-xs">Body * <span className="text-muted-foreground">({(editItem?.body || "").length}/1024)</span></Label>
                       <div className="flex gap-1 flex-wrap">
-                        {COMMON_VARS.slice(0, 6).map(v => (
+                        {COMMON_VARS.slice(0, 8).map(v => (
                           <button key={v} onClick={() => insertVariable(v)} className="text-[9px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 hover:bg-blue-200 font-mono">{`{{${v}}}`}</button>
                         ))}
                       </div>
                     </div>
-                    <Textarea value={editItem?.body || ""} onChange={e => setEditItem({ ...editItem, body: e.target.value })} rows={5} className="text-sm font-mono" />
-                    <p className="text-[10px] text-muted-foreground mt-0.5">{(editItem?.body || "").length}/1024</p>
+                    <Textarea value={editItem?.body || ""} onChange={e => setEditItem({ ...editItem, body: e.target.value })} rows={5} className="text-sm font-mono" maxLength={1024} />
                   </div>
                   <div>
-                    <Label className="text-xs">Footer</Label>
-                    <Input value={editItem?.footer || ""} onChange={e => setEditItem({ ...editItem, footer: e.target.value })} className="h-8 text-sm" placeholder="Reply STOP to unsubscribe" />
+                    <Label className="text-xs">Footer <span className="text-muted-foreground">(max 60 chars, no variables)</span></Label>
+                    <Input value={editItem?.footer || ""} onChange={e => setEditItem({ ...editItem, footer: e.target.value })} className="h-8 text-sm" placeholder="Reply STOP to unsubscribe" maxLength={60} />
                   </div>
+
+                  {/* Button Editor */}
+                  <ButtonEditor buttons={editButtons} onChange={setEditButtons} />
+
                   {editItem?.ab_variant_of && (
                     <div>
                       <Label className="text-xs">Variant Label</Label>
@@ -729,18 +947,18 @@ export function WaTemplateManager() {
               )}
             </div>
 
-            {/* Live Phone Preview (Templates only) */}
+            {/* Live Phone Preview */}
             {mainTab !== "quick_replies" && (
               <div className="shrink-0">
                 <p className="text-xs font-medium text-center mb-2 text-muted-foreground">Live Preview</p>
-                <PhonePreview template={editItem || {}} />
+                <PhonePreview template={editItem || {}} buttons={editButtons} />
               </div>
             )}
           </div>
           <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => { setIsEditing(false); setEditItem(null); }}>Cancel</Button>
-            <Button onClick={mainTab === "quick_replies" ? saveQuickReply : saveTemplate} className="gap-2">
-              <Save className="h-4 w-4" /> Save & Submit
+            <Button variant="outline" onClick={() => { setIsEditing(false); setEditItem(null); setEditButtons([]); }}>Cancel</Button>
+            <Button onClick={mainTab === "quick_replies" ? saveQuickReply : saveTemplate} className="gap-2" disabled={mainTab !== "quick_replies" && hasErrors}>
+              <Save className="h-4 w-4" /> {hasErrors ? "Fix Errors First" : "Save & Submit to Meta"}
             </Button>
           </DialogFooter>
         </DialogContent>
