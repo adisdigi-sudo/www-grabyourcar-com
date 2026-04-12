@@ -265,7 +265,7 @@ export function BulkQuoteSharePanel({ leads, source, onDone }: BulkQuoteSharePan
         // Step 1: Send approved Meta template (SAFE — Marketing category, approved)
         const result = await sendWhatsApp({
           phone: l.phone || "", message: "", name: l.customer_name || "", logEvent: "bulk_quote", silent: true,
-          templateName: "insurance_quote_share",
+          templateName: "renewal_reminder",
           templateVariables: { var_1: l.customer_name || "Valued Customer", var_2: vehicleLabel, var_3: premiumStr, var_4: expiryStr },
           messageType: "template",
         });
@@ -325,7 +325,7 @@ export function BulkQuoteSharePanel({ leads, source, onDone }: BulkQuoteSharePan
         // Step 1: Send approved Meta template (SAFE — Marketing category, approved)
         const result = await sendWhatsApp({
           phone: l.phone || "", message: "", name: l.customer_name || "", logEvent: "bulk_renewal_api", silent: true,
-          templateName: "insurance_quote_share",
+          templateName: "renewal_reminder",
           templateVariables: { var_1: l.customer_name || "Valued Customer", var_2: vehicleLabel, var_3: premiumStr, var_4: expiryStr },
           messageType: "template",
         });

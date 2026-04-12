@@ -342,7 +342,7 @@ export function BulkRenewalQuoteGenerator({ onClose }: { onClose: () => void }) 
       // Step 1: Send approved Meta template (SAFE — Marketing category, approved)
       const result = await sendWhatsApp({
         phone: q.phone, message: "", name: q.customer_name || undefined, logEvent: "renewal_quote_single", silent: false,
-        templateName: "insurance_quote_share",
+        templateName: "renewal_reminder",
         templateVariables: { var_1: q.customer_name || "Valued Customer", var_2: vehicleLabel, var_3: `Rs. ${total.toLocaleString("en-IN")}`, var_4: "N/A" },
         messageType: "template",
       });
@@ -414,7 +414,7 @@ export function BulkRenewalQuoteGenerator({ onClose }: { onClose: () => void }) 
         // Step 1: Send approved Meta template (SAFE — Marketing category, approved)
         const result = await sendWhatsApp({
           phone: q.phone, message: "", name: q.customer_name || undefined, logEvent: "bulk_renewal_quote", silent: true,
-          templateName: "insurance_quote_share",
+          templateName: "renewal_reminder",
           templateVariables: { var_1: q.customer_name || "Valued Customer", var_2: vehicleLabel, var_3: premiumStr, var_4: "N/A" },
           messageType: "template",
         });
