@@ -109,40 +109,52 @@ export function WAHubLayout() {
 
         {/* Navigation */}
         <TooltipProvider delayDuration={0}>
-          <nav className="flex-1 py-2 px-2 space-y-1">
-            {NAV_ITEMS.map((item) => {
-              const isActive = activeModule === item.id;
-              return (
-                <Tooltip key={item.id}>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={() => setActiveModule(item.id)}
-                      className={cn(
-                        "w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
-                        isActive
-                          ? "bg-green-600/10 text-green-700 dark:text-green-400 border border-green-600/20"
-                          : "text-muted-foreground hover:bg-accent hover:text-foreground"
+          <nav className="flex-1 py-2 px-2 space-y-0.5 overflow-y-auto">
+            {(() => {
+              let lastSection = "";
+              return NAV_ITEMS.map((item) => {
+                const isActive = activeModule === item.id;
+                const showSection = !collapsed && item.section && item.section !== lastSection;
+                if (item.section) lastSection = item.section;
+                return (
+                  <div key={item.id}>
+                    {showSection && (
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/60 px-3 pt-3 pb-1">
+                        {item.section}
+                      </p>
+                    )}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => setActiveModule(item.id)}
+                          className={cn(
+                            "w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all",
+                            isActive
+                              ? "bg-green-600/10 text-green-700 dark:text-green-400 border border-green-600/20"
+                              : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                          )}
+                        >
+                          <item.icon className={cn("h-4.5 w-4.5 shrink-0", isActive ? item.color : "")} />
+                          {!collapsed && (
+                            <span className="truncate text-xs">{item.label}</span>
+                          )}
+                          {!collapsed && item.badge && item.badge > 0 && (
+                            <Badge className="ml-auto h-5 px-1.5 text-[10px] bg-green-600 hover:bg-green-600">
+                              {item.badge}
+                            </Badge>
+                          )}
+                        </button>
+                      </TooltipTrigger>
+                      {collapsed && (
+                        <TooltipContent side="right" className="font-medium">
+                          {item.label}
+                        </TooltipContent>
                       )}
-                    >
-                      <item.icon className={cn("h-5 w-5 shrink-0", isActive ? item.color : "")} />
-                      {!collapsed && (
-                        <span className="truncate">{item.label}</span>
-                      )}
-                      {!collapsed && item.badge && item.badge > 0 && (
-                        <Badge className="ml-auto h-5 px-1.5 text-[10px] bg-green-600 hover:bg-green-600">
-                          {item.badge}
-                        </Badge>
-                      )}
-                    </button>
-                  </TooltipTrigger>
-                  {collapsed && (
-                    <TooltipContent side="right" className="font-medium">
-                      {item.label}
-                    </TooltipContent>
-                  )}
-                </Tooltip>
-              );
-            })}
+                    </Tooltip>
+                  </div>
+                );
+              });
+            })()}
           </nav>
         </TooltipProvider>
 
