@@ -97,12 +97,31 @@ function validateTemplate(tpl: Partial<Template>, buttons: MetaButton[]): Valida
     if (body.length > 1024) {
       issues.push({ type: "error", field: "body", message: `Body exceeds 1024 chars (${body.length}/1024)` });
     }
-    // Check for invalid variable format
     const invalidVars = body.match(/\{\{[^}]*[^a-zA-Z0-9_}][^}]*\}\}/g);
     if (invalidVars) {
       issues.push({ type: "error", field: "body", message: `Invalid variable format: ${invalidVars.join(", ")}. Use {{variable_name}} format.` });
     }
-    // Marketing templates cannot have just variables
+
+    const normalizedBody = body.replace(/\{\{([^}]+)\}\}/g, (_match, inner: string) => `{{${inner.trim()}}}`);
+    const positionalMatches = normalizedBody.match(/\{\{\d+\}\}/g) || [];
+    const namedMatches = normalizedBody.match(/\{\{[a-zA-Z_][a-zA-Z0-9_]*\}\}/g) || [];
+    const totalVariables = positionalMatches.length + namedMatches.length;
+    const plainWords = normalizedBody
+      .replace(/\{\{[^}]+\}\}/g, " ")
+      .replace(/[^\p{L}\p{N}\s]/gu, " ")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    const minimumWordsNeeded = totalVariables * 3;
+
+    if (totalVariables > 0 && plainWords.length < minimumWordsNeeded) {
+      issues.push({
+        type: "error",
+        field: "body",
+        message: `Too many variables for body length: ${totalVariables} variables need about ${minimumWordsNeeded} real words, only ${plainWords.length} found. Add more text or reduce variables.`,
+      });
+    }
+
     if (category === "marketing" && body.replace(/\{\{\w+\}\}/g, "").trim().length < 10) {
       issues.push({ type: "warning", field: "body", message: "Marketing templates need substantial text content beyond variables" });
     }
@@ -515,6 +534,8 @@ export function WaTemplateManager() {
   const [statsTemplate, setStatsTemplate] = useState<Template | null>(null);
   const [abCompareOpen, setAbCompareOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [submittingTemplateId, setSubmittingTemplateId] = useState<string | null>(null);
+  const [isSavingTemplate, setIsSavingTemplate] = useState(false);
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -547,13 +568,28 @@ export function WaTemplateManager() {
   };
 
   const submitToMeta = async (template: Template) => {
+    if (submittingTemplateId === template.id) return;
+
+    const templateIssues = validateTemplate(template, Array.isArray(template.buttons) ? (template.buttons as MetaButton[]) : []);
+    const blockingIssue = templateIssues.find(issue => issue.type === "error");
+    if (blockingIssue) {
+      toast.error(blockingIssue.message);
+      return;
+    }
+
+    setSubmittingTemplateId(template.id);
     try {
       const { data, error } = await supabase.functions.invoke("meta-templates", { body: { action: "submit_template", template_id: template.id } });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       toast.success("Submitted to Meta ✅");
       await fetchAll();
-    } catch (err: any) { toast.error(err.message); }
+    } catch (err: any) {
+      toast.error(err.message || "Meta submission failed");
+      await fetchAll();
+    } finally {
+      setSubmittingTemplateId(null);
+    }
   };
 
   const deleteFromMeta = async (template: Template) => {
@@ -567,11 +603,14 @@ export function WaTemplateManager() {
   };
 
   const saveTemplate = async () => {
+    if (isSavingTemplate) return;
     if (hasErrors) {
       toast.error("Fix validation errors before saving");
       return;
     }
     if (!editItem?.name || !editItem?.body) { toast.error("Name and body required"); return; }
+
+    setIsSavingTemplate(true);
     const cleanName = editItem.name.toLowerCase().replace(/[^a-z0-9_]/g, "_");
     const payload: any = {
       name: cleanName, display_name: editItem.display_name || editItem.name,
@@ -584,26 +623,45 @@ export function WaTemplateManager() {
       ab_variant_label: editItem.ab_variant_label || null,
     };
 
-    let savedId = editItem.id;
-    if (editItem.id) {
-      await supabase.from("wa_templates").update(payload).eq("id", editItem.id);
-      toast.success("Template updated");
-    } else {
-      const { data: ins } = await supabase.from("wa_templates").insert(payload).select("id").single();
-      savedId = ins?.id;
-      toast.success("Template created as Draft");
-    }
-    setIsEditing(false); setEditItem(null); setEditButtons([]); await fetchAll();
+    try {
+      let savedId = editItem.id;
+      if (editItem.id) {
+        await supabase.from("wa_templates").update(payload).eq("id", editItem.id);
+        toast.success("Template updated");
+      } else {
+        const { data: ins } = await supabase.from("wa_templates").insert(payload).select("id").single();
+        savedId = ins?.id;
+        toast.success("Template created as Draft");
+      }
 
-    if (savedId && (!editItem.id || editItem.status === "draft")) {
-      toast.info("Auto-submitting to Meta…");
-      try {
-        const { data, error } = await supabase.functions.invoke("meta-templates", { body: { action: "submit_template", template_id: savedId } });
-        if (error) throw error;
-        if (data?.error) throw new Error(data.error);
-        toast.success("Submitted to Meta ✅");
-        await fetchAll();
-      } catch (err: any) { toast.error("Saved locally, Meta submission failed: " + err.message); }
+      setIsEditing(false); setEditItem(null); setEditButtons([]); await fetchAll();
+
+      if (savedId && (!editItem.id || editItem.status === "draft")) {
+        const savedTemplate = templates.find(t => t.id === savedId) || ({ ...payload, id: savedId } as Template);
+        const templateIssues = validateTemplate(savedTemplate, editButtons);
+        const blockingIssue = templateIssues.find(issue => issue.type === "error");
+        if (blockingIssue) {
+          toast.error(`Saved locally. ${blockingIssue.message}`);
+          return;
+        }
+
+        toast.info("Auto-submitting to Meta…");
+        setSubmittingTemplateId(savedId);
+        try {
+          const { data, error } = await supabase.functions.invoke("meta-templates", { body: { action: "submit_template", template_id: savedId } });
+          if (error) throw error;
+          if (data?.error) throw new Error(data.error);
+          toast.success("Submitted to Meta ✅");
+          await fetchAll();
+        } catch (err: any) {
+          toast.error("Saved locally, Meta submission failed: " + (err.message || "Unknown error"));
+          await fetchAll();
+        } finally {
+          setSubmittingTemplateId(null);
+        }
+      }
+    } finally {
+      setIsSavingTemplate(false);
     }
   };
 
@@ -837,7 +895,14 @@ export function WaTemplateManager() {
                                 <Copy className="h-3.5 w-3.5" />
                               </Button>
                               {(t.status === "draft" || t.status === "rejected") ? (
-                                <Button size="icon" variant="ghost" className="h-7 w-7 text-green-600" title="Submit to Meta" onClick={() => submitToMeta(t)}>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-7 w-7 text-green-600"
+                                  title={submittingTemplateId === t.id ? "Submitting..." : "Submit to Meta"}
+                                  onClick={() => submitToMeta(t)}
+                                  disabled={submittingTemplateId === t.id}
+                                >
                                   <Send className="h-3.5 w-3.5" />
                                 </Button>
                               ) : t.status === "approved" ? (
@@ -1091,9 +1156,9 @@ export function WaTemplateManager() {
             )}
           </div>
           <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => { setIsEditing(false); setEditItem(null); setEditButtons([]); }}>Cancel</Button>
-            <Button onClick={mainTab === "quick_replies" ? saveQuickReply : saveTemplate} className="gap-2" disabled={mainTab !== "quick_replies" && hasErrors}>
-              <Save className="h-4 w-4" /> {hasErrors ? "Fix Errors First" : "Save & Submit to Meta"}
+            <Button variant="outline" onClick={() => { setIsEditing(false); setEditItem(null); setEditButtons([]); }} disabled={isSavingTemplate}>Cancel</Button>
+            <Button onClick={mainTab === "quick_replies" ? saveQuickReply : saveTemplate} className="gap-2" disabled={(mainTab !== "quick_replies" && hasErrors) || isSavingTemplate}>
+              <Save className="h-4 w-4" /> {isSavingTemplate ? "Saving..." : hasErrors ? "Fix Errors First" : "Save & Submit to Meta"}
             </Button>
           </DialogFooter>
         </DialogContent>
