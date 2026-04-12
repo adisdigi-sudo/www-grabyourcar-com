@@ -526,13 +526,15 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
     addRow("Fuel Type", fuelType);
     y += 3; rowIdx = 0;
 
-    addRow(`Basic OD Premium (${calc.odRate}%)`, fmt(calc.basicOD));
-    if (discountPct > 0) addRow(`OD Discount (${discountPct}%)`, `- ${fmt(calc.odDiscount)}`);
-    if (ncb > 0) addRow(`NCB Discount (${ncb}%)`, `- ${fmt(calc.ncbDiscount)}`);
-    addRow("Net OD Premium", fmt(calc.netOD), true);
-    y += 3; rowIdx = 0;
+    if (!isThirdPartyOnly) {
+      addRow(`Basic OD Premium (${calc.odRate}%)`, fmt(calc.basicOD));
+      if (discountPct > 0) addRow(`OD Discount (${discountPct}%)`, `- ${fmt(calc.odDiscount)}`);
+      if (ncb > 0) addRow(`NCB Discount (${ncb}%)`, `- ${fmt(calc.ncbDiscount)}`);
+      addRow("Net OD Premium", fmt(calc.netOD), true);
+      y += 3; rowIdx = 0;
+    }
 
-    addRow("Third Party Premium", fmt(calc.tp));
+    if (showTPInCalc) addRow("Third Party Premium", fmt(calc.tp));
     if (securePremiumNum > 0) addRow("Secure Premium", fmt(securePremiumNum));
 
     // ── Add-ons ──
