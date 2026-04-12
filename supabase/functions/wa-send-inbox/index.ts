@@ -231,12 +231,12 @@ serve(async (req) => {
 
       console.log("Template payload:", JSON.stringify(metaPayload));
 
-    } else if (message_type === "image" && media_url) {
+    } else if (effectiveMessageType === "image" && media_url) {
       metaPayload = {
         type: "image",
         image: { link: media_url, caption: content || undefined },
       };
-    } else if (message_type === "document" && media_url) {
+    } else if (effectiveMessageType === "document" && media_url) {
       metaPayload = {
         type: "document",
         document: { link: media_url, filename: media_filename || "document", caption: content || undefined },
