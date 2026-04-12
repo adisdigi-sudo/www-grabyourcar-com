@@ -9,8 +9,10 @@ import { Label } from "@/components/ui/label";
 import {
   Send, Paperclip, Clock, Check, CheckCheck, X,
   AlertTriangle, Info, Zap, LayoutTemplate, MessageSquare,
-  UserPlus, Timer
+  UserPlus, Timer, Image, FileText, Video, Loader2
 } from "lucide-react";
+import { supabase as sbClient } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format, formatDistanceToNowStrict, differenceInSeconds } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -120,8 +122,12 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
   const [agents, setAgents] = useState<Array<{ id: string; full_name: string; email: string }>>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateOption | null>(null);
   const [templateValues, setTemplateValues] = useState<Record<string, string>>({});
+  const [isUploading, setIsUploading] = useState(false);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [fileAccept, setFileAccept] = useState("");
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -284,6 +290,60 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
     if (!conversation) return;
     await supabase.from("wa_conversations").update({ assigned_user_id: agentId }).eq("id", conversation.id);
     setShowAssign(false);
+  };
+
+  const handleAttachClick = (type: "image" | "document" | "video") => {
+    const accepts: Record<string, string> = {
+      image: "image/jpeg,image/png,image/webp",
+      document: "application/pdf,.doc,.docx,.xls,.xlsx,.csv,.txt",
+      video: "video/mp4,video/3gpp",
+    };
+    setFileAccept(accepts[type]);
+    setShowAttachMenu(false);
+    setTimeout(() => fileInputRef.current?.click(), 50);
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !conversation) return;
+    e.target.value = "";
+
+    const maxSize = 16 * 1024 * 1024; // 16MB WhatsApp limit
+    if (file.size > maxSize) {
+      toast.error("File too large. WhatsApp allows max 16MB.");
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `inbox/${conversation.phone}/${Date.now()}_${file.name}`;
+      
+      const { error: upErr } = await sbClient.storage.from("broadcast-media").upload(path, file);
+      if (upErr) throw upErr;
+
+      const { data: urlData } = sbClient.storage.from("broadcast-media").getPublicUrl(path);
+      const publicUrl = urlData?.publicUrl;
+      if (!publicUrl) throw new Error("Failed to get public URL");
+
+      const isImage = file.type.startsWith("image/");
+      const isVideo = file.type.startsWith("video/");
+      const msgType = isImage ? "image" : isVideo ? "video" : "document";
+
+      const ok = await onSend(
+        text.trim() || "",
+        msgType,
+        { media_url: publicUrl, media_filename: file.name }
+      );
+      if (ok) {
+        setText("");
+        toast.success(`${msgType === "image" ? "📷" : msgType === "video" ? "🎥" : "📄"} ${file.name} sent!`);
+      }
+    } catch (err) {
+      toast.error("Upload failed: " + (err instanceof Error ? err.message : "Unknown error"));
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const getStatusIcon = (msg: WaMessage) => {
@@ -510,19 +570,50 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
             </PopoverContent>
           </Popover>
 
+          {/* Attachments */}
+          <Popover open={showAttachMenu} onOpenChange={setShowAttachMenu}>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" title="Send attachment" disabled={!isWindowOpen || isUploading}>
+                {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-48 p-2" align="start">
+              <p className="text-xs font-semibold mb-2">📎 Send Attachment</p>
+              <div className="space-y-1">
+                <button onClick={() => handleAttachClick("image")} className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs hover:bg-accent transition-colors">
+                  <Image className="h-3.5 w-3.5 text-blue-500" /> Photo
+                </button>
+                <button onClick={() => handleAttachClick("document")} className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs hover:bg-accent transition-colors">
+                  <FileText className="h-3.5 w-3.5 text-orange-500" /> Document / PDF
+                </button>
+                <button onClick={() => handleAttachClick("video")} className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs hover:bg-accent transition-colors">
+                  <Video className="h-3.5 w-3.5 text-purple-500" /> Video
+                </button>
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={fileAccept}
+            className="hidden"
+            onChange={handleFileUpload}
+          />
+
           <Input
             ref={inputRef}
             placeholder={isWindowOpen ? "Type a message..." : "Use template (window closed)"}
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
-            disabled={!isWindowOpen || isSending}
+            disabled={!isWindowOpen || isSending || isUploading}
             className="flex-1 h-9 text-sm"
           />
 
           <Button
             onClick={handleSend}
-            disabled={!text.trim() || isSending || !isWindowOpen}
+            disabled={!text.trim() || isSending || !isWindowOpen || isUploading}
             size="icon"
             className="h-9 w-9 bg-green-600 hover:bg-green-700 shrink-0"
           >

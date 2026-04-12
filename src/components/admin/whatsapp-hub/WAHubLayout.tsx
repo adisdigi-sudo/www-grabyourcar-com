@@ -6,7 +6,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import {
   MessageSquare, LayoutTemplate, Megaphone, Bot, Users, BarChart3,
   UsersRound, ChevronLeft, ChevronRight, Wifi, WifiOff, Search,
-  Settings, Workflow, MessageSquareText
+  Settings, Workflow, MessageSquareText, ClipboardList, MousePointer,
+  TrendingUp
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
@@ -19,8 +20,11 @@ import { WAHubContacts } from "./modules/WAHubContacts";
 import { WAHubAnalytics } from "./modules/WAHubAnalytics";
 import { WAHubTeam } from "./modules/WAHubTeam";
 import { WAHubCrmMessages } from "./modules/WAHubCrmMessages";
+import { WAHubSurveys } from "./modules/WAHubSurveys";
+import { WAHubInteractive } from "./modules/WAHubInteractive";
+import { WAHubCampaignROI } from "./modules/WAHubCampaignROI";
 
-type Module = "inbox" | "templates" | "broadcasts" | "flows" | "contacts" | "analytics" | "team" | "crm-messages";
+type Module = "inbox" | "templates" | "broadcasts" | "flows" | "contacts" | "analytics" | "team" | "crm-messages" | "surveys" | "interactive" | "campaign-roi";
 
 interface NavItem {
   id: Module;
@@ -28,23 +32,31 @@ interface NavItem {
   icon: React.ElementType;
   badge?: number;
   color: string;
+  section?: string;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { id: "inbox", label: "Inbox", icon: MessageSquare, color: "text-green-500" },
-  { id: "templates", label: "Templates", icon: LayoutTemplate, color: "text-blue-500" },
-  { id: "broadcasts", label: "Broadcasts", icon: Megaphone, color: "text-orange-500" },
-  { id: "flows", label: "Flows", icon: Workflow, color: "text-purple-500" },
-  { id: "contacts", label: "Contacts", icon: Users, color: "text-cyan-500" },
-  { id: "analytics", label: "Analytics", icon: BarChart3, color: "text-amber-500" },
-  { id: "team", label: "Team", icon: UsersRound, color: "text-rose-500" },
-  { id: "crm-messages", label: "CRM Messages", icon: MessageSquareText, color: "text-emerald-500" },
+  // Core
+  { id: "inbox", label: "Inbox", icon: MessageSquare, color: "text-green-500", section: "Core" },
+  { id: "templates", label: "Templates", icon: LayoutTemplate, color: "text-blue-500", section: "Core" },
+  { id: "crm-messages", label: "CRM Messages", icon: MessageSquareText, color: "text-emerald-500", section: "Core" },
+  // Marketing
+  { id: "broadcasts", label: "Broadcasts", icon: Megaphone, color: "text-orange-500", section: "Marketing" },
+  { id: "surveys", label: "Surveys", icon: ClipboardList, color: "text-pink-500", section: "Marketing" },
+  { id: "interactive", label: "Interactive", icon: MousePointer, color: "text-indigo-500", section: "Marketing" },
+  { id: "campaign-roi", label: "Campaign ROI", icon: TrendingUp, color: "text-teal-500", section: "Marketing" },
+  // Automation
+  { id: "flows", label: "Flows", icon: Workflow, color: "text-purple-500", section: "Automation" },
+  // Management
+  { id: "contacts", label: "Contacts", icon: Users, color: "text-cyan-500", section: "Management" },
+  { id: "analytics", label: "Analytics", icon: BarChart3, color: "text-amber-500", section: "Management" },
+  { id: "team", label: "Team", icon: UsersRound, color: "text-rose-500", section: "Management" },
 ];
 
 export function WAHubLayout() {
   const [activeModule, setActiveModule] = useState<Module>("inbox");
   const [collapsed, setCollapsed] = useState(false);
-  const [isConnected] = useState(true); // Meta connection status
+  const [isConnected] = useState(true);
 
   const renderModule = () => {
     switch (activeModule) {
@@ -56,6 +68,9 @@ export function WAHubLayout() {
       case "analytics": return <WAHubAnalytics />;
       case "team": return <WAHubTeam />;
       case "crm-messages": return <WAHubCrmMessages />;
+      case "surveys": return <WAHubSurveys />;
+      case "interactive": return <WAHubInteractive />;
+      case "campaign-roi": return <WAHubCampaignROI />;
       default: return <WAHubInbox />;
     }
   };
@@ -94,40 +109,52 @@ export function WAHubLayout() {
 
         {/* Navigation */}
         <TooltipProvider delayDuration={0}>
-          <nav className="flex-1 py-2 px-2 space-y-1">
-            {NAV_ITEMS.map((item) => {
-              const isActive = activeModule === item.id;
-              return (
-                <Tooltip key={item.id}>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={() => setActiveModule(item.id)}
-                      className={cn(
-                        "w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
-                        isActive
-                          ? "bg-green-600/10 text-green-700 dark:text-green-400 border border-green-600/20"
-                          : "text-muted-foreground hover:bg-accent hover:text-foreground"
+          <nav className="flex-1 py-2 px-2 space-y-0.5 overflow-y-auto">
+            {(() => {
+              let lastSection = "";
+              return NAV_ITEMS.map((item) => {
+                const isActive = activeModule === item.id;
+                const showSection = !collapsed && item.section && item.section !== lastSection;
+                if (item.section) lastSection = item.section;
+                return (
+                  <div key={item.id}>
+                    {showSection && (
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/60 px-3 pt-3 pb-1">
+                        {item.section}
+                      </p>
+                    )}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => setActiveModule(item.id)}
+                          className={cn(
+                            "w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all",
+                            isActive
+                              ? "bg-green-600/10 text-green-700 dark:text-green-400 border border-green-600/20"
+                              : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                          )}
+                        >
+                          <item.icon className={cn("h-4.5 w-4.5 shrink-0", isActive ? item.color : "")} />
+                          {!collapsed && (
+                            <span className="truncate text-xs">{item.label}</span>
+                          )}
+                          {!collapsed && item.badge && item.badge > 0 && (
+                            <Badge className="ml-auto h-5 px-1.5 text-[10px] bg-green-600 hover:bg-green-600">
+                              {item.badge}
+                            </Badge>
+                          )}
+                        </button>
+                      </TooltipTrigger>
+                      {collapsed && (
+                        <TooltipContent side="right" className="font-medium">
+                          {item.label}
+                        </TooltipContent>
                       )}
-                    >
-                      <item.icon className={cn("h-5 w-5 shrink-0", isActive ? item.color : "")} />
-                      {!collapsed && (
-                        <span className="truncate">{item.label}</span>
-                      )}
-                      {!collapsed && item.badge && item.badge > 0 && (
-                        <Badge className="ml-auto h-5 px-1.5 text-[10px] bg-green-600 hover:bg-green-600">
-                          {item.badge}
-                        </Badge>
-                      )}
-                    </button>
-                  </TooltipTrigger>
-                  {collapsed && (
-                    <TooltipContent side="right" className="font-medium">
-                      {item.label}
-                    </TooltipContent>
-                  )}
-                </Tooltip>
-              );
-            })}
+                    </Tooltip>
+                  </div>
+                );
+              });
+            })()}
           </nav>
         </TooltipProvider>
 
