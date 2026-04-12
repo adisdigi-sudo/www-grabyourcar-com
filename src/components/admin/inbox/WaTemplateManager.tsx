@@ -895,7 +895,14 @@ export function WaTemplateManager() {
                                 <Copy className="h-3.5 w-3.5" />
                               </Button>
                               {(t.status === "draft" || t.status === "rejected") ? (
-                                <Button size="icon" variant="ghost" className="h-7 w-7 text-green-600" title="Submit to Meta" onClick={() => submitToMeta(t)}>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-7 w-7 text-green-600"
+                                  title={submittingTemplateId === t.id ? "Submitting..." : "Submit to Meta"}
+                                  onClick={() => submitToMeta(t)}
+                                  disabled={submittingTemplateId === t.id}
+                                >
                                   <Send className="h-3.5 w-3.5" />
                                 </Button>
                               ) : t.status === "approved" ? (
