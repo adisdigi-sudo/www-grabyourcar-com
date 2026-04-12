@@ -534,6 +534,8 @@ export function WaTemplateManager() {
   const [statsTemplate, setStatsTemplate] = useState<Template | null>(null);
   const [abCompareOpen, setAbCompareOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [submittingTemplateId, setSubmittingTemplateId] = useState<string | null>(null);
+  const [isSavingTemplate, setIsSavingTemplate] = useState(false);
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -566,13 +568,28 @@ export function WaTemplateManager() {
   };
 
   const submitToMeta = async (template: Template) => {
+    if (submittingTemplateId === template.id) return;
+
+    const templateIssues = validateTemplate(template, Array.isArray(template.buttons) ? (template.buttons as MetaButton[]) : []);
+    const blockingIssue = templateIssues.find(issue => issue.type === "error");
+    if (blockingIssue) {
+      toast.error(blockingIssue.message);
+      return;
+    }
+
+    setSubmittingTemplateId(template.id);
     try {
       const { data, error } = await supabase.functions.invoke("meta-templates", { body: { action: "submit_template", template_id: template.id } });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       toast.success("Submitted to Meta ✅");
       await fetchAll();
-    } catch (err: any) { toast.error(err.message); }
+    } catch (err: any) {
+      toast.error(err.message || "Meta submission failed");
+      await fetchAll();
+    } finally {
+      setSubmittingTemplateId(null);
+    }
   };
 
   const deleteFromMeta = async (template: Template) => {
@@ -586,11 +603,14 @@ export function WaTemplateManager() {
   };
 
   const saveTemplate = async () => {
+    if (isSavingTemplate) return;
     if (hasErrors) {
       toast.error("Fix validation errors before saving");
       return;
     }
     if (!editItem?.name || !editItem?.body) { toast.error("Name and body required"); return; }
+
+    setIsSavingTemplate(true);
     const cleanName = editItem.name.toLowerCase().replace(/[^a-z0-9_]/g, "_");
     const payload: any = {
       name: cleanName, display_name: editItem.display_name || editItem.name,
@@ -603,26 +623,45 @@ export function WaTemplateManager() {
       ab_variant_label: editItem.ab_variant_label || null,
     };
 
-    let savedId = editItem.id;
-    if (editItem.id) {
-      await supabase.from("wa_templates").update(payload).eq("id", editItem.id);
-      toast.success("Template updated");
-    } else {
-      const { data: ins } = await supabase.from("wa_templates").insert(payload).select("id").single();
-      savedId = ins?.id;
-      toast.success("Template created as Draft");
-    }
-    setIsEditing(false); setEditItem(null); setEditButtons([]); await fetchAll();
+    try {
+      let savedId = editItem.id;
+      if (editItem.id) {
+        await supabase.from("wa_templates").update(payload).eq("id", editItem.id);
+        toast.success("Template updated");
+      } else {
+        const { data: ins } = await supabase.from("wa_templates").insert(payload).select("id").single();
+        savedId = ins?.id;
+        toast.success("Template created as Draft");
+      }
 
-    if (savedId && (!editItem.id || editItem.status === "draft")) {
-      toast.info("Auto-submitting to Meta…");
-      try {
-        const { data, error } = await supabase.functions.invoke("meta-templates", { body: { action: "submit_template", template_id: savedId } });
-        if (error) throw error;
-        if (data?.error) throw new Error(data.error);
-        toast.success("Submitted to Meta ✅");
-        await fetchAll();
-      } catch (err: any) { toast.error("Saved locally, Meta submission failed: " + err.message); }
+      setIsEditing(false); setEditItem(null); setEditButtons([]); await fetchAll();
+
+      if (savedId && (!editItem.id || editItem.status === "draft")) {
+        const savedTemplate = templates.find(t => t.id === savedId) || ({ ...payload, id: savedId } as Template);
+        const templateIssues = validateTemplate(savedTemplate, editButtons);
+        const blockingIssue = templateIssues.find(issue => issue.type === "error");
+        if (blockingIssue) {
+          toast.error(`Saved locally. ${blockingIssue.message}`);
+          return;
+        }
+
+        toast.info("Auto-submitting to Meta…");
+        setSubmittingTemplateId(savedId);
+        try {
+          const { data, error } = await supabase.functions.invoke("meta-templates", { body: { action: "submit_template", template_id: savedId } });
+          if (error) throw error;
+          if (data?.error) throw new Error(data.error);
+          toast.success("Submitted to Meta ✅");
+          await fetchAll();
+        } catch (err: any) {
+          toast.error("Saved locally, Meta submission failed: " + (err.message || "Unknown error"));
+          await fetchAll();
+        } finally {
+          setSubmittingTemplateId(null);
+        }
+      }
+    } finally {
+      setIsSavingTemplate(false);
     }
   };
 
