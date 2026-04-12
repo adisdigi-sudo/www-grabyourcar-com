@@ -214,6 +214,7 @@ export function InsuranceComparisonBuilder(props: Props) {
         fuelType: props.fuelType || "Petrol",
         cc: ccNum,
         city: props.city,
+        termsAndConditions: termsAndConditions.trim() || undefined,
         quotes,
       };
 
