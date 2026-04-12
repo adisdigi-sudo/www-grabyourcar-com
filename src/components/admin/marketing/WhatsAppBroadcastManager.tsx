@@ -88,7 +88,7 @@ export function WhatsAppBroadcastManager() {
     try {
       const [broadcastsRes, templatesRes, leadsRes] = await Promise.all([
         supabase.from("whatsapp_broadcasts").select("*").order("created_at", { ascending: false }),
-        supabase.from("whatsapp_templates").select("id, name, category, content, variables").eq("is_active", true),
+        supabase.from("wa_templates").select("id, name, category, body, variables").eq("status", "approved"),
         supabase.from("leads").select("id, priority, service_category, created_at", { count: "exact" }),
       ]);
 

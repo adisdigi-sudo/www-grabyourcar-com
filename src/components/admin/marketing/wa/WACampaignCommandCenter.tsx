@@ -112,7 +112,7 @@ function CampaignBuilder({ channel, onCampaignCreated }: { channel: Channel; onC
   const { data: templates } = useQuery({
     queryKey: ["wa-templates-list"],
     queryFn: async () => {
-      const { data } = await supabase.from("whatsapp_templates").select("id, name, content").eq("is_active", true).order("name");
+      const { data } = await supabase.from("wa_templates").select("id, name, body").eq("status", "approved").order("name");
       return data || [];
     },
     enabled: channel === "whatsapp",

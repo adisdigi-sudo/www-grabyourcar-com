@@ -6,7 +6,8 @@ export function useWhatsAppTemplates() {
   return useQuery({
     queryKey: ["wa-suite-templates"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("whatsapp_templates").select("*").order("created_at", { ascending: false });
+      // Use wa_templates (Meta-synced single source of truth), only show approved
+      const { data, error } = await supabase.from("wa_templates").select("*").eq("status", "approved").order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -18,35 +19,26 @@ export function useCreateWhatsAppTemplate() {
   return useMutation({
     mutationFn: async (template: { name: string; category?: string; language?: string; body_text: string; header_type?: string; header_content?: string; footer_text?: string; buttons?: unknown[]; variables?: unknown[] }) => {
       const normalizedName = normalizeTemplateName(template.name);
-      const { data, error } = await supabase.from("whatsapp_templates").insert({
+      // Save directly to wa_templates (Meta source of truth)
+      const { data, error } = await supabase.from("wa_templates").insert({
         name: normalizedName,
+        display_name: template.name,
         category: template.category || 'marketing',
         language: template.language || 'en',
-        content: template.body_text,
-        template_type: 'custom',
-        preview: template.body_text?.substring(0, 100),
-        approval_status: 'pending',
-        is_approved: false,
+        body: template.body_text,
+        header_type: template.header_type || null,
+        header_content: template.header_content || null,
+        footer: template.footer_text || null,
+        buttons: (template.buttons as any) || [],
+        variables: (template.variables as any) || [],
+        status: 'draft',
       }).select().single();
       if (error) throw error;
 
-      const syncResult = await syncTemplateToMeta({
-        name: normalizedName,
-        displayName: template.name,
-        body: template.body_text,
-        category: template.category || 'marketing',
-        language: template.language || 'en',
-        headerType: template.header_type,
-        headerContent: template.header_content,
-        footer: template.footer_text,
-        buttons: (template.buttons as unknown[]) || [],
-        variables: (template.variables as string[]) || [],
+      // Auto-submit to Meta
+      const syncRes = await supabase.functions.invoke("meta-templates", {
+        body: { action: "submit_template", template_id: data.id },
       });
-
-      await supabase.from("whatsapp_templates").update({
-        approval_status: syncResult.status,
-        is_approved: syncResult.status === 'approved',
-      }).eq("id", data.id);
 
       return data;
     },
@@ -57,7 +49,7 @@ export function useCreateWhatsAppTemplate() {
 export function useDeleteWhatsAppTemplate() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => { const { error } = await supabase.from("whatsapp_templates").delete().eq("id", id); if (error) throw error; },
+    mutationFn: async (id: string) => { const { error } = await supabase.from("wa_templates").delete().eq("id", id); if (error) throw error; },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["wa-suite-templates"] }),
   });
 }

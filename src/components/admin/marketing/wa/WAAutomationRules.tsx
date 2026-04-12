@@ -58,7 +58,7 @@ export function WAAutomationRules() {
   const fetchData = async () => {
     const [rulesRes, tmplRes] = await Promise.all([
       supabase.from("wa_automation_rules").select("*").order("created_at", { ascending: false }),
-      supabase.from("whatsapp_templates").select("id, name, content").eq("is_active", true),
+      supabase.from("wa_templates").select("id, name, body").eq("status", "approved"),
     ]);
     if (rulesRes.data) setRules(rulesRes.data as any);
     if (tmplRes.data) setTemplates(tmplRes.data);
