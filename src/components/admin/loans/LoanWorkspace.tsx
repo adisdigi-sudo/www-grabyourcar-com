@@ -311,7 +311,8 @@ export const LoanWorkspace = ({ initialView = "pipeline" }: LoanWorkspaceProps) 
 
   const handleCardClick = (app: any) => { setSelectedApp(app); setShowStageModal(true); };
   const handleWhatsApp = async (phone: string, name: string) => {
-    const msg = `Hi ${name}, this is from GrabYourCar regarding your car loan inquiry. How can I help you today?`;
+    const { getCrmMessage } = await import("@/lib/crmMessageTemplates");
+    const msg = await getCrmMessage("loan_inquiry", { customer_name: name });
     const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
     await sendWhatsApp({ phone, message: msg, name, logEvent: "loan_inquiry" });
   };
@@ -952,7 +953,8 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
                       <PhoneCall className="h-3 w-3 text-emerald-600" />
                     </Button>
                     <Button variant="ghost" size="icon" className="h-5 w-5" onClick={async () => {
-                      const msg = `Hi ${application.customer_name}, this is from GrabYourCar regarding your car loan. How can I help?`;
+                      const { getCrmMessage } = await import("@/lib/crmMessageTemplates");
+                      const msg = await getCrmMessage("loan_followup", { customer_name: application.customer_name });
                       const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
                       await sendWhatsApp({ phone: application.phone, message: msg, name: application.customer_name, logEvent: "loan_followup" });
                     }}>

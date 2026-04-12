@@ -413,7 +413,11 @@ const RentalCard = forwardRef<HTMLDivElement, any>(function RentalCard(
   const handleWhatsApp = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!customerPhone) return;
-    const msg = `Hi${customerName ? ` ${customerName}` : ""}, regarding your ${booking.vehicle_name} rental booking. — GrabYourCar`;
+    const { getCrmMessage } = await import("@/lib/crmMessageTemplates");
+    const msg = await getCrmMessage("rental_update", {
+      customer_name_space: customerName ? ` ${customerName}` : "",
+      vehicle_name: booking.vehicle_name || "car",
+    });
     const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
     await sendWhatsApp({ phone: customerPhone, message: msg, name: customerName, logEvent: "rental_update" });
   };

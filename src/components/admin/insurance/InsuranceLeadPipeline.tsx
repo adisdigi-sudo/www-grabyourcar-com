@@ -919,8 +919,14 @@ export function InsuranceLeadPipeline({ clients, isLoading, onOpenChat }: Insura
     setBulkSending(true);
     setBulkProgress({ sent: 0, total: targets.length });
     let sent = 0, failed = 0;
+    const { getCrmMessage } = await import("@/lib/crmMessageTemplates");
     for (const client of targets) {
-      const msg = `🙏 Namaste ${client.customer_name || "Sir/Madam"},\n\nThis is *Grabyourcar Insurance* team.\n\nWe wanted to follow up regarding your motor insurance${client.vehicle_number ? ` for vehicle *${client.vehicle_number}*` : ""}.\n\n${client.current_insurer ? `🏢 Current insurer: *${client.current_insurer}*\n` : ""}${client.current_premium ? `💰 Premium: *₹${Number(client.current_premium).toLocaleString("en-IN")}*\n` : ""}\n✅ We can help you get the best renewal rates!\n\n👉 *Reply here* or call us at +91 98559 24442\n🔗 https://www.grabyourcar.com/insurance\n\n— *Team Grabyourcar* 🚗💚`;
+      const msg = await getCrmMessage("insurance_follow_up", {
+        customer_name: client.customer_name || "Sir/Madam",
+        vehicle_number_line: client.vehicle_number ? ` for vehicle *${client.vehicle_number}*` : "",
+        insurer_line: client.current_insurer ? `🏢 Current insurer: *${client.current_insurer}*\n` : "",
+        premium_line: client.current_premium ? `💰 Premium: *₹${Number(client.current_premium).toLocaleString("en-IN")}*\n` : "",
+      });
       try {
         const result = await sendWhatsApp({ phone: client.phone, message: msg, name: client.customer_name || undefined, logEvent: "bulk_follow_up", silent: true });
         if (result.success) sent++; else failed++;

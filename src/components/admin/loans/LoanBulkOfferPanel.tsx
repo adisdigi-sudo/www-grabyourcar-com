@@ -110,9 +110,18 @@ export const LoanBulkOfferPanel = ({ applications, bankPartners }: LoanBulkOffer
     if (!apps.length) { toast.error("Select leads first"); return; }
     setSending(true);
     let sent = 0;
+    const { getCrmMessage } = await import("@/lib/crmMessageTemplates");
     for (const app of apps) {
       const emi = calcEMI(Number(app.loan_amount), rate, tenure);
-      const msg = `Hi ${app.customer_name},\n\nHere's your *Car Loan Offer* from GrabYourCar:\n\nLoan Amount: Rs. ${Math.round(Number(app.loan_amount)).toLocaleString("en-IN")}\nBank: ${selectedBank?.name || "Partner Bank"}\nInterest Rate: ${rate}% p.a.\nTenure: ${tenure} months\n*Monthly EMI: Rs. ${Math.round(emi).toLocaleString("en-IN")}*\n${specialOffer ? `\nSpecial Offer: ${specialOffer}` : ""}\n\nCall us: +91-98559-24442\nwww.grabyourcar.com`;
+      const msg = await getCrmMessage("loan_bulk_offer", {
+        customer_name: app.customer_name,
+        loan_amount: Math.round(Number(app.loan_amount)).toLocaleString("en-IN"),
+        bank_name: selectedBank?.name || "Partner Bank",
+        interest_rate: String(rate),
+        tenure: String(tenure),
+        emi: Math.round(emi).toLocaleString("en-IN"),
+        special_offer_line: specialOffer ? `\nSpecial Offer: ${specialOffer}` : "",
+      });
       await sendWhatsApp({ phone: app.phone, message: msg, name: app.customer_name, logEvent: "loan_offer_bulk", silent: true });
       sent++;
       await new Promise(r => setTimeout(r, 1500));

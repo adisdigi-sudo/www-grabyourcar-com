@@ -212,7 +212,13 @@ export function SalesLeadDetailModal({
   };
 
   const handleShareQuoteWhatsApp = async () => {
-    const msg = `*Car Sales Quote - GrabYourCar*\n\nCustomer: ${lead.customer_name}\nCar: ${lead.car_brand || ""} ${lead.car_model || ""} ${lead.car_variant || ""}\nCity: ${lead.city || "-"}\nBuying Intent: ${lead.buying_intent || "-"}\n\n_Contact us for the best offer!_\nwww.grabyourcar.com`;
+    const { getCrmMessage } = await import("@/lib/crmMessageTemplates");
+    const msg = await getCrmMessage("sales_quote_share", {
+      customer_name: lead.customer_name || "",
+      car_details: `${lead.car_brand || ""} ${lead.car_model || ""} ${lead.car_variant || ""}`.trim(),
+      city: lead.city || "-",
+      buying_intent: lead.buying_intent || "-",
+    });
     const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
     await sendWhatsApp({ phone: lead.phone || "", message: msg, name: lead.customer_name, logEvent: "sales_quote" });
     onUpdate({}, "whatsapp_sent", "Quote shared via WhatsApp");
@@ -330,10 +336,12 @@ export function SalesLeadDetailModal({
                 size="sm"
                 className="gap-1.5"
                 onClick={async () => {
+                  const { getCrmMessage } = await import("@/lib/crmMessageTemplates");
+                  const msg = await getCrmMessage("sales_greeting", { customer_name: lead.customer_name || "" });
                   const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
                   await sendWhatsApp({
                     phone: lead.phone || "",
-                    message: `Hi ${lead.customer_name}, this is GrabYourCar. How can we help?`,
+                    message: msg,
                     name: lead.customer_name,
                     logEvent: "sales_contact",
                   });

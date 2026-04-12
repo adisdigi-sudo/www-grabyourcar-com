@@ -286,18 +286,27 @@ export function HSRPWorkspace() {
 // ─── Card ───────────────────────────────────────────────────────────────
 function HSRPCard({ booking, onDragStart, onDragEnd, onClick, isDragging }: any) {
   const stage = booking.pipeline_stage;
-  const waMessages: Record<string, string> = {
-    new_booking: `Hi ${booking.owner_name}, your HSRP/FASTag booking for ${booking.registration_number} has been received. Tracking ID: ${booking.tracking_id || booking.id.slice(0, 8)}. We'll verify your documents shortly. — GrabYourCar`,
-    verification: `Hi ${booking.owner_name}, we're verifying your documents for ${booking.registration_number}. Please ensure chassis & engine numbers are correct. — GrabYourCar`,
-    payment: `Hi ${booking.owner_name}, verification is done for ${booking.registration_number}! Please pay Rs.${(booking.payment_amount || 0).toLocaleString("en-IN")} to proceed. — GrabYourCar`,
-    scheduled: `Hi ${booking.owner_name}, your ${booking.service_type} installation for ${booking.registration_number} is scheduled${booking.scheduled_date ? ` on ${format(new Date(booking.scheduled_date), "dd MMM")}` : ""}. Keep your vehicle ready! — GrabYourCar`,
-    installation: `Hi ${booking.owner_name}, our technician is on the way for your ${booking.service_type} installation on ${booking.registration_number}. — GrabYourCar`,
-    completed: `Hi ${booking.owner_name}, your ${booking.service_type} has been installed on ${booking.registration_number}. Thank you for choosing GrabYourCar! 🚗`,
+  const hsrpVars = {
+    owner_name: booking.owner_name || "",
+    registration_number: booking.registration_number || "",
+    tracking_id: booking.tracking_id || booking.id.slice(0, 8),
+    payment_amount: (booking.payment_amount || 0).toLocaleString("en-IN"),
+    service_type: booking.service_type || "HSRP",
+    schedule_date: booking.scheduled_date ? ` on ${format(new Date(booking.scheduled_date), "dd MMM")}` : "",
   };
-
+  const hsrpSlugMap: Record<string, string> = {
+    new_booking: "hsrp_new_booking",
+    verification: "hsrp_verification",
+    payment: "hsrp_payment",
+    scheduled: "hsrp_scheduled",
+    installation: "hsrp_installation",
+    completed: "hsrp_completed",
+  };
   const handleWhatsApp = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    const msg = waMessages[stage] || waMessages.new_booking;
+    const { getCrmMessage } = await import("@/lib/crmMessageTemplates");
+    const slug = hsrpSlugMap[stage] || "hsrp_new_booking";
+    const msg = await getCrmMessage(slug, hsrpVars);
     const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
     await sendWhatsApp({ phone: booking.mobile || "", message: msg, name: booking.owner_name, logEvent: "hsrp_update" });
   };
@@ -484,7 +493,15 @@ function HSRPDetailModal({ open, onOpenChange, booking, onUpdate }: any) {
   };
 
   const handleShareWhatsApp = async () => {
-    const msg = `*HSRP Booking - GrabYourCar*\n\nOwner: ${booking.owner_name}\nVehicle: ${booking.registration_number}\nService: ${booking.service_type}\nAmount: Rs.${(booking.payment_amount || 0).toLocaleString("en-IN")}\nStatus: ${booking.payment_status}\n${booking.scheduled_date ? `Scheduled: ${booking.scheduled_date}` : ""}\n\nwww.grabyourcar.com`;
+    const { getCrmMessage } = await import("@/lib/crmMessageTemplates");
+    const msg = await getCrmMessage("hsrp_share", {
+      owner_name: booking.owner_name || "",
+      registration_number: booking.registration_number || "",
+      service_type: booking.service_type || "HSRP",
+      payment_amount: (booking.payment_amount || 0).toLocaleString("en-IN"),
+      payment_status: booking.payment_status || "",
+      scheduled_line: booking.scheduled_date ? `Scheduled: ${booking.scheduled_date}` : "",
+    });
     const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
     await sendWhatsApp({ phone: booking.mobile || "", message: msg, name: booking.owner_name, logEvent: "hsrp_share" });
   };
