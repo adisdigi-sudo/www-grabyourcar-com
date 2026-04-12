@@ -213,6 +213,21 @@ Deno.serve(async (req) => {
 
           conversationHistory.push({ role: "user", content: messageText });
 
+          const lowerMessageText = messageText.toLowerCase();
+          const isStrictSelfServiceRequest = [
+            "policy",
+            "invoice",
+            "bill",
+            "receipt",
+            "loan status",
+            "emi",
+            "hsrp",
+            "payment history",
+            "payment receipt",
+            "my car",
+            "meri gaadi",
+          ].some((keyword) => lowerMessageText.includes(keyword));
+
           // ══════════════════════════════════════════════════════════
           // STEP 1: Check wa_chatbot_rules (Chatbot Builder rules)
           // ══════════════════════════════════════════════════════════
@@ -220,15 +235,18 @@ Deno.serve(async (req) => {
           let intentDetected = "general";
           let leadCaptured = false;
           let respondedBy = "ai_brain";
+          let documentShare: { url: string; fileName?: string; caption?: string } | null = null;
 
-          const { data: chatbotRules } = await supabase
-            .from("wa_chatbot_rules")
-            .select("*")
-            .eq("is_active", true)
-            .order("priority", { ascending: true });
+          const { data: chatbotRules } = isStrictSelfServiceRequest
+            ? { data: [] as any[] }
+            : await supabase
+                .from("wa_chatbot_rules")
+                .select("*")
+                .eq("is_active", true)
+                .order("priority", { ascending: true });
 
           if (chatbotRules && chatbotRules.length > 0) {
-            const msgLower = messageText.toLowerCase();
+            const msgLower = lowerMessageText;
 
             for (const rule of chatbotRules) {
               // Split comma-separated keywords and match
@@ -315,7 +333,7 @@ Deno.serve(async (req) => {
           // STEP 2: Fallback to AI Brain if no chatbot rule matched
           // ══════════════════════════════════════════════════════════
           if (!aiResponse) {
-            aiResponse = getFallbackResponse(messageText.toLowerCase());
+            aiResponse = getFallbackResponse(lowerMessageText);
 
             try {
               const brainResponse = await fetch(`${SUPABASE_URL}/functions/v1/ai-brain`, {
@@ -337,6 +355,7 @@ Deno.serve(async (req) => {
                 aiResponse = brainData.response || aiResponse;
                 intentDetected = brainData.intent || "general";
                 leadCaptured = brainData.lead_captured || false;
+                documentShare = brainData.document_share || null;
               } else {
                 console.error("AI Brain error:", brainResponse.status);
               }
@@ -345,7 +364,7 @@ Deno.serve(async (req) => {
             }
           }
 
-          const finalAiResponse = aiResponse || getFallbackResponse(messageText.toLowerCase());
+          const finalAiResponse = aiResponse || getFallbackResponse(lowerMessageText);
           conversationHistory.push({ role: "assistant", content: finalAiResponse });
 
           await supabase.from("whatsapp_conversations").update({
@@ -430,6 +449,34 @@ Deno.serve(async (req) => {
                   status: sendResult.ok ? "sent" : "failed",
                   sent_by_name: respondedBy.startsWith("chatbot") ? "Chatbot" : "AI Bot",
                 });
+              }
+            }
+
+            if (gatewaySent && documentShare?.url) {
+              try {
+                const documentResponse = await fetch(`${SUPABASE_URL}/functions/v1/whatsapp-send`, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                  },
+                  body: JSON.stringify({
+                    to: from,
+                    messageType: "document",
+                    mediaUrl: documentShare.url,
+                    mediaFileName: documentShare.fileName || "policy.pdf",
+                    message: documentShare.caption || "Your verified policy PDF",
+                    name: contactName,
+                    logEvent: `${respondedBy}:document_share`,
+                  }),
+                });
+
+                const documentData = await documentResponse.json().catch(() => null);
+                if (!documentResponse.ok || documentData?.success !== true) {
+                  console.error("Policy document send failed:", documentData?.error || documentData);
+                }
+              } catch (documentError) {
+                console.error("Policy document send exception:", documentError);
               }
             }
           }
