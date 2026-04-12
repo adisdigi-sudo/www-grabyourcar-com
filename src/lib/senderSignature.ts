@@ -45,20 +45,24 @@ export async function getSenderIdentity(): Promise<SenderIdentity> {
     // Fallback to crm_users
     const { data: cu } = await supabase
       .from("crm_users")
-      .select("name, role")
+      .select("name, role, email")
       .eq("auth_user_id", user.id)
       .maybeSingle();
 
     if (cu?.name) {
-      const roleMap: Record<string, string> = {
-        admin: "Founder",
-        super_admin: "Founder",
-        manager: "Manager",
-        executive: "Relationship Representative",
-      };
+      // Map specific accounts to proper designations
+      let designation = "Relationship Representative";
+      if (cu.email === "919855924442@grabyourcar.app") {
+        designation = "Founder";
+      } else if (cu.role === "admin" || cu.role === "super_admin") {
+        designation = "Relationship Manager";
+      } else if (cu.role === "manager") {
+        designation = "Manager";
+      }
+
       cachedIdentity = {
         name: cu.name,
-        designation: roleMap[cu.role] || "Relationship Representative",
+        designation,
         company: "GrabYourCar",
       };
       cacheTs = Date.now();
