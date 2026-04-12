@@ -132,8 +132,12 @@ export function FreshLeadsQueue() {
     if (method === "phone") {
       window.open(`tel:+${fullPhone}`, "_self");
     } else {
-      import("@/lib/sendWhatsApp").then(({ sendWhatsApp }) => {
-        sendWhatsApp({ phone, message: `Hi ${name}, this is GrabYourCar. How can we help you today?`, name, logEvent: "fresh_lead_call" });
+      Promise.all([
+        import("@/lib/sendWhatsApp"),
+        import("@/lib/crmMessageTemplates"),
+      ]).then(async ([{ sendWhatsApp }, { getCrmMessage }]) => {
+        const msg = await getCrmMessage("fresh_lead_greeting", { customer_name: name });
+        sendWhatsApp({ phone, message: msg, name, logEvent: "fresh_lead_call" });
       });
     }
 

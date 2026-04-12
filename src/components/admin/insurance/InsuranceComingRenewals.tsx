@@ -268,12 +268,18 @@ export function InsuranceComingRenewals({ policies }: InsuranceComingRenewalsPro
           <Button size="sm" variant="default" className="gap-1.5 text-xs" onClick={async () => {
             const sel = filtered.filter(p => selectedIds.has(p.id));
             const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
+            const { getCrmMessage } = await import("@/lib/crmMessageTemplates");
             let sent = 0;
             for (const p of sel) {
               const ph = p.insurance_clients?.phone;
               if (ph && !ph.startsWith("IB_")) {
                 const days = differenceInDays(new Date(p.expiry_date!), new Date());
-                await sendWhatsApp({ phone: ph, message: `Hi ${p.insurance_clients?.customer_name || ""}, your ${p.insurer} policy expires in ${days} days. Contact us for the best renewal quote!`, name: p.insurance_clients?.customer_name || "", logEvent: "renewal_alert", silent: true });
+                const msg = await getCrmMessage("insurance_renewal_alert", {
+                  customer_name: p.insurance_clients?.customer_name || "",
+                  insurer: p.insurer || "insurance",
+                  days: String(days),
+                });
+                await sendWhatsApp({ phone: ph, message: msg, name: p.insurance_clients?.customer_name || "", logEvent: "renewal_alert", silent: true });
                 sent++;
               }
             }
