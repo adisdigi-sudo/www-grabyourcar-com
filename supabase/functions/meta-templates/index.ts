@@ -251,49 +251,53 @@ serve(async (req) => {
         }
       }
 
-      // Convert named variables {{customer_name}} to positional {{1}}, {{2}}, etc.
+      // Convert ALL {{...}} variables (named, spaced, or positional) to clean positional {{1}}, {{2}}, etc.
       let metaBody = template.body as string;
-      const namedVarMatches = metaBody.match(/\{\{([a-zA-Z_]\w*)\}\}/g) || [];
-      const uniqueNamedVars: string[] = [];
-      for (const m of namedVarMatches) {
-        const varName = m.replace(/[{}]/g, "");
-        if (!uniqueNamedVars.includes(varName)) uniqueNamedVars.push(varName);
+      
+      // Match ANY {{...}} pattern including spaces inside: {{name}}, {{Car Details}}, {{Insurance price }}, {{1}}
+      const allVarMatches = metaBody.match(/\{\{([^}]+)\}\}/g) || [];
+      const uniqueVarTexts: string[] = [];
+      for (const m of allVarMatches) {
+        const inner = m.replace(/^\{\{|\}\}$/g, "").trim();
+        if (!uniqueVarTexts.includes(inner) && !/^\d+$/.test(inner)) {
+          uniqueVarTexts.push(inner);
+        }
       }
       
-      // Replace named vars with positional
-      if (uniqueNamedVars.length > 0) {
-        uniqueNamedVars.forEach((varName, i) => {
-          metaBody = metaBody.replace(new RegExp(`\\{\\{${varName}\\}\\}`, "g"), `{{${i + 1}}}`);
+      // Replace each unique named/spaced var with positional — handle spaces in regex
+      if (uniqueVarTexts.length > 0) {
+        uniqueVarTexts.forEach((varText, i) => {
+          const escaped = varText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          metaBody = metaBody.replace(new RegExp(`\\{\\{\\s*${escaped}\\s*\\}\\}`, "g"), `{{${i + 1}}}`);
         });
       }
 
       // Generate sample values for Meta approval
       const sampleMap: Record<string, string> = {
-        customer_name: "Rahul Sharma",
-        name: "Rahul Sharma",
-        phone: "9876543210",
-        vehicle_number: "DL 01 AB 1234",
-        vehicle: "Hyundai Creta",
-        insurer: "HDFC ERGO",
-        premium: "₹12,500",
-        expiry_date: "15 Mar 2026",
-        policy_number: "POL-2025-001",
-        order_id: "ORD-12345",
-        amount: "₹25,000",
-        date: "11 Apr 2026",
-        booking_id: "BK-001",
-        txn_id: "TXN-78901",
-        car_model: "Hyundai Creta",
-        otp: "123456",
+        customer_name: "Rahul Sharma", name: "Rahul Sharma", phone: "9876543210",
+        vehicle_number: "DL 01 AB 1234", vehicle: "Hyundai Creta", insurer: "HDFC ERGO",
+        premium: "₹12,500", expiry_date: "15 Mar 2026", policy_number: "POL-2025-001",
+        order_id: "ORD-12345", amount: "₹25,000", date: "11 Apr 2026",
+        booking_id: "BK-001", txn_id: "TXN-78901", car_model: "Hyundai Creta", otp: "123456",
       };
 
-      // Body with example values for variables
+      // Normalize var keys for sample lookup
+      const normKey = (v: string) => v.trim().toLowerCase().replace(/\s+/g, "_");
+
+      // Count final positional vars in metaBody
+      const finalPositional = metaBody.match(/\{\{(\d+)\}\}/g) || [];
+      const numVars = finalPositional.length;
+
+      // Build sample values matching positional count
+      const sampleValues: string[] = [];
+      for (let i = 0; i < numVars; i++) {
+        const origName = uniqueVarTexts[i] || `var_${i + 1}`;
+        const key = normKey(origName);
+        sampleValues.push(sampleMap[key] || `Sample ${origName}`);
+      }
+
       const bodyComponent: any = { type: "BODY", text: metaBody };
-      const positionalVars = metaBody.match(/\{\{(\d+)\}\}/g) || [];
-      if (positionalVars.length > 0 || uniqueNamedVars.length > 0) {
-        const sampleValues = uniqueNamedVars.length > 0
-          ? uniqueNamedVars.map(v => sampleMap[v] || `Sample ${v}`)
-          : positionalVars.map((_: string, i: number) => `Sample ${i + 1}`);
+      if (sampleValues.length > 0) {
         bodyComponent.example = { body_text: [sampleValues] };
       }
       components.push(bodyComponent);
