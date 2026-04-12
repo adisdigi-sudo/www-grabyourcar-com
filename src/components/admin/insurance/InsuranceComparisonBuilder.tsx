@@ -53,6 +53,8 @@ interface InsurerEntry {
   showCustom: boolean;
   odDiscountPct: number;
   securePremium: number;
+  customIdv: string; // per-insurer IDV override (empty = use global)
+  customNcb: string; // per-insurer NCB override (empty = use global)
   addons: { id: string; name: string; price: number; enabled: boolean }[];
 }
 
