@@ -369,6 +369,135 @@ function TemplateStats({ template }: { template: Template }) {
   );
 }
 
+// --- Category Rules Panel ---
+function CategoryRulesPanel() {
+  const [rules, setRules] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase.from("wa_category_rules").select("*").order("meta_category").order("rule_name")
+      .then(({ data }) => { setRules(data || []); setLoading(false); });
+  }, []);
+
+  const categoryColors: Record<string, string> = {
+    service: "bg-emerald-100 text-emerald-800 border-emerald-200",
+    utility: "bg-blue-100 text-blue-800 border-blue-200",
+    marketing: "bg-orange-100 text-orange-800 border-orange-200",
+    authentication: "bg-green-100 text-green-800 border-green-200",
+  };
+
+  const categoryPricing: Record<string, string> = {
+    service: "FREE (24hr window)",
+    utility: "₹0.35/msg",
+    marketing: "₹0.80/msg",
+    authentication: "₹0.30/msg",
+  };
+
+  if (loading) return <div className="text-center p-8 text-muted-foreground text-sm">Loading rules...</div>;
+
+  const grouped = rules.reduce((acc: Record<string, any[]>, r) => {
+    const cat = r.meta_category || "service";
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(r);
+    return acc;
+  }, {});
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 rounded-lg p-3">
+        <h3 className="font-semibold text-sm flex items-center gap-2"><Shield className="h-4 w-4 text-blue-600" /> Meta Message Category Rules</h3>
+        <p className="text-xs text-muted-foreground mt-1">
+          Yeh rules define karte hain ki konsa message kis Meta category me jayega. <strong>Service = FREE</strong> (24hr window ke andar), 
+          <strong> Utility = ₹0.35</strong> (existing clients ko updates), <strong> Marketing = ₹0.80</strong> (new client outreach).
+          System automatically enforce karta hai — koi bhi message galat category me nahi jayega.
+        </p>
+      </div>
+
+      {/* Cost Summary */}
+      <div className="grid grid-cols-4 gap-3">
+        {(["service", "utility", "marketing", "authentication"] as const).map(cat => (
+          <Card key={cat}>
+            <CardContent className="p-3 text-center">
+              <Badge variant="outline" className={cn("text-[10px] mb-1.5", categoryColors[cat])}>
+                {cat.toUpperCase()}
+              </Badge>
+              <p className="text-lg font-bold">{categoryPricing[cat]}</p>
+              <p className="text-[10px] text-muted-foreground">{grouped[cat]?.length || 0} rules</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Rules by Category */}
+      {(["service", "utility", "marketing", "authentication"] as const).map(cat => (
+        <Card key={cat}>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Badge variant="outline" className={cn("text-xs", categoryColors[cat])}>
+                {cat === "service" ? "🆓" : cat === "utility" ? "🔧" : cat === "marketing" ? "📣" : "🔐"} {cat.toUpperCase()}
+              </Badge>
+              <span className="text-muted-foreground font-normal text-xs">— {categoryPricing[cat]}</span>
+              {cat === "service" && <Badge className="bg-green-600 text-[9px]">Best for CRM Clients</Badge>}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {!grouped[cat] || grouped[cat].length === 0 ? (
+              <p className="text-xs text-muted-foreground">No rules in this category</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs">Rule</TableHead>
+                    <TableHead className="text-xs">Context</TableHead>
+                    <TableHead className="text-xs">Template Required</TableHead>
+                    <TableHead className="text-xs">Opt-out Footer</TableHead>
+                    <TableHead className="text-xs">Description</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(grouped[cat] || []).map((rule: any) => (
+                    <TableRow key={rule.id}>
+                      <TableCell className="text-xs font-medium">{rule.rule_name}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-[9px] font-mono">{rule.message_context}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        {rule.requires_template ? (
+                          <Badge className="text-[9px] bg-amber-500">Required</Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-[9px] text-green-600 border-green-200">Free Text OK</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {rule.opt_out_footer_required ? (
+                          <Badge variant="outline" className="text-[9px]">Yes</Badge>
+                        ) : (
+                          <span className="text-[9px] text-muted-foreground">No</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-[10px] text-muted-foreground max-w-[200px]">{rule.description}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      ))}
+
+      <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 rounded-lg p-3 text-xs">
+        <p className="font-semibold text-amber-800">💡 Cost-Saving Strategy Active</p>
+        <ul className="mt-1.5 space-y-1 text-amber-700">
+          <li>• <strong>CRM Clients (Key Clients):</strong> Sabko free text jaata hai 24hr window ke andar + opt-out footer</li>
+          <li>• <strong>Renewal Reminders:</strong> Pehle window check hota hai → agar open hai toh FREE, varna utility template</li>
+          <li>• <strong>New Client Outreach:</strong> Marketing template mandatory — Meta policy strictly enforced</li>
+          <li>• <strong>Bulk Campaigns:</strong> Campaign type ke hisaab se auto-categorize hota hai</li>
+        </ul>
+      </div>
+    </div>
+  );
+}
+
 // --- Main Component ---
 export function WaTemplateManager() {
   const [templates, setTemplates] = useState<Template[]>([]);
