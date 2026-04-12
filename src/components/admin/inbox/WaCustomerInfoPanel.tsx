@@ -61,6 +61,8 @@ export function WaCustomerInfoPanel({ conversation, messageCount, onClose }: Pro
   const [tags, setTags] = useState<string[]>(conversation.tags || []);
   const [linkedLead, setLinkedLead] = useState<any>(null);
   const [linkedClient, setLinkedClient] = useState<any>(null);
+  const [addLeadVertical, setAddLeadVertical] = useState("");
+  const [addingLead, setAddingLead] = useState(false);
   const isWindowOpen = conversation.window_expires_at && new Date(conversation.window_expires_at) > new Date();
 
   useEffect(() => {
