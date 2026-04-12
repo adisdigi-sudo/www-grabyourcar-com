@@ -125,13 +125,17 @@ export function InsuranceComparisonBuilder(props: Props) {
       };
     }
 
-    if (!idvNum) return null;
+    // Per-insurer IDV & NCB overrides
+    const entryIdv = entry.customIdv ? (parseFloat(entry.customIdv) || 0) : idvNum;
+    const entryNcb = entry.customNcb !== "" ? (parseFloat(entry.customNcb) || 0) : ncbPct;
+    
+    if (!entryIdv) return null;
     const ccKey = ccNum > 1500 ? "above1500" : "upto1500";
     const odRate = OD_RATES[zone][ccKey];
-    const basicOD = (idvNum * odRate) / 100;
+    const basicOD = (entryIdv * odRate) / 100;
     const odDiscount = (basicOD * entry.odDiscountPct) / 100;
     const odAfterDiscount = basicOD - odDiscount;
-    const ncbDiscount = (odAfterDiscount * ncbPct) / 100;
+    const ncbDiscount = (odAfterDiscount * entryNcb) / 100;
     const netOD = odAfterDiscount - ncbDiscount;
     // Standalone OD: NO Third Party premium (IRDAI rule)
     const tp = isStandaloneOD ? 0 : getTPPremium(ccNum);
@@ -142,7 +146,7 @@ export function InsuranceComparisonBuilder(props: Props) {
     return {
       insurerName: resolvedInsurer,
       policyType: props.policyType || "Comprehensive",
-      idv: idvNum,
+      idv: entryIdv,
       basicOD: Math.round(basicOD),
       odDiscount: Math.round(odDiscount),
       ncbDiscount: Math.round(ncbDiscount),
