@@ -278,7 +278,7 @@ export function BulkQuoteSharePanel({ leads, source, onDone }: BulkQuoteSharePan
         if (result.success) sent++;
       } catch (e) { console.error(e); }
       setProgress(Math.round(((i + 1) / target.length) * 100));
-      if (i < target.length - 1) await new Promise(r => setTimeout(r, 500));
+      if (i < target.length - 1) await new Promise(r => setTimeout(r, 1500));
     }
     setSending(false);
     toast.success(`📨 Sent ${sent}/${target.length} quotes with PDFs via WhatsApp`);
@@ -338,7 +338,7 @@ export function BulkQuoteSharePanel({ leads, source, onDone }: BulkQuoteSharePan
         if (result.success) sent++;
       } catch { /* continue */ }
       setProgress(Math.round(((i + 1) / target.length) * 100));
-      if (i < target.length - 1) await new Promise(r => setTimeout(r, 500));
+      if (i < target.length - 1) await new Promise(r => setTimeout(r, 1500));
     }
     setSending(false);
     toast.success(`🚀 Sent ${sent}/${target.length} renewal reminders with PDFs via WA API!`);

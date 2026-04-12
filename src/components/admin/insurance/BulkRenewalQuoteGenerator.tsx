@@ -431,7 +431,7 @@ export function BulkRenewalQuoteGenerator({ onClose }: { onClose: () => void }) 
         }
       } catch (e) { console.error(e); }
       toast.loading(`Sending bulk renewal quotes... ${i + 1}/${selected.length}`, { id: toastId });
-      if (i < selected.length - 1) await new Promise(r => setTimeout(r, 500));
+      if (i < selected.length - 1) await new Promise(r => setTimeout(r, 1500));
     }
     toast.success(`✅ WhatsApp sent with PDFs to ${sent}/${selected.length} customers`, { id: toastId });
     setBulkAction(false);
