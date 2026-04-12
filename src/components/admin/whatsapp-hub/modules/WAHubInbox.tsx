@@ -72,14 +72,28 @@ export function WAHubInbox() {
   const handleSendMessage = async (content: string, messageType: string = "text", extras: Record<string, unknown> = {}) => {
     if (!selectedConvo) return;
     const { data: userData } = await supabase.auth.getUser();
+    const userId = userData?.user?.id;
+    let senderName = userData?.user?.email?.split("@")[0] || "Agent";
+    
+    // Try to get proper display name from team_members
+    if (userId) {
+      const { data: tm } = await supabase
+        .from("team_members")
+        .select("display_name")
+        .eq("user_id", userId)
+        .eq("is_active", true)
+        .maybeSingle();
+      if (tm?.display_name) senderName = tm.display_name;
+    }
+
     const { data, error } = await supabase.functions.invoke("wa-send-inbox", {
       body: {
         conversation_id: selectedConvo.id,
         phone: selectedConvo.phone,
         message_type: messageType,
         content,
-        sent_by: userData?.user?.id,
-        sent_by_name: userData?.user?.email?.split("@")[0] || "Agent",
+        sent_by: userId,
+        sent_by_name: senderName,
         ...extras,
       },
     });
