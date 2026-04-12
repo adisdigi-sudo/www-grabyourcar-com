@@ -128,7 +128,7 @@ export function InsuranceHeroForm({ policyType = "comprehensive", vehicleLabel =
     trackLeadConversion("insurance_hero", { policyType });
 
     toast.success("Redirecting you to get your quotes 🎉");
-    window.location.assign(PARTNER_URL);
+    window.location.assign(partnerUrl);
   };
 
   const handleStateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
