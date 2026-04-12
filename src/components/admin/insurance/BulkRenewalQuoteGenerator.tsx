@@ -400,45 +400,16 @@ export function BulkRenewalQuoteGenerator({ onClose }: { onClose: () => void }) 
         const { error: uploadErr } = await supabase.storage.from("quote-pdfs").upload(storagePath, pdfBlob, { contentType: "application/pdf", upsert: true });
         const pdfUrl = !uploadErr ? supabase.storage.from("quote-pdfs").getPublicUrl(storagePath).data?.publicUrl : null;
 
-        // Build template variables
+        // Build caption for single document message
         const vehicleLabel = q.vehicle_number || `${q.vehicle_make || ""} ${q.vehicle_model || ""}`.trim() || "Your Vehicle";
         const premiumStr = `Rs. ${total.toLocaleString("en-IN")}`;
-        const expiryStr = "N/A";
 
-        // Send approved Meta template first (works outside 24h window)
-        const result = await sendWhatsApp({
-          phone: q.phone,
-          message: "",
-          name: q.customer_name || undefined,
-          logEvent: "bulk_renewal_quote",
-          silent: true,
-          templateName: "insurance_quote_share",
-          templateComponents: [
-            {
-              type: "body",
-              parameters: [
-                { type: "text", text: q.customer_name || "Valued Customer", parameter_name: "customer_name" },
-                { type: "text", text: vehicleLabel, parameter_name: "vehicle" },
-                { type: "text", text: premiumStr, parameter_name: "premium" },
-                { type: "text", text: expiryStr, parameter_name: "expiry_date" },
-              ],
-            },
-          ],
-          messageType: "template",
-        });
+        // Single document message: PDF + caption in ONE message
+        const caption = `Hi ${q.customer_name || "Valued Customer"}! 🚗\n\n📋 *Insurance Renewal Quote*\n🚘 Vehicle: ${vehicleLabel}\n🏢 Insurer: ${q.insurance_company || "Best Available"}\n💰 Premium: ${premiumStr}\n\nPlease review the attached quote PDF.\n📞 +91 98559 24442\n🌐 www.grabyourcar.com\n— *GrabYourCar Insurance*`;
 
-        // Send PDF as separate document message
-        if (result.success && pdfUrl) {
-          await sendWhatsApp({
-            phone: q.phone,
-            message: "📄 Insurance Renewal Quote PDF",
-            messageType: "document",
-            mediaUrl: pdfUrl,
-            mediaFileName: pdfResult.fileName,
-            silent: true,
-            logEvent: "bulk_renewal_quote_pdf",
-          });
-        }
+        const result = pdfUrl
+          ? await sendWhatsApp({ phone: q.phone, message: caption, name: q.customer_name || undefined, logEvent: "bulk_renewal_quote", silent: true, messageType: "document", mediaUrl: pdfUrl, mediaFileName: pdfResult.fileName })
+          : await sendWhatsApp({ phone: q.phone, message: caption, name: q.customer_name || undefined, logEvent: "bulk_renewal_quote", silent: true });
 
         if (result.success) {
           await updateQuote.mutateAsync({ id: q.id, whatsapp_sent: true, whatsapp_sent_at: new Date().toISOString(), status: "sent", pdf_generated: true, pdf_generated_at: new Date().toISOString() } as any);
