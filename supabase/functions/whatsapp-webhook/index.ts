@@ -345,7 +345,8 @@ Deno.serve(async (req) => {
             }
           }
 
-          conversationHistory.push({ role: "assistant", content: aiResponse });
+          const finalAiResponse = aiResponse || getFallbackResponse(messageText.toLowerCase());
+          conversationHistory.push({ role: "assistant", content: finalAiResponse });
 
           await supabase.from("whatsapp_conversations").update({
             messages: conversationHistory.slice(-20),
@@ -358,7 +359,7 @@ Deno.serve(async (req) => {
           const WHATSAPP_ACCESS_TOKEN = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
           const WHATSAPP_PHONE_NUMBER_ID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
 
-          if (aiResponse) {
+          if (finalAiResponse) {
             let gatewaySent = false;
 
             try {
@@ -370,7 +371,7 @@ Deno.serve(async (req) => {
                 },
                 body: JSON.stringify({
                   to: from,
-                  message: aiResponse,
+                  message: finalAiResponse,
                   name: contactName,
                   logEvent: respondedBy,
                   messageType: "text",
@@ -398,7 +399,7 @@ Deno.serve(async (req) => {
                   messaging_product: "whatsapp",
                   to: from,
                   type: "text",
-                  text: { body: aiResponse },
+                  text: { body: finalAiResponse },
                 }),
               });
 
@@ -409,7 +410,7 @@ Deno.serve(async (req) => {
                 phone: from,
                 customer_name: contactName,
                 message_type: "text",
-                message_content: aiResponse,
+                message_content: finalAiResponse,
                 trigger_event: respondedBy,
                 status: sendResult.ok ? "sent" : "failed",
                 provider: "meta",
@@ -424,7 +425,7 @@ Deno.serve(async (req) => {
                   conversation_id: inboxConvoId,
                   direction: "outbound",
                   message_type: "text",
-                  content: aiResponse,
+                  content: finalAiResponse,
                   wa_message_id: providerMessageId,
                   status: sendResult.ok ? "sent" : "failed",
                   sent_by_name: respondedBy.startsWith("chatbot") ? "Chatbot" : "AI Bot",
