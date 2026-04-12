@@ -2,6 +2,22 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeTemplateName, syncTemplateToMeta } from "@/lib/whatsappTemplateMirror";
 
+function hasMetaVariableRatioIssue(body: string) {
+  const normalizedBody = body.replace(/\{\{([^}]+)\}\}/g, (_match, inner: string) => `{{${inner.trim()}}}`);
+  const totalVariables = [
+    ...(normalizedBody.match(/\{\{\d+\}\}/g) || []),
+    ...(normalizedBody.match(/\{\{[a-zA-Z_][a-zA-Z0-9_]*\}\}/g) || []),
+  ].length;
+  const plainWords = normalizedBody
+    .replace(/\{\{[^}]+\}\}/g, " ")
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  return totalVariables > 0 && plainWords.length < totalVariables * 3;
+}
+
 export function useWhatsAppTemplates() {
   return useQuery({
     queryKey: ["wa-suite-templates"],
@@ -35,10 +51,12 @@ export function useCreateWhatsAppTemplate() {
       }).select().single();
       if (error) throw error;
 
-      // Auto-submit to Meta
-      const syncRes = await supabase.functions.invoke("meta-templates", {
-        body: { action: "submit_template", template_id: data.id },
-      });
+      // Auto-submit to Meta only when body passes Meta ratio rules
+      if (!hasMetaVariableRatioIssue(template.body_text)) {
+        await supabase.functions.invoke("meta-templates", {
+          body: { action: "submit_template", template_id: data.id },
+        });
+      }
 
       return data;
     },
