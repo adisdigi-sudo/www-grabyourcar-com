@@ -266,7 +266,7 @@ export function BulkQuoteSharePanel({ leads, source, onDone }: BulkQuoteSharePan
         const result = await sendWhatsApp({
           phone: l.phone || "", message: "", name: l.customer_name || "", logEvent: "bulk_quote", silent: true,
           templateName: "renewal_reminder",
-          templateVariables: { var_1: l.customer_name || "Valued Customer", var_2: vehicleLabel, var_3: premiumStr, var_4: expiryStr },
+          templateVariables: { var_1: l.customer_name || "Valued Customer", var_2: vehicleLabel, var_3: premiumStr + " | Expiry: " + expiryStr },
           messageType: "template",
         });
 
@@ -326,7 +326,7 @@ export function BulkQuoteSharePanel({ leads, source, onDone }: BulkQuoteSharePan
         const result = await sendWhatsApp({
           phone: l.phone || "", message: "", name: l.customer_name || "", logEvent: "bulk_renewal_api", silent: true,
           templateName: "renewal_reminder",
-          templateVariables: { var_1: l.customer_name || "Valued Customer", var_2: vehicleLabel, var_3: premiumStr, var_4: expiryStr },
+          templateVariables: { var_1: l.customer_name || "Valued Customer", var_2: vehicleLabel, var_3: premiumStr + " | Expiry: " + expiryStr },
           messageType: "template",
         });
 
