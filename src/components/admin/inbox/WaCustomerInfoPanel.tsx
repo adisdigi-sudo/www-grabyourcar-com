@@ -286,7 +286,35 @@ export function WaCustomerInfoPanel({ conversation, messageCount, onClose }: Pro
 
           <Separator />
 
-          {/* Details */}
+          {/* Add as Lead */}
+          <div>
+            <p className="text-xs font-medium mb-2 flex items-center gap-1">
+              <UserPlus className="h-3 w-3" /> Add as Lead
+            </p>
+            <div className="space-y-2">
+              <Select value={addLeadVertical} onValueChange={setAddLeadVertical}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="Select vertical..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {VERTICALS.map(v => (
+                    <SelectItem key={v.value} value={v.value} className="text-xs">{v.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                size="sm"
+                className="w-full h-8 text-xs gap-1.5"
+                disabled={!addLeadVertical || addingLead}
+                onClick={handleAddAsLead}
+              >
+                <UserPlus className="h-3 w-3" />
+                {addingLead ? "Adding..." : "Add to CRM Pipeline"}
+              </Button>
+            </div>
+          </div>
+
+          <Separator />
           <div className="space-y-1.5">
             <p className="text-xs font-medium mb-1">Details</p>
             <div className="flex items-center gap-2 text-xs">
