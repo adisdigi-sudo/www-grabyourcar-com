@@ -51,6 +51,33 @@ function normalizePhone(phone: string): { full: string; short: string; valid: bo
   return { full: `91${short}`, short, valid };
 }
 
+function buildTemplateParameters(templateVariables?: Record<string, unknown>) {
+  if (!templateVariables) return [];
+
+  const entries = Object.entries(templateVariables).filter(([, value]) => {
+    if (value === null || value === undefined) return false;
+    return String(value).trim().length > 0;
+  });
+
+  const positionalEntries = entries
+    .map(([key, value]) => {
+      const match = key.match(/^var_(\d+)$/) || key.match(/^(\d+)$/);
+      return match ? { index: Number(match[1]), value } : null;
+    })
+    .filter((entry): entry is { index: number; value: unknown } => entry !== null)
+    .sort((a, b) => a.index - b.index);
+
+  if (positionalEntries.length === entries.length) {
+    return positionalEntries.map(({ value }) => ({ type: "text", text: String(value) }));
+  }
+
+  return entries.map(([key, value]) => ({
+    type: "text",
+    parameter_name: key,
+    text: String(value),
+  }));
+}
+
 // ── Meta Cloud API Provider ──
 async function sendViaMeta(
   token: string,
@@ -266,15 +293,24 @@ async function sendMessage(
     let payload: Record<string, unknown>;
     if (messageType === "template" && templateName) {
       const components: unknown[] = [];
-      if (templateVars && Object.keys(templateVars).length > 0) {
+      const derivedParameters = buildTemplateParameters(templateVars);
+      if (templateComponents && templateComponents.length > 0) {
+        components.push(...templateComponents);
+      } else if (derivedParameters.length > 0) {
         components.push({
           type: "body",
-          parameters: Object.values(templateVars).map(val => ({ type: "text", text: val })),
+          parameters: derivedParameters,
         });
       }
-      // If caller provided raw components array, use it directly (supports buttons with dynamic URLs)
-      const finalComponents = templateComponents && templateComponents.length > 0 ? templateComponents : components;
-      payload = { type: "template", template: { name: templateName, language: { code: "en" }, ...(finalComponents.length > 0 ? { components: finalComponents } : {}) } };
+
+      payload = {
+        type: "template",
+        template: {
+          name: templateName,
+          language: { code: "en" },
+          ...(components.length > 0 ? { components } : {}),
+        },
+      };
     } else if (messageType === "image" && mediaUrl) {
       payload = { type: "image", image: { link: mediaUrl, caption: message || "" } };
     } else if (messageType === "document" && mediaUrl) {

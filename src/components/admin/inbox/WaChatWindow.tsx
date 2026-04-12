@@ -4,6 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import {
   Send, Paperclip, Clock, Check, CheckCheck, X,
   AlertTriangle, Info, Zap, LayoutTemplate, MessageSquare,
@@ -65,15 +67,59 @@ function LiveCountdown({ expiresAt }: { expiresAt: string }) {
   );
 }
 
+type TemplateOption = {
+  id: string;
+  name: string;
+  display_name: string | null;
+  body: string;
+  variables?: string[] | null;
+};
+
+function extractTemplateVariables(template: TemplateOption): string[] {
+  const explicitVariables = Array.isArray(template.variables)
+    ? template.variables.filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+    : [];
+
+  if (explicitVariables.length > 0) return explicitVariables;
+
+  const body = template.body || "";
+  const namedMatches = [...body.matchAll(/\{\{([a-zA-Z_]\w*)\}\}/g)].map((match) => match[1]);
+  if (namedMatches.length > 0) return [...new Set(namedMatches)];
+
+  const positionalMatches = [...body.matchAll(/\{\{(\d+)\}\}/g)].map((match) => `var_${match[1]}`);
+  return [...new Set(positionalMatches)];
+}
+
+function renderTemplatePreview(body: string, values: Record<string, string>) {
+  return Object.entries(values).reduce((content, [key, value]) => {
+    const safeValue = value || "";
+    const positionalMatch = key.match(/^var_(\d+)$/);
+
+    if (positionalMatch) {
+      return content.replace(new RegExp(`\\{\\{${positionalMatch[1]}\\}\\}`, "g"), safeValue);
+    }
+
+    return content.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), safeValue);
+  }, body);
+}
+
+function getVariableLabel(key: string) {
+  const positionalMatch = key.match(/^var_(\d+)$/);
+  if (positionalMatch) return `Variable ${positionalMatch[1]}`;
+  return key.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
 export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onToggleInfo }: Props) {
   const [text, setText] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [showQuickReplies, setShowQuickReplies] = useState(false);
   const [quickReplies, setQuickReplies] = useState<Array<{ id: string; title: string; message: string }>>([]);
   const [showTemplates, setShowTemplates] = useState(false);
-  const [templates, setTemplates] = useState<Array<{ id: string; name: string; display_name: string | null; body: string }>>([]);
+  const [templates, setTemplates] = useState<TemplateOption[]>([]);
   const [showAssign, setShowAssign] = useState(false);
   const [agents, setAgents] = useState<Array<{ id: string; full_name: string; email: string }>>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<TemplateOption | null>(null);
+  const [templateValues, setTemplateValues] = useState<Record<string, string>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -85,13 +131,30 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
     supabase.from("wa_quick_replies").select("id, title, message").eq("is_active", true).order("sort_order").then(({ data }) => {
       setQuickReplies((data || []) as any);
     });
-    supabase.from("wa_templates").select("id, name, display_name, body, status").eq("status", "approved").order("created_at", { ascending: false }).then(({ data }) => {
+    supabase.from("wa_templates").select("id, name, display_name, body, variables, status").eq("status", "approved").order("created_at", { ascending: false }).then(({ data }) => {
       setTemplates((data || []) as any);
     });
     supabase.from("crm_users").select("id, full_name, email").limit(50).then(({ data }) => {
       setAgents((data || []) as any);
     });
   }, []);
+
+  const buildInitialTemplateValues = (template: TemplateOption) => {
+    const defaults: Record<string, string> = {};
+
+    extractTemplateVariables(template).forEach((key) => {
+      const normalized = key.toLowerCase();
+      if (["customer_name", "full_name", "name"].includes(normalized)) {
+        defaults[key] = conversation?.customer_name || "";
+      } else if (normalized === "phone") {
+        defaults[key] = conversation?.phone || "";
+      } else {
+        defaults[key] = "";
+      }
+    });
+
+    return defaults;
+  };
 
   const handleSend = async () => {
     if (!text.trim() || isSending) return;
@@ -111,11 +174,51 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
     inputRef.current?.focus();
   };
 
-  const handleTemplateSend = async (tpl: { name: string; body: string }) => {
+  const handleTemplateSend = async (tpl: TemplateOption) => {
     setShowTemplates(false);
+    const requiredVariables = extractTemplateVariables(tpl);
+
+    if (requiredVariables.length === 0) {
+      setIsSending(true);
+      await onSend(tpl.body, "template", { template_name: tpl.name });
+      setIsSending(false);
+      return;
+    }
+
+    setSelectedTemplate(tpl);
+    setTemplateValues(buildInitialTemplateValues(tpl));
+  };
+
+  const handleTemplateConfirm = async () => {
+    if (!selectedTemplate) return;
+
+    const requiredVariables = extractTemplateVariables(selectedTemplate);
+    const missingVariable = requiredVariables.find((key) => !templateValues[key]?.trim());
+
+    if (missingVariable) {
+      return;
+    }
+
+    const finalVariables = requiredVariables.reduce<Record<string, string>>((acc, key) => {
+      acc[key] = templateValues[key].trim();
+      return acc;
+    }, {});
+
     setIsSending(true);
-    await onSend(tpl.body, "template", { template_name: tpl.name });
+    const ok = await onSend(
+      renderTemplatePreview(selectedTemplate.body, finalVariables),
+      "template",
+      {
+        template_name: selectedTemplate.name,
+        template_variables: finalVariables,
+      },
+    );
     setIsSending(false);
+
+    if (ok) {
+      setSelectedTemplate(null);
+      setTemplateValues({});
+    }
   };
 
   const handleAssign = async (agentId: string) => {
@@ -147,8 +250,11 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
     );
   }
 
+  const selectedTemplateVariables = selectedTemplate ? extractTemplateVariables(selectedTemplate) : [];
+
   return (
-    <div className="flex-1 flex flex-col bg-[#efeae2] dark:bg-background/95">
+    <>
+      <div className="flex-1 flex flex-col bg-[#efeae2] dark:bg-background/95">
       {/* Chat Header */}
       <div className="h-14 bg-card border-b flex items-center px-4 gap-3 shrink-0">
         <div className={cn(
@@ -354,6 +460,45 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
           </Button>
         </div>
       </div>
-    </div>
+      </div>
+
+      <Dialog open={!!selectedTemplate} onOpenChange={(open) => { if (!open) { setSelectedTemplate(null); setTemplateValues({}); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Fill template details</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="rounded-lg border bg-muted/40 p-3 text-sm">
+              <p className="font-medium">{selectedTemplate?.display_name || selectedTemplate?.name}</p>
+              <p className="mt-1 whitespace-pre-wrap text-muted-foreground">{selectedTemplate?.body}</p>
+            </div>
+
+            <div className="space-y-3">
+              {selectedTemplateVariables.map((key) => (
+                <div key={key} className="space-y-2">
+                  <Label htmlFor={`template-${key}`}>{getVariableLabel(key)}</Label>
+                  <Input
+                    id={`template-${key}`}
+                    value={templateValues[key] || ""}
+                    onChange={(event) => setTemplateValues((current) => ({ ...current, [key]: event.target.value }))}
+                    placeholder={`Enter ${getVariableLabel(key).toLowerCase()}`}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setSelectedTemplate(null); setTemplateValues({}); }} disabled={isSending}>
+              Cancel
+            </Button>
+            <Button onClick={handleTemplateConfirm} disabled={isSending || selectedTemplateVariables.some((key) => !templateValues[key]?.trim())}>
+              Send template
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
