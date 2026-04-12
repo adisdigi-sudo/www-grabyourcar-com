@@ -94,10 +94,10 @@ export function WhatsAppBroadcastManager() {
 
       if (broadcastsRes.data) setBroadcasts(broadcastsRes.data);
       if (templatesRes.data) {
-        // Map to expected shape
         const mapped = templatesRes.data.map(t => ({
-          ...t,
-          variables: t.variables as string[] | null
+          id: t.id, name: t.name, category: t.category,
+          content: t.body, // wa_templates uses 'body', map to 'content'
+          variables: t.variables as string[] | null,
         }));
         setTemplates(mapped);
       }

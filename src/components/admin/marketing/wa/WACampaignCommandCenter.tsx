@@ -128,7 +128,7 @@ function CampaignBuilder({ channel, onCampaignCreated }: { channel: Channel; onC
 
   const handleTemplateSelect = (templateId: string) => {
     const tpl = templates?.find((t: any) => t.id === templateId);
-    setForm((prev) => ({ ...prev, template_id: templateId, message_content: tpl?.content || prev.message_content }));
+    setForm((prev) => ({ ...prev, template_id: templateId, message_content: tpl?.body || prev.message_content }));
   };
 
   const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
