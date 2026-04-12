@@ -80,11 +80,20 @@ export default function WhatsAppTemplateManager() {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
-        .from("whatsapp_templates")
+        .from("wa_templates")
         .select("*")
-        .order("category", { ascending: true });
+        .order("created_at", { ascending: false });
       if (error) throw error;
-      setTemplates((data || []).map(item => ({ ...item, example_data: item.example_data as Record<string, unknown> | null })));
+      // Map wa_templates fields to WhatsAppTemplate interface
+      setTemplates((data || []).map(item => ({
+        id: item.id, name: item.name, category: item.category || "utility",
+        template_type: "text", content: item.body || "",
+        variables: (item.variables as string[]) || null, preview: null,
+        is_approved: item.status === "approved", is_active: item.status !== "disabled",
+        approval_status: item.status, wbiztool_template_id: item.meta_template_id,
+        language: item.language, use_cases: null, example_data: null,
+        created_at: item.created_at, updated_at: item.created_at,
+      })));
     } catch (error) {
       console.error("Error fetching templates:", error);
     } finally {
