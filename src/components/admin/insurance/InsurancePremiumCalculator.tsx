@@ -139,6 +139,10 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
   const securePremiumNum = parseFloat(securePremium) || 0;
 
   const isThirdPartyOnly = policyType === "Third Party";
+  const isStandaloneOD = policyType === "Standalone OD";
+  const isComprehensive = policyType === "Comprehensive";
+  const showODFields = !isThirdPartyOnly; // OD fields visible for Comprehensive & Standalone OD
+  const showTPInCalc = !isStandaloneOD; // TP included in Comprehensive & Third Party Only
 
   const calc = useMemo(() => {
     if (isThirdPartyOnly) {
@@ -160,14 +164,15 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
     const ncbDiscount = (odAfterDiscount * effectiveNcb) / 100;
     const netOD = odAfterDiscount - ncbDiscount;
 
-    const tp = getTPPremium(ccNum);
+    // Standalone OD: NO Third Party premium (IRDAI rule)
+    const tp = isStandaloneOD ? 0 : getTPPremium(ccNum);
     const addonTotal = addons.filter(a => a.enabled).reduce((s, a) => s + a.price, 0);
     const subtotal = netOD + tp + securePremiumNum + addonTotal;
     const gst = (subtotal * GST_RATE) / 100;
     const total = subtotal + gst;
 
     return { odRate, basicOD, odDiscount, odAfterDiscount, ncbDiscount, netOD, tp, securePremium: securePremiumNum, addonTotal, subtotal, gst, total };
-  }, [idvNum, ccNum, zone, discountPct, ncb, addons, ncbLocked, securePremiumNum, isThirdPartyOnly]);
+  }, [idvNum, ccNum, zone, discountPct, ncb, addons, ncbLocked, securePremiumNum, isThirdPartyOnly, isStandaloneOD]);
 
   const toggleAddon = (id: string) => {
     setAddons(prev => prev.map(a => a.id === id ? { ...a, enabled: !a.enabled } : a));
