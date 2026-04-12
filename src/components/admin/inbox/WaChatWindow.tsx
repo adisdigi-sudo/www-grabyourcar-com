@@ -570,19 +570,50 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
             </PopoverContent>
           </Popover>
 
+          {/* Attachments */}
+          <Popover open={showAttachMenu} onOpenChange={setShowAttachMenu}>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" title="Send attachment" disabled={!isWindowOpen || isUploading}>
+                {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-48 p-2" align="start">
+              <p className="text-xs font-semibold mb-2">📎 Send Attachment</p>
+              <div className="space-y-1">
+                <button onClick={() => handleAttachClick("image")} className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs hover:bg-accent transition-colors">
+                  <Image className="h-3.5 w-3.5 text-blue-500" /> Photo
+                </button>
+                <button onClick={() => handleAttachClick("document")} className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs hover:bg-accent transition-colors">
+                  <FileText className="h-3.5 w-3.5 text-orange-500" /> Document / PDF
+                </button>
+                <button onClick={() => handleAttachClick("video")} className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs hover:bg-accent transition-colors">
+                  <Video className="h-3.5 w-3.5 text-purple-500" /> Video
+                </button>
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={fileAccept}
+            className="hidden"
+            onChange={handleFileUpload}
+          />
+
           <Input
             ref={inputRef}
             placeholder={isWindowOpen ? "Type a message..." : "Use template (window closed)"}
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
-            disabled={!isWindowOpen || isSending}
+            disabled={!isWindowOpen || isSending || isUploading}
             className="flex-1 h-9 text-sm"
           />
 
           <Button
             onClick={handleSend}
-            disabled={!text.trim() || isSending || !isWindowOpen}
+            disabled={!text.trim() || isSending || !isWindowOpen || isUploading}
             size="icon"
             className="h-9 w-9 bg-green-600 hover:bg-green-700 shrink-0"
           >
