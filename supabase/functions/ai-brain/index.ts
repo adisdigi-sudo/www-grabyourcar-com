@@ -781,9 +781,15 @@ function isProtectedInsuranceIntent(text?: string): boolean {
       || ["policy", "document", "pdf", "copy", "renewal"].some((keyword) => lower.includes(keyword)));
 }
 
-function isPolicyDocumentIntent(text?: string): boolean {
+function wantsPolicyDocumentCopy(text?: string): boolean {
   const lower = (text || "").toLowerCase();
-  return ["policy", "document", "pdf", "copy"].some((keyword) => lower.includes(keyword));
+  if (!lower) return false;
+
+  const policyKeywords = ["policy", "insurance", "document", "pdf", "copy"];
+  const deliveryKeywords = ["send", "share", "bhejo", "forward", "download", "copy", "pdf", "document"];
+
+  return policyKeywords.some((keyword) => lower.includes(keyword))
+    && deliveryKeywords.some((keyword) => lower.includes(keyword));
 }
 
 function isPositiveConfirmation(text?: string): boolean {
@@ -791,34 +797,49 @@ function isPositiveConfirmation(text?: string): boolean {
   return ["yes", "haan", "han", "ji", "correct", "right", "yes i renewed", "i renewed", "renewed with you"].some((keyword) => lower === keyword || lower.includes(keyword));
 }
 
-function recentUserVerification(messages: any[]): { customerName: string | null; vehicleNumber: string | null } {
-  const recentUserMessages = messages
-    .filter((message: any) => message?.role === "user" && typeof message?.content === "string")
-    .map((message: any) => String(message.content).trim())
-    .filter(Boolean)
-    .slice(-6)
-    .reverse();
+function getLastAssistantMessageInfo(messages: any[]): { index: number; content: string } {
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    const message = messages[i];
+    if (message?.role === "assistant" && typeof message?.content === "string") {
+      return { index: i, content: String(message.content) };
+    }
+  }
+
+  return { index: -1, content: "" };
+}
+
+function hasPendingManualReviewPrompt(messages: any[]): boolean {
+  const { content } = getLastAssistantMessageInfo(messages);
+  return content.includes("Your documents are not available here")
+    || content.includes("Reply YES to connect to our insurance expert");
+}
+
+function hasPendingVerificationPrompt(messages: any[]): boolean {
+  const { content } = getLastAssistantMessageInfo(messages);
+  return content.includes("For security, please reply in this exact format:");
+}
+
+function extractStrictVerification(messages: any[], latestUserMessage: string): { customerName: string | null; vehicleNumber: string | null } {
+  const { index: lastAssistantIndex } = getLastAssistantMessageInfo(messages);
+  const candidateTexts = hasPendingVerificationPrompt(messages)
+    ? messages
+        .slice(lastAssistantIndex + 1)
+        .filter((message: any) => message?.role === "user" && typeof message?.content === "string")
+        .map((message: any) => String(message.content).trim())
+        .filter(Boolean)
+        .slice(-3)
+    : [String(latestUserMessage || "").trim()].filter(Boolean);
 
   let customerName: string | null = null;
   let vehicleNumber: string | null = null;
 
-  for (const text of recentUserMessages) {
+  for (const text of candidateTexts) {
     if (!customerName) customerName = extractCustomerNameFromText(text);
     if (!vehicleNumber) vehicleNumber = extractVehicleNumberFromText(text);
     if (customerName && vehicleNumber) break;
   }
 
   return { customerName, vehicleNumber };
-}
-
-function hasPendingManualReviewPrompt(messages: any[]): boolean {
-  const recentAssistantMessages = messages
-    .filter((message: any) => message?.role === "assistant" && typeof message?.content === "string")
-    .map((message: any) => String(message.content));
-
-  const lastAssistantMessage = recentAssistantMessages[recentAssistantMessages.length - 1] || "";
-  return lastAssistantMessage.includes("Your documents are not available here")
-    || lastAssistantMessage.includes("Reply YES to connect to our insurance expert");
 }
 
 async function handleStrictInsuranceSelfService(supabase: any, messages: any[], customerPhone?: string) {
@@ -839,7 +860,11 @@ async function handleStrictInsuranceSelfService(supabase: any, messages: any[], 
     };
   }
 
-  if (!isProtectedInsuranceIntent(latestUserMessage)) return null;
+  const shouldHandleStrictFlow = isProtectedInsuranceIntent(latestUserMessage)
+    || hasPendingVerificationPrompt(messages)
+    || hasPendingManualReviewPrompt(messages);
+
+  if (!shouldHandleStrictFlow) return null;
 
   if (!customerPhone) {
     return {
@@ -851,7 +876,17 @@ async function handleStrictInsuranceSelfService(supabase: any, messages: any[], 
     };
   }
 
-  const { customerName, vehicleNumber } = recentUserVerification(messages);
+  if (hasPendingManualReviewPrompt(messages)) {
+    return {
+      response: "Please reply YES to connect to our insurance expert.",
+      intent: "insurance",
+      suggestedActions: ["Reply YES for human expert"],
+      documentShare: null,
+      humanHandover: null,
+    };
+  }
+
+  const { customerName, vehicleNumber } = extractStrictVerification(messages, latestUserMessage);
 
   if (!customerName || !vehicleNumber) {
     return {
@@ -875,9 +910,11 @@ async function handleStrictInsuranceSelfService(supabase: any, messages: any[], 
     };
   }
 
+  const primaryVehicle = Array.isArray(policyLookup.vehicles) ? policyLookup.vehicles[0] : null;
   const primaryDocument = Array.isArray(policyLookup.policy_documents) ? policyLookup.policy_documents[0] : null;
+  const wantsDocumentCopy = wantsPolicyDocumentCopy(latestUserMessage);
 
-  if (isPolicyDocumentIntent(latestUserMessage)) {
+  if (wantsDocumentCopy) {
     if (!primaryDocument?.url) {
       return {
         response: "Your policy record is verified, but the PDF is not available here right now. Are you sure you renewed your insurance with us? Reply YES to connect to our insurance expert.",
@@ -900,9 +937,18 @@ async function handleStrictInsuranceSelfService(supabase: any, messages: any[], 
   }
 
   return {
-    response: `I have verified your registered record for ${policyLookup.vehicles?.[0]?.vehicle_number || vehicleNumber}. To prepare your insurance quote safely, please share:\n1. NCB percentage\n2. Any claim in the last 1 year (Yes/No)\n3. Required add-ons (Zero Dep / RSA / Engine Protect)\n\nWe will continue only on this registered mobile number.`,
+    response: [
+      `Your verified policy record for ${primaryVehicle?.vehicle_number || vehicleNumber}:`,
+      `Policy holder: ${policyLookup.customer || customerName}`,
+      `Insurer: ${primaryVehicle?.insurer || "Not available"}`,
+      `Policy number: ${primaryVehicle?.policy_number || "Not available"}`,
+      `Valid till: ${policyLookup.active_policies?.[0]?.valid_until || primaryVehicle?.expiry || "Not available"}`,
+      primaryDocument?.url
+        ? "If you need the PDF copy, reply: SEND POLICY PDF"
+        : "The policy PDF is not available here right now. Reply YES to connect to our insurance expert.",
+    ].join("\n"),
     intent: "insurance",
-    suggestedActions: ["Share NCB", "Share claim status", "Share add-ons"],
+    suggestedActions: primaryDocument?.url ? ["Send policy PDF"] : ["Reply YES for human expert"],
     documentShare: null,
     humanHandover: null,
   };
