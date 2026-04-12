@@ -224,13 +224,34 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
     }
 
     setSelectedTemplate(tpl);
-    setTemplateValues(buildInitialTemplateValues(tpl));
+    const initialValues = buildInitialTemplateValues(tpl);
+    setTemplateValues(initialValues);
+
+    // If all variables are auto-filled, send immediately without dialog
+    const allFilled = requiredVariables.every((key) => initialValues[key]?.trim());
+    if (allFilled) {
+      setIsSending(true);
+      const finalVars = requiredVariables.reduce<Record<string, string>>((acc, key) => {
+        acc[key] = initialValues[key].trim();
+        return acc;
+      }, {});
+      const ok = await onSend(
+        renderTemplatePreview(tpl.body, finalVars),
+        "template",
+        { template_name: tpl.name, template_variables: finalVars },
+      );
+      setIsSending(false);
+      if (ok) { setSelectedTemplate(null); setTemplateValues({}); }
+      return;
+    }
   };
+
+  const selectedTemplateVariables = selectedTemplate ? extractTemplateVariables(selectedTemplate) : [];
 
   const handleTemplateConfirm = async () => {
     if (!selectedTemplate) return;
 
-    const requiredVariables = extractTemplateVariables(selectedTemplate);
+    const requiredVariables = selectedTemplateVariables;
     const missingVariable = requiredVariables.find((key) => !templateValues[key]?.trim());
 
     if (missingVariable) {
