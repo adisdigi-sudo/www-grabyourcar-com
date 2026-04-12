@@ -121,8 +121,7 @@ serve(async (req) => {
       }
 
       const name = customer.customer_name || "there";
-      const messageGen = JOURNEY_MESSAGES[trigger.trigger_type];
-      const messageText = messageGen ? messageGen(name) : trigger.recommendation;
+      const messageText = await getJourneyMessage(supabase, trigger.trigger_type, name);
 
       let sendSuccess = false;
       if (WHATSAPP_ACCESS_TOKEN && WHATSAPP_PHONE_NUMBER_ID) {
