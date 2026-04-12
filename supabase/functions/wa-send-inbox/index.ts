@@ -114,6 +114,39 @@ serve(async (req) => {
           parameters,
         }];
       }
+
+      // Lookup template in DB to auto-add button components if needed
+      if (!template_components) {
+        const { data: tplData } = await supabase
+          .from("wa_templates")
+          .select("buttons, category")
+          .eq("name", template_name)
+          .single();
+
+        if (tplData?.buttons && Array.isArray(tplData.buttons)) {
+          const btnComponents: Record<string, unknown>[] = [];
+          (tplData.buttons as Array<Record<string, unknown>>).forEach((btn, idx) => {
+            const btnUrl = String(btn.url || "");
+            // Check if button URL has {{1}} variable
+            if (btnUrl.includes("{{1}}") || btn.type === "URL") {
+              // For OTP/auth templates, the button param is usually the same as body var_1
+              const paramValue = template_variables?.["var_1"] || template_variables?.["1"] || Object.values(template_variables || {})[0] || "";
+              if (paramValue) {
+                btnComponents.push({
+                  type: "button",
+                  sub_type: "url",
+                  index: idx,
+                  parameters: [{ type: "text", text: String(paramValue) }],
+                });
+              }
+            }
+          });
+          if (btnComponents.length > 0) {
+            finalComponents = [...(finalComponents || []), ...btnComponents];
+          }
+        }
+      }
+
       metaPayload = {
         type: "template",
         template: {
