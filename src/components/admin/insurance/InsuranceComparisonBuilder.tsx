@@ -536,6 +536,18 @@ export function InsuranceComparisonBuilder(props: Props) {
                 </div>
               )}
 
+              {/* Terms & Conditions */}
+              <div>
+                <Label className="text-[10px] text-muted-foreground">Terms & Conditions (optional — will appear on PDF)</Label>
+                <Textarea
+                  value={termsAndConditions}
+                  onChange={e => setTermsAndConditions(e.target.value)}
+                  placeholder="E.g. Quote valid for 7 days. Subject to insurer verification. No claim bonus applicable on renewal..."
+                  className="min-h-[50px] text-[10px] mt-0.5 resize-none"
+                  rows={2}
+                />
+              </div>
+
               <Separator />
 
               {/* Actions */}
