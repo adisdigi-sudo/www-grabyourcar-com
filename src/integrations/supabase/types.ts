@@ -3586,6 +3586,8 @@ export type Database = {
           id: string
           is_active: boolean
           label: string
+          meta_category: string | null
+          opt_out_footer: string | null
           slug: string
           updated_at: string
           variables: string[] | null
@@ -3598,6 +3600,8 @@ export type Database = {
           id?: string
           is_active?: boolean
           label: string
+          meta_category?: string | null
+          opt_out_footer?: string | null
           slug: string
           updated_at?: string
           variables?: string[] | null
@@ -3610,6 +3614,8 @@ export type Database = {
           id?: string
           is_active?: boolean
           label?: string
+          meta_category?: string | null
+          opt_out_footer?: string | null
           slug?: string
           updated_at?: string
           variables?: string[] | null
@@ -15738,6 +15744,7 @@ export type Database = {
           media_type: string | null
           media_url: string | null
           message_content: string | null
+          meta_category: string | null
           name: string
           paused_at: string | null
           scheduled_at: string | null
@@ -15774,6 +15781,7 @@ export type Database = {
           media_type?: string | null
           media_url?: string | null
           message_content?: string | null
+          meta_category?: string | null
           name: string
           paused_at?: string | null
           scheduled_at?: string | null
@@ -15810,6 +15818,7 @@ export type Database = {
           media_type?: string | null
           media_url?: string | null
           message_content?: string | null
+          meta_category?: string | null
           name?: string
           paused_at?: string | null
           scheduled_at?: string | null
@@ -15839,6 +15848,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      wa_category_rules: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          message_context: string
+          meta_category: string
+          opt_out_footer_required: boolean | null
+          requires_template: boolean | null
+          rule_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          message_context: string
+          meta_category?: string
+          opt_out_footer_required?: boolean | null
+          requires_template?: boolean | null
+          rule_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          message_context?: string
+          meta_category?: string
+          opt_out_footer_required?: boolean | null
+          requires_template?: boolean | null
+          rule_name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       wa_chatbot_rules: {
         Row: {
@@ -16443,6 +16491,7 @@ export type Database = {
           media_type: string | null
           media_url: string | null
           message_content: string
+          meta_category: string | null
           next_retry_at: string | null
           phone: string
           priority: number | null
@@ -16470,6 +16519,7 @@ export type Database = {
           media_type?: string | null
           media_url?: string | null
           message_content: string
+          meta_category?: string | null
           next_retry_at?: string | null
           phone: string
           priority?: number | null
@@ -16497,6 +16547,7 @@ export type Database = {
           media_type?: string | null
           media_url?: string | null
           message_content?: string
+          meta_category?: string | null
           next_retry_at?: string | null
           phone?: string
           priority?: number | null
