@@ -834,7 +834,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
               </div>
             )}
 
-            {/* Third Party Only info banner */}
+            {/* Policy type info banner */}
             {isThirdPartyOnly && (
               <div className="flex items-start gap-2 p-3 rounded-lg border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-950/30">
                 <Info className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
@@ -842,6 +842,17 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
                   <p className="text-xs font-bold text-blue-800 dark:text-blue-300">Third Party Only Policy</p>
                   <p className="text-[10px] text-blue-600 dark:text-blue-400 mt-0.5">
                     IDV, NCB, OD discount, and add-on coverages are not applicable. Premium is based on engine CC capacity as per IRDAI tariff.
+                  </p>
+                </div>
+              </div>
+            )}
+            {isStandaloneOD && (
+              <div className="flex items-start gap-2 p-3 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30">
+                <Info className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-xs font-bold text-amber-800 dark:text-amber-300">Standalone OD Policy</p>
+                  <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5">
+                    Only Own Damage coverage. Third Party premium is NOT included — customer must have a separate active TP policy as per IRDAI guidelines.
                   </p>
                 </div>
               </div>
@@ -982,7 +993,7 @@ export function InsurancePremiumCalculator({ onQuoteSaved }: Props) {
           )}
 
           {/* Add-ons Card — hide for Third Party Only */}
-          {!isThirdPartyOnly && (
+          {showODFields && (
           <div className="rounded-xl border border-border bg-card p-4 space-y-3">
             <button onClick={() => setShowAddons(!showAddons)} className="flex items-center gap-2 w-full">
               <Zap className="h-4 w-4 text-primary" />
