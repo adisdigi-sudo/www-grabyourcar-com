@@ -587,6 +587,7 @@ export function WaTemplateManager() {
             <TabsTrigger value="templates" className="gap-1.5 text-xs"><LayoutTemplate className="h-3.5 w-3.5" /> Templates</TabsTrigger>
             <TabsTrigger value="quick_replies" className="gap-1.5 text-xs"><Zap className="h-3.5 w-3.5" /> Quick Replies</TabsTrigger>
             <TabsTrigger value="ab_testing" className="gap-1.5 text-xs"><GitBranch className="h-3.5 w-3.5" /> A/B Tests</TabsTrigger>
+            <TabsTrigger value="category_rules" className="gap-1.5 text-xs"><Shield className="h-3.5 w-3.5" /> Category Rules</TabsTrigger>
           </TabsList>
           <Button size="sm" className="gap-1.5 text-xs" onClick={() => { setEditItem({}); setEditButtons([]); setIsEditing(true); }}>
             <Plus className="h-3.5 w-3.5" /> {mainTab === "quick_replies" ? "New Quick Reply" : "New Template"}
