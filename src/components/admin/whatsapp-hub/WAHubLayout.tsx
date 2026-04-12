@@ -18,8 +18,9 @@ import { WAHubFlows } from "./modules/WAHubFlows";
 import { WAHubContacts } from "./modules/WAHubContacts";
 import { WAHubAnalytics } from "./modules/WAHubAnalytics";
 import { WAHubTeam } from "./modules/WAHubTeam";
+import { WAHubCrmMessages } from "./modules/WAHubCrmMessages";
 
-type Module = "inbox" | "templates" | "broadcasts" | "flows" | "contacts" | "analytics" | "team";
+type Module = "inbox" | "templates" | "broadcasts" | "flows" | "contacts" | "analytics" | "team" | "crm-messages";
 
 interface NavItem {
   id: Module;
