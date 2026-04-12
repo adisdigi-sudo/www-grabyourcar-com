@@ -524,8 +524,35 @@ export function InsuranceWorkspace() {
               <Button size="sm" onClick={() => setShowAddLead(true)} className="gap-1.5 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border border-white/20">
                 <Plus className="h-4 w-4" /> Add Lead
               </Button>
-              <Button size="sm" onClick={() => window.open("https://pbpci.policybazaar.com/?token=o5aMAq6qZ1tLXTODNpDyVbk4MP6pWDnq6hhpN5u%2BmyJLH9wHcj81JpXwkmKwLPBcDQlOpmql%2FtQgJKjQaQBk%2F6h5%2Bh6wxuKCTAtXRNQ1WBN7m6J2EwinhUfoywZ8E%2B%2BJFZQlcTcGh6a4upMh26MliMAXl%2FqWXTt%2B579hIW3zzfAGZ7aSNJ3WTeVCdfy%2FjJGe%2BQa3M6xdyWiN9%2FuvLVHo9A%3D%3D", "_blank")} className="gap-1.5 bg-emerald-500/80 hover:bg-emerald-500 text-white border border-emerald-400/30">
-                <ExternalLink className="h-4 w-4" /> Get Quote
+              <Button
+                size="sm"
+                onClick={() => {
+                  if (partnerLink?.partner_url) {
+                    window.open(partnerLink.partner_url, "_blank");
+                  } else {
+                    toast.error("Partner link not found. Add it in settings.");
+                    setShowPartnerLink(true);
+                  }
+                }}
+                className={cn(
+                  "gap-1.5 text-white border",
+                  partnerLinkError ? "bg-red-500/80 hover:bg-red-500 border-red-400/30" : "bg-emerald-500/80 hover:bg-emerald-500 border-emerald-400/30"
+                )}
+              >
+                {partnerLinkError ? <AlertCircle className="h-4 w-4" /> : <ExternalLink className="h-4 w-4" />}
+                Get Quote
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setEditPartnerUrl(partnerLink?.partner_url || "");
+                  setShowPartnerLink(true);
+                }}
+                className="gap-1 text-white/70 hover:text-white hover:bg-white/10 px-2"
+                title="Update Partner Quote Link"
+              >
+                <Settings2 className="h-3.5 w-3.5" />
               </Button>
             </div>
           </div>
