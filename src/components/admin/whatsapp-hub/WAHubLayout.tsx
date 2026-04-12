@@ -6,7 +6,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import {
   MessageSquare, LayoutTemplate, Megaphone, Bot, Users, BarChart3,
   UsersRound, ChevronLeft, ChevronRight, Wifi, WifiOff, Search,
-  Settings, Workflow
+  Settings, Workflow, MessageSquareText
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
@@ -18,8 +18,9 @@ import { WAHubFlows } from "./modules/WAHubFlows";
 import { WAHubContacts } from "./modules/WAHubContacts";
 import { WAHubAnalytics } from "./modules/WAHubAnalytics";
 import { WAHubTeam } from "./modules/WAHubTeam";
+import { WAHubCrmMessages } from "./modules/WAHubCrmMessages";
 
-type Module = "inbox" | "templates" | "broadcasts" | "flows" | "contacts" | "analytics" | "team";
+type Module = "inbox" | "templates" | "broadcasts" | "flows" | "contacts" | "analytics" | "team" | "crm-messages";
 
 interface NavItem {
   id: Module;
@@ -37,6 +38,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: "contacts", label: "Contacts", icon: Users, color: "text-cyan-500" },
   { id: "analytics", label: "Analytics", icon: BarChart3, color: "text-amber-500" },
   { id: "team", label: "Team", icon: UsersRound, color: "text-rose-500" },
+  { id: "crm-messages", label: "CRM Messages", icon: MessageSquareText, color: "text-emerald-500" },
 ];
 
 export function WAHubLayout() {
@@ -53,6 +55,7 @@ export function WAHubLayout() {
       case "contacts": return <WAHubContacts />;
       case "analytics": return <WAHubAnalytics />;
       case "team": return <WAHubTeam />;
+      case "crm-messages": return <WAHubCrmMessages />;
       default: return <WAHubInbox />;
     }
   };
