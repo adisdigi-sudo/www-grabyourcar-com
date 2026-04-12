@@ -99,12 +99,14 @@ const TOOLS = [
     type: "function",
     function: {
       name: "lookup_my_policy",
-      description: "Look up customer's insurance policy details. ONLY returns data for the customer's own registered phone number. Use when customer asks about their insurance policy, policy copy, policy status, or renewal.",
+      description: "Look up customer's insurance policy details. ONLY returns data for the customer's own registered phone number AND exact verified name + vehicle number match. Use when customer asks about their insurance policy, policy copy, policy status, or renewal.",
       parameters: {
         type: "object",
         properties: {
-          vehicle_number: { type: "string", description: "Vehicle registration number like DL10CJ4761" },
+          customer_name: { type: "string", description: "Customer full name exactly as registered" },
+          vehicle_number: { type: "string", description: "Vehicle registration number like DL01AB1234" },
         },
+        required: ["customer_name", "vehicle_number"],
       },
     },
   },
@@ -140,7 +142,7 @@ const TOOLS = [
       parameters: {
         type: "object",
         properties: {
-          vehicle_number: { type: "string", description: "Vehicle registration number" },
+          vehicle_number: { type: "string", description: "Vehicle registration number like DL01AB1234" },
         },
       },
     },
@@ -160,12 +162,14 @@ const TOOLS = [
     type: "function",
     function: {
       name: "lookup_my_car_details",
-      description: "Look up customer's car/vehicle details from our records using their phone number or vehicle number.",
+      description: "Look up customer's car/vehicle details from our records using ONLY their registered phone number plus exact verified name and vehicle number.",
       parameters: {
         type: "object",
         properties: {
-          vehicle_number: { type: "string", description: "Vehicle registration number" },
+          customer_name: { type: "string", description: "Customer full name exactly as registered" },
+          vehicle_number: { type: "string", description: "Vehicle registration number like DL01AB1234" },
         },
+        required: ["customer_name", "vehicle_number"],
       },
     },
   },
@@ -278,6 +282,23 @@ ${page_context ? `User is currently viewing: ${page_context}` : ""}
 ${customer_name ? `Customer name: ${customer_name}` : ""}
 ${customer_phone ? `Customer phone: ${customer_phone}` : ""}`;
 
+    const strictInsuranceSelfService = channel === "whatsapp"
+      ? await handleStrictInsuranceSelfService(supabase, messages, customer_phone)
+      : null;
+
+    if (strictInsuranceSelfService) {
+      return new Response(JSON.stringify({
+        response: strictInsuranceSelfService.response,
+        intent: strictInsuranceSelfService.intent,
+        lead_captured: false,
+        suggested_actions: strictInsuranceSelfService.suggestedActions,
+        document_share: strictInsuranceSelfService.documentShare || null,
+        human_handover: strictInsuranceSelfService.humanHandover || null,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const aiMessages = [
       { role: "system", content: systemPrompt },
       ...messages.slice(-15),
@@ -334,6 +355,7 @@ ${customer_phone ? `Customer phone: ${customer_phone}` : ""}`;
       lead_captured: result.leadCaptured,
       suggested_actions: result.suggestedActions,
       document_share: result.documentShare || null,
+      human_handover: null,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
@@ -425,7 +447,7 @@ async function executeWithTools(
           break;
         // ====== SELF-SERVICE TOOLS ======
         case "lookup_my_policy":
-          result = await toolLookupPolicy(supabase, customerPhone, args.vehicle_number);
+          result = await toolLookupPolicy(supabase, customerPhone, args.vehicle_number, args.customer_name);
           intent = "insurance";
           break;
         case "lookup_my_invoices":
@@ -445,7 +467,7 @@ async function executeWithTools(
           intent = "payments";
           break;
         case "lookup_my_car_details":
-          result = await toolLookupCarDetails(supabase, customerPhone, args.vehicle_number);
+          result = await toolLookupCarDetails(supabase, customerPhone, args.vehicle_number, args.customer_name);
           intent = "car_details";
           break;
         case "record_manual_payment":
@@ -687,33 +709,232 @@ function phoneVariants(phone?: string): string[] {
   return Array.from(variants).filter(Boolean);
 }
 
-async function toolLookupPolicy(supabase: any, customerPhone?: string, vehicleNumber?: string) {
+function normalizeVehicleNumber(value?: string): string {
+  return (value || "").toUpperCase().replace(/[^A-Z0-9]/g, "").trim();
+}
+
+function normalizePersonName(value?: string): string {
+  return (value || "")
+    .toLowerCase()
+    .replace(/[^a-z\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isStrictNameMatch(input?: string, candidate?: string): boolean {
+  const normalizedInput = normalizePersonName(input);
+  const normalizedCandidate = normalizePersonName(candidate);
+  if (!normalizedInput || !normalizedCandidate) return false;
+  if (normalizedInput === normalizedCandidate) return true;
+
+  const inputTokens = normalizedInput.split(" ").filter((token) => token.length > 1);
+  if (inputTokens.length < 2) return false;
+  return inputTokens.every((token) => normalizedCandidate.includes(token));
+}
+
+function extractVehicleNumberFromText(text?: string): string | null {
+  if (!text) return null;
+  const match = text.toUpperCase().match(/\b[A-Z]{2}\s?-?\d{1,2}\s?-?[A-Z]{1,3}\s?-?\d{3,4}\b/);
+  return match ? normalizeVehicleNumber(match[0]) : null;
+}
+
+function extractCustomerNameFromText(text?: string): string | null {
+  if (!text) return null;
+
+  const explicitPatterns = [
+    /(?:my name is|name is|i am|i'm|this is)\s+([A-Za-z][A-Za-z\s]{2,60})/i,
+    /name\s*[:\-]\s*([A-Za-z][A-Za-z\s]{2,60})/i,
+  ];
+
+  for (const pattern of explicitPatterns) {
+    const match = text.match(pattern);
+    if (match?.[1]) {
+      const candidate = match[1].replace(/\s+/g, " ").trim();
+      if (/^[A-Za-z]+(?:\s+[A-Za-z]+){1,3}$/.test(candidate)) {
+        return candidate;
+      }
+    }
+  }
+
+  const cleaned = text
+    .replace(/\b[A-Z]{2}\s?-?\d{1,2}\s?-?[A-Z]{1,3}\s?-?\d{3,4}\b/gi, " ")
+    .replace(/[^A-Za-z\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (/^[A-Za-z]+(?:\s+[A-Za-z]+){1,3}$/.test(cleaned)) {
+    return cleaned;
+  }
+
+  return null;
+}
+
+function isProtectedInsuranceIntent(text?: string): boolean {
+  const lower = (text || "").toLowerCase();
+  if (!lower) return false;
+
+  const sensitiveKeywords = ["policy", "document", "pdf", "copy", "quote", "premium", "renewal", "insurance"];
+  const selfReferenceKeywords = ["my", "meri", "mera", "apni", "please send", "send me"];
+
+  return sensitiveKeywords.some((keyword) => lower.includes(keyword))
+    && (selfReferenceKeywords.some((keyword) => lower.includes(keyword))
+      || ["policy", "document", "pdf", "copy", "renewal"].some((keyword) => lower.includes(keyword)));
+}
+
+function isPolicyDocumentIntent(text?: string): boolean {
+  const lower = (text || "").toLowerCase();
+  return ["policy", "document", "pdf", "copy"].some((keyword) => lower.includes(keyword));
+}
+
+function isPositiveConfirmation(text?: string): boolean {
+  const lower = (text || "").toLowerCase().trim();
+  return ["yes", "haan", "han", "ji", "correct", "right", "yes i renewed", "i renewed", "renewed with you"].some((keyword) => lower === keyword || lower.includes(keyword));
+}
+
+function recentUserVerification(messages: any[]): { customerName: string | null; vehicleNumber: string | null } {
+  const recentUserMessages = messages
+    .filter((message: any) => message?.role === "user" && typeof message?.content === "string")
+    .map((message: any) => String(message.content).trim())
+    .filter(Boolean)
+    .slice(-6)
+    .reverse();
+
+  let customerName: string | null = null;
+  let vehicleNumber: string | null = null;
+
+  for (const text of recentUserMessages) {
+    if (!customerName) customerName = extractCustomerNameFromText(text);
+    if (!vehicleNumber) vehicleNumber = extractVehicleNumberFromText(text);
+    if (customerName && vehicleNumber) break;
+  }
+
+  return { customerName, vehicleNumber };
+}
+
+function hasPendingManualReviewPrompt(messages: any[]): boolean {
+  const recentAssistantMessages = messages
+    .filter((message: any) => message?.role === "assistant" && typeof message?.content === "string")
+    .map((message: any) => String(message.content));
+
+  const lastAssistantMessage = recentAssistantMessages[recentAssistantMessages.length - 1] || "";
+  return lastAssistantMessage.includes("Your documents are not available here")
+    || lastAssistantMessage.includes("Reply YES to connect to our insurance expert");
+}
+
+async function handleStrictInsuranceSelfService(supabase: any, messages: any[], customerPhone?: string) {
+  const latestUserMessage = [...messages]
+    .reverse()
+    .find((message: any) => message?.role === "user" && typeof message?.content === "string")?.content || "";
+
+  if (hasPendingManualReviewPrompt(messages) && isPositiveConfirmation(latestUserMessage)) {
+    return {
+      response: "Thank you. I am transferring this chat to our relevant insurance expert now.",
+      intent: "insurance",
+      suggestedActions: ["Human expert takeover started"],
+      documentShare: null,
+      humanHandover: {
+        vertical: "insurance",
+        reason: "customer_confirmed_manual_review",
+      },
+    };
+  }
+
+  if (!isProtectedInsuranceIntent(latestUserMessage)) return null;
+
+  if (!customerPhone) {
+    return {
+      response: "For security, please message us only from your registered mobile number.",
+      intent: "insurance",
+      suggestedActions: ["Message from registered number"],
+      documentShare: null,
+      humanHandover: null,
+    };
+  }
+
+  const { customerName, vehicleNumber } = recentUserVerification(messages);
+
+  if (!customerName || !vehicleNumber) {
+    return {
+      response: "For security, please reply in this exact format:\nName: Your full name\nCar Number: DL01AB1234\n\nWe only share policy or insurance details on the registered mobile number.",
+      intent: "insurance",
+      suggestedActions: ["Share full name", "Share car number"],
+      documentShare: null,
+      humanHandover: null,
+    };
+  }
+
+  const policyLookup = await toolLookupPolicy(supabase, customerPhone, vehicleNumber, customerName);
+
+  if (!policyLookup?.found) {
+    return {
+      response: "Your documents are not available here. Are you sure you have renewed your insurance with us? Reply YES to connect to our insurance expert.",
+      intent: "insurance",
+      suggestedActions: ["Reply YES for human expert"],
+      documentShare: null,
+      humanHandover: null,
+    };
+  }
+
+  const primaryDocument = Array.isArray(policyLookup.policy_documents) ? policyLookup.policy_documents[0] : null;
+
+  if (isPolicyDocumentIntent(latestUserMessage)) {
+    if (!primaryDocument?.url) {
+      return {
+        response: "Your policy record is verified, but the PDF is not available here right now. Are you sure you renewed your insurance with us? Reply YES to connect to our insurance expert.",
+        intent: "insurance",
+        suggestedActions: ["Reply YES for human expert"],
+        documentShare: null,
+        humanHandover: null,
+      };
+    }
+
+    const deterministicResponse = buildSelfServiceResponse([{ name: "lookup_my_policy", result: policyLookup }]);
+
+    return {
+      response: deterministicResponse?.response || "Your verified policy details are ready.",
+      intent: "insurance",
+      suggestedActions: ["Verified policy shared"],
+      documentShare: deterministicResponse?.documentShare || null,
+      humanHandover: null,
+    };
+  }
+
+  return {
+    response: `I have verified your registered record for ${policyLookup.vehicles?.[0]?.vehicle_number || vehicleNumber}. To prepare your insurance quote safely, please share:\n1. NCB percentage\n2. Any claim in the last 1 year (Yes/No)\n3. Required add-ons (Zero Dep / RSA / Engine Protect)\n\nWe will continue only on this registered mobile number.`,
+    intent: "insurance",
+    suggestedActions: ["Share NCB", "Share claim status", "Share add-ons"],
+    documentShare: null,
+    humanHandover: null,
+  };
+}
+
+async function toolLookupPolicy(supabase: any, customerPhone?: string, vehicleNumber?: string, customerName?: string) {
   if (!customerPhone) return { error: "Phone number not available. Please share your registered mobile number." };
+  if (!customerName) return { error: "Full name is required for policy verification." };
+  if (!vehicleNumber) return { error: "Vehicle number is required for policy verification." };
   
   const phones = phoneVariants(customerPhone);
+  const cleanVehicle = normalizeVehicleNumber(vehicleNumber);
   
-  // Find insurance client by phone
-  let query = supabase.from("insurance_clients")
+  const { data: clients } = await supabase.from("insurance_clients")
     .select("id, customer_name, phone, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_policy_number, current_policy_type, current_insurer, current_premium, policy_expiry_date, policy_start_date, pipeline_stage, ncb_percentage")
-    .or(phones.map(p => `phone.eq.${p}`).join(","));
-
-  // STRICT: Even with vehicle number, ALWAYS require phone match first
-  // Vehicle number is only used as additional filter, never as standalone lookup
-  if (vehicleNumber) {
-    const cleanVehicle = vehicleNumber.replace(/\s+/g, "").toUpperCase();
-    query = query.ilike("vehicle_number", `%${cleanVehicle}%`);
-  }
-
-  const { data: clients } = await query.limit(5);
+    .or(phones.map(p => `phone.eq.${p}`).join(","))
+    .limit(25);
   
   if (!clients?.length) {
-    return { found: false, message: "No insurance records found for your number. Would you like to get a new insurance quote?" };
+    return { found: false, message: "No insurance records found for your number." };
   }
 
-  // Verify phone matches (strict security)
-  const verifiedClients = clients.filter((c: any) => phones.includes(c.phone?.replace(/\D/g, "")));
+  const verifiedClients = clients.filter((client: any) => {
+    const storedPhone = client.phone?.replace(/\D/g, "") || "";
+    const storedVehicle = normalizeVehicleNumber(client.vehicle_number);
+    return phones.includes(storedPhone)
+      && storedVehicle === cleanVehicle
+      && isStrictNameMatch(customerName, client.customer_name);
+  });
+
   if (!verifiedClients.length) {
-    return { found: false, message: "For security, we can only share policy details with the registered mobile number. Please contact from your registered number." };
+    return { found: false, message: "No verified insurance record was found for this registered number, name, and vehicle combination." };
   }
 
   // Get policies for verified clients
@@ -948,18 +1169,21 @@ async function toolLookupPayments(supabase: any, customerPhone?: string) {
 
 async function toolLookupCarDetails(supabase: any, customerPhone?: string, vehicleNumber?: string) {
   if (!customerPhone) return { error: "Phone number not available." };
-  
+  if (!vehicleNumber) return { error: "Vehicle number is required." };
+
   const phones = phoneVariants(customerPhone);
+  const cleanVehicle = normalizeVehicleNumber(vehicleNumber);
   const vehicles: any[] = [];
 
   // Insurance clients
   const { data: insClients } = await supabase.from("insurance_clients")
-    .select("vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_insurer, policy_expiry_date")
+    .select("customer_name, phone, vehicle_number, vehicle_make, vehicle_model, vehicle_year, current_insurer, policy_expiry_date")
     .or(phones.map(p => `phone.eq.${p}`).join(","))
-    .limit(5);
+    .limit(25);
 
   if (insClients?.length) {
     for (const c of insClients) {
+      if (normalizeVehicleNumber(c.vehicle_number) !== cleanVehicle) continue;
       vehicles.push({
         vehicle_number: c.vehicle_number,
         make: c.vehicle_make,
@@ -974,12 +1198,13 @@ async function toolLookupCarDetails(supabase: any, customerPhone?: string, vehic
 
   // HSRP bookings
   const { data: hsrpBookings } = await supabase.from("hsrp_bookings")
-    .select("registration_number, vehicle_category")
+    .select("owner_name, mobile, registration_number, vehicle_category")
     .or(phones.map(p => `mobile.eq.${p}`).join(","))
-    .limit(5);
+    .limit(25);
 
   if (hsrpBookings?.length) {
     for (const h of hsrpBookings) {
+      if (normalizeVehicleNumber(h.registration_number) !== cleanVehicle) continue;
       if (!vehicles.some(v => v.vehicle_number === h.registration_number)) {
         vehicles.push({ vehicle_number: h.registration_number, category: h.vehicle_category, source: "HSRP Records" });
       }
@@ -988,12 +1213,13 @@ async function toolLookupCarDetails(supabase: any, customerPhone?: string, vehic
 
   // Loan applications
   const { data: loans } = await supabase.from("loan_applications")
-    .select("vehicle_name, vehicle_number, stage")
+    .select("customer_name, phone, vehicle_name, vehicle_number, stage")
     .or(phones.map(p => `phone.eq.${p}`).join(","))
-    .limit(5);
+    .limit(25);
 
   if (loans?.length) {
     for (const l of loans) {
+      if (normalizeVehicleNumber(l.vehicle_number) !== cleanVehicle) continue;
       if (l.vehicle_number && !vehicles.some(v => v.vehicle_number === l.vehicle_number)) {
         vehicles.push({ vehicle_number: l.vehicle_number, vehicle_name: l.vehicle_name, loan_status: l.stage, source: "Loan Records" });
       }
