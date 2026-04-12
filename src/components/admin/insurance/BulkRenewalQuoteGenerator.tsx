@@ -339,9 +339,19 @@ export function BulkRenewalQuoteGenerator({ onClose }: { onClose: () => void }) 
       await supabase.storage.from("quote-pdfs").upload(storagePath, pdfBlob, { contentType: "application/pdf", upsert: true });
       const pdfUrl = supabase.storage.from("quote-pdfs").getPublicUrl(storagePath).data?.publicUrl;
 
-      const caption = `Hi ${q.customer_name || "Valued Customer"}! 🚗\n\n📋 *Insurance Quote*\n🚘 Vehicle: ${vehicleLabel}\n🏢 Insurer: ${q.insurance_company || "N/A"}\n💰 Premium: Rs. ${total.toLocaleString("en-IN")}\n\nPlease review the attached quote PDF.\n📞 +91 98559 24442\n🌐 www.grabyourcar.com\n— *GrabYourCar Insurance*`;
+      // Step 1: Send approved Meta template (SAFE — Marketing category, approved)
+      const result = await sendWhatsApp({
+        phone: q.phone, message: "", name: q.customer_name || undefined, logEvent: "renewal_quote_single", silent: false,
+        templateName: "insurance_quote_share",
+        templateVariables: { var_1: q.customer_name || "Valued Customer", var_2: vehicleLabel, var_3: `Rs. ${total.toLocaleString("en-IN")}`, var_4: "N/A" },
+        messageType: "template",
+      });
 
-      await sendWhatsApp({ phone: q.phone, message: caption, name: q.customer_name || undefined, logEvent: "renewal_quote_single", silent: false, messageType: "document", mediaUrl: pdfUrl, mediaFileName: pdfResult.fileName });
+      // Step 2: Send PDF as document (FREE — within 24h window opened by template)
+      if (result.success && pdfUrl) {
+        await new Promise(r => setTimeout(r, 800));
+        await sendWhatsApp({ phone: q.phone, message: `📄 ${q.customer_name || "Customer"} - Insurance Quote`, messageType: "document", mediaUrl: pdfUrl, mediaFileName: pdfResult.fileName, silent: true, logEvent: "renewal_quote_single_pdf" });
+      }
       await updateQuote.mutateAsync({ id: q.id, whatsapp_sent: true, whatsapp_sent_at: new Date().toISOString(), status: "sent", pdf_generated: true, pdf_generated_at: new Date().toISOString() } as any);
     } catch { toast.error("Failed to send WhatsApp"); }
     setSendingId(null);
@@ -401,12 +411,19 @@ export function BulkRenewalQuoteGenerator({ onClose }: { onClose: () => void }) 
         const vehicleLabel = q.vehicle_number || `${q.vehicle_make || ""} ${q.vehicle_model || ""}`.trim() || "Your Vehicle";
         const premiumStr = `Rs. ${total.toLocaleString("en-IN")}`;
 
-        // Single document message: PDF + caption in ONE message
-        const caption = `Hi ${q.customer_name || "Valued Customer"}! 🚗\n\n📋 *Insurance Renewal Quote*\n🚘 Vehicle: ${vehicleLabel}\n🏢 Insurer: ${q.insurance_company || "Best Available"}\n💰 Premium: ${premiumStr}\n\nPlease review the attached quote PDF.\n📞 +91 98559 24442\n🌐 www.grabyourcar.com\n— *GrabYourCar Insurance*`;
+        // Step 1: Send approved Meta template (SAFE — Marketing category, approved)
+        const result = await sendWhatsApp({
+          phone: q.phone, message: "", name: q.customer_name || undefined, logEvent: "bulk_renewal_quote", silent: true,
+          templateName: "insurance_quote_share",
+          templateVariables: { var_1: q.customer_name || "Valued Customer", var_2: vehicleLabel, var_3: premiumStr, var_4: "N/A" },
+          messageType: "template",
+        });
 
-        const result = pdfUrl
-          ? await sendWhatsApp({ phone: q.phone, message: caption, name: q.customer_name || undefined, logEvent: "bulk_renewal_quote", silent: true, messageType: "document", mediaUrl: pdfUrl, mediaFileName: pdfResult.fileName })
-          : await sendWhatsApp({ phone: q.phone, message: caption, name: q.customer_name || undefined, logEvent: "bulk_renewal_quote", silent: true });
+        // Step 2: Send PDF as document (FREE — within 24h window opened by template)
+        if (result.success && pdfUrl) {
+          await new Promise(r => setTimeout(r, 800));
+          await sendWhatsApp({ phone: q.phone, message: `📄 ${q.customer_name || "Customer"} - Insurance Quote`, messageType: "document", mediaUrl: pdfUrl, mediaFileName: pdfResult.fileName, silent: true, logEvent: "bulk_renewal_quote_pdf" });
+        }
 
         if (result.success) {
           await updateQuote.mutateAsync({ id: q.id, whatsapp_sent: true, whatsapp_sent_at: new Date().toISOString(), status: "sent", pdf_generated: true, pdf_generated_at: new Date().toISOString() } as any);
