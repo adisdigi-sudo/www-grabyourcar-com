@@ -98,7 +98,12 @@ export function WAHubInbox() {
       },
     });
     if (error || !data?.success) {
-      toast({ title: "Failed to send", description: data?.error || error?.message, variant: "destructive" });
+      const errMsg = data?.error || error?.message || "Send failed";
+      if (data?.window_expired) {
+        toast({ title: "⏰ 24hr Window Expired", description: "Message not sent. Please send an approved template message to re-open the conversation.", variant: "destructive" });
+      } else {
+        toast({ title: "Failed to send", description: errMsg, variant: "destructive" });
+      }
       return false;
     }
     toast({ title: "Message sent ✓" });

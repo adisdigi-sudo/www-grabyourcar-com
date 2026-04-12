@@ -264,6 +264,11 @@ export function OmniChatPanel({ phone, email, context, initialMessage, initialNa
         });
 
         if (error || !data?.success) {
+          if (data?.window_expired) {
+            toast({ title: "⏰ 24hr Window Expired", description: "Message not sent. Please send an approved template message to re-open the conversation.", variant: "destructive" });
+            setSending(false);
+            return;
+          }
           throw new Error(data?.error || error?.message || "Failed to send WhatsApp reply");
         }
       } else {
