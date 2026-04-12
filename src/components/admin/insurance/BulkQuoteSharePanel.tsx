@@ -262,26 +262,12 @@ export function BulkQuoteSharePanel({ leads, source, onDone }: BulkQuoteSharePan
         const premiumStr = `Rs. ${(l.current_premium || l.premium || 0).toLocaleString("en-IN")}`;
         const expiryStr = l.policy_expiry_date || l.renewal_date || "N/A";
 
-        // Send approved Meta template (works outside 24h window)
-        const result = await sendWhatsApp({
-          phone: l.phone || "", message: "", name: l.customer_name || "", logEvent: "bulk_quote", silent: true,
-          templateName: "insurance_quote_share",
-          templateComponents: [{
-            type: "body",
-            parameters: [
-              { type: "text", text: l.customer_name || "Valued Customer", parameter_name: "customer_name" },
-              { type: "text", text: vehicleLabel, parameter_name: "vehicle" },
-              { type: "text", text: premiumStr, parameter_name: "premium" },
-              { type: "text", text: expiryStr, parameter_name: "expiry_date" },
-            ],
-          }],
-          messageType: "template",
-        });
+        // Single document message: PDF + caption in ONE message
+        const caption = `Hi ${l.customer_name || "Valued Customer"}! 🚗\n\n📋 *Insurance Quote*\n🚘 Vehicle: ${vehicleLabel}\n💰 Premium: ${premiumStr}\n📅 Expiry: ${expiryStr}\n\nPlease review the attached quote PDF.\n📞 +91 98559 24442\n🌐 www.grabyourcar.com\n— *GrabYourCar Insurance*`;
 
-        // Send PDF
-        if (result.success && pdfUrl) {
-          await sendWhatsApp({ phone: l.phone || "", message: "📄 Insurance Quote PDF", messageType: "document", mediaUrl: pdfUrl, mediaFileName: pdfResult.fileName, silent: true, logEvent: "bulk_quote_pdf" });
-        }
+        const result = pdfUrl
+          ? await sendWhatsApp({ phone: l.phone || "", message: caption, name: l.customer_name || "", logEvent: "bulk_quote", silent: true, messageType: "document", mediaUrl: pdfUrl, mediaFileName: pdfResult.fileName })
+          : await sendWhatsApp({ phone: l.phone || "", message: caption, name: l.customer_name || "", logEvent: "bulk_quote", silent: true });
         if (result.success) sent++;
       } catch (e) { console.error(e); }
       setProgress(Math.round(((i + 1) / target.length) * 100));
@@ -329,26 +315,12 @@ export function BulkQuoteSharePanel({ leads, source, onDone }: BulkQuoteSharePan
         const premiumStr = `Rs. ${(l.current_premium || l.premium || 0).toLocaleString("en-IN")}`;
         const expiryStr = l.policy_expiry_date || l.renewal_date || "N/A";
 
-        // Send approved Meta template (works outside 24h window)
-        const result = await sendWhatsApp({
-          phone: l.phone || "", message: "", name: l.customer_name || "", logEvent: "bulk_renewal_api", silent: true,
-          templateName: "insurance_quote_share",
-          templateComponents: [{
-            type: "body",
-            parameters: [
-              { type: "text", text: l.customer_name || "Valued Customer", parameter_name: "customer_name" },
-              { type: "text", text: vehicleLabel, parameter_name: "vehicle" },
-              { type: "text", text: premiumStr, parameter_name: "premium" },
-              { type: "text", text: expiryStr, parameter_name: "expiry_date" },
-            ],
-          }],
-          messageType: "template",
-        });
+        // Single document message: PDF + caption in ONE message
+        const caption = `Hi ${l.customer_name || "Valued Customer"}! 🚗\n\n📋 *Renewal Reminder*\n🚘 Vehicle: ${vehicleLabel}\n💰 Premium: ${premiumStr}\n📅 Expiry: ${expiryStr}\n🏢 Insurer: ${l.current_insurer || "N/A"}\n\nPlease review the attached renewal PDF.\n📞 +91 98559 24442\n🌐 www.grabyourcar.com\n— *GrabYourCar Insurance*`;
 
-        // Send PDF
-        if (result.success && pdfUrl) {
-          await sendWhatsApp({ phone: l.phone || "", message: "📄 Insurance Renewal Reminder PDF", messageType: "document", mediaUrl: pdfUrl, mediaFileName: pdfResult.fileName, silent: true, logEvent: "bulk_renewal_api_pdf" });
-        }
+        const result = pdfUrl
+          ? await sendWhatsApp({ phone: l.phone || "", message: caption, name: l.customer_name || "", logEvent: "bulk_renewal_api", silent: true, messageType: "document", mediaUrl: pdfUrl, mediaFileName: pdfResult.fileName })
+          : await sendWhatsApp({ phone: l.phone || "", message: caption, name: l.customer_name || "", logEvent: "bulk_renewal_api", silent: true });
         if (result.success) sent++;
       } catch { /* continue */ }
       setProgress(Math.round(((i + 1) / target.length) * 100));
