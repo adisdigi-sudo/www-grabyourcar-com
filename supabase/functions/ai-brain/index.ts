@@ -1167,12 +1167,14 @@ async function toolLookupPayments(supabase: any, customerPhone?: string) {
   return { found: true, total: results.length, payments: results };
 }
 
-async function toolLookupCarDetails(supabase: any, customerPhone?: string, vehicleNumber?: string) {
+async function toolLookupCarDetails(supabase: any, customerPhone?: string, vehicleNumber?: string, customerName?: string) {
   if (!customerPhone) return { error: "Phone number not available." };
   if (!vehicleNumber) return { error: "Vehicle number is required." };
+  if (!customerName) return { error: "Full name is required." };
 
   const phones = phoneVariants(customerPhone);
   const cleanVehicle = normalizeVehicleNumber(vehicleNumber);
+  const normalizedName = normalizePersonName(customerName);
   const vehicles: any[] = [];
 
   // Insurance clients
@@ -1184,6 +1186,7 @@ async function toolLookupCarDetails(supabase: any, customerPhone?: string, vehic
   if (insClients?.length) {
     for (const c of insClients) {
       if (normalizeVehicleNumber(c.vehicle_number) !== cleanVehicle) continue;
+      if (!isStrictNameMatch(normalizedName, c.customer_name)) continue;
       vehicles.push({
         vehicle_number: c.vehicle_number,
         make: c.vehicle_make,
