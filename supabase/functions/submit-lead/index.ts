@@ -108,9 +108,7 @@ serve(async (req) => {
     const safeCarModel = body.carInterest?.trim() || body.vehicleModel?.trim() || null;
     const safeCarBrand = body.vehicleMake?.trim() || body.carBrand?.trim() || null;
 
-    const { data: lead, error: insertError } = await supabaseAdmin
-      .from('leads')
-      .insert({
+    const leadPayload: Record<string, any> = {
         customer_name: name,
         phone,
         email: safeEmail,
@@ -121,9 +119,15 @@ serve(async (req) => {
         lead_type: body.type || 'enquiry',
         status: 'new',
         priority: 'medium',
-        user_id: submittedBy,
         service_category: serviceCategory || null,
-      })
+      };
+    if (submittedBy) {
+      leadPayload.submitted_by = submittedBy;
+    }
+
+    const { data: lead, error: insertError } = await supabaseAdmin
+      .from('leads')
+      .insert(leadPayload)
       .select()
       .single();
 
