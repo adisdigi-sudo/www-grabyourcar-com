@@ -1,6 +1,7 @@
 import jsPDF from "jspdf";
 import { format } from "date-fns";
 import { loadInsurancePdfBrandingCache, resolveInsurerLogo } from "@/lib/insurancePdfBranding";
+import { addWatermark, PDF_ENCRYPTION } from "./insurancePdfSecurity";
 
 export interface InsuranceQuoteData {
   customerName: string;
@@ -24,13 +25,14 @@ export interface InsuranceQuoteData {
   addons: string[];
   insurerLogoUrl?: string;
   claimTaken?: boolean;
+  termsAndConditions?: string;
 }
 
 const formatINR = (amount: number): string =>
   `Rs. ${Math.round(amount).toLocaleString("en-IN")}`;
 
 export const generateInsuranceQuotePdf = (data: InsuranceQuoteData, options?: { skipDownload?: boolean }) => {
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", encryption: PDF_ENCRYPTION } as any);
   const pw = doc.internal.pageSize.getWidth();
   const ph = doc.internal.pageSize.getHeight();
   const m = 14;
@@ -334,8 +336,31 @@ export const generateInsuranceQuotePdf = (data: InsuranceQuoteData, options?: { 
   doc.setFontSize(5.5);
   doc.text(`Grabyourcar is a registered Insurance Broker  •  Quote valid: 7 days from ${format(new Date(), "dd MMM yyyy")}  •  All premiums inclusive of taxes`, m + 3, y + 7.5);
 
+  // ── Terms & Conditions ──
+  if (data.termsAndConditions?.trim()) {
+    y += 4;
+    if (y > footerY - 20) { doc.addPage(); y = 15; drawFooter(); }
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7);
+    doc.setTextColor(...dark);
+    doc.text("Terms & Conditions", m + 3, y);
+    y += 4;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(5.5);
+    doc.setTextColor(...gray);
+    const tcLines = doc.splitTextToSize(data.termsAndConditions.trim(), contentW - 6) as string[];
+    tcLines.forEach((line: string) => {
+      if (y > footerY - 6) { doc.addPage(); y = 15; drawFooter(); }
+      doc.text(line, m + 3, y);
+      y += 3;
+    });
+  }
+
   // ── Footer ──
   drawFooter();
+
+  // ── Watermark ──
+  addWatermark(doc);
 
   // ── Save ──
   const fileName = `${(data.customerName || "Customer").replace(/\s+/g, "_")}_${data.vehicleMake || "Vehicle"}_Insurance_Quote.pdf`;
