@@ -325,27 +325,24 @@ export function BulkRenewalQuoteGenerator({ onClose }: { onClose: () => void }) 
     if (!q.phone) { toast.error("No phone number"); return; }
     setSendingId(q.id);
     try {
-      const phone = q.phone.replace(/\D/g, "");
-      const full = phone.startsWith("91") ? phone : `91${phone}`;
+      const { sendWhatsApp } = await import("@/lib/sendWhatsApp");
       const netOD = Math.max(0, q.basic_od - q.od_discount - q.ncb_discount);
       const netPremium = netOD + q.third_party + q.secure_premium + q.addon_premium;
       const gst = Math.round(netPremium * 0.18);
       const total = netPremium + gst;
+      const vehicleLabel = q.vehicle_number || `${q.vehicle_make || ""} ${q.vehicle_model || ""}`.trim() || "Your Vehicle";
 
-      await supabase.functions.invoke("wa-automation-trigger", {
-        body: {
-          event: "insurance_renewal_bulk",
-          phone: full,
-          customerName: q.customer_name,
-          vehicleNumber: q.vehicle_number,
-          vehicleMake: q.vehicle_make,
-          vehicleModel: q.vehicle_model,
-          insuranceCompany: q.insurance_company,
-          totalPremium: `Rs. ${total.toLocaleString("en-IN")}`,
-        },
-      });
-      await updateQuote.mutateAsync({ id: q.id, whatsapp_sent: true, whatsapp_sent_at: new Date().toISOString(), status: "sent" } as any);
-      toast.success(`WhatsApp sent to ${q.customer_name}`);
+      // Generate PDF silently & upload
+      const pdfResult = generateInsuranceQuotePdf(toQuoteData(q), { skipDownload: true });
+      const pdfBlob = pdfResult.doc.output("blob");
+      const storagePath = `shares/${Date.now()}_${pdfResult.fileName}`;
+      await supabase.storage.from("quote-pdfs").upload(storagePath, pdfBlob, { contentType: "application/pdf", upsert: true });
+      const pdfUrl = supabase.storage.from("quote-pdfs").getPublicUrl(storagePath).data?.publicUrl;
+
+      const caption = `Hi ${q.customer_name || "Valued Customer"}! 🚗\n\n📋 *Insurance Quote*\n🚘 Vehicle: ${vehicleLabel}\n🏢 Insurer: ${q.insurance_company || "N/A"}\n💰 Premium: Rs. ${total.toLocaleString("en-IN")}\n\nPlease review the attached quote PDF.\n📞 +91 98559 24442\n🌐 www.grabyourcar.com\n— *GrabYourCar Insurance*`;
+
+      await sendWhatsApp({ phone: q.phone, message: caption, name: q.customer_name || undefined, logEvent: "renewal_quote_single", silent: false, messageType: "document", mediaUrl: pdfUrl, mediaFileName: pdfResult.fileName });
+      await updateQuote.mutateAsync({ id: q.id, whatsapp_sent: true, whatsapp_sent_at: new Date().toISOString(), status: "sent", pdf_generated: true, pdf_generated_at: new Date().toISOString() } as any);
     } catch { toast.error("Failed to send WhatsApp"); }
     setSendingId(null);
   };
