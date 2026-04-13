@@ -359,6 +359,8 @@ const navItems: NavItem[] = [
       { id: "hr-engagement", label: "🎉 Engagement", icon: FileText },
       { id: "hr-assets", label: "💻 Assets", icon: Package },
       { id: "hr-helpdesk", label: "🎧 Helpdesk", icon: FileText },
+      { id: "hr-task-escalation", label: "🔺 Task Escalation", icon: FileText },
+      { id: "hr-daily-reports", label: "📊 Daily Reports", icon: BarChart3 },
     ]
   },
 
