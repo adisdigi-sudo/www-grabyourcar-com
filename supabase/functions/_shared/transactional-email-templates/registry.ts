@@ -14,6 +14,8 @@ import { template as welcomeEmail } from './welcome-email.tsx'
 import { template as leadConfirmation } from './lead-confirmation.tsx'
 import { template as invoiceSent } from './invoice-sent.tsx'
 import { template as renewalReminder } from './renewal-reminder.tsx'
+import { template as paymentReceipt } from './payment-receipt.tsx'
+import { template as followUpScheduled } from './follow-up-scheduled.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'booking-confirmation': bookingConfirmation,
@@ -21,4 +23,6 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'lead-confirmation': leadConfirmation,
   'invoice-sent': invoiceSent,
   'renewal-reminder': renewalReminder,
+  'payment-receipt': paymentReceipt,
+  'follow-up-scheduled': followUpScheduled,
 }

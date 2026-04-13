@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { sendLeadConfirmationEmail } from "@/lib/emailTriggers";
 import { cn } from "@/lib/utils";
 
 const VERTICALS = [
@@ -24,6 +25,7 @@ export function FloatingGetQuote() {
   const [form, setForm] = useState({
     name: "",
     phone: "",
+    email: "",
     vertical: "insurance",
     vehicle_number: "",
     city: "",
@@ -44,9 +46,12 @@ export function FloatingGetQuote() {
 
     setLoading(true);
     try {
+      const leadId = crypto.randomUUID();
       const { error } = await supabase.from("leads").insert({
+        id: leadId,
         name: form.name.trim().slice(0, 100),
         phone: cleanPhone,
+        email: form.email.trim() || null,
         service_category: selectedVertical.serviceCategory,
         source: "Website Popup",
         city: form.city.trim().slice(0, 50) || null,
@@ -56,9 +61,20 @@ export function FloatingGetQuote() {
       });
 
       if (error) throw error;
+
+      // Fire confirmation email if email provided
+      if (form.email.trim()) {
+        sendLeadConfirmationEmail({
+          email: form.email.trim(),
+          name: form.name.trim(),
+          service: selectedVertical.label,
+          leadId: leadId.slice(0, 8).toUpperCase(),
+        });
+      }
+
       setSubmitted(true);
       toast.success("Quote request submitted! Our team will contact you shortly 🎉");
-      setTimeout(() => { setSubmitted(false); setOpen(false); setForm({ name: "", phone: "", vertical: "insurance", vehicle_number: "", city: "" }); }, 3000);
+      setTimeout(() => { setSubmitted(false); setOpen(false); setForm({ name: "", phone: "", email: "", vertical: "insurance", vehicle_number: "", city: "" }); }, 3000);
     } catch (err: any) {
       console.error("Lead submission error:", err);
       toast.error(err?.message || "Something went wrong. Please try again.");
@@ -184,6 +200,17 @@ export function FloatingGetQuote() {
                           type="tel"
                         />
                       </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-foreground">Email <span className="text-muted-foreground">(optional)</span></Label>
+                      <Input
+                        value={form.email}
+                        onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                        placeholder="your@email.com"
+                        className="h-10 mt-1"
+                        type="email"
+                        maxLength={100}
+                      />
                     </div>
                     {(form.vertical === "insurance" || form.vertical === "hsrp") && (
                       <div>
