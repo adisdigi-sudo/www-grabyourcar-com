@@ -439,6 +439,33 @@ export const SuperAdminUserManager = () => {
                   onChange={e => setForm({ ...form, department: e.target.value })} />
               </div>
             </div>
+
+            {/* Hierarchy */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Role Tier *</Label>
+                <Select value={form.roleTier} onValueChange={v => setForm({ ...form, roleTier: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {roleTierOptions.map(o => (
+                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Reports To</Label>
+                <Select value={form.reportingTo} onValueChange={v => setForm({ ...form, reportingTo: v === "none" ? "" : v })}>
+                  <SelectTrigger><SelectValue placeholder="Select supervisor" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No supervisor</SelectItem>
+                    {users.filter(u => u.role_tier === "team_leader" || u.role_tier === "manager").map(u => (
+                      <SelectItem key={u.user_id} value={u.id}>{u.display_name} ({u.role_tier})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
             <div className="space-y-1.5">
               <Label>Password (optional — auto-generated if empty)</Label>
               <Input type="password" placeholder="Leave empty for auto-generated" value={form.password}
