@@ -258,7 +258,11 @@ function ComposeEmailPanel({
       toast({ title: "To & Subject required", variant: "destructive" });
       return;
     }
-    const htmlBody = body || "<p>&nbsp;</p>";
+    const attachmentHtml = attachments.length > 0
+      ? `<br/><hr style="margin:16px 0;border:none;border-top:1px solid #e5e5e5"/><p style="font-size:13px;color:#666;margin-bottom:8px">📎 Attachments:</p>` +
+        attachments.map(a => `<p style="margin:4px 0"><a href="${a.url}" target="_blank" style="color:#2563eb;text-decoration:underline">${a.name}</a> <span style="color:#999;font-size:11px">(${(a.size / 1024).toFixed(0)} KB)</span></p>`).join("")
+      : "";
+    const htmlBody = (body || "<p>&nbsp;</p>") + attachmentHtml;
     setSending(true);
     try {
       const { data, error } = await supabase.functions.invoke("send-direct-email", {
