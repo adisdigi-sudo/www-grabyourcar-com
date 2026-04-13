@@ -88,6 +88,12 @@ const AIContentHub = lazy(() =>
 const BulkDataManager = lazy(() =>
   import("@/components/admin/BulkDataManager").then((module) => ({ default: module.BulkDataManager })),
 );
+const SmartExcelUpload = lazy(() =>
+  import("@/components/admin/SmartExcelUpload").then((module) => ({ default: module.SmartExcelUpload })),
+);
+const UnifiedBulkBroadcaster = lazy(() =>
+  import("@/components/admin/UnifiedBulkBroadcaster").then((module) => ({ default: module.UnifiedBulkBroadcaster })),
+);
 const WebsiteContentManagement = lazy(() =>
   import("@/components/admin/WebsiteContentManagement").then((module) => ({ default: module.WebsiteContentManagement })),
 );
@@ -715,11 +721,13 @@ const AdminLayout = () => {
       case "marketing-command":
         return <MarketingCommandCenter />;
       case "holi-share":
-        return <HoliBulkShare />;
+        return <UnifiedBulkBroadcaster />;
       case "marketing-email":
         return <UnifiedMarketingHub />;
       case "marketing-bulk":
         return <BulkDataManager />;
+      case "smart-excel":
+        return <SmartExcelUpload />;
       case "integrations-api":
         return <APIIntegrationPortal />;
       case "open-api-portal":
