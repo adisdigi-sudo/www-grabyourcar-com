@@ -72,13 +72,18 @@ function extractTemplateVariableOrder(templateMeta?: ManagedTemplateMeta) {
   return Array.from(new Set(matches));
 }
 
-function buildTemplateParameters(templateVariables?: Record<string, unknown>, orderedKeys: string[] = []) {
+function buildTemplateParameters(templateVariables?: Record<string, unknown>, orderedKeys: string[] = [], templateHasVariables?: boolean) {
   if (!templateVariables) return [];
+
+  // If the template explicitly has 0 variables, never send parameters
+  if (templateHasVariables === false) return [];
 
   const entries = Object.entries(templateVariables).filter(([, value]) => {
     if (value === null || value === undefined) return false;
     return String(value).trim().length > 0;
   });
+
+  if (entries.length === 0) return [];
 
   if (orderedKeys.length > 0) {
     const orderedValues = orderedKeys
@@ -334,7 +339,9 @@ async function sendMessage(
     let payload: Record<string, unknown>;
     if (messageType === "template" && templateName) {
       const components: unknown[] = [];
-      const derivedParameters = buildTemplateParameters(templateVars, extractTemplateVariableOrder(templateMeta));
+      const varOrder = extractTemplateVariableOrder(templateMeta);
+      const templateHasVariables = varOrder.length > 0;
+      const derivedParameters = buildTemplateParameters(templateVars, varOrder, templateHasVariables);
       const templateLanguage = templateMeta?.language || "en";
       if (templateComponents && templateComponents.length > 0) {
         components.push(...templateComponents);
@@ -503,7 +510,7 @@ serve(async (req) => {
       templateMeta,
     );
 
-    const deliveryStatus = result.success ? "queued" : "failed";
+    const deliveryStatus = result.success ? "sent" : "failed";
 
     // Log to wa_message_logs
     const phoneNorm = normalizePhone(to);
