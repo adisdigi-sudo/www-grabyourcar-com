@@ -119,3 +119,49 @@ export function sendRenewalReminderEmail(params: {
     policyNumber: params.policyNumber,
   });
 }
+
+/**
+ * Fire payment receipt email
+ */
+export function sendPaymentReceiptEmail(params: {
+  email: string;
+  name?: string;
+  amount?: string;
+  paymentId?: string;
+  service?: string;
+  paymentDate?: string;
+  paymentMode?: string;
+}) {
+  if (!params.email) return;
+  const key = `payment-${params.paymentId || Date.now()}`;
+  return fireTransactionalEmail("payment-receipt", params.email, key, {
+    name: params.name,
+    amount: params.amount,
+    paymentId: params.paymentId,
+    service: params.service,
+    paymentDate: params.paymentDate,
+    paymentMode: params.paymentMode,
+  });
+}
+
+/**
+ * Fire follow-up scheduled email
+ */
+export function sendFollowUpScheduledEmail(params: {
+  email: string;
+  name?: string;
+  followUpDate?: string;
+  followUpTime?: string;
+  agentName?: string;
+  service?: string;
+}) {
+  if (!params.email) return;
+  const key = `followup-${params.email}-${params.followUpDate || Date.now()}`;
+  return fireTransactionalEmail("follow-up-scheduled", params.email, key, {
+    name: params.name,
+    followUpDate: params.followUpDate,
+    followUpTime: params.followUpTime,
+    agentName: params.agentName,
+    service: params.service,
+  });
+}
