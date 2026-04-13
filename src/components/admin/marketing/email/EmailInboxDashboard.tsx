@@ -457,7 +457,7 @@ export function EmailInboxDashboard() {
     refetchInterval: 15000,
   });
 
-  const { data: rawEmailLogs = [], isLoading: loadingEmailLogs, refetch: refetchEmailLogs } = useQuery({
+   const { data: rawEmailLogs = [], isLoading: loadingEmailLogs, refetch: refetchEmailLogs } = useQuery({
     queryKey: ["email-logs-direct", timeRange],
     queryFn: async () => {
       let query = supabase.from("email_logs").select("*").order("sent_at", { ascending: false }).limit(500);
@@ -474,16 +474,31 @@ export function EmailInboxDashboard() {
         error_message: d.error_message,
         created_at: d.sent_at || d.created_at,
         metadata: { ...d.metadata, subject: d.subject },
+        _source: "outgoing" as const,
       })) as EmailLogEntry[];
     },
     refetchInterval: 15000,
   });
 
-  const isLoading = loadingSendLogs || loadingEmailLogs;
-  const refetch = useCallback(() => { refetchSendLogs(); refetchEmailLogs(); }, [refetchSendLogs, refetchEmailLogs]);
+  // ─── FETCH INCOMING EMAILS ───
+  const { data: incomingEmails = [], isLoading: loadingIncoming, refetch: refetchIncoming } = useQuery({
+    queryKey: ["received-emails", timeRange],
+    queryFn: async () => {
+      let query = (supabase as any).from("received_emails").select("*").order("received_at", { ascending: false }).limit(500);
+      const rangeDate = getTimeRangeDate(timeRange);
+      if (rangeDate) query = query.gte("received_at", rangeDate.toISOString());
+      const { data, error } = await query;
+      if (error) throw error;
+      return (data || []) as ReceivedEmail[];
+    },
+    refetchInterval: 10000,
+  });
 
-  // ─── MERGE & DEDUPLICATE ───
-  const allLogs = useMemo(() => {
+  const isLoading = loadingSendLogs || loadingEmailLogs || loadingIncoming;
+  const refetch = useCallback(() => { refetchSendLogs(); refetchEmailLogs(); refetchIncoming(); }, [refetchSendLogs, refetchEmailLogs, refetchIncoming]);
+
+  // ─── MERGE & DEDUPLICATE OUTGOING ───
+  const allOutgoingLogs = useMemo(() => {
     const combined = [...rawSendLogs, ...rawEmailLogs];
     const map = new Map<string, EmailLogEntry>();
     const statusPriority = { sent: 5, delivered: 5, failed: 4, dlq: 4, suppressed: 4, bounced: 4, complained: 4, pending: 2, queued: 2 } as Record<string, number>;
@@ -494,10 +509,39 @@ export function EmailInboxDashboard() {
     });
     for (const log of sorted) {
       const key = log.message_id || log.id;
-      map.set(key, log);
+      map.set(key, { ...log, _source: "outgoing" });
     }
     return Array.from(map.values());
   }, [rawSendLogs, rawEmailLogs]);
+
+  // Convert incoming emails to EmailLogEntry format for unified threading
+  const incomingAsLogs = useMemo((): EmailLogEntry[] => {
+    return incomingEmails.map((e: ReceivedEmail) => ({
+      id: e.id,
+      message_id: e.id,
+      template_name: "Incoming Email",
+      recipient_email: e.from_email,
+      status: "received",
+      error_message: null,
+      created_at: e.received_at || e.created_at,
+      metadata: {
+        subject: e.subject,
+        body_html: e.body_html,
+        body_text: e.body_text,
+        from: e.from_name ? `${e.from_name} <${e.from_email}>` : e.from_email,
+        from_email: e.from_email,
+        from_name: e.from_name,
+        to_email: e.to_email,
+        reply_to: e.reply_to,
+        is_read: e.is_read,
+        is_starred: e.is_starred,
+        folder: e.folder,
+      },
+      _source: "incoming" as const,
+    }));
+  }, [incomingEmails]);
+
+  const allLogs = useMemo(() => [...allOutgoingLogs, ...incomingAsLogs], [allOutgoingLogs, incomingAsLogs]);
 
   // ─── KNOWN SENDER DOMAINS (outgoing) ───
   const OUTGOING_DOMAINS = ["grabyourcar.com", "notify.grabyourcar.com"];
