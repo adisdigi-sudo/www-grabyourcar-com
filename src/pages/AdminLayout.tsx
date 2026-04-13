@@ -747,6 +747,8 @@ const AdminLayout = () => {
         return <TeamHierarchyView />;
       case "data-room":
         return <DataRoom />;
+      case "my-team":
+        return <MyTeamDashboard />;
       case "settings":
         return <SiteSettingsManager />;
       case "services-pricing":
