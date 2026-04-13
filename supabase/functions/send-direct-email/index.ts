@@ -30,7 +30,14 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { to, subject, body, from_name, from_email, reply_to, in_reply_to }: DirectEmailRequest = await req.json();
+    const rawBody: DirectEmailRequest = await req.json();
+    const to = (rawBody.to || "").trim();
+    const subject = (rawBody.subject || "").trim();
+    const body = rawBody.body || "";
+    const from_name = rawBody.from_name;
+    const from_email = rawBody.from_email;
+    const reply_to = rawBody.reply_to;
+    const in_reply_to = rawBody.in_reply_to;
 
     if (!to || !subject || !body) {
       return new Response(
@@ -39,8 +46,13 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Extract email from "Name <email>" format if present
+    const emailMatch = to.match(/<([^>]+)>/) || [null, to];
+    const recipientEmail = (emailMatch[1] || to).trim();
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(to)) {
+    if (!emailRegex.test(recipientEmail)) {
+      console.error("Invalid email received:", JSON.stringify(to));
       return new Response(
         JSON.stringify({ error: "Invalid recipient email" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -71,7 +83,7 @@ Deno.serve(async (req) => {
     }
 
     // Get or create unsubscribe token for this recipient
-    const normalizedEmail = to.toLowerCase();
+    const normalizedEmail = recipientEmail.toLowerCase();
     let unsubscribeToken: string;
 
     const { data: existingToken } = await supabase
@@ -104,7 +116,7 @@ Deno.serve(async (req) => {
     await supabase.from("email_send_log").insert({
       message_id: messageId,
       template_name: "direct_email",
-      recipient_email: to,
+      recipient_email: recipientEmail,
       status: "pending",
     });
 
@@ -113,7 +125,7 @@ Deno.serve(async (req) => {
       queue_name: "transactional_emails",
       payload: {
         message_id: messageId,
-        to,
+        to: recipientEmail,
         from: `${senderName} <${senderLocalPart}@${FROM_DOMAIN}>`,
         sender_domain: SENDER_DOMAIN,
         subject,
@@ -134,7 +146,7 @@ Deno.serve(async (req) => {
       await supabase.from("email_send_log").insert({
         message_id: messageId,
         template_name: "direct_email",
-        recipient_email: to,
+        recipient_email: recipientEmail,
         status: "failed",
         error_message: "Failed to enqueue email",
       });
@@ -147,7 +159,7 @@ Deno.serve(async (req) => {
     // Also log to legacy email_logs for the inbox dashboard
     await supabase.from("email_logs").insert({
       campaign_id: null,
-      recipient_email: to,
+      recipient_email: recipientEmail,
       subject,
       status: "pending",
       resend_id: messageId,
@@ -160,10 +172,10 @@ Deno.serve(async (req) => {
       },
     });
 
-    console.log(`✅ Direct email queued for ${to}: ${subject}`);
+    console.log(`✅ Direct email queued for ${recipientEmail}: ${subject}`);
 
     return new Response(
-      JSON.stringify({ success: true, id: messageId, message: `Email queued for ${to}` }),
+      JSON.stringify({ success: true, id: messageId, message: `Email queued for ${recipientEmail}` }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: any) {
