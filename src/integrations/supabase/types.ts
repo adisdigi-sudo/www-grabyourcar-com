@@ -13539,6 +13539,78 @@ export type Database = {
         }
         Relationships: []
       }
+      received_emails: {
+        Row: {
+          attachments: Json | null
+          bcc: string | null
+          body_html: string | null
+          body_text: string | null
+          cc: string | null
+          created_at: string | null
+          folder: string | null
+          from_email: string
+          from_name: string | null
+          headers: Json | null
+          id: string
+          in_reply_to: string | null
+          is_archived: boolean | null
+          is_read: boolean | null
+          is_spam: boolean | null
+          is_starred: boolean | null
+          message_id: string | null
+          received_at: string | null
+          reply_to: string | null
+          subject: string | null
+          to_email: string
+        }
+        Insert: {
+          attachments?: Json | null
+          bcc?: string | null
+          body_html?: string | null
+          body_text?: string | null
+          cc?: string | null
+          created_at?: string | null
+          folder?: string | null
+          from_email: string
+          from_name?: string | null
+          headers?: Json | null
+          id?: string
+          in_reply_to?: string | null
+          is_archived?: boolean | null
+          is_read?: boolean | null
+          is_spam?: boolean | null
+          is_starred?: boolean | null
+          message_id?: string | null
+          received_at?: string | null
+          reply_to?: string | null
+          subject?: string | null
+          to_email: string
+        }
+        Update: {
+          attachments?: Json | null
+          bcc?: string | null
+          body_html?: string | null
+          body_text?: string | null
+          cc?: string | null
+          created_at?: string | null
+          folder?: string | null
+          from_email?: string
+          from_name?: string | null
+          headers?: Json | null
+          id?: string
+          in_reply_to?: string | null
+          is_archived?: boolean | null
+          is_read?: boolean | null
+          is_spam?: boolean | null
+          is_starred?: boolean | null
+          message_id?: string | null
+          received_at?: string | null
+          reply_to?: string | null
+          subject?: string | null
+          to_email?: string
+        }
+        Relationships: []
+      }
       rental_agreement_history: {
         Row: {
           action: string
