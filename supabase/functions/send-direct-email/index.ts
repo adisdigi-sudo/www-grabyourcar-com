@@ -146,7 +146,7 @@ Deno.serve(async (req) => {
       await supabase.from("email_send_log").insert({
         message_id: messageId,
         template_name: "direct_email",
-        recipient_email: to,
+        recipient_email: recipientEmail,
         status: "failed",
         error_message: "Failed to enqueue email",
       });
@@ -159,7 +159,7 @@ Deno.serve(async (req) => {
     // Also log to legacy email_logs for the inbox dashboard
     await supabase.from("email_logs").insert({
       campaign_id: null,
-      recipient_email: to,
+      recipient_email: recipientEmail,
       subject,
       status: "pending",
       resend_id: messageId,
@@ -172,10 +172,10 @@ Deno.serve(async (req) => {
       },
     });
 
-    console.log(`✅ Direct email queued for ${to}: ${subject}`);
+    console.log(`✅ Direct email queued for ${recipientEmail}: ${subject}`);
 
     return new Response(
-      JSON.stringify({ success: true, id: messageId, message: `Email queued for ${to}` }),
+      JSON.stringify({ success: true, id: messageId, message: `Email queued for ${recipientEmail}` }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: any) {
