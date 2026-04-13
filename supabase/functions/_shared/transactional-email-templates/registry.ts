@@ -16,6 +16,11 @@ import { template as invoiceSent } from './invoice-sent.tsx'
 import { template as renewalReminder } from './renewal-reminder.tsx'
 import { template as paymentReceipt } from './payment-receipt.tsx'
 import { template as followUpScheduled } from './follow-up-scheduled.tsx'
+import { template as hrMorningBriefing } from './hr-morning-briefing.tsx'
+import { template as dailyWorkSummary } from './daily-work-summary.tsx'
+import { template as founderEveningReport } from './founder-evening-report.tsx'
+import { template as weeklyPerformanceReport } from './weekly-performance-report.tsx'
+import { template as taskEscalationAlert } from './task-escalation-alert.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'booking-confirmation': bookingConfirmation,
@@ -25,4 +30,9 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'renewal-reminder': renewalReminder,
   'payment-receipt': paymentReceipt,
   'follow-up-scheduled': followUpScheduled,
+  'hr-morning-briefing': hrMorningBriefing,
+  'daily-work-summary': dailyWorkSummary,
+  'founder-evening-report': founderEveningReport,
+  'weekly-performance-report': weeklyPerformanceReport,
+  'task-escalation-alert': taskEscalationAlert,
 }
