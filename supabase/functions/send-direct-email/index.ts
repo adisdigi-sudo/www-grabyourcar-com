@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
     await supabase.from("email_send_log").insert({
       message_id: messageId,
       template_name: "direct_email",
-      recipient_email: to,
+      recipient_email: recipientEmail,
       status: "pending",
     });
 
@@ -125,7 +125,7 @@ Deno.serve(async (req) => {
       queue_name: "transactional_emails",
       payload: {
         message_id: messageId,
-        to,
+        to: recipientEmail,
         from: `${senderName} <${senderLocalPart}@${FROM_DOMAIN}>`,
         sender_domain: SENDER_DOMAIN,
         subject,
