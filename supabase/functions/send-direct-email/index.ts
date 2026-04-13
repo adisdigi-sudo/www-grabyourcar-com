@@ -1,6 +1,8 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "https://esm.sh/resend@2.0.0";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
+import { createClient } from 'npm:@supabase/supabase-js@2'
+
+const SITE_NAME = "GrabYourCar";
+const SENDER_DOMAIN = "notify.grabyourcar.com";
+const FROM_DOMAIN = "grabyourcar.com";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,23 +13,19 @@ const corsHeaders = {
 interface DirectEmailRequest {
   to: string;
   subject: string;
-  body: string; // HTML body
+  body: string;
   from_name?: string;
   from_email?: string;
   reply_to?: string;
-  in_reply_to?: string; // For threading
+  in_reply_to?: string;
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const resendApiKey = Deno.env.get("RESEND_API_KEY");
-    if (!resendApiKey) throw new Error("RESEND_API_KEY not configured");
-
-    const resend = new Resend(resendApiKey);
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -35,16 +33,23 @@ serve(async (req) => {
     const { to, subject, body, from_name, from_email, reply_to, in_reply_to }: DirectEmailRequest = await req.json();
 
     if (!to || !subject || !body) {
-      throw new Error("to, subject, and body are required");
+      return new Response(
+        JSON.stringify({ error: "to, subject, and body are required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    // Validate email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(to)) throw new Error("Invalid recipient email");
+    if (!emailRegex.test(to)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid recipient email" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
-    const senderName = from_name || "GrabYourCar";
-    const senderEmail = from_email || "noreply@grabyourcar.com";
-    const fromLine = `${senderName} <${senderEmail}>`;
+    const senderName = from_name || SITE_NAME;
+    const senderLocalPart = (from_email || "noreply@grabyourcar.com").split("@")[0];
+    const replyToAddr = reply_to || (from_email || `noreply@${FROM_DOMAIN}`);
 
     // Strip HTML for plain text version
     const plainText = body
@@ -56,37 +61,104 @@ serve(async (req) => {
       .replace(/\n{3,}/g, '\n\n')
       .trim();
 
-    const headers: Record<string, string> = {};
+    const messageId = crypto.randomUUID();
+
+    // Build extra headers for threading
+    const extraHeaders: Record<string, string> = {};
     if (in_reply_to) {
-      headers["In-Reply-To"] = in_reply_to;
-      headers["References"] = in_reply_to;
+      extraHeaders["In-Reply-To"] = in_reply_to;
+      extraHeaders["References"] = in_reply_to;
     }
 
-    const result = await resend.emails.send({
-      from: fromLine,
-      to: [to],
-      subject,
-      html: body,
-      text: plainText,
-      reply_to: reply_to || senderEmail,
-      headers: Object.keys(headers).length > 0 ? headers : undefined,
+    // Get or create unsubscribe token for this recipient
+    const normalizedEmail = to.toLowerCase();
+    let unsubscribeToken: string;
+
+    const { data: existingToken } = await supabase
+      .from("email_unsubscribe_tokens")
+      .select("token, used_at")
+      .eq("email", normalizedEmail)
+      .maybeSingle();
+
+    if (existingToken && !existingToken.used_at) {
+      unsubscribeToken = existingToken.token;
+    } else if (!existingToken) {
+      const bytes = new Uint8Array(32);
+      crypto.getRandomValues(bytes);
+      unsubscribeToken = Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+      await supabase
+        .from("email_unsubscribe_tokens")
+        .upsert({ token: unsubscribeToken, email: normalizedEmail }, { onConflict: "email", ignoreDuplicates: true });
+      // Re-read in case of race
+      const { data: storedToken } = await supabase
+        .from("email_unsubscribe_tokens")
+        .select("token")
+        .eq("email", normalizedEmail)
+        .maybeSingle();
+      if (storedToken) unsubscribeToken = storedToken.token;
+    } else {
+      unsubscribeToken = existingToken.token;
+    }
+
+    // Log pending status
+    await supabase.from("email_send_log").insert({
+      message_id: messageId,
+      template_name: "direct_email",
+      recipient_email: to,
+      status: "pending",
     });
 
-    // Log to email_logs table
+    // Enqueue via Lovable's email queue (same system as transactional emails)
+    const { error: enqueueError } = await supabase.rpc("enqueue_email", {
+      queue_name: "transactional_emails",
+      payload: {
+        message_id: messageId,
+        to,
+        from: `${senderName} <${senderLocalPart}@${FROM_DOMAIN}>`,
+        sender_domain: SENDER_DOMAIN,
+        subject,
+        html: body,
+        text: plainText,
+        reply_to: replyToAddr,
+        extra_headers: Object.keys(extraHeaders).length > 0 ? extraHeaders : undefined,
+        purpose: "transactional",
+        label: "direct_email",
+        idempotency_key: messageId,
+        unsubscribe_token: unsubscribeToken,
+        queued_at: new Date().toISOString(),
+      },
+    });
+
+    if (enqueueError) {
+      console.error("❌ Failed to enqueue direct email:", enqueueError);
+      await supabase.from("email_send_log").insert({
+        message_id: messageId,
+        template_name: "direct_email",
+        recipient_email: to,
+        status: "failed",
+        error_message: "Failed to enqueue email",
+      });
+      return new Response(
+        JSON.stringify({ success: false, error: "Failed to queue email" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Also log to legacy email_logs for the inbox dashboard
     await supabase.from("email_logs").insert({
       campaign_id: null,
       recipient_email: to,
       subject,
-      status: result.data?.id ? "sent" : "failed",
-      resend_id: result.data?.id || null,
+      status: "sent",
+      resend_id: messageId,
       sent_at: new Date().toISOString(),
-      metadata: { type: "direct", from: fromLine, reply_to: reply_to || senderEmail },
+      metadata: { type: "direct", from: `${senderName} <${senderLocalPart}@${FROM_DOMAIN}>`, reply_to: replyToAddr },
     });
 
-    console.log(`📧 Direct email sent to ${to}: ${subject}`);
+    console.log(`✅ Direct email queued for ${to}: ${subject}`);
 
     return new Response(
-      JSON.stringify({ success: true, id: result.data?.id, message: `Email sent to ${to}` }),
+      JSON.stringify({ success: true, id: messageId, message: `Email queued for ${to}` }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: any) {
