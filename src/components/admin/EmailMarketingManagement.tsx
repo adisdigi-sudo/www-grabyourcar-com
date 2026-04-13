@@ -374,10 +374,12 @@ export const EmailMarketingManagement = () => {
       scheduled: { color: 'bg-blue-100 text-blue-800', icon: <Clock className="h-3 w-3" /> },
       sending: { color: 'bg-yellow-100 text-yellow-800', icon: <RefreshCw className="h-3 w-3 animate-spin" /> },
       completed: { color: 'bg-green-100 text-green-800', icon: <CheckCircle className="h-3 w-3" /> },
+      partially_completed: { color: 'bg-orange-100 text-orange-800', icon: <CheckCircle className="h-3 w-3" /> },
+      rate_limited: { color: 'bg-amber-100 text-amber-800', icon: <Clock className="h-3 w-3" /> },
       failed: { color: 'bg-red-100 text-red-800', icon: <XCircle className="h-3 w-3" /> },
     };
     const config = configs[status] || configs.draft;
-    return <Badge className={`${config.color} gap-1`}>{config.icon}{status.charAt(0).toUpperCase() + status.slice(1)}</Badge>;
+    return <Badge className={`${config.color} gap-1`}>{config.icon}{status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</Badge>;
   };
 
   const filteredSubscribers = subscribers.filter(s =>
