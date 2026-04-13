@@ -258,15 +258,18 @@ Deno.serve(async (req) => {
 
                   // ── AUTO-RESUME AI after fallback ──
                   // Turn off human_takeover so AI resumes for next messages
-                  await supabase.from("wa_conversations").update({
+                  const { error: resetErr1 } = await supabase.from("wa_conversations").update({
                     human_takeover: false,
                     human_takeover_at: null,
                   }).eq("id", inboxConvo.id);
+                  if (resetErr1) console.error("Failed to reset wa_conversations human_takeover:", resetErr1);
 
-                  await supabase.from("whatsapp_conversations").update({
+                  const { error: resetErr2 } = await supabase.from("whatsapp_conversations").update({
                     human_takeover: false,
                     status: "active",
                   }).eq("phone_number", from);
+                  if (resetErr2) console.error("Failed to reset whatsapp_conversations human_takeover:", resetErr2);
+                  else console.log(`Reset human_takeover for ${from} in both tables`);
 
                   // Send AI resume message
                   const resumeText = `Meanwhile, I'm your AI assistant and I'm available right now! 🤖\n\nIs there anything I can help you with? I can assist with:\n• Insurance queries & quotes\n• Policy details & renewals\n• Car booking information\n• Any other questions\n\nJust type your question and I'll do my best to help! 😊`;
@@ -382,15 +385,18 @@ Deno.serve(async (req) => {
                       console.log(`Sent no-agent fallback (legacy path) to ${from}, wa_id: ${fbWaId}`);
 
                       // ── AUTO-RESUME AI after fallback (legacy path) ──
-                      await supabase.from("wa_conversations").update({
+                      const { error: lgResetErr1 } = await supabase.from("wa_conversations").update({
                         human_takeover: false,
                         human_takeover_at: null,
                       }).eq("id", inboxConvo.id);
+                      if (lgResetErr1) console.error("Legacy reset wa_conversations failed:", lgResetErr1);
 
-                      await supabase.from("whatsapp_conversations").update({
+                      const { error: lgResetErr2 } = await supabase.from("whatsapp_conversations").update({
                         human_takeover: false,
                         status: "active",
                       }).eq("id", conversationId);
+                      if (lgResetErr2) console.error("Legacy reset whatsapp_conversations failed:", lgResetErr2);
+                      else console.log(`Legacy path: reset human_takeover for ${from}`);
 
                       const resumeText = `Meanwhile, I'm your AI assistant and I'm available right now! 🤖\n\nIs there anything I can help you with? I can assist with:\n• Insurance queries & quotes\n• Policy details & renewals\n• Car booking information\n• Any other questions\n\nJust type your question and I'll do my best to help! 😊`;
 
