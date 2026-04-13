@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Mail, Send, FileText, Users, GitBranch, BarChart3, Blocks, Star, MousePointer, ShoppingCart, Vote, Sparkles, Zap, Store, Plug } from "lucide-react";
+import { Mail, Send, FileText, Users, GitBranch, BarChart3, Blocks, Star, MousePointer, ShoppingCart, Vote, Sparkles, Zap, Store, Plug, Inbox } from "lucide-react";
+import { EmailInboxDashboard } from "./email/EmailInboxDashboard";
 import { EmailBlockBuilder } from "./email/EmailBlockBuilder";
 import { SubscriberSegmentation } from "./email/SubscriberSegmentation";
 import { DripSequenceBuilder } from "./email/DripSequenceBuilder";
@@ -31,6 +32,9 @@ export function UnifiedMarketingHub() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="flex-wrap h-auto gap-1 p-1">
+          <TabsTrigger value="email-inbox" className="gap-1.5 text-xs sm:text-sm">
+            <Inbox className="h-3.5 w-3.5" />Email Inbox
+          </TabsTrigger>
           <TabsTrigger value="omni" className="gap-1.5 text-xs sm:text-sm">
             <Zap className="h-3.5 w-3.5" />Omni Campaigns
           </TabsTrigger>
@@ -69,6 +73,7 @@ export function UnifiedMarketingHub() {
           </TabsTrigger>
         </TabsList>
 
+        <TabsContent value="email-inbox"><EmailInboxDashboard /></TabsContent>
         <TabsContent value="omni"><OmniCampaignManager /></TabsContent>
         <TabsContent value="email-campaigns"><EmailMarketingManagement /></TabsContent>
         <TabsContent value="builder"><EmailBlockBuilder /></TabsContent>
