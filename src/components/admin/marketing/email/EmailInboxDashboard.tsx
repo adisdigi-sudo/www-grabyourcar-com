@@ -217,7 +217,41 @@ function ComposeEmailPanel({
   const [sending, setSending] = useState(false);
   const [cc, setCc] = useState("");
   const [showCcBcc, setShowCcBcc] = useState(false);
+  const [attachments, setAttachments] = useState<{ name: string; url: string; size: number }[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    try {
+      for (const file of Array.from(files)) {
+        if (file.size > 10 * 1024 * 1024) {
+          toast({ title: "File too large", description: `${file.name} exceeds 10MB limit`, variant: "destructive" });
+          continue;
+        }
+        const ext = file.name.split(".").pop() || "file";
+        const path = `email-attachments/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error: uploadError } = await supabase.storage.from("policy-documents").upload(path, file);
+        if (uploadError) {
+          toast({ title: "Upload failed", description: uploadError.message, variant: "destructive" });
+          continue;
+        }
+        const { data: urlData } = supabase.storage.from("policy-documents").getPublicUrl(path);
+        setAttachments(prev => [...prev, { name: file.name, url: urlData.publicUrl, size: file.size }]);
+      }
+      toast({ title: "📎 File attached" });
+    } catch (err: any) {
+      toast({ title: "Upload error", description: err.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const removeAttachment = (idx: number) => setAttachments(prev => prev.filter((_, i) => i !== idx));
 
   const handleSend = async () => {
     if (!to || !subject) {
