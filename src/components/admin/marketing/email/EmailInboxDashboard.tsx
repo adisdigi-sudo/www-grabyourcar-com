@@ -25,6 +25,7 @@ type Folder = "inbox" | "sent" | "drafts" | "spam" | "all";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ElementType }> = {
   sent: { label: "Delivered", color: "bg-green-500/10 text-green-700 border-green-200", icon: CheckCircle2 },
+  received: { label: "Received", color: "bg-blue-500/10 text-blue-700 border-blue-200", icon: Inbox },
   pending: { label: "Queued", color: "bg-yellow-500/10 text-yellow-700 border-yellow-200", icon: Clock },
   failed: { label: "Failed", color: "bg-red-500/10 text-red-700 border-red-200", icon: XCircle },
   dlq: { label: "Dead Letter", color: "bg-red-500/10 text-red-800 border-red-300", icon: AlertTriangle },
