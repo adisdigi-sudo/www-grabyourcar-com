@@ -201,6 +201,17 @@ export function FloatingGetQuote() {
                         />
                       </div>
                     </div>
+                    <div>
+                      <Label className="text-xs font-medium text-foreground">Email <span className="text-muted-foreground">(optional)</span></Label>
+                      <Input
+                        value={form.email}
+                        onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                        placeholder="your@email.com"
+                        className="h-10 mt-1"
+                        type="email"
+                        maxLength={100}
+                      />
+                    </div>
                     {(form.vertical === "insurance" || form.vertical === "hsrp") && (
                       <div>
                         <Label className="text-xs font-medium text-foreground">Vehicle Number</Label>
