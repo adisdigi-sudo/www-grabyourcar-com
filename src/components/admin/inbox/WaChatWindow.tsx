@@ -9,8 +9,9 @@ import { Label } from "@/components/ui/label";
 import {
   Send, Paperclip, Clock, Check, CheckCheck, X,
   AlertTriangle, Info, Zap, LayoutTemplate, MessageSquare,
-  UserPlus, Timer, Image, FileText, Video, Loader2
+  UserPlus, Timer, Image, FileText, Video, Loader2, Bot, HandMetal
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { supabase as sbClient } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -387,6 +388,30 @@ export function WaChatWindow({ conversation, messages, onSend, isWindowOpen, onT
           <p className="text-xs text-muted-foreground">{conversation.phone}</p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Human Takeover Toggle */}
+          <div className="flex items-center gap-1.5 border-r pr-2 mr-1">
+            {conversation.human_takeover ? (
+              <Badge variant="destructive" className="text-[10px] gap-1">
+                <HandMetal className="h-3 w-3" /> Manual
+              </Badge>
+            ) : (
+              <Badge variant="secondary" className="text-[10px] gap-1 text-green-600">
+                <Bot className="h-3 w-3" /> AI Active
+              </Badge>
+            )}
+            <Switch
+              checked={conversation.human_takeover}
+              onCheckedChange={async (checked) => {
+                await supabase.from("wa_conversations").update({
+                  human_takeover: checked,
+                  human_takeover_at: checked ? new Date().toISOString() : null,
+                }).eq("id", conversation.id);
+                toast(checked ? "🖐 Human takeover ON — AI paused" : "🤖 AI resumed for this chat");
+              }}
+              className="scale-75"
+            />
+          </div>
+
           {/* Live Countdown */}
           {conversation.window_expires_at && isWindowOpen ? (
             <LiveCountdown expiresAt={conversation.window_expires_at} />

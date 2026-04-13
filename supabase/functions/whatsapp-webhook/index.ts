@@ -98,9 +98,23 @@ Deno.serve(async (req) => {
           const windowExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
           const { data: inboxConvo } = await supabase
             .from("wa_conversations")
-            .select("id, unread_count")
+            .select("id, unread_count, human_takeover, human_takeover_at")
             .eq("phone", from)
             .maybeSingle();
+
+          // ── Auto-reset human takeover after 2 hours of inactivity ──
+          if (inboxConvo?.human_takeover && inboxConvo?.human_takeover_at) {
+            const takeoverAge = Date.now() - new Date(inboxConvo.human_takeover_at).getTime();
+            const TWO_HOURS = 2 * 60 * 60 * 1000;
+            if (takeoverAge > TWO_HOURS) {
+              console.log(`Auto-resetting human takeover for ${from} (${Math.round(takeoverAge / 60000)}min old)`);
+              await supabase.from("wa_conversations").update({
+                human_takeover: false,
+                human_takeover_at: null,
+              }).eq("id", inboxConvo.id);
+              inboxConvo.human_takeover = false;
+            }
+          }
 
           const isNewInboxConversation = !inboxConvo;
 
@@ -176,6 +190,26 @@ Deno.serve(async (req) => {
               name: contactName,
               last_message_at: new Date().toISOString(),
             }).eq("id", existingContact.id);
+          }
+
+          // ── Check new inbox human_takeover flag ──
+          if (inboxConvo?.human_takeover) {
+            console.log(`Human takeover active (wa_conversations) for ${from}, skipping AI`);
+            // Still store in legacy but skip AI reply
+            const { data: existingConvoLegacy } = await supabase
+              .from("whatsapp_conversations")
+              .select("id, messages")
+              .eq("phone_number", from)
+              .single();
+            if (existingConvoLegacy) {
+              const history = [...((existingConvoLegacy.messages as any[]) || []), { role: "user", content: messageText }];
+              await supabase.from("whatsapp_conversations").update({
+                messages: history.slice(-20),
+                last_message_at: new Date().toISOString(),
+                customer_name: contactName,
+              }).eq("id", existingConvoLegacy.id);
+            }
+            continue;
           }
 
           // ── Legacy: whatsapp_conversations ──
