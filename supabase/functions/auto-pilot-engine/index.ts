@@ -58,6 +58,12 @@ serve(async (req) => {
         case "weekly_pl":
           result = await runWeeklyPL(supabase, LOVABLE_API_KEY, WA_TOKEN, WA_PHONE_ID, config?.recipient_phones);
           break;
+        case "task_escalation":
+          result = await runTaskEscalation(supabase);
+          break;
+        case "daily_reports":
+          result = await runDailyReports(supabase);
+          break;
         default:
           throw new Error(`Unknown agent: ${agent_type}`);
       }
