@@ -196,6 +196,9 @@ const TeamHierarchyView = lazy(() =>
 const DataRoom = lazy(() =>
   import("@/components/admin/DataRoom").then((module) => ({ default: module.DataRoom })),
 );
+const MyTeamDashboard = lazy(() =>
+  import("@/components/admin/MyTeamDashboard").then((module) => ({ default: module.MyTeamDashboard })),
+);
 const UserManagementDashboard = lazy(() =>
   import("@/components/admin/UserManagementDashboard").then((module) => ({ default: module.UserManagementDashboard })),
 );
@@ -289,7 +292,7 @@ const VALID_ADMIN_TABS = new Set([
   "dealer-reps", "dealer-inventory", "dealer-broadcast", "accounts-dashboard", "accounts-invoices", "accounts-expenses",
   "accounts-bills", "accounts-banking", "accounts-chart", "accounts-journal", "accounts-reports", "accounts-documents",
   "hr-core", "hr-recruitment", "hr-workforce", "hr-attendance", "hr-payroll", "hr-expense", "hr-performance", "hr-engagement",
-  "hr-assets", "hr-helpdesk", "ai-cofounder", "legacy-leads", "my-hr"
+  "hr-assets", "hr-helpdesk", "ai-cofounder", "legacy-leads", "my-hr", "my-team"
 ]);
 
 const getInitialAdminTab = () => {
@@ -313,6 +316,7 @@ const UNIVERSAL_ADMIN_TABS = new Set([
   DEFAULT_ADMIN_TAB,
   "ai-cofounder",
   "my-hr",
+  "my-team",
   "calling-system",
   "lead-scoring",
   "client-management",
@@ -743,6 +747,8 @@ const AdminLayout = () => {
         return <TeamHierarchyView />;
       case "data-room":
         return <DataRoom />;
+      case "my-team":
+        return <MyTeamDashboard />;
       case "settings":
         return <SiteSettingsManager />;
       case "services-pricing":

@@ -223,17 +223,17 @@ Start with "🌅 Good Morning ${member.name}!" Include motivational line and tar
   };
 }
 
-// ===== AGENT: Evening Report =====
+// ===== AGENT: Evening Report (Hierarchical) =====
 async function runEveningReport(supabase: any, aiKey?: string | null, waToken?: string | null, waPhoneId?: string | null, phones?: string[]): Promise<AgentResult> {
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
   const since = todayStart.toISOString();
 
   const [leadsRes, dealsRes, insuranceRes, callsRes] = await Promise.all([
-    supabase.from("leads").select("id, status, source, priority", { count: "exact" }).gte("created_at", since),
+    supabase.from("leads").select("id, status, source, priority, assigned_to", { count: "exact" }).gte("created_at", since),
     supabase.from("deals").select("id, deal_value, deal_status, payment_received_amount").gte("created_at", since),
     supabase.from("insurance_clients").select("id, lead_status", { count: "exact" }).gte("created_at", since),
-    supabase.from("call_logs").select("id, duration_seconds", { count: "exact" }).gte("created_at", since),
+    supabase.from("call_logs").select("id, duration_seconds, agent_id", { count: "exact" }).gte("created_at", since),
   ]);
 
   const leads = leadsRes.data || [];
@@ -248,6 +248,7 @@ async function runEveningReport(supabase: any, aiKey?: string | null, waToken?: 
     return acc;
   }, {});
 
+  // Build Super Admin report
   const prompt = `Generate an evening business report for GrabYourCar founder:
 📊 TODAY'S METRICS:
 - New Leads: ${leads.length} (High priority: ${leads.filter((l: any) => l.priority === "high").length})
@@ -263,6 +264,52 @@ Start with "🌙 Day End Report — GrabYourCar". Include insights and tomorrow'
   let messagesSent = 0;
   const founderPhone = phones?.[0] || "9855924442";
   if (await sendWhatsApp(founderPhone, message, waToken, waPhoneId)) messagesSent++;
+
+  // ── Hierarchical Reporting: Send Team summaries to Team Leaders & Managers ──
+  try {
+    const { data: teamLeaders } = await supabase
+      .from("team_members")
+      .select("id, user_id, display_name, phone, role_tier")
+      .in("role_tier", ["team_leader", "manager"])
+      .eq("is_active", true)
+      .not("phone", "is", null);
+
+    if (teamLeaders?.length) {
+      for (const leader of teamLeaders) {
+        // Get their direct reports
+        const { data: reports } = await supabase
+          .from("team_members")
+          .select("user_id, display_name")
+          .eq("reporting_to", leader.id)
+          .eq("is_active", true);
+
+        if (!reports?.length) continue;
+
+        const reportUserIds = reports.map((r: any) => r.user_id).filter(Boolean);
+        const reportNames = reports.map((r: any) => r.display_name).filter(Boolean);
+
+        // Team's calls today
+        const teamCalls = calls.filter((c: any) => reportUserIds.includes(c.agent_id));
+        // Team's leads today
+        const teamLeads = leads.filter((l: any) => reportNames.includes(l.assigned_to));
+
+        const tierLabel = leader.role_tier === "manager" ? "Manager" : "Team Leader";
+        const teamPrompt = `Generate a short evening team summary for ${tierLabel} "${leader.display_name}":
+- Team size: ${reports.length} members
+- Team calls today: ${teamCalls.length}
+- Team leads today: ${teamLeads.length}
+- Team members: ${reportNames.join(", ")}
+Start with "🌙 Team Summary — ${leader.display_name}". Keep it under 200 words.`;
+
+        const teamMsg = await generateAI(teamPrompt, aiKey);
+        if (leader.phone && await sendWhatsApp(leader.phone, teamMsg, waToken, waPhoneId)) {
+          messagesSent++;
+        }
+      }
+    }
+  } catch (e) {
+    console.error("Hierarchical report error:", e);
+  }
 
   return {
     summary: `Evening: ${leads.length} leads, ${closedDeals.length} closed, ₹${todayRevenue.toLocaleString("en-IN")} revenue`,
