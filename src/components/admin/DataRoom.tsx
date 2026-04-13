@@ -22,14 +22,14 @@ export const DataRoom = () => {
         const start = startOfMonth(date).toISOString();
         const end = endOfMonth(date).toISOString();
         
-        const { count: totalLeads } = await supabase
-          .from("leads")
+        const { count: totalLeads } = await (supabase
+          .from("leads") as any)
           .select("id", { count: "exact", head: true })
           .gte("created_at", start)
           .lte("created_at", end);
 
-        const { count: wonLeads } = await supabase
-          .from("leads")
+        const { count: wonLeads } = await (supabase
+          .from("leads") as any)
           .select("id", { count: "exact", head: true })
           .gte("created_at", start)
           .lte("created_at", end)
