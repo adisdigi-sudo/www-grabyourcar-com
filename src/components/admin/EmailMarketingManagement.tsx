@@ -192,7 +192,14 @@ export const EmailMarketingManagement = () => {
 
       if (error) throw error;
       toast.dismiss('bulk-send');
-      toast.success(`✅ Campaign sent! ${data.sent} delivered, ${data.failed} failed`);
+      
+      if (data.error) {
+        toast.error(`⚠️ ${data.error}`);
+      } else {
+        const warmupNote = data.is_warmup ? ' (Warmup Mode 🔥)' : '';
+        const skippedNote = data.skipped > 0 ? ` | ${data.skipped} queued for tomorrow` : '';
+        toast.success(`✅ ${data.sent} delivered, ${data.failed} failed${skippedNote}${warmupNote}`);
+      }
       fetchAll();
     } catch (err: any) {
       toast.dismiss('bulk-send');
