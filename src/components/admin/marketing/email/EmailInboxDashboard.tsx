@@ -25,6 +25,7 @@ type Folder = "inbox" | "sent" | "drafts" | "spam" | "all";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ElementType }> = {
   sent: { label: "Delivered", color: "bg-green-500/10 text-green-700 border-green-200", icon: CheckCircle2 },
+  received: { label: "Received", color: "bg-blue-500/10 text-blue-700 border-blue-200", icon: Inbox },
   pending: { label: "Queued", color: "bg-yellow-500/10 text-yellow-700 border-yellow-200", icon: Clock },
   failed: { label: "Failed", color: "bg-red-500/10 text-red-700 border-red-200", icon: XCircle },
   dlq: { label: "Dead Letter", color: "bg-red-500/10 text-red-800 border-red-300", icon: AlertTriangle },
@@ -50,6 +51,24 @@ interface EmailLogEntry {
   error_message: string | null;
   created_at: string;
   metadata: any;
+  _source?: "outgoing" | "incoming";
+}
+
+interface ReceivedEmail {
+  id: string;
+  from_email: string;
+  from_name: string | null;
+  to_email: string;
+  subject: string | null;
+  body_text: string | null;
+  body_html: string | null;
+  is_read: boolean;
+  is_starred: boolean;
+  is_spam: boolean;
+  folder: string;
+  received_at: string;
+  created_at: string;
+  reply_to: string | null;
 }
 
 interface EmailThread {
@@ -439,7 +458,7 @@ export function EmailInboxDashboard() {
     refetchInterval: 15000,
   });
 
-  const { data: rawEmailLogs = [], isLoading: loadingEmailLogs, refetch: refetchEmailLogs } = useQuery({
+   const { data: rawEmailLogs = [], isLoading: loadingEmailLogs, refetch: refetchEmailLogs } = useQuery({
     queryKey: ["email-logs-direct", timeRange],
     queryFn: async () => {
       let query = supabase.from("email_logs").select("*").order("sent_at", { ascending: false }).limit(500);
@@ -456,16 +475,31 @@ export function EmailInboxDashboard() {
         error_message: d.error_message,
         created_at: d.sent_at || d.created_at,
         metadata: { ...d.metadata, subject: d.subject },
+        _source: "outgoing" as const,
       })) as EmailLogEntry[];
     },
     refetchInterval: 15000,
   });
 
-  const isLoading = loadingSendLogs || loadingEmailLogs;
-  const refetch = useCallback(() => { refetchSendLogs(); refetchEmailLogs(); }, [refetchSendLogs, refetchEmailLogs]);
+  // ─── FETCH INCOMING EMAILS ───
+  const { data: incomingEmails = [], isLoading: loadingIncoming, refetch: refetchIncoming } = useQuery({
+    queryKey: ["received-emails", timeRange],
+    queryFn: async () => {
+      let query = (supabase as any).from("received_emails").select("*").order("received_at", { ascending: false }).limit(500);
+      const rangeDate = getTimeRangeDate(timeRange);
+      if (rangeDate) query = query.gte("received_at", rangeDate.toISOString());
+      const { data, error } = await query;
+      if (error) throw error;
+      return (data || []) as ReceivedEmail[];
+    },
+    refetchInterval: 10000,
+  });
 
-  // ─── MERGE & DEDUPLICATE ───
-  const allLogs = useMemo(() => {
+  const isLoading = loadingSendLogs || loadingEmailLogs || loadingIncoming;
+  const refetch = useCallback(() => { refetchSendLogs(); refetchEmailLogs(); refetchIncoming(); }, [refetchSendLogs, refetchEmailLogs, refetchIncoming]);
+
+  // ─── MERGE & DEDUPLICATE OUTGOING ───
+  const allOutgoingLogs = useMemo(() => {
     const combined = [...rawSendLogs, ...rawEmailLogs];
     const map = new Map<string, EmailLogEntry>();
     const statusPriority = { sent: 5, delivered: 5, failed: 4, dlq: 4, suppressed: 4, bounced: 4, complained: 4, pending: 2, queued: 2 } as Record<string, number>;
@@ -476,21 +510,52 @@ export function EmailInboxDashboard() {
     });
     for (const log of sorted) {
       const key = log.message_id || log.id;
-      map.set(key, log);
+      map.set(key, { ...log, _source: "outgoing" });
     }
     return Array.from(map.values());
   }, [rawSendLogs, rawEmailLogs]);
+
+  // Convert incoming emails to EmailLogEntry format for unified threading
+  const incomingAsLogs = useMemo((): EmailLogEntry[] => {
+    return incomingEmails.map((e: ReceivedEmail) => ({
+      id: e.id,
+      message_id: e.id,
+      template_name: "Incoming Email",
+      recipient_email: e.from_email,
+      status: "received",
+      error_message: null,
+      created_at: e.received_at || e.created_at,
+      metadata: {
+        subject: e.subject,
+        body_html: e.body_html,
+        body_text: e.body_text,
+        from: e.from_name ? `${e.from_name} <${e.from_email}>` : e.from_email,
+        from_email: e.from_email,
+        from_name: e.from_name,
+        to_email: e.to_email,
+        reply_to: e.reply_to,
+        is_read: e.is_read,
+        is_starred: e.is_starred,
+        folder: e.folder,
+      },
+      _source: "incoming" as const,
+    }));
+  }, [incomingEmails]);
+
+  const allLogs = useMemo(() => [...allOutgoingLogs, ...incomingAsLogs], [allOutgoingLogs, incomingAsLogs]);
 
   // ─── KNOWN SENDER DOMAINS (outgoing) ───
   const OUTGOING_DOMAINS = ["grabyourcar.com", "notify.grabyourcar.com"];
 
   const isOutgoingEmail = useCallback((log: EmailLogEntry) => {
+    // If explicitly marked as incoming
+    if (log._source === "incoming") return false;
     // If metadata has from_email or from, check if it's from our domain
     const from = log.metadata?.from_email || log.metadata?.from || "";
     const fromDomain = from.includes("@") ? from.split("@").pop()?.replace(">", "").toLowerCase() : "";
     if (OUTGOING_DOMAINS.some(d => fromDomain === d)) return true;
     // Template-based sends are always outgoing
-    if (log.template_name && log.template_name !== "Direct Email" && log.template_name !== "auth_emails") return true;
+    if (log.template_name && log.template_name !== "Direct Email" && log.template_name !== "auth_emails" && log.template_name !== "Incoming Email") return true;
     // If metadata type is direct, it's outgoing
     if (log.metadata?.type === "direct") return true;
     return false;
@@ -500,7 +565,11 @@ export function EmailInboxDashboard() {
   const threads = useMemo((): EmailThread[] => {
     const threadMap = new Map<string, EmailLogEntry[]>();
     for (const log of allLogs) {
-      const key = log.recipient_email?.toLowerCase() + "::" + (log.metadata?.subject || log.template_name || "");
+      // For incoming emails, use from_email as key; for outgoing, use recipient
+      const emailKey = log._source === "incoming" 
+        ? (log.metadata?.from_email || log.recipient_email)?.toLowerCase()
+        : log.recipient_email?.toLowerCase();
+      const key = emailKey + "::" + (log.metadata?.subject || log.template_name || "");
       if (!threadMap.has(key)) threadMap.set(key, []);
       threadMap.get(key)!.push(log);
     }
@@ -512,18 +581,24 @@ export function EmailInboxDashboard() {
       const subject = latest.metadata?.subject || latest.template_name || "No Subject";
       const preview = latest.metadata?.body_html
         ? latest.metadata.body_html.replace(/<[^>]+>/g, "").substring(0, 100)
-        : latest.template_name;
-      const isSpam = latest.status === "complained" || latest.status === "suppressed";
+        : (latest.metadata?.body_text?.substring(0, 100) || latest.template_name);
+      const isSpam = latest.status === "complained" || latest.status === "suppressed" || latest.metadata?.folder === "spam";
+      const isIncoming = latest._source === "incoming";
       const outgoing = isOutgoingEmail(latest);
 
-      // Determine folder: spam > sent (outgoing) > inbox (incoming/replies)
-      let emailFolder: "inbox" | "sent" | "spam" = "inbox";
+      // Determine folder: spam > inbox (incoming) > sent (outgoing)
+      let emailFolder: "inbox" | "sent" | "spam" = "sent";
       if (isSpam) emailFolder = "spam";
+      else if (isIncoming) emailFolder = "inbox";
       else if (outgoing) emailFolder = "sent";
+
+      const fromName = isIncoming 
+        ? (latest.metadata?.from_name || latest.metadata?.from_email?.split("@")[0] || "Unknown Sender")
+        : (latest.metadata?.from?.split("<")[0]?.trim() || "GrabYourCar");
 
       result.push({
         id: latest.message_id || latest.id,
-        email: latest.recipient_email?.toLowerCase() || "unknown",
+        email: isIncoming ? (latest.metadata?.from_email || latest.recipient_email)?.toLowerCase() : (latest.recipient_email?.toLowerCase() || "unknown"),
         subject,
         preview: preview || "",
         messages: sorted,
@@ -531,7 +606,7 @@ export function EmailInboxDashboard() {
         lastAt: latest.created_at,
         isStarred: starredEmails.has(latest.message_id || latest.id),
         folder: emailFolder,
-        fromName: latest.metadata?.from?.split("<")[0]?.trim() || (outgoing ? "GrabYourCar" : latest.recipient_email?.split("@")[0] || "Unknown"),
+        fromName,
       });
     }
     return result.sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime());
