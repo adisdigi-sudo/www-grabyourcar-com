@@ -95,6 +95,8 @@ export const SuperAdminUserManager = () => {
     department: "",
     password: "",
     verticalIds: [] as string[],
+    roleTier: "caller",
+    reportingTo: "",
   });
 
   // Fetch all users
@@ -128,6 +130,8 @@ export const SuperAdminUserManager = () => {
           designation: form.designation || null,
           department: form.department || null,
           password: form.password || undefined,
+          roleTier: form.roleTier,
+          reportingTo: form.reportingTo || null,
         },
       });
       if (res.error) throw res.error;
@@ -138,7 +142,7 @@ export const SuperAdminUserManager = () => {
       queryClient.invalidateQueries({ queryKey: ["managed-users"] });
       setIsCreateOpen(false);
       setShowCredentials(data.credentials);
-      setForm({ username: "", displayName: "", phone: "", role: "sales", designation: "", department: "", password: "", verticalIds: [] });
+      setForm({ username: "", displayName: "", phone: "", role: "sales", designation: "", department: "", password: "", verticalIds: [], roleTier: "caller", reportingTo: "" });
       toast.success("User created successfully!");
     },
     onError: (err: Error) => toast.error(err.message),
