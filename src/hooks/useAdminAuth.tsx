@@ -83,7 +83,7 @@ export const useAdminAuth = () => {
   };
 
   const canManageLeads = (): boolean => {
-    return isAdmin() || hasRole('sales');
+    return isAdmin() || hasRole('sales') || hasRole('team_leader') || hasRole('manager');
   };
 
   const canManageFinance = (): boolean => {
@@ -96,6 +96,14 @@ export const useAdminAuth = () => {
 
   const canManageUsers = (): boolean => {
     return hasRole('super_admin');
+  };
+
+  const isTeamLeader = (): boolean => {
+    return hasRole('team_leader');
+  };
+
+  const isManager = (): boolean => {
+    return hasRole('manager');
   };
 
   return {
@@ -111,5 +119,7 @@ export const useAdminAuth = () => {
     canManageFinance,
     canManageDealers,
     canManageUsers,
+    isTeamLeader,
+    isManager,
   };
 };
