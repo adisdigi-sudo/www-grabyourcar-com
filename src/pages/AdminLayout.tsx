@@ -289,7 +289,7 @@ const VALID_ADMIN_TABS = new Set([
   "dealer-reps", "dealer-inventory", "dealer-broadcast", "accounts-dashboard", "accounts-invoices", "accounts-expenses",
   "accounts-bills", "accounts-banking", "accounts-chart", "accounts-journal", "accounts-reports", "accounts-documents",
   "hr-core", "hr-recruitment", "hr-workforce", "hr-attendance", "hr-payroll", "hr-expense", "hr-performance", "hr-engagement",
-  "hr-assets", "hr-helpdesk", "ai-cofounder", "legacy-leads", "my-hr"
+  "hr-assets", "hr-helpdesk", "ai-cofounder", "legacy-leads", "my-hr", "my-team"
 ]);
 
 const getInitialAdminTab = () => {
