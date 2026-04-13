@@ -548,12 +548,14 @@ export function EmailInboxDashboard() {
   const OUTGOING_DOMAINS = ["grabyourcar.com", "notify.grabyourcar.com"];
 
   const isOutgoingEmail = useCallback((log: EmailLogEntry) => {
+    // If explicitly marked as incoming
+    if (log._source === "incoming") return false;
     // If metadata has from_email or from, check if it's from our domain
     const from = log.metadata?.from_email || log.metadata?.from || "";
     const fromDomain = from.includes("@") ? from.split("@").pop()?.replace(">", "").toLowerCase() : "";
     if (OUTGOING_DOMAINS.some(d => fromDomain === d)) return true;
     // Template-based sends are always outgoing
-    if (log.template_name && log.template_name !== "Direct Email" && log.template_name !== "auth_emails") return true;
+    if (log.template_name && log.template_name !== "Direct Email" && log.template_name !== "auth_emails" && log.template_name !== "Incoming Email") return true;
     // If metadata type is direct, it's outgoing
     if (log.metadata?.type === "direct") return true;
     return false;
@@ -563,7 +565,11 @@ export function EmailInboxDashboard() {
   const threads = useMemo((): EmailThread[] => {
     const threadMap = new Map<string, EmailLogEntry[]>();
     for (const log of allLogs) {
-      const key = log.recipient_email?.toLowerCase() + "::" + (log.metadata?.subject || log.template_name || "");
+      // For incoming emails, use from_email as key; for outgoing, use recipient
+      const emailKey = log._source === "incoming" 
+        ? (log.metadata?.from_email || log.recipient_email)?.toLowerCase()
+        : log.recipient_email?.toLowerCase();
+      const key = emailKey + "::" + (log.metadata?.subject || log.template_name || "");
       if (!threadMap.has(key)) threadMap.set(key, []);
       threadMap.get(key)!.push(log);
     }
@@ -575,18 +581,24 @@ export function EmailInboxDashboard() {
       const subject = latest.metadata?.subject || latest.template_name || "No Subject";
       const preview = latest.metadata?.body_html
         ? latest.metadata.body_html.replace(/<[^>]+>/g, "").substring(0, 100)
-        : latest.template_name;
-      const isSpam = latest.status === "complained" || latest.status === "suppressed";
+        : (latest.metadata?.body_text?.substring(0, 100) || latest.template_name);
+      const isSpam = latest.status === "complained" || latest.status === "suppressed" || latest.metadata?.folder === "spam";
+      const isIncoming = latest._source === "incoming";
       const outgoing = isOutgoingEmail(latest);
 
-      // Determine folder: spam > sent (outgoing) > inbox (incoming/replies)
-      let emailFolder: "inbox" | "sent" | "spam" = "inbox";
+      // Determine folder: spam > inbox (incoming) > sent (outgoing)
+      let emailFolder: "inbox" | "sent" | "spam" = "sent";
       if (isSpam) emailFolder = "spam";
+      else if (isIncoming) emailFolder = "inbox";
       else if (outgoing) emailFolder = "sent";
+
+      const fromName = isIncoming 
+        ? (latest.metadata?.from_name || latest.metadata?.from_email?.split("@")[0] || "Unknown Sender")
+        : (latest.metadata?.from?.split("<")[0]?.trim() || "GrabYourCar");
 
       result.push({
         id: latest.message_id || latest.id,
-        email: latest.recipient_email?.toLowerCase() || "unknown",
+        email: isIncoming ? (latest.metadata?.from_email || latest.recipient_email)?.toLowerCase() : (latest.recipient_email?.toLowerCase() || "unknown"),
         subject,
         preview: preview || "",
         messages: sorted,
@@ -594,7 +606,7 @@ export function EmailInboxDashboard() {
         lastAt: latest.created_at,
         isStarred: starredEmails.has(latest.message_id || latest.id),
         folder: emailFolder,
-        fromName: latest.metadata?.from?.split("<")[0]?.trim() || (outgoing ? "GrabYourCar" : latest.recipient_email?.split("@")[0] || "Unknown"),
+        fromName,
       });
     }
     return result.sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime());
