@@ -316,6 +316,8 @@ const navItems: NavItem[] = [
     ]
   },
   { id: "roles", label: "👥 User Roles", icon: UserCog, verticals: ["marketing"], allowedRoles: ["super_admin", "admin"] },
+  { id: "team-hierarchy", label: "🏛️ Team Hierarchy", icon: Users, verticals: ["marketing"], allowedRoles: ["super_admin", "admin"] },
+  { id: "data-room", label: "📊 Data Room", icon: BarChart3, verticals: ["marketing"], allowedRoles: ["super_admin"] },
   { id: "settings", label: "⚙️ Site Settings", icon: Settings, verticals: ["marketing"], allowedRoles: ["super_admin", "admin"] },
 
   // ── Accounts & Finance (Zoho Books style) ──
