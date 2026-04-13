@@ -905,6 +905,22 @@ const LoanStageDetailModal = ({ open, onOpenChange, application, bankPartners }:
       } catch (err: any) { toast.error(`Upload failed: ${err.message}`); return; }
       finally { setUploadingFile(false); }
     }
+
+    // 📧 Send loan disbursed email
+    if (application.email) {
+      import("@/lib/emailTriggers").then(({ sendLoanDisbursedEmail }) => {
+        sendLoanDisbursedEmail({
+          email: application.email,
+          name: application.customer_name,
+          loanAmount: disbAmount,
+          lenderName: disbBank,
+          disbursementDate: disbDate,
+          emiAmount: application.emi_amount?.toLocaleString("en-IN"),
+          applicationId: application.id,
+        });
+      });
+    }
+
     updateMutation.mutate(updates);
   };
 

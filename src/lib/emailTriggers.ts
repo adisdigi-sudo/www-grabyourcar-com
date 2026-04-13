@@ -165,3 +165,122 @@ export function sendFollowUpScheduledEmail(params: {
     service: params.service,
   });
 }
+
+// ─── CRM Event Triggers ───────────────────────────────
+
+/**
+ * 🏆 Insurance Won — Policy issued notification
+ */
+export function sendInsuranceWonEmail(params: {
+  email: string;
+  name?: string;
+  vehicleNumber?: string;
+  insurer?: string;
+  policyType?: string;
+  premium?: string;
+  policyNumber?: string;
+  expiryDate?: string;
+  clientId?: string;
+}) {
+  if (!params.email) return;
+  const key = `insurance-won-${params.clientId || params.policyNumber || Date.now()}`;
+  return fireTransactionalEmail("insurance-won", params.email, key, {
+    name: params.name,
+    vehicleNumber: params.vehicleNumber,
+    insurer: params.insurer,
+    policyType: params.policyType,
+    premium: params.premium,
+    policyNumber: params.policyNumber,
+    expiryDate: params.expiryDate,
+  });
+}
+
+/**
+ * 🎊 Deal Closed — Confirmation to customer
+ */
+export function sendDealClosedEmail(params: {
+  email: string;
+  name?: string;
+  dealNumber?: string;
+  carName?: string;
+  amount?: string;
+  vertical?: string;
+  dealId?: string;
+}) {
+  if (!params.email) return;
+  const key = `deal-closed-${params.dealId || params.dealNumber || Date.now()}`;
+  return fireTransactionalEmail("deal-closed", params.email, key, {
+    name: params.name,
+    dealNumber: params.dealNumber,
+    carName: params.carName,
+    amount: params.amount,
+    vertical: params.vertical,
+  });
+}
+
+/**
+ * 🏦 Loan Disbursed — Confirmation to customer
+ */
+export function sendLoanDisbursedEmail(params: {
+  email: string;
+  name?: string;
+  loanAmount?: string;
+  lenderName?: string;
+  disbursementDate?: string;
+  emiAmount?: string;
+  applicationId?: string;
+}) {
+  if (!params.email) return;
+  const key = `loan-disbursed-${params.applicationId || Date.now()}`;
+  return fireTransactionalEmail("loan-disbursed", params.email, key, {
+    name: params.name,
+    loanAmount: params.loanAmount,
+    lenderName: params.lenderName,
+    disbursementDate: params.disbursementDate,
+    emiAmount: params.emiAmount,
+  });
+}
+
+/**
+ * ✅ HSRP Completed — Order completion notification
+ */
+export function sendHsrpCompletedEmail(params: {
+  email: string;
+  name?: string;
+  registrationNumber?: string;
+  serviceType?: string;
+  bookingId?: string;
+}) {
+  if (!params.email) return;
+  const key = `hsrp-completed-${params.bookingId || Date.now()}`;
+  return fireTransactionalEmail("hsrp-completed", params.email, key, {
+    name: params.name,
+    registrationNumber: params.registrationNumber,
+    serviceType: params.serviceType,
+    bookingId: params.bookingId,
+  });
+}
+
+/**
+ * 🚗 Rental Confirmed — Booking confirmation
+ */
+export function sendRentalConfirmedEmail(params: {
+  email: string;
+  name?: string;
+  carName?: string;
+  pickupDate?: string;
+  returnDate?: string;
+  totalAmount?: string;
+  bookingId?: string;
+}) {
+  if (!params.email) return;
+  const key = `rental-confirmed-${params.bookingId || Date.now()}`;
+  return fireTransactionalEmail("rental-confirmed", params.email, key, {
+    name: params.name,
+    carName: params.carName,
+    pickupDate: params.pickupDate,
+    returnDate: params.returnDate,
+    totalAmount: params.totalAmount,
+    bookingId: params.bookingId,
+  });
+}

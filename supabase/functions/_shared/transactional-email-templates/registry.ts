@@ -21,6 +21,11 @@ import { template as dailyWorkSummary } from './daily-work-summary.tsx'
 import { template as founderEveningReport } from './founder-evening-report.tsx'
 import { template as weeklyPerformanceReport } from './weekly-performance-report.tsx'
 import { template as taskEscalationAlert } from './task-escalation-alert.tsx'
+import { template as insuranceWon } from './insurance-won.tsx'
+import { template as dealClosed } from './deal-closed.tsx'
+import { template as loanDisbursed } from './loan-disbursed.tsx'
+import { template as hsrpCompleted } from './hsrp-completed.tsx'
+import { template as rentalConfirmed } from './rental-confirmed.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'booking-confirmation': bookingConfirmation,
@@ -35,4 +40,9 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'founder-evening-report': founderEveningReport,
   'weekly-performance-report': weeklyPerformanceReport,
   'task-escalation-alert': taskEscalationAlert,
+  'insurance-won': insuranceWon,
+  'deal-closed': dealClosed,
+  'loan-disbursed': loanDisbursed,
+  'hsrp-completed': hsrpCompleted,
+  'rental-confirmed': rentalConfirmed,
 }
