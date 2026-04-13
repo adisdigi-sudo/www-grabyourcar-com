@@ -65,21 +65,36 @@ function ComposeEmailPanel({
   onSent, 
   defaultTo = "",
   defaultSubject = "",
+  defaultBody = "",
   isReply = false,
 }: { 
   onClose: () => void; 
   onSent: () => void;
   defaultTo?: string;
   defaultSubject?: string;
+  defaultBody?: string;
   isReply?: boolean;
 }) {
   const [to, setTo] = useState(defaultTo);
   const [subject, setSubject] = useState(defaultSubject);
-  const [body, setBody] = useState("");
+  const [body, setBody] = useState(defaultBody);
   const [fromName, setFromName] = useState("GrabYourCar");
   const [fromEmail, setFromEmail] = useState("noreply@grabyourcar.com");
   const [sending, setSending] = useState(false);
   const { toast } = useToast();
+
+  const getFunctionErrorMessage = (error: any, fallback: string) => {
+    const context = error?.context;
+    if (typeof context === "string") {
+      try {
+        const parsed = JSON.parse(context);
+        return parsed?.error || parsed?.message || fallback;
+      } catch {
+        return context || fallback;
+      }
+    }
+    return error?.message || fallback;
+  };
 
   const handleSend = async () => {
     if (!to || !subject || !body) {
@@ -101,11 +116,11 @@ function ComposeEmailPanel({
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      toast({ title: "✅ Email sent!", description: `Delivered to ${to}` });
+      toast({ title: "✅ Email queued", description: `Delivery started for ${to}` });
       onSent();
       onClose();
     } catch (e: any) {
-      toast({ title: "Send failed", description: e.message, variant: "destructive" });
+      toast({ title: "Send failed", description: getFunctionErrorMessage(e, "Unable to queue email"), variant: "destructive" });
     } finally {
       setSending(false);
     }
@@ -178,11 +193,11 @@ function ComposeEmailPanel({
 
         <div className="flex justify-between items-center pt-1">
           <p className="text-[10px] text-muted-foreground">
-            Sent via Resend • Auto plain-text version included
+            Queued for delivery • Auto plain-text version included
           </p>
           <Button onClick={handleSend} disabled={sending || !to || !subject || !body} size="sm" className="gap-1.5">
             {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-            {sending ? "Sending..." : "Send Email"}
+            {sending ? "Queueing..." : "Send Email"}
           </Button>
         </div>
       </div>
@@ -198,7 +213,7 @@ export function EmailInboxDashboard() {
   const [search, setSearch] = useState("");
   const [selectedThread, setSelectedThread] = useState<string | null>(null);
   const [showCompose, setShowCompose] = useState(false);
-  const [replyTo, setReplyTo] = useState<{ email: string; subject: string } | null>(null);
+  const [replyTo, setReplyTo] = useState<{ email: string; subject: string; body?: string } | null>(null);
   const { toast } = useToast();
 
   // ─── EMAIL LOGS (send_log + email_logs combined) ───
@@ -256,7 +271,12 @@ export function EmailInboxDashboard() {
   const allLogs = useMemo(() => {
     const combined = [...rawSendLogs, ...rawEmailLogs];
     const map = new Map<string, EmailLogEntry>();
-    const sorted = [...combined].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    const statusPriority = { sent: 5, delivered: 5, failed: 4, dlq: 4, suppressed: 4, bounced: 4, complained: 4, pending: 2, queued: 2 } as Record<string, number>;
+    const sorted = [...combined].sort((a, b) => {
+      const timeDiff = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      if (timeDiff !== 0) return timeDiff;
+      return (statusPriority[a.status] || 0) - (statusPriority[b.status] || 0);
+    });
     for (const log of sorted) {
       const key = log.message_id || log.id;
       map.set(key, log);
@@ -336,6 +356,21 @@ export function EmailInboxDashboard() {
   const selectedThreadData = threads.find(t => t.email === selectedThread);
 
   const handleResend = async (log: EmailLogEntry) => {
+    const isDirectEmail = log.template_name === "direct_email" || log.template_name === "📧 Direct Email" || log.metadata?.type === "direct";
+
+    if (isDirectEmail) {
+      setReplyTo({
+        email: log.recipient_email,
+        subject: log.metadata?.subject || "",
+        body: typeof log.metadata?.body_html === "string"
+          ? log.metadata.body_html.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&")
+          : "",
+      });
+      setShowCompose(false);
+      toast({ title: "Draft opened", description: "Review and resend the direct email." });
+      return;
+    }
+
     try {
       const { error } = await supabase.functions.invoke("send-transactional-email", {
         body: {
@@ -348,7 +383,7 @@ export function EmailInboxDashboard() {
       toast({ title: "Email re-queued ✓" });
       refetch();
     } catch (e: any) {
-      toast({ title: "Resend failed", description: e.message, variant: "destructive" });
+      toast({ title: "Resend failed", description: e?.message || "Unable to re-queue email", variant: "destructive" });
     }
   };
 
@@ -358,6 +393,7 @@ export function EmailInboxDashboard() {
     setReplyTo({
       email,
       subject: lastSubject.startsWith("Re:") ? lastSubject : `Re: ${lastSubject}`,
+      body: "",
     });
     setShowCompose(false); // Close compose if open
   };
@@ -462,6 +498,7 @@ export function EmailInboxDashboard() {
           onSent={refetch}
           defaultTo={replyTo?.email || ""}
           defaultSubject={replyTo?.subject || ""}
+          defaultBody={replyTo?.body || ""}
           isReply={!!replyTo}
         />
       )}
