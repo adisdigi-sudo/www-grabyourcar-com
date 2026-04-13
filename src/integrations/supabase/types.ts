@@ -16148,6 +16148,8 @@ export type Database = {
           created_at: string | null
           customer_name: string | null
           customer_profile_pic: string | null
+          human_takeover: boolean
+          human_takeover_at: string | null
           id: string
           is_pinned: boolean | null
           last_customer_message_at: string | null
@@ -16168,6 +16170,8 @@ export type Database = {
           created_at?: string | null
           customer_name?: string | null
           customer_profile_pic?: string | null
+          human_takeover?: boolean
+          human_takeover_at?: string | null
           id?: string
           is_pinned?: boolean | null
           last_customer_message_at?: string | null
@@ -16188,6 +16192,8 @@ export type Database = {
           created_at?: string | null
           customer_name?: string | null
           customer_profile_pic?: string | null
+          human_takeover?: boolean
+          human_takeover_at?: string | null
           id?: string
           is_pinned?: boolean | null
           last_customer_message_at?: string | null
