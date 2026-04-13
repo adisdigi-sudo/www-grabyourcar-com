@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 
-export type AppRole = 'super_admin' | 'admin' | 'sales' | 'dealer' | 'finance' | 'insurance' | 'marketing' | 'calling' | 'operations';
+export type AppRole = 'super_admin' | 'admin' | 'sales' | 'dealer' | 'finance' | 'insurance' | 'marketing' | 'calling' | 'operations' | 'executive' | 'vertical_manager' | 'team_leader' | 'manager';
 
 interface UserRole {
   id: string;
@@ -83,7 +83,7 @@ export const useAdminAuth = () => {
   };
 
   const canManageLeads = (): boolean => {
-    return isAdmin() || hasRole('sales');
+    return isAdmin() || hasRole('sales') || hasRole('team_leader') || hasRole('manager');
   };
 
   const canManageFinance = (): boolean => {
@@ -96,6 +96,14 @@ export const useAdminAuth = () => {
 
   const canManageUsers = (): boolean => {
     return hasRole('super_admin');
+  };
+
+  const isTeamLeader = (): boolean => {
+    return hasRole('team_leader');
+  };
+
+  const isManager = (): boolean => {
+    return hasRole('manager');
   };
 
   return {
@@ -111,5 +119,7 @@ export const useAdminAuth = () => {
     canManageFinance,
     canManageDealers,
     canManageUsers,
+    isTeamLeader,
+    isManager,
   };
 };

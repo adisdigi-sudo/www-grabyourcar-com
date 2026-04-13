@@ -190,6 +190,12 @@ const DataExportEngine = lazy(() =>
 const SuperAdminUserManager = lazy(() =>
   import("@/components/admin/SuperAdminUserManager").then((module) => ({ default: module.SuperAdminUserManager })),
 );
+const TeamHierarchyView = lazy(() =>
+  import("@/components/admin/TeamHierarchyView").then((module) => ({ default: module.TeamHierarchyView })),
+);
+const DataRoom = lazy(() =>
+  import("@/components/admin/DataRoom").then((module) => ({ default: module.DataRoom })),
+);
 const UserManagementDashboard = lazy(() =>
   import("@/components/admin/UserManagementDashboard").then((module) => ({ default: module.UserManagementDashboard })),
 );
@@ -733,6 +739,10 @@ const AdminLayout = () => {
         return <SuperAdminUserManager />;
       case "team-management":
         return <UserManagementDashboard />;
+      case "team-hierarchy":
+        return <TeamHierarchyView />;
+      case "data-room":
+        return <DataRoom />;
       case "settings":
         return <SiteSettingsManager />;
       case "services-pricing":

@@ -26,10 +26,12 @@ interface ManagedUser {
   phone: string | null;
   designation: string | null;
   department: string | null;
+  role_tier: string | null;
+  reporting_to: string | null;
   is_active: boolean;
   created_at: string;
   roles: { role: string }[];
-  verticalAccess: { vertical_id: string; business_verticals: { name: string; slug: string; color: string; icon: string } }[];
+  verticalAccess: { vertical_id: string; access_level?: string; business_verticals: { name: string; slug: string; color: string; icon: string } }[];
 }
 
 interface BusinessVertical {
@@ -49,6 +51,8 @@ const roleOptions = [
   { value: "marketing", label: "Marketing" },
   { value: "dealer", label: "Dealer" },
   { value: "admin", label: "Admin" },
+  { value: "team_leader", label: "Team Leader" },
+  { value: "manager", label: "Manager" },
 ];
 
 const roleColors: Record<string, string> = {
@@ -61,7 +65,15 @@ const roleColors: Record<string, string> = {
   operations: "bg-indigo-500/10 text-indigo-600 border-indigo-200",
   marketing: "bg-pink-500/10 text-pink-600 border-pink-200",
   dealer: "bg-green-500/10 text-green-600 border-green-200",
+  team_leader: "bg-orange-500/10 text-orange-600 border-orange-200",
+  manager: "bg-teal-500/10 text-teal-600 border-teal-200",
 };
+
+const roleTierOptions = [
+  { value: "caller", label: "Caller / Executive" },
+  { value: "team_leader", label: "Team Leader" },
+  { value: "manager", label: "Manager" },
+];
 
 export const SuperAdminUserManager = () => {
   const queryClient = useQueryClient();
@@ -83,6 +95,8 @@ export const SuperAdminUserManager = () => {
     department: "",
     password: "",
     verticalIds: [] as string[],
+    roleTier: "caller",
+    reportingTo: "",
   });
 
   // Fetch all users
@@ -116,6 +130,8 @@ export const SuperAdminUserManager = () => {
           designation: form.designation || null,
           department: form.department || null,
           password: form.password || undefined,
+          roleTier: form.roleTier,
+          reportingTo: form.reportingTo || null,
         },
       });
       if (res.error) throw res.error;
@@ -126,7 +142,7 @@ export const SuperAdminUserManager = () => {
       queryClient.invalidateQueries({ queryKey: ["managed-users"] });
       setIsCreateOpen(false);
       setShowCredentials(data.credentials);
-      setForm({ username: "", displayName: "", phone: "", role: "sales", designation: "", department: "", password: "", verticalIds: [] });
+      setForm({ username: "", displayName: "", phone: "", role: "sales", designation: "", department: "", password: "", verticalIds: [], roleTier: "caller", reportingTo: "" });
       toast.success("User created successfully!");
     },
     onError: (err: Error) => toast.error(err.message),
@@ -421,6 +437,33 @@ export const SuperAdminUserManager = () => {
                 <Label>Department</Label>
                 <Input placeholder="Insurance" value={form.department}
                   onChange={e => setForm({ ...form, department: e.target.value })} />
+              </div>
+            </div>
+
+            {/* Hierarchy */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Role Tier *</Label>
+                <Select value={form.roleTier} onValueChange={v => setForm({ ...form, roleTier: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {roleTierOptions.map(o => (
+                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Reports To</Label>
+                <Select value={form.reportingTo} onValueChange={v => setForm({ ...form, reportingTo: v === "none" ? "" : v })}>
+                  <SelectTrigger><SelectValue placeholder="Select supervisor" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No supervisor</SelectItem>
+                    {users.filter(u => u.role_tier === "team_leader" || u.role_tier === "manager").map(u => (
+                      <SelectItem key={u.user_id} value={u.id}>{u.display_name} ({u.role_tier})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="space-y-1.5">

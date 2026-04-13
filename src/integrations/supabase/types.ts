@@ -14775,7 +14775,10 @@ export type Database = {
           display_name: string
           id: string
           is_active: boolean | null
+          max_reports: number | null
           phone: string | null
+          reporting_to: string | null
+          role_tier: string | null
           updated_at: string | null
           user_id: string
           username: string
@@ -14788,7 +14791,10 @@ export type Database = {
           display_name: string
           id?: string
           is_active?: boolean | null
+          max_reports?: number | null
           phone?: string | null
+          reporting_to?: string | null
+          role_tier?: string | null
           updated_at?: string | null
           user_id: string
           username: string
@@ -14801,12 +14807,23 @@ export type Database = {
           display_name?: string
           id?: string
           is_active?: boolean | null
+          max_reports?: number | null
           phone?: string | null
+          reporting_to?: string | null
+          role_tier?: string | null
           updated_at?: string | null
           user_id?: string
           username?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "team_members_reporting_to_fkey"
+            columns: ["reporting_to"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       team_problems: {
         Row: {
@@ -17548,6 +17565,8 @@ export type Database = {
         | "operations"
         | "vertical_manager"
         | "executive"
+        | "team_leader"
+        | "manager"
       call_disposition:
         | "connected"
         | "not_connected"
@@ -17708,6 +17727,8 @@ export const Constants = {
         "operations",
         "vertical_manager",
         "executive",
+        "team_leader",
+        "manager",
       ],
       call_disposition: [
         "connected",
