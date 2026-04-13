@@ -481,6 +481,21 @@ export function EmailInboxDashboard() {
     return Array.from(map.values());
   }, [rawSendLogs, rawEmailLogs]);
 
+  // ─── KNOWN SENDER DOMAINS (outgoing) ───
+  const OUTGOING_DOMAINS = ["grabyourcar.com", "notify.grabyourcar.com"];
+
+  const isOutgoingEmail = useCallback((log: EmailLogEntry) => {
+    // If metadata has from_email or from, check if it's from our domain
+    const from = log.metadata?.from_email || log.metadata?.from || "";
+    const fromDomain = from.includes("@") ? from.split("@").pop()?.replace(">", "").toLowerCase() : "";
+    if (OUTGOING_DOMAINS.some(d => fromDomain === d)) return true;
+    // Template-based sends are always outgoing
+    if (log.template_name && log.template_name !== "Direct Email" && log.template_name !== "auth_emails") return true;
+    // If metadata type is direct, it's outgoing
+    if (log.metadata?.type === "direct") return true;
+    return false;
+  }, []);
+
   // ─── BUILD THREADS ───
   const threads = useMemo((): EmailThread[] => {
     const threadMap = new Map<string, EmailLogEntry[]>();
@@ -498,8 +513,13 @@ export function EmailInboxDashboard() {
       const preview = latest.metadata?.body_html
         ? latest.metadata.body_html.replace(/<[^>]+>/g, "").substring(0, 100)
         : latest.template_name;
-      const isFailed = ["failed", "dlq", "bounced"].includes(latest.status);
       const isSpam = latest.status === "complained" || latest.status === "suppressed";
+      const outgoing = isOutgoingEmail(latest);
+
+      // Determine folder: spam > sent (outgoing) > inbox (incoming/replies)
+      let emailFolder: "inbox" | "sent" | "spam" = "inbox";
+      if (isSpam) emailFolder = "spam";
+      else if (outgoing) emailFolder = "sent";
 
       result.push({
         id: latest.message_id || latest.id,
@@ -510,20 +530,21 @@ export function EmailInboxDashboard() {
         lastStatus: latest.status,
         lastAt: latest.created_at,
         isStarred: starredEmails.has(latest.message_id || latest.id),
-        folder: isSpam ? "spam" : "sent",
-        fromName: latest.metadata?.from?.split("<")[0]?.trim() || "GrabYourCar",
+        folder: emailFolder,
+        fromName: latest.metadata?.from?.split("<")[0]?.trim() || (outgoing ? "GrabYourCar" : latest.recipient_email?.split("@")[0] || "Unknown"),
       });
     }
     return result.sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime());
-  }, [allLogs, starredEmails]);
+  }, [allLogs, starredEmails, isOutgoingEmail]);
 
   // ─── FILTERED THREADS ───
   const filteredThreads = useMemo(() => {
     let list = threads;
-    if (folder === "sent") list = list.filter(t => t.folder === "sent");
+    if (folder === "inbox") list = list.filter(t => t.folder === "inbox");
+    else if (folder === "sent") list = list.filter(t => t.folder === "sent");
     else if (folder === "spam") list = list.filter(t => t.folder === "spam");
-    else if (folder === "inbox") list = list.filter(t => t.folder !== "spam");
-    // drafts is empty for now, all is all
+    else if (folder === "drafts") list = []; // drafts empty for now
+    // "all" shows everything
     if (search) {
       const q = search.toLowerCase();
       list = list.filter(t =>
