@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Mail, Send, FileText, Users, GitBranch, BarChart3, Blocks, Star, MousePointer, ShoppingCart, Vote, Sparkles, Zap, Store, Plug } from "lucide-react";
+import { Mail, Send, FileText, Users, GitBranch, BarChart3, Blocks, Star, MousePointer, ShoppingCart, Vote, Sparkles, Zap, Store, Plug, Inbox } from "lucide-react";
+import { EmailInboxDashboard } from "./email/EmailInboxDashboard";
 import { EmailBlockBuilder } from "./email/EmailBlockBuilder";
 import { SubscriberSegmentation } from "./email/SubscriberSegmentation";
 import { DripSequenceBuilder } from "./email/DripSequenceBuilder";
