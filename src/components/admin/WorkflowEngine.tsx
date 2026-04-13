@@ -195,12 +195,14 @@ export const WorkflowEngine = () => {
       const guardrailMap: Record<string, boolean> = {};
       guardrailStates.forEach(g => { guardrailMap[g.id] = g.active; });
 
-      const { error } = await supabase.from("admin_settings").upsert({
+      const payload = {
         setting_key: `workflow_guardrails_${activeVertical}`,
-        setting_value: guardrailMap as unknown as Record<string, unknown>,
+        setting_value: guardrailMap as unknown as import("@/integrations/supabase/types").Json,
         description: `Workflow guardrail settings for ${activeVertical}`,
         updated_at: new Date().toISOString(),
-      }, { onConflict: "setting_key" });
+      };
+
+      const { error } = await supabase.from("admin_settings").upsert(payload, { onConflict: "setting_key" });
 
       if (error) throw error;
     },
