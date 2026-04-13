@@ -292,6 +292,63 @@ Deno.serve(async (req) => {
 
             if (existingConvo.human_takeover) {
               console.log(`Human takeover active for ${from}, skipping AI`);
+
+              // ── Fallback: if 3+ unanswered inbound msgs, send support contact ──
+              if (inboxConvo?.id) {
+                const { data: recentMsgsLegacy } = await supabase
+                  .from("wa_inbox_messages")
+                  .select("direction")
+                  .eq("conversation_id", inboxConvo.id)
+                  .order("created_at", { ascending: false })
+                  .limit(10);
+
+                let unansweredLegacy = 0;
+                if (recentMsgsLegacy) {
+                  for (const m of recentMsgsLegacy) {
+                    if (m.direction === "inbound") unansweredLegacy++;
+                    else break;
+                  }
+                }
+
+                if (unansweredLegacy >= 2) {
+                  const WA_TOKEN = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
+                  const WA_PHONE_ID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
+                  if (WA_TOKEN && WA_PHONE_ID) {
+                    const { data: recentFb } = await supabase
+                      .from("wa_inbox_messages")
+                      .select("id")
+                      .eq("conversation_id", inboxConvo.id)
+                      .eq("direction", "outbound")
+                      .eq("template_name", "_system_no_agent")
+                      .gte("created_at", new Date(Date.now() - 30 * 60 * 1000).toISOString())
+                      .limit(1);
+
+                    if (!recentFb || recentFb.length === 0) {
+                      const fbText = `Thank you for your patience! Our support team is currently unavailable. Please contact us directly:\n\n📞 *+91 95772 00023*\n📧 support@grabyourcar.com\n\nWe'll get back to you as soon as possible. 🙏`;
+                      const toNum = from.startsWith("91") ? from : `91${from.replace(/\D/g, "")}`;
+                      const fbResp = await fetch(`https://graph.facebook.com/v25.0/${WA_PHONE_ID}/messages`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", Authorization: `Bearer ${WA_TOKEN}` },
+                        body: JSON.stringify({ messaging_product: "whatsapp", recipient_type: "individual", to: toNum, type: "text", text: { body: fbText } }),
+                      });
+                      const fbResult = await fbResp.json();
+                      const fbWaId = fbResult.messages?.[0]?.id || null;
+                      await supabase.from("wa_inbox_messages").insert({
+                        conversation_id: inboxConvo.id,
+                        direction: "outbound",
+                        message_type: "text",
+                        content: fbText,
+                        template_name: "_system_no_agent",
+                        wa_message_id: fbWaId,
+                        status: fbResp.ok ? "sent" : "failed",
+                        sent_by_name: "System",
+                      });
+                      console.log(`Sent no-agent fallback (legacy path) to ${from}, wa_id: ${fbWaId}`);
+                    }
+                  }
+                }
+              }
+
               conversationHistory.push({ role: "user", content: messageText });
               await supabase.from("whatsapp_conversations").update({
                 messages: conversationHistory.slice(-20),
