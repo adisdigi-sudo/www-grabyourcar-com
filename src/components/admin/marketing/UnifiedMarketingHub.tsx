@@ -41,6 +41,7 @@ export function UnifiedMarketingHub() {
           <TabsTrigger value="email-campaigns" className="gap-1.5 text-xs sm:text-sm">
             <Send className="h-3.5 w-3.5" />Email Campaigns
           </TabsTrigger>
+          <TabsTrigger value="builder" className="gap-1.5 text-xs sm:text-sm">
             <Blocks className="h-3.5 w-3.5" />Template Builder
           </TabsTrigger>
           <TabsTrigger value="subscribers" className="gap-1.5 text-xs sm:text-sm">
