@@ -263,6 +263,12 @@ const HRTemplates = lazy(() =>
 const EncouragementPopup = lazy(() =>
   import("@/components/admin/EncouragementPopup").then((module) => ({ default: module.EncouragementPopup })),
 );
+const TaskEscalationView = lazy(() =>
+  import("@/components/admin/TaskEscalationView").then((module) => ({ default: module.TaskEscalationView })),
+);
+const EmployeeDailyReportsDashboard = lazy(() =>
+  import("@/components/admin/EmployeeDailyReportsDashboard").then((module) => ({ default: module.EmployeeDailyReportsDashboard })),
+);
 const AdminPanelLoader = ({ className }: { className?: string }) => (
   <div className={cn("flex min-h-[240px] items-center justify-center", className)}>
     <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
@@ -290,7 +296,7 @@ const VALID_ADMIN_TABS = new Set([
   "dealer-reps", "dealer-inventory", "dealer-broadcast", "accounts-dashboard", "accounts-invoices", "accounts-expenses",
   "accounts-bills", "accounts-banking", "accounts-chart", "accounts-journal", "accounts-reports", "accounts-documents",
   "hr-core", "hr-recruitment", "hr-workforce", "hr-attendance", "hr-payroll", "hr-expense", "hr-performance", "hr-engagement",
-  "hr-assets", "hr-helpdesk", "ai-cofounder", "legacy-leads", "my-hr", "my-team"
+  "hr-assets", "hr-helpdesk", "hr-task-escalation", "hr-daily-reports", "ai-cofounder", "legacy-leads", "my-hr", "my-team"
 ]);
 
 const getInitialAdminTab = () => {
@@ -800,6 +806,10 @@ const AdminLayout = () => {
       case "hr-assets":
       case "hr-helpdesk":
         return <ZohoHRWorkspace />;
+      case "hr-task-escalation":
+        return <TaskEscalationView />;
+      case "hr-daily-reports":
+        return <EmployeeDailyReportsDashboard />;
       case "ai-cofounder":
         return <AICofounderDashboard />;
       case "legacy-leads":
