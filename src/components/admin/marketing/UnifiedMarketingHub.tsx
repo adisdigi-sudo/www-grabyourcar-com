@@ -73,6 +73,7 @@ export function UnifiedMarketingHub() {
           </TabsTrigger>
         </TabsList>
 
+        <TabsContent value="email-inbox"><EmailInboxDashboard /></TabsContent>
         <TabsContent value="omni"><OmniCampaignManager /></TabsContent>
         <TabsContent value="email-campaigns"><EmailMarketingManagement /></TabsContent>
         <TabsContent value="builder"><EmailBlockBuilder /></TabsContent>
