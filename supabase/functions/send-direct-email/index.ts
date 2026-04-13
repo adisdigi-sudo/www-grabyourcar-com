@@ -30,7 +30,14 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { to, subject, body, from_name, from_email, reply_to, in_reply_to }: DirectEmailRequest = await req.json();
+    const rawBody: DirectEmailRequest = await req.json();
+    const to = (rawBody.to || "").trim();
+    const subject = (rawBody.subject || "").trim();
+    const body = rawBody.body || "";
+    const from_name = rawBody.from_name;
+    const from_email = rawBody.from_email;
+    const reply_to = rawBody.reply_to;
+    const in_reply_to = rawBody.in_reply_to;
 
     if (!to || !subject || !body) {
       return new Response(
@@ -39,8 +46,13 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Extract email from "Name <email>" format if present
+    const emailMatch = to.match(/<([^>]+)>/) || [null, to];
+    const recipientEmail = (emailMatch[1] || to).trim();
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(to)) {
+    if (!emailRegex.test(recipientEmail)) {
+      console.error("Invalid email received:", JSON.stringify(to));
       return new Response(
         JSON.stringify({ error: "Invalid recipient email" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
