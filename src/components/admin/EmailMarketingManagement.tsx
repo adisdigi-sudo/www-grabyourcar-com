@@ -292,6 +292,19 @@ export const EmailMarketingManagement = () => {
   };
 
   // ── AI Email Writer ──
+  const getFunctionErrorMessage = (error: any, fallback: string) => {
+    const context = error?.context;
+    if (typeof context === "string") {
+      try {
+        const parsed = JSON.parse(context);
+        return parsed?.error || parsed?.message || fallback;
+      } catch {
+        return context || fallback;
+      }
+    }
+    return error?.message || fallback;
+  };
+
   const handleAIGenerateContent = async () => {
     if (!campaignForm.ai_prompt) {
       toast.error("Please describe what you want the email to be about");
@@ -319,7 +332,7 @@ export const EmailMarketingManagement = () => {
         throw new Error(data?.error || "No content generated");
       }
     } catch (err: any) {
-      toast.error(`AI generation failed: ${err.message}`);
+      toast.error(`AI generation failed: ${getFunctionErrorMessage(err, "Unable to generate email right now")}`);
     } finally {
       setIsAIGenerating(false);
     }
@@ -339,9 +352,11 @@ export const EmailMarketingManagement = () => {
       if (data?.subjects?.length) {
         setSubjectSuggestions(data.subjects);
         toast.success("Subject lines generated!");
+      } else {
+        throw new Error(data?.error || "No subject suggestions returned");
       }
     } catch (err: any) {
-      toast.error(`Failed: ${err.message}`);
+      toast.error(`Failed: ${getFunctionErrorMessage(err, "Unable to generate subject lines right now")}`);
     } finally {
       setIsSubjectGenerating(false);
     }
@@ -358,9 +373,11 @@ export const EmailMarketingManagement = () => {
       if (data?.html_content) {
         setCampaignForm(prev => ({ ...prev, content: data.html_content }));
         toast.success("✨ Email improved!");
+      } else {
+        throw new Error(data?.error || "No improved content returned");
       }
     } catch (err: any) {
-      toast.error(`Failed: ${err.message}`);
+      toast.error(`Failed: ${getFunctionErrorMessage(err, "Unable to improve email right now")}`);
     } finally {
       setIsAIGenerating(false);
     }

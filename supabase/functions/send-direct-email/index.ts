@@ -149,10 +149,15 @@ Deno.serve(async (req) => {
       campaign_id: null,
       recipient_email: to,
       subject,
-      status: "sent",
+      status: "pending",
       resend_id: messageId,
       sent_at: new Date().toISOString(),
-      metadata: { type: "direct", from: `${senderName} <${senderLocalPart}@${FROM_DOMAIN}>`, reply_to: replyToAddr },
+      metadata: {
+        type: "direct",
+        from: `${senderName} <${senderLocalPart}@${FROM_DOMAIN}>`,
+        reply_to: replyToAddr,
+        body_html: body,
+      },
     });
 
     console.log(`✅ Direct email queued for ${to}: ${subject}`);

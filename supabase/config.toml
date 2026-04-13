@@ -9,6 +9,8 @@ project_id = "ynoiwioypxpurwdbjvyt"
     verify_jwt = false
   [functions.ai-brain]
     verify_jwt = false
+  [functions.ai-email-writer]
+    verify_jwt = false
   [functions.ai-generate]
     verify_jwt = false
   [functions.auth-email-hook]
@@ -125,6 +127,8 @@ project_id = "ynoiwioypxpurwdbjvyt"
   [functions.send-bulk-email]
     verify_jwt = false
   [functions.send-dashboard-report]
+    verify_jwt = false
+  [functions.send-direct-email]
     verify_jwt = false
   [functions.send-transactional-email]
     verify_jwt = true
