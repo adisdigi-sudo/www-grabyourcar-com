@@ -195,6 +195,70 @@ Deno.serve(async (req) => {
           // ── Check new inbox human_takeover flag ──
           if (inboxConvo?.human_takeover) {
             console.log(`Human takeover active (wa_conversations) for ${from}, skipping AI`);
+
+            // Check if customer has sent multiple messages without any agent reply
+            // If 3+ unanswered inbound messages, send a fallback support message
+            const { data: recentMsgs } = await supabase
+              .from("wa_inbox_messages")
+              .select("direction")
+              .eq("conversation_id", inboxConvo.id)
+              .order("created_at", { ascending: false })
+              .limit(10);
+
+            // Count consecutive inbound messages (no outbound in between)
+            let unansweredCount = 0;
+            if (recentMsgs) {
+              for (const m of recentMsgs) {
+                if (m.direction === "inbound") unansweredCount++;
+                else break; // stop at first outbound
+              }
+            }
+
+            // On 3rd unanswered message, send a polite fallback
+            if (unansweredCount >= 2) { // current msg is the 3rd (not yet stored)
+              const WHATSAPP_ACCESS_TOKEN = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
+              const WHATSAPP_PHONE_NUMBER_ID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
+
+              if (WHATSAPP_ACCESS_TOKEN && WHATSAPP_PHONE_NUMBER_ID) {
+                // Only send once — check if we already sent a fallback recently (within last 30 min)
+                const { data: recentFallback } = await supabase
+                  .from("wa_inbox_messages")
+                  .select("id")
+                  .eq("conversation_id", inboxConvo.id)
+                  .eq("direction", "outbound")
+                  .eq("template_name", "_system_no_agent")
+                  .gte("created_at", new Date(Date.now() - 30 * 60 * 1000).toISOString())
+                  .limit(1);
+
+                if (!recentFallback || recentFallback.length === 0) {
+                  const fallbackText = `Thank you for your patience! Our support team is currently unavailable. Please contact us directly:\n\n📞 *+91 95772 00023*\n📧 support@grabyourcar.com\n\nWe'll get back to you as soon as possible. 🙏`;
+
+                  const toNum = from.startsWith("91") ? from : `91${from.replace(/\D/g, "")}`;
+                  const fallbackResp = await fetch(`https://graph.facebook.com/v25.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}` },
+                    body: JSON.stringify({ messaging_product: "whatsapp", recipient_type: "individual", to: toNum, type: "text", text: { body: fallbackText } }),
+                  });
+                  const fallbackResult = await fallbackResp.json();
+                  const fallbackWaId = fallbackResult.messages?.[0]?.id || null;
+
+                  // Store fallback message in inbox
+                  await supabase.from("wa_inbox_messages").insert({
+                    conversation_id: inboxConvo.id,
+                    direction: "outbound",
+                    message_type: "text",
+                    content: fallbackText,
+                    template_name: "_system_no_agent",
+                    wa_message_id: fallbackWaId,
+                    status: fallbackResp.ok ? "sent" : "failed",
+                    sent_by_name: "System",
+                  });
+
+                  console.log(`Sent no-agent fallback to ${from}, wa_id: ${fallbackWaId}`);
+                }
+              }
+            }
+
             // Still store in legacy but skip AI reply
             const { data: existingConvoLegacy } = await supabase
               .from("whatsapp_conversations")
