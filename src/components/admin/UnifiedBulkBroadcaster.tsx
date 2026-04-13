@@ -97,13 +97,13 @@ export const UnifiedBulkBroadcaster = () => {
           query = supabase.from("insurance_prospects").select("customer_name, phone, email").not("phone", "is", null).limit(5000);
           break;
         case "customers":
-          query = supabase.from("customers").select("name, phone, email").not("phone", "is", null).limit(5000);
+          query = (supabase as any).from("customers").select("name, phone, email").not("phone", "is", null).limit(5000);
           break;
         case "leads":
-          query = supabase.from("leads").select("name, phone, email").not("phone", "is", null).limit(5000);
+          query = (supabase as any).from("leads").select("name, phone, email").not("phone", "is", null).limit(5000);
           break;
         case "email_contacts":
-          query = supabase.from("email_marketing_contacts").select("name, email, phone").not("email", "is", null).limit(5000);
+          query = (supabase as any).from("email_marketing_contacts").select("name, email, phone").not("email", "is", null).limit(5000);
           break;
         default:
           return;
