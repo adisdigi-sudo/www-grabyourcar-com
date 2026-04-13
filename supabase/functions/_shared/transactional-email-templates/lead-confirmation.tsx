@@ -24,7 +24,7 @@ const LeadConfirmationEmail = ({ name, service, leadId }: LeadConfirmationProps)
         </Section>
         <Hr style={divider} />
         <Heading style={h1}>
-          {name ? `Hi ${name}, we've received your enquiry!` : 'We've received your enquiry!'}
+          {name ? `Hi ${name}, we have received your enquiry!` : 'We have received your enquiry!'}
         </Heading>
         <Text style={text}>
           Thank you for reaching out to {SITE_NAME}. Our team has received your request and will contact you shortly.
