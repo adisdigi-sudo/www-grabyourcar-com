@@ -60,6 +60,21 @@ const reloadAfterDevServerRestart = () => {
 };
 
 if (typeof window !== "undefined") {
+  window.addEventListener("vite:preloadError", (event) => {
+    const preloadEvent = event as Event & {
+      payload?: unknown;
+      preventDefault: () => void;
+    };
+
+    preloadEvent.preventDefault();
+
+    const recovered = attemptChunkRecovery(preloadEvent.payload, "window.vite:preloadError");
+
+    if (!recovered) {
+      window.location.reload();
+    }
+  });
+
   window.addEventListener("error", (event) => {
     attemptChunkRecovery(event.error ?? event.message, "window.error");
   });

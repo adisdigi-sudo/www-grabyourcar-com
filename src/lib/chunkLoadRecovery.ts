@@ -3,6 +3,8 @@ const DYNAMIC_IMPORT_ERROR_PATTERNS = [
   "Importing a module script failed",
   "Failed to fetch module script",
   "error loading dynamically imported module",
+  "Unable to preload",
+  "Unable to preload CSS",
   "Failed to load url /node_modules/.vite/deps/",
   "Failed to load url /@fs/",
 ];
