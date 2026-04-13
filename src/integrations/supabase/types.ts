@@ -420,12 +420,18 @@ export type Database = {
         Row: {
           ai_suggestion: string | null
           approved_at: string | null
+          assigned_user_id: string | null
           completed_at: string | null
           created_at: string
           description: string | null
           dismissed_at: string | null
           due_date: string | null
+          escalated_at: string | null
+          escalated_to: string | null
+          escalation_chain: Json | null
+          escalation_level: number | null
           id: string
+          is_overdue: boolean | null
           priority: string | null
           role: string | null
           source_id: string | null
@@ -436,16 +442,23 @@ export type Database = {
           title: string
           user_id: string | null
           vertical: string | null
+          visibility_tier: string | null
         }
         Insert: {
           ai_suggestion?: string | null
           approved_at?: string | null
+          assigned_user_id?: string | null
           completed_at?: string | null
           created_at?: string
           description?: string | null
           dismissed_at?: string | null
           due_date?: string | null
+          escalated_at?: string | null
+          escalated_to?: string | null
+          escalation_chain?: Json | null
+          escalation_level?: number | null
           id?: string
+          is_overdue?: boolean | null
           priority?: string | null
           role?: string | null
           source_id?: string | null
@@ -456,16 +469,23 @@ export type Database = {
           title: string
           user_id?: string | null
           vertical?: string | null
+          visibility_tier?: string | null
         }
         Update: {
           ai_suggestion?: string | null
           approved_at?: string | null
+          assigned_user_id?: string | null
           completed_at?: string | null
           created_at?: string
           description?: string | null
           dismissed_at?: string | null
           due_date?: string | null
+          escalated_at?: string | null
+          escalated_to?: string | null
+          escalation_chain?: Json | null
+          escalation_level?: number | null
           id?: string
+          is_overdue?: boolean | null
           priority?: string | null
           role?: string | null
           source_id?: string | null
@@ -476,6 +496,7 @@ export type Database = {
           title?: string
           user_id?: string | null
           vertical?: string | null
+          visibility_tier?: string | null
         }
         Relationships: []
       }
@@ -6414,6 +6435,75 @@ export type Database = {
           user_id?: string
           user_name?: string | null
           vertical_name?: string | null
+        }
+        Relationships: []
+      }
+      employee_daily_reports: {
+        Row: {
+          active_seconds: number | null
+          break_seconds: number | null
+          calls_made: number | null
+          created_at: string | null
+          follow_ups_done: number | null
+          id: string
+          idle_seconds: number | null
+          leads_handled: number | null
+          performance_score: number | null
+          report_date: string
+          report_type: string
+          sent_to_email: string | null
+          sent_via_email: boolean | null
+          sent_via_whatsapp: boolean | null
+          summary: string | null
+          tasks_completed: number | null
+          tasks_overdue: number | null
+          tasks_pending: number | null
+          user_id: string | null
+          user_name: string | null
+        }
+        Insert: {
+          active_seconds?: number | null
+          break_seconds?: number | null
+          calls_made?: number | null
+          created_at?: string | null
+          follow_ups_done?: number | null
+          id?: string
+          idle_seconds?: number | null
+          leads_handled?: number | null
+          performance_score?: number | null
+          report_date?: string
+          report_type?: string
+          sent_to_email?: string | null
+          sent_via_email?: boolean | null
+          sent_via_whatsapp?: boolean | null
+          summary?: string | null
+          tasks_completed?: number | null
+          tasks_overdue?: number | null
+          tasks_pending?: number | null
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Update: {
+          active_seconds?: number | null
+          break_seconds?: number | null
+          calls_made?: number | null
+          created_at?: string | null
+          follow_ups_done?: number | null
+          id?: string
+          idle_seconds?: number | null
+          leads_handled?: number | null
+          performance_score?: number | null
+          report_date?: string
+          report_type?: string
+          sent_to_email?: string | null
+          sent_via_email?: boolean | null
+          sent_via_whatsapp?: boolean | null
+          summary?: string | null
+          tasks_completed?: number | null
+          tasks_overdue?: number | null
+          tasks_pending?: number | null
+          user_id?: string | null
+          user_name?: string | null
         }
         Relationships: []
       }
