@@ -26,10 +26,12 @@ interface ManagedUser {
   phone: string | null;
   designation: string | null;
   department: string | null;
+  role_tier: string | null;
+  reporting_to: string | null;
   is_active: boolean;
   created_at: string;
   roles: { role: string }[];
-  verticalAccess: { vertical_id: string; business_verticals: { name: string; slug: string; color: string; icon: string } }[];
+  verticalAccess: { vertical_id: string; access_level?: string; business_verticals: { name: string; slug: string; color: string; icon: string } }[];
 }
 
 interface BusinessVertical {
@@ -49,6 +51,8 @@ const roleOptions = [
   { value: "marketing", label: "Marketing" },
   { value: "dealer", label: "Dealer" },
   { value: "admin", label: "Admin" },
+  { value: "team_leader", label: "Team Leader" },
+  { value: "manager", label: "Manager" },
 ];
 
 const roleColors: Record<string, string> = {
@@ -61,7 +65,15 @@ const roleColors: Record<string, string> = {
   operations: "bg-indigo-500/10 text-indigo-600 border-indigo-200",
   marketing: "bg-pink-500/10 text-pink-600 border-pink-200",
   dealer: "bg-green-500/10 text-green-600 border-green-200",
+  team_leader: "bg-orange-500/10 text-orange-600 border-orange-200",
+  manager: "bg-teal-500/10 text-teal-600 border-teal-200",
 };
+
+const roleTierOptions = [
+  { value: "caller", label: "Caller / Executive" },
+  { value: "team_leader", label: "Team Leader" },
+  { value: "manager", label: "Manager" },
+];
 
 export const SuperAdminUserManager = () => {
   const queryClient = useQueryClient();
