@@ -61,7 +61,7 @@ export function FloatingGetQuote() {
       setTimeout(() => { setSubmitted(false); setOpen(false); setForm({ name: "", phone: "", vertical: "insurance", vehicle_number: "", city: "" }); }, 3000);
     } catch (err: any) {
       console.error("Lead submission error:", err);
-      toast.error("Something went wrong. Please try again.");
+      toast.error(err?.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
