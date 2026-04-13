@@ -70,6 +70,36 @@ Deno.serve(async (req) => {
       extraHeaders["References"] = in_reply_to;
     }
 
+    // Get or create unsubscribe token for this recipient
+    const normalizedEmail = to.toLowerCase();
+    let unsubscribeToken: string;
+
+    const { data: existingToken } = await supabase
+      .from("email_unsubscribe_tokens")
+      .select("token, used_at")
+      .eq("email", normalizedEmail)
+      .maybeSingle();
+
+    if (existingToken && !existingToken.used_at) {
+      unsubscribeToken = existingToken.token;
+    } else if (!existingToken) {
+      const bytes = new Uint8Array(32);
+      crypto.getRandomValues(bytes);
+      unsubscribeToken = Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+      await supabase
+        .from("email_unsubscribe_tokens")
+        .upsert({ token: unsubscribeToken, email: normalizedEmail }, { onConflict: "email", ignoreDuplicates: true });
+      // Re-read in case of race
+      const { data: storedToken } = await supabase
+        .from("email_unsubscribe_tokens")
+        .select("token")
+        .eq("email", normalizedEmail)
+        .maybeSingle();
+      if (storedToken) unsubscribeToken = storedToken.token;
+    } else {
+      unsubscribeToken = existingToken.token;
+    }
+
     // Log pending status
     await supabase.from("email_send_log").insert({
       message_id: messageId,
@@ -94,6 +124,7 @@ Deno.serve(async (req) => {
         purpose: "transactional",
         label: "direct_email",
         idempotency_key: messageId,
+        unsubscribe_token: unsubscribeToken,
         queued_at: new Date().toISOString(),
       },
     });
