@@ -32,13 +32,15 @@ export function UnifiedMarketingHub() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="flex-wrap h-auto gap-1 p-1">
+          <TabsTrigger value="email-inbox" className="gap-1.5 text-xs sm:text-sm">
+            <Inbox className="h-3.5 w-3.5" />Email Inbox
+          </TabsTrigger>
           <TabsTrigger value="omni" className="gap-1.5 text-xs sm:text-sm">
             <Zap className="h-3.5 w-3.5" />Omni Campaigns
           </TabsTrigger>
           <TabsTrigger value="email-campaigns" className="gap-1.5 text-xs sm:text-sm">
             <Send className="h-3.5 w-3.5" />Email Campaigns
           </TabsTrigger>
-          <TabsTrigger value="builder" className="gap-1.5 text-xs sm:text-sm">
             <Blocks className="h-3.5 w-3.5" />Template Builder
           </TabsTrigger>
           <TabsTrigger value="subscribers" className="gap-1.5 text-xs sm:text-sm">
