@@ -8,14 +8,16 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const SENDER_DOMAIN = "notify.grabyourcar.com";
+
 interface DirectEmailRequest {
   to: string;
   subject: string;
-  body: string; // HTML body
+  body: string;
   from_name?: string;
   from_email?: string;
   reply_to?: string;
-  in_reply_to?: string; // For threading
+  in_reply_to?: string;
 }
 
 serve(async (req) => {
@@ -38,13 +40,17 @@ serve(async (req) => {
       throw new Error("to, subject, and body are required");
     }
 
-    // Validate email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(to)) throw new Error("Invalid recipient email");
 
     const senderName = from_name || "GrabYourCar";
-    const senderEmail = from_email || "noreply@grabyourcar.com";
+    // Always use the verified sender domain
+    const senderLocalPart = (from_email || "noreply@grabyourcar.com").split("@")[0];
+    const senderEmail = `${senderLocalPart}@${SENDER_DOMAIN}`;
     const fromLine = `${senderName} <${senderEmail}>`;
+
+    // Reply-to can be the original domain so replies go to actual mailbox
+    const replyToAddr = reply_to || (from_email || "noreply@grabyourcar.com");
 
     // Strip HTML for plain text version
     const plainText = body
@@ -56,11 +62,13 @@ serve(async (req) => {
       .replace(/\n{3,}/g, '\n\n')
       .trim();
 
-    const headers: Record<string, string> = {};
+    const emailHeaders: Record<string, string> = {};
     if (in_reply_to) {
-      headers["In-Reply-To"] = in_reply_to;
-      headers["References"] = in_reply_to;
+      emailHeaders["In-Reply-To"] = in_reply_to;
+      emailHeaders["References"] = in_reply_to;
     }
+
+    console.log(`📤 Sending email from: ${fromLine} to: ${to} subject: ${subject}`);
 
     const result = await resend.emails.send({
       from: fromLine,
@@ -68,25 +76,43 @@ serve(async (req) => {
       subject,
       html: body,
       text: plainText,
-      reply_to: reply_to || senderEmail,
-      headers: Object.keys(headers).length > 0 ? headers : undefined,
+      reply_to: replyToAddr,
+      headers: Object.keys(emailHeaders).length > 0 ? emailHeaders : undefined,
     });
+
+    // Check for Resend API errors
+    const resendError = (result as any).error;
+    const resendId = result.data?.id;
+    const emailStatus = resendId ? "sent" : "failed";
+    const errorMsg = resendError ? (resendError.message || JSON.stringify(resendError)) : null;
+
+    if (resendError) {
+      console.error(`❌ Resend API error:`, JSON.stringify(resendError));
+    } else {
+      console.log(`✅ Email sent successfully. Resend ID: ${resendId}`);
+    }
 
     // Log to email_logs table
     await supabase.from("email_logs").insert({
       campaign_id: null,
       recipient_email: to,
       subject,
-      status: result.data?.id ? "sent" : "failed",
-      resend_id: result.data?.id || null,
+      status: emailStatus,
+      resend_id: resendId || null,
       sent_at: new Date().toISOString(),
-      metadata: { type: "direct", from: fromLine, reply_to: reply_to || senderEmail },
+      error_message: errorMsg,
+      metadata: { type: "direct", from: fromLine, reply_to: replyToAddr },
     });
 
-    console.log(`📧 Direct email sent to ${to}: ${subject}`);
+    if (resendError) {
+      return new Response(
+        JSON.stringify({ success: false, error: errorMsg }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     return new Response(
-      JSON.stringify({ success: true, id: result.data?.id, message: `Email sent to ${to}` }),
+      JSON.stringify({ success: true, id: resendId, message: `Email sent to ${to}` }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: any) {
