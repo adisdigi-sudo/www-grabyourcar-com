@@ -562,8 +562,11 @@ export function EmailInboxDashboard() {
     const failed = allLogs.filter(l => ["failed", "dlq"].includes(l.status)).length;
     const pending = allLogs.filter(l => l.status === "pending").length;
     const spam = allLogs.filter(l => ["suppressed", "complained"].includes(l.status)).length;
-    return { total, sent, failed, pending, spam };
-  }, [allLogs]);
+    const inboxCount = threads.filter(t => t.folder === "inbox").length;
+    const sentCount = threads.filter(t => t.folder === "sent").length;
+    const spamCount = threads.filter(t => t.folder === "spam").length;
+    return { total, sent, failed, pending, spam, inboxCount, sentCount, spamCount };
+  }, [allLogs, threads]);
 
   const selectedThread = threads.find(t => t.id === selectedEmailId);
 
