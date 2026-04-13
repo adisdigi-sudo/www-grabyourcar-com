@@ -460,3 +460,37 @@ Start with "📊 Weekly P&L — GrabYourCar". Include 3 action items for next we
     details: { revenue: totalRevenue, expenses: totalExpenses, netProfit, revenueByVertical, leads: leads.length, dealsClosed: closedDeals.length },
   };
 }
+
+// ===== AGENT: Task Escalation =====
+async function runTaskEscalation(supabase: any): Promise<AgentResult> {
+  try {
+    const { data, error } = await supabase.functions.invoke("task-escalation-engine", {
+      body: { action: "check_escalations" },
+    });
+    if (error) throw error;
+    return {
+      summary: data?.summary || "Escalation check completed",
+      messagesSent: data?.emailsSent || 0,
+      details: data || {},
+    };
+  } catch (e) {
+    return { summary: `Escalation check failed: ${e}`, messagesSent: 0, details: {} };
+  }
+}
+
+// ===== AGENT: Daily Reports =====
+async function runDailyReports(supabase: any): Promise<AgentResult> {
+  try {
+    const { data, error } = await supabase.functions.invoke("task-escalation-engine", {
+      body: { action: "generate_daily_reports" },
+    });
+    if (error) throw error;
+    return {
+      summary: data?.summary || "Daily reports generated",
+      messagesSent: data?.emailsSent || 0,
+      details: data || {},
+    };
+  } catch (e) {
+    return { summary: `Daily reports failed: ${e}`, messagesSent: 0, details: {} };
+  }
+}
