@@ -50,6 +50,24 @@ interface EmailLogEntry {
   error_message: string | null;
   created_at: string;
   metadata: any;
+  _source?: "outgoing" | "incoming";
+}
+
+interface ReceivedEmail {
+  id: string;
+  from_email: string;
+  from_name: string | null;
+  to_email: string;
+  subject: string | null;
+  body_text: string | null;
+  body_html: string | null;
+  is_read: boolean;
+  is_starred: boolean;
+  is_spam: boolean;
+  folder: string;
+  received_at: string;
+  created_at: string;
+  reply_to: string | null;
 }
 
 interface EmailThread {
