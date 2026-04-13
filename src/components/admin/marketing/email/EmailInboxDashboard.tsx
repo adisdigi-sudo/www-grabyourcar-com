@@ -217,14 +217,52 @@ function ComposeEmailPanel({
   const [sending, setSending] = useState(false);
   const [cc, setCc] = useState("");
   const [showCcBcc, setShowCcBcc] = useState(false);
+  const [attachments, setAttachments] = useState<{ name: string; url: string; size: number }[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    try {
+      for (const file of Array.from(files)) {
+        if (file.size > 10 * 1024 * 1024) {
+          toast({ title: "File too large", description: `${file.name} exceeds 10MB limit`, variant: "destructive" });
+          continue;
+        }
+        const ext = file.name.split(".").pop() || "file";
+        const path = `email-attachments/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error: uploadError } = await supabase.storage.from("policy-documents").upload(path, file);
+        if (uploadError) {
+          toast({ title: "Upload failed", description: uploadError.message, variant: "destructive" });
+          continue;
+        }
+        const { data: urlData } = supabase.storage.from("policy-documents").getPublicUrl(path);
+        setAttachments(prev => [...prev, { name: file.name, url: urlData.publicUrl, size: file.size }]);
+      }
+      toast({ title: "📎 File attached" });
+    } catch (err: any) {
+      toast({ title: "Upload error", description: err.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const removeAttachment = (idx: number) => setAttachments(prev => prev.filter((_, i) => i !== idx));
 
   const handleSend = async () => {
     if (!to || !subject) {
       toast({ title: "To & Subject required", variant: "destructive" });
       return;
     }
-    const htmlBody = body || "<p>&nbsp;</p>";
+    const attachmentHtml = attachments.length > 0
+      ? `<br/><hr style="margin:16px 0;border:none;border-top:1px solid #e5e5e5"/><p style="font-size:13px;color:#666;margin-bottom:8px">📎 Attachments:</p>` +
+        attachments.map(a => `<p style="margin:4px 0"><a href="${a.url}" target="_blank" style="color:#2563eb;text-decoration:underline">${a.name}</a> <span style="color:#999;font-size:11px">(${(a.size / 1024).toFixed(0)} KB)</span></p>`).join("")
+      : "";
+    const htmlBody = (body || "<p>&nbsp;</p>") + attachmentHtml;
     setSending(true);
     try {
       const { data, error } = await supabase.functions.invoke("send-direct-email", {
@@ -318,18 +356,54 @@ function ComposeEmailPanel({
 
           {/* Rich Text Editor */}
           <RichTextEditor value={body} onChange={setBody} minHeight="200px" />
+
+          {/* Attachments Preview */}
+          {attachments.length > 0 && (
+            <div className="px-3 pb-2 flex flex-wrap gap-2">
+              {attachments.map((att, idx) => (
+                <div key={idx} className="flex items-center gap-1.5 bg-muted/50 border rounded-md px-2 py-1 text-xs">
+                  <Paperclip className="h-3 w-3 text-muted-foreground" />
+                  <span className="max-w-[150px] truncate">{att.name}</span>
+                  <span className="text-muted-foreground">({(att.size / 1024).toFixed(0)}KB)</span>
+                  <button onClick={() => removeAttachment(idx)} className="ml-1 hover:text-destructive">
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
+
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          className="hidden"
+          onChange={handleFileUpload}
+          accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.zip,.csv,.txt"
+        />
 
         {/* Footer */}
         <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/20">
           <div className="flex items-center gap-1">
-            <Button size="sm" onClick={handleSend} disabled={sending || !to || !subject} className="gap-1.5 font-medium">
+            <Button size="sm" onClick={handleSend} disabled={sending || uploading || !to || !subject} className="gap-1.5 font-medium">
               {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
               {sending ? "Sending..." : "Send"}
             </Button>
-            <Button size="icon" variant="ghost" className="h-8 w-8" title="Attach file">
-              <Paperclip className="h-4 w-4" />
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8"
+              title="Attach file"
+              disabled={uploading}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
             </Button>
+            {attachments.length > 0 && (
+              <span className="text-xs text-muted-foreground ml-1">{attachments.length} file(s)</span>
+            )}
           </div>
           <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={onClose}>
             <Trash2 className="h-4 w-4" />
