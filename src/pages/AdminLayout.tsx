@@ -196,6 +196,9 @@ const TeamHierarchyView = lazy(() =>
 const DataRoom = lazy(() =>
   import("@/components/admin/DataRoom").then((module) => ({ default: module.DataRoom })),
 );
+const MyTeamDashboard = lazy(() =>
+  import("@/components/admin/MyTeamDashboard").then((module) => ({ default: module.MyTeamDashboard })),
+);
 const UserManagementDashboard = lazy(() =>
   import("@/components/admin/UserManagementDashboard").then((module) => ({ default: module.UserManagementDashboard })),
 );
@@ -313,6 +316,7 @@ const UNIVERSAL_ADMIN_TABS = new Set([
   DEFAULT_ADMIN_TAB,
   "ai-cofounder",
   "my-hr",
+  "my-team",
   "calling-system",
   "lead-scoring",
   "client-management",
