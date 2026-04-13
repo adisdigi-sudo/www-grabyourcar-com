@@ -195,6 +195,7 @@ const TeamHierarchyView = lazy(() =>
 );
 const DataRoom = lazy(() =>
   import("@/components/admin/DataRoom").then((module) => ({ default: module.DataRoom })),
+);
 const UserManagementDashboard = lazy(() =>
   import("@/components/admin/UserManagementDashboard").then((module) => ({ default: module.UserManagementDashboard })),
 );
