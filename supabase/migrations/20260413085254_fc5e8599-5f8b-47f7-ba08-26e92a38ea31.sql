@@ -1,0 +1,1 @@
+ALTER TABLE public.email_unsubscribe_tokens ALTER COLUMN subscriber_id DROP NOT NULL;
