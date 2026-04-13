@@ -9,8 +9,9 @@ import { Label } from "@/components/ui/label";
 import {
   Send, Paperclip, Clock, Check, CheckCheck, X,
   AlertTriangle, Info, Zap, LayoutTemplate, MessageSquare,
-  UserPlus, Timer, Image, FileText, Video, Loader2
+  UserPlus, Timer, Image, FileText, Video, Loader2, Bot, HandMetal
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { supabase as sbClient } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";

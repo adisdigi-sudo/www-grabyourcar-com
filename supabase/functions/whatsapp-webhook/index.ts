@@ -192,6 +192,26 @@ Deno.serve(async (req) => {
             }).eq("id", existingContact.id);
           }
 
+          // ── Check new inbox human_takeover flag ──
+          if (inboxConvo?.human_takeover) {
+            console.log(`Human takeover active (wa_conversations) for ${from}, skipping AI`);
+            // Still store in legacy but skip AI reply
+            const { data: existingConvoLegacy } = await supabase
+              .from("whatsapp_conversations")
+              .select("id, messages")
+              .eq("phone_number", from)
+              .single();
+            if (existingConvoLegacy) {
+              const history = [...((existingConvoLegacy.messages as any[]) || []), { role: "user", content: messageText }];
+              await supabase.from("whatsapp_conversations").update({
+                messages: history.slice(-20),
+                last_message_at: new Date().toISOString(),
+                customer_name: contactName,
+              }).eq("id", existingConvoLegacy.id);
+            }
+            continue;
+          }
+
           // ── Legacy: whatsapp_conversations ──
           const { data: existingConvo } = await supabase
             .from("whatsapp_conversations")
