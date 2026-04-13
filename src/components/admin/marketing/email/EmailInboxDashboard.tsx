@@ -627,11 +627,11 @@ export function EmailInboxDashboard() {
           {(["inbox", "sent", "drafts", "spam", "all"] as Folder[]).map(f => {
             const cfg = FOLDER_CONFIG[f];
             const Icon = cfg.icon;
-            const count = f === "inbox" ? stats.total - stats.spam
-              : f === "sent" ? stats.sent
-              : f === "spam" ? stats.spam
+            const count = f === "inbox" ? stats.inboxCount
+              : f === "sent" ? stats.sentCount
+              : f === "spam" ? stats.spamCount
               : f === "drafts" ? 0
-              : stats.total;
+              : threads.length;
             return (
               <button
                 key={f}
