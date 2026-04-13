@@ -5859,6 +5859,7 @@ export type Database = {
       }
       email_events: {
         Row: {
+          bounce_type: string | null
           campaign_id: string | null
           created_at: string | null
           email_log_id: string | null
@@ -5872,6 +5873,7 @@ export type Database = {
           user_agent: string | null
         }
         Insert: {
+          bounce_type?: string | null
           campaign_id?: string | null
           created_at?: string | null
           email_log_id?: string | null
@@ -5885,6 +5887,7 @@ export type Database = {
           user_agent?: string | null
         }
         Update: {
+          bounce_type?: string | null
           campaign_id?: string | null
           created_at?: string | null
           email_log_id?: string | null
@@ -5937,12 +5940,14 @@ export type Database = {
           campaign_id: string | null
           clicked_at: string | null
           created_at: string
+          delivered_at: string | null
           error_message: string | null
           id: string
           metadata: Json | null
           opened_at: string | null
           recipient_email: string
           recipient_name: string | null
+          replied_at: string | null
           resend_id: string | null
           sent_at: string | null
           sequence_id: string | null
@@ -5955,12 +5960,14 @@ export type Database = {
           campaign_id?: string | null
           clicked_at?: string | null
           created_at?: string
+          delivered_at?: string | null
           error_message?: string | null
           id?: string
           metadata?: Json | null
           opened_at?: string | null
           recipient_email: string
           recipient_name?: string | null
+          replied_at?: string | null
           resend_id?: string | null
           sent_at?: string | null
           sequence_id?: string | null
@@ -5973,12 +5980,14 @@ export type Database = {
           campaign_id?: string | null
           clicked_at?: string | null
           created_at?: string
+          delivered_at?: string | null
           error_message?: string | null
           id?: string
           metadata?: Json | null
           opened_at?: string | null
           recipient_email?: string
           recipient_name?: string | null
+          replied_at?: string | null
           resend_id?: string | null
           sent_at?: string | null
           sequence_id?: string | null
@@ -17604,6 +17613,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      increment_campaign_counter: {
+        Args: { p_campaign_id: string; p_column: string }
+        Returns: undefined
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       move_to_dlq: {
