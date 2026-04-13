@@ -6334,21 +6334,27 @@ export type Database = {
       email_unsubscribe_tokens: {
         Row: {
           created_at: string | null
+          email: string | null
           id: string
-          subscriber_id: string
+          subscriber_id: string | null
           token: string
+          used_at: string | null
         }
         Insert: {
           created_at?: string | null
+          email?: string | null
           id?: string
-          subscriber_id: string
+          subscriber_id?: string | null
           token?: string
+          used_at?: string | null
         }
         Update: {
           created_at?: string | null
+          email?: string | null
           id?: string
-          subscriber_id?: string
+          subscriber_id?: string | null
           token?: string
+          used_at?: string | null
         }
         Relationships: [
           {
