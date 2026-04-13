@@ -98,9 +98,23 @@ Deno.serve(async (req) => {
           const windowExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
           const { data: inboxConvo } = await supabase
             .from("wa_conversations")
-            .select("id, unread_count")
+            .select("id, unread_count, human_takeover, human_takeover_at")
             .eq("phone", from)
             .maybeSingle();
+
+          // ── Auto-reset human takeover after 2 hours of inactivity ──
+          if (inboxConvo?.human_takeover && inboxConvo?.human_takeover_at) {
+            const takeoverAge = Date.now() - new Date(inboxConvo.human_takeover_at).getTime();
+            const TWO_HOURS = 2 * 60 * 60 * 1000;
+            if (takeoverAge > TWO_HOURS) {
+              console.log(`Auto-resetting human takeover for ${from} (${Math.round(takeoverAge / 60000)}min old)`);
+              await supabase.from("wa_conversations").update({
+                human_takeover: false,
+                human_takeover_at: null,
+              }).eq("id", inboxConvo.id);
+              inboxConvo.human_takeover = false;
+            }
+          }
 
           const isNewInboxConversation = !inboxConvo;
 

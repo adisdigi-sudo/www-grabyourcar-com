@@ -26,6 +26,8 @@ export interface WaConversation {
   tags: string[] | null;
   lead_id: string | null;
   client_id: string | null;
+  human_takeover: boolean;
+  human_takeover_at: string | null;
   created_at: string;
 }
 
