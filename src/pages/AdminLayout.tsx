@@ -19,6 +19,7 @@ import { CRMAssistant } from "@/components/admin/CRMAssistant";
 import { AICofounderBanner } from "@/components/admin/AICofounderBanner";
 import { PersonalizedWelcomeBanner } from "@/components/admin/PersonalizedWelcomeBanner";
 import { InsuranceDashboard } from "@/components/admin/verticals/InsuranceDashboard";
+import { UnifiedMarketingHub } from "@/components/admin/marketing/UnifiedMarketingHub";
 
 const ChannelProvidersSettings = lazy(() =>
   import("@/components/admin/settings/ChannelProvidersSettings").then((module) => ({ default: module.ChannelProvidersSettings })),
@@ -80,9 +81,6 @@ const BrandingSettings = lazy(() =>
 );
 const APIIntegrationPortal = lazy(() =>
   import("@/components/admin/APIIntegrationPortal").then((module) => ({ default: module.APIIntegrationPortal })),
-);
-const EmailMarketingManagement = lazy(() =>
-  import("@/components/admin/marketing/UnifiedMarketingHub").then((module) => ({ default: module.UnifiedMarketingHub })),
 );
 const AIContentHub = lazy(() =>
   import("@/components/admin/AIContentHub").then((module) => ({ default: module.AIContentHub })),
@@ -713,7 +711,7 @@ const AdminLayout = () => {
       case "holi-share":
         return <HoliBulkShare />;
       case "marketing-email":
-        return <EmailMarketingManagement />;
+        return <UnifiedMarketingHub />;
       case "marketing-bulk":
         return <BulkDataManager />;
       case "integrations-api":
