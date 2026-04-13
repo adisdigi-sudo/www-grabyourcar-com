@@ -284,6 +284,22 @@ export function InsuranceStatusPipeline() {
         } as any);
       }
 
+      // 📧 Send insurance won email
+      if (client.email) {
+        const { sendInsuranceWonEmail } = await import("@/lib/emailTriggers");
+        sendInsuranceWonEmail({
+          email: client.email,
+          name: client.customer_name,
+          vehicleNumber: client.vehicle_number,
+          insurer: client.current_insurer || client.quote_insurer,
+          policyType: client.current_policy_type || "Comprehensive",
+          premium: client.quote_amount?.toLocaleString("en-IN") || client.current_premium?.toLocaleString("en-IN"),
+          policyNumber: client.current_policy_number,
+          expiryDate: expiryDate,
+          clientId: clientId,
+        });
+      }
+
       toast.success("🎉 Lead converted & policy added to Policy Book!", {
         description: `${client.customer_name} — Policy: ${startDate} → ${expiryDate}`,
         duration: 5000,

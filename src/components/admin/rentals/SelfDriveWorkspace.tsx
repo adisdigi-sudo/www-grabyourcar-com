@@ -224,6 +224,24 @@ export function SelfDriveWorkspace() {
       }
       const { error } = await supabase.from("rental_bookings").update(dbUpdates).eq("id", id);
       if (error) throw error;
+
+      // 📧 Send rental confirmed email when moved to booking_payment
+      if (updates.pipeline_stage === "booking_payment") {
+        const booking = filteredBookings.find((b: any) => b.id === id);
+        if (booking?.email) {
+          import("@/lib/emailTriggers").then(({ sendRentalConfirmedEmail }) => {
+            sendRentalConfirmedEmail({
+              email: booking.email,
+              name: booking.customer_name,
+              carName: booking.car_name || booking.vehicle_type,
+              pickupDate: booking.start_date,
+              returnDate: booking.end_date,
+              totalAmount: booking.total_amount?.toLocaleString("en-IN"),
+              bookingId: id.slice(0, 8),
+            });
+          });
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["rental-pipeline"] });
