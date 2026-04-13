@@ -380,6 +380,40 @@ Deno.serve(async (req) => {
                         sent_by_name: "System",
                       });
                       console.log(`Sent no-agent fallback (legacy path) to ${from}, wa_id: ${fbWaId}`);
+
+                      // ── AUTO-RESUME AI after fallback (legacy path) ──
+                      await supabase.from("wa_conversations").update({
+                        human_takeover: false,
+                        human_takeover_at: null,
+                      }).eq("id", inboxConvo.id);
+
+                      await supabase.from("whatsapp_conversations").update({
+                        human_takeover: false,
+                        status: "active",
+                      }).eq("id", conversationId);
+
+                      const resumeText = `Meanwhile, I'm your AI assistant and I'm available right now! 🤖\n\nIs there anything I can help you with? I can assist with:\n• Insurance queries & quotes\n• Policy details & renewals\n• Car booking information\n• Any other questions\n\nJust type your question and I'll do my best to help! 😊`;
+
+                      const resumeResp = await fetch(`https://graph.facebook.com/v25.0/${WA_PHONE_ID}/messages`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", Authorization: `Bearer ${WA_TOKEN}` },
+                        body: JSON.stringify({ messaging_product: "whatsapp", recipient_type: "individual", to: toNum, type: "text", text: { body: resumeText } }),
+                      });
+                      const resumeResult = await resumeResp.json();
+                      const resumeWaId = resumeResult.messages?.[0]?.id || null;
+
+                      await supabase.from("wa_inbox_messages").insert({
+                        conversation_id: inboxConvo.id,
+                        direction: "outbound",
+                        message_type: "text",
+                        content: resumeText,
+                        template_name: "_system_ai_resume",
+                        wa_message_id: resumeWaId,
+                        status: resumeResp.ok ? "sent" : "failed",
+                        sent_by_name: "AI Assistant",
+                      });
+
+                      console.log(`AI auto-resumed (legacy) for ${from} after no-agent fallback`);
                     }
                   }
                 }
