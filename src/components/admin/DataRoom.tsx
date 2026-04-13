@@ -24,13 +24,13 @@ export const DataRoom = () => {
         
         const { count: totalLeads } = await supabase
           .from("leads")
-          .select("*", { count: "exact", head: true })
+          .select("id", { count: "exact", head: true })
           .gte("created_at", start)
           .lte("created_at", end);
 
         const { count: wonLeads } = await supabase
           .from("leads")
-          .select("*", { count: "exact", head: true })
+          .select("id", { count: "exact", head: true })
           .gte("created_at", start)
           .lte("created_at", end)
           .eq("lead_status", "won");
