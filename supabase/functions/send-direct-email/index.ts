@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
     }
 
     // Get or create unsubscribe token for this recipient
-    const normalizedEmail = to.toLowerCase();
+    const normalizedEmail = recipientEmail.toLowerCase();
     let unsubscribeToken: string;
 
     const { data: existingToken } = await supabase
