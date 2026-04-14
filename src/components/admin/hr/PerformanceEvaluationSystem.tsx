@@ -79,7 +79,7 @@ export const PerformanceEvaluationSystem = () => {
   const { data: employees = [] } = useQuery({
     queryKey: ["hr-perf-employees"],
     queryFn: async () => {
-      const { data } = await supabase.from("hr_team_directory").select("*").eq("employment_status", "active").order("full_name");
+      const { data } = await (supabase.from("hr_team_directory") as any).select("*").eq("employment_status", "active").order("full_name");
       return data || [];
     },
   });
