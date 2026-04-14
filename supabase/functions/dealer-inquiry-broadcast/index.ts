@@ -25,23 +25,26 @@ async function sendTemplate(
 ): Promise<{ success: boolean; provider_message_id?: string; error?: string }> {
   const url = `https://graph.facebook.com/v25.0/${phoneNumberId}/messages`;
 
-  const components: unknown[] = [];
-  if (variables && variables.length > 0) {
-    components.push({
+  // Only add components if there are actual variables
+  const hasVars = variables && variables.length > 0 && variables.some(v => v && v.trim() !== "");
+  
+  const templateObj: Record<string, unknown> = {
+    name: templateName,
+    language: { code: "en" },
+  };
+
+  if (hasVars) {
+    templateObj.components = [{
       type: "body",
-      parameters: variables.map((val) => ({ type: "text", text: val })),
-    });
+      parameters: variables!.filter(v => v && v.trim()).map((val) => ({ type: "text", text: val })),
+    }];
   }
 
   const body: Record<string, unknown> = {
     messaging_product: "whatsapp",
     to,
     type: "template",
-    template: {
-      name: templateName,
-      language: { code: "en_US" },
-      ...(components.length > 0 ? { components } : {}),
-    },
+    template: templateObj,
   };
 
   const resp = await fetch(url, {
