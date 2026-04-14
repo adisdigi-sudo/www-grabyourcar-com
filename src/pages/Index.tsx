@@ -1,25 +1,9 @@
-import { useState, lazy, Suspense } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { GlobalSEO } from "@/components/seo/GlobalSEO";
 import { Header } from "@/components/Header";
 import { RivianHero } from "@/components/RivianHero";
-import { CategoryGrid } from "@/components/CategoryGrid";
 import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
-import { BrowseByBudget } from "@/components/BrowseByBudget";
-import { CarListings } from "@/components/CarListings";
-import { LeadForm } from "@/components/LeadForm";
-import { Testimonials } from "@/components/Testimonials";
-import { TrustBadges } from "@/components/TrustBadges";
-import { Footer } from "@/components/Footer";
-import { FloatingCTA } from "@/components/FloatingCTA";
-import { CustomerStories } from "@/components/CustomerStories";
-import { DealerLocatorWidget } from "@/components/DealerLocatorWidget";
-import { CrossSellWidget } from "@/components/CrossSellWidget";
-import { HomepageSEOContent } from "@/components/HomepageSEOContent";
-import { EntryLeadCaptureModal } from "@/components/EntryLeadCaptureModal";
-import { ExitIntentPopup } from "@/components/ExitIntentPopup";
-import { DynamicHeroBanners, DynamicPromoBanners, DynamicFeaturedCars, DynamicTestimonials, DynamicCTABanners } from "@/components/DynamicHomepageContent";
-
-const EMICalculator = lazy(() => import("@/components/EMICalculator"));
+const HomeDeferredSections = lazy(() => import("@/components/home/HomeDeferredSections"));
 
 const SectionSkeleton = ({ label }: { label: string }) => (
   <div className="flex min-h-[120px] items-center justify-center text-sm text-muted-foreground">
@@ -31,6 +15,23 @@ const SectionSkeleton = ({ label }: { label: string }) => (
 
 const Index = () => {
   const [loanPrefill, setLoanPrefill] = useState<string>("");
+  const [showDeferredSections, setShowDeferredSections] = useState(false);
+
+  useEffect(() => {
+    let frameId = 0;
+    let timeoutId = 0;
+
+    frameId = window.requestAnimationFrame(() => {
+      timeoutId = window.setTimeout(() => {
+        setShowDeferredSections(true);
+      }, 120);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.clearTimeout(timeoutId);
+    };
+  }, []);
 
   const handleGetLoanQuote = (loanDetails: string) => {
     setLoanPrefill(loanDetails);
@@ -67,117 +68,19 @@ const Index = () => {
       
       {/* Main Content */}
       <main>
-        {/* Single Rivian-style full-screen hero carousel — backend managed */}
+         {/* Single Rivian-style full-screen hero carousel — backend managed */}
         <SectionErrorBoundary sectionName="hero">
           <RivianHero />
         </SectionErrorBoundary>
-        
-        {/* Our Services Category Grid */}
-        <SectionErrorBoundary sectionName="category-grid">
-          <CategoryGrid />
-        </SectionErrorBoundary>
 
-        {/* Browse by Budget/Body Type - CarDekho style */}
-        <Suspense fallback={null}>
-          <SectionErrorBoundary sectionName="browse-by-budget" fallback={null}>
-            <BrowseByBudget />
-          </SectionErrorBoundary>
-        </Suspense>
-        
-         <Suspense fallback={<SectionSkeleton label="Loading EMI calculator..." />}>
-          {/* Dynamic Hero Banners from Admin */}
-          <SectionErrorBoundary sectionName="dynamic-hero-banners" fallback={null}>
-            <DynamicHeroBanners />
-          </SectionErrorBoundary>
-          
-          {/* Dynamic Promo Banners from Admin */}
-          <SectionErrorBoundary sectionName="dynamic-promo-banners" fallback={null}>
-            <DynamicPromoBanners />
-          </SectionErrorBoundary>
-          
-          {/* Dynamic Featured Cars from Admin */}
-          <SectionErrorBoundary sectionName="dynamic-featured-cars" fallback={null}>
-            <DynamicFeaturedCars />
-          </SectionErrorBoundary>
-          
-          {/* Featured Car Listings */}
-          <SectionErrorBoundary sectionName="car-listings">
-            <CarListings />
-          </SectionErrorBoundary>
-
-          {/* Cross-Sell Services */}
-          <div className="container mx-auto px-4">
-            <SectionErrorBoundary sectionName="cross-sell-widget" fallback={null}>
-              <CrossSellWidget context="home" title="Complete Your Car Buying Journey" maxItems={4} />
-            </SectionErrorBoundary>
-          </div>
-          
-          {/* Nearby Dealer Locator */}
-          <SectionErrorBoundary sectionName="dealer-locator-widget" fallback={null}>
-            <DealerLocatorWidget />
-          </SectionErrorBoundary>
-           
-          {/* EMI Calculator */}
-          <SectionErrorBoundary sectionName="emi-calculator">
-            <EMICalculator onGetQuote={handleGetLoanQuote} />
-          </SectionErrorBoundary>
-          
-          {/* Dynamic CTA Banners from Admin */}
-          <SectionErrorBoundary sectionName="dynamic-cta-banners" fallback={null}>
-            <DynamicCTABanners />
-          </SectionErrorBoundary>
-          
-          {/* Lead Capture Form */}
-          <SectionErrorBoundary sectionName="lead-form">
-            <LeadForm prefillCarInterest={loanPrefill} />
-          </SectionErrorBoundary>
-          
-          {/* Customer Testimonials */}
-          <SectionErrorBoundary sectionName="testimonials">
-            <Testimonials />
-          </SectionErrorBoundary>
-          
-          {/* Dynamic Testimonials from Admin */}
-          <SectionErrorBoundary sectionName="dynamic-testimonials" fallback={null}>
-            <DynamicTestimonials />
-          </SectionErrorBoundary>
-          
-          {/* Customer Stories with Delivery Photos */}
-          <SectionErrorBoundary sectionName="customer-stories">
-            <CustomerStories />
-          </SectionErrorBoundary>
-           
-          {/* Trust Badges */}
-          <SectionErrorBoundary sectionName="trust-badges">
-            <TrustBadges />
-          </SectionErrorBoundary>
-          
-          {/* Crawlable SEO Content — 1000+ words of keyword-rich text */}
-          <SectionErrorBoundary sectionName="homepage-seo-content" fallback={null}>
-            <HomepageSEOContent />
-          </SectionErrorBoundary>
-        </Suspense>
+          {showDeferredSections ? (
+            <Suspense fallback={<SectionSkeleton label="Loading homepage sections..." />}>
+              <HomeDeferredSections loanPrefill={loanPrefill} onGetLoanQuote={handleGetLoanQuote} />
+            </Suspense>
+          ) : (
+            <SectionSkeleton label="Loading homepage sections..." />
+          )}
       </main>
-      
-      {/* Footer */}
-       <Suspense fallback={<SectionSkeleton label="Loading footer..." />}>
-        <SectionErrorBoundary sectionName="footer" fallback={null}>
-          <Footer />
-        </SectionErrorBoundary>
-        
-        {/* Floating WhatsApp & Call Buttons */}
-        <SectionErrorBoundary sectionName="floating-cta" fallback={null}>
-          <FloatingCTA />
-        </SectionErrorBoundary>
-        
-        {/* Lead Capture Modals */}
-        <SectionErrorBoundary sectionName="entry-lead-capture-modal" fallback={null}>
-          <EntryLeadCaptureModal />
-        </SectionErrorBoundary>
-        <SectionErrorBoundary sectionName="exit-intent-popup" fallback={null}>
-          <ExitIntentPopup />
-        </SectionErrorBoundary>
-      </Suspense>
       </div>
     </>
   );
