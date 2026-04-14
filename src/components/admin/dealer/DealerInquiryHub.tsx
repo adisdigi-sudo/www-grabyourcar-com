@@ -211,10 +211,25 @@ export default function DealerInquiryHub() {
       });
       if (error) throw error;
 
-      toast.success(`✅ Sent to ${data?.summary?.sent || 0} / ${phones.length} dealers via ${sendMode === "template_only" ? "Template" : "Template + Text"}!`);
-      if (aiFollowup) toast.info(`🤖 AI follow-up scheduled in ${followupDelay} minutes`);
-      if (data?.summary?.failed > 0) toast.warning(`⚠️ ${data.summary.failed} failed`);
-      setSelectedIds([]);
+      const sentCount = data?.summary?.sent || 0;
+      const failedCount = data?.summary?.failed || 0;
+      const modeLabel = sendMode === "template_only"
+        ? "Template"
+        : sendMode === "text_only"
+          ? "Direct Text"
+          : "Template + Text";
+
+      if (sentCount > 0) {
+        toast.success(`✅ Sent to ${sentCount} / ${phones.length} dealers via ${modeLabel}!`);
+        if (data?.followup_scheduled) {
+          toast.info(`🤖 AI follow-up scheduled in ${followupDelay} minutes`);
+        }
+        setSelectedIds([]);
+      } else {
+        toast.error("Message not sent to any dealer");
+      }
+
+      if (failedCount > 0) toast.warning(`⚠️ ${failedCount} failed`);
       qc.invalidateQueries({ queryKey: ["dealer-inquiry-campaigns"] });
     } catch (e: any) {
       toast.error(e.message || "Failed to send");
