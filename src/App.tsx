@@ -21,25 +21,12 @@ import WorkspaceSelector from "./pages/WorkspaceSelector";
 // so /admin, /crm, /workspace, and document viewing never depend on a stale route chunk.
 import Index from "./pages/Index";
 
-// Non-entry route pages stay lazy-loaded so the public site bundle stays lean
-const FloatingCompareBar = lazy(() =>
-  import("./components/FloatingCompareBar").then((module) => ({ default: module.FloatingCompareBar })),
-);
-const WhatsAppFloatingButton = lazy(() =>
-  import("./components/WhatsAppCTA").then((module) => ({ default: module.WhatsAppFloatingButton })),
-);
-const FloatingCallButton = lazy(() =>
-  import("./components/FloatingCallButton").then((module) => ({ default: module.FloatingCallButton })),
-);
-const CookieConsentBanner = lazy(() =>
-  import("./components/CookieConsentBanner").then((module) => ({ default: module.CookieConsentBanner })),
-);
-const FloatingGetQuote = lazy(() =>
-  import("./components/FloatingGetQuote").then((module) => ({ default: module.FloatingGetQuote })),
-);
-const SiteStructuredData = lazy(() =>
-  import("./components/seo/SiteStructuredData").then((module) => ({ default: module.SiteStructuredData })),
-);
+import { FloatingCompareBar } from "./components/FloatingCompareBar";
+import { WhatsAppFloatingButton } from "./components/WhatsAppCTA";
+import { FloatingCallButton } from "./components/FloatingCallButton";
+import { CookieConsentBanner } from "./components/CookieConsentBanner";
+import { FloatingGetQuote } from "./components/FloatingGetQuote";
+import { SiteStructuredData } from "./components/seo/SiteStructuredData";
 
 // Public-facing pages stay lazy-loaded to keep the main site bundle small
 const Cars = lazy(() => import("./pages/Cars"));
@@ -234,11 +221,7 @@ const RouteAwareStructuredData = ({ isChromelessExperience }: { isChromelessExpe
     return null;
   }
 
-  return (
-    <Suspense fallback={null}>
-      <SiteStructuredData />
-    </Suspense>
-  );
+  return <SiteStructuredData />;
 };
 
 const RouteAwareChrome = ({ isChromelessExperience }: { isChromelessExperience: boolean }) => {
@@ -247,15 +230,13 @@ const RouteAwareChrome = ({ isChromelessExperience }: { isChromelessExperience: 
   }
 
   return (
-    <Suspense fallback={null}>
-      <>
-        <FloatingCompareBar />
-        <WhatsAppFloatingButton />
-        <FloatingCallButton />
-        <FloatingGetQuote />
-        <CookieConsentBanner />
-      </>
-    </Suspense>
+    <>
+      <FloatingCompareBar />
+      <WhatsAppFloatingButton />
+      <FloatingCallButton />
+      <FloatingGetQuote />
+      <CookieConsentBanner />
+    </>
   );
 };
 
