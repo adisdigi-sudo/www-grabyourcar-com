@@ -39,6 +39,7 @@ import { SalaryEngine } from "./SalaryEngine";
 import { EmployeeDocumentHub } from "./EmployeeDocumentHub";
 import { EmployeeProfileView } from "./EmployeeProfileView";
 import { EmployeeTargetDashboard } from "./EmployeeTargetDashboard";
+import { PerformanceEvaluationSystem } from "./PerformanceEvaluationSystem";
 
 const initials = (name: string) => name?.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2) || "??";
 
@@ -173,8 +174,9 @@ export const ZohoHRWorkspace = () => {
       case "time": return <HRAttendanceModule />;
       case "operations": return <HRCoreModule />;
       case "reports": return <HRWorkforceModule />;
-      case "performance": return <HRPerformanceModule />;
+      case "performance": return <PerformanceEvaluationSystem />;
       case "files": return renderDocuments();
+      case "performance-eval": return <PerformanceEvaluationSystem />;
       case "engagement": return <HREngagementModule />;
       case "travel": return <HRExpenseModule />;
       case "tasks": return <HRHelpdeskModule />;
