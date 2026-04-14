@@ -53,12 +53,12 @@ serve(async (req) => {
       });
     }
 
-    // Get recipients who were sent successfully and haven't had AI follow-up
+    // Get recipients whose first message was actually delivered/read and haven't had AI follow-up
     const { data: recipients } = await supabase
       .from("dealer_inquiry_recipients")
       .select("*")
       .eq("campaign_id", campaign_id)
-      .eq("send_status", "sent")
+      .in("send_status", ["delivered", "read"])
       .eq("ai_followup_sent", false);
 
     if (!recipients || recipients.length === 0) {

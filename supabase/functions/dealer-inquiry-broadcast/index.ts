@@ -13,6 +13,62 @@ function normalizePhone(phone: string): { full: string; short: string; valid: bo
   return { full: `91${short}`, short, valid: /^[6-9]\d{9}$/.test(short) };
 }
 
+async function hasOpenConversationWindow(supabase: any, phone: string): Promise<boolean> {
+  const now = new Date();
+
+  const { data: convo } = await supabase
+    .from("wa_conversations")
+    .select("window_expires_at")
+    .eq("phone", phone)
+    .maybeSingle();
+
+  if (convo?.window_expires_at && new Date(convo.window_expires_at) > now) {
+    return true;
+  }
+
+  const { data: legacy } = await supabase
+    .from("whatsapp_conversations")
+    .select("last_message_at")
+    .eq("phone_number", phone)
+    .maybeSingle();
+
+  return Boolean(
+    legacy?.last_message_at &&
+    now.getTime() - new Date(legacy.last_message_at).getTime() < 24 * 60 * 60 * 1000,
+  );
+}
+
+async function resolveApprovedTemplateName(supabase: any, preferredTemplate?: string | null): Promise<string | null> {
+  const candidates = [preferredTemplate, "grabyourcarintroduction", "insurancefollowup", "welcome_new_lead"]
+    .filter((value): value is string => Boolean(value));
+
+  for (const candidate of candidates) {
+    const { data } = await supabase
+      .from("wa_templates")
+      .select("name")
+      .eq("name", candidate)
+      .eq("status", "approved")
+      .limit(1);
+
+    if (data?.[0]?.name) return data[0].name;
+  }
+
+  const { data: fallback } = await supabase
+    .from("wa_templates")
+    .select("name")
+    .eq("status", "approved")
+    .limit(1);
+
+  return fallback?.[0]?.name || null;
+}
+
+function mergeTrackingData(existing: Record<string, unknown> | null, updates: Record<string, unknown>) {
+  return {
+    ...(existing && typeof existing === "object" ? existing : {}),
+    ...updates,
+  };
+}
+
 /**
  * Send a Meta-approved template message (opens 24-hour window)
  */
@@ -125,6 +181,7 @@ serve(async (req) => {
     // Determine send mode
     const mode = send_mode || (template_name ? "template_then_text" : "text_only");
     const metaTemplate = template_name || "grabyourcarintroduction";
+    const approvedTemplate = await resolveApprovedTemplateName(supabase, metaTemplate);
 
     // Create campaign record
     const campaignName = `${brand || "All"} ${model || ""} ${variant || ""} — ${new Date().toLocaleDateString("en-IN")}`.trim();
@@ -166,14 +223,42 @@ serve(async (req) => {
       }
 
       try {
-        let templateResult = { success: true, provider_message_id: undefined as string | undefined, error: undefined as string | undefined };
-        let textResult = { success: true, provider_message_id: undefined as string | undefined, error: undefined as string | undefined };
+        const windowOpen = await hasOpenConversationWindow(supabase, phone.full);
+        const shouldAutoOpenWindow = mode === "text_only" && !windowOpen;
+        const shouldSendTemplate = mode === "template_only" || mode === "template_then_text" || shouldAutoOpenWindow;
+        const requiresTextMessage = (mode === "text_only" || mode === "template_then_text") && Boolean(message && message.trim());
+        const actualMode = shouldAutoOpenWindow ? "template_then_text" : mode;
+        const activeTemplateName = shouldSendTemplate ? approvedTemplate : null;
 
-        // Step 1: Send approved template (opens 24-hour window)
-        if (mode === "template_only" || mode === "template_then_text") {
+        if (shouldSendTemplate && !activeTemplateName) {
+          failed++;
+          errors.push(`${rawPhone}: No approved Meta template is available to open the chat window`);
+          recipientRows.push({
+            campaign_id: campaign?.id,
+            dealer_rep_id: recipientInfo.dealer_rep_id || null,
+            dealer_name: recipientInfo.dealer_name || null,
+            rep_name: recipientInfo.rep_name || null,
+            phone: rawPhone,
+            send_status: "failed",
+            qualification_data: mergeTrackingData(null, {
+              requested_mode: mode,
+              actual_mode: actualMode,
+              conversation_window_open: windowOpen,
+              opener_template_name: null,
+              last_error: "No approved template available",
+            }),
+          });
+          continue;
+        }
+
+        let templateResult = { success: !shouldSendTemplate, provider_message_id: undefined as string | undefined, error: undefined as string | undefined };
+        let textResult = { success: !requiresTextMessage, provider_message_id: undefined as string | undefined, error: undefined as string | undefined };
+
+        // Step 1: Send approved template (opens 24-hour window when needed)
+        if (shouldSendTemplate && activeTemplateName) {
           templateResult = await sendTemplate(
             WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID,
-            phone.full, metaTemplate, template_variables || []
+            phone.full, activeTemplateName, template_variables || []
           );
           
           if (!templateResult.success) {
@@ -186,32 +271,37 @@ serve(async (req) => {
               rep_name: recipientInfo.rep_name || null,
               phone: rawPhone,
               send_status: "failed",
+              qualification_data: mergeTrackingData(null, {
+                requested_mode: mode,
+                actual_mode: actualMode,
+                conversation_window_open: windowOpen,
+                opener_template_name: activeTemplateName,
+                provider_message_id: templateResult.provider_message_id || null,
+                template_provider_message_id: templateResult.provider_message_id || null,
+                text_provider_message_id: null,
+                last_error: templateResult.error || "Template send failed",
+              }),
             });
             await new Promise(r => setTimeout(r, 200));
             continue;
           }
         }
 
-        // Step 2: Send detailed text message (after template opens window)
-        if (mode === "template_then_text" && message && message.trim()) {
-          // Wait 1.5s for template to be delivered and window to open
-          await new Promise(r => setTimeout(r, 1500));
-          textResult = await sendText(
-            WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID,
-            phone.full, message
-          );
-          // Text failure is non-critical if template succeeded
-          if (!textResult.success) {
-            console.warn(`Text follow-up failed for ${rawPhone}: ${textResult.error}`);
+        // Step 2: Send detailed text message (after template opens window if required)
+        if (requiresTextMessage) {
+          if (shouldSendTemplate) {
+            // Wait 1.5s for template to be accepted and the chat window to open
+            await new Promise(r => setTimeout(r, 1500));
           }
-        } else if (mode === "text_only" && message) {
+
+          await new Promise(r => setTimeout(r, 1500));
           textResult = await sendText(
             WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID,
             phone.full, message
           );
         }
 
-        const overallSuccess = templateResult.success || textResult.success;
+        const overallSuccess = requiresTextMessage ? textResult.success : templateResult.success;
         if (overallSuccess) {
           sent++;
           recipientRows.push({
@@ -220,12 +310,21 @@ serve(async (req) => {
             dealer_name: recipientInfo.dealer_name || null,
             rep_name: recipientInfo.rep_name || null,
             phone: rawPhone,
-            send_status: "sent",
+            send_status: "submitted",
             sent_at: new Date().toISOString(),
+            qualification_data: mergeTrackingData(null, {
+              requested_mode: mode,
+              actual_mode: actualMode,
+              conversation_window_open: windowOpen,
+              opener_template_name: activeTemplateName,
+              provider_message_id: textResult.provider_message_id || templateResult.provider_message_id || null,
+              template_provider_message_id: templateResult.provider_message_id || null,
+              text_provider_message_id: textResult.provider_message_id || null,
+            }),
           });
         } else {
           failed++;
-          errors.push(`${rawPhone}: ${textResult.error || "Send error"}`);
+          errors.push(`${rawPhone}: ${textResult.error || templateResult.error || "Send error"}`);
           recipientRows.push({
             campaign_id: campaign?.id,
             dealer_rep_id: recipientInfo.dealer_rep_id || null,
@@ -233,6 +332,16 @@ serve(async (req) => {
             rep_name: recipientInfo.rep_name || null,
             phone: rawPhone,
             send_status: "failed",
+            qualification_data: mergeTrackingData(null, {
+              requested_mode: mode,
+              actual_mode: actualMode,
+              conversation_window_open: windowOpen,
+              opener_template_name: activeTemplateName,
+              provider_message_id: textResult.provider_message_id || templateResult.provider_message_id || null,
+              template_provider_message_id: templateResult.provider_message_id || null,
+              text_provider_message_id: textResult.provider_message_id || null,
+              last_error: textResult.error || templateResult.error || "Send error",
+            }),
           });
         }
       } catch (e) {
@@ -243,6 +352,11 @@ serve(async (req) => {
           dealer_rep_id: recipientInfo.dealer_rep_id || null,
           phone: rawPhone,
           send_status: "failed",
+          qualification_data: mergeTrackingData(null, {
+            requested_mode: mode,
+            actual_mode: mode,
+            last_error: e instanceof Error ? e.message : "Send error",
+          }),
         });
       }
 
@@ -259,7 +373,7 @@ serve(async (req) => {
       await supabase.from("dealer_inquiry_campaigns").update({
         sent_count: sent,
         failed_count: failed,
-        status: sent > 0 ? "sent" : "failed",
+        status: sent > 0 ? "sending" : "failed",
       }).eq("id", campaign.id);
     }
 
@@ -297,7 +411,7 @@ serve(async (req) => {
       details: { brand, model, variant, color, sent, failed, campaign_id: campaign?.id, mode, template: metaTemplate, followup_scheduled: followupScheduled, errors: errors.slice(0, 20) },
     });
 
-    console.log(`Dealer inquiry broadcast (${mode}): ${sent} sent, ${failed} failed / ${phones.length}`);
+    console.log(`Dealer inquiry broadcast (${mode}): ${sent} submitted, ${failed} failed / ${phones.length}`);
 
     return new Response(JSON.stringify({
       success: true,
