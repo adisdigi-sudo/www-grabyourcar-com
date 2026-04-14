@@ -536,8 +536,31 @@ export function WaTemplateManager() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [submittingTemplateId, setSubmittingTemplateId] = useState<string | null>(null);
   const [isSavingTemplate, setIsSavingTemplate] = useState(false);
+  const [autoSyncActive, setAutoSyncActive] = useState(false);
 
   useEffect(() => { fetchAll(); }, []);
+
+  // Auto-sync: poll Meta every 30s when there are pending templates
+  useEffect(() => {
+    const hasPending = templates.some(t => t.status === "pending");
+    if (!hasPending) { setAutoSyncActive(false); return; }
+    setAutoSyncActive(true);
+    const interval = setInterval(async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("meta-templates", { body: { action: "sync_templates" } });
+        if (!error && data?.synced > 0) {
+          await fetchAll();
+          // Check if any pending became approved
+          const { data: updated } = await supabase.from("wa_templates").select("id, status, display_name").in("status", ["approved", "rejected"]);
+          const newlyApproved = (updated || []).filter(u => u.status === "approved" && templates.find(t => t.id === u.id && t.status === "pending"));
+          newlyApproved.forEach(t => toast.success(`✅ "${t.display_name}" approved by Meta — now sendable!`));
+          const newlyRejected = (updated || []).filter(u => u.status === "rejected" && templates.find(t => t.id === u.id && t.status === "pending"));
+          newlyRejected.forEach(t => toast.error(`❌ "${t.display_name}" rejected by Meta`));
+        }
+      } catch { /* silent */ }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [templates]);
 
   // Live validation
   const validationIssues = useMemo(() => {
@@ -582,8 +605,15 @@ export function WaTemplateManager() {
       const { data, error } = await supabase.functions.invoke("meta-templates", { body: { action: "submit_template", template_id: template.id } });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      toast.success("Submitted to Meta ✅");
+      toast.success("Submitted to Meta ✅ — Auto-sync will track approval status");
       await fetchAll();
+      // Trigger immediate sync after 5s to catch fast approvals
+      setTimeout(async () => {
+        try {
+          await supabase.functions.invoke("meta-templates", { body: { action: "sync_templates" } });
+          await fetchAll();
+        } catch { /* silent */ }
+      }, 5000);
     } catch (err: any) {
       toast.error(err.message || "Meta submission failed");
       await fetchAll();
@@ -740,9 +770,16 @@ export function WaTemplateManager() {
               <p className="text-xs text-muted-foreground">Create, validate, A/B test — strict Meta compliance</p>
             </div>
           </div>
-          <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={syncFromMeta} disabled={isSyncing}>
-            <RefreshCw className={cn("h-3.5 w-3.5", isSyncing && "animate-spin")} /> {isSyncing ? "Syncing…" : "Sync from Meta"}
-          </Button>
+          <div className="flex items-center gap-2">
+            {autoSyncActive && (
+              <Badge variant="outline" className="text-[10px] border-yellow-300 text-yellow-700 animate-pulse gap-1">
+                <RefreshCw className="h-3 w-3 animate-spin" /> Auto-Syncing (Pending templates)
+              </Badge>
+            )}
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={syncFromMeta} disabled={isSyncing}>
+              <RefreshCw className={cn("h-3.5 w-3.5", isSyncing && "animate-spin")} /> {isSyncing ? "Syncing…" : "Sync from Meta"}
+            </Button>
+          </div>
         </div>
       </div>
 
