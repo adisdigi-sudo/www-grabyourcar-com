@@ -4,27 +4,28 @@ import { Header } from "@/components/Header";
 import { RivianHero } from "@/components/RivianHero";
 import { CategoryGrid } from "@/components/CategoryGrid";
 import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
-const BrowseByBudget = lazy(() => import("@/components/BrowseByBudget").then(m => ({ default: m.BrowseByBudget })));
+import { BrowseByBudget } from "@/components/BrowseByBudget";
+import { CarListings } from "@/components/CarListings";
+import { LeadForm } from "@/components/LeadForm";
+import { Testimonials } from "@/components/Testimonials";
+import { TrustBadges } from "@/components/TrustBadges";
+import { Footer } from "@/components/Footer";
+import { FloatingCTA } from "@/components/FloatingCTA";
+import { CustomerStories } from "@/components/CustomerStories";
+import { DealerLocatorWidget } from "@/components/DealerLocatorWidget";
+import { CrossSellWidget } from "@/components/CrossSellWidget";
+import { HomepageSEOContent } from "@/components/HomepageSEOContent";
+import { EntryLeadCaptureModal } from "@/components/EntryLeadCaptureModal";
+import { ExitIntentPopup } from "@/components/ExitIntentPopup";
+import { DynamicHeroBanners, DynamicPromoBanners, DynamicFeaturedCars, DynamicTestimonials, DynamicCTABanners } from "@/components/DynamicHomepageContent";
 
-// Lazy-load below-the-fold sections to reduce initial bundle
-const CarListings = lazy(() => import("@/components/CarListings").then(m => ({ default: m.CarListings })));
 const EMICalculator = lazy(() => import("@/components/EMICalculator"));
-const LeadForm = lazy(() => import("@/components/LeadForm").then(m => ({ default: m.LeadForm })));
-const Testimonials = lazy(() => import("@/components/Testimonials").then(m => ({ default: m.Testimonials })));
-const TrustBadges = lazy(() => import("@/components/TrustBadges").then(m => ({ default: m.TrustBadges })));
-const Footer = lazy(() => import("@/components/Footer").then(m => ({ default: m.Footer })));
-const FloatingCTA = lazy(() => import("@/components/FloatingCTA").then(m => ({ default: m.FloatingCTA })));
-const CustomerStories = lazy(() => import("@/components/CustomerStories").then(m => ({ default: m.CustomerStories })));
-const DealerLocatorWidget = lazy(() => import("@/components/DealerLocatorWidget").then(m => ({ default: m.DealerLocatorWidget })));
-const CrossSellWidget = lazy(() => import("@/components/CrossSellWidget").then(m => ({ default: m.CrossSellWidget })));
-const HomepageSEOContent = lazy(() => import("@/components/HomepageSEOContent").then(m => ({ default: m.HomepageSEOContent })));
-const EntryLeadCaptureModal = lazy(() => import("@/components/EntryLeadCaptureModal").then(m => ({ default: m.EntryLeadCaptureModal })));
-const ExitIntentPopup = lazy(() => import("@/components/ExitIntentPopup").then(m => ({ default: m.ExitIntentPopup })));
-const DynamicHeroBanners = lazy(() => import("@/components/DynamicHomepageContent").then(m => ({ default: m.DynamicHeroBanners })));
-const DynamicPromoBanners = lazy(() => import("@/components/DynamicHomepageContent").then(m => ({ default: m.DynamicPromoBanners })));
-const DynamicFeaturedCars = lazy(() => import("@/components/DynamicHomepageContent").then(m => ({ default: m.DynamicFeaturedCars })));
-const DynamicTestimonials = lazy(() => import("@/components/DynamicHomepageContent").then(m => ({ default: m.DynamicTestimonials })));
-const DynamicCTABanners = lazy(() => import("@/components/DynamicHomepageContent").then(m => ({ default: m.DynamicCTABanners })));
+
+const SectionSkeleton = ({ label }: { label: string }) => (
+  <div className="flex min-h-[120px] items-center justify-center text-sm text-muted-foreground">
+    {label}
+  </div>
+);
 
 // Clean Rivian layout — fresh build v2
 
@@ -83,7 +84,7 @@ const Index = () => {
           </SectionErrorBoundary>
         </Suspense>
         
-        <Suspense fallback={null}>
+         <Suspense fallback={<SectionSkeleton label="Loading EMI calculator..." />}>
           {/* Dynamic Hero Banners from Admin */}
           <SectionErrorBoundary sectionName="dynamic-hero-banners" fallback={null}>
             <DynamicHeroBanners />
@@ -159,7 +160,7 @@ const Index = () => {
       </main>
       
       {/* Footer */}
-      <Suspense fallback={null}>
+       <Suspense fallback={<SectionSkeleton label="Loading footer..." />}>
         <SectionErrorBoundary sectionName="footer" fallback={null}>
           <Footer />
         </SectionErrorBoundary>
