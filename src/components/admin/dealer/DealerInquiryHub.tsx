@@ -72,6 +72,8 @@ export default function DealerInquiryHub() {
   const [bulkText, setBulkText] = useState("");
   const [bulkBrand, setBulkBrand] = useState("");
   const [addOpen, setAddOpen] = useState(false);
+  const [sendMode, setSendMode] = useState<"template_then_text" | "template_only" | "text_only">("template_then_text");
+  const [metaTemplate, setMetaTemplate] = useState("grabyourcarintroduction");
   const [addForm, setAddForm] = useState({ name: "", whatsapp_number: "", dealer_name: "", brand: "", city: "", state: "" });
 
   // Data queries
@@ -178,17 +180,17 @@ export default function DealerInquiryHub() {
   // SHOOT ALL — bulk send + schedule AI follow-up
   const shootAll = async () => {
     if (selectedIds.length === 0) { toast.error("Select at least one dealer"); return; }
-    if (!message.trim()) { toast.error("Write a message first"); return; }
+    if (sendMode !== "template_only" && !message.trim()) { toast.error("Write a message first"); return; }
+    if (!metaTemplate && sendMode !== "text_only") { toast.error("Select a Meta template"); return; }
     setSending(true);
     try {
       const selectedReps = reps.filter((r: any) => selectedIds.includes(r.id) && r.whatsapp_number);
       const phones = selectedReps.map((r: any) => r.whatsapp_number);
 
-      // 1. Send broadcast
       const { data, error } = await supabase.functions.invoke("dealer-inquiry-broadcast", {
         body: {
           phones,
-          message,
+          message: sendMode !== "template_only" ? message : "",
           brand: selectedBrand !== "all" ? selectedBrand : "All",
           model: selectedModel !== "all" ? selectedModel : null,
           variant: selectedVariant !== "all" ? selectedVariant : null,
@@ -196,6 +198,9 @@ export default function DealerInquiryHub() {
           ai_followup_enabled: aiFollowup,
           ai_followup_script: aiScript === "custom" ? customScript : AI_SCRIPTS.find(s => s.id === aiScript)?.script || "",
           ai_followup_delay_minutes: followupDelay,
+          template_name: sendMode !== "text_only" ? metaTemplate : null,
+          template_variables: [],
+          send_mode: sendMode,
           recipients: selectedReps.map((r: any) => ({
             dealer_rep_id: r.id,
             rep_name: r.name,
@@ -206,7 +211,7 @@ export default function DealerInquiryHub() {
       });
       if (error) throw error;
 
-      toast.success(`✅ Sent to ${data?.summary?.sent || 0} / ${phones.length} dealers!`);
+      toast.success(`✅ Sent to ${data?.summary?.sent || 0} / ${phones.length} dealers via ${sendMode === "template_only" ? "Template" : "Template + Text"}!`);
       if (aiFollowup) toast.info(`🤖 AI follow-up scheduled in ${followupDelay} minutes`);
       if (data?.summary?.failed > 0) toast.warning(`⚠️ ${data.summary.failed} failed`);
       setSelectedIds([]);
@@ -469,24 +474,65 @@ export default function DealerInquiryHub() {
                 <CardTitle className="flex items-center gap-2 text-lg"><Send className="h-5 w-5" /> Message</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
+                {/* Send Mode */}
                 <div>
-                  <Label className="text-xs">Template</Label>
-                  <Select value={templateType} onValueChange={applyTemplate}>
+                  <Label className="text-xs font-semibold">Send Mode</Label>
+                  <Select value={sendMode} onValueChange={(v: any) => setSendMode(v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {Object.entries(TEMPLATES).map(([k, v]) => (
-                        <SelectItem key={k} value={k}>{v.label}</SelectItem>
-                      ))}
+                      <SelectItem value="template_then_text">📋 Template + Text (Recommended)</SelectItem>
+                      <SelectItem value="template_only">📋 Template Only</SelectItem>
+                      <SelectItem value="text_only">✏️ Text Only (24hr window)</SelectItem>
                     </SelectContent>
                   </Select>
+                  {sendMode === "text_only" && (
+                    <p className="text-xs text-destructive mt-1">⚠️ Text only works if dealer messaged you in last 24 hours</p>
+                  )}
+                  {sendMode === "template_then_text" && (
+                    <p className="text-xs text-muted-foreground mt-1">✅ Template opens window → then sends your detailed text</p>
+                  )}
                 </div>
-                <div>
-                  <Label className="text-xs">Message</Label>
-                  <Textarea value={message} onChange={e => setMessage(e.target.value)} rows={8} placeholder="Select template or write custom..." className="font-mono text-xs" />
-                  <p className="text-xs text-muted-foreground mt-1">{message.length} chars</p>
-                </div>
+
+                {/* Meta Template */}
+                {sendMode !== "text_only" && (
+                  <div>
+                    <Label className="text-xs">Meta Approved Template *</Label>
+                    <Select value={metaTemplate} onValueChange={setMetaTemplate}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="grabyourcarintroduction">🤝 GrabYourCar Introduction</SelectItem>
+                        <SelectItem value="insurancefollowup">🛡️ Insurance Follow-up</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* Smart Template */}
+                {sendMode !== "template_only" && (
+                  <div>
+                    <Label className="text-xs">Smart Template</Label>
+                    <Select value={templateType} onValueChange={applyTemplate}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(TEMPLATES).map(([k, v]) => (
+                          <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* Message */}
+                {sendMode !== "template_only" && (
+                  <div>
+                    <Label className="text-xs">Detailed Message</Label>
+                    <Textarea value={message} onChange={e => setMessage(e.target.value)} rows={6} placeholder="Select template or write custom..." className="font-mono text-xs" />
+                    <p className="text-xs text-muted-foreground mt-1">{message.length} chars</p>
+                  </div>
+                )}
+
                 <div className="space-y-2">
-                  <Button className="w-full gap-2" size="lg" onClick={shootAll} disabled={sending || selectedIds.length === 0 || !message.trim()}>
+                  <Button className="w-full gap-2" size="lg" onClick={shootAll} disabled={sending || selectedIds.length === 0 || (sendMode !== "template_only" && !message.trim())}>
                     <Zap className="h-4 w-4" />
                     {sending ? "Sending..." : `🚀 Shoot All (${selectedIds.length})`}
                   </Button>
