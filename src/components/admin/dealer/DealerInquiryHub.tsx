@@ -72,7 +72,7 @@ export default function DealerInquiryHub() {
   const [bulkText, setBulkText] = useState("");
   const [bulkBrand, setBulkBrand] = useState("");
   const [addOpen, setAddOpen] = useState(false);
-  const [sendMode, setSendMode] = useState<"template_then_text" | "template_only" | "text_only">("template_then_text");
+  const [sendMode, setSendMode] = useState<"template_then_text" | "template_only" | "text_only">("text_only");
   const [metaTemplate, setMetaTemplate] = useState("grabyourcarintroduction");
   const [addForm, setAddForm] = useState({ name: "", whatsapp_number: "", dealer_name: "", brand: "", city: "", state: "" });
 
