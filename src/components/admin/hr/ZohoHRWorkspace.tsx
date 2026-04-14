@@ -36,6 +36,9 @@ import { HRHelpdeskModule } from "./HRHelpdeskModule";
 import { HROnboarding } from "./HROnboarding";
 import { TicketApprovalCenter } from "./TicketApprovalCenter";
 import { SalaryEngine } from "./SalaryEngine";
+import { EmployeeDocumentHub } from "./EmployeeDocumentHub";
+import { EmployeeProfileView } from "./EmployeeProfileView";
+import { EmployeeTargetDashboard } from "./EmployeeTargetDashboard";
 
 const initials = (name: string) => name?.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2) || "??";
 
@@ -43,6 +46,9 @@ const initials = (name: string) => name?.split(" ").map(w => w[0]).join("").toUp
 const SIDEBAR_ITEMS = [
   { id: "home", label: "Home", icon: Home },
   { id: "onboarding", label: "Onboarding", icon: UserPlus },
+  { id: "employee-directory", label: "Employee Directory", icon: Users },
+  { id: "document-hub", label: "Document Hub", icon: FileText },
+  { id: "targets", label: "Targets & Incentives", icon: Award },
   { id: "tickets", label: "Tickets & Approvals", icon: ListTodo },
   { id: "salary-engine", label: "Salary Engine", icon: IndianRupee },
   { id: "leave", label: "Leave Tracker", icon: Palmtree },
