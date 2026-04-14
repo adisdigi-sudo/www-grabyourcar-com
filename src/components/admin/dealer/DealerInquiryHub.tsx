@@ -480,16 +480,16 @@ export default function DealerInquiryHub() {
                   <Select value={sendMode} onValueChange={(v: any) => setSendMode(v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="template_then_text">📋 Template + Text (Recommended)</SelectItem>
+                      <SelectItem value="text_only">✏️ Direct Text (Recommended ✅)</SelectItem>
+                      <SelectItem value="template_then_text">📋 Template + Text</SelectItem>
                       <SelectItem value="template_only">📋 Template Only</SelectItem>
-                      <SelectItem value="text_only">✏️ Text Only (24hr window)</SelectItem>
                     </SelectContent>
                   </Select>
                   {sendMode === "text_only" && (
-                    <p className="text-xs text-destructive mt-1">⚠️ Text only works if dealer messaged you in last 24 hours</p>
+                    <p className="text-xs text-green-600 mt-1">✅ Direct text message — works reliably for new outreach</p>
                   )}
                   {sendMode === "template_then_text" && (
-                    <p className="text-xs text-muted-foreground mt-1">✅ Template opens window → then sends your detailed text</p>
+                    <p className="text-xs text-muted-foreground mt-1">⚠️ Template requires exact Meta format match (video header etc.)</p>
                   )}
                 </div>
 
