@@ -605,8 +605,15 @@ export function WaTemplateManager() {
       const { data, error } = await supabase.functions.invoke("meta-templates", { body: { action: "submit_template", template_id: template.id } });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      toast.success("Submitted to Meta ✅");
+      toast.success("Submitted to Meta ✅ — Auto-sync will track approval status");
       await fetchAll();
+      // Trigger immediate sync after 5s to catch fast approvals
+      setTimeout(async () => {
+        try {
+          await supabase.functions.invoke("meta-templates", { body: { action: "sync_templates" } });
+          await fetchAll();
+        } catch { /* silent */ }
+      }, 5000);
     } catch (err: any) {
       toast.error(err.message || "Meta submission failed");
       await fetchAll();
