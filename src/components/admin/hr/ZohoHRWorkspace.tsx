@@ -36,6 +36,9 @@ import { HRHelpdeskModule } from "./HRHelpdeskModule";
 import { HROnboarding } from "./HROnboarding";
 import { TicketApprovalCenter } from "./TicketApprovalCenter";
 import { SalaryEngine } from "./SalaryEngine";
+import { EmployeeDocumentHub } from "./EmployeeDocumentHub";
+import { EmployeeProfileView } from "./EmployeeProfileView";
+import { EmployeeTargetDashboard } from "./EmployeeTargetDashboard";
 
 const initials = (name: string) => name?.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2) || "??";
 
@@ -43,6 +46,9 @@ const initials = (name: string) => name?.split(" ").map(w => w[0]).join("").toUp
 const SIDEBAR_ITEMS = [
   { id: "home", label: "Home", icon: Home },
   { id: "onboarding", label: "Onboarding", icon: UserPlus },
+  { id: "employee-directory", label: "Employee Directory", icon: Users },
+  { id: "document-hub", label: "Document Hub", icon: FileText },
+  { id: "targets", label: "Targets & Incentives", icon: Award },
   { id: "tickets", label: "Tickets & Approvals", icon: ListTodo },
   { id: "salary-engine", label: "Salary Engine", icon: IndianRupee },
   { id: "leave", label: "Leave Tracker", icon: Palmtree },
@@ -157,6 +163,9 @@ export const ZohoHRWorkspace = () => {
   const renderModuleContent = () => {
     switch (sidebarActive) {
       case "onboarding": return <HROnboarding />;
+      case "employee-directory": return <EmployeeProfileView />;
+      case "document-hub": return <EmployeeDocumentHub />;
+      case "targets": return <EmployeeTargetDashboard />;
       case "tickets": return <TicketApprovalCenter />;
       case "salary-engine": return <SalaryEngine />;
       case "leave": return renderLeaveTracker();
@@ -175,6 +184,7 @@ export const ZohoHRWorkspace = () => {
       case "recruitment": return <HRRecruitmentModule />;
       case "workforce": return <HRWorkforceModule />;
       case "payroll": return <HRPayrollModule />;
+      case "hr-letters": return <EmployeeDocumentHub />;
       case "home":
       default:
         return renderHome();
