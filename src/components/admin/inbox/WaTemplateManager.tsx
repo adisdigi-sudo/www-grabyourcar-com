@@ -536,8 +536,31 @@ export function WaTemplateManager() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [submittingTemplateId, setSubmittingTemplateId] = useState<string | null>(null);
   const [isSavingTemplate, setIsSavingTemplate] = useState(false);
+  const [autoSyncActive, setAutoSyncActive] = useState(false);
 
   useEffect(() => { fetchAll(); }, []);
+
+  // Auto-sync: poll Meta every 30s when there are pending templates
+  useEffect(() => {
+    const hasPending = templates.some(t => t.status === "pending");
+    if (!hasPending) { setAutoSyncActive(false); return; }
+    setAutoSyncActive(true);
+    const interval = setInterval(async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("meta-templates", { body: { action: "sync_templates" } });
+        if (!error && data?.synced > 0) {
+          await fetchAll();
+          // Check if any pending became approved
+          const { data: updated } = await supabase.from("wa_templates").select("id, status, display_name").in("status", ["approved", "rejected"]);
+          const newlyApproved = (updated || []).filter(u => u.status === "approved" && templates.find(t => t.id === u.id && t.status === "pending"));
+          newlyApproved.forEach(t => toast.success(`✅ "${t.display_name}" approved by Meta — now sendable!`));
+          const newlyRejected = (updated || []).filter(u => u.status === "rejected" && templates.find(t => t.id === u.id && t.status === "pending"));
+          newlyRejected.forEach(t => toast.error(`❌ "${t.display_name}" rejected by Meta`));
+        }
+      } catch { /* silent */ }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [templates]);
 
   // Live validation
   const validationIssues = useMemo(() => {
