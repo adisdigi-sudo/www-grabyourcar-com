@@ -458,7 +458,6 @@ export const HROnboarding = () => {
             </div>
           </div>
         );
-      case 3:
       case 4:
         return (
           <div className="space-y-4">
@@ -471,7 +470,8 @@ export const HROnboarding = () => {
               <div><Label>Shift End</Label><Input type="time" value={form.shift_end || "18:00"} onChange={e => updateField("shift_end", e.target.value)} /></div>
               <div><Label>Probation End Date</Label><Input type="date" value={form.probation_end_date || ""} onChange={e => updateField("probation_end_date", e.target.value)} /></div>
             </div>
-
+          </div>
+        );
       case 5:
         return (
           <div className="space-y-4">
@@ -497,12 +497,18 @@ export const HROnboarding = () => {
                   <div><span className="text-muted-foreground">Vertical:</span> <strong>{verticals.find((v: any) => v.id === form.vertical_id)?.name || "—"}</strong></div>
                   <div><span className="text-muted-foreground">Net Salary:</span> <strong className="text-green-600">{fmt(calcNet)}/mo</strong></div>
                 </div>
-              <div className="grid grid-cols-2 gap-2 text-sm mt-2 pt-2 border-t">
+              </CardContent>
+            </Card>
+            <Card className="bg-muted/50">
+              <CardContent className="p-3">
+                <h4 className="font-semibold mb-2 text-sm">KYC Status</h4>
+                <div className="grid grid-cols-2 gap-2 text-sm">
                 <div><span className="text-muted-foreground">Aadhaar:</span> <strong>{form.aadhaar_number ? "✓ Collected" : "✗ Missing"}</strong></div>
                 <div><span className="text-muted-foreground">PAN:</span> <strong>{form.pan_number ? "✓ Collected" : "✗ Missing"}</strong></div>
                 <div><span className="text-muted-foreground">Bank:</span> <strong>{form.bank_account_number ? "✓ Collected" : "✗ Missing"}</strong></div>
                 <div><span className="text-muted-foreground">Source:</span> <strong>{form.recruitment_source || "—"}</strong></div>
-              </div>
+                </div>
+              </CardContent>
             </Card>
 
             <Card className="bg-blue-50 border-blue-200">
