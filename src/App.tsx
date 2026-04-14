@@ -8,9 +8,10 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { AdminSubdomainRouter } from "@/components/AdminSubdomainRouter";
 import { isAdminSubdomain } from "@/hooks/useAdminSubdomain";
 import { usePageViewTracking } from "@/hooks/usePageViewTracking";
-import { resetChunkLoadRecovery } from "@/lib/chunkLoadRecovery";
+import { scheduleChunkLoadRecoveryReset } from "@/lib/chunkLoadRecovery";
 import { withPreviewParams } from "@/lib/previewRouting";
 import { RouteProviderGate } from "@/components/app/RouteProviderGate";
+import { PublicRouteChrome, PublicRouteStructuredData } from "@/components/app/PublicRouteChrome";
 import AdminAuth from "./pages/AdminAuth";
 import AdminLayout from "./pages/AdminLayout";
 import AdminResetPassword from "./pages/AdminResetPassword";
@@ -20,13 +21,6 @@ import WorkspaceSelector from "./pages/WorkspaceSelector";
 // Only the homepage plus critical admin entry shells are statically imported
 // so /admin, /crm, /workspace, and document viewing never depend on a stale route chunk.
 import Index from "./pages/Index";
-
-import { FloatingCompareBar } from "./components/FloatingCompareBar";
-import { WhatsAppFloatingButton } from "./components/WhatsAppCTA";
-import { FloatingCallButton } from "./components/FloatingCallButton";
-import { CookieConsentBanner } from "./components/CookieConsentBanner";
-import { FloatingGetQuote } from "./components/FloatingGetQuote";
-import { SiteStructuredData } from "./components/seo/SiteStructuredData";
 
 // Public-facing pages stay lazy-loaded to keep the main site bundle small
 const Cars = lazy(() => import("./pages/Cars"));
@@ -118,13 +112,19 @@ const PageViewTracker = () => {
   usePageViewTracking(!isAdminExperience);
 
   useEffect(() => {
-    resetChunkLoadRecovery();
+    const resetTimer = scheduleChunkLoadRecoveryReset();
 
     console.info("[AppBootstrap] Root route shell mounted", {
       href: window.location.href,
       hostname: window.location.hostname,
       path: window.location.pathname,
     });
+
+    return () => {
+      if (resetTimer) {
+        window.clearTimeout(resetTimer);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -221,7 +221,7 @@ const RouteAwareStructuredData = ({ isChromelessExperience }: { isChromelessExpe
     return null;
   }
 
-  return <SiteStructuredData />;
+  return <PublicRouteStructuredData />;
 };
 
 const RouteAwareChrome = ({ isChromelessExperience }: { isChromelessExperience: boolean }) => {
@@ -229,15 +229,7 @@ const RouteAwareChrome = ({ isChromelessExperience }: { isChromelessExperience: 
     return null;
   }
 
-  return (
-    <>
-      <FloatingCompareBar />
-      <WhatsAppFloatingButton />
-      <FloatingCallButton />
-      <FloatingGetQuote />
-      <CookieConsentBanner />
-    </>
-  );
+  return <PublicRouteChrome />;
 };
 
 const App = () => (

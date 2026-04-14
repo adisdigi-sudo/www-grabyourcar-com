@@ -5,28 +5,53 @@ import { HelmetProvider } from "react-helmet-async";
 import "./index.css";
 import App from "./App";
 import { AppErrorBoundary } from "@/components/AppErrorBoundary";
-import { isDynamicImportError, recoverFromChunkLoadError } from "@/lib/chunkLoadRecovery";
+import { isChunkLoadRecoveryExhausted, isDynamicImportError, recoverFromChunkLoadError, resetChunkLoadRecovery } from "@/lib/chunkLoadRecovery";
 import { Loader2, WifiOff } from "lucide-react";
 
 let hasTriggeredChunkRecovery = false;
 
 const DEV_SERVER_STATUS_EVENT = "lovable:dev-server-status";
+const CHUNK_RECOVERY_STATUS_EVENT = "lovable:chunk-recovery-status";
 const DEV_SERVER_PENDING_RELOAD_KEY = "lovable_dev_server_pending_reload";
 const DEV_SERVER_LAST_RELOAD_KEY = "lovable_dev_server_last_reload";
 const DEV_SERVER_RELOAD_COOLDOWN_MS = 5000;
 
-const attemptChunkRecovery = (error: unknown, source: string) => {
+type ChunkRecoveryAttemptResult = "recovered" | "exhausted" | "ignored";
+
+const dispatchChunkRecoveryStatus = (status: "recovering" | "exhausted", source: string) => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.dispatchEvent(
+    new CustomEvent(CHUNK_RECOVERY_STATUS_EVENT, {
+      detail: { status, source },
+    }),
+  );
+};
+
+const attemptChunkRecovery = (error: unknown, source: string): ChunkRecoveryAttemptResult => {
   if (hasTriggeredChunkRecovery || !isDynamicImportError(error)) {
-    return false;
+    return "ignored";
   }
 
-  hasTriggeredChunkRecovery = recoverFromChunkLoadError();
+  const recovered = recoverFromChunkLoadError();
 
-  if (hasTriggeredChunkRecovery) {
+  if (recovered) {
+    hasTriggeredChunkRecovery = true;
+    dispatchChunkRecoveryStatus("recovering", source);
+
     console.warn("[Bootstrap] Attempting chunk recovery", { source, error });
+    return "recovered";
   }
 
-  return hasTriggeredChunkRecovery;
+  if (isChunkLoadRecoveryExhausted()) {
+    dispatchChunkRecoveryStatus("exhausted", source);
+    console.error("[Bootstrap] Chunk recovery attempts exhausted", { source, error });
+    return "exhausted";
+  }
+
+  return "ignored";
 };
 
 const markDevServerPendingReload = () => {
@@ -68,9 +93,9 @@ if (typeof window !== "undefined") {
 
     preloadEvent.preventDefault();
 
-    const recovered = attemptChunkRecovery(preloadEvent.payload, "window.vite:preloadError");
+    const recoveryResult = attemptChunkRecovery(preloadEvent.payload, "window.vite:preloadError");
 
-    if (!recovered) {
+    if (recoveryResult === "ignored") {
       window.location.reload();
     }
   });
@@ -188,6 +213,66 @@ const DevServerStatusOverlay = () => {
   );
 };
 
+const ChunkRecoveryOverlay = () => {
+  const [recoverySource, setRecoverySource] = useState<string | null>(() =>
+    typeof window !== "undefined" && isChunkLoadRecoveryExhausted() ? "startup" : null,
+  );
+
+  useEffect(() => {
+    const handleStatus = (event: Event) => {
+      const detail = (event as CustomEvent<{ status?: "recovering" | "exhausted"; source?: string }>).detail;
+
+      if (detail?.status === "exhausted") {
+        setRecoverySource(detail.source ?? "runtime");
+        return;
+      }
+
+      if (detail?.status === "recovering") {
+        setRecoverySource(null);
+      }
+    };
+
+    window.addEventListener(CHUNK_RECOVERY_STATUS_EVENT, handleStatus as EventListener);
+
+    return () => {
+      window.removeEventListener(CHUNK_RECOVERY_STATUS_EVENT, handleStatus as EventListener);
+    };
+  }, []);
+
+  if (!recoverySource) {
+    return null;
+  }
+
+  const handleManualRefresh = () => {
+    resetChunkLoadRecovery();
+
+    const nextUrl = new URL(window.location.href);
+    nextUrl.searchParams.set("__v", Date.now().toString());
+    window.location.replace(nextUrl.toString());
+  };
+
+  return (
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-background/95 px-6 backdrop-blur-sm">
+      <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-8 text-center text-card-foreground shadow-sm">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+          <WifiOff className="h-6 w-6" />
+        </div>
+        <h2 className="text-lg font-semibold">Latest update got stuck</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          We stopped the auto-reload loop so the screen does not go blank again. Refresh once to load a clean bundle.
+        </p>
+        <button
+          type="button"
+          onClick={handleManualRefresh}
+          className="mt-5 inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+        >
+          Reload safely
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const SafeTelemetry = () => {
   const [telemetry, setTelemetry] = useState<null | {
     Analytics: React.ComponentType;
@@ -262,6 +347,7 @@ createRoot(rootElement).render(
         <App />
         <SafeTelemetry />
         <DevServerStatusOverlay />
+        <ChunkRecoveryOverlay />
       </ThemeProvider>
     </HelmetProvider>
   </AppErrorBoundary>

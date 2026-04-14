@@ -20,7 +20,8 @@ export const CompareProvider = ({ children }: { children: ReactNode }) => {
       (path) => window.location.pathname === path || window.location.pathname.startsWith(`${path}/`)
     );
   const [selectedCarIds, setSelectedCarIds] = useState<string[]>([]);
-  const { data: dbCars = [] } = useCars({ useDatabase: true, enabled: !isAdminPath });
+  const shouldLoadSelectedCars = !isAdminPath && selectedCarIds.length > 0;
+  const { data: dbCars = [] } = useCars({ useDatabase: true, enabled: shouldLoadSelectedCars });
 
   // Normalize ID to string for consistent comparison
   const normalizeId = (id: string | number): string => String(id);

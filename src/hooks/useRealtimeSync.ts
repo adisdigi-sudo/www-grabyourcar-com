@@ -59,10 +59,14 @@ const TABLE_QUERY_KEY_MAP: Record<string, string[]> = {
  * Hook to enable real-time synchronization across the entire app.
  * Call this once at the app root level.
  */
-export function useGlobalRealtimeSync() {
+export function useGlobalRealtimeSync(enabled: boolean = true) {
   const queryClient = useQueryClient();
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
     const isAdminPath =
       typeof window !== 'undefined' &&
       ['/crm', '/crm-auth', '/crm-reset-password', '/workspace', '/admin', '/admin-auth', '/admin-reset-password'].some(
@@ -74,36 +78,33 @@ export function useGlobalRealtimeSync() {
     }
 
     console.log('[Realtime] Setting up global sync...');
-    
-    const channels = REALTIME_TABLES.map(table => {
-      return supabase
-        .channel(`realtime-${table}`)
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table },
-          (payload) => {
-            console.log(`[Realtime] Change detected in ${table}:`, payload.eventType);
-            
-            // Invalidate relevant queries
-            const queryKeys = TABLE_QUERY_KEY_MAP[table] || [];
-            queryKeys.forEach(key => {
-              queryClient.invalidateQueries({ queryKey: [key] });
-            });
-          }
-        )
-        .subscribe((status) => {
-          if (status === 'SUBSCRIBED') {
-            console.log(`[Realtime] ${table} subscribed`);
-          }
-        });
+
+    const channelName = `realtime-public-global-${Date.now()}`;
+    const channel = REALTIME_TABLES.reduce((realtimeChannel, table) => {
+      return realtimeChannel.on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table },
+        (payload) => {
+          console.log(`[Realtime] Change detected in ${table}:`, payload.eventType);
+
+          const queryKeys = TABLE_QUERY_KEY_MAP[table] || [];
+          queryKeys.forEach((key) => {
+            queryClient.invalidateQueries({ queryKey: [key] });
+          });
+        }
+      );
+    }, supabase.channel(channelName));
+
+    channel.subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        console.log('[Realtime] public sync subscribed');
+      }
     });
 
     return () => {
-      channels.forEach(channel => {
-        supabase.removeChannel(channel);
-      });
+      supabase.removeChannel(channel);
     };
-  }, [queryClient]);
+  }, [enabled, queryClient]);
 }
 
 /**
