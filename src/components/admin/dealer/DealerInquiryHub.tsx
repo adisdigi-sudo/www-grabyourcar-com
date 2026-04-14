@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -140,7 +140,28 @@ export default function DealerInquiryHub() {
         .select("*").order("created_at", { ascending: false }).limit(20);
       return data || [];
     },
+    refetchInterval: 3000,
   });
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("dealer-inquiry-live-sync")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "dealer_inquiry_campaigns" },
+        () => qc.invalidateQueries({ queryKey: ["dealer-inquiry-campaigns"] })
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "dealer_inquiry_recipients" },
+        () => qc.invalidateQueries({ queryKey: ["dealer-inquiry-campaigns"] })
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [qc]);
 
   const states = useMemo(() => [...new Set(reps.map((r: any) => r.state).filter(Boolean))].sort(), [reps]);
   const cities = useMemo(() => [...new Set(reps.map((r: any) => r.city).filter(Boolean))].sort(), [reps]);
@@ -216,13 +237,13 @@ export default function DealerInquiryHub() {
       const modeLabel = sendMode === "template_only"
         ? "Template"
         : sendMode === "text_only"
-          ? "Direct Text"
+          ? "Auto Send"
           : "Template + Text";
 
       if (sentCount > 0) {
-        toast.success(`✅ Sent to ${sentCount} / ${phones.length} dealers via ${modeLabel}!`);
+        toast.success(`✅ Submitted to Meta for ${sentCount} / ${phones.length} dealers via ${modeLabel}`);
         if (data?.followup_scheduled) {
-          toast.info(`🤖 AI follow-up scheduled in ${followupDelay} minutes`);
+          toast.info(`🤖 AI follow-up will wait for delivery confirmation`);
         }
         setSelectedIds([]);
       } else {
@@ -495,13 +516,13 @@ export default function DealerInquiryHub() {
                   <Select value={sendMode} onValueChange={(v: any) => setSendMode(v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="text_only">✏️ Direct Text (Recommended ✅)</SelectItem>
+                        <SelectItem value="text_only">⚡ Auto Send (template if needed)</SelectItem>
                       <SelectItem value="template_then_text">📋 Template + Text</SelectItem>
                       <SelectItem value="template_only">📋 Template Only</SelectItem>
                     </SelectContent>
                   </Select>
                   {sendMode === "text_only" && (
-                    <p className="text-xs text-green-600 mt-1">✅ Direct text message — works reliably for new outreach</p>
+                    <p className="text-xs text-green-600 mt-1">✅ Sends direct text inside active chat, otherwise auto-opens with an approved template first</p>
                   )}
                   {sendMode === "template_then_text" && (
                     <p className="text-xs text-muted-foreground mt-1">⚠️ Template requires exact Meta format match (video header etc.)</p>

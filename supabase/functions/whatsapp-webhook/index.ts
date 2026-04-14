@@ -5,6 +5,118 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function normalizeDealerPhone(phone: string | null | undefined) {
+  const digits = String(phone || "").replace(/\D/g, "").replace(/^0+/, "");
+  if (digits.startsWith("91") && digits.length === 12) return digits.slice(2);
+  return digits;
+}
+
+function toWebhookIso(timestamp?: string) {
+  return timestamp
+    ? new Date(parseInt(timestamp, 10) * 1000).toISOString()
+    : new Date().toISOString();
+}
+
+function mergeJsonObject(base: unknown, patch: Record<string, unknown>) {
+  return {
+    ...(base && typeof base === "object" ? base as Record<string, unknown> : {}),
+    ...patch,
+  };
+}
+
+async function syncDealerInquiryCampaignCounts(supabase: any, campaignId: string) {
+  const { data: recipients } = await supabase
+    .from("dealer_inquiry_recipients")
+    .select("send_status, replied_at")
+    .eq("campaign_id", campaignId);
+
+  if (!recipients) return;
+
+  const sentCount = recipients.filter((row: any) => ["submitted", "sent", "delivered", "read"].includes(row.send_status || "")).length;
+  const failedCount = recipients.filter((row: any) => ["failed", "invalid"].includes(row.send_status || "")).length;
+  const repliedCount = recipients.filter((row: any) => Boolean(row.replied_at)).length;
+  const awaitingMetaStatus = recipients.some((row: any) => ["submitted", "sent"].includes(row.send_status || ""));
+
+  await supabase.from("dealer_inquiry_campaigns").update({
+    sent_count: sentCount,
+    failed_count: failedCount,
+    replied_count: repliedCount,
+    status: awaitingMetaStatus ? "sending" : sentCount > 0 ? "completed" : failedCount > 0 ? "failed" : "sending",
+  }).eq("id", campaignId);
+}
+
+async function syncDealerRecipientStatus(supabase: any, statusUpdate: any) {
+  const shortPhone = normalizeDealerPhone(statusUpdate.recipient_id);
+  if (!shortPhone) return;
+
+  const { data: recentRecipients } = await supabase
+    .from("dealer_inquiry_recipients")
+    .select("id, campaign_id, send_status, sent_at, qualification_data")
+    .eq("phone", shortPhone)
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  if (!recentRecipients?.length) return;
+
+  const matchedRecipient = recentRecipients.find((row: any) => {
+    const tracking = row.qualification_data || {};
+    return tracking.provider_message_id === statusUpdate.id
+      || tracking.text_provider_message_id === statusUpdate.id
+      || tracking.template_provider_message_id === statusUpdate.id;
+  }) || recentRecipients.find((row: any) => [null, "submitted", "sent"].includes(row.send_status));
+
+  if (!matchedRecipient) return;
+
+  const errorInfo = statusUpdate.errors?.[0];
+  const statusTime = toWebhookIso(statusUpdate.timestamp);
+  const updates: Record<string, unknown> = {
+    qualification_data: mergeJsonObject(matchedRecipient.qualification_data, {
+      provider_status: statusUpdate.status,
+      provider_status_at: statusTime,
+      last_error: errorInfo?.message || errorInfo?.title || null,
+      error_code: errorInfo?.code ? String(errorInfo.code) : null,
+    }),
+  };
+
+  if (statusUpdate.status === "sent") {
+    updates.send_status = "sent";
+    updates.sent_at = matchedRecipient.sent_at || statusTime;
+  } else if (statusUpdate.status === "delivered") {
+    updates.send_status = "delivered";
+    updates.delivered_at = statusTime;
+  } else if (statusUpdate.status === "read") {
+    updates.send_status = "read";
+    updates.delivered_at = statusTime;
+  } else if (statusUpdate.status === "failed") {
+    updates.send_status = "failed";
+  }
+
+  await supabase.from("dealer_inquiry_recipients").update(updates).eq("id", matchedRecipient.id);
+  await syncDealerInquiryCampaignCounts(supabase, matchedRecipient.campaign_id);
+}
+
+async function syncDealerReply(supabase: any, phone: string, messageText: string) {
+  const shortPhone = normalizeDealerPhone(phone);
+  if (!shortPhone || !messageText) return;
+
+  const { data: recentRecipients } = await supabase
+    .from("dealer_inquiry_recipients")
+    .select("id, campaign_id, replied_at")
+    .eq("phone", shortPhone)
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  const matchedRecipient = recentRecipients?.find((row: any) => !row.replied_at) || recentRecipients?.[0];
+  if (!matchedRecipient) return;
+
+  await supabase.from("dealer_inquiry_recipients").update({
+    replied_at: new Date().toISOString(),
+    reply_message: messageText,
+  }).eq("id", matchedRecipient.id);
+
+  await syncDealerInquiryCampaignCounts(supabase, matchedRecipient.campaign_id);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -60,9 +172,7 @@ Deno.serve(async (req) => {
       if (value.statuses?.length > 0) {
         for (const statusUpdate of value.statuses) {
           const updates: Record<string, any> = { status: statusUpdate.status };
-          const timestamp = statusUpdate.timestamp
-            ? new Date(parseInt(statusUpdate.timestamp) * 1000).toISOString()
-            : new Date().toISOString();
+          const timestamp = toWebhookIso(statusUpdate.timestamp);
 
           if (statusUpdate.status === "sent") updates.sent_at = timestamp;
           else if (statusUpdate.status === "delivered") { updates.delivered_at = timestamp; updates.status_updated_at = timestamp; }
@@ -76,6 +186,7 @@ Deno.serve(async (req) => {
 
           await supabase.from("wa_message_logs").update(updates).eq("provider_message_id", statusUpdate.id);
           await supabase.from("wa_inbox_messages").update(updates).eq("wa_message_id", statusUpdate.id);
+          await syncDealerRecipientStatus(supabase, statusUpdate);
         }
         return new Response(JSON.stringify({ success: true, processed: "statuses" }), {
           status: 200,
@@ -172,6 +283,8 @@ Deno.serve(async (req) => {
 
           // ── Upsert wa_contacts ──
           const cleanPhone = from.replace(/^91/, "");
+          await syncDealerReply(supabase, from, messageText);
+
           const { data: existingContact } = await supabase
             .from("wa_contacts")
             .select("id")
