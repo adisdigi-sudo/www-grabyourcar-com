@@ -763,9 +763,16 @@ export function WaTemplateManager() {
               <p className="text-xs text-muted-foreground">Create, validate, A/B test — strict Meta compliance</p>
             </div>
           </div>
-          <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={syncFromMeta} disabled={isSyncing}>
-            <RefreshCw className={cn("h-3.5 w-3.5", isSyncing && "animate-spin")} /> {isSyncing ? "Syncing…" : "Sync from Meta"}
-          </Button>
+          <div className="flex items-center gap-2">
+            {autoSyncActive && (
+              <Badge variant="outline" className="text-[10px] border-yellow-300 text-yellow-700 animate-pulse gap-1">
+                <RefreshCw className="h-3 w-3 animate-spin" /> Auto-Syncing (Pending templates)
+              </Badge>
+            )}
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={syncFromMeta} disabled={isSyncing}>
+              <RefreshCw className={cn("h-3.5 w-3.5", isSyncing && "animate-spin")} /> {isSyncing ? "Syncing…" : "Sync from Meta"}
+            </Button>
+          </div>
         </div>
       </div>
 
