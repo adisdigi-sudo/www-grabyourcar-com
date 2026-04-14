@@ -4736,6 +4736,147 @@ export type Database = {
           },
         ]
       }
+      dealer_inquiry_campaigns: {
+        Row: {
+          ai_followup_delay_minutes: number | null
+          ai_followup_enabled: boolean | null
+          ai_followup_script: string | null
+          brand: string | null
+          campaign_name: string
+          color: string | null
+          created_at: string | null
+          created_by: string | null
+          failed_count: number | null
+          id: string
+          message_template: string
+          model: string | null
+          replied_count: number | null
+          sent_count: number | null
+          status: string | null
+          template_type: string | null
+          total_dealers: number | null
+          updated_at: string | null
+          variant: string | null
+        }
+        Insert: {
+          ai_followup_delay_minutes?: number | null
+          ai_followup_enabled?: boolean | null
+          ai_followup_script?: string | null
+          brand?: string | null
+          campaign_name: string
+          color?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          failed_count?: number | null
+          id?: string
+          message_template: string
+          model?: string | null
+          replied_count?: number | null
+          sent_count?: number | null
+          status?: string | null
+          template_type?: string | null
+          total_dealers?: number | null
+          updated_at?: string | null
+          variant?: string | null
+        }
+        Update: {
+          ai_followup_delay_minutes?: number | null
+          ai_followup_enabled?: boolean | null
+          ai_followup_script?: string | null
+          brand?: string | null
+          campaign_name?: string
+          color?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          failed_count?: number | null
+          id?: string
+          message_template?: string
+          model?: string | null
+          replied_count?: number | null
+          sent_count?: number | null
+          status?: string | null
+          template_type?: string | null
+          total_dealers?: number | null
+          updated_at?: string | null
+          variant?: string | null
+        }
+        Relationships: []
+      }
+      dealer_inquiry_recipients: {
+        Row: {
+          ai_followup_reply: string | null
+          ai_followup_sent: boolean | null
+          ai_followup_sent_at: string | null
+          ai_qualified: boolean | null
+          campaign_id: string
+          created_at: string | null
+          dealer_name: string | null
+          dealer_rep_id: string | null
+          delivered_at: string | null
+          id: string
+          phone: string
+          qualification_data: Json | null
+          rep_name: string | null
+          replied_at: string | null
+          reply_message: string | null
+          send_status: string | null
+          sent_at: string | null
+        }
+        Insert: {
+          ai_followup_reply?: string | null
+          ai_followup_sent?: boolean | null
+          ai_followup_sent_at?: string | null
+          ai_qualified?: boolean | null
+          campaign_id: string
+          created_at?: string | null
+          dealer_name?: string | null
+          dealer_rep_id?: string | null
+          delivered_at?: string | null
+          id?: string
+          phone: string
+          qualification_data?: Json | null
+          rep_name?: string | null
+          replied_at?: string | null
+          reply_message?: string | null
+          send_status?: string | null
+          sent_at?: string | null
+        }
+        Update: {
+          ai_followup_reply?: string | null
+          ai_followup_sent?: boolean | null
+          ai_followup_sent_at?: string | null
+          ai_qualified?: boolean | null
+          campaign_id?: string
+          created_at?: string | null
+          dealer_name?: string | null
+          dealer_rep_id?: string | null
+          delivered_at?: string | null
+          id?: string
+          phone?: string
+          qualification_data?: Json | null
+          rep_name?: string | null
+          replied_at?: string | null
+          reply_message?: string | null
+          send_status?: string | null
+          sent_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dealer_inquiry_recipients_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "dealer_inquiry_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dealer_inquiry_recipients_dealer_rep_id_fkey"
+            columns: ["dealer_rep_id"]
+            isOneToOne: false
+            referencedRelation: "dealer_representatives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dealer_inventory: {
         Row: {
           brand: string
