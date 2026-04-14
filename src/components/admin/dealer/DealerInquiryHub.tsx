@@ -180,17 +180,17 @@ export default function DealerInquiryHub() {
   // SHOOT ALL — bulk send + schedule AI follow-up
   const shootAll = async () => {
     if (selectedIds.length === 0) { toast.error("Select at least one dealer"); return; }
-    if (!message.trim()) { toast.error("Write a message first"); return; }
+    if (sendMode !== "template_only" && !message.trim()) { toast.error("Write a message first"); return; }
+    if (!metaTemplate && sendMode !== "text_only") { toast.error("Select a Meta template"); return; }
     setSending(true);
     try {
       const selectedReps = reps.filter((r: any) => selectedIds.includes(r.id) && r.whatsapp_number);
       const phones = selectedReps.map((r: any) => r.whatsapp_number);
 
-      // 1. Send broadcast
       const { data, error } = await supabase.functions.invoke("dealer-inquiry-broadcast", {
         body: {
           phones,
-          message,
+          message: sendMode !== "template_only" ? message : "",
           brand: selectedBrand !== "all" ? selectedBrand : "All",
           model: selectedModel !== "all" ? selectedModel : null,
           variant: selectedVariant !== "all" ? selectedVariant : null,
@@ -198,6 +198,9 @@ export default function DealerInquiryHub() {
           ai_followup_enabled: aiFollowup,
           ai_followup_script: aiScript === "custom" ? customScript : AI_SCRIPTS.find(s => s.id === aiScript)?.script || "",
           ai_followup_delay_minutes: followupDelay,
+          template_name: sendMode !== "text_only" ? metaTemplate : null,
+          template_variables: [],
+          send_mode: sendMode,
           recipients: selectedReps.map((r: any) => ({
             dealer_rep_id: r.id,
             rep_name: r.name,
@@ -208,7 +211,7 @@ export default function DealerInquiryHub() {
       });
       if (error) throw error;
 
-      toast.success(`✅ Sent to ${data?.summary?.sent || 0} / ${phones.length} dealers!`);
+      toast.success(`✅ Sent to ${data?.summary?.sent || 0} / ${phones.length} dealers via ${sendMode === "template_only" ? "Template" : "Template + Text"}!`);
       if (aiFollowup) toast.info(`🤖 AI follow-up scheduled in ${followupDelay} minutes`);
       if (data?.summary?.failed > 0) toast.warning(`⚠️ ${data.summary.failed} failed`);
       setSelectedIds([]);
