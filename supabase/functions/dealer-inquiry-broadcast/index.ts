@@ -263,8 +263,10 @@ serve(async (req) => {
       }).eq("id", campaign.id);
     }
 
-    // Schedule AI follow-up if enabled
-    if (ai_followup_enabled && campaign?.id && sent > 0) {
+    const followupScheduled = Boolean(ai_followup_enabled && campaign?.id && sent > 0);
+
+    // Schedule AI follow-up if enabled and at least one message really sent
+    if (followupScheduled) {
       const delayMs = (ai_followup_delay_minutes || 3) * 60 * 1000;
       const followupUrl = `${SUPABASE_URL}/functions/v1/dealer-ai-followup`;
       const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
@@ -292,7 +294,7 @@ serve(async (req) => {
       recipient_count: phones.length,
       sent_by: "admin",
       status: failed === phones.length ? "failed" : "sent",
-      details: { brand, model, variant, color, sent, failed, campaign_id: campaign?.id, mode, template: metaTemplate, errors: errors.slice(0, 20) },
+      details: { brand, model, variant, color, sent, failed, campaign_id: campaign?.id, mode, template: metaTemplate, followup_scheduled: followupScheduled, errors: errors.slice(0, 20) },
     });
 
     console.log(`Dealer inquiry broadcast (${mode}): ${sent} sent, ${failed} failed / ${phones.length}`);
@@ -301,6 +303,7 @@ serve(async (req) => {
       success: true,
       campaign_id: campaign?.id,
       summary: { total: phones.length, sent, failed, mode },
+      followup_scheduled: followupScheduled,
     }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error) {
     console.error("Dealer inquiry broadcast error:", error);
