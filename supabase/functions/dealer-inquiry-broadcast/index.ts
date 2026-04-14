@@ -31,7 +31,11 @@ serve(async (req) => {
     }
 
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
-    const { phones, message, brand } = await req.json();
+    const {
+      phones, message, brand, model, variant, color,
+      ai_followup_enabled, ai_followup_script, ai_followup_delay_minutes,
+      recipients,
+    } = await req.json();
 
     if (!phones || !Array.isArray(phones) || phones.length === 0) {
       return new Response(JSON.stringify({ error: "phones array required" }), {
@@ -44,15 +48,47 @@ serve(async (req) => {
       });
     }
 
+    // Create campaign record
+    const campaignName = `${brand || "All"} ${model || ""} ${variant || ""} — ${new Date().toLocaleDateString("en-IN")}`.trim();
+    const { data: campaign } = await supabase.from("dealer_inquiry_campaigns").insert({
+      campaign_name: campaignName,
+      brand: brand || null,
+      model: model || null,
+      variant: variant || null,
+      color: color || null,
+      message_template: message,
+      total_dealers: phones.length,
+      ai_followup_enabled: ai_followup_enabled || false,
+      ai_followup_script: ai_followup_script || null,
+      ai_followup_delay_minutes: ai_followup_delay_minutes || 3,
+      status: "sending",
+    }).select("id").single();
+
     let sent = 0, failed = 0;
     const errors: string[] = [];
+    const recipientRows: any[] = [];
 
-    for (const rawPhone of phones) {
+    for (let i = 0; i < phones.length; i++) {
+      const rawPhone = phones[i];
       const phone = normalizePhone(rawPhone);
-      if (!phone.valid) { failed++; errors.push(`Invalid: ${rawPhone}`); continue; }
+      const recipientInfo = recipients?.[i] || {};
+
+      if (!phone.valid) {
+        failed++;
+        errors.push(`Invalid: ${rawPhone}`);
+        recipientRows.push({
+          campaign_id: campaign?.id,
+          dealer_rep_id: recipientInfo.dealer_rep_id || null,
+          dealer_name: recipientInfo.dealer_name || null,
+          rep_name: recipientInfo.rep_name || null,
+          phone: rawPhone,
+          send_status: "invalid",
+        });
+        continue;
+      }
 
       try {
-        const url = `https://graph.facebook.com/v21.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
+        const url = `https://graph.facebook.com/v25.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
         const resp = await fetch(url, {
           method: "POST",
           headers: {
@@ -71,33 +107,97 @@ serve(async (req) => {
         const result = await resp.json();
         if (resp.ok && result.messages?.[0]?.id) {
           sent++;
+          recipientRows.push({
+            campaign_id: campaign?.id,
+            dealer_rep_id: recipientInfo.dealer_rep_id || null,
+            dealer_name: recipientInfo.dealer_name || null,
+            rep_name: recipientInfo.rep_name || null,
+            phone: rawPhone,
+            send_status: "sent",
+            sent_at: new Date().toISOString(),
+          });
         } else {
           failed++;
-          errors.push(`${rawPhone}: ${result.error?.message || "Unknown error"}`);
+          errors.push(`${rawPhone}: ${result.error?.message || "Unknown"}`);
+          recipientRows.push({
+            campaign_id: campaign?.id,
+            dealer_rep_id: recipientInfo.dealer_rep_id || null,
+            dealer_name: recipientInfo.dealer_name || null,
+            rep_name: recipientInfo.rep_name || null,
+            phone: rawPhone,
+            send_status: "failed",
+          });
         }
       } catch (e) {
         failed++;
         errors.push(`${rawPhone}: ${e instanceof Error ? e.message : "Send error"}`);
+        recipientRows.push({
+          campaign_id: campaign?.id,
+          dealer_rep_id: recipientInfo.dealer_rep_id || null,
+          phone: rawPhone,
+          send_status: "failed",
+        });
       }
 
-      // Rate limit: 200ms between messages
       await new Promise(r => setTimeout(r, 200));
     }
 
-    // Log to dealer_broadcast_logs
+    // Insert recipient tracking rows
+    if (campaign?.id && recipientRows.length > 0) {
+      await supabase.from("dealer_inquiry_recipients").insert(recipientRows);
+    }
+
+    // Update campaign counts
+    if (campaign?.id) {
+      await supabase.from("dealer_inquiry_campaigns").update({
+        sent_count: sent,
+        failed_count: failed,
+        status: sent > 0 ? "sent" : "failed",
+      }).eq("id", campaign.id);
+    }
+
+    // Schedule AI follow-up if enabled
+    if (ai_followup_enabled && campaign?.id && sent > 0) {
+      const delayMs = (ai_followup_delay_minutes || 3) * 60 * 1000;
+      // Use edge function self-invoke with delay via setTimeout pattern
+      // In production, this would use pg_cron. For now, fire-and-forget delayed call.
+      const followupUrl = `${SUPABASE_URL}/functions/v1/dealer-ai-followup`;
+      const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
+      
+      setTimeout(async () => {
+        try {
+          await fetch(followupUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${anonKey}`,
+            },
+            body: JSON.stringify({ campaign_id: campaign.id }),
+          });
+          console.log(`AI follow-up triggered for campaign ${campaign.id}`);
+        } catch (e) {
+          console.error("Failed to trigger AI follow-up:", e);
+        }
+      }, delayMs);
+
+      console.log(`AI follow-up scheduled in ${ai_followup_delay_minutes} minutes for campaign ${campaign.id}`);
+    }
+
+    // Legacy log
     await supabase.from("dealer_broadcast_logs").insert({
       broadcast_type: "dealer_inquiry",
       message_template: message,
       recipient_count: phones.length,
       sent_by: "admin",
       status: failed === phones.length ? "failed" : "sent",
-      details: { brand, sent, failed, errors: errors.slice(0, 20) },
+      details: { brand, model, variant, color, sent, failed, campaign_id: campaign?.id, errors: errors.slice(0, 20) },
     });
 
     console.log(`Dealer inquiry broadcast: ${sent} sent, ${failed} failed / ${phones.length}`);
 
     return new Response(JSON.stringify({
       success: true,
+      campaign_id: campaign?.id,
       summary: { total: phones.length, sent, failed },
     }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error) {
