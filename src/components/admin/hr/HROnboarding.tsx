@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -15,19 +15,35 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { UserPlus, CheckCircle2, ClipboardList, Plus, Users, IndianRupee, Shield, Building2, Clock } from "lucide-react";
+import { UserPlus, CheckCircle2, ClipboardList, Plus, Users, IndianRupee, Shield, Building2, Clock, FileUp, Send, IdCard, Upload, Eye } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const DEFAULT_STEPS = [
-  "Assign Role & Manager",
-  "Set CTC & Salary Structure",
-  "Upload ID Proof",
-  "Upload Offer Letter",
-  "Upload Salary Agreement",
-  "Generate Welcome Letter",
-  "Set KPI Targets",
+  "Candidate Screening Done",
+  "Interview Scheduled",
+  "Interview Completed",
+  "Offer Extended",
+  "Offer Accepted",
+  "KYC Documents Collected",
+  "Aadhaar Verified",
+  "PAN Verified",
+  "Bank Details Collected",
+  "Employee ID Created",
+  "Role & Manager Assigned",
+  "CTC & Salary Finalized",
   "System Access Created",
-  "Welcome Kit Delivered",
+  "Offer Letter Generated",
+  "Appointment Letter Generated",
+  "Welcome Letter Sent",
   "First Day Orientation",
+];
+
+const WIZARD_STEPS = [
+  { num: 1, label: "Lead & Interview", icon: Users },
+  { num: 2, label: "KYC & Documents", icon: Shield },
+  { num: 3, label: "CTC & Salary", icon: IndianRupee },
+  { num: 4, label: "Work Schedule", icon: Clock },
+  { num: 5, label: "Review & Finalize", icon: CheckCircle2 },
 ];
 
 const ROLES = ["employee", "team_lead", "manager", "senior_manager", "head"];
@@ -98,6 +114,7 @@ export const HROnboarding = () => {
       const emp = employees.find((e: any) => e.id === form.employee_id);
       const vertical = verticals.find((v: any) => v.id === form.vertical_id);
       const manager = teamMembers.find((m: any) => m.user_id === form.manager_user_id);
+      const empCode = "GYC-" + (form.designation?.slice(0, 3) || "EMP").toUpperCase() + "-" + Date.now().toString().slice(-6);
       const monthlyCTC = Number(form.monthly_ctc || 0);
       const basic = Math.round(monthlyCTC * 0.4);
       const hra = Math.round(monthlyCTC * 0.2);
@@ -116,6 +133,7 @@ export const HROnboarding = () => {
         designation: form.designation || emp?.designation,
         department: form.department || emp?.department,
         role: form.role || "employee",
+        employee_code: empCode,
         manager_user_id: form.manager_user_id || null,
         manager_name: manager?.display_name || form.manager_name || "",
         vertical_id: form.vertical_id || null,
@@ -129,6 +147,14 @@ export const HROnboarding = () => {
         esi_deduction: esi,
         professional_tax: Number(form.professional_tax || 200),
         tds: Number(form.tds || 0),
+        pan_number: form.pan_number || null,
+        aadhaar_number: form.aadhaar_number || null,
+        bank_account_number: form.bank_account_number || null,
+        bank_ifsc: form.bank_ifsc || null,
+        bank_name: form.bank_name || null,
+        emergency_contact_name: form.emergency_contact_name || null,
+        emergency_contact_phone: form.emergency_contact_phone || null,
+        blood_group: form.blood_group || null,
         joining_date: form.joining_date || new Date().toISOString().split("T")[0],
         probation_end_date: form.probation_end_date || null,
         employment_type: form.employment_type || "full_time",
@@ -136,6 +162,8 @@ export const HROnboarding = () => {
         shift_start: form.shift_start || "09:00",
         shift_end: form.shift_end || "18:00",
         grace_minutes: Number(form.grace_minutes || 15),
+        interview_notes: form.interview_notes || null,
+        recruitment_source: form.recruitment_source || null,
         onboarded_by: user?.id,
       });
       if (profileError) throw profileError;
@@ -247,7 +275,8 @@ export const HROnboarding = () => {
       case 1:
         return (
           <div className="space-y-4">
-            <h3 className="font-semibold flex items-center gap-2"><Users className="h-4 w-4" /> Personal & Team Details</h3>
+            <h3 className="font-semibold flex items-center gap-2"><Users className="h-4 w-4" /> Step 1: Lead & Interview Details</h3>
+            <p className="text-sm text-muted-foreground">Candidate ki basic info aur interview details fill karo</p>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Select Employee</Label>
@@ -262,6 +291,17 @@ export const HROnboarding = () => {
                   <SelectContent>
                     {employees.filter((e: any) => !grouped[e.id]).map((e: any) => (
                       <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Recruitment Source</Label>
+                <Select value={form.recruitment_source || ""} onValueChange={v => updateField("recruitment_source", v)}>
+                  <SelectTrigger><SelectValue placeholder="How did they apply?" /></SelectTrigger>
+                  <SelectContent>
+                    {["walk_in", "referral", "job_portal", "linkedin", "campus", "internal", "other"].map(s => (
+                      <SelectItem key={s} value={s}>{s.replace("_", " ").replace(/\b\w/g, c => c.toUpperCase())}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -319,12 +359,73 @@ export const HROnboarding = () => {
                 <Input type="date" value={form.joining_date || ""} onChange={e => updateField("joining_date", e.target.value)} />
               </div>
             </div>
+            <div>
+              <Label>Interview Notes / Observations</Label>
+              <Textarea value={form.interview_notes || ""} onChange={e => updateField("interview_notes", e.target.value)} placeholder="Interview feedback, strengths, areas of improvement..." rows={3} />
+            </div>
           </div>
         );
       case 2:
         return (
           <div className="space-y-4">
-            <h3 className="font-semibold flex items-center gap-2"><IndianRupee className="h-4 w-4" /> CTC & Salary Structure</h3>
+            <h3 className="font-semibold flex items-center gap-2"><Shield className="h-4 w-4" /> Step 2: KYC & Document Collection</h3>
+            <p className="text-sm text-muted-foreground">Employee ke identity aur bank details collect karo</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Aadhaar Number</Label>
+                <Input value={form.aadhaar_number || ""} onChange={e => updateField("aadhaar_number", e.target.value.replace(/\D/g, "").slice(0, 12))} placeholder="12 digit Aadhaar" maxLength={12} />
+                {form.aadhaar_number?.length === 12 && <p className="text-xs text-green-600 mt-1">✓ Valid format</p>}
+              </div>
+              <div>
+                <Label>PAN Number</Label>
+                <Input value={form.pan_number || ""} onChange={e => updateField("pan_number", e.target.value.toUpperCase().slice(0, 10))} placeholder="ABCDE1234F" maxLength={10} />
+                {/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(form.pan_number || "") && <p className="text-xs text-green-600 mt-1">✓ Valid PAN</p>}
+              </div>
+              <div>
+                <Label>Bank Account Number</Label>
+                <Input value={form.bank_account_number || ""} onChange={e => updateField("bank_account_number", e.target.value)} placeholder="Account number" />
+              </div>
+              <div>
+                <Label>Bank IFSC Code</Label>
+                <Input value={form.bank_ifsc || ""} onChange={e => updateField("bank_ifsc", e.target.value.toUpperCase())} placeholder="e.g. SBIN0001234" />
+              </div>
+              <div>
+                <Label>Bank Name</Label>
+                <Input value={form.bank_name || ""} onChange={e => updateField("bank_name", e.target.value)} placeholder="e.g. State Bank of India" />
+              </div>
+              <div>
+                <Label>Blood Group</Label>
+                <Select value={form.blood_group || ""} onValueChange={v => updateField("blood_group", v)}>
+                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>
+                    {["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"].map(bg => <SelectItem key={bg} value={bg}>{bg}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Emergency Contact Name</Label>
+                <Input value={form.emergency_contact_name || ""} onChange={e => updateField("emergency_contact_name", e.target.value)} placeholder="Father / Guardian" />
+              </div>
+              <div>
+                <Label>Emergency Contact Phone</Label>
+                <Input value={form.emergency_contact_phone || ""} onChange={e => updateField("emergency_contact_phone", e.target.value)} placeholder="10 digit number" maxLength={10} />
+              </div>
+            </div>
+            <Card className="bg-green-50 border-green-200">
+              <CardContent className="p-3">
+                <div className="flex items-center gap-2 text-sm">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <span className="text-green-800">KYC documents will be auto-linked to the employee profile after onboarding</span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+      case 3:
+        return (
+          <div className="space-y-4">
+            <h3 className="font-semibold flex items-center gap-2"><IndianRupee className="h-4 w-4" /> Step 3: CTC & Salary Structure</h3>
+            <p className="text-sm text-muted-foreground">Monthly CTC daalo, breakdown auto-calculate hoga</p>
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2">
                 <Label>Monthly CTC (₹)</Label>
@@ -357,10 +458,11 @@ export const HROnboarding = () => {
             </div>
           </div>
         );
-      case 3:
+      case 4:
         return (
           <div className="space-y-4">
-            <h3 className="font-semibold flex items-center gap-2"><Clock className="h-4 w-4" /> Work Schedule & Policies</h3>
+            <h3 className="font-semibold flex items-center gap-2"><Clock className="h-4 w-4" /> Step 4: Work Schedule & Policies</h3>
+            <p className="text-sm text-muted-foreground">Shift timing aur working policies set karo</p>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Working Days/Month</Label><Input type="number" value={form.working_days || "26"} onChange={e => updateField("working_days", e.target.value)} /></div>
               <div><Label>Grace Minutes (Late)</Label><Input type="number" value={form.grace_minutes || "15"} onChange={e => updateField("grace_minutes", e.target.value)} /></div>
@@ -368,6 +470,21 @@ export const HROnboarding = () => {
               <div><Label>Shift End</Label><Input type="time" value={form.shift_end || "18:00"} onChange={e => updateField("shift_end", e.target.value)} /></div>
               <div><Label>Probation End Date</Label><Input type="date" value={form.probation_end_date || ""} onChange={e => updateField("probation_end_date", e.target.value)} /></div>
             </div>
+          </div>
+        );
+      case 5:
+        return (
+          <div className="space-y-4">
+            <h3 className="font-semibold flex items-center gap-2"><CheckCircle2 className="h-4 w-4" /> Step 5: Review & Finalize</h3>
+            <p className="text-sm text-muted-foreground">Sab details check karo. Submit karne pe Employee ID create hoga aur documents generate honge.</p>
+            
+            <Card className="border-2 border-primary/20 bg-primary/5">
+              <CardContent className="p-4 text-center">
+                <IdCard className="h-8 w-8 mx-auto mb-2 text-primary" />
+                <p className="text-sm text-muted-foreground">Employee ID will be auto-generated</p>
+                <p className="text-lg font-mono font-bold mt-1">GYC-{(form.designation?.slice(0, 3) || "EMP").toUpperCase()}-XXXXXX</p>
+              </CardContent>
+            </Card>
 
             <Card className="bg-muted/50">
               <CardContent className="p-4">
@@ -380,6 +497,30 @@ export const HROnboarding = () => {
                   <div><span className="text-muted-foreground">Vertical:</span> <strong>{verticals.find((v: any) => v.id === form.vertical_id)?.name || "—"}</strong></div>
                   <div><span className="text-muted-foreground">Net Salary:</span> <strong className="text-green-600">{fmt(calcNet)}/mo</strong></div>
                 </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-muted/50">
+              <CardContent className="p-3">
+                <h4 className="font-semibold mb-2 text-sm">KYC Status</h4>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                <div><span className="text-muted-foreground">Aadhaar:</span> <strong>{form.aadhaar_number ? "✓ Collected" : "✗ Missing"}</strong></div>
+                <div><span className="text-muted-foreground">PAN:</span> <strong>{form.pan_number ? "✓ Collected" : "✗ Missing"}</strong></div>
+                <div><span className="text-muted-foreground">Bank:</span> <strong>{form.bank_account_number ? "✓ Collected" : "✗ Missing"}</strong></div>
+                <div><span className="text-muted-foreground">Source:</span> <strong>{form.recruitment_source || "—"}</strong></div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-blue-50 border-blue-200">
+              <CardContent className="p-3">
+                <p className="text-sm font-semibold text-blue-800 mb-2">📄 Documents that will be auto-generated:</p>
+                <div className="grid grid-cols-2 gap-1 text-xs text-blue-700">
+                  <p>✓ Offer Letter PDF</p>
+                  <p>✓ Appointment Letter PDF</p>
+                  <p>✓ Welcome Letter PDF</p>
+                  <p>✓ Salary Structure PDF</p>
+                </div>
+                <p className="text-xs text-blue-600 mt-2">These can be shared via WhatsApp/Email from Document Hub</p>
               </CardContent>
             </Card>
           </div>
@@ -464,25 +605,42 @@ export const HROnboarding = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Onboarding Wizard Dialog */}
-      <Dialog open={showNew} onOpenChange={setShowNew}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+      <Dialog open={showNew} onOpenChange={v => { if (!v) { setShowNew(false); setStep(1); setForm({}); } else setShowNew(true); }}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>Onboard New Employee — Step {step} of 3</DialogTitle>
-            <Progress value={(step / 3) * 100} className="h-1.5 mt-2" />
+            <DialogTitle>Onboard New Employee</DialogTitle>
+            <div className="flex items-center gap-1 mt-3">
+              {WIZARD_STEPS.map((ws) => {
+                const Icon = ws.icon;
+                const isActive = step === ws.num;
+                const isDone = step > ws.num;
+                return (
+                  <div key={ws.num} className="flex items-center flex-1">
+                    <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium transition-all ${isActive ? "bg-primary text-primary-foreground" : isDone ? "bg-green-100 text-green-800" : "bg-muted text-muted-foreground"}`}>
+                      {isDone ? <CheckCircle2 className="h-3 w-3" /> : <Icon className="h-3 w-3" />}
+                      <span className="hidden sm:inline">{ws.label}</span>
+                      <span className="sm:hidden">{ws.num}</span>
+                    </div>
+                    {ws.num < 5 && <div className={`h-0.5 flex-1 mx-1 rounded ${isDone ? "bg-green-400" : "bg-muted"}`} />}
+                  </div>
+                );
+              })}
+            </div>
           </DialogHeader>
-          {renderWizardStep()}
-          <DialogFooter className="flex justify-between">
+          <ScrollArea className="flex-1 pr-2">
+            <div className="py-2">{renderWizardStep()}</div>
+          </ScrollArea>
+          <DialogFooter className="flex justify-between border-t pt-3">
             <div>
               {step > 1 && <Button variant="outline" onClick={() => setStep(s => s - 1)}>Back</Button>}
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setShowNew(false)}>Cancel</Button>
-              {step < 3 ? (
+              {step < 5 ? (
                 <Button disabled={step === 1 && !form.employee_id} onClick={() => setStep(s => s + 1)}>Next</Button>
               ) : (
                 <Button onClick={() => completeOnboarding.mutate()} disabled={completeOnboarding.isPending}>
-                  {completeOnboarding.isPending ? "Creating..." : "Complete Onboarding"}
+                  {completeOnboarding.isPending ? "Creating..." : "🚀 Complete Onboarding & Generate Docs"}
                 </Button>
               )}
             </div>

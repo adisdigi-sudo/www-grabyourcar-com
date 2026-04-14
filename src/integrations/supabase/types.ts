@@ -6729,6 +6729,147 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_kpi_metrics: {
+        Row: {
+          achieved_value: number
+          created_at: string
+          designation: string
+          employee_id: string | null
+          employee_name: string
+          id: string
+          metric_name: string
+          month_year: string
+          notes: string | null
+          score: number | null
+          target_value: number
+          unit: string
+          updated_at: string
+          vertical_name: string
+        }
+        Insert: {
+          achieved_value?: number
+          created_at?: string
+          designation?: string
+          employee_id?: string | null
+          employee_name: string
+          id?: string
+          metric_name: string
+          month_year?: string
+          notes?: string | null
+          score?: number | null
+          target_value?: number
+          unit?: string
+          updated_at?: string
+          vertical_name?: string
+        }
+        Update: {
+          achieved_value?: number
+          created_at?: string
+          designation?: string
+          employee_id?: string | null
+          employee_name?: string
+          id?: string
+          metric_name?: string
+          month_year?: string
+          notes?: string | null
+          score?: number | null
+          target_value?: number
+          unit?: string
+          updated_at?: string
+          vertical_name?: string
+        }
+        Relationships: []
+      }
+      employee_kra_definitions: {
+        Row: {
+          created_at: string
+          description: string | null
+          designation: string
+          evaluation_criteria: string | null
+          id: string
+          is_active: boolean
+          kra_name: string
+          updated_at: string
+          vertical_name: string
+          weightage_pct: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          designation: string
+          evaluation_criteria?: string | null
+          id?: string
+          is_active?: boolean
+          kra_name: string
+          updated_at?: string
+          vertical_name?: string
+          weightage_pct?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          designation?: string
+          evaluation_criteria?: string | null
+          id?: string
+          is_active?: boolean
+          kra_name?: string
+          updated_at?: string
+          vertical_name?: string
+          weightage_pct?: number
+        }
+        Relationships: []
+      }
+      employee_ksa_scores: {
+        Row: {
+          attribute_name: string
+          category: string
+          created_at: string
+          designation: string
+          employee_id: string | null
+          employee_name: string
+          evaluation_period: string
+          evaluator_name: string | null
+          evaluator_notes: string | null
+          id: string
+          max_score: number
+          scored_value: number
+          updated_at: string
+          vertical_name: string
+        }
+        Insert: {
+          attribute_name: string
+          category?: string
+          created_at?: string
+          designation?: string
+          employee_id?: string | null
+          employee_name: string
+          evaluation_period?: string
+          evaluator_name?: string | null
+          evaluator_notes?: string | null
+          id?: string
+          max_score?: number
+          scored_value?: number
+          updated_at?: string
+          vertical_name?: string
+        }
+        Update: {
+          attribute_name?: string
+          category?: string
+          created_at?: string
+          designation?: string
+          employee_id?: string | null
+          employee_name?: string
+          evaluation_period?: string
+          evaluator_name?: string | null
+          evaluator_notes?: string | null
+          id?: string
+          max_score?: number
+          scored_value?: number
+          updated_at?: string
+          vertical_name?: string
+        }
+        Relationships: []
+      }
       employee_profiles: {
         Row: {
           basic_salary: number | null
