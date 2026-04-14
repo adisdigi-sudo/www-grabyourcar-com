@@ -19,6 +19,15 @@ const VERTICALS = [
   { value: "car_sales", label: "Car Sales" },
   { value: "insurance", label: "Insurance" },
   { value: "car_loans", label: "Car Loans" },
+  { value: "hsrp", label: "HSRP" },
+  { value: "self_drive", label: "Self Drive Rentals" },
+  { value: "accessories", label: "Accessories" },
+  { value: "marketing", label: "Marketing" },
+  { value: "accounts", label: "Accounts & Finance" },
+  { value: "hr", label: "HR" },
+  { value: "operations", label: "Operations" },
+  { value: "telecalling", label: "Telecalling" },
+  { value: "dealer_network", label: "Dealer Network" },
 ];
 
 const fmt = (v: number) => `₹${Math.round(v).toLocaleString("en-IN")}`;
