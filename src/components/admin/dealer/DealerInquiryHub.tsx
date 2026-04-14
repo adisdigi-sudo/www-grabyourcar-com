@@ -140,6 +140,7 @@ export default function DealerInquiryHub() {
         .select("*").order("created_at", { ascending: false }).limit(20);
       return data || [];
     },
+    refetchInterval: 3000,
   });
 
   useEffect(() => {

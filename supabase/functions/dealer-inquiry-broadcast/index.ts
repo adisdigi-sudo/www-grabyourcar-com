@@ -293,8 +293,6 @@ serve(async (req) => {
             // Wait 1.5s for template to be accepted and the chat window to open
             await new Promise(r => setTimeout(r, 1500));
           }
-
-          await new Promise(r => setTimeout(r, 1500));
           textResult = await sendText(
             WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID,
             phone.full, message
