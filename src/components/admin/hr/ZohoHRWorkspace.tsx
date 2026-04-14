@@ -163,6 +163,9 @@ export const ZohoHRWorkspace = () => {
   const renderModuleContent = () => {
     switch (sidebarActive) {
       case "onboarding": return <HROnboarding />;
+      case "employee-directory": return <EmployeeProfileView />;
+      case "document-hub": return <EmployeeDocumentHub />;
+      case "targets": return <EmployeeTargetDashboard />;
       case "tickets": return <TicketApprovalCenter />;
       case "salary-engine": return <SalaryEngine />;
       case "leave": return renderLeaveTracker();
@@ -181,6 +184,7 @@ export const ZohoHRWorkspace = () => {
       case "recruitment": return <HRRecruitmentModule />;
       case "workforce": return <HRWorkforceModule />;
       case "payroll": return <HRPayrollModule />;
+      case "hr-letters": return <EmployeeDocumentHub />;
       case "home":
       default:
         return renderHome();
