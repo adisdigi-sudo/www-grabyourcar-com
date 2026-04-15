@@ -47,7 +47,13 @@ const WIZARD_STEPS = [
 ];
 
 const ROLES = ["employee", "team_lead", "manager", "senior_manager", "head"];
-const EMPLOYMENT_TYPES = ["full_time", "part_time", "contract", "intern", "freelancer"];
+const EMPLOYMENT_TYPES = [
+  { value: "full_time", label: "Full Time" },
+  { value: "part_time", label: "Part Time" },
+  { value: "contract", label: "Contract" },
+  { value: "intern", label: "Intern (Trainee / Stipend Based)" },
+  { value: "freelancer", label: "Freelancer" },
+];
 
 const DEPARTMENTS = [
   "Sales", "Insurance", "Loans", "HSRP", "Self Drive Rentals",
