@@ -51,50 +51,45 @@ export function generateSalesOfferPDF(params: SalesOfferParams): { doc: jsPDF; f
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const w = doc.internal.pageSize.getWidth();
   const colLabel = 15;
-  const colValue = w - 25;
-  const rowH = 7;
+  const colValue = w - 15;
+  const rowH = 5.5;
   let y = 20;
   const discountAmount = Math.max(params.discountAmount || 0, 0);
   const rawTotalPrice = params.onRoadPrice || params.dealValue || 0;
   const totalPrice = Math.max(rawTotalPrice - discountAmount, 0);
 
-  // ── Header ──
+  // ── Compact Header ──
   doc.setFillColor(30, 41, 59);
-  doc.rect(0, 0, w, 42, "F");
+  doc.rect(0, 0, w, 30, "F");
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(20);
+  doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
-  doc.text("CAR DEAL OFFER", w / 2, 18, { align: "center" });
-  doc.setFontSize(10);
+  doc.text("CAR DEAL OFFER", 15, 14);
+  doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
-  doc.text("Grabyourcar — Your Trusted Car Partner", w / 2, 28, { align: "center" });
-  doc.text(`Date: ${new Date().toLocaleDateString("en-IN")}`, w / 2, 36, { align: "center" });
+  doc.text("Grabyourcar | www.grabyourcar.com | +91 98559 24442", 15, 22);
+  doc.text(`Date: ${new Date().toLocaleDateString("en-IN")}`, w - 15, 14, { align: "right" });
 
-  y = 52;
+  y = 36;
   doc.setTextColor(30, 41, 59);
 
-  // ── Customer Details ──
-  doc.setFontSize(12);
+  // ── Customer + Vehicle (compact inline) ──
+  doc.setFillColor(248, 250, 252);
+  doc.rect(colLabel - 2, y - 3, w - 26, 14, "F");
+  doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
-  doc.text("Customer Details", 15, y);
-  y += 8;
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  doc.text(`Name: ${params.customerName}`, 15, y); y += 6;
-  doc.text(`Phone: ${params.phone}`, 15, y); y += 10;
-
-  // ── Vehicle Details ──
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
-  doc.text("Vehicle Details", 15, y);
-  y += 8;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  doc.text(`Model: ${params.carModel}`, 15, y); y += 6;
-  if (params.variant) { doc.text(`Variant: ${params.variant}`, 15, y); y += 6; }
-  if (params.color) { doc.text(`Color: ${params.color}`, 15, y); y += 6; }
-  if (params.city) { doc.text(`City: ${params.city}`, 15, y); y += 6; }
+  doc.setTextColor(100, 100, 100);
+  doc.text("CUSTOMER & VEHICLE", colLabel, y);
   y += 4;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(30, 41, 59);
+  const custLine = `${params.customerName} | ${params.phone}`;
+  const carLine = [params.carModel, params.variant, params.color, params.city].filter(Boolean).join(" | ");
+  doc.text(custLine, colLabel, y);
+  y += 4;
+  doc.text(carLine, colLabel, y);
+  y += 6;
 
   // ── Price Breakup Table (car components) ──
   const lineItems: { label: string; value: number }[] = [];
